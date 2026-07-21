@@ -206,13 +206,24 @@ def test_frame_verification_checks_non_empty_fields_in_order() -> None:
           frame_quality: defaultFrameQuality(),
         };
 
-        verifyEntireFrame(item).then(() => {
-          assert.deepEqual(calls, ["Capire perché funziona", "Scrivere codice"]);
-          assert.equal(item.frame.context, "Capire perché funziona verificato");
-          assert.equal(item.frame.objectives, "Scrivere codice verificato");
+        verifyEntireFrame(item);
+        assert.deepEqual(calls, []);
+        assert.equal(els.aiBusyNextBtn.textContent, "Verifica prossimo");
+        assert.equal(els.aiBusyAllBtn.textContent, "Verifica tutti");
+
+        verifyNextFrameField().then(() => {
+          assert.deepEqual(calls, ["Capire perché funziona"]);
           assert.equal(item.frame_quality.context, "ai");
-          assert.equal(item.frame_quality.objectives, "ai");
-          assert.equal(frameVerificationBatch, null);
+          assert.equal(item.frame_quality.objectives, "none");
+
+          verifyAllFrameFields().then(() => {
+            assert.deepEqual(calls, ["Capire perché funziona", "Scrivere codice"]);
+            assert.equal(item.frame.context, "Capire perché funziona verificato");
+            assert.equal(item.frame.objectives, "Scrivere codice verificato");
+            assert.equal(item.frame_quality.context, "ai");
+            assert.equal(item.frame_quality.objectives, "ai");
+            assert.equal(frameVerificationBatch, null);
+          });
         });
         """
     )

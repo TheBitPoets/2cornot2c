@@ -299,13 +299,19 @@ function showFrameVerificationProgress() {
   aiProgressTimer = null;
   els.aiBusy.hidden = false;
   els.aiBusyControls.hidden = false;
-  els.aiBusyNextBtn.hidden = true;
-  els.aiBusyAllBtn.hidden = true;
-  els.aiBusyCloseBtn.disabled = true;
-  els.aiBusyCancelBtn.disabled = false;
   const total = frameVerificationBatch.fields.length;
   const done = frameVerificationBatch.index;
   const current = frameVerificationBatch.fields[done];
+  els.aiBusyNextBtn.hidden = false;
+  els.aiBusyAllBtn.hidden = false;
+  els.aiBusyNextBtn.textContent = "Verifica prossimo";
+  els.aiBusyNextBtn.title = "Controlla solo il prossimo campo della cornice.";
+  els.aiBusyAllBtn.textContent = "Verifica tutti";
+  els.aiBusyAllBtn.title = "Controlla in sequenza tutti i campi rimasti della cornice.";
+  els.aiBusyNextBtn.disabled = frameVerificationBatch.running || done >= total;
+  els.aiBusyAllBtn.disabled = frameVerificationBatch.running || done >= total;
+  els.aiBusyCloseBtn.disabled = false;
+  els.aiBusyCancelBtn.disabled = false;
   const percent = total ? Math.round((done / total) * 100) : 100;
   els.aiBusyTitle.textContent = `Verifica cornice: ${frameVerificationBatch.item.title}`;
   updateAiProgress(
@@ -1882,7 +1888,7 @@ async function proofreadFrameFieldForBatch(item, field) {
   return payload;
 }
 
-async function verifyEntireFrame(item) {
+function verifyEntireFrame(item) {
   if (frameBatch || frameVerificationBatch) {
     setStatus("Una coda AI e gia in esecuzione: attendi il completamento prima di avviare una nuova verifica.");
     return;
@@ -1898,39 +1904,63 @@ async function verifyEntireFrame(item) {
     index: 0,
     running: true,
     cancelled: false,
+    closeRequested: false,
+    snapshots: {
+      frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(item.frame || {}) })),
+      frameQuality: JSON.parse(JSON.stringify({ ...defaultFrameQuality(), ...(item.frame_quality || {}) })),
+    },
   };
+  frameVerificationBatch.running = false;
   showFrameVerificationProgress();
-  setStatus(`Verifico la cornice di "${item.title}" campo per campo...`);
+  setStatus(`Coda pronta: ${fields.length} campi della cornice di "${item.title}" da verificare.`);
+}
+
+async function verifyNextFrameField() {
+  if (!frameVerificationBatch || frameVerificationBatch.running || frameVerificationBatch.index >= frameVerificationBatch.fields.length) return false;
+  frameVerificationBatch.running = true;
+  frameVerificationBatch.cancelled = false;
+  const current = frameVerificationBatch.fields[frameVerificationBatch.index];
+  const total = frameVerificationBatch.fields.length;
+  showFrameVerificationProgress();
   try {
-    while (frameVerificationBatch && frameVerificationBatch.index < fields.length && !frameVerificationBatch.cancelled) {
-      const current = fields[frameVerificationBatch.index];
-      const local = applyLocalTextFixes(String(item.frame[current.key] || ""));
-      item.frame[current.key] = local.text;
-      item.frame_quality[current.key] = "local";
-      renderCourse();
-      showFrameVerificationProgress();
-      setStatus(`Controllo locale: ${current.label} (${frameVerificationBatch.index + 1}/${fields.length}).`);
-      await proofreadFrameFieldForBatch(item, current);
-      frameVerificationBatch.index += 1;
-      renderCourse();
-      showFrameVerificationProgress();
-    }
-    if (!frameVerificationBatch) return;
+    const local = applyLocalTextFixes(String(frameVerificationBatch.item.frame[current.key] || ""));
+    frameVerificationBatch.item.frame[current.key] = local.text;
+    frameVerificationBatch.item.frame_quality[current.key] = "local";
+    renderCourse();
+    showFrameVerificationProgress();
+    setStatus(`Controllo locale: ${current.label} (${frameVerificationBatch.index + 1}/${total}).`);
+    await proofreadFrameFieldForBatch(frameVerificationBatch.item, current);
+    frameVerificationBatch.index += 1;
+    renderCourse();
     if (frameVerificationBatch.cancelled) {
+      restoreFrameVerificationSnapshot();
       frameVerificationBatch = null;
       els.aiBusyControls.hidden = true;
-      els.aiBusyCloseBtn.disabled = false;
       renderCourse();
-      setStatus("Verifica cornice annullata. I campi gia verificati sono stati mantenuti.");
+      setStatus("Verifica cornice annullata: cornice ripristinata.");
       stopAiProgress("Verifica annullata.");
-      return;
+      return false;
     }
-    frameVerificationBatch = null;
-    els.aiBusyControls.hidden = true;
-    els.aiBusyCloseBtn.disabled = false;
-    renderCourse();
-    setStatus(`Cornice verificata: ${fields.length} campi controllati. Ricordati di salvare il JSON.`);
-    stopAiProgress("Cornice verificata.");
+    if (frameVerificationBatch.closeRequested) {
+      const done = frameVerificationBatch.index;
+      frameVerificationBatch = null;
+      els.aiBusyControls.hidden = true;
+      renderCourse();
+      setStatus(`Coda chiusa: mantenuti ${done}/${total} campi verificati. Ricordati di salvare il JSON.`);
+      stopAiProgress("Coda chiusa.");
+      return false;
+    }
+    if (frameVerificationBatch.index >= total) {
+      frameVerificationBatch = null;
+      els.aiBusyControls.hidden = true;
+      renderCourse();
+      setStatus(`Cornice verificata: ${total} campi controllati. Ricordati di salvare il JSON.`);
+      stopAiProgress("Cornice verificata.");
+      return true;
+    }
+    showFrameVerificationProgress();
+    setStatus(`Campo verificato: ${current.label}. Puoi passare al prossimo o verificare tutti i rimanenti.`);
+    return true;
   } catch (error) {
     frameVerificationBatch = null;
     els.aiBusyControls.hidden = true;
@@ -1938,22 +1968,55 @@ async function verifyEntireFrame(item) {
     renderCourse();
     setStatus(`Verifica cornice interrotta. Dettaglio provider/server: ${error.message}`);
     failAiProgress(`Errore provider/server: ${error.message}`);
+    return false;
+  } finally {
+    if (frameVerificationBatch) frameVerificationBatch.running = false;
   }
+}
+
+async function verifyAllFrameFields() {
+  if (!frameVerificationBatch || frameVerificationBatch.running) return;
+  while (frameVerificationBatch && frameVerificationBatch.index < frameVerificationBatch.fields.length) {
+    if (!await verifyNextFrameField()) return;
+  }
+}
+
+function restoreFrameVerificationSnapshot() {
+  if (!frameVerificationBatch) return;
+  frameVerificationBatch.item.frame = JSON.parse(JSON.stringify(frameVerificationBatch.snapshots.frame));
+  frameVerificationBatch.item.frame_quality = JSON.parse(JSON.stringify(frameVerificationBatch.snapshots.frameQuality));
+}
+
+function closeFrameVerification() {
+  if (!frameVerificationBatch) return;
+  if (frameVerificationBatch.running) {
+    frameVerificationBatch.closeRequested = true;
+    setStatus("La coda si chiudera dopo il campo AI in corso.");
+    return;
+  }
+  const done = frameVerificationBatch.index;
+  const total = frameVerificationBatch.fields.length;
+  frameVerificationBatch = null;
+  els.aiBusy.hidden = true;
+  els.aiBusyControls.hidden = true;
+  renderCourse();
+  setStatus(`Coda chiusa: mantenuti ${done}/${total} campi verificati. Ricordati di salvare il JSON.`);
 }
 
 function cancelFrameVerification() {
   if (!frameVerificationBatch) return;
   frameVerificationBatch.cancelled = true;
   if (frameVerificationBatch.running) {
-    setStatus("Annullamento richiesto: termino il campo AI in corso e poi fermo la verifica.");
+    setStatus("Annullamento richiesto: termino il campo AI in corso e ripristino la cornice.");
     showFrameVerificationProgress();
     return;
   }
+  restoreFrameVerificationSnapshot();
   frameVerificationBatch = null;
   els.aiBusy.hidden = true;
   els.aiBusyControls.hidden = true;
   renderCourse();
-  setStatus("Verifica cornice annullata.");
+  setStatus("Verifica cornice annullata: cornice ripristinata.");
 }
 
 function showToolbarMessage(output, message, kind) {
@@ -2126,10 +2189,25 @@ els.yearTitleInput.addEventListener("input", () => {
 els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
 els.generateCoursePlanMdBtn.addEventListener("click", generateCoursePlanMd);
 els.updateReadmeFramesBtn.addEventListener("click", updateReadmeFrames);
-els.aiBusyNextBtn.addEventListener("click", generateNextFrameInBatch);
-els.aiBusyAllBtn.addEventListener("click", generateAllFramesInBatch);
+els.aiBusyNextBtn.addEventListener("click", () => {
+  if (frameVerificationBatch) {
+    verifyNextFrameField();
+    return;
+  }
+  generateNextFrameInBatch();
+});
+els.aiBusyAllBtn.addEventListener("click", () => {
+  if (frameVerificationBatch) {
+    verifyAllFrameFields();
+    return;
+  }
+  generateAllFramesInBatch();
+});
 els.aiBusyCloseBtn.addEventListener("click", () => {
-  if (frameVerificationBatch) return;
+  if (frameVerificationBatch) {
+    closeFrameVerification();
+    return;
+  }
   closeFrameBatch();
 });
 els.aiBusyCancelBtn.addEventListener("click", () => {
