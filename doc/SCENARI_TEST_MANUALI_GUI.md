@@ -509,11 +509,13 @@ workspace, test e aiuti devono provenire dai dati persistiti.
 <table>
 <tr><td valign="top" width="52%">
 
-<details>
-<summary>Evidenza Step 1-3: sessione TUI registrata</summary>
+![Sessione TUI annotata](images/dashboard-guides/scenario-6-tui-session-colori.svg)
 
-La traccia mostra la selezione della consegna, l'esecuzione del comando <code>e</code>, il report salvato
-e il ritorno alla lista. E stata acquisita eseguendo la TUI sulla root demo corrente.
+La cattura mostra un estratto reale della selezione consegna, del runner e del report. E stata acquisita
+eseguendo la TUI sulla root demo corrente.
+
+<details>
+<summary>Evidenza completa Step 1-3: sessione TUI registrata</summary>
 
 [Apri la traccia completa della sessione TUI](images/dashboard-guides/scenario-6-tui-session.txt)
 </details>
@@ -521,7 +523,7 @@ e il ritorno alla lista. E stata acquisita eseguendo la TUI sulla root demo corr
 </td><td valign="top">
 <strong style="color:#1464c0">Step 1-2 - Blu: esecuzione</strong><br>
 Avvia la TUI, seleziona <code>Demo somma in Python</code> ed esegui il runner.<br><br>
-<strong style="color:#168a45">Step 3-6 - Verde: verifica GUI</strong><br>
+<strong style="color:#168a45">Step 3-6 - Verde: report e verifica GUI</strong><br>
 Esci, apri la dashboard studente, seleziona <code>rossi-mario</code>, clicca <code>Carica</code> e confronta report, test, ultimo tentativo e aiuti con la TUI.
 </td></tr>
 </table>

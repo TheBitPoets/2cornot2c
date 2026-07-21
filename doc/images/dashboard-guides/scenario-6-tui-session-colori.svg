@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="904" viewBox="0 0 1000 904">
+  <style>.page{fill:#f7f7f5}.title{font:700 26px Arial,sans-serif;fill:#111}.subtitle{font:14px Arial,sans-serif;fill:#555}.terminal{fill:#16181d;stroke:#343943;stroke-width:2}.terminal-text{font:12px 'Cascadia Mono','Consolas',monospace;fill:#e7e9ee;white-space:pre}.label{font:700 13px Arial,sans-serif;fill:#fff}.blue{fill:#1464c0}.green{fill:#168a45}.purple{fill:#7b35b2}</style>
+  <rect class="page" width="100%" height="100%"/>
+  <text x="28" y="38" class="title">Scenario 6 · Sessione TUI studente</text>
+  <text x="28" y="62" class="subtitle">Estratto reale: selezione consegna, runner, report e ritorno alla lista</text>
+  <rect x="20" y="118" width="960" height="238" rx="8" class="terminal"/>
+  <rect x="36" y="130" width="178" height="24" rx="12" class="blue"/>
+  <text x="48" y="147" class="label">1 · selezione e runner</text>
+    <text x="38" y="175" class="terminal-text">TheBitLab - lab studente</text>
+    <text x="38" y="190" class="terminal-text">Studente: rossi-mario</text>
+    <text x="38" y="205" class="terminal-text">Consegne: 1 | Da fare: 0 | Mancanti: 0 | Consegnate: 1</text>
+    <text x="38" y="220" class="terminal-text"></text>
+    <text x="38" y="235" class="terminal-text">Comandi: numero = dettaglio | r = ricarica | q = esci</text>
+    <text x="38" y="250" class="terminal-text"></text>
+    <text x="38" y="265" class="terminal-text">Legenda:</text>
+    <text x="38" y="280" class="terminal-text">- Da fare: consegna assegnata, scadenza futura, nessun report ancora salvato.</text>
+    <text x="38" y="295" class="terminal-text">- Mancante: scadenza superata senza report/consegna.</text>
+    <text x="38" y="310" class="terminal-text">- Consegnata: esiste un report coerente con la consegna.</text>
+    <text x="38" y="325" class="terminal-text">- Consegnata in ritardo: report presente ma consegnato dopo la scadenza.</text>
+    <text x="38" y="340" class="terminal-text">- workspace: cartella locale della consegna presente.</text>
+    <text x="38" y="355" class="terminal-text">- no workspace: cartella locale non ancora presente o non trovata.</text>
+    <text x="38" y="370" class="terminal-text"></text>
+    <text x="38" y="385" class="terminal-text"> #  Titolo                             | Stato                  | Scadenza         | Workspace</text>
+    <text x="38" y="400" class="terminal-text">-----------------------------------------------------------------------------------------------</text>
+    <text x="38" y="415" class="terminal-text"> 1. Demo somma in Python               | Consegnata             | 2026-10-19 23:59 | workspace</text>
+    <text x="38" y="430" class="terminal-text"></text>
+  <rect x="20" y="374" width="960" height="238" rx="8" class="terminal"/>
+  <rect x="36" y="386" width="172" height="24" rx="12" class="green"/>
+  <text x="48" y="403" class="label">2 · report e test</text>
+    <text x="38" y="431" class="terminal-text">Dettaglio: Esecuzione completata</text>
+    <text x="38" y="446" class="terminal-text">Stato runner:      passed</text>
+    <text x="38" y="461" class="terminal-text">Esito:             consegna superata</text>
+    <text x="38" y="476" class="terminal-text">Test:              2/2 test</text>
+    <text x="38" y="491" class="terminal-text">Report salvato:    E:\dev\2cornot2c\tmp\student-lab-demo\examples\assignment_tracking\student_repos\rossi-mar...</text>
+    <text x="38" y="506" class="terminal-text"></text>
+    <text x="38" y="521" class="terminal-text">Dettaglio test</text>
+    <text x="38" y="536" class="terminal-text">  [ok] tests/test_main.py::test_somma_positivi</text>
+    <text x="38" y="551" class="terminal-text">  [ok] tests/test_main.py::test_somma_negativi</text>
+    <text x="38" y="566" class="terminal-text"></text>
+  <rect x="20" y="630" width="960" height="238" rx="8" class="terminal"/>
+  <rect x="36" y="642" width="178" height="24" rx="12" class="purple"/>
+  <text x="48" y="659" class="label">3 · ritorno alla lista</text>
+    <text x="38" y="687" class="terminal-text">Studente: rossi-mario</text>
+    <text x="38" y="702" class="terminal-text">Consegne: 1 | Da fare: 0 | Mancanti: 0 | Consegnate: 1</text>
+    <text x="38" y="717" class="terminal-text"></text>
+    <text x="38" y="732" class="terminal-text">Comandi: numero = dettaglio | r = ricarica | q = esci</text>
+    <text x="38" y="747" class="terminal-text"></text>
+    <text x="38" y="762" class="terminal-text">Legenda:</text>
+    <text x="38" y="777" class="terminal-text">- Da fare: consegna assegnata, scadenza futura, nessun report ancora salvato.</text>
+    <text x="38" y="792" class="terminal-text">- Mancante: scadenza superata senza report/consegna.</text>
+    <text x="38" y="807" class="terminal-text">- Consegnata: esiste un report coerente con la consegna.</text>
+    <text x="38" y="822" class="terminal-text">- Consegnata in ritardo: report presente ma consegnato dopo la scadenza.</text>
+    <text x="38" y="837" class="terminal-text">- workspace: cartella locale della consegna presente.</text>
+    <text x="38" y="852" class="terminal-text">- no workspace: cartella locale non ancora presente o non trovata.</text>
+    <text x="38" y="867" class="terminal-text"></text>
+    <text x="38" y="882" class="terminal-text"> #  Titolo                             | Stato                  | Scadenza         | Workspace</text>
+    <text x="38" y="897" class="terminal-text">-----------------------------------------------------------------------------------------------</text>
+    <text x="38" y="912" class="terminal-text"> 1. Demo somma in Python               | Consegnata             | 2026-10-19 23:59 | workspace</text>
+    <text x="38" y="927" class="terminal-text"></text>
+    <text x="38" y="942" class="terminal-text">Scelta: </text>
+  <text x="28" y="890" class="subtitle">Transcript completo disponibile nella sezione collassabile.</text>
+</svg>
