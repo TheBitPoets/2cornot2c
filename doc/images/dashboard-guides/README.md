@@ -93,7 +93,7 @@ Per lo Scenario 1 sono disponibili catture reali con nomi specifici:
 | `scenario-1-studente-lab.png` | fatto | Dashboard studente | Workspace, report e test `2/2` |
 | `scenario-1-studente-dettaglio.png` | fatto | Dashboard studente | Modal dettaglio della consegna |
 
-Per gli scenari docente 2 e 3 sono disponibili anche panoramiche annotate a colori. I numeri e i colori
+Per gli scenari GUI 2-6 e 8-10 sono disponibili panoramiche annotate a colori. I numeri e i colori
 seguono esattamente la procedura dettagliata nella guida; le immagini non annotate restano come evidenza
 completa della schermata, mentre quelle annotate servono per trovare rapidamente i controlli da verificare.
 
@@ -115,9 +115,10 @@ completa della schermata, mentre quelle annotate servono per trovare rapidamente
 | `scenario-10-docente-calendario-colori.png` | fatto | School Calendar Board | Date, interruzioni, calendario e Gantt annotati |
 | `scenario-10-docente-calendario.png` | fatto | School Calendar Board | Vista iniziale del calendario docente |
 
-Gli scenari 4-10 riusano la stessa convenzione: una panoramica annotata a sinistra e la procedura
-numerata a destra, con eventuali schermate di dettaglio sotto. Le catture reali vengono aggiunte insieme
-alla verifica manuale della relativa GUI o TUI, così la documentazione non presenta dati inventati o
+Gli scenari GUI 2-6 e 8-10 riusano la stessa convenzione: una panoramica annotata a sinistra e la procedura
+numerata a destra, con eventuali schermate di dettaglio sotto. Lo Scenario 7 TUI usa invece una traccia
+testuale della sessione, perché il terminale non ha una panoramica GUI stabile da annotare. Le catture
+reali vengono aggiunte insieme alla verifica manuale, così la documentazione non presenta dati inventati o
 immagini non corrispondenti alla versione corrente.
 
 ## Dopo aver aggiunto immagini
