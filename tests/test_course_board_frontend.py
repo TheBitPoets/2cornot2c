@@ -186,6 +186,84 @@ def test_frame_snapshot_restores_content_and_quality() -> None:
     )
 
 
+def test_frame_verification_checks_non_empty_fields_in_order() -> None:
+    run_course_board_js(
+        """
+        const calls = [];
+        api = async (_path, options) => {
+          const body = JSON.parse(options.body);
+          calls.push(body.text);
+          return { corrected_text: body.text + " verificato" };
+        };
+        renderCourse = () => {};
+        const item = {
+          title: "Lezione test",
+          frame: {
+            ...defaultFrame(),
+            context: "Capire perche funziona",
+            objectives: "Scrivere codice",
+          },
+          frame_quality: defaultFrameQuality(),
+        };
+
+        verifyEntireFrame(item);
+        assert.deepEqual(calls, []);
+        assert.equal(els.aiBusyNextBtn.textContent, "Verifica prossimo");
+        assert.equal(els.aiBusyAllBtn.textContent, "Verifica tutti");
+
+        verifyNextFrameField().then(() => {
+          assert.deepEqual(calls, ["Capire perché funziona"]);
+          assert.equal(item.frame_quality.context, "ai");
+          assert.equal(item.frame_quality.objectives, "none");
+          assert.equal(els.aiBusyNextBtn.disabled, false);
+          assert.equal(els.aiBusyAllBtn.disabled, false);
+
+          verifyAllFrameFields().then(() => {
+            assert.deepEqual(calls, ["Capire perché funziona", "Scrivere codice"]);
+            assert.equal(item.frame.context, "Capire perché funziona verificato");
+            assert.equal(item.frame.objectives, "Scrivere codice verificato");
+            assert.equal(item.frame_quality.context, "ai");
+            assert.equal(item.frame_quality.objectives, "ai");
+            assert.equal(frameVerificationBatch, null);
+          });
+        });
+        """
+    )
+
+
+def test_frame_toolbar_exposes_complete_verification_action() -> None:
+    source = Path("tools/course_board.js").read_text(encoding="utf-8")
+
+    assert 'data-format="verify-frame"' in source
+    assert "Verifica tutta la cornice" in source
+
+
+def test_frame_batch_restores_generation_labels_after_verification_mode() -> None:
+    run_course_board_js(
+        """
+        frameVerificationBatch = {
+          fields: [{ key: "context", label: "Contesto" }],
+          index: 0,
+          running: false,
+          item: { title: "Lezione test" },
+        };
+        showFrameVerificationProgress();
+        assert.equal(els.aiBusyNextBtn.textContent, "Verifica prossimo");
+
+        frameVerificationBatch = null;
+        frameBatch = {
+          rootTitle: "Percorso test",
+          entries: [],
+          index: 0,
+          running: false,
+        };
+        showFrameBatchProgress();
+        assert.equal(els.aiBusyNextBtn.textContent, "AI genera prossimo");
+        assert.equal(els.aiBusyAllBtn.textContent, "AI genera tutti");
+        """
+    )
+
+
 def test_save_as_requires_confirmation_before_overwriting() -> None:
     run_course_board_js(
         """
