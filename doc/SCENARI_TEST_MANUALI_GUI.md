@@ -437,7 +437,7 @@ il modal che deve contenere l'errore completo.
 <strong>1.</strong> Apri la dashboard docente.<br>
 <strong>2.</strong> Carica o ricarica il registro mutato.<br>
 <strong>3.</strong> Apri <code>Studenti</code>.<br>
-<strong>4.</strong> Cerca <code>rossi-mario</code>.<br><br>
+<strong>4.</strong> Cerca <code>bianchi-luca</code>.<br><br>
 
 <strong style="color:#c87800">Step 5 - Arancione: dettaglio</strong><br>
 <strong>5.</strong> Clicca <code>Dettaglio errori</code> e verifica che il testo Python/pytest sia leggibile anche quando e lungo.<br><br>
@@ -458,10 +458,10 @@ Chiudi il modal e verifica che la vista del registro resti invariata.
 Prepara un errore intenzionale dopo il setup comune:
 
 ```powershell
-$source = "tmp\student-lab-demo\examples\assignment_tracking\student_repos\rossi-mario\assignments\python-demo-somma-001\main.py"
+$source = "tmp\student-lab-demo\examples\assignment_tracking\student_repos\bianchi-luca\assignments\python-demo-somma-001\main.py"
 Set-Content -Path $source -Encoding utf8 -Value @("def somma(a, b):", "    return a - b")
-python scripts/student_lab_runner.py --root tmp/student-lab-demo --student-id rossi-mario --activity-id python-demo-somma-001 --write-report
-python -m scripts.track_assignments --activity tmp\student-lab-demo\activities\python-demo-somma-001.json --target tmp\student-lab-demo\examples\assignment_tracking\student_repos\rossi-mario --assigned-at 2026-10-12T09:00:00+02:00 --due-at 2026-10-19T23:59:00+02:00 --now 2026-10-18T18:30:00+02:00 --class-id 3A-TPSI --class-label "3A TPSI" --github-team team-3a-tpsi --output tmp\student-lab-demo\teacher-reports\demo\python-demo-somma-001.json
+python scripts/student_lab_runner.py --root tmp/student-lab-demo --student-id bianchi-luca --activity-id python-demo-somma-001 --write-report
+python -m scripts.track_assignments --activity tmp\student-lab-demo\activities\python-demo-somma-001.json --target tmp\student-lab-demo\examples\assignment_tracking\student_repos\bianchi-luca --assigned-at 2026-10-12T09:00:00+02:00 --due-at 2026-10-19T23:59:00+02:00 --now 2026-10-18T18:30:00+02:00 --class-id 3A-TPSI --class-label "3A TPSI" --github-team team-3a-tpsi --output tmp\student-lab-demo\teacher-reports\demo\python-demo-somma-001.json
 ```
 
 Poi:
@@ -469,7 +469,7 @@ Poi:
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Carica o ricarica `demo/python-demo-somma-001.json`.
 3. Apri `Studenti`.
-4. Cerca `rossi-mario`.
+4. Cerca `bianchi-luca`.
 5. Clicca `Dettaglio errori`.
 
 Risultato atteso:
