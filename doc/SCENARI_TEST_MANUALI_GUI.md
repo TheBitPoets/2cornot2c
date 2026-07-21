@@ -506,10 +506,11 @@ Obiettivo: verificare che un'azione fatta dalla TUI venga riflessa nella GUI stu
 La schermata mostra il risultato che deve comparire dopo l'esecuzione del runner dalla TUI: report,
 workspace, test e aiuti devono provenire dai dati persistiti.
 
-<table>
-<tr><td valign="top" width="52%">
+<div style="width:100%; overflow-x:auto">
 
 ![Sessione TUI annotata](images/dashboard-guides/scenario-6-tui-session-colori.svg)
+
+</div>
 
 La traccia mostra la selezione della consegna, l'esecuzione del comando <code>e</code>, il report salvato
 e il ritorno alla lista. E stata acquisita eseguendo la TUI sulla root demo corrente.
@@ -520,9 +521,11 @@ e il ritorno alla lista. E stata acquisita eseguendo la TUI sulla root demo corr
 [Apri la traccia completa della sessione TUI](images/dashboard-guides/scenario-6-tui-session.txt)
 </details>
 
-</td><td valign="top">
+<table>
+<tr><td valign="top" width="52%">
 <strong style="color:#1464c0">Step 1-2 - Blu: esecuzione</strong><br>
 Avvia la TUI, seleziona <code>Demo somma in Python</code> ed esegui il runner.<br><br>
+</td><td valign="top">
 <strong style="color:#168a45">Step 3-6 - Verde: report e verifica GUI</strong><br>
 Esci, apri la dashboard studente, seleziona <code>rossi-mario</code>, clicca <code>Carica</code> e confronta report, test, ultimo tentativo e aiuti con la TUI.
 </td></tr>
