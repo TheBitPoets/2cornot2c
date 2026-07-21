@@ -332,6 +332,27 @@ def test_dirty_tracking_detects_changes_and_resets_after_save() -> None:
     )
 
 
+def test_save_project_follows_dirty_state() -> None:
+    run_course_board_js(
+        """
+        state.design = { years: [{ id: "first" }] };
+        state.activeSavedDesign = "course.json";
+        state.isNewDesign = false;
+        markDesignClean();
+        renderCourseActions();
+        assert.equal(els.saveArchiveBtn.disabled, true);
+
+        state.design.years.push({ id: "changed" });
+        renderCourseActions();
+        assert.equal(els.saveArchiveBtn.disabled, false);
+
+        markDesignClean();
+        renderCourseActions();
+        assert.equal(els.saveArchiveBtn.disabled, true);
+        """
+    )
+
+
 def test_change_during_current_project_save_remains_dirty() -> None:
     run_course_board_js(
         """
