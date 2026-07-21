@@ -222,6 +222,41 @@ Questi passaggi sono gia predisposti per una futura automazione Playwright: URL,
 
 Obiettivo: verificare che il docente possa caricare il registro generato dalla demo lab.
 
+### Schermata reale annotata
+
+La cattura usa la root `tmp/student-lab-demo`, il registro `demo/python-demo-somma-001.json` e il viewport desktop `1440x1000`.
+
+<table>
+<tr>
+<td valign="top" width="52%">
+
+![Panoramica docente annotata per il registro](images/dashboard-guides/scenario-2-docente-registro-colori.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1-2 - Blu: registro selezionato</strong><br>
+<strong>1.</strong> Apri <code>assignment_dashboard.html</code>.<br>
+<strong>2.</strong> Nel pannello <code>Registro selezionato</code> individua il registro demo.<br><br>
+
+<strong style="color:#7b35b2">Step 3 - Viola: caricamento</strong><br>
+<strong>3.</strong> Clicca <code>Carica registro</code> e attendi il caricamento; usa <code>Ricarica</code> solo per rileggere i dati persistiti.<br><br>
+
+<strong style="color:#168a45">Step 4, 7-8 - Verde: riepilogo e consegna</strong><br>
+<strong>4.</strong> Controlla classe, activity, studenti, consegnati, mancanti e ritardi.<br>
+<strong>7.</strong> In <code>Apri studenti</code> cerca <code>rossi-mario</code> e apri la consegna.<br>
+<strong>8.</strong> Nel dettaglio seleziona <code>main.py</code> e <code>test_main.py</code>.<br><br>
+
+<strong style="color:#c87800">Step 5-6 - Arancione: vista studenti</strong><br>
+<strong>5.</strong> Clicca <code>Apri studenti</code>.<br>
+<strong>6.</strong> Verifica che il modal mostri lo studente corretto e i suoi indicatori.
+
+</td>
+</tr>
+</table>
+
+![Registro docente caricato](images/dashboard-guides/scenario-2-docente-registro.png)
+
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Nel pannello del registro seleziona `demo/python-demo-somma-001.json`.
 3. Clicca `Carica registro`.
@@ -247,6 +282,39 @@ Risultato atteso:
 
 Obiettivo: verificare che il quadro classe rimanga leggibile e che i bottoni aprano la consegna corretta.
 
+### Schermata reale annotata
+
+La cattura mostra il modal <code>Quadro classe</code> aperto sul registro demo, con filtri e righe reali di `rossi-mario` e `bianchi-luca`.
+
+<table>
+<tr>
+<td valign="top" width="52%">
+
+![Quadro classe annotato per filtri, risultati e azioni](images/dashboard-guides/scenario-3-docente-quadro-colori.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1-3 - Blu: apertura e filtri</strong><br>
+<strong>1.</strong> Apri la dashboard docente.<br>
+<strong>2.</strong> Carica <code>demo/python-demo-somma-001.json</code>.<br>
+<strong>3.</strong> Controlla classe, studente, activity, tipo, stato e modalità.<br><br>
+
+<strong style="color:#7b35b2">Step 4 - Viola: vista elenco</strong><br>
+<strong>4.</strong> Seleziona <code>Elenco</code> e verifica che la tabella resti leggibile.<br><br>
+
+<strong style="color:#168a45">Step 5 - Verde: risultato Rossi</strong><br>
+<strong>5.</strong> Cerca <code>rossi-mario</code> e controlla consegna, stato, test <code>2/2</code> e voto.<br><br>
+
+<strong style="color:#c87800">Step 6 - Arancione: azione</strong><br>
+<strong>6.</strong> Clicca <code>Consegna</code> solo se abilitato e verifica che apra la consegna corretta.
+
+</td>
+</tr>
+</table>
+
+![Quadro classe con filtri e righe](images/dashboard-guides/scenario-3-docente-quadro.png)
+
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Carica il registro `demo/python-demo-somma-001.json`.
 3. Nel pannello `Quadro classe` controlla i filtri attivi.
@@ -264,6 +332,41 @@ Risultato atteso:
 ## Scenario 4 - Richieste di aiuto visibili al docente
 
 Obiettivo: verificare che il docente veda quante volte lo studente ha chiesto aiuto e il prompt inviato.
+
+### Schermate reali della prova
+
+La schermata annotata evidenzia il modal dedicato agli aiuti; la schermata completa sotto serve per
+controllare testo, provider e contatori senza affidarsi soltanto al colore.
+
+<table>
+<tr>
+<td valign="top" width="52%">
+
+![Modal aiuti docente annotato](images/dashboard-guides/scenario-4-docente-aiuti-colori.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1-5 - Blu: raggiungi lo studente</strong><br>
+<strong>1.</strong> Apri la dashboard docente e carica il registro demo.<br>
+<strong>2.</strong> Apri <code>Studenti</code>.<br>
+<strong>3.</strong> Cerca <code>rossi-mario</code>.<br>
+<strong>4.</strong> Controlla il riepilogo degli aiuti.<br>
+<strong>5.</strong> Verifica i contatori nella riga.<br><br>
+
+<strong style="color:#7b35b2">Step 6-8 - Viola: leggi i dettagli</strong><br>
+<strong>6.</strong> Clicca <code>Dettagli aiuti</code>.<br>
+<strong>7.</strong> Leggi prompt, risposta, provider e stato.<br>
+<strong>8.</strong> Confronta i token dichiarati con il riepilogo.<br><br>
+
+<strong style="color:#c87800">Step 9 - Arancione: ritorno</strong><br>
+<strong>9.</strong> Chiudi il modal e verifica di restare nella stessa vista Studenti.
+
+</td>
+</tr>
+</table>
+
+![Dettaglio completo delle richieste di aiuto](images/dashboard-guides/scenario-4-docente-aiuti.png)
 
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Carica il registro `demo/python-demo-somma-001.json`.
@@ -291,6 +394,38 @@ Risultato atteso:
 ## Scenario 5 - Dettaglio errori test in modal
 
 Obiettivo: verificare che un report fallito mostri gli errori in un modal leggibile, non in una linguetta troppo stretta.
+
+### Schermate reali della prova
+
+La cattura e stata ottenuta con il report demo che contiene un errore di test (fixture `bianchi-luca`). Il bordo arancione indica
+il modal che deve contenere l'errore completo.
+
+<table>
+<tr>
+<td valign="top" width="52%">
+
+![Modal dettaglio errori annotato](images/dashboard-guides/scenario-5-docente-errori-colori.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1-4 - Blu: selezione</strong><br>
+<strong>1.</strong> Apri la dashboard docente.<br>
+<strong>2.</strong> Carica o ricarica il registro mutato.<br>
+<strong>3.</strong> Apri <code>Studenti</code>.<br>
+<strong>4.</strong> Cerca <code>rossi-mario</code>.<br><br>
+
+<strong style="color:#c87800">Step 5 - Arancione: dettaglio</strong><br>
+<strong>5.</strong> Clicca <code>Dettaglio errori</code> e verifica che il testo Python/pytest sia leggibile anche quando e lungo.<br><br>
+
+<strong style="color:#168a45">Chiusura - Verde: ritorno</strong><br>
+Chiudi il modal e verifica che la vista del registro resti invariata.
+
+</td>
+</tr>
+</table>
+
+![Dettaglio errori completo](images/dashboard-guides/scenario-5-docente-errori.png)
 
 Prepara un errore intenzionale dopo il setup comune:
 
@@ -337,6 +472,24 @@ python scripts/course_board_server.py --root tmp/student-lab-demo
 ## Scenario 6 - Dashboard studente dopo esecuzione TUI
 
 Obiettivo: verificare che un'azione fatta dalla TUI venga riflessa nella GUI studente.
+
+### Schermata reale di riscontro
+
+La schermata mostra il risultato che deve comparire dopo l'esecuzione del runner dalla TUI: report,
+workspace, test e aiuti devono provenire dai dati persistiti.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Riscontro dashboard dopo TUI](images/dashboard-guides/scenario-6-studente-dopo-tui.png)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-2 - Blu: esecuzione</strong><br>
+Avvia la TUI, seleziona <code>Demo somma in Python</code> ed esegui il runner.<br><br>
+<strong style="color:#168a45">Step 3-6 - Verde: verifica GUI</strong><br>
+Esci, apri la dashboard studente, seleziona <code>rossi-mario</code>, clicca <code>Carica</code> e confronta report, test, ultimo tentativo e aiuti con la TUI.
+</td></tr>
+</table>
 
 1. Avvia la TUI:
 
@@ -418,6 +571,25 @@ Risultato atteso:
 
 Obiettivo: verificare che la vista studente mostri il percorso associato e il calendario in sola lettura.
 
+### Schermata reale annotata
+
+La cattura evidenzia calendario e filtri, percorso associato e consegne come blocchi distinti.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Percorso studente e calendario annotati](images/dashboard-guides/scenario-8-studente-percorso-colori.png)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-5 - Blu: calendario</strong><br>
+Apri la dashboard, seleziona <code>rossi-mario</code>, carica, scegli modalità, mese e filtro e prova lista/calendario.<br><br>
+<strong style="color:#7b35b2">Step 3 - Viola: percorso</strong><br>
+Controlla i percorsi associati e apri un paragrafo senza possibilità di modifica.<br><br>
+<strong style="color:#168a45">Step 6 - Verde: consegne</strong><br>
+Confronta attività, scadenze, stato e distinzione tra consegna, UDA e interruzione.
+</td></tr>
+</table>
+
 1. Apri `http://localhost:8765/tools/student_dashboard.html`.
 2. Seleziona `rossi-mario`.
 3. Controlla il pannello del percorso.
@@ -434,6 +606,25 @@ Risultato atteso:
 - Le interruzioni usano lo sfondo a strisce salmone/bianco.
 
 ## Scenario 9 - Percorso docente
+
+### Schermata reale annotata
+
+La cattura parte dal repository corrente senza progetto caricato: e utile per verificare lo stato iniziale.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Percorso docente annotato](images/dashboard-guides/scenario-9-docente-percorso-colori.png)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-2 - Blu: catalogo</strong><br>
+Apri <code>course_board.html</code> e usa ricerca, sorgenti e livelli del catalogo.<br><br>
+<strong style="color:#7b35b2">Step 3-5 - Viola: progetto</strong><br>
+Crea o apri il progetto, aggiungi un percorso e inserisci paragrafi nelle UDA.<br><br>
+<strong style="color:#c87800">Step 6-8 - Arancione: azioni</strong><br>
+Prova salva, ricarica, generazione AI e annullamento; ogni stato deve avere feedback visibile.
+</td></tr>
+</table>
 
 Obiettivo: verificare creazione, modifica, persistenza, protezione dagli errori e accessibilità della pagina Percorso.
 
@@ -468,6 +659,25 @@ Risultato atteso:
 - I comandi essenziali sono raggiungibili da tastiera e restano usabili su mobile.
 
 ## Scenario 10 - Calendario docente
+
+### Schermata reale annotata
+
+La cattura mostra la vista iniziale del calendario con le date obbligatorie ancora da impostare.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Calendario docente annotato](images/dashboard-guides/scenario-10-docente-calendario-colori.png)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-2 - Blu: calendario e date</strong><br>
+Apri <code>school_calendar.html</code>, carica o crea un calendario e imposta inizio/fine lezioni.<br><br>
+<strong style="color:#c87800">Step 3 - Arancione: interruzioni</strong><br>
+Aggiungi o importa festivita e sospensioni e verifica che siano distinguibili.<br><br>
+<strong style="color:#168a45">Step 4 - Verde: viste</strong><br>
+Controlla calendario, Gantt UDA e riepilogo ore; prova modalita e filtri senza perdere dati.
+</td></tr>
+</table>
 
 Obiettivo: verificare che il calendario docente resti coerente con il percorso e con la dashboard studente.
 

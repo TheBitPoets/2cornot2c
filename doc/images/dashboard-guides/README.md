@@ -93,6 +93,33 @@ Per lo Scenario 1 sono disponibili catture reali con nomi specifici:
 | `scenario-1-studente-lab.png` | fatto | Dashboard studente | Workspace, report e test `2/2` |
 | `scenario-1-studente-dettaglio.png` | fatto | Dashboard studente | Modal dettaglio della consegna |
 
+Per gli scenari docente 2 e 3 sono disponibili anche panoramiche annotate a colori. I numeri e i colori
+seguono esattamente la procedura dettagliata nella guida; le immagini non annotate restano come evidenza
+completa della schermata, mentre quelle annotate servono per trovare rapidamente i controlli da verificare.
+
+| File | Stato | Pagina | Cosa mostra |
+|---|---|---|---|
+| `scenario-2-docente-registro-colori.png` | fatto | Dashboard docente | Registro selezionato, caricamento, riepilogo e pannello studenti |
+| `scenario-2-docente-registro.png` | fatto | Dashboard docente | Schermata completa dopo il caricamento del registro |
+| `scenario-3-docente-quadro-colori.png` | fatto | Dashboard docente | Filtri, vista elenco, riga Rossi e azioni del quadro classe |
+| `scenario-3-docente-quadro.png` | fatto | Dashboard docente | Modal Quadro classe completo con filtri e due studenti |
+| `scenario-4-docente-aiuti-colori.png` | fatto | Dashboard docente | Modal aiuti annotato con numerazione della procedura |
+| `scenario-4-docente-aiuti.png` | fatto | Dashboard docente | Prompt, risposta, provider e contatori degli aiuti |
+| `scenario-5-docente-errori-colori.png` | fatto | Dashboard docente | Modal dettaglio errori evidenziato |
+| `scenario-5-docente-errori.png` | fatto | Dashboard docente | Test falliti e dettaglio Python/pytest |
+| `scenario-6-studente-dopo-tui.png` | fatto | Dashboard studente | Report e test dopo l'esecuzione dalla TUI |
+| `scenario-8-studente-percorso-colori.png` | fatto | Dashboard studente | Calendario, percorso e consegne annotati |
+| `scenario-8-studente-percorso.png` | fatto | Dashboard studente | Vista completa del percorso/calendario studente |
+| `scenario-9-docente-percorso-colori.png` | fatto | Course Design Board | Catalogo, progetto e azioni annotati |
+| `scenario-9-docente-percorso.png` | fatto | Course Design Board | Vista iniziale del progetto didattico |
+| `scenario-10-docente-calendario-colori.png` | fatto | School Calendar Board | Date, interruzioni, calendario e Gantt annotati |
+| `scenario-10-docente-calendario.png` | fatto | School Calendar Board | Vista iniziale del calendario docente |
+
+Gli scenari 4-10 riusano la stessa convenzione: una panoramica annotata a sinistra e la procedura
+numerata a destra, con eventuali schermate di dettaglio sotto. Le catture reali vengono aggiunte insieme
+alla verifica manuale della relativa GUI o TUI, così la documentazione non presenta dati inventati o
+immagini non corrispondenti alla versione corrente.
+
 ## Dopo aver aggiunto immagini
 
 Quando uno screenshot viene salvato:
