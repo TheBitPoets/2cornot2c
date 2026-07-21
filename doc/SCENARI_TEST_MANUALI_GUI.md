@@ -97,17 +97,108 @@ Quando il flusso activity, assegnazione, consegna, lab e registro sara completo,
 
 ## Scenario 1 - Dashboard studente con report riuscito
 
-Obiettivo: verificare che lo studente veda consegna, workspace, report, test e aiuti.
+Obiettivo: verificare, come tester manuale, che lo studente veda la consegna corretta e tutti i dati del lab collegati: workspace, report, test, ultimo tentativo e aiuti.
 
-1. Apri `http://localhost:8765/tools/student_dashboard.html`.
-2. Seleziona lo studente `rossi-mario`.
-3. Controlla che sia visibile la consegna `Demo somma in Python`.
-4. Apri il dettaglio della consegna, se presente il bottone di dettaglio.
-5. Controlla il pannello `Lab`.
+![Mappa visiva dello Scenario 1](images/dashboard-guides/scenario-1-studente-mappa.svg)
 
-Risultato atteso:
+### Schermate reali della prova
 
-- La consegna `Demo somma in Python` e visibile.
+La schermata annotata e stata catturata sulla dashboard reale usando la root `tmp/student-lab-demo`, lo studente `rossi-mario` e il viewport desktop `1440x1000`.
+
+<table>
+<tr>
+<td valign="top" width="52%">
+
+![Panoramica annotata a colori con i dati da controllare](images/dashboard-guides/scenario-1-studente-overview-colori.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1-5 - Blu: apertura e selezione</strong><br>
+<strong>1.</strong> Apri esattamente <code>http://localhost:8765/tools/student_dashboard.html</code>.<br>
+<strong>2.</strong> Individua i filtri <code>Classe</code> e <code>Studente</code>.<br>
+<strong>3.</strong> Seleziona la classe demo, se presente, quindi <code>rossi-mario</code>.<br>
+<strong>4.</strong> Clicca <code>Carica</code>: la sola selezione non aggiorna i dati.<br>
+<strong>5.</strong> Attendi il completamento del caricamento.<br><br>
+
+<strong style="color:#7b35b2">Step 6-8 - Viola: consegna</strong><br>
+<strong>6.</strong> Nel pannello <code>Consegne</code> cerca <strong>Demo somma in Python</strong>.<br>
+<strong>7.</strong> Verifica stato completata/consegnata, non mancante.<br>
+<strong>8.</strong> Controlla scadenza e indicazione del grading.<br><br>
+
+<strong style="color:#168a45">Step 9-12 - Verde: dettaglio e test</strong><br>
+<strong>9.</strong> Apri <code>Dettaglio</code> o <code>Apri consegna</code>.<br>
+<strong>10.</strong> Verifica workspace e file, inclusi <code>main.py</code> e <code>tests/test_main.py</code> quando disponibili.<br>
+<strong>11.</strong> Chiudi il modal e apri il pannello <code>Lab</code>.<br>
+<strong>12.</strong> Controlla report, ultimo tentativo e risultato <code>2/2</code>.<br><br>
+
+<strong style="color:#c87800">Step 13 - Arancione: aiuti e feedback</strong><br>
+<strong>13.</strong> Verifica <code>Aiuti tracciati</code> e che il feedback AI non approvato non venga mostrato come definitivo.
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary>Evidenza Step 6-8: pannello Consegne con Demo somma in Python</summary>
+
+![Pannello Consegne con Demo somma in Python](images/dashboard-guides/scenario-1-studente-consegna.png)
+</details>
+
+<details>
+<summary>Evidenza Step 9-12: pannello Lab con workspace, report e test</summary>
+
+![Pannello Lab con workspace, report e test](images/dashboard-guides/scenario-1-studente-lab.png)
+</details>
+
+<details>
+<summary>Evidenza Step 9-10: modal dettaglio della consegna e file</summary>
+
+![Modal dettaglio della consegna](images/dashboard-guides/scenario-1-studente-dettaglio.png)
+</details>
+
+### Precondizioni
+
+Esegui i comandi dalla root del repository. Se il server demo e gia attivo, non avviarne una seconda istanza.
+
+```powershell
+python scripts/student_lab_demo_setup.py
+python scripts/course_board_server.py --root tmp/student-lab-demo
+```
+
+Il secondo comando resta attivo nel terminale. Usa un browser separato per la prova. Se compare una richiesta di autenticazione, inserisci l'utente `teacher` e il token stampato dal server.
+
+### Da dove arrivano i dati
+
+| Dato da controllare | Percorso nella root demo | Perche serve |
+| --- | --- | --- |
+| Activity | `tmp/student-lab-demo/activities/python-demo-somma-001.json` | Contiene titolo e istruzioni dell'esercizio |
+| Assegnazione | `tmp/student-lab-demo/teacher-assignments/` | Collega activity, classe e studenti |
+| Registro/report docente | `tmp/student-lab-demo/teacher-reports/demo/python-demo-somma-001.json` | Riassume stato, grading e test per ogni studente |
+| Workspace | `tmp/student-lab-demo/examples/assignment_tracking/student_repos/rossi-mario/assignments/python-demo-somma-001/` | Contiene i file su cui lo studente lavora |
+| Report lab | `tmp/student-lab-demo/examples/assignment_tracking/student_repos/rossi-mario/reports/python-demo-somma-001/latest.json` | Contiene l'ultimo risultato del runner |
+| Aiuti | `tmp/student-lab-demo/teacher-help-events/` | Contiene gli eventi di richiesta aiuto |
+
+### Procedura dettagliata
+
+1. Apri esattamente `http://localhost:8765/tools/student_dashboard.html`.
+   Non aprire `assignment_dashboard.html`: quella e la dashboard docente e mostra registri diversi.
+2. Nella parte superiore individua i filtri `Classe` e `Studente`.
+3. Seleziona la classe demo, se presente, quindi seleziona `rossi-mario`.
+4. Clicca `Carica`: la selezione dello studente da sola non aggiorna i dati mostrati.
+5. Attendi il completamento del caricamento. Non cambiare scheda durante il caricamento.
+6. Nel pannello `Consegne` cerca il titolo esatto **Demo somma in Python**.
+7. Verifica che la riga mostri uno stato di consegna completata o consegnata e che non sia indicata come mancante.
+8. Controlla nella stessa riga la scadenza e l'eventuale indicazione del grading.
+9. Apri `Dettaglio` o `Apri consegna` nella riga della demo.
+10. Nel dettaglio verifica che il workspace risulti presente e che siano elencati i file dell'attivita, inclusi `main.py` e `tests/test_main.py` quando disponibili.
+11. Chiudi il modal, torna alla vista della consegna e apri il pannello `Lab`.
+12. Controlla il report, l'ultimo tentativo e il risultato dei test.
+13. Verifica che gli aiuti tracciati siano valorizzati e che un eventuale feedback AI non approvato dal docente non venga mostrato come feedback definitivo.
+
+### Risultato atteso
+
+- La consegna visibile e **Demo somma in Python**, non `Somma in Python`.
 - Il workspace risulta presente.
 - Il report risulta presente.
 - I test risultano passati: `2/2`.
@@ -115,9 +206,72 @@ Risultato atteso:
 - Gli aiuti tracciati sono valorizzati.
 - Il feedback AI non approvato dal docente non viene mostrato allo studente come feedback definitivo.
 
+### Se il risultato non coincide
+
+- Se vedi due consegne `Somma in Python`, controlla l'URL: probabilmente e aperta la dashboard docente.
+- Se vedi `Demo somma in Python` ma senza dati, verifica che il server sia stato avviato con `--root tmp/student-lab-demo`.
+- Se il server segnala che la root e gia in uso, non avviarne un altro: usa l'istanza gia attiva.
+- Se il browser mostra una risposta precedente, esegui un hard refresh con `Ctrl+F5` e riseleziona `rossi-mario`.
+
+### Evidenze da raccogliere
+
+Per una prova manuale annota:
+
+| Evidenza | Valore da riportare |
+| --- | --- |
+| URL usato | `student_dashboard.html` |
+| Studente | `rossi-mario` |
+| Activity visualizzata | `Demo somma in Python` |
+| Workspace | presente/assente |
+| Report | presente/assente |
+| Test | `2/2` oppure valore osservato |
+| Aiuti | numero visualizzato |
+| Esito | superato / problema con descrizione |
+
+Questi passaggi sono gia predisposti per una futura automazione Playwright: URL, studente, titolo activity e valori attesi possono diventare asserzioni; la schermata annotata puo essere usata come riferimento visivo durante la prova.
+
 ## Scenario 2 - Dashboard docente con registro demo
 
 Obiettivo: verificare che il docente possa caricare il registro generato dalla demo lab.
+
+### Schermata reale annotata
+
+La cattura usa la root `tmp/student-lab-demo`, il registro `demo/python-demo-somma-001.json` e il viewport desktop `1440x1000`.
+
+<table>
+<tr>
+<td valign="top" width="52%">
+
+![Panoramica docente annotata per il registro](images/dashboard-guides/scenario-2-docente-registro-colori.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1-2 - Blu: registro selezionato</strong><br>
+<strong>1.</strong> Apri <code>assignment_dashboard.html</code>.<br>
+<strong>2.</strong> Nel pannello <code>Registro selezionato</code> individua il registro demo.<br><br>
+
+<strong style="color:#7b35b2">Step 3 - Viola: caricamento</strong><br>
+<strong>3.</strong> Clicca <code>Carica registro</code> e attendi il caricamento; usa <code>Ricarica</code> solo per rileggere i dati persistiti.<br><br>
+
+<strong style="color:#168a45">Step 4, 7-8 - Verde: riepilogo e consegna</strong><br>
+<strong>4.</strong> Controlla classe, activity, studenti, consegnati, mancanti e ritardi.<br>
+<strong>7.</strong> In <code>Apri studenti</code> cerca <code>rossi-mario</code> e apri la consegna.<br>
+<strong>8.</strong> Nel dettaglio seleziona <code>main.py</code> e <code>test_main.py</code>.<br><br>
+
+<strong style="color:#c87800">Step 5-6 - Arancione: vista studenti</strong><br>
+<strong>5.</strong> Clicca <code>Apri studenti</code>.<br>
+<strong>6.</strong> Verifica che il modal mostri lo studente corretto e i suoi indicatori.
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary>Evidenza Step 1-4: dashboard docente con registro caricato</summary>
+
+![Registro docente caricato](images/dashboard-guides/scenario-2-docente-registro.png)
+</details>
 
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Nel pannello del registro seleziona `demo/python-demo-somma-001.json`.
@@ -144,6 +298,43 @@ Risultato atteso:
 
 Obiettivo: verificare che il quadro classe rimanga leggibile e che i bottoni aprano la consegna corretta.
 
+### Schermata reale annotata
+
+La cattura mostra il modal <code>Quadro classe</code> aperto sul registro demo, con filtri e righe reali di `rossi-mario` e `bianchi-luca`.
+
+<table>
+<tr>
+<td valign="top" width="52%">
+
+![Quadro classe annotato per filtri, risultati e azioni](images/dashboard-guides/scenario-3-docente-quadro-colori.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1-3 - Blu: apertura e filtri</strong><br>
+<strong>1.</strong> Apri la dashboard docente.<br>
+<strong>2.</strong> Carica <code>demo/python-demo-somma-001.json</code>.<br>
+<strong>3.</strong> Controlla classe, studente, activity, tipo, stato e modalità.<br><br>
+
+<strong style="color:#7b35b2">Step 4 - Viola: vista elenco</strong><br>
+<strong>4.</strong> Seleziona <code>Elenco</code> e verifica che la tabella resti leggibile.<br><br>
+
+<strong style="color:#168a45">Step 5 - Verde: risultato Rossi</strong><br>
+<strong>5.</strong> Cerca <code>rossi-mario</code> e controlla consegna, stato, test <code>2/2</code> e voto.<br><br>
+
+<strong style="color:#c87800">Step 6 - Arancione: azione</strong><br>
+<strong>6.</strong> Clicca <code>Consegna</code> solo se abilitato e verifica che apra la consegna corretta.
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary>Evidenza Step 3-6: quadro classe, filtri, righe e azioni</summary>
+
+![Quadro classe con filtri e righe](images/dashboard-guides/scenario-3-docente-quadro.png)
+</details>
+
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Carica il registro `demo/python-demo-somma-001.json`.
 3. Nel pannello `Quadro classe` controlla i filtri attivi.
@@ -161,6 +352,45 @@ Risultato atteso:
 ## Scenario 4 - Richieste di aiuto visibili al docente
 
 Obiettivo: verificare che il docente veda quante volte lo studente ha chiesto aiuto e il prompt inviato.
+
+### Schermate reali della prova
+
+La schermata annotata evidenzia il modal dedicato agli aiuti; la schermata completa sotto serve per
+controllare testo, provider e contatori senza affidarsi soltanto al colore.
+
+<table>
+<tr>
+<td valign="top" width="52%">
+
+![Modal aiuti docente annotato](images/dashboard-guides/scenario-4-docente-aiuti-colori.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1-5 - Blu: raggiungi lo studente</strong><br>
+<strong>1.</strong> Apri la dashboard docente e carica il registro demo.<br>
+<strong>2.</strong> Apri <code>Studenti</code>.<br>
+<strong>3.</strong> Cerca <code>rossi-mario</code>.<br>
+<strong>4.</strong> Controlla il riepilogo degli aiuti.<br>
+<strong>5.</strong> Verifica i contatori nella riga.<br><br>
+
+<strong style="color:#7b35b2">Step 6-8 - Viola: leggi i dettagli</strong><br>
+<strong>6.</strong> Clicca <code>Dettagli aiuti</code>.<br>
+<strong>7.</strong> Leggi prompt, risposta, provider e stato.<br>
+<strong>8.</strong> Confronta i token dichiarati con il riepilogo.<br><br>
+
+<strong style="color:#c87800">Step 9 - Arancione: ritorno</strong><br>
+<strong>9.</strong> Chiudi il modal e verifica di restare nella stessa vista Studenti.
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary>Evidenza Step 6-8: dettaglio completo delle richieste di aiuto</summary>
+
+![Dettaglio completo delle richieste di aiuto](images/dashboard-guides/scenario-4-docente-aiuti.png)
+</details>
 
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Carica il registro `demo/python-demo-somma-001.json`.
@@ -189,13 +419,49 @@ Risultato atteso:
 
 Obiettivo: verificare che un report fallito mostri gli errori in un modal leggibile, non in una linguetta troppo stretta.
 
+### Schermate reali della prova
+
+La cattura e stata ottenuta con il report demo che contiene un errore di test (fixture `bianchi-luca`). Il bordo arancione indica
+il modal che deve contenere l'errore completo.
+
+<table>
+<tr>
+<td valign="top" width="52%">
+
+![Modal dettaglio errori annotato](images/dashboard-guides/scenario-5-docente-errori-colori.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1-4 - Blu: selezione</strong><br>
+<strong>1.</strong> Apri la dashboard docente.<br>
+<strong>2.</strong> Carica o ricarica il registro mutato.<br>
+<strong>3.</strong> Apri <code>Studenti</code>.<br>
+<strong>4.</strong> Cerca <code>bianchi-luca</code>.<br><br>
+
+<strong style="color:#c87800">Step 5 - Arancione: dettaglio</strong><br>
+<strong>5.</strong> Clicca <code>Dettaglio errori</code> e verifica che il testo Python/pytest sia leggibile anche quando e lungo.<br><br>
+
+<strong style="color:#168a45">Chiusura - Verde: ritorno</strong><br>
+Chiudi il modal e verifica che la vista del registro resti invariata.
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary>Evidenza Step 5: modal con dettaglio errori Python/pytest</summary>
+
+![Dettaglio errori completo](images/dashboard-guides/scenario-5-docente-errori.png)
+</details>
+
 Prepara un errore intenzionale dopo il setup comune:
 
 ```powershell
-$source = "tmp\student-lab-demo\examples\assignment_tracking\student_repos\rossi-mario\assignments\python-demo-somma-001\main.py"
+$source = "tmp\student-lab-demo\examples\assignment_tracking\student_repos\bianchi-luca\assignments\python-demo-somma-001\main.py"
 Set-Content -Path $source -Encoding utf8 -Value @("def somma(a, b):", "    return a - b")
-python scripts/student_lab_runner.py --root tmp/student-lab-demo --student-id rossi-mario --activity-id python-demo-somma-001 --write-report
-python -m scripts.track_assignments --activity tmp\student-lab-demo\activities\python-demo-somma-001.json --target tmp\student-lab-demo\examples\assignment_tracking\student_repos\rossi-mario --assigned-at 2026-10-12T09:00:00+02:00 --due-at 2026-10-19T23:59:00+02:00 --now 2026-10-18T18:30:00+02:00 --class-id 3A-TPSI --class-label "3A TPSI" --github-team team-3a-tpsi --output tmp\student-lab-demo\teacher-reports\demo\python-demo-somma-001.json
+python scripts/student_lab_runner.py --root tmp/student-lab-demo --student-id bianchi-luca --activity-id python-demo-somma-001 --write-report
+python -m scripts.track_assignments --activity tmp\student-lab-demo\activities\python-demo-somma-001.json --target tmp\student-lab-demo\examples\assignment_tracking\student_repos\bianchi-luca --assigned-at 2026-10-12T09:00:00+02:00 --due-at 2026-10-19T23:59:00+02:00 --now 2026-10-18T18:30:00+02:00 --class-id 3A-TPSI --class-label "3A TPSI" --github-team team-3a-tpsi --output tmp\student-lab-demo\teacher-reports\demo\python-demo-somma-001.json
 ```
 
 Poi:
@@ -203,7 +469,7 @@ Poi:
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Carica o ricarica `demo/python-demo-somma-001.json`.
 3. Apri `Studenti`.
-4. Cerca `rossi-mario`.
+4. Cerca `bianchi-luca`.
 5. Clicca `Dettaglio errori`.
 
 Risultato atteso:
@@ -234,6 +500,31 @@ python scripts/course_board_server.py --root tmp/student-lab-demo
 ## Scenario 6 - Dashboard studente dopo esecuzione TUI
 
 Obiettivo: verificare che un'azione fatta dalla TUI venga riflessa nella GUI studente.
+
+### Schermata reale di riscontro
+
+La schermata mostra il risultato che deve comparire dopo l'esecuzione del runner dalla TUI: report,
+workspace, test e aiuti devono provenire dai dati persistiti.
+
+<table>
+<tr><td valign="top" width="52%">
+
+<details>
+<summary>Evidenza Step 1-3: sessione TUI registrata</summary>
+
+La traccia mostra la selezione della consegna, l'esecuzione del comando <code>e</code>, il report salvato
+e il ritorno alla lista. E stata acquisita eseguendo la TUI sulla root demo corrente.
+
+[Apri la traccia completa della sessione TUI](images/dashboard-guides/scenario-6-tui-session.txt)
+</details>
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-2 - Blu: esecuzione</strong><br>
+Avvia la TUI, seleziona <code>Demo somma in Python</code> ed esegui il runner.<br><br>
+<strong style="color:#168a45">Step 3-6 - Verde: verifica GUI</strong><br>
+Esci, apri la dashboard studente, seleziona <code>rossi-mario</code>, clicca <code>Carica</code> e confronta report, test, ultimo tentativo e aiuti con la TUI.
+</td></tr>
+</table>
 
 1. Avvia la TUI:
 
@@ -315,6 +606,26 @@ Risultato atteso:
 
 Obiettivo: verificare che la vista studente mostri il percorso associato e il calendario in sola lettura.
 
+### Schermata reale annotata
+
+La cattura evidenzia calendario e filtri, percorso e consegne come blocchi distinti. La cattura documenta
+il controllo negativo della fixture demo; la procedura include anche una variante positiva riproducibile.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Percorso studente e calendario annotati](images/dashboard-guides/scenario-8-studente-percorso-colori.png)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-5 - Blu: calendario</strong><br>
+Apri la dashboard, seleziona <code>rossi-mario</code>, carica, scegli modalità, mese e filtro e prova lista/calendario.<br><br>
+<strong style="color:#7b35b2">Step 3 - Viola: percorso</strong><br>
+Controlla i percorsi associati e apri un paragrafo senza possibilità di modifica.<br><br>
+<strong style="color:#168a45">Step 6 - Verde: consegne</strong><br>
+Confronta attività, scadenze, stato e distinzione tra consegna, UDA e interruzione.
+</td></tr>
+</table>
+
 1. Apri `http://localhost:8765/tools/student_dashboard.html`.
 2. Seleziona `rossi-mario`.
 3. Controlla il pannello del percorso.
@@ -322,15 +633,47 @@ Obiettivo: verificare che la vista studente mostri il percorso associato e il ca
 5. Prova i filtri di visualizzazione.
 6. Prova la vista lista e la vista calendario.
 
+Per verificare anche l'associazione positiva, ripeti il test con una seconda preparazione della root demo:
+
+1. Ferma il server con `Ctrl+C`.
+2. Copia `doc/images/dashboard-guides/scenario-8-positive-course-design.json` in
+   `tmp/student-lab-demo/doc/course_design.json`, sostituendo il file presente.
+3. Riavvia il server sulla stessa root e ricarica la dashboard.
+4. Seleziona di nuovo `rossi-mario` e controlla il pannello del percorso.
+
+La fixture positiva associa `demo-percorso-3a` alla classe `3A-TPSI`. Per tornare al caso negativo,
+esegui di nuovo `python scripts/student_lab_demo_setup.py` e riavvia il server.
+
 Risultato atteso:
 
-- Lo studente vede solo percorsi associati al suo profilo o alla sua classe.
+- Nella fixture demo lo studente vede il messaggio `Percorso non associato`.
+- Nella fixture positiva lo studente vede `Percorso demo 3A` e la relativa UDA, perché la classe `3A-TPSI` e associata.
+- Un percorso associato a un'altra classe non deve essere mostrato allo studente.
 - I paragrafi del percorso sono cliccabili e puntano alla pagina GitHub con ancora del paragrafo.
 - Il calendario e in sola lettura.
 - Consegne, UDA reali, UDA programmate e interruzioni sono distinguibili.
 - Le interruzioni usano lo sfondo a strisce salmone/bianco.
 
 ## Scenario 9 - Percorso docente
+
+### Schermata reale annotata
+
+La cattura parte dal repository corrente senza progetto caricato: e utile per verificare lo stato iniziale.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Percorso docente annotato](images/dashboard-guides/scenario-9-docente-percorso-colori.png)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-2 - Blu: catalogo</strong><br>
+Apri <code>course_board.html</code> e usa ricerca, sorgenti e livelli del catalogo.<br><br>
+<strong style="color:#7b35b2">Step 3-5 - Viola: progetto</strong><br>
+Crea o apri il progetto, aggiungi un percorso e inserisci paragrafi nelle UDA.<br><br>
+<strong style="color:#c87800">Step 6-8 - Arancione: azioni</strong><br>
+Prova salva, ricarica, generazione AI e annullamento; ogni stato deve avere feedback visibile.
+</td></tr>
+</table>
 
 Obiettivo: verificare creazione, modifica, persistenza, protezione dagli errori e accessibilità della pagina Percorso.
 
@@ -366,15 +709,42 @@ Risultato atteso:
 
 ## Scenario 10 - Calendario docente
 
+### Schermata reale annotata
+
+La cattura mostra la vista iniziale del calendario con le date obbligatorie ancora da impostare.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Calendario docente annotato](images/dashboard-guides/scenario-10-docente-calendario-colori.png)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-2 - Blu: calendario e date</strong><br>
+Apri <code>school_calendar.html</code>, carica o crea un calendario e imposta inizio/fine lezioni.<br><br>
+<strong style="color:#c87800">Step 3 - Arancione: interruzioni</strong><br>
+Aggiungi o importa festivita e sospensioni e verifica che siano distinguibili.<br><br>
+<strong style="color:#168a45">Step 4 - Verde: viste</strong><br>
+Controlla calendario, Gantt UDA e riepilogo ore; prova modalita e filtri senza perdere dati.
+</td></tr>
+</table>
+
 Obiettivo: verificare che il calendario docente resti coerente con il percorso e con la dashboard studente.
 
 1. Con il server dello Scenario 9 ancora attivo, apri `http://localhost:8765/tools/school_calendar.html`.
-2. Prova modalità `settimana`, `mese` e `anno`.
-3. Prova frecce avanti/indietro e filtri visibili.
+2. Seleziona il percorso salvato nello Scenario 9, oppure crea un calendario di prova associato a
+   `test-manuale-percorso.json`.
+3. Imposta inizio e fine delle lezioni e salva il calendario.
+4. Aggiungi almeno una festivita o sospensione con intervallo di date e salva di nuovo.
+5. Se il percorso contiene UDA programmate o reali, verifica che compaiano nel calendario e nel Gantt.
+   Se non sono presenti, annota esplicitamente il dato come prerequisito non disponibile invece di
+   considerare superato il controllo.
+6. Prova modalità `settimana`, `mese` e `anno`.
+7. Prova frecce avanti/indietro e filtri visibili, verificando che interruzioni e UDA restino distinguibili.
 
 Risultato atteso:
 
 - La grafica resta coerente con lo stile morbido del calendario docente.
+- Il calendario mantiene le date salvate e il percorso associato dopo ricarica.
 - I filtri non nascondono dati senza indicarlo.
 - Le UDA reali e programmate sono distinguibili quando presenti.
 - Le interruzioni sono visibili e non si confondono con consegne mancanti.

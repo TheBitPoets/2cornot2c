@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Mappa visiva dello scenario 1 della dashboard studente</title>
+  <desc id="desc">Percorso in quattro passi: aprire la dashboard, selezionare lo studente, leggere la consegna e controllare il pannello Lab.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#56708f" />
+    </marker>
+    <style>
+      .bg { fill: #f5f7fa; }
+      .panel { fill: #ffffff; stroke: #c9d3df; stroke-width: 2; }
+      .header { fill: #243447; }
+      .step { fill: #eaf2fb; stroke: #7fa6cf; stroke-width: 2; }
+      .data { fill: #fff8e6; stroke: #d3ad55; stroke-width: 2; }
+      .ok { fill: #eaf7ef; stroke: #6bad83; stroke-width: 2; }
+      .title { font: 700 25px Arial, sans-serif; fill: #ffffff; }
+      .label { font: 700 20px Arial, sans-serif; fill: #1f2d3d; }
+      .text { font: 16px Arial, sans-serif; fill: #314255; }
+      .small { font: 14px Arial, sans-serif; fill: #526579; }
+      .arrow { stroke: #56708f; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="720" />
+  <rect class="panel" x="40" y="35" width="1120" height="650" rx="8" />
+  <rect class="header" x="40" y="35" width="1120" height="70" rx="8" />
+  <text class="title" x="70" y="79">Scenario 1 - Dashboard studente</text>
+  <text class="small" x="70" y="135">Segui i numeri nell'ordine indicato. I dati arrivano dalla root tmp/student-lab-demo.</text>
+
+  <rect class="step" x="80" y="175" width="470" height="125" rx="8" />
+  <text class="label" x="105" y="212">1. Apri la pagina corretta</text>
+  <text class="text" x="105" y="244">student_dashboard.html</text>
+  <text class="small" x="105" y="271">Non usare assignment_dashboard.html: e la vista docente.</text>
+
+  <rect class="step" x="650" y="175" width="470" height="125" rx="8" />
+  <text class="label" x="675" y="212">2. Seleziona lo studente</text>
+  <text class="text" x="675" y="244">Studente: rossi-mario</text>
+  <text class="small" x="675" y="271">Seleziona anche la classe quando richiesto.</text>
+
+  <path class="arrow" d="M550,237 L640,237" />
+
+  <rect class="data" x="80" y="385" width="470" height="145" rx="8" />
+  <text class="label" x="105" y="422">3. Controlla la consegna</text>
+  <text class="text" x="105" y="454">Demo somma in Python</text>
+  <text class="small" x="105" y="482">Workspace presente, report presente, test 2/2.</text>
+  <text class="small" x="105" y="506">Apri il dettaglio per verificare i file.</text>
+
+  <rect class="ok" x="650" y="385" width="470" height="145" rx="8" />
+  <text class="label" x="675" y="422">4. Controlla il pannello Lab</text>
+  <text class="text" x="675" y="454">Ultimo tentativo e aiuti tracciati</text>
+  <text class="small" x="675" y="482">Il feedback AI non approvato non e definitivo.</text>
+  <text class="small" x="675" y="506">Annota eventuali errori o dati mancanti.</text>
+
+  <path class="arrow" d="M885,300 L885,375" />
+  <path class="arrow" d="M650,457 L560,457" />
+
+  <rect class="panel" x="80" y="585" width="1040" height="65" rx="8" />
+  <text class="label" x="105" y="613">Dati demo attesi</text>
+  <text class="small" x="305" y="613">activity: python-demo-somma-001 | registro: demo/python-demo-somma-001.json | root: tmp/student-lab-demo</text>
+</svg>

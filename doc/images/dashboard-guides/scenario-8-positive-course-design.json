@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "paths": [
+    {
+      "id": "demo-percorso-3a",
+      "title": "Percorso demo 3A",
+      "description": "Fixture positiva per verificare la visibilita del percorso associato alla classe.",
+      "class_ids": ["3A-TPSI"],
+      "udas": [
+        {
+          "id": "uda-demo-associata",
+          "title": "UDA demo associata",
+          "path": "Base",
+          "weeks": "1",
+          "items": [
+            {
+              "id": "scenario-8-paragrafo",
+              "title": "Paragrafo percorso associato",
+              "source": "README.md",
+              "href": "../README.md#introduzione",
+              "level": 2
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

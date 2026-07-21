@@ -84,6 +84,43 @@ Pagina studente:
 | `scenario-studente-consegna.png` | da fare | Lettura consegna | Una consegna con stato, scadenza e grading leggibili |
 | `scenario-studente-feedback.png` | da fare | Feedback approvato | Feedback pubblicato e nessuna bozza AI visibile |
 
+Per lo Scenario 1 sono disponibili catture reali con nomi specifici:
+
+| File | Stato | Pagina | Cosa mostra |
+|---|---|---|---|
+| `scenario-1-studente-overview-colori.png` | fatto | Dashboard studente | Studente `rossi-mario` e controlli obbligatori con cerchi colorati |
+| `scenario-1-studente-consegna.png` | fatto | Dashboard studente | Consegna `Demo somma in Python` |
+| `scenario-1-studente-lab.png` | fatto | Dashboard studente | Workspace, report e test `2/2` |
+| `scenario-1-studente-dettaglio.png` | fatto | Dashboard studente | Modal dettaglio della consegna |
+
+Per gli scenari GUI 2-6 e 8-10 sono disponibili panoramiche annotate a colori. I numeri e i colori
+seguono esattamente la procedura dettagliata nella guida; le immagini non annotate restano come evidenza
+completa della schermata, mentre quelle annotate servono per trovare rapidamente i controlli da verificare.
+
+| File | Stato | Pagina | Cosa mostra |
+|---|---|---|---|
+| `scenario-2-docente-registro-colori.png` | fatto | Dashboard docente | Registro selezionato, caricamento, riepilogo e pannello studenti |
+| `scenario-2-docente-registro.png` | fatto | Dashboard docente | Schermata completa dopo il caricamento del registro |
+| `scenario-3-docente-quadro-colori.png` | fatto | Dashboard docente | Filtri, vista elenco, riga Rossi e azioni del quadro classe |
+| `scenario-3-docente-quadro.png` | fatto | Dashboard docente | Modal Quadro classe completo con filtri e due studenti |
+| `scenario-4-docente-aiuti-colori.png` | fatto | Dashboard docente | Modal aiuti annotato con numerazione della procedura |
+| `scenario-4-docente-aiuti.png` | fatto | Dashboard docente | Prompt, risposta, provider e contatori degli aiuti |
+| `scenario-5-docente-errori-colori.png` | fatto | Dashboard docente | Modal dettaglio errori evidenziato |
+| `scenario-5-docente-errori.png` | fatto | Dashboard docente | Test falliti e dettaglio Python/pytest |
+| `scenario-6-tui-session.txt` | fatto | TUI studente | Sessione reale con runner e report salvato |
+| `scenario-8-studente-percorso-colori.png` | fatto | Dashboard studente | Calendario, percorso e consegne annotati |
+| `scenario-8-studente-percorso.png` | fatto | Dashboard studente | Vista completa del percorso/calendario studente |
+| `scenario-9-docente-percorso-colori.png` | fatto | Course Design Board | Catalogo, progetto e azioni annotati |
+| `scenario-9-docente-percorso.png` | fatto | Course Design Board | Vista iniziale del progetto didattico |
+| `scenario-10-docente-calendario-colori.png` | fatto | School Calendar Board | Date, interruzioni, calendario e Gantt annotati |
+| `scenario-10-docente-calendario.png` | fatto | School Calendar Board | Vista iniziale del calendario docente |
+
+Gli scenari GUI 2-6 e 8-10 riusano la stessa convenzione: una panoramica annotata a sinistra e la procedura
+numerata a destra, con eventuali schermate di dettaglio sotto. Lo Scenario 7 TUI usa invece una traccia
+testuale della sessione, perché il terminale non ha una panoramica GUI stabile da annotare. Le catture
+reali vengono aggiunte insieme alla verifica manuale, così la documentazione non presenta dati inventati o
+immagini non corrispondenti alla versione corrente.
+
 ## Dopo aver aggiunto immagini
 
 Quando uno screenshot viene salvato:
@@ -92,3 +129,11 @@ Quando uno screenshot viene salvato:
 2. verificare che il nome file corrisponda a quello citato nelle guide;
 3. controllare dimensione e leggibilita;
 4. valutare se inserirlo direttamente nella guida o lasciarlo come riferimento linkato.
+
+## Tavole di orientamento
+
+Le tavole SVG con numerazione e percorsi dei dati possono essere usate anche prima degli screenshot reali della UI. Non sostituiscono una verifica visiva del browser: servono a far trovare rapidamente URL, filtri, pannelli e dati attesi.
+
+| File | Scenario | Stato |
+|---|---|---|
+| `scenario-1-studente-mappa.svg` | Dashboard studente con report riuscito | fatto |

@@ -1,0 +1,134 @@
+TheBitLab - lab studente
+Studente: rossi-mario
+Consegne: 1 | Da fare: 0 | Mancanti: 0 | Consegnate: 1
+
+Comandi: numero = dettaglio | r = ricarica | q = esci
+
+Legenda:
+- Da fare: consegna assegnata, scadenza futura, nessun report ancora salvato.
+- Mancante: scadenza superata senza report/consegna.
+- Consegnata: esiste un report coerente con la consegna.
+- Consegnata in ritardo: report presente ma consegnato dopo la scadenza.
+- workspace: cartella locale della consegna presente.
+- no workspace: cartella locale non ancora presente o non trovata.
+
+ #  Titolo                             | Stato                  | Scadenza         | Workspace
+-----------------------------------------------------------------------------------------------
+ 1. Demo somma in Python               | Consegnata             | 2026-10-19 23:59 | workspace
+
+Scelta: > [-] Dettaglio consegna                                       |   [-] Report                                           
+Titolo:            Demo somma in Python                        | Path:              examples/assignment_tracking/stud...
+Activity:          python-demo-somma-001                       | Esiste:            si                                  
+Assegnazione:      assignment-python-demo-somma-001-3a-tpsi... | Consegnata:        2026-07-21 10:44                    
+Classe:            3A TPSI                                     | Commit:            -                                   
+Assegnata:         2026-10-12 09:00                            | -------------------------------------------------------
+Scadenza:          2026-10-19 23:59                            |   [-] Ultimo dettaglio test                            
+Stato:             Consegnata                                  |   [ok] tests/test_main.py::test_somma_positivi         
+-------------------------------------------------------------- |   [ok] tests/test_main.py::test_somma_negativi         
+  [-] Workspace                                                | -------------------------------------------------------
+Path:              examples/assignment_tracking/student_rep... |   [-] Grading                                          
+Esiste:            si                                          | Stato:             graded_passed (2/2 test)            
+-------------------------------------------------------------- | Voto:              10.0                                
+  [-] Activity                                                 | -------------------------------------------------------
+Path:              activities/python-demo-somma-001.json       |   [-] Runner                                           
+Tipo:              laboratorio                                 | Stato:             passed                              
+Linguaggio:        python                                      | Backend:           local                               
+Sorgente:          main.py                                     | -------------------------------------------------------
+Argomenti:         funzioni, test                              |   [-] Guida rapida                                     
+-------------------------------------------------------------- |   Consegna  lavoro assegnato dal docente.              
+  [-] Aiuto consentito                                         |   Workspace cartella locale dove modifichi i file.     
+Modalità:          AI assisted                                 |   Test      controlli automatici sul tuo lavoro.       
+Sintesi:           Puoi usare aiuto AI nei limiti decisi da... |   Report    risultato salvato e letto da dashboard/r...
+Permesso:          feedback tecnico, richiami teorici, sugg... |                                                        
+Non permesso:      sostituire la consegna con una soluzione... | Flusso consigliato                                     
+-------------------------------------------------------------- |   1. Apri workspace                                    
+  [-] Richieste aiuto                                          |   2. Modifica i file                                   
+Stato log:         ok                                          |   3. Esegui test e salva report                        
+Errore log:        -                                           |   4. Controlla esito e, se serve, chiedi aiuto sulla...
+Eventi:            1                                           | Azioni principali                                      
+Consentite:        1                                           |   e  Esegui test e salva report                        
+Bloccate:          -                                           |   a  Chiedi aiuto                                      
+AI budget:         1/5 usate, 4 rimanenti                      |   o  Apri workspace                                    
+Ultima:            2026-10-18 18:35                            |   v  Apri editor                                       
+Esito ultima:      consentita                                  |   l  Modifica layout pannelli                          
+-------------------------------------------------------------- |                                                        
+                                                               | Altri comandi                                          
+                                                               |   h  Storico aiuti                                     
+                                                               |   b  Torna alla lista                                  
+                                                               |   invio  Torna alla lista                              
+                                                               |   q  Esci                                              
+                                                               | -------------------------------------------------------
+
+Dettaglio: Esecuzione completata
+Stato runner:      passed
+Esito:             consegna superata
+Test:              2/2 test
+Report salvato:    E:\dev\2cornot2c\tmp\student-lab-demo\examples\assignment_tracking\student_repos\rossi-mario\reports\python-demo-somma-001\latest.json
+
+Dettaglio test
+  [ok] tests/test_main.py::test_somma_positivi
+  [ok] tests/test_main.py::test_somma_negativi
+
+Questo report è quello letto da dashboard e registro docente.
+Premi invio per continuare...> [-] Dettaglio consegna                                       |   [-] Report                                           
+Titolo:            Demo somma in Python                        | Path:              examples/assignment_tracking/stud...
+Activity:          python-demo-somma-001                       | Esiste:            si                                  
+Assegnazione:      assignment-python-demo-somma-001-3a-tpsi... | Consegnata:        2026-07-21 12:47                    
+Classe:            3A TPSI                                     | Commit:            -                                   
+Assegnata:         2026-10-12 09:00                            | -------------------------------------------------------
+Scadenza:          2026-10-19 23:59                            |   [-] Ultimo dettaglio test                            
+Stato:             Consegnata                                  |   [ok] tests/test_main.py::test_somma_positivi         
+-------------------------------------------------------------- |   [ok] tests/test_main.py::test_somma_negativi         
+  [-] Workspace                                                | -------------------------------------------------------
+Path:              examples/assignment_tracking/student_rep... |   [-] Grading                                          
+Esiste:            si                                          | Stato:             graded_passed (2/2 test)            
+-------------------------------------------------------------- | Voto:              10.0                                
+  [-] Activity                                                 | -------------------------------------------------------
+Path:              activities/python-demo-somma-001.json       |   [-] Runner                                           
+Tipo:              laboratorio                                 | Stato:             passed                              
+Linguaggio:        python                                      | Backend:           local                               
+Sorgente:          main.py                                     | -------------------------------------------------------
+Argomenti:         funzioni, test                              |   [-] Guida rapida                                     
+-------------------------------------------------------------- |   Consegna  lavoro assegnato dal docente.              
+  [-] Aiuto consentito                                         |   Workspace cartella locale dove modifichi i file.     
+Modalità:          AI assisted                                 |   Test      controlli automatici sul tuo lavoro.       
+Sintesi:           Puoi usare aiuto AI nei limiti decisi da... |   Report    risultato salvato e letto da dashboard/r...
+Permesso:          feedback tecnico, richiami teorici, sugg... |                                                        
+Non permesso:      sostituire la consegna con una soluzione... | Flusso consigliato                                     
+-------------------------------------------------------------- |   1. Apri workspace                                    
+  [-] Richieste aiuto                                          |   2. Modifica i file                                   
+Stato log:         ok                                          |   3. Esegui test e salva report                        
+Errore log:        -                                           |   4. Controlla esito e, se serve, chiedi aiuto sulla...
+Eventi:            1                                           | Azioni principali                                      
+Consentite:        1                                           |   e  Esegui test e salva report                        
+Bloccate:          -                                           |   a  Chiedi aiuto                                      
+AI budget:         1/5 usate, 4 rimanenti                      |   o  Apri workspace                                    
+Ultima:            2026-10-18 18:35                            |   v  Apri editor                                       
+Esito ultima:      consentita                                  |   l  Modifica layout pannelli                          
+-------------------------------------------------------------- |                                                        
+                                                               | Altri comandi                                          
+                                                               |   h  Storico aiuti                                     
+                                                               |   b  Torna alla lista                                  
+                                                               |   invio  Torna alla lista                              
+                                                               |   q  Esci                                              
+                                                               | -------------------------------------------------------
+
+Dettaglio: TheBitLab - lab studente
+Studente: rossi-mario
+Consegne: 1 | Da fare: 0 | Mancanti: 0 | Consegnate: 1
+
+Comandi: numero = dettaglio | r = ricarica | q = esci
+
+Legenda:
+- Da fare: consegna assegnata, scadenza futura, nessun report ancora salvato.
+- Mancante: scadenza superata senza report/consegna.
+- Consegnata: esiste un report coerente con la consegna.
+- Consegnata in ritardo: report presente ma consegnato dopo la scadenza.
+- workspace: cartella locale della consegna presente.
+- no workspace: cartella locale non ancora presente o non trovata.
+
+ #  Titolo                             | Stato                  | Scadenza         | Workspace
+-----------------------------------------------------------------------------------------------
+ 1. Demo somma in Python               | Consegnata             | 2026-10-19 23:59 | workspace
+
+Scelta: 
