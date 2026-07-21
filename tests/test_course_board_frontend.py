@@ -238,6 +238,32 @@ def test_frame_toolbar_exposes_complete_verification_action() -> None:
     assert "Verifica tutta la cornice" in source
 
 
+def test_frame_batch_restores_generation_labels_after_verification_mode() -> None:
+    run_course_board_js(
+        """
+        frameVerificationBatch = {
+          fields: [{ key: "context", label: "Contesto" }],
+          index: 0,
+          running: false,
+          item: { title: "Lezione test" },
+        };
+        showFrameVerificationProgress();
+        assert.equal(els.aiBusyNextBtn.textContent, "Verifica prossimo");
+
+        frameVerificationBatch = null;
+        frameBatch = {
+          rootTitle: "Percorso test",
+          entries: [],
+          index: 0,
+          running: false,
+        };
+        showFrameBatchProgress();
+        assert.equal(els.aiBusyNextBtn.textContent, "AI genera prossimo");
+        assert.equal(els.aiBusyAllBtn.textContent, "AI genera tutti");
+        """
+    )
+
+
 def test_save_as_requires_confirmation_before_overwriting() -> None:
     run_course_board_js(
         """

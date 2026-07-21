@@ -281,6 +281,12 @@ function showFrameBatchProgress() {
   aiProgressTimer = null;
   els.aiBusy.hidden = false;
   els.aiBusyControls.hidden = false;
+  els.aiBusyNextBtn.hidden = false;
+  els.aiBusyAllBtn.hidden = false;
+  els.aiBusyNextBtn.textContent = "AI genera prossimo";
+  els.aiBusyNextBtn.title = "Usa il provider AI configurato per generare solo la prossima cornice nella coda.";
+  els.aiBusyAllBtn.textContent = "AI genera tutti";
+  els.aiBusyAllBtn.title = "Usa il provider AI configurato per generare in sequenza tutte le cornici rimaste nella coda.";
   const total = frameBatch.entries.length;
   const done = frameBatch.index;
   const current = frameBatch.entries[done]?.item;
