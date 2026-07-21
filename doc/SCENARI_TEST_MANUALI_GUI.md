@@ -731,12 +731,20 @@ Controlla calendario, Gantt UDA e riepilogo ore; prova modalita e filtri senza p
 Obiettivo: verificare che il calendario docente resti coerente con il percorso e con la dashboard studente.
 
 1. Con il server dello Scenario 9 ancora attivo, apri `http://localhost:8765/tools/school_calendar.html`.
-2. Prova modalità `settimana`, `mese` e `anno`.
-3. Prova frecce avanti/indietro e filtri visibili.
+2. Seleziona il percorso salvato nello Scenario 9, oppure crea un calendario di prova associato a
+   `test-manuale-percorso.json`.
+3. Imposta inizio e fine delle lezioni e salva il calendario.
+4. Aggiungi almeno una festivita o sospensione con intervallo di date e salva di nuovo.
+5. Se il percorso contiene UDA programmate o reali, verifica che compaiano nel calendario e nel Gantt.
+   Se non sono presenti, annota esplicitamente il dato come prerequisito non disponibile invece di
+   considerare superato il controllo.
+6. Prova modalità `settimana`, `mese` e `anno`.
+7. Prova frecce avanti/indietro e filtri visibili, verificando che interruzioni e UDA restino distinguibili.
 
 Risultato atteso:
 
 - La grafica resta coerente con lo stile morbido del calendario docente.
+- Il calendario mantiene le date salvate e il percorso associato dopo ricarica.
 - I filtri non nascondono dati senza indicarlo.
 - Le UDA reali e programmate sono distinguibili quando presenti.
 - Le interruzioni sono visibili e non si confondono con consegne mancanti.
