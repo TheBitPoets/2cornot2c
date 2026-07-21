@@ -107,6 +107,10 @@ Le immagini seguenti sono state catturate sulla dashboard reale usando la root `
 
 ![Panoramica dashboard studente con Rossi Mario](images/dashboard-guides/scenario-1-studente-overview.png)
 
+Versione annotata: i cerchi rossi indicano i dati minimi da controllare durante lo scenario.
+
+![Panoramica annotata con i dati da controllare](images/dashboard-guides/scenario-1-studente-overview-annotato.png)
+
 ![Pannello Consegne con Demo somma in Python](images/dashboard-guides/scenario-1-studente-consegna.png)
 
 ![Pannello Lab con workspace, report e test](images/dashboard-guides/scenario-1-studente-lab.png)
