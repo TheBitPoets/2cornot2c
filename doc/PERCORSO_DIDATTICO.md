@@ -4175,12 +4175,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Contesto</strong></summary>
 
-      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su durata, visibilità e collegamento degli identificatori in C. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
+      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso intermedio per terzo anno. Serve a lavorare su durata, visibilità e collegamento degli identificatori in C. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
       </details>
     - <details>
       <summary><strong>Prerequisiti</strong></summary>
 
-      Prima di affrontare "Classi di memorizzazione" lo studente dovrebbe aver seguito il lavoro precedente su "Passaggio di strutture a funzioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+      Prima di affrontare "Classi di memorizzazione", lo studente dovrebbe aver seguito il lavoro precedente su "Passaggio di strutture a funzioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
       </details>
     - <details>
       <summary><strong>Obiettivi</strong></summary>
@@ -4190,7 +4190,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Richiamo</strong></summary>
 
-      Richiama il passaggio precedente su "Passaggio di strutture a funzioni" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+      Richiama il passaggio precedente su "Passaggio di strutture a funzioni" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come una prosecuzione naturale, non come un blocco isolato.
       </details>
     - <details>
       <summary><strong>Anticipazione</strong></summary>
@@ -4200,7 +4200,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Prossimo passo</strong></summary>
 
-      Dopo la spiegazione, proponi un esempio minimo su "Classi di memorizzazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Block scope" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+      Dopo la spiegazione, proponi un esempio minimo su "Classi di memorizzazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Block scope" oppure, se l'argomento ha sottoparagrafi, affrontarli nell'ordine.
       </details>
     - <details>
       <summary><strong>Rimando</strong></summary>
@@ -4218,37 +4218,37 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Contesto</strong></summary>
 
-      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+      Il corso di TPSI e programmazione C si concentra sulla logica di programmazione e sulla gestione della memoria. L'argomento specifico riguarda la memoria automatica, statica e dinamica, trattato nel terzo anno del corso.
       </details>
     - <details>
       <summary><strong>Prerequisiti</strong></summary>
 
-      Prima di affrontare "Block scope" lo studente dovrebbe aver seguito il lavoro precedente su "Classi di memorizzazione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+      Conoscenze di base della programmazione in C, inclusi operatori, condizioni, cicli e funzioni. Comprensione delle classi di memorizzazione.
       </details>
     - <details>
       <summary><strong>Obiettivi</strong></summary>
 
-      Alla fine della lezione lo studente deve saper spiegare il ruolo di "Block scope", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+      Comprendere il concetto di block scope e le differenze tra variabili locali e globali. Acquisire familiarità con l'utilizzo di variabili locali e globali in un programma C.
       </details>
     - <details>
       <summary><strong>Richiamo</strong></summary>
 
-      Richiama il passaggio precedente su "Classi di memorizzazione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+      Le variabili locali sono dichiarate all'interno di una funzione e sono visibili solo all'interno di quella funzione. Le variabili locali non vengono inizializzate automaticamente.
       </details>
     - <details>
       <summary><strong>Anticipazione</strong></summary>
 
-      Questo argomento prepara il lavoro successivo su "File scope". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+      L'argomento successivo sarà il file scope, che tratta delle variabili dichiarate all'esterno di tutte le funzioni.
       </details>
     - <details>
       <summary><strong>Prossimo passo</strong></summary>
 
-      Dopo la spiegazione, proponi un esempio minimo su "Block scope", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "File scope" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+      Il prossimo passo sarà comprendere come le variabili di file scope sono accessibili da tutte le funzioni di un file.
       </details>
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Block scope" (../README.md#block-scope). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Per approfondire gli argomenti trattati, è possibile consultare il codice di esempio /lab/0_intro/3_variabili.c e la documentazione ufficiale del linguaggio C.
       </details>
     </details>
   </details>
@@ -4261,37 +4261,37 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Contesto</strong></summary>
 
-      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve per lavorare su apertura, lettura, scrittura e chiusura dei file tramite la libreria standard C. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
       </details>
     - <details>
       <summary><strong>Prerequisiti</strong></summary>
 
-      Prima di affrontare "File scope" lo studente dovrebbe aver seguito il lavoro precedente su "Block scope", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+      Prima di affrontare "File scope" lo studente dovrebbe aver seguito il lavoro precedente su "Block scope", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
       </details>
     - <details>
       <summary><strong>Obiettivi</strong></summary>
 
-      Alla fine della lezione lo studente deve saper spiegare il ruolo di "File scope", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+      Alla fine della lezione lo studente deve sapere spiegare il ruolo di "File scope", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
       </details>
     - <details>
       <summary><strong>Richiamo</strong></summary>
 
-      Richiama il passaggio precedente su "Block scope" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+      Richiama il passaggio precedente su "Block scope" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
       </details>
     - <details>
       <summary><strong>Anticipazione</strong></summary>
 
-      Questo argomento prepara il lavoro successivo su "Linkage". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+      Questo argomento prepara il lavoro successivo su "Linkage". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
       </details>
     - <details>
       <summary><strong>Prossimo passo</strong></summary>
 
-      Dopo la spiegazione, proponi un esempio minimo su "File scope", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Linkage" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+      Dopo la spiegazione, proponi un esempio minimo su "File scope", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Linkage" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
       </details>
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "File scope" (../README.md#file-scope). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: README.md, sezione "File scope" (../README.md#file-scope). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
@@ -4304,12 +4304,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Contesto</strong></summary>
 
-      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
       </details>
     - <details>
       <summary><strong>Prerequisiti</strong></summary>
 
-      Prima di affrontare "Linkage" lo studente dovrebbe aver seguito il lavoro precedente su "File scope", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+      Prima di affrontare "Linkage", lo studente dovrebbe aver seguito il lavoro precedente su "File scope", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
       </details>
     - <details>
       <summary><strong>Obiettivi</strong></summary>
@@ -4319,22 +4319,22 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Richiamo</strong></summary>
 
-      Richiama il passaggio precedente su "File scope" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+      Richiama il passaggio precedente su "File scope" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
       </details>
     - <details>
       <summary><strong>Anticipazione</strong></summary>
 
-      Questo argomento prepara il lavoro successivo su "Storage duration". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+      Questo argomento prepara il lavoro successivo su "Storage duration". Durante la spiegazione, conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
       </details>
     - <details>
       <summary><strong>Prossimo passo</strong></summary>
 
-      Dopo la spiegazione, proponi un esempio minimo su "Linkage", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Storage duration" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+      Dopo la spiegazione, proponi un esempio minimo su "Linkage", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Storage duration" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
       </details>
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Linkage" (../README.md#linkage). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: README.md, sezione "Linkage" (../README.md#linkage). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
@@ -4347,37 +4347,37 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Contesto</strong></summary>
 
-      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per il Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
       </details>
     - <details>
       <summary><strong>Prerequisiti</strong></summary>
 
-      Prima di affrontare "Storage duration" lo studente dovrebbe aver seguito il lavoro precedente su "Linkage", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+      Prima di affrontare "Storage duration" lo studente dovrebbe aver seguito il lavoro precedente su "Linkage", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
       </details>
     - <details>
       <summary><strong>Obiettivi</strong></summary>
 
-      Alla fine della lezione lo studente deve saper spiegare il ruolo di "Storage duration", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+      Alla fine della lezione, lo studente deve sapere spiegare il ruolo di "Storage duration", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
       </details>
     - <details>
       <summary><strong>Richiamo</strong></summary>
 
-      Richiama il passaggio precedente su "Linkage" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+      Richiama il passaggio precedente su "Linkage" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
       </details>
     - <details>
       <summary><strong>Anticipazione</strong></summary>
 
-      Questo argomento prepara il lavoro successivo su "Static storage duration". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+      Questo argomento prepara il lavoro successivo su "Static storage duration". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
       </details>
     - <details>
       <summary><strong>Prossimo passo</strong></summary>
 
-      Dopo la spiegazione, proponi un esempio minimo su "Storage duration", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Static storage duration" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+      Dopo la spiegazione, proponi un esempio minimo su "Storage duration", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Static storage duration" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
       </details>
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Storage duration" (../README.md#storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: README.md, sezione "Storage duration" (../README.md#storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
@@ -4390,37 +4390,37 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Contesto</strong></summary>
 
-      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
       </details>
     - <details>
       <summary><strong>Prerequisiti</strong></summary>
 
-      Prima di affrontare "Static storage duration" lo studente dovrebbe aver seguito il lavoro precedente su "Storage duration", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+      Prima di affrontare "Static storage duration" lo studente dovrebbe aver seguito il lavoro precedente su "Storage duration", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
       </details>
     - <details>
       <summary><strong>Obiettivi</strong></summary>
 
-      Alla fine della lezione lo studente deve saper spiegare il ruolo di "Static storage duration", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+      Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Static storage duration", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
       </details>
     - <details>
       <summary><strong>Richiamo</strong></summary>
 
-      Richiama il passaggio precedente su "Storage duration" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+      Richiama il passaggio precedente su "Storage duration" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
       </details>
     - <details>
       <summary><strong>Anticipazione</strong></summary>
 
-      Questo argomento prepara il lavoro successivo su "Auto storage duration". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+      Questo argomento prepara il lavoro successivo su "Auto storage duration". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
       </details>
     - <details>
       <summary><strong>Prossimo passo</strong></summary>
 
-      Dopo la spiegazione, proponi un esempio minimo su "Static storage duration", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Auto storage duration" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+      Dopo la spiegazione, proponi un esempio minimo su "Static storage duration", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Auto storage duration" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
       </details>
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Static storage duration" (../README.md#static-storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: README.md, sezione "Static storage duration" (../README.md#static-storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
@@ -4433,37 +4433,37 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Contesto</strong></summary>
 
-      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per il Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
       </details>
     - <details>
       <summary><strong>Prerequisiti</strong></summary>
 
-      Prima di affrontare "Auto storage duration" lo studente dovrebbe aver seguito il lavoro precedente su "Static storage duration", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+      Prima di affrontare "Auto storage duration" lo studente dovrebbe aver seguito il lavoro precedente su "Static storage duration", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
       </details>
     - <details>
       <summary><strong>Obiettivi</strong></summary>
 
-      Alla fine della lezione lo studente deve saper spiegare il ruolo di "Auto storage duration", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+      Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Auto storage duration", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
       </details>
     - <details>
       <summary><strong>Richiamo</strong></summary>
 
-      Richiama il passaggio precedente su "Static storage duration" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+      Richiama il passaggio precedente su "Static storage duration" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
       </details>
     - <details>
       <summary><strong>Anticipazione</strong></summary>
 
-      Questo argomento prepara il lavoro successivo su "Classi di memorizzazione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+      Questo argomento prepara il lavoro successivo su "Classi di memorizzazione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
       </details>
     - <details>
       <summary><strong>Prossimo passo</strong></summary>
 
-      Dopo la spiegazione, proponi un esempio minimo su "Auto storage duration", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Classi di memorizzazione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+      Dopo la spiegazione, proponi un esempio minimo su "Auto storage duration", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Classi di memorizzazione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
       </details>
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Auto storage duration" (../README.md#auto-storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: README.md, sezione "Auto storage duration" (../README.md#auto-storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
@@ -4476,37 +4476,37 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Contesto</strong></summary>
 
-      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su durata, visibilita e collegamento degli identificatori in C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+      Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su durata, visibilità e collegamento degli identificatori in C. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
       </details>
     - <details>
       <summary><strong>Prerequisiti</strong></summary>
 
-      Prima di affrontare "Classi di memorizzazione" lo studente dovrebbe aver seguito il lavoro precedente su "Auto storage duration", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+      Prima di affrontare "Classi di memorizzazione" lo studente dovrebbe aver seguito il lavoro precedente su "Auto storage duration", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
       </details>
     - <details>
       <summary><strong>Obiettivi</strong></summary>
 
-      Alla fine della lezione lo studente deve saper spiegare il ruolo di "Classi di memorizzazione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+      Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Classi di memorizzazione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve, inoltre, saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
       </details>
     - <details>
       <summary><strong>Richiamo</strong></summary>
 
-      Richiama il passaggio precedente su "Auto storage duration" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+      Richiama il passaggio precedente su "Auto storage duration" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
       </details>
     - <details>
       <summary><strong>Anticipazione</strong></summary>
 
-      Questo argomento prepara il lavoro successivo su "Variabili automatiche (automatic class)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+      Questo argomento prepara il lavoro successivo su "Variabili automatiche (automatic class)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
       </details>
     - <details>
       <summary><strong>Prossimo passo</strong></summary>
 
-      Dopo la spiegazione, proponi un esempio minimo su "Classi di memorizzazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Variabili automatiche (automatic class)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+      Dopo la spiegazione, proponi un esempio minimo su "Classi di memorizzazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Variabili automatiche (automatic class)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
       </details>
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Classi di memorizzazione" (../README.md#classi-di-memorizzazione-1). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: README.md, sezione "Classi di memorizzazione" (../README.md#classi-di-memorizzazione-1). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
