@@ -396,6 +396,20 @@ input[aria-invalid="true"] {
   line-height: 1.18;
 }
 
+.headingPreviewTrigger,
+.itemPreviewTrigger {
+  cursor: pointer;
+}
+
+.headingPreviewTrigger:hover,
+.headingPreviewTrigger:focus-visible,
+.itemPreviewTrigger:hover,
+.itemPreviewTrigger:focus-visible {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: .16em;
+}
+
 .treeToggle,
 .treeToggleSpacer {
   flex: 0 0 1.15rem;
@@ -709,6 +723,87 @@ input[aria-invalid="true"] {
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
+}
+
+.paragraphDialog {
+  width: min(64rem, calc(100vw - 2rem));
+}
+
+.paragraphDialogMeta {
+  margin: .35rem 0 0;
+  color: var(--muted);
+  font: .75rem/1.35 var(--mono);
+}
+
+.paragraphContent {
+  min-height: 16rem;
+  max-height: min(58vh, 40rem);
+  margin: 0;
+  overflow: auto;
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 16px;
+  background: #fafafa;
+  color: var(--ink);
+  padding: 1rem;
+  overflow-wrap: anywhere;
+  font: .86rem/1.6 var(--mono);
+}
+
+.paragraphContent p,
+.paragraphContent h1,
+.paragraphContent h2,
+.paragraphContent h3,
+.paragraphContent h4,
+.paragraphContent h5,
+.paragraphContent h6 {
+  margin: 0 0 .8rem;
+}
+
+.paragraphContent h1,
+.paragraphContent h2,
+.paragraphContent h3,
+.paragraphContent h4,
+.paragraphContent h5,
+.paragraphContent h6 {
+  font-family: inherit;
+  line-height: 1.25;
+}
+
+.paragraphContent ul,
+.paragraphContent ol {
+  margin: 0 0 .8rem;
+  padding-left: 1.5rem;
+}
+
+.paragraphContent pre {
+  overflow: auto;
+  margin: 0 0 .8rem;
+  border-radius: 10px;
+  background: #eeeeee;
+  padding: .8rem;
+  white-space: pre;
+}
+
+.paragraphContent code {
+  border-radius: .25rem;
+  background: #eeeeee;
+  padding: .08rem .25rem;
+}
+
+.paragraphContent pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.paragraphContent a {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.paragraphSourceLink {
+  color: var(--ink);
+  font-size: .78rem;
+  font-weight: 700;
 }
 
 .courseAiHead,

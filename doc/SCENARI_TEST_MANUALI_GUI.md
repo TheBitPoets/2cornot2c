@@ -345,6 +345,8 @@ Obiettivo: verificare creazione, modifica, persistenza, protezione dagli errori 
 3. Usa `Nuovo progetto` e crea `test-manuale-percorso.json`.
 4. Aggiungi un percorso con settimane e ore valide. Prova poi a crearne uno con `0` settimane e verifica il bordo rosso e il messaggio di errore.
 5. Nel catalogo a sinistra usa il pulsante `+` su un paragrafo, poi premilo di nuovo sullo stesso paragrafo.
+5a. Clicca il titolo di un paragrafo e poi il comando `Testo`: verifica che si apra il modal con il contenuto completo.
+5b. Dentro una UDA ripeti dal titolo e dal comando `Testo`, poi usa `Apri sorgente su GitHub` e verifica l'ancora del paragrafo.
 6. Modifica una cornice e premi `Ricarica`: annulla la conferma e verifica che la modifica resti visibile; ripeti accettando e verifica che torni l'ultimo stato salvato.
 7. Usa `Salva progetto con nome` indicando di nuovo `test-manuale-percorso.json`: annulla la richiesta di sovrascrittura e verifica che l'archivio precedente non cambi.
 8. Salva regolarmente il progetto. Se il provider AI è configurato, genera una sola cornice, avvia una nuova coda e usa `Annulla`; verifica che testo e indicatori di qualità tornino allo stato iniziale.
@@ -356,6 +358,7 @@ Risultato atteso:
 
 - I dati non validi non entrano nel progetto.
 - Lo stesso paragrafo non viene duplicato nello stesso percorso.
+- Il titolo e il comando `Testo` aprono il modal con contenuto, fonte, riga e link GitHub coerenti.
 - Ricarica e navigazione non scartano modifiche senza conferma.
 - Un nome già esistente richiede conferma prima della sovrascrittura.
 - L'annullamento AI ripristina sia il testo sia gli indicatori di qualità.
