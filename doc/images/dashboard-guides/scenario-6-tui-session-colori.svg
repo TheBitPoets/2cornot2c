@@ -1,147 +1,147 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2422" viewBox="0 0 1800 2422">
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2530" viewBox="0 0 1800 2530">
   <style>.page{fill:#f7f7f5}.title{font:700 34px Arial,sans-serif;fill:#111}.subtitle{font:16px Arial,sans-serif;fill:#555}.terminal{fill:#16181d;stroke:#343943;stroke-width:2}.terminal-text{font:14px 'Cascadia Mono','Consolas',monospace;fill:#e7e9ee;white-space:pre}.label{font:700 15px Arial,sans-serif;fill:#fff}.blue{fill:#1464c0}.green{fill:#168a45}.line-blue{stroke:#1464c0}.line-green{stroke:#168a45}</style>
   <rect class="page" width="100%" height="100%"/>
   <text x="40" y="48" class="title">Scenario 6 · Sessione TUI studente</text>
   <text x="40" y="76" class="subtitle">Snapshot reale del terminale: selezione consegna, runner, report e ritorno alla lista</text>
-  <rect x="24" y="96" width="1752" height="2302" rx="8" class="terminal"/>
   <rect x="42" y="108" width="154" height="26" rx="13" class="blue"/>
   <text x="56" y="126" class="label">1 · esecuzione TUI</text>
   <line x1="205" y1="121" x2="1750" y2="121" class="line-blue" stroke-width="2"/>
-  <rect x="42" y="1154" width="190" height="26" rx="13" class="green"/>
-  <text x="56" y="1172" class="label">2 · report e test</text>
-  <line x1="242" y1="1167" x2="1750" y2="1167" class="line-green" stroke-width="2"/>
-    <text x="42" y="129" class="terminal-text">TheBitLab - lab studente</text>
-    <text x="42" y="146" class="terminal-text">Studente: rossi-mario</text>
-    <text x="42" y="163" class="terminal-text">Consegne: 1 | Da fare: 0 | Mancanti: 0 | Consegnate: 1</text>
-    <text x="42" y="180" class="terminal-text"></text>
-    <text x="42" y="197" class="terminal-text">Comandi: numero = dettaglio | r = ricarica | q = esci</text>
-    <text x="42" y="214" class="terminal-text"></text>
-    <text x="42" y="231" class="terminal-text">Legenda:</text>
-    <text x="42" y="248" class="terminal-text">- Da fare: consegna assegnata, scadenza futura, nessun report ancora salvato.</text>
-    <text x="42" y="265" class="terminal-text">- Mancante: scadenza superata senza report/consegna.</text>
-    <text x="42" y="282" class="terminal-text">- Consegnata: esiste un report coerente con la consegna.</text>
-    <text x="42" y="299" class="terminal-text">- Consegnata in ritardo: report presente ma consegnato dopo la scadenza.</text>
-    <text x="42" y="316" class="terminal-text">- workspace: cartella locale della consegna presente.</text>
-    <text x="42" y="333" class="terminal-text">- no workspace: cartella locale non ancora presente o non trovata.</text>
-    <text x="42" y="350" class="terminal-text"></text>
-    <text x="42" y="367" class="terminal-text"> #  Titolo                             | Stato                  | Scadenza         | Workspace</text>
-    <text x="42" y="384" class="terminal-text">-----------------------------------------------------------------------------------------------</text>
-    <text x="42" y="401" class="terminal-text"> 1. Demo somma in Python               | Consegnata             | 2026-10-19 23:59 | workspace</text>
-    <text x="42" y="418" class="terminal-text"></text>
-    <text x="42" y="435" class="terminal-text">Scelta: &gt; [-] Dettaglio consegna                                       |   [-] Report                                           </text>
-    <text x="42" y="452" class="terminal-text">Titolo:            Demo somma in Python                        | Path:              examples/assignment_tracking/stud...</text>
-    <text x="42" y="469" class="terminal-text">Activity:          python-demo-somma-001                       | Esiste:            si                                  </text>
-    <text x="42" y="486" class="terminal-text">Assegnazione:      assignment-python-demo-somma-001-3a-tpsi... | Consegnata:        2026-07-21 10:44                    </text>
-    <text x="42" y="503" class="terminal-text">Classe:            3A TPSI                                     | Commit:            -                                   </text>
-    <text x="42" y="520" class="terminal-text">Assegnata:         2026-10-12 09:00                            | -------------------------------------------------------</text>
-    <text x="42" y="537" class="terminal-text">Scadenza:          2026-10-19 23:59                            |   [-] Ultimo dettaglio test                            </text>
-    <text x="42" y="554" class="terminal-text">Stato:             Consegnata                                  |   [ok] tests/test_main.py::test_somma_positivi         </text>
-    <text x="42" y="571" class="terminal-text">-------------------------------------------------------------- |   [ok] tests/test_main.py::test_somma_negativi         </text>
-    <text x="42" y="588" class="terminal-text">  [-] Workspace                                                | -------------------------------------------------------</text>
-    <text x="42" y="605" class="terminal-text">Path:              examples/assignment_tracking/student_rep... |   [-] Grading                                          </text>
-    <text x="42" y="622" class="terminal-text">Esiste:            si                                          | Stato:             graded_passed (2/2 test)            </text>
-    <text x="42" y="639" class="terminal-text">-------------------------------------------------------------- | Voto:              10.0                                </text>
-    <text x="42" y="656" class="terminal-text">  [-] Activity                                                 | -------------------------------------------------------</text>
-    <text x="42" y="673" class="terminal-text">Path:              activities/python-demo-somma-001.json       |   [-] Runner                                           </text>
-    <text x="42" y="690" class="terminal-text">Tipo:              laboratorio                                 | Stato:             passed                              </text>
-    <text x="42" y="707" class="terminal-text">Linguaggio:        python                                      | Backend:           local                               </text>
-    <text x="42" y="724" class="terminal-text">Sorgente:          main.py                                     | -------------------------------------------------------</text>
-    <text x="42" y="741" class="terminal-text">Argomenti:         funzioni, test                              |   [-] Guida rapida                                     </text>
-    <text x="42" y="758" class="terminal-text">-------------------------------------------------------------- |   Consegna  lavoro assegnato dal docente.              </text>
-    <text x="42" y="775" class="terminal-text">  [-] Aiuto consentito                                         |   Workspace cartella locale dove modifichi i file.     </text>
-    <text x="42" y="792" class="terminal-text">Modalità:          AI assisted                                 |   Test      controlli automatici sul tuo lavoro.       </text>
-    <text x="42" y="809" class="terminal-text">Sintesi:           Puoi usare aiuto AI nei limiti decisi da... |   Report    risultato salvato e letto da dashboard/r...</text>
-    <text x="42" y="826" class="terminal-text">Permesso:          feedback tecnico, richiami teorici, sugg... |                                                        </text>
-    <text x="42" y="843" class="terminal-text">Non permesso:      sostituire la consegna con una soluzione... | Flusso consigliato                                     </text>
-    <text x="42" y="860" class="terminal-text">-------------------------------------------------------------- |   1. Apri workspace                                    </text>
-    <text x="42" y="877" class="terminal-text">  [-] Richieste aiuto                                          |   2. Modifica i file                                   </text>
-    <text x="42" y="894" class="terminal-text">Stato log:         ok                                          |   3. Esegui test e salva report                        </text>
-    <text x="42" y="911" class="terminal-text">Errore log:        -                                           |   4. Controlla esito e, se serve, chiedi aiuto sulla...</text>
-    <text x="42" y="928" class="terminal-text">Eventi:            1                                           | Azioni principali                                      </text>
-    <text x="42" y="945" class="terminal-text">Consentite:        1                                           |   e  Esegui test e salva report                        </text>
-    <text x="42" y="962" class="terminal-text">Bloccate:          -                                           |   a  Chiedi aiuto                                      </text>
-    <text x="42" y="979" class="terminal-text">AI budget:         1/5 usate, 4 rimanenti                      |   o  Apri workspace                                    </text>
-    <text x="42" y="996" class="terminal-text">Ultima:            2026-10-18 18:35                            |   v  Apri editor                                       </text>
-    <text x="42" y="1013" class="terminal-text">Esito ultima:      consentita                                  |   l  Modifica layout pannelli                          </text>
-    <text x="42" y="1030" class="terminal-text">-------------------------------------------------------------- |                                                        </text>
-    <text x="42" y="1047" class="terminal-text">                                                               | Altri comandi                                          </text>
-    <text x="42" y="1064" class="terminal-text">                                                               |   h  Storico aiuti                                     </text>
-    <text x="42" y="1081" class="terminal-text">                                                               |   b  Torna alla lista                                  </text>
-    <text x="42" y="1098" class="terminal-text">                                                               |   invio  Torna alla lista                              </text>
-    <text x="42" y="1115" class="terminal-text">                                                               |   q  Esci                                              </text>
-    <text x="42" y="1132" class="terminal-text">                                                               | -------------------------------------------------------</text>
-    <text x="42" y="1149" class="terminal-text"></text>
-    <text x="42" y="1166" class="terminal-text">Dettaglio: Esecuzione completata</text>
-    <text x="42" y="1183" class="terminal-text">Stato runner:      passed</text>
-    <text x="42" y="1200" class="terminal-text">Esito:             consegna superata</text>
-    <text x="42" y="1217" class="terminal-text">Test:              2/2 test</text>
-    <text x="42" y="1234" class="terminal-text">Report salvato:    E:\dev\2cornot2c\tmp\student-lab-demo\examples\assignment_tracking\student_repos\rossi-mario\reports\python-demo-somma-001\latest.json</text>
-    <text x="42" y="1251" class="terminal-text"></text>
-    <text x="42" y="1268" class="terminal-text">Dettaglio test</text>
-    <text x="42" y="1285" class="terminal-text">  [ok] tests/test_main.py::test_somma_positivi</text>
-    <text x="42" y="1302" class="terminal-text">  [ok] tests/test_main.py::test_somma_negativi</text>
-    <text x="42" y="1319" class="terminal-text"></text>
-    <text x="42" y="1336" class="terminal-text">Questo report è quello letto da dashboard e registro docente.</text>
-    <text x="42" y="1353" class="terminal-text">Premi invio per continuare...&gt; [-] Dettaglio consegna                                       |   [-] Report                                           </text>
-    <text x="42" y="1370" class="terminal-text">Titolo:            Demo somma in Python                        | Path:              examples/assignment_tracking/stud...</text>
-    <text x="42" y="1387" class="terminal-text">Activity:          python-demo-somma-001                       | Esiste:            si                                  </text>
-    <text x="42" y="1404" class="terminal-text">Assegnazione:      assignment-python-demo-somma-001-3a-tpsi... | Consegnata:        2026-07-21 12:47                    </text>
-    <text x="42" y="1421" class="terminal-text">Classe:            3A TPSI                                     | Commit:            -                                   </text>
-    <text x="42" y="1438" class="terminal-text">Assegnata:         2026-10-12 09:00                            | -------------------------------------------------------</text>
-    <text x="42" y="1455" class="terminal-text">Scadenza:          2026-10-19 23:59                            |   [-] Ultimo dettaglio test                            </text>
-    <text x="42" y="1472" class="terminal-text">Stato:             Consegnata                                  |   [ok] tests/test_main.py::test_somma_positivi         </text>
-    <text x="42" y="1489" class="terminal-text">-------------------------------------------------------------- |   [ok] tests/test_main.py::test_somma_negativi         </text>
-    <text x="42" y="1506" class="terminal-text">  [-] Workspace                                                | -------------------------------------------------------</text>
-    <text x="42" y="1523" class="terminal-text">Path:              examples/assignment_tracking/student_rep... |   [-] Grading                                          </text>
-    <text x="42" y="1540" class="terminal-text">Esiste:            si                                          | Stato:             graded_passed (2/2 test)            </text>
-    <text x="42" y="1557" class="terminal-text">-------------------------------------------------------------- | Voto:              10.0                                </text>
-    <text x="42" y="1574" class="terminal-text">  [-] Activity                                                 | -------------------------------------------------------</text>
-    <text x="42" y="1591" class="terminal-text">Path:              activities/python-demo-somma-001.json       |   [-] Runner                                           </text>
-    <text x="42" y="1608" class="terminal-text">Tipo:              laboratorio                                 | Stato:             passed                              </text>
-    <text x="42" y="1625" class="terminal-text">Linguaggio:        python                                      | Backend:           local                               </text>
-    <text x="42" y="1642" class="terminal-text">Sorgente:          main.py                                     | -------------------------------------------------------</text>
-    <text x="42" y="1659" class="terminal-text">Argomenti:         funzioni, test                              |   [-] Guida rapida                                     </text>
-    <text x="42" y="1676" class="terminal-text">-------------------------------------------------------------- |   Consegna  lavoro assegnato dal docente.              </text>
-    <text x="42" y="1693" class="terminal-text">  [-] Aiuto consentito                                         |   Workspace cartella locale dove modifichi i file.     </text>
-    <text x="42" y="1710" class="terminal-text">Modalità:          AI assisted                                 |   Test      controlli automatici sul tuo lavoro.       </text>
-    <text x="42" y="1727" class="terminal-text">Sintesi:           Puoi usare aiuto AI nei limiti decisi da... |   Report    risultato salvato e letto da dashboard/r...</text>
-    <text x="42" y="1744" class="terminal-text">Permesso:          feedback tecnico, richiami teorici, sugg... |                                                        </text>
-    <text x="42" y="1761" class="terminal-text">Non permesso:      sostituire la consegna con una soluzione... | Flusso consigliato                                     </text>
-    <text x="42" y="1778" class="terminal-text">-------------------------------------------------------------- |   1. Apri workspace                                    </text>
-    <text x="42" y="1795" class="terminal-text">  [-] Richieste aiuto                                          |   2. Modifica i file                                   </text>
-    <text x="42" y="1812" class="terminal-text">Stato log:         ok                                          |   3. Esegui test e salva report                        </text>
-    <text x="42" y="1829" class="terminal-text">Errore log:        -                                           |   4. Controlla esito e, se serve, chiedi aiuto sulla...</text>
-    <text x="42" y="1846" class="terminal-text">Eventi:            1                                           | Azioni principali                                      </text>
-    <text x="42" y="1863" class="terminal-text">Consentite:        1                                           |   e  Esegui test e salva report                        </text>
-    <text x="42" y="1880" class="terminal-text">Bloccate:          -                                           |   a  Chiedi aiuto                                      </text>
-    <text x="42" y="1897" class="terminal-text">AI budget:         1/5 usate, 4 rimanenti                      |   o  Apri workspace                                    </text>
-    <text x="42" y="1914" class="terminal-text">Ultima:            2026-10-18 18:35                            |   v  Apri editor                                       </text>
-    <text x="42" y="1931" class="terminal-text">Esito ultima:      consentita                                  |   l  Modifica layout pannelli                          </text>
-    <text x="42" y="1948" class="terminal-text">-------------------------------------------------------------- |                                                        </text>
-    <text x="42" y="1965" class="terminal-text">                                                               | Altri comandi                                          </text>
-    <text x="42" y="1982" class="terminal-text">                                                               |   h  Storico aiuti                                     </text>
-    <text x="42" y="1999" class="terminal-text">                                                               |   b  Torna alla lista                                  </text>
-    <text x="42" y="2016" class="terminal-text">                                                               |   invio  Torna alla lista                              </text>
-    <text x="42" y="2033" class="terminal-text">                                                               |   q  Esci                                              </text>
-    <text x="42" y="2050" class="terminal-text">                                                               | -------------------------------------------------------</text>
-    <text x="42" y="2067" class="terminal-text"></text>
-    <text x="42" y="2084" class="terminal-text">Dettaglio: TheBitLab - lab studente</text>
-    <text x="42" y="2101" class="terminal-text">Studente: rossi-mario</text>
-    <text x="42" y="2118" class="terminal-text">Consegne: 1 | Da fare: 0 | Mancanti: 0 | Consegnate: 1</text>
-    <text x="42" y="2135" class="terminal-text"></text>
-    <text x="42" y="2152" class="terminal-text">Comandi: numero = dettaglio | r = ricarica | q = esci</text>
-    <text x="42" y="2169" class="terminal-text"></text>
-    <text x="42" y="2186" class="terminal-text">Legenda:</text>
-    <text x="42" y="2203" class="terminal-text">- Da fare: consegna assegnata, scadenza futura, nessun report ancora salvato.</text>
-    <text x="42" y="2220" class="terminal-text">- Mancante: scadenza superata senza report/consegna.</text>
-    <text x="42" y="2237" class="terminal-text">- Consegnata: esiste un report coerente con la consegna.</text>
-    <text x="42" y="2254" class="terminal-text">- Consegnata in ritardo: report presente ma consegnato dopo la scadenza.</text>
-    <text x="42" y="2271" class="terminal-text">- workspace: cartella locale della consegna presente.</text>
-    <text x="42" y="2288" class="terminal-text">- no workspace: cartella locale non ancora presente o non trovata.</text>
-    <text x="42" y="2305" class="terminal-text"></text>
-    <text x="42" y="2322" class="terminal-text"> #  Titolo                             | Stato                  | Scadenza         | Workspace</text>
-    <text x="42" y="2339" class="terminal-text">-----------------------------------------------------------------------------------------------</text>
-    <text x="42" y="2356" class="terminal-text"> 1. Demo somma in Python               | Consegnata             | 2026-10-19 23:59 | workspace</text>
-    <text x="42" y="2373" class="terminal-text"></text>
-    <text x="42" y="2390" class="terminal-text">Scelta: </text>
+  <rect x="42" y="146" width="190" height="26" rx="13" class="green"/>
+  <text x="56" y="164" class="label">2 · report e test</text>
+  <line x1="242" y1="159" x2="1750" y2="159" class="line-green" stroke-width="2"/>
+  <rect x="24" y="190" width="1752" height="2316" rx="8" class="terminal"/>
+    <text x="42" y="237" class="terminal-text">TheBitLab - lab studente</text>
+    <text x="42" y="254" class="terminal-text">Studente: rossi-mario</text>
+    <text x="42" y="271" class="terminal-text">Consegne: 1 | Da fare: 0 | Mancanti: 0 | Consegnate: 1</text>
+    <text x="42" y="288" class="terminal-text"></text>
+    <text x="42" y="305" class="terminal-text">Comandi: numero = dettaglio | r = ricarica | q = esci</text>
+    <text x="42" y="322" class="terminal-text"></text>
+    <text x="42" y="339" class="terminal-text">Legenda:</text>
+    <text x="42" y="356" class="terminal-text">- Da fare: consegna assegnata, scadenza futura, nessun report ancora salvato.</text>
+    <text x="42" y="373" class="terminal-text">- Mancante: scadenza superata senza report/consegna.</text>
+    <text x="42" y="390" class="terminal-text">- Consegnata: esiste un report coerente con la consegna.</text>
+    <text x="42" y="407" class="terminal-text">- Consegnata in ritardo: report presente ma consegnato dopo la scadenza.</text>
+    <text x="42" y="424" class="terminal-text">- workspace: cartella locale della consegna presente.</text>
+    <text x="42" y="441" class="terminal-text">- no workspace: cartella locale non ancora presente o non trovata.</text>
+    <text x="42" y="458" class="terminal-text"></text>
+    <text x="42" y="475" class="terminal-text"> #  Titolo                             | Stato                  | Scadenza         | Workspace</text>
+    <text x="42" y="492" class="terminal-text">-----------------------------------------------------------------------------------------------</text>
+    <text x="42" y="509" class="terminal-text"> 1. Demo somma in Python               | Consegnata             | 2026-10-19 23:59 | workspace</text>
+    <text x="42" y="526" class="terminal-text"></text>
+    <text x="42" y="543" class="terminal-text">Scelta: &gt; [-] Dettaglio consegna                                       |   [-] Report                                           </text>
+    <text x="42" y="560" class="terminal-text">Titolo:            Demo somma in Python                        | Path:              examples/assignment_tracking/stud...</text>
+    <text x="42" y="577" class="terminal-text">Activity:          python-demo-somma-001                       | Esiste:            si                                  </text>
+    <text x="42" y="594" class="terminal-text">Assegnazione:      assignment-python-demo-somma-001-3a-tpsi... | Consegnata:        2026-07-21 10:44                    </text>
+    <text x="42" y="611" class="terminal-text">Classe:            3A TPSI                                     | Commit:            -                                   </text>
+    <text x="42" y="628" class="terminal-text">Assegnata:         2026-10-12 09:00                            | -------------------------------------------------------</text>
+    <text x="42" y="645" class="terminal-text">Scadenza:          2026-10-19 23:59                            |   [-] Ultimo dettaglio test                            </text>
+    <text x="42" y="662" class="terminal-text">Stato:             Consegnata                                  |   [ok] tests/test_main.py::test_somma_positivi         </text>
+    <text x="42" y="679" class="terminal-text">-------------------------------------------------------------- |   [ok] tests/test_main.py::test_somma_negativi         </text>
+    <text x="42" y="696" class="terminal-text">  [-] Workspace                                                | -------------------------------------------------------</text>
+    <text x="42" y="713" class="terminal-text">Path:              examples/assignment_tracking/student_rep... |   [-] Grading                                          </text>
+    <text x="42" y="730" class="terminal-text">Esiste:            si                                          | Stato:             graded_passed (2/2 test)            </text>
+    <text x="42" y="747" class="terminal-text">-------------------------------------------------------------- | Voto:              10.0                                </text>
+    <text x="42" y="764" class="terminal-text">  [-] Activity                                                 | -------------------------------------------------------</text>
+    <text x="42" y="781" class="terminal-text">Path:              activities/python-demo-somma-001.json       |   [-] Runner                                           </text>
+    <text x="42" y="798" class="terminal-text">Tipo:              laboratorio                                 | Stato:             passed                              </text>
+    <text x="42" y="815" class="terminal-text">Linguaggio:        python                                      | Backend:           local                               </text>
+    <text x="42" y="832" class="terminal-text">Sorgente:          main.py                                     | -------------------------------------------------------</text>
+    <text x="42" y="849" class="terminal-text">Argomenti:         funzioni, test                              |   [-] Guida rapida                                     </text>
+    <text x="42" y="866" class="terminal-text">-------------------------------------------------------------- |   Consegna  lavoro assegnato dal docente.              </text>
+    <text x="42" y="883" class="terminal-text">  [-] Aiuto consentito                                         |   Workspace cartella locale dove modifichi i file.     </text>
+    <text x="42" y="900" class="terminal-text">Modalità:          AI assisted                                 |   Test      controlli automatici sul tuo lavoro.       </text>
+    <text x="42" y="917" class="terminal-text">Sintesi:           Puoi usare aiuto AI nei limiti decisi da... |   Report    risultato salvato e letto da dashboard/r...</text>
+    <text x="42" y="934" class="terminal-text">Permesso:          feedback tecnico, richiami teorici, sugg... |                                                        </text>
+    <text x="42" y="951" class="terminal-text">Non permesso:      sostituire la consegna con una soluzione... | Flusso consigliato                                     </text>
+    <text x="42" y="968" class="terminal-text">-------------------------------------------------------------- |   1. Apri workspace                                    </text>
+    <text x="42" y="985" class="terminal-text">  [-] Richieste aiuto                                          |   2. Modifica i file                                   </text>
+    <text x="42" y="1002" class="terminal-text">Stato log:         ok                                          |   3. Esegui test e salva report                        </text>
+    <text x="42" y="1019" class="terminal-text">Errore log:        -                                           |   4. Controlla esito e, se serve, chiedi aiuto sulla...</text>
+    <text x="42" y="1036" class="terminal-text">Eventi:            1                                           | Azioni principali                                      </text>
+    <text x="42" y="1053" class="terminal-text">Consentite:        1                                           |   e  Esegui test e salva report                        </text>
+    <text x="42" y="1070" class="terminal-text">Bloccate:          -                                           |   a  Chiedi aiuto                                      </text>
+    <text x="42" y="1087" class="terminal-text">AI budget:         1/5 usate, 4 rimanenti                      |   o  Apri workspace                                    </text>
+    <text x="42" y="1104" class="terminal-text">Ultima:            2026-10-18 18:35                            |   v  Apri editor                                       </text>
+    <text x="42" y="1121" class="terminal-text">Esito ultima:      consentita                                  |   l  Modifica layout pannelli                          </text>
+    <text x="42" y="1138" class="terminal-text">-------------------------------------------------------------- |                                                        </text>
+    <text x="42" y="1155" class="terminal-text">                                                               | Altri comandi                                          </text>
+    <text x="42" y="1172" class="terminal-text">                                                               |   h  Storico aiuti                                     </text>
+    <text x="42" y="1189" class="terminal-text">                                                               |   b  Torna alla lista                                  </text>
+    <text x="42" y="1206" class="terminal-text">                                                               |   invio  Torna alla lista                              </text>
+    <text x="42" y="1223" class="terminal-text">                                                               |   q  Esci                                              </text>
+    <text x="42" y="1240" class="terminal-text">                                                               | -------------------------------------------------------</text>
+    <text x="42" y="1257" class="terminal-text"></text>
+    <text x="42" y="1274" class="terminal-text">Dettaglio: Esecuzione completata</text>
+    <text x="42" y="1291" class="terminal-text">Stato runner:      passed</text>
+    <text x="42" y="1308" class="terminal-text">Esito:             consegna superata</text>
+    <text x="42" y="1325" class="terminal-text">Test:              2/2 test</text>
+    <text x="42" y="1342" class="terminal-text">Report salvato:    E:\dev\2cornot2c\tmp\student-lab-demo\examples\assignment_tracking\student_repos\rossi-mario\reports\python-demo-somma-001\latest.json</text>
+    <text x="42" y="1359" class="terminal-text"></text>
+    <text x="42" y="1376" class="terminal-text">Dettaglio test</text>
+    <text x="42" y="1393" class="terminal-text">  [ok] tests/test_main.py::test_somma_positivi</text>
+    <text x="42" y="1410" class="terminal-text">  [ok] tests/test_main.py::test_somma_negativi</text>
+    <text x="42" y="1427" class="terminal-text"></text>
+    <text x="42" y="1444" class="terminal-text">Questo report è quello letto da dashboard e registro docente.</text>
+    <text x="42" y="1461" class="terminal-text">Premi invio per continuare...&gt; [-] Dettaglio consegna                                       |   [-] Report                                           </text>
+    <text x="42" y="1478" class="terminal-text">Titolo:            Demo somma in Python                        | Path:              examples/assignment_tracking/stud...</text>
+    <text x="42" y="1495" class="terminal-text">Activity:          python-demo-somma-001                       | Esiste:            si                                  </text>
+    <text x="42" y="1512" class="terminal-text">Assegnazione:      assignment-python-demo-somma-001-3a-tpsi... | Consegnata:        2026-07-21 12:47                    </text>
+    <text x="42" y="1529" class="terminal-text">Classe:            3A TPSI                                     | Commit:            -                                   </text>
+    <text x="42" y="1546" class="terminal-text">Assegnata:         2026-10-12 09:00                            | -------------------------------------------------------</text>
+    <text x="42" y="1563" class="terminal-text">Scadenza:          2026-10-19 23:59                            |   [-] Ultimo dettaglio test                            </text>
+    <text x="42" y="1580" class="terminal-text">Stato:             Consegnata                                  |   [ok] tests/test_main.py::test_somma_positivi         </text>
+    <text x="42" y="1597" class="terminal-text">-------------------------------------------------------------- |   [ok] tests/test_main.py::test_somma_negativi         </text>
+    <text x="42" y="1614" class="terminal-text">  [-] Workspace                                                | -------------------------------------------------------</text>
+    <text x="42" y="1631" class="terminal-text">Path:              examples/assignment_tracking/student_rep... |   [-] Grading                                          </text>
+    <text x="42" y="1648" class="terminal-text">Esiste:            si                                          | Stato:             graded_passed (2/2 test)            </text>
+    <text x="42" y="1665" class="terminal-text">-------------------------------------------------------------- | Voto:              10.0                                </text>
+    <text x="42" y="1682" class="terminal-text">  [-] Activity                                                 | -------------------------------------------------------</text>
+    <text x="42" y="1699" class="terminal-text">Path:              activities/python-demo-somma-001.json       |   [-] Runner                                           </text>
+    <text x="42" y="1716" class="terminal-text">Tipo:              laboratorio                                 | Stato:             passed                              </text>
+    <text x="42" y="1733" class="terminal-text">Linguaggio:        python                                      | Backend:           local                               </text>
+    <text x="42" y="1750" class="terminal-text">Sorgente:          main.py                                     | -------------------------------------------------------</text>
+    <text x="42" y="1767" class="terminal-text">Argomenti:         funzioni, test                              |   [-] Guida rapida                                     </text>
+    <text x="42" y="1784" class="terminal-text">-------------------------------------------------------------- |   Consegna  lavoro assegnato dal docente.              </text>
+    <text x="42" y="1801" class="terminal-text">  [-] Aiuto consentito                                         |   Workspace cartella locale dove modifichi i file.     </text>
+    <text x="42" y="1818" class="terminal-text">Modalità:          AI assisted                                 |   Test      controlli automatici sul tuo lavoro.       </text>
+    <text x="42" y="1835" class="terminal-text">Sintesi:           Puoi usare aiuto AI nei limiti decisi da... |   Report    risultato salvato e letto da dashboard/r...</text>
+    <text x="42" y="1852" class="terminal-text">Permesso:          feedback tecnico, richiami teorici, sugg... |                                                        </text>
+    <text x="42" y="1869" class="terminal-text">Non permesso:      sostituire la consegna con una soluzione... | Flusso consigliato                                     </text>
+    <text x="42" y="1886" class="terminal-text">-------------------------------------------------------------- |   1. Apri workspace                                    </text>
+    <text x="42" y="1903" class="terminal-text">  [-] Richieste aiuto                                          |   2. Modifica i file                                   </text>
+    <text x="42" y="1920" class="terminal-text">Stato log:         ok                                          |   3. Esegui test e salva report                        </text>
+    <text x="42" y="1937" class="terminal-text">Errore log:        -                                           |   4. Controlla esito e, se serve, chiedi aiuto sulla...</text>
+    <text x="42" y="1954" class="terminal-text">Eventi:            1                                           | Azioni principali                                      </text>
+    <text x="42" y="1971" class="terminal-text">Consentite:        1                                           |   e  Esegui test e salva report                        </text>
+    <text x="42" y="1988" class="terminal-text">Bloccate:          -                                           |   a  Chiedi aiuto                                      </text>
+    <text x="42" y="2005" class="terminal-text">AI budget:         1/5 usate, 4 rimanenti                      |   o  Apri workspace                                    </text>
+    <text x="42" y="2022" class="terminal-text">Ultima:            2026-10-18 18:35                            |   v  Apri editor                                       </text>
+    <text x="42" y="2039" class="terminal-text">Esito ultima:      consentita                                  |   l  Modifica layout pannelli                          </text>
+    <text x="42" y="2056" class="terminal-text">-------------------------------------------------------------- |                                                        </text>
+    <text x="42" y="2073" class="terminal-text">                                                               | Altri comandi                                          </text>
+    <text x="42" y="2090" class="terminal-text">                                                               |   h  Storico aiuti                                     </text>
+    <text x="42" y="2107" class="terminal-text">                                                               |   b  Torna alla lista                                  </text>
+    <text x="42" y="2124" class="terminal-text">                                                               |   invio  Torna alla lista                              </text>
+    <text x="42" y="2141" class="terminal-text">                                                               |   q  Esci                                              </text>
+    <text x="42" y="2158" class="terminal-text">                                                               | -------------------------------------------------------</text>
+    <text x="42" y="2175" class="terminal-text"></text>
+    <text x="42" y="2192" class="terminal-text">Dettaglio: TheBitLab - lab studente</text>
+    <text x="42" y="2209" class="terminal-text">Studente: rossi-mario</text>
+    <text x="42" y="2226" class="terminal-text">Consegne: 1 | Da fare: 0 | Mancanti: 0 | Consegnate: 1</text>
+    <text x="42" y="2243" class="terminal-text"></text>
+    <text x="42" y="2260" class="terminal-text">Comandi: numero = dettaglio | r = ricarica | q = esci</text>
+    <text x="42" y="2277" class="terminal-text"></text>
+    <text x="42" y="2294" class="terminal-text">Legenda:</text>
+    <text x="42" y="2311" class="terminal-text">- Da fare: consegna assegnata, scadenza futura, nessun report ancora salvato.</text>
+    <text x="42" y="2328" class="terminal-text">- Mancante: scadenza superata senza report/consegna.</text>
+    <text x="42" y="2345" class="terminal-text">- Consegnata: esiste un report coerente con la consegna.</text>
+    <text x="42" y="2362" class="terminal-text">- Consegnata in ritardo: report presente ma consegnato dopo la scadenza.</text>
+    <text x="42" y="2379" class="terminal-text">- workspace: cartella locale della consegna presente.</text>
+    <text x="42" y="2396" class="terminal-text">- no workspace: cartella locale non ancora presente o non trovata.</text>
+    <text x="42" y="2413" class="terminal-text"></text>
+    <text x="42" y="2430" class="terminal-text"> #  Titolo                             | Stato                  | Scadenza         | Workspace</text>
+    <text x="42" y="2447" class="terminal-text">-----------------------------------------------------------------------------------------------</text>
+    <text x="42" y="2464" class="terminal-text"> 1. Demo somma in Python               | Consegnata             | 2026-10-19 23:59 | workspace</text>
+    <text x="42" y="2481" class="terminal-text"></text>
+    <text x="42" y="2498" class="terminal-text">Scelta: </text>
 </svg>
