@@ -103,13 +103,32 @@ Obiettivo: verificare, come tester manuale, che lo studente veda la consegna cor
 
 ### Schermate reali della prova
 
-Le immagini seguenti sono state catturate sulla dashboard reale usando la root `tmp/student-lab-demo`, lo studente `rossi-mario` e il viewport desktop `1440x1000`.
+La schermata annotata e stata catturata sulla dashboard reale usando la root `tmp/student-lab-demo`, lo studente `rossi-mario` e il viewport desktop `1440x1000`.
 
-![Panoramica dashboard studente con Rossi Mario](images/dashboard-guides/scenario-1-studente-overview.png)
-
-Versione annotata: i cerchi rossi indicano i dati minimi da controllare durante lo scenario.
+<table>
+<tr>
+<td valign="top" width="52%">
 
 ![Panoramica annotata con i dati da controllare](images/dashboard-guides/scenario-1-studente-overview-annotato.png)
+
+</td>
+<td valign="top">
+
+<strong style="color:#1464c0">Step 1 - Blu: selezione studente</strong><br>
+Controlla che il campo <code>Studente</code> mostri <code>Rossi Mario</code>. Poi clicca <code>Carica</code>.<br><br>
+
+<strong style="color:#7b35b2">Step 2 - Viola: consegna</strong><br>
+Cerca il titolo esatto <strong>Demo somma in Python</strong> nel pannello <code>Consegne</code>.<br><br>
+
+<strong style="color:#168a45">Step 3 - Verde: esecuzione</strong><br>
+Verifica <code>Workspace pronto</code>, <code>Report salvato</code>, <code>Test superati</code> e il valore <code>2/2</code>.<br><br>
+
+<strong style="color:#c87800">Step 4 - Arancione: aiuti</strong><br>
+Controlla che la riga <code>Aiuti tracciati</code> riporti il numero atteso.
+
+</td>
+</tr>
+</table>
 
 ![Pannello Consegne con Demo somma in Python](images/dashboard-guides/scenario-1-studente-consegna.png)
 
@@ -188,7 +207,7 @@ Per una prova manuale annota:
 | Aiuti | numero visualizzato |
 | Esito | superato / problema con descrizione |
 
-Questi passaggi sono gia predisposti per una futura automazione Playwright: URL, studente, titolo activity e valori attesi possono diventare asserzioni; le schermate possono diventare screenshot di riferimento o allegati alle evidenze.
+Questi passaggi sono gia predisposti per una futura automazione Playwright: URL, studente, titolo activity e valori attesi possono diventare asserzioni; la schermata annotata puo essere usata come riferimento visivo durante la prova.
 
 ## Scenario 2 - Dashboard docente con registro demo
 

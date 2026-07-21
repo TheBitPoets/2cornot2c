@@ -84,12 +84,11 @@ Pagina studente:
 | `scenario-studente-consegna.png` | da fare | Lettura consegna | Una consegna con stato, scadenza e grading leggibili |
 | `scenario-studente-feedback.png` | da fare | Feedback approvato | Feedback pubblicato e nessuna bozza AI visibile |
 
-Per lo Scenario 1 sono disponibili anche catture reali con nomi specifici e non sostitutivi delle immagini generiche sopra elencate:
+Per lo Scenario 1 sono disponibili catture reali con nomi specifici:
 
 | File | Stato | Pagina | Cosa mostra |
 |---|---|---|---|
-| `scenario-1-studente-overview.png` | fatto | Dashboard studente | Studente `rossi-mario` caricato e riepilogo |
-| `scenario-1-studente-overview-annotato.png` | fatto | Dashboard studente | Stessi dati con cerchi rossi sui controlli obbligatori |
+| `scenario-1-studente-overview-annotato.png` | fatto | Dashboard studente | Studente `rossi-mario` e controlli obbligatori con cerchi colorati |
 | `scenario-1-studente-consegna.png` | fatto | Dashboard studente | Consegna `Demo somma in Python` |
 | `scenario-1-studente-lab.png` | fatto | Dashboard studente | Workspace, report e test `2/2` |
 | `scenario-1-studente-dettaglio.png` | fatto | Dashboard studente | Modal dettaglio della consegna |
