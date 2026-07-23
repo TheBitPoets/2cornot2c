@@ -395,6 +395,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         openStudentHelpDialog,
         clearStudentHelpRows,
         renderStudents,
+        studentByName,
         submissionFiles,
         submissionGithubUrl,
         failedTestDetails,
@@ -4168,5 +4169,16 @@ def test_reset_panel_order_clears_saved_order_and_reloads() -> None:
         tested.resetPanelOrder();
         assert.equal(tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelOrder"), null);
         assert.equal(tested.window.location.reloaded, true);
+        """
+    )
+
+
+def test_assignment_dashboard_matches_display_name_when_opening_overview_submission() -> None:
+    run_dashboard_js(
+        """
+        tested.state.report = {
+          students: [{ student: "rossi-mario", student_id: "rossi-mario", submission: { source_path: "assignments/demo/main.py" } }],
+        };
+        assert.equal(tested.studentByName("Rossi Mario").student, "rossi-mario");
         """
     )

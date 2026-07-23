@@ -1266,6 +1266,26 @@ def student_dashboard(student_id: str) -> dict:
             "assignments": [],
             "error": str(error),
         }
+    lab_assignments = dashboard.get("lab", {}).get("assignments", [])
+    lab_by_activity: dict[str, list[dict]] = {}
+    for lab_assignment in lab_assignments:
+        if not isinstance(lab_assignment, dict):
+            continue
+        activity_id = str(lab_assignment.get("activity_id") or "").strip()
+        if activity_id:
+            lab_by_activity.setdefault(activity_id, []).append(lab_assignment)
+    for assignment in dashboard.get("assignments", []):
+        if not isinstance(assignment, dict):
+            continue
+        activity_id = str(assignment.get("activity_id") or "").strip()
+        candidates = lab_by_activity.get(activity_id, [])
+        if not candidates:
+            continue
+        lab_assignment = candidates.pop(0)
+        assignment["lab"] = lab_assignment
+        for field in ("workspace", "report", "help", "runner"):
+            if field in lab_assignment:
+                assignment[field] = lab_assignment[field]
     return dashboard
 
 

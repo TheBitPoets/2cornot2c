@@ -4667,8 +4667,26 @@ function clearReview() {
   closeReviewDialog();
 }
 
+function studentIdentityKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function studentByName(studentName) {
-  return (state.report?.students || []).find((student) => student.student === studentName);
+  const exact = (state.report?.students || []).find((student) => (
+    student.student === studentName || student.student_id === studentName
+  ));
+  if (exact) return exact;
+  const requestedKey = studentIdentityKey(studentName);
+  return (state.report?.students || []).find((student) => [
+    student.student,
+    student.student_id,
+    student.display_name,
+    student.name,
+  ].some((value) => studentIdentityKey(value) === requestedKey));
 }
 
 function renderModalBreadcrumb(element, items) {

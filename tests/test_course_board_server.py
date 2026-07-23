@@ -3342,7 +3342,6 @@ def test_student_dashboard_endpoint_filters_to_requested_student(tmp_path, monke
         ),
         encoding="utf-8",
     )
-
     dashboard = course_board_server.student_dashboard("rossi-mario")
 
     assert dashboard["student_id"] == "rossi-mario"
@@ -3396,6 +3395,27 @@ def test_student_dashboard_endpoint_includes_student_lab_results(tmp_path, monke
         ),
         encoding="utf-8",
     )
+    teacher_report_dir = tmp_path / "teacher-reports"
+    teacher_report_dir.mkdir(parents=True, exist_ok=True)
+    (teacher_report_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "title": "Somma in Python",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "submitted": True,
+                        "submission": {
+                            "source_path": "assignments/python-base-somma-001/main.py",
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     dashboard = course_board_server.student_dashboard("rossi-mario")
 
@@ -3406,6 +3426,11 @@ def test_student_dashboard_endpoint_includes_student_lab_results(tmp_path, monke
     assert lab_assignment["report"]["exists"] is True
     assert lab_assignment["grading"]["status"] == "graded_passed"
     assert lab_assignment["grading"]["tests_passed"] == 2
+    dashboard_assignment = dashboard["assignments"][0]
+    assert dashboard_assignment["workspace"]["exists"] is True
+    assert dashboard_assignment["report"]["exists"] is True
+    assert dashboard_assignment["help"]["total"] == lab_assignment["help"]["total"]
+    assert dashboard_assignment["runner"]["status"] == "passed"
 
 
 def test_record_student_help_delegates_only_client_identifiers_to_service(monkeypatch, tmp_path) -> None:

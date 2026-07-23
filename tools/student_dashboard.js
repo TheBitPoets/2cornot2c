@@ -1256,6 +1256,13 @@ function renderAssignmentDetail(assignment) {
   const sourceLink = assignment.source_github_url
     ? safeExternalLink(assignment.source_github_url, "Consegna", assignment.source_path || "-")
     : escapeHtml(assignment.source_path || "-");
+  const workspace = assignment.workspace || {};
+  const report = assignment.report || {};
+  const runner = assignment.runner || {};
+  const files = submissionFiles(assignment);
+  const fileList = files.length
+    ? files.map((file) => `<li><strong>${escapeHtml(file.path)}</strong>${file.github_url ? ` - ${safeExternalLink(file.github_url, "GitHub")}` : ""}</li>`).join("")
+    : "<li>Nessun file consegnato disponibile.</li>";
   return `
     <section class="detailSection">
       <h3>Attivita</h3>
@@ -1292,6 +1299,17 @@ function renderAssignmentDetail(assignment) {
         ${detailItem("Test falliti", failedTests)}
       </div>
       ${grading.detail ? `<p class="details">${escapeHtml(grading.detail)}</p>` : ""}
+    </section>
+    <section class="detailSection">
+      <h3>Lab</h3>
+      <div class="detailGrid">
+        ${detailItem("Workspace", workspace.path || (workspace.exists ? "Pronto" : "Non trovato"))}
+        ${detailItem("Report", report.path || (report.exists ? "Salvato" : "Assente"))}
+        ${detailItem("Runner", `${runner.status || "not_run"} (${runner.backend || "-"})`)}
+        ${detailItem("Aiuti tracciati", assignment.help?.total ?? 0)}
+      </div>
+      <p class="details">File consegnati:</p>
+      <ul class="detailFileList">${fileList}</ul>
     </section>
     ${renderFeedback(assignment.approved_feedback)}
   `;
