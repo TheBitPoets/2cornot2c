@@ -2,7 +2,16 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from scripts import student_lab_demo_smoke
+
+
+def test_student_lab_demo_smoke_rejects_populated_cli_root(tmp_path) -> None:
+    (tmp_path / "teacher-assignments").mkdir()
+
+    with pytest.raises(RuntimeError, match="Root smoke non vuota"):
+        student_lab_demo_smoke.ensure_root_is_usable_for_cli(tmp_path)
 
 
 def test_student_lab_demo_smoke_builds_complete_flow(tmp_path) -> None:

@@ -37,6 +37,10 @@ Per usare una cartella scelta:
 python scripts/student_lab_demo_smoke.py --root tmp/student-lab-demo
 ```
 
+Lo smoke test con `--root` richiede una cartella nuova o vuota: non usare la stessa root gia
+preparata da `student_lab_demo_setup.py`. Se la cartella contiene dati, lo script si interrompe
+prima di scrivere per evitare assegnazioni duplicate o dati sovrascritti.
+
 ## Setup locale ispezionabile
 
 Per preparare una demo stabile in `tmp/student-lab-demo`, cancellando eventuali residui precedenti:
@@ -95,7 +99,16 @@ Per ottenere lo stesso risultato in formato JSON, utile per automazione o debug:
 python scripts/student_lab_demo_check.py --json
 ```
 
-Esegui un solo collaudo alla volta sulla stessa root demo: il comando ricrea la cartella per garantire dati puliti.
+Il comando precedente ricrea la cartella per garantire dati puliti e va eseguito prima di avviare
+il server sulla stessa root. Per controllare invece una root gia preparata o gia usata dal server,
+senza cancellarla e senza rigenerare assegnazioni, usa:
+
+```bash
+python scripts/student_lab_demo_check.py --root tmp/student-lab-demo --existing --json
+```
+
+Esegui un solo comando di reset alla volta sulla stessa root demo. La modalita `--existing` e
+quella da usare durante il collaudo GUI/TUI quando il server deve restare attivo.
 
 ## Collaudo manuale su GUI/TUI
 
