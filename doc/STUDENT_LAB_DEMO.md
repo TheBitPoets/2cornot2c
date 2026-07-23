@@ -37,9 +37,16 @@ Per usare una cartella scelta:
 python scripts/student_lab_demo_smoke.py --root tmp/student-lab-demo
 ```
 
-Lo smoke test con `--root` richiede una cartella nuova o vuota: non usare la stessa root gia
-preparata da `student_lab_demo_setup.py`. Se la cartella contiene dati, lo script si interrompe
-prima di scrivere per evitare assegnazioni duplicate o dati sovrascritti.
+Lo smoke test completo con `--root` richiede una cartella nuova o vuota. Se vuoi riusare la root
+creata dal setup, usa la modalita non distruttiva:
+
+```bash
+python scripts/student_lab_demo_smoke.py --root tmp/student-lab-demo --existing
+```
+
+La modalita `--existing` verifica la root senza ricreare activity, assegnazioni o report ed e quella
+da usare quando il server e gia attivo o quando vuoi conservare i risultati del collaudo. Se la root
+contiene dati ma non e una demo riconoscibile, lo script si interrompe senza modificare nulla.
 
 ## Setup locale ispezionabile
 

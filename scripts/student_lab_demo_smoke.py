@@ -42,7 +42,8 @@ def ensure_root_is_usable_for_cli(root: Path) -> None:
     entries = list(root.iterdir())
     if any(entry.name != ".thebitlab-server.lock" for entry in entries):
         raise RuntimeError(
-            f"Root smoke non vuota: {root}. Usa una root nuova oppure student_lab_demo_setup.py."
+            f"Root smoke non vuota: {root}. Usa --existing per riusare una root preparata "
+            "oppure una root nuova per eseguire uno smoke completo."
         )
     if any(entry.name == ".thebitlab-server.lock" for entry in entries):
         raise RuntimeError(
@@ -275,13 +276,37 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Esegue una demo end-to-end temporanea del lab studente.")
     parser.add_argument("--root", type=Path, help="Root demo da usare invece di una cartella temporanea.")
     parser.add_argument("--keep", action="store_true", help="Conserva la cartella temporanea al termine.")
+    parser.add_argument(
+        "--existing",
+        action="store_true",
+        help="Verifica una root gia preparata senza ricreare activity, assegnazioni o report.",
+    )
     return parser.parse_args()
+
+
+def run_existing_check(root: Path) -> dict[str, Any]:
+    """Validate an existing demo root without rewriting its data."""
+
+    from scripts import student_lab_demo_check
+
+    return student_lab_demo_check.run_guided_check(root, prepare=False)
 
 
 def main() -> int:
     """Run the smoke test and print a JSON summary."""
 
     args = parse_args()
+    if args.existing:
+        if not args.root:
+            print("Usa --existing insieme a --root per indicare la root gia preparata.", file=sys.stderr)
+            return 1
+        try:
+            summary = run_existing_check(args.root.resolve(strict=False))
+        except Exception as error:  # noqa: BLE001
+            print(f"Smoke existing non riuscito: {error}", file=sys.stderr)
+            return 1
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0
     if args.root:
         root = args.root.resolve(strict=False)
         try:
