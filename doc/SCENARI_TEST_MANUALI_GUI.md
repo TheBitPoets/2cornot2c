@@ -434,14 +434,20 @@ il modal che deve contenere l'errore completo.
 <tr>
 <td valign="top" width="52%">
 
-![Modal dettaglio errori annotato](images/dashboard-guides/scenario-5-docente-errori-colori.png)
+![Scenario 5, passi 1-2: registro caricato](images/dashboard-guides/scenario-5-steps-1-2-registro-colori.png)
+
+![Scenario 5, passi 3-4: pannello Studenti](images/dashboard-guides/scenario-5-steps-3-4-studenti-colori.png)
+
+![Scenario 5, passo 5: modal dettaglio errori](images/dashboard-guides/scenario-5-docente-errori-colori.png)
 
 </td>
 <td valign="top">
 
-<strong style="color:#1464c0">Step 1-4 - Blu: selezione</strong><br>
+<strong style="color:#1464c0">Step 1-2 - Blu: registro</strong><br>
 <strong>1.</strong> Apri la dashboard docente.<br>
 <strong>2.</strong> Carica o ricarica il registro mutato.<br>
+<br>
+<strong style="color:#1464c0">Step 3-4 - Blu: selezione studente</strong><br>
 <strong>3.</strong> Apri <code>Studenti</code>.<br>
 <strong>4.</strong> Cerca <code>bianchi-luca</code>.<br><br>
 
