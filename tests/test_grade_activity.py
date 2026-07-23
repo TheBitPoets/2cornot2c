@@ -43,6 +43,7 @@ def test_grade_activity_passes_valid_c_program(tmp_path) -> None:
     assert report["summary"] == {"passed": 2, "total": 2}
 
 
+@pytest.mark.skipif(shutil.which("gcc") is None, reason="gcc non disponibile nell'ambiente di test")
 def test_grade_activity_reports_wrong_output(tmp_path) -> None:
     source = tmp_path / "main.c"
     source.write_text(
@@ -57,6 +58,7 @@ def test_grade_activity_reports_wrong_output(tmp_path) -> None:
     assert report["summary"]["passed"] == 0
 
 
+@pytest.mark.skipif(shutil.which("gcc") is None, reason="gcc non disponibile nell'ambiente di test")
 def test_grade_activity_reports_compile_error(tmp_path) -> None:
     source = tmp_path / "main.c"
     source.write_text("int main(void){ return }\n", encoding="utf-8")
