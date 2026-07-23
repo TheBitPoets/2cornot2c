@@ -44,6 +44,7 @@ let currentStudentCalendarView = {
 };
 let visibleStudentPathIds = null;
 let currentAssignmentFilesIndex = -1;
+let assignmentFilesRequestToken = 0;
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -1366,6 +1367,7 @@ async function openAssignmentFiles(assignmentIndex, preferredPath = "") {
   const index = Number(assignmentIndex);
   const assignment = currentDashboardPayload.assignments[index];
   if (!assignment || !els.assignmentFilesModal || !els.assignmentFilesBody || !els.assignmentFilesTitle) return;
+  const requestToken = ++assignmentFilesRequestToken;
   currentAssignmentFilesIndex = index;
   const files = submissionFiles(assignment);
   if (!files.length) {
@@ -1407,7 +1409,7 @@ async function openAssignmentFiles(assignmentIndex, preferredPath = "") {
       error: error.message,
     };
   }
-  if (!els.assignmentFilesModal.hidden) {
+  if (requestToken === assignmentFilesRequestToken && !els.assignmentFilesModal.hidden) {
     els.assignmentFilesBody.innerHTML = renderAssignmentFiles(assignment, fileState);
   }
 }
@@ -1603,6 +1605,7 @@ els.assignmentDetailModal?.addEventListener("click", (event) => {
 
 function closeAssignmentFiles() {
   if (!els.assignmentFilesModal) return;
+  assignmentFilesRequestToken += 1;
   els.assignmentFilesModal.hidden = true;
   document.body?.classList?.remove("modalOpen");
 }
