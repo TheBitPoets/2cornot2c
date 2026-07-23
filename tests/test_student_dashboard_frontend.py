@@ -1053,3 +1053,29 @@ def test_student_dashboard_uses_demo_students_when_overview_is_empty() -> None:
         assert.equal(tested.studentLabel("neri-giulia"), "Neri Giulia");
         """
     )
+
+
+def test_student_dashboard_assignment_detail_includes_lab_state_and_files() -> None:
+    run_student_dashboard_js(
+        """
+        const assignment = {
+          activity_id: "python-demo-somma-001",
+          title: "Demo somma in Python",
+          submitted: true,
+          source_path: "assignments/python-demo-somma-001/main.py",
+          source_github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-demo-somma-001/main.py",
+          files: [{ path: "assignments/python-demo-somma-001/main.py", role: "soluzione", github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-demo-somma-001/main.py" }],
+          workspace: { exists: true, path: "examples/student_repos/rossi-mario/assignments/python-demo-somma-001" },
+          report: { exists: true, path: "examples/student_repos/rossi-mario/reports/python-demo-somma-001/latest.json" },
+          runner: { status: "passed", backend: "local" },
+          help: { total: 1 },
+          grading: { status: "graded_passed", tests_passed: 2, tests_total: 2 },
+        };
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [assignment] });
+        tested.openAssignmentDetail(0);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /Workspace/);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /examples\/student_repos\/rossi-mario\/assignments\/python-demo-somma-001/);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /Aiuti tracciati/);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /main\.py/);
+        """
+    )

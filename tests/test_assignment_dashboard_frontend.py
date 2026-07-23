@@ -395,6 +395,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         openStudentHelpDialog,
         clearStudentHelpRows,
         renderStudents,
+        studentByName,
         submissionFiles,
         submissionGithubUrl,
         failedTestDetails,
@@ -4168,5 +4169,54 @@ def test_reset_panel_order_clears_saved_order_and_reloads() -> None:
         tested.resetPanelOrder();
         assert.equal(tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelOrder"), null);
         assert.equal(tested.window.location.reloaded, true);
+        """
+    )
+
+
+def test_loading_report_from_overview_uses_explicit_report_name() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.reportSelect.value = "";
+          tested.fetchResponses["/api/assignment-reports/load"] = {
+            report: {
+              activity_id: "python-demo-somma-001",
+              students: [{
+                student: "rossi-mario",
+                submission: { source_path: "assignments/demo/main.py" },
+              }],
+            },
+          };
+
+          const loaded = await tested.loadSelectedReport({
+            reportName: "demo/python-demo-somma-001.json",
+          });
+
+          assert.equal(loaded, true);
+          assert.equal(tested.state.reportName, "demo/python-demo-somma-001.json");
+          assert.equal(tested.els.reportSelect.value, "demo/python-demo-somma-001.json");
+        })();
+        """
+    )
+
+
+def test_assignment_dashboard_matches_display_name_when_opening_overview_submission() -> None:
+    run_dashboard_js(
+        """
+        tested.state.report = {
+          students: [{ student: "rossi-mario", student_id: "rossi-mario", submission: { source_path: "assignments/demo/main.py" } }],
+        };
+        assert.equal(tested.studentByName("Rossi Mario").student, "rossi-mario");
+        """
+    )
+
+
+def test_assignment_dashboard_matches_accented_display_name_to_slug() -> None:
+    run_dashboard_js(
+        """
+        tested.state.report = {
+          students: [{ student: "jose-garcia", student_id: "jose-garcia", submission: { source_path: "assignments/demo/main.py" } }],
+        };
+        assert.equal(tested.studentByName("José García").student, "jose-garcia");
         """
     )
