@@ -803,6 +803,38 @@ def test_student_dashboard_file_modal_lists_submitted_files_separately() -> None
     )
 
 
+def test_student_dashboard_file_modal_keeps_second_file_selected_after_loading() -> None:
+    run_student_dashboard_js(
+        """
+        const html = tested.renderAssignmentFiles({
+          files: [
+            {
+              path: "assignments/python-base-somma-001/main.py",
+              role: "solution",
+              github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-base-somma-001/main.py",
+            },
+            {
+              path: "assignments/python-base-somma-001/test_main.py",
+              role: "test",
+              github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-base-somma-001/test_main.py",
+            },
+          ],
+        }, {
+          requestedPath: "assignments/python-base-somma-001/test_main.py",
+          path: "assignments/python-base-somma-001/test_main.py",
+          displayPath: "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001/test_main.py",
+          content: "assert somma([1, 2]) == 3",
+        });
+
+        assert.match(html, /fileChoice isActive[^>]*data-assignment-file-path="assignments\/python-base-somma-001\/test_main\.py"/);
+        assert.match(html, /test_main\.py/);
+        assert.match(html, /examples\/assignment_tracking\/student_repos\/rossi-mario\/assignments\/python-base-somma-001\/test_main\.py/);
+        assert.match(html, /blob\/main\/assignments\/python-base-somma-001\/test_main\.py/);
+        assert.match(html, /assert somma/);
+        """
+    )
+
+
 def test_student_dashboard_closes_assignment_detail_when_dashboard_changes() -> None:
     run_student_dashboard_js(
         """

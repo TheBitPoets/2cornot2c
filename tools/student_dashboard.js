@@ -1329,7 +1329,7 @@ function submissionFiles(assignment) {
 
 function renderAssignmentFiles(assignment, fileState = {}) {
   const files = submissionFiles(assignment);
-  const selectedPath = fileState.path || files[0]?.path || "";
+  const selectedPath = fileState.requestedPath || fileState.path || files[0]?.path || "";
   const selected = files.find((file) => file.path === selectedPath) || files[0];
   const content = fileState.loading
     ? "Caricamento file..."
@@ -1353,7 +1353,7 @@ function renderAssignmentFiles(assignment, fileState = {}) {
       </aside>
       <section class="submissionFilePreview">
         <header>
-          <strong>${escapeHtml(fileState.path || selected?.path || "File")}</strong>
+          <strong>${escapeHtml(fileState.displayPath || fileState.path || selected?.path || "File")}</strong>
           ${selected?.github_url ? safeExternalLink(selected.github_url, "Apri su GitHub") : ""}
         </header>
         <pre class="${fileState.error ? "fileError" : ""}"><code>${escapeHtml(content)}</code></pre>
@@ -1375,7 +1375,11 @@ async function openAssignmentFiles(assignmentIndex, preferredPath = "") {
     document.body?.classList?.add("modalOpen");
     return;
   }
-  let fileState = { path: preferredPath || files[0].path, loading: true };
+  let fileState = {
+    path: preferredPath || files[0].path,
+    requestedPath: preferredPath || files[0].path,
+    loading: true,
+  };
   els.assignmentFilesTitle.textContent = assignment.title || assignment.activity_id || "Consegna";
   els.assignmentFilesBody.innerHTML = renderAssignmentFiles(assignment, fileState);
   els.assignmentFilesModal.hidden = false;
@@ -1390,9 +1394,18 @@ async function openAssignmentFiles(assignmentIndex, preferredPath = "") {
         path: fileState.path,
       }),
     });
-    fileState = { path: payload.file.path, content: payload.file.content };
+    fileState = {
+      path: fileState.requestedPath,
+      requestedPath: fileState.requestedPath,
+      displayPath: payload.file.path,
+      content: payload.file.content,
+    };
   } catch (error) {
-    fileState = { path: fileState.path, error: error.message };
+    fileState = {
+      path: fileState.requestedPath,
+      requestedPath: fileState.requestedPath,
+      error: error.message,
+    };
   }
   if (!els.assignmentFilesModal.hidden) {
     els.assignmentFilesBody.innerHTML = renderAssignmentFiles(assignment, fileState);
