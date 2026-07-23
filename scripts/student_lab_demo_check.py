@@ -135,7 +135,8 @@ def run_guided_check(
         "student_id": student_lab_demo_smoke.STUDENT_ID,
         "activity_id": student_lab_demo_smoke.ACTIVITY_ID,
         "automatic_checks": {
-            "setup": True,
+            "setup": prepare,
+            "existing_root": not prepare,
             "passing_and_failing_results": True,
             "student_lab_payload": True,
             "student_dashboard_api": True,
@@ -160,7 +161,7 @@ def render_text_check(result: dict[str, Any]) -> str:
         "Controlli automatici",
         "--------------------",
     ]
-    for key in ("setup", "passing_and_failing_results", "student_lab_payload", "student_dashboard_api"):
+    for key in ("setup", "existing_root", "passing_and_failing_results", "student_lab_payload", "student_dashboard_api"):
         status = "OK" if checks.get(key) else "NO"
         lines.append(f"- {status} {key}")
     lines.extend(["", "Passi manuali", "-------------"])

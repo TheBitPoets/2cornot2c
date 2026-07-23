@@ -12,6 +12,7 @@ def test_student_lab_demo_check_returns_guided_manual_steps(tmp_path) -> None:
     assert result["activity_id"] == "python-demo-somma-001"
     assert result["automatic_checks"] == {
         "setup": True,
+        "existing_root": False,
         "passing_and_failing_results": True,
         "student_lab_payload": True,
         "student_dashboard_api": True,
@@ -36,4 +37,10 @@ def test_student_lab_demo_check_can_validate_existing_root_without_resetting(tmp
     result = student_lab_demo_check.run_guided_check(tmp_path, port=8877, prepare=False)
 
     assert result["ok"] is True
-    assert result["automatic_checks"]["setup"] is True
+    assert result["automatic_checks"] == {
+        "setup": False,
+        "existing_root": True,
+        "passing_and_failing_results": True,
+        "student_lab_payload": True,
+        "student_dashboard_api": True,
+    }
