@@ -510,7 +510,14 @@ Serve una guida d'uso pratica, separata dalla documentazione tecnica, che accomp
    - approvazione, respinta e riapertura bozze AI;
    - uso di copertura registri;
    - gestione dei casi mancanti, in ritardo, senza grading o senza feedback.
-2. Creare una guida studente per la vista studente:
+   - spiegazione chiara di tutti i pannelli, modal, viste e bottoni, indicando quando usarli;
+   - controllo delle azioni ridondanti o prive di effetto e individuazione dei flussi mancanti.
+2. Estendere la guida alle altre pagine docente:
+   - dashboard percorso/course board;
+   - dashboard calendario scolastico;
+   - pannelli, filtri, modal, salvataggio, caricamento e collegamento percorso-calendario;
+   - visualizzazione di UDA, paragrafi, activity, lezioni, festivita e interruzioni.
+3. Creare una guida studente per la vista studente:
    - apertura della vista;
    - scelta/riconoscimento dello studente;
    - lettura consegne aperte e scadute;
@@ -518,7 +525,7 @@ Serve una guida d'uso pratica, separata dalla documentazione tecnica, che accomp
    - differenza tra feedback visibile, bozza docente e feedback non generato;
    - collegamento futuro a repository/profilo GitHub;
    - vista futura del percorso didattico e calendario in sola lettura.
-3. Per ogni scenario includere:
+4. Per ogni scenario includere:
    - obiettivo dello scenario;
    - prerequisiti;
    - dati demo da caricare;
@@ -527,8 +534,8 @@ Serve una guida d'uso pratica, separata dalla documentazione tecnica, che accomp
    - cosa controllare a schermo;
    - errori comuni e come interpretarli;
    - differenza tra stato demo/MVP e comportamento previsto con dati reali.
-4. Salvare screenshot e immagini in una cartella dedicata, per esempio `doc/images/dashboard-guides/`.
-5. Collegare le guide da `doc/README.md`, `STUDENT_DASHBOARD.md`, `CLASS_ROSTERS.md` e dalla futura cornice didattica.
+5. Salvare screenshot e immagini in una cartella dedicata, per esempio `doc/images/dashboard-guides/`.
+6. Collegare le guide da `doc/README.md`, `STUDENT_DASHBOARD.md`, `CLASS_ROSTERS.md` e dalla futura cornice didattica.
 
 ## Priorita 6 - Cornice didattica
 
@@ -572,6 +579,31 @@ Questa priorita attraversa tutte le altre.
    - verifica manuale;
    - impatto sugli schemi;
    - eventuali migrazioni.
+9. Completare gli scenari manuali per tutte le pagine docente:
+   - dashboard consegne;
+   - percorso/course board;
+   - calendario;
+   - activity e assegnazioni;
+   - modal, filtri, viste responsive e stati di errore.
+10. Usare `doc/SCENARI_TEST_MANUALI_GUI.md` come fonte per il collaudo E2E:
+   - eseguire gli scenari con Codex Desktop e Playwright quando il browser e disponibile;
+   - usare root demo separate e non modificare `doc/course_design.json` o calendari personali;
+   - salvare screenshot per gli step importanti, video/trace Playwright quando disponibili e log server/browser;
+   - riportare PASS, FAIL o BLOCKED con dati, prerequisiti e artefatti riproducibili.
+11. Separare l'automazione in livelli:
+   - smoke test funzionali brevi in ogni PR;
+   - suite E2E completa locale o notturna;
+   - test visuali solo dopo la stabilizzazione di layout, testi e colori.
+12. Per i test visuali Playwright:
+   - preferire locator stabili, ruoli accessibili e `data-testid` ai selettori fragili;
+   - limitare gli screenshot a pagine o componenti significativi;
+   - aggiornare le baseline solo con revisione esplicita del cambiamento grafico;
+   - documentare la tolleranza e la procedura di aggiornamento delle immagini.
+13. Per la TUI:
+   - testare sequenze di input e output testuale normalizzato;
+   - usare snapshot testuali per viste e comandi stabili;
+   - verificare separatamente navigazione, layout, resize, runner, report e persistenza;
+   - evitare di dipendere da screenshot pixel-perfect del terminale.
 
 ## Priorita 8 - Knowledge Lab dopo MVP
 
@@ -666,7 +698,8 @@ Ordine consigliato:
 11. Consolidamento grading Docker per flusso reale di consegna.
 12. Collegamento automatico report/artifact al registro consegne.
 13. Revisione completa della dashboard docente contro il flusso MVP reale, usando `gpt-5.6-sol` con reasoning `high`:
-   - estendere la revisione gia fatta sulla pagina Percorso alle altre pagine docente;
+   - estendere la revisione gia fatta sulla pagina Percorso alla dashboard Calendario e alla dashboard Consegne;
+   - controllare esplicitamente tutti i pannelli, bottoni, modal, filtri e viste delle dashboard Percorso e Calendario;
    - verificare coerenza di font, colori, spaziature, pannelli, modal, tooltip, legenda e stati di errore;
    - verificare responsive, accessibilita e leggibilita dei contenuti lunghi nelle viste e nei modal;
    - eseguire gli scenari manuali aggiornati e trasformare i problemi in issue/PR atomiche;
@@ -675,7 +708,15 @@ Ordine consigliato:
    - mantenere aggiornata la checklist `doc/SCENARI_TEST_MANUALI_GUI.md` per ogni pannello, modal, vista e comando TUI;
    - aggiungere `data-testid` o altri punti di aggancio stabili alle GUI prima di automatizzare;
    - introdurre Playwright come prima scelta per dashboard, modal, calendario e responsive, lasciando Selenium come alternativa;
-   - creare una suite leggera da PR e una suite pesante/notturna con browser, screenshot e scenari end-to-end da lanciare quando la macchina non serve.
+   - creare una suite leggera da PR e una suite pesante/notturna con browser, screenshot e scenari end-to-end da lanciare quando la macchina non serve;
+   - rimandare le baseline visuali estese finche GUI e testi non sono stabili, mantenendo nel frattempo test funzionali e scenari manuali;
+   - valutare la manutenzione delle baseline come costo esplicito di ogni modifica grafica.
+14a. Integrazione futura di utui nella TUI:
+   - definire prima contratti dati e comportamenti stabili della TUI attuale;
+   - introdurre un adapter/rendering layer che permetta di sostituire la presentazione senza riscrivere backend e flussi;
+   - mantenere compatibili navigazione, comandi, resize, pannelli, colori e snapshot testuali;
+   - confrontare utui con la TUI attuale tramite gli stessi scenari e snapshot;
+   - integrare utui solo dopo la stabilizzazione del primo flusso lab studente.
 15. Event log minimale e provenienza minima per activity/contenuti generati.
 16. Cornice didattica generale e guida operativa docente/studente.
 17. Inserimento activity nel percorso e visualizzazione calendario.
