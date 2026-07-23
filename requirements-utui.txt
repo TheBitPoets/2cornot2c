@@ -1,0 +1,2 @@
+# Optional student TUI renderer. Requires Python 3.11 or newer.
+utui @ git+https://github.com/TheBitPoets/utui.git@c38ec96c865f9ee4d2f20abaf63482d7930050fa

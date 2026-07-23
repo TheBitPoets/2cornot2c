@@ -1,0 +1,60 @@
++ > Dettaglio consegna ------------------------------------------------+
+|Titolo: Somma in Python                                               |
+|Activity: python-demo-somma-001                                       |
+|Assegnazione: assignment-demo-001                                     |
+|Classe: 3A Informatica                                                |
+|Assegnata: 20/07/2026 08:30                                           |
+|Scadenza: 25/07/2026 23:59                                            |
++----------------------------------------------------------------------+
++ Workspace -----------------------------------------------------------+
+|Path: tmp/demo/rossi-mario/python-demo-somma-001                      |
+|Esiste: si                                                            |
++----------------------------------------------------------------------+
++ Activity ------------------------------------------------------------+
+|Path: activities/python-demo-somma-001.json                           |
+|Tipo: laboratorio                                                     |
+|Linguaggio: python                                                    |
+|Sorgente: main.py                                                     |
+|Argomenti: funzioni, somma, input                                     |
++----------------------------------------------------------------------+
++ Aiuto consentito ----------------------------------------------------+
+|Modalita: Debug guidato                                               |
+|Sintesi: Spiegazioni e indizi senza soluzione completa.               |
+|Permesso: errori, concetti                                            |
+|Non permesso: soluzione completa                                      |
++----------------------------------------------------------------------+
++ Richieste aiuto -----------------------------------------------------+
+|Stato log: ready                                                      |
+|Errore log: -                                                         |
+|Eventi: 2                                                             |
+|Consentite: 2                                                         |
+|Bloccate: 0                                                           |
+|AI budget: 2/5 usate, 3 rimanenti                                     |
++----------------------------------------------------------------------+
++ Report --------------------------------------------------------------+
+|Path: teacher-reports/demo/python-demo-somma-001.json                 |
+|Esiste: si                                                            |
+|Consegnata: 23/07/2026 18:10                                          |
+|Commit: abc1234                                                       |
++----------------------------------------------------------------------+
++ Ultimo dettaglio test -----------------------------------------------+
+|[ok] test_somma_positivi                                              |
+|[ko] test_somma_negativi                                              |
+|atteso -3, ottenuto 3                                                 |
++----------------------------------------------------------------------+
++ Grading -------------------------------------------------------------+
+|Stato: draft (1/2 test)                                               |
+|Voto: 7                                                               |
++----------------------------------------------------------------------+
++ Runner --------------------------------------------------------------+
+|Stato: completed                                                      |
+|Backend: docker                                                       |
++----------------------------------------------------------------------+
++ Guida rapida --------------------------------------------------------+
+|Consegna: lavoro assegnato dal docente.                               |
+|Workspace: cartella locale dove modifichi i file.                     |
+|Test: controlli automatici sul tuo lavoro.                            |
+|Report: risultato letto da dashboard e registro.                      |
+|Flusso: apri, modifica, esegui test, controlla.                       |
+|Comandi: e test, a aiuto, o workspace, v editor.                      |
++----------------------------------------------------------------------+

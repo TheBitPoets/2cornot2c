@@ -16,6 +16,18 @@ La prima interfaccia semigrafica e:
 python scripts/student_lab_cli.py --student-id rossi-mario
 ```
 
+Il progetto richiede Python 3.11 o successivo; per sviluppo e collaudo e consigliato Python 3.12,
+come nella GitHub Action di qualita. Il futuro renderer a pannelli usa opzionalmente `utui`, fissato
+temporaneamente a un commit verificato:
+
+```powershell
+py -3.12 -m pip install -r requirements-utui.txt
+```
+
+La prima integrazione espone soltanto l'adapter puro in `scripts/student_lab_utui.py` e i relativi
+snapshot. La CLI continua a usare il renderer testuale esistente: selezione del renderer, input e
+resize verranno collegati in una PR successiva, mantenendo il renderer storico come fallback.
+
 Le richieste di aiuto non invocano provider dentro la TUI. La TUI le invia al server locale della macchina docente,
 che ricarica consegna, policy e budget dai propri dati e usa Codex CLI installato localmente. Server e TUI devono
 puntare alla stessa root dati. Per la demo:

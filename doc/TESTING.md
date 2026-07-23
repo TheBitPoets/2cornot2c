@@ -18,6 +18,17 @@ Installa prima la dipendenza di test:
 python -m pip install -r requirements-dev.txt
 ```
 
+I test del renderer opzionale `utui` richiedono Python 3.11 o successivo e la dipendenza fissata:
+
+```bash
+python3.12 -m pip install -r requirements-utui.txt
+python3.12 -m pytest tests/test_student_lab_utui.py
+```
+
+Senza questa dipendenza i test che esercitano i widget vengono saltati; proiezione dei dati e
+fallback restano comunque verificati. La CI consumer dovra installare esplicitamente entrambi i
+file dei requisiti prima che il nuovo renderer venga collegato alla CLI.
+
 ## Test Python locali
 
 Per eseguire tutti i test Python:

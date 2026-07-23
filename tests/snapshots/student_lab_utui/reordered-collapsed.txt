@@ -1,0 +1,28 @@
++ Guida rapida ----------------------------------------------+ | + [+] Richieste aiuto --------------------------------+
+|Consegna: lavoro assegnato dal docente.                     | | |                                                     |
+|Workspace: cartella locale dove modifichi i file.           | | +-----------------------------------------------------+
+|Test: controlli automatici sul tuo lavoro.                  | | + Aiuto consentito -----------------------------------+
+|Report: risultato letto da dashboard e registro.            | | |Modalita: Debug guidato                              |
+|Flusso: apri, modifica, esegui test, controlla.             | | |Sintesi: Spiegazioni e indizi senza soluzione comp...|
+|Comandi: e test, a aiuto, o workspace, v editor.            | | |Permesso: errori, concetti                           |
++------------------------------------------------------------+ | |Non permesso: soluzione completa                     |
++ > Runner --------------------------------------------------+ | +-----------------------------------------------------+
+|Stato: completed                                            | | + Activity -------------------------------------------+
+|Backend: docker                                             | | |Path: activities/python-demo-somma-001.json          |
++------------------------------------------------------------+ | |Tipo: laboratorio                                    |
++ Grading ---------------------------------------------------+ | |Linguaggio: python                                   |
+|Stato: draft (1/2 test)                                     | | |Sorgente: main.py                                    |
+|Voto: 7                                                     | | |Argomenti: funzioni, somma, input                    |
++------------------------------------------------------------+ | +-----------------------------------------------------+
++ Ultimo dettaglio test -------------------------------------+ | + Workspace ------------------------------------------+
+|[ok] test_somma_positivi                                    | | |Path: tmp/demo/rossi-mario/python-demo-somma-001     |
+|[ko] test_somma_negativi                                    | | |Esiste: si                                           |
+|atteso -3, ottenuto 3                                       | | +-----------------------------------------------------+
++------------------------------------------------------------+ | + Dettaglio consegna ---------------------------------+
++ [+] Report ------------------------------------------------+ | |Titolo: Somma in Python                              |
+|                                                            | | |Activity: python-demo-somma-001                      |
++------------------------------------------------------------+ | |Assegnazione: assignment-demo-001                    |
+                                                               | |Classe: 3A Informatica                               |
+                                                               | |Assegnata: 20/07/2026 08:30                          |
+                                                               | |Scadenza: 25/07/2026 23:59                           |
+                                                               | +-----------------------------------------------------+

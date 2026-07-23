@@ -1,0 +1,33 @@
++ > Dettaglio consegna --------------------------------------+ | + Report ---------------------------------------------+
+|Titolo: Somma in Python                                     | | |Path: teacher-reports/demo/python-demo-somma-001.json|
+|Activity: python-demo-somma-001                             | | |Esiste: si                                           |
+|Assegnazione: assignment-demo-001                           | | |Consegnata: 23/07/2026 18:10                         |
+|Classe: 3A Informatica                                      | | |Commit: abc1234                                      |
+|Assegnata: 20/07/2026 08:30                                 | | +-----------------------------------------------------+
+|Scadenza: 25/07/2026 23:59                                  | | + Ultimo dettaglio test ------------------------------+
++------------------------------------------------------------+ | |[ok] test_somma_positivi                             |
++ Workspace -------------------------------------------------+ | |[ko] test_somma_negativi                             |
+|Path: tmp/demo/rossi-mario/python-demo-somma-001            | | |atteso -3, ottenuto 3                                |
+|Esiste: si                                                  | | +-----------------------------------------------------+
++------------------------------------------------------------+ | + Grading --------------------------------------------+
++ Activity --------------------------------------------------+ | |Stato: draft (1/2 test)                              |
+|Path: activities/python-demo-somma-001.json                 | | |Voto: 7                                              |
+|Tipo: laboratorio                                           | | +-----------------------------------------------------+
+|Linguaggio: python                                          | | + Runner ---------------------------------------------+
+|Sorgente: main.py                                           | | |Stato: completed                                     |
+|Argomenti: funzioni, somma, input                           | | |Backend: docker                                      |
++------------------------------------------------------------+ | +-----------------------------------------------------+
++ Aiuto consentito ------------------------------------------+ | + Guida rapida ---------------------------------------+
+|Modalita: Debug guidato                                     | | |Consegna: lavoro assegnato dal docente.              |
+|Sintesi: Spiegazioni e indizi senza soluzione completa.     | | |Workspace: cartella locale dove modifichi i file.    |
+|Permesso: errori, concetti                                  | | |Test: controlli automatici sul tuo lavoro.           |
+|Non permesso: soluzione completa                            | | |Report: risultato letto da dashboard e registro.     |
++------------------------------------------------------------+ | |Flusso: apri, modifica, esegui test, controlla.      |
++ Richieste aiuto -------------------------------------------+ | |Comandi: e test, a aiuto, o workspace, v editor.     |
+|Stato log: ready                                            | | +-----------------------------------------------------+
+|Errore log: -                                               | |
+|Eventi: 2                                                   | |
+|Consentite: 2                                               | |
+|Bloccate: 0                                                 | |
+|AI budget: 2/5 usate, 3 rimanenti                           | |
++------------------------------------------------------------+ |
