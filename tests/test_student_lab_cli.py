@@ -1291,8 +1291,8 @@ def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path
     monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
     monkeypatch.setattr(
         student_lab_cli.student_lab_runner,
-        "run_local_assignment",
-        lambda assignment, root: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
+        "run_assignment",
+        lambda assignment, root, **kwargs: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
     )
 
     def fake_write_report(root, assignment, report):
@@ -1321,6 +1321,44 @@ def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 
+def test_run_tui_forwards_runner_backend_options(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    inputs = iter(["1", "e", "", "", "q"])
+    runner_calls = []
+
+    monkeypatch.setattr(student_lab_cli, "load_payload", lambda root, student_id, now=None: payload)
+
+    def fake_run_assignment(assignment, root, **kwargs):
+        runner_calls.append((assignment, root, kwargs))
+        return {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}}
+
+    monkeypatch.setattr(student_lab_cli.student_lab_runner, "run_assignment", fake_run_assignment)
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "write_student_report",
+        lambda root, assignment, report: tmp_path / "reports" / "latest.json",
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=lambda output: None,
+        clear=False,
+        backend="docker",
+        timeout_seconds=9,
+        docker_image="custom-runner:latest",
+    )
+
+    assert result == 0
+    assert len(runner_calls) == 1
+    assert runner_calls[0][2] == {
+        "backend": "docker",
+        "timeout_seconds": 9,
+        "docker_image": "custom-runner:latest",
+    }
+
+
 def test_run_tui_refreshes_from_server_after_runner_in_remote_mode(monkeypatch, tmp_path) -> None:
     payload = sample_payload()
     outputs = []
@@ -1341,8 +1379,8 @@ def test_run_tui_refreshes_from_server_after_runner_in_remote_mode(monkeypatch, 
     monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
     monkeypatch.setattr(
         student_lab_cli.student_lab_runner,
-        "run_local_assignment",
-        lambda assignment, root: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
+        "run_assignment",
+        lambda assignment, root, **kwargs: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
     )
     monkeypatch.setattr(
         student_lab_cli.student_lab_runner,
@@ -1383,8 +1421,8 @@ def test_run_tui_keeps_saved_runner_result_when_remote_refresh_fails(monkeypatch
     monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
     monkeypatch.setattr(
         student_lab_cli.student_lab_runner,
-        "run_local_assignment",
-        lambda assignment, root: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
+        "run_assignment",
+        lambda assignment, root, **kwargs: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
     )
     monkeypatch.setattr(
         student_lab_cli.student_lab_runner,

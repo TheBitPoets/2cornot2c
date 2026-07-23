@@ -1072,6 +1072,9 @@ def run_tui(
     server_url: str = DEFAULT_SERVER_URL,
     server_token: str = "",
     allow_insecure_http: bool = False,
+    backend: str = "local",
+    timeout_seconds: int = student_lab_runner.DEFAULT_TIMEOUT_SECONDS,
+    docker_image: str = student_lab_runner.DEFAULT_DOCKER_IMAGE,
 ) -> int:
     """Run the interactive student lab loop."""
 
@@ -1225,7 +1228,13 @@ def run_tui(
                 continue
             if action == "e":
                 try:
-                    report = student_lab_runner.run_local_assignment(assignment, root=root)
+                    report = student_lab_runner.run_assignment(
+                        assignment,
+                        root=root,
+                        backend=backend,
+                        timeout_seconds=timeout_seconds,
+                        docker_image=docker_image,
+                    )
                     report_path = student_lab_runner.write_student_report(root, assignment, report)
                 except ValueError as error:
                     print_fn(f"Runner non disponibile:\n{error}")
@@ -1258,6 +1267,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-clear", action="store_true", help="Non pulire lo schermo tra una vista e l'altra.")
     parser.add_argument("--no-color", action="store_true", help="Disabilita colori ANSI.")
     parser.add_argument(
+        "--backend",
+        choices=sorted(student_lab_runner.RUNNER_BACKENDS),
+        default="local",
+        help="Backend del runner da usare per il comando esegui test.",
+    )
+    parser.add_argument(
+        "--docker-image",
+        default=student_lab_runner.DEFAULT_DOCKER_IMAGE,
+        help="Immagine Docker da usare quando il backend e docker.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=student_lab_runner.positive_int,
+        default=student_lab_runner.DEFAULT_TIMEOUT_SECONDS,
+        help="Timeout del runner in secondi.",
+    )
+    parser.add_argument(
         "--server-url",
         default=os.environ.get("THEBITLAB_SERVER_URL", DEFAULT_SERVER_URL),
         help="URL del server locale che gestisce richieste di aiuto e provider Codex.",
@@ -1284,6 +1310,9 @@ def main() -> int:
             server_url=args.server_url,
             server_token=os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", ""),
             allow_insecure_http=args.allow_insecure_http,
+            backend=args.backend,
+            timeout_seconds=args.timeout,
+            docker_image=args.docker_image,
         )
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)
