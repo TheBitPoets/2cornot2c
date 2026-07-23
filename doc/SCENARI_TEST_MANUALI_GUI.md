@@ -550,6 +550,30 @@ Risultato atteso:
 
 Obiettivo: verificare che la TUI sia comprensibile, robusta sugli input e coerente con dashboard e report.
 
+### Schermata annotata della procedura
+
+La schermata riassume gli stessi passaggi descritti sotto: input non valido, dettaglio, aiuto, runner
+locale e runner Docker. I colori dei blocchi corrispondono ai gruppi di passi della procedura.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Comandi TUI annotati](images/dashboard-guides/scenario-7-tui-comandi-colori.svg)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-5 - Blu: lista e input</strong><br>
+Avvia la TUI, prova un input non valido, seleziona la consegna con il numero e verifica che il dettaglio si apra.<br><br>
+<strong style="color:#168a45">Step 6-10 - Verde: dettaglio e annullamento aiuto</strong><br>
+Controlla le sezioni, apri lo storico, entra in aiuto e verifica che <code>b</code> e invio annullino senza creare richieste.<br><br>
+<strong style="color:#7b35b2">Step 11-15 - Viola: richiesta e storico</strong><br>
+Invia una richiesta consentita, controlla tipo, stato, risposta e presenza di prompt e risposta nello storico.<br><br>
+<strong style="color:#b45f06">Step 16-19 - Arancio: esecuzione e navigazione</strong><br>
+Esegui il runner, controlla report ed esito, poi usa <code>b</code>, <code>r</code> e <code>q</code>.<br><br>
+<strong style="color:#1464c0">Scenario 7A - Blu: backend Docker</strong><br>
+Ripeti il comando <code>e</code> con <code>--backend docker</code> e verifica il campo <code>backend</code> nel report.
+</td></tr>
+</table>
+
 1. Se stai continuando dagli scenari precedenti, ferma con `Ctrl+C` il server avviato durante il setup
    comune. Prepara quindi di nuovo la demo e avvia il server docente con provider Codex:
 

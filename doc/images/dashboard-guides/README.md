@@ -109,6 +109,7 @@ completa della schermata, mentre quelle annotate servono per trovare rapidamente
 | `scenario-5-docente-errori.png` | fatto | Dashboard docente | Test falliti e dettaglio Python/pytest |
 | `scenario-6-tui-session-colori.svg` | fatto | TUI studente | Snapshot terminale annotato con runner, report e test |
 | `scenario-6-tui-session.txt` | fatto | TUI studente | Sessione reale con runner e report salvato |
+| `scenario-7-tui-comandi-colori.svg` | fatto | TUI studente | Snapshot annotato di input, aiuto, runner locale e runner Docker |
 | `scenario-8-studente-percorso-colori.png` | fatto | Dashboard studente | Calendario, percorso e consegne annotati |
 | `scenario-8-studente-percorso.png` | fatto | Dashboard studente | Vista completa del percorso/calendario studente |
 | `scenario-9-docente-percorso-colori.png` | fatto | Course Design Board | Catalogo, progetto e azioni annotati |
@@ -116,11 +117,10 @@ completa della schermata, mentre quelle annotate servono per trovare rapidamente
 | `scenario-10-docente-calendario-colori.png` | fatto | School Calendar Board | Date, interruzioni, calendario e Gantt annotati |
 | `scenario-10-docente-calendario.png` | fatto | School Calendar Board | Vista iniziale del calendario docente |
 
-Gli scenari GUI 2-6 e 8-10 riusano la stessa convenzione: una panoramica annotata a sinistra e la procedura
-numerata a destra, con eventuali schermate di dettaglio sotto. Lo Scenario 7 TUI usa invece una traccia
-testuale della sessione, perché il terminale non ha una panoramica GUI stabile da annotare. Le catture
-reali vengono aggiunte insieme alla verifica manuale, così la documentazione non presenta dati inventati o
-immagini non corrispondenti alla versione corrente.
+Gli scenari GUI 2-10 e lo Scenario 7 TUI riusano la stessa convenzione: una panoramica annotata a sinistra
+e la procedura numerata a destra, con eventuali schermate di dettaglio sotto. Le catture reali vengono
+aggiunte insieme alla verifica manuale, così la documentazione non presenta dati inventati o immagini non
+corrispondenti alla versione corrente.
 
 ## Dopo aver aggiunto immagini
 
