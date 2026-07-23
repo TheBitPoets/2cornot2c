@@ -254,14 +254,14 @@ La cattura usa la root `tmp/student-lab-demo`, il registro `demo/python-demo-som
 <strong style="color:#7b35b2">Step 3 - Viola: caricamento</strong><br>
 <strong>3.</strong> Clicca <code>Carica registro</code> e attendi il caricamento; usa <code>Ricarica</code> solo per rileggere i dati persistiti.<br><br>
 
-<strong style="color:#168a45">Step 4, 7-8 - Verde: riepilogo e consegna</strong><br>
-<strong>4.</strong> Controlla classe, activity, studenti, consegnati, mancanti e ritardi.<br>
-<strong>7.</strong> In <code>Apri studenti</code> cerca <code>rossi-mario</code> e apri la consegna.<br>
-<strong>8.</strong> Nel dettaglio seleziona <code>main.py</code> e <code>test_main.py</code>.<br><br>
+<strong style="color:#168a45">Step 4 - Verde: riepilogo</strong><br>
+<strong>4.</strong> Controlla classe, activity, studenti, consegnati, mancanti e ritardi.<br><br>
 
-<strong style="color:#c87800">Step 5-6 - Arancione: vista studenti</strong><br>
+<strong style="color:#c87800">Step 5-8 - Arancione: vista studenti e consegna</strong><br>
 <strong>5.</strong> Clicca <code>Apri studenti</code>.<br>
-<strong>6.</strong> Verifica che il modal mostri lo studente corretto e i suoi indicatori.
+<strong>6.</strong> Verifica che il modal mostri lo studente corretto e i suoi indicatori.<br>
+<strong>7.</strong> Nella riga di <code>rossi-mario</code>, clicca <code>Apri consegna</code>.<br>
+<strong>8.</strong> Seleziona <code>main.py</code> e <code>test_main.py</code>.
 
 </td>
 </tr>
@@ -367,19 +367,18 @@ controllare testo, provider e contatori senza affidarsi soltanto al colore.
 </td>
 <td valign="top">
 
-<strong style="color:#1464c0">Step 1-5 - Blu: raggiungi lo studente</strong><br>
+<strong style="color:#1464c0">Step 1-8 - Blu: studente e dettagli</strong><br>
 <strong>1.</strong> Apri la dashboard docente e carica il registro demo.<br>
 <strong>2.</strong> Apri <code>Studenti</code>.<br>
 <strong>3.</strong> Cerca <code>rossi-mario</code>.<br>
 <strong>4.</strong> Controlla il riepilogo degli aiuti.<br>
 <strong>5.</strong> Verifica i contatori nella riga.<br><br>
 
-<strong style="color:#7b35b2">Step 6-8 - Viola: leggi i dettagli</strong><br>
 <strong>6.</strong> Clicca <code>Dettagli aiuti</code>.<br>
 <strong>7.</strong> Leggi prompt, risposta, provider e stato.<br>
 <strong>8.</strong> Confronta i token dichiarati con il riepilogo.<br><br>
 
-<strong style="color:#c87800">Step 9 - Arancione: ritorno</strong><br>
+<strong style="color:#c87800">Step 9 - Arancione: chiusura</strong><br>
 <strong>9.</strong> Chiudi il modal e verifica di restare nella stessa vista Studenti.
 
 </td>
@@ -442,7 +441,7 @@ il modal che deve contenere l'errore completo.
 <strong style="color:#c87800">Step 5 - Arancione: dettaglio</strong><br>
 <strong>5.</strong> Clicca <code>Dettaglio errori</code> e verifica che il testo Python/pytest sia leggibile anche quando e lungo.<br><br>
 
-<strong style="color:#168a45">Chiusura - Verde: ritorno</strong><br>
+<strong style="color:#168a45">Chiusura - Step 6 - Verde: ritorno</strong><br>
 Chiudi il modal e verifica che la vista del registro resti invariata.
 
 </td>
@@ -521,9 +520,11 @@ eseguendo la TUI sulla root demo corrente.
 </details>
 
 </td><td valign="top">
-<strong style="color:#1464c0">Step 1-2 - Blu: esecuzione</strong><br>
+<strong style="color:#1464c0">Step 1-3 - Blu: selezione ed esecuzione</strong><br>
 Avvia la TUI, seleziona <code>Demo somma in Python</code> ed esegui il runner.<br><br>
-<strong style="color:#168a45">Step 3-6 - Verde: report e verifica GUI</strong><br>
+<strong style="color:#168a45">Step 3 - Verde: report e test</strong><br>
+Controlla nella TUI report, esito e test dell'esecuzione completata.<br><br>
+<strong style="color:#7b35b2">Step 4-6 - Viola: ritorno e verifica GUI</strong><br>
 Esci, apri la dashboard studente, seleziona <code>rossi-mario</code>, clicca <code>Carica</code> e confronta report, test, ultimo tentativo e aiuti con la TUI.
 </td></tr>
 </table>
@@ -690,7 +691,7 @@ il controllo negativo della fixture demo; la procedura include anche una variant
 ![Percorso studente e calendario annotati](images/dashboard-guides/scenario-8-studente-percorso-colori.png)
 
 </td><td valign="top">
-<strong style="color:#1464c0">Step 1-5 - Blu: calendario</strong><br>
+<strong style="color:#1464c0">Step 1-2, 4-5 - Blu: calendario e filtri</strong><br>
 Apri la dashboard, seleziona <code>rossi-mario</code>, carica, scegli modalità, mese e filtro e prova lista/calendario.<br><br>
 <strong style="color:#7b35b2">Step 3 - Viola: percorso</strong><br>
 Controlla i percorsi associati e apri un paragrafo senza possibilità di modifica.<br><br>
@@ -794,10 +795,13 @@ La cattura mostra la vista iniziale del calendario con le date obbligatorie anco
 </td><td valign="top">
 <strong style="color:#1464c0">Step 1-2 - Blu: calendario e date</strong><br>
 Apri <code>school_calendar.html</code>, carica o crea un calendario e imposta inizio/fine lezioni.<br><br>
-<strong style="color:#c87800">Step 3 - Arancione: interruzioni</strong><br>
+<strong style="color:#c87800">Step 4 - Arancione: interruzioni</strong><br>
 Aggiungi o importa festivita e sospensioni e verifica che siano distinguibili.<br><br>
-<strong style="color:#168a45">Step 4 - Verde: viste</strong><br>
-Controlla calendario, Gantt UDA e riepilogo ore; prova modalita e filtri senza perdere dati.
+<strong style="color:#168a45">Step 3, 6-7 - Verde: vista calendario</strong><br>
+Salva il calendario, prova modalita, frecce e filtri senza perdere dati.<br><br>
+
+<strong style="color:#7b35b2">Step 5 - Viola: Gantt</strong><br>
+Controlla che le UDA compaiano nel Gantt quando sono presenti.
 </td></tr>
 </table>
 

@@ -45,7 +45,7 @@
   <text x="38" y="886" class="terminal-text">Il report resta visibile dopo il ricaricamento.</text>
   <rect x="20" y="924" width="960" height="190" rx="8" class="terminal"/>
   <rect x="36" y="936" width="180" height="24" rx="12" class="blue"/>
-  <text x="48" y="953" class="label">Runner Docker</text>
+  <text x="48" y="953" class="label">7A - backend Docker</text>
   <text x="38" y="982" class="terminal-text">Avvio: --backend docker</text>
   <text x="38" y="998" class="terminal-text">Dettaglio: Esecuzione completata</text>
   <text x="38" y="1014" class="terminal-text">Stato runner: passed | Esito: consegna superata</text>
