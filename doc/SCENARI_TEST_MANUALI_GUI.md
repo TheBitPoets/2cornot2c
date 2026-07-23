@@ -362,7 +362,11 @@ controllare testo, provider e contatori senza affidarsi soltanto al colore.
 <tr>
 <td valign="top" width="52%">
 
-![Modal aiuti docente annotato](images/dashboard-guides/scenario-4-docente-aiuti-colori.png)
+![Scenario 4, passi 1-2: registro caricato](images/dashboard-guides/scenario-4-steps-1-2-registro-colori.png)
+
+![Scenario 4, passi 3-5: pannello Studenti](images/dashboard-guides/scenario-4-steps-3-5-studenti-colori.png)
+
+![Scenario 4, passi 6-8: modal dettagli aiuti](images/dashboard-guides/scenario-4-docente-aiuti-colori.png)
 
 </td>
 <td valign="top">

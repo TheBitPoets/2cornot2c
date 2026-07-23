@@ -104,6 +104,8 @@ completa della schermata, mentre quelle annotate servono per trovare rapidamente
 | `scenario-3-docente-quadro-colori.png` | fatto | Dashboard docente | Filtri, vista elenco, riga Rossi e azioni del quadro classe |
 | `scenario-3-docente-quadro.png` | fatto | Dashboard docente | Modal Quadro classe completo con filtri e due studenti |
 | `scenario-4-docente-aiuti-colori.png` | fatto | Dashboard docente | Modal aiuti annotato con numerazione della procedura |
+| `scenario-4-steps-1-2-registro-colori.png` | fatto | Dashboard docente | Evidenza pulita del registro caricato e del riepilogo |
+| `scenario-4-steps-3-5-studenti-colori.png` | fatto | Dashboard docente | Evidenza pulita del pannello Studenti e dei contatori |
 | `scenario-4-docente-aiuti.png` | fatto | Dashboard docente | Prompt, risposta, provider e contatori degli aiuti |
 | `scenario-5-docente-errori-colori.png` | fatto | Dashboard docente | Modal dettaglio errori evidenziato |
 | `scenario-5-docente-errori.png` | fatto | Dashboard docente | Test falliti e dettaglio Python/pytest |
