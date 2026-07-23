@@ -14,6 +14,23 @@ def test_student_lab_demo_smoke_rejects_populated_cli_root(tmp_path) -> None:
         student_lab_demo_smoke.ensure_root_is_usable_for_cli(tmp_path)
 
 
+def test_student_lab_demo_smoke_existing_mode_uses_non_destructive_check(tmp_path, monkeypatch) -> None:
+    called = {}
+
+    def fake_check(root):
+        called.update(root=root)
+        return {"ok": True, "root": str(root), "automatic_checks": {"existing_root": True}}
+
+    monkeypatch.setattr(student_lab_demo_smoke, "run_existing_check", fake_check)
+    monkeypatch.setattr(
+        "sys.argv",
+        ["student_lab_demo_smoke.py", "--root", str(tmp_path), "--existing"],
+    )
+
+    assert student_lab_demo_smoke.main() == 0
+    assert called == {"root": tmp_path.resolve()}
+
+
 def test_student_lab_demo_smoke_builds_complete_flow(tmp_path) -> None:
     summary = student_lab_demo_smoke.run_smoke(tmp_path)
 
