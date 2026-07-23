@@ -879,6 +879,36 @@ def test_student_dashboard_file_modal_ignores_stale_file_response() -> None:
     )
 
 
+def test_student_dashboard_closes_file_modal_when_dashboard_changes() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [{
+            activity_id: "python-base-somma-001",
+            title: "Somma in Python",
+            submitted: true,
+            source_path: "assignments/python-base-somma-001/main.py",
+          }],
+        });
+        const pending = tested.openAssignmentFiles(0);
+        assert.equal(tested.els.assignmentFilesModal.hidden, false);
+
+        tested.renderDashboard({
+          student_id: "bianchi-luca",
+          assignments: [{
+            activity_id: "python-loop-001",
+            title: "Loop in Python",
+            submitted: false,
+          }],
+        });
+        await pending;
+
+        assert.equal(tested.els.assignmentFilesModal.hidden, true);
+        """
+    )
+
+
 def test_student_dashboard_closes_assignment_detail_when_dashboard_changes() -> None:
     run_student_dashboard_js(
         """

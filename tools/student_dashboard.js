@@ -1476,6 +1476,7 @@ function isNextDeadlineAssignment(assignment, nextAssignment) {
 
 function renderDashboard(payload) {
   closeAssignmentDetail();
+  closeAssignmentFiles();
   const assignments = Array.isArray(payload.assignments) ? payload.assignments : [];
   currentDashboardPayload = { ...payload, assignments };
   const filterValue = els.assignmentFilter?.value || "all";
