@@ -583,8 +583,6 @@ Controlla le sezioni, apri lo storico, entra in aiuto e verifica che <code>b</co
 Invia una richiesta consentita, controlla tipo, stato, risposta e presenza di prompt e risposta nello storico.<br><br>
 <strong style="color:#b45f06">Step 16-19 - Arancio: esecuzione e navigazione</strong><br>
 Esegui il runner, controlla report ed esito, poi usa <code>b</code>, <code>r</code> e <code>q</code>.<br><br>
-<strong style="color:#1464c0">Scenario 7A - Blu: backend Docker</strong><br>
-Ripeti il comando <code>e</code> con <code>--backend docker</code> e verifica il campo <code>backend</code> nel report.
 </td></tr>
 </table>
 
@@ -643,6 +641,26 @@ Risultato atteso:
 - Gli accenti e i testi italiani sono corretti.
 
 ### Scenario 7A - Runner TUI locale e Docker
+
+Obiettivo: verificare separatamente il backend locale, il backend Docker, il report persistito e la coerenza
+con la dashboard studente.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Scenario 7A annotato](images/dashboard-guides/scenario-7a-tui-docker-colori.svg)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-4 - Blu: runner locale</strong><br>
+Avvia la TUI con <code>--backend local</code>, seleziona la demo, premi <code>e</code> e verifica esecuzione completata,
+<code>passed</code>, test <code>2/2</code> e report salvato.<br><br>
+<strong style="color:#b45f06">Step 5-7 - Arancione: runner Docker</strong><br>
+Riavvia con <code>--backend docker</code>, ripeti l'esecuzione e controlla che il report persistito contenga
+<code>backend=docker</code>. Se Docker non e disponibile deve comparire un errore esplicito.<br><br>
+<strong style="color:#168a45">Step 8 - Verde: verifica dashboard</strong><br>
+Apri la dashboard studente, seleziona <code>rossi-mario</code> e confronta test, esito, ultimo tentativo e report.
+</td></tr>
+</table>
 
 Obiettivo: verificare che il comando `e` usi davvero il backend scelto all'avvio della TUI e che il
 report persistito mantenga lo stesso valore. Questo scenario usa una root separata per non sovrascrivere

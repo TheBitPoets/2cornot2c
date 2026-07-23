@@ -114,6 +114,7 @@ completa della schermata, mentre quelle annotate servono per trovare rapidamente
 | `scenario-6-tui-session-colori.svg` | fatto | TUI studente | Snapshot terminale annotato con runner, report e test |
 | `scenario-6-tui-session.txt` | fatto | TUI studente | Sessione reale con runner e report salvato |
 | `scenario-7-tui-comandi-colori.svg` | fatto | TUI studente | Snapshot annotato di input, aiuto, runner locale e runner Docker |
+| `scenario-7a-tui-docker-colori.svg` | fatto | TUI studente | Runner locale, runner Docker e verifica dashboard annotati |
 | `scenario-8-studente-percorso-colori.png` | fatto | Dashboard studente | Calendario, percorso e consegne annotati |
 | `scenario-8-studente-percorso.png` | fatto | Dashboard studente | Vista completa del percorso/calendario studente |
 | `scenario-9-docente-percorso-colori.png` | fatto | Course Design Board | Catalogo, progetto e azioni annotati |
