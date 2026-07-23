@@ -75,7 +75,7 @@ Ogni pannello, modal, vista e comando deve avere almeno uno scenario manuale. Qu
 | Calendario docente | Vista calendario | Verifica modalita, frecce, filtri, UDA programmate/reali e interruzioni | Playwright o Selenium |
 | TUI studente | Lista consegne | Avvia TUI e verifica legenda, colori opzionali, date compatte e selezione numerica | Test interattivo o snapshot terminale |
 | TUI studente | Dettaglio consegna | Apri una consegna e verifica sezioni, divisori, guida rapida e comandi | Test interattivo o snapshot terminale |
-| TUI studente | Comando `e` | Esegui test e salva report, poi verifica GUI studente/docente | Test interattivo piu assert su file |
+| TUI studente | Comando `e` | Esegui test e salva report con backend local e docker, poi verifica GUI studente/docente | Test interattivo piu assert su file |
 | TUI studente | Comando `a` | Chiedi aiuto, verifica guida locale e storico, annulla con `b`/invio, valida input non valido | Test interattivo con input finto |
 | TUI studente | Comando `h` | Mostra storico aiuti e torna alla consegna | Test interattivo con input finto |
 | TUI studente | Comando `o` | Apre workspace se presente, mostra errore chiaro se assente | Test con mock apertura |
@@ -603,6 +603,53 @@ Risultato atteso:
 - Il report salvato dalla TUI viene letto dalla dashboard studente.
 - Le richieste di aiuto salvate dalla TUI vengono viste dal docente.
 - Gli accenti e i testi italiani sono corretti.
+
+### Scenario 7A - Runner TUI locale e Docker
+
+Obiettivo: verificare che il comando `e` usi davvero il backend scelto all'avvio della TUI e che il
+report persistito mantenga lo stesso valore. Questo scenario usa una root separata per non sovrascrivere
+la demo corrente.
+
+1. Prepara una root demo dedicata:
+
+   ```powershell
+   python scripts/student_lab_demo_setup.py --root tmp/student-lab-docker-demo-20260723
+   ```
+
+2. Avvia la TUI con il backend locale:
+
+   ```powershell
+   python scripts/student_lab_cli.py --root tmp/student-lab-docker-demo-20260723 --student-id rossi-mario --backend local --no-clear --no-color
+   ```
+
+3. Seleziona `Demo somma in Python`, premi `e`, attendi il messaggio `Esecuzione completata`, premi invio,
+   poi `b` e `q`.
+4. Verifica nel dettaglio che compaiano `Backend: local`, `Stato runner: passed`, `Test: 2/2 test` e
+   `Report salvato`.
+5. Ripeti i passi 2-4 con il backend Docker:
+
+   ```powershell
+   python scripts/student_lab_cli.py --root tmp/student-lab-docker-demo-20260723 --student-id rossi-mario --backend docker --no-clear --no-color
+   ```
+
+6. Verifica nel dettaglio che ora compaiano `Backend: docker`, `Stato runner: passed`, `Test: 2/2 test` e
+   un nuovo percorso di report.
+7. Controlla il report persistito:
+
+   ```powershell
+   Get-Content tmp/student-lab-docker-demo-20260723/examples/assignment_tracking/student_repos/rossi-mario/reports/python-demo-somma-001/latest.json
+   ```
+
+   Nel JSON il campo `backend` deve valere `docker` dopo l'ultima esecuzione.
+8. Apri la dashboard studente, seleziona `rossi-mario` e verifica che test, esito e ultimo tentativo
+   corrispondano al report Docker.
+
+Risultato atteso:
+
+- Il backend locale produce `passed` e `2/2 test` nella demo Python.
+- Il backend Docker produce lo stesso esito isolando l'esecuzione nel container.
+- Il report viene ricaricato dalla TUI e dalla dashboard senza perdere il campo `backend`.
+- Se Docker non e disponibile, la TUI mostra un errore esplicito senza dichiarare la consegna superata.
 
 ## Scenario 8 - Percorso e calendario studente
 
