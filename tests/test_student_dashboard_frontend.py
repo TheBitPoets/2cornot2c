@@ -53,13 +53,15 @@ def run_student_dashboard_js(assertions: str) -> None:
           ? [elementFor("[data-student-calendar-display=calendar]"), elementFor("[data-student-calendar-display=list]")]
           : [],
       }},
-      fetch: async () => ({{
+      fetchImpl: async () => ({{
         ok: true,
         status: 200,
         statusText: "OK",
         json: async () => ({{ student_id: "rossi-mario", assignments: [] }}),
         text: async () => "",
       }}),
+      fetch: (...args) => context.fetchImpl(...args),
+      setFetch: (handler) => {{ context.fetchImpl = handler; }},
       window: {{ location: {{ href: "http://localhost:8765/tools/student_dashboard.html" }} }},
     }};
     context.globalThis = context;
@@ -76,6 +78,8 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderStudentLab,
         renderAssignment,
         renderAssignmentDetail,
+        renderAssignmentFiles,
+        openAssignmentFiles,
         openAssignmentDetail,
         closeAssignmentDetail,
         renderDashboard,
@@ -104,6 +108,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         setStudentCalendarDisplay: (display) => {{ currentStudentCalendarView.display = display; }},
         setVisibleStudentPathIds: (ids) => {{ visibleStudentPathIds = new Set(ids); }},
         els,
+        setFetch: globalThis.setFetch,
       }};
     `, context);
 
@@ -193,10 +198,10 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
         assert.match(tested.els.assignments.innerHTML, /Feedback docente/);
         assert.match(tested.els.assignments.innerHTML, /Hai gestito correttamente/);
         assert.match(tested.els.assignments.innerHTML, /Test superati/);
-        assert.match(tested.els.assignments.innerHTML, /Apri consegna/);
+        assert.match(tested.els.assignments.innerHTML, /Apri file/);
         assert.match(tested.els.assignments.innerHTML, /Dettaglio/);
         assert.match(tested.els.assignments.innerHTML, /data-detail-index="0"/);
-        assert.match(tested.els.assignments.innerHTML, /data-open-assignment-detail="0"/);
+        assert.match(tested.els.assignments.innerHTML, /data-open-assignment-files="0"/);
         assert.match(tested.els.assignments.innerHTML, /href="https:\\/\\/github.com\\/TheBitPoets\\/rossi-mario\\/blob\\/main\\/assignments\\/python-base-somma-001\\/main.py"/);
         assert.match(tested.els.studentLab.innerHTML, /Workspace pronto/);
         assert.match(tested.els.studentLab.innerHTML, /Report salvato/);
@@ -781,6 +786,125 @@ def test_student_dashboard_assignment_detail_modal_renders_selected_assignment()
 
         tested.closeAssignmentDetail();
         assert.equal(tested.els.assignmentDetailModal.hidden, true);
+        """
+    )
+
+
+def test_student_dashboard_file_modal_lists_submitted_files_separately() -> None:
+    run_student_dashboard_js(
+        """
+        const html = tested.renderAssignmentFiles({
+          source_path: "assignments/python-base-somma-001/main.py",
+          source_github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-base-somma-001/main.py",
+        }, { path: "assignments/python-base-somma-001/main.py", content: "print(1)" });
+
+        assert.match(html, /File/);
+        assert.match(html, /main\.py/);
+        assert.match(html, /soluzione/);
+        assert.match(html, /Apri su GitHub/);
+        assert.match(html, /print\(1\)/);
+        """
+    )
+
+
+def test_student_dashboard_file_modal_keeps_second_file_selected_after_loading() -> None:
+    run_student_dashboard_js(
+        """
+        const html = tested.renderAssignmentFiles({
+          files: [
+            {
+              path: "assignments/python-base-somma-001/main.py",
+              role: "solution",
+              github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-base-somma-001/main.py",
+            },
+            {
+              path: "assignments/python-base-somma-001/test_main.py",
+              role: "test",
+              github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-base-somma-001/test_main.py",
+            },
+          ],
+        }, {
+          requestedPath: "assignments/python-base-somma-001/test_main.py",
+          path: "assignments/python-base-somma-001/test_main.py",
+          displayPath: "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001/test_main.py",
+          content: "assert somma([1, 2]) == 3",
+        });
+
+        assert.match(html, /fileChoice isActive[^>]*data-assignment-file-path="assignments\/python-base-somma-001\/test_main\.py"/);
+        assert.match(html, /test_main\.py/);
+        assert.match(html, /examples\/assignment_tracking\/student_repos\/rossi-mario\/assignments\/python-base-somma-001\/test_main\.py/);
+        assert.match(html, /blob\/main\/assignments\/python-base-somma-001\/test_main\.py/);
+        assert.match(html, /assert somma/);
+        """
+    )
+
+
+def test_student_dashboard_file_modal_ignores_stale_file_response() -> None:
+    run_student_dashboard_js(
+        """
+        let resolveFirst;
+        let resolveSecond;
+        tested.setFetch(async (_path, options) => {
+          const request = JSON.parse(options.body);
+          return new Promise((resolve) => {
+          if (request.path.endsWith("/main.py")) resolveFirst = resolve;
+            else resolveSecond = resolve;
+          });
+        });
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [{
+            activity_id: "python-base-somma-001",
+            title: "Somma in Python",
+            report_name: "python-demo.json",
+            submitted: true,
+            files: [
+              { path: "assignments/python-base-somma-001/main.py", role: "solution" },
+              { path: "assignments/python-base-somma-001/test_main.py", role: "test" },
+            ],
+          }],
+        });
+
+        const first = tested.openAssignmentFiles(0, "assignments/python-base-somma-001/main.py");
+        const second = tested.openAssignmentFiles(0, "assignments/python-base-somma-001/test_main.py");
+        resolveFirst({ ok: true, json: async () => ({ file: { path: "local/main.py", content: "STALE" } }) });
+        resolveSecond({ ok: true, json: async () => ({ file: { path: "local/test_main.py", content: "CURRENT" } }) });
+        await first;
+        await second;
+
+        assert.match(tested.els.assignmentFilesBody.innerHTML, /CURRENT/);
+        assert.doesNotMatch(tested.els.assignmentFilesBody.innerHTML, /STALE/);
+        assert.match(tested.els.assignmentFilesBody.innerHTML, /data-assignment-file-path="assignments\/python-base-somma-001\/test_main\.py"/);
+        """
+    )
+
+
+def test_student_dashboard_closes_file_modal_when_dashboard_changes() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [{
+            activity_id: "python-base-somma-001",
+            title: "Somma in Python",
+            submitted: true,
+            source_path: "assignments/python-base-somma-001/main.py",
+          }],
+        });
+        const pending = tested.openAssignmentFiles(0);
+        assert.equal(tested.els.assignmentFilesModal.hidden, false);
+
+        tested.renderDashboard({
+          student_id: "bianchi-luca",
+          assignments: [{
+            activity_id: "python-loop-001",
+            title: "Loop in Python",
+            submitted: false,
+          }],
+        });
+        await pending;
+
+        assert.equal(tested.els.assignmentFilesModal.hidden, true);
         """
     )
 

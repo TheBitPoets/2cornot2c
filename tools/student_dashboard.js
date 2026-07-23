@@ -23,6 +23,10 @@ const els = {
   assignmentDetailTitle: document.querySelector("#assignmentDetailTitle"),
   assignmentDetailBody: document.querySelector("#assignmentDetailBody"),
   assignmentDetailClose: document.querySelector("#assignmentDetailClose"),
+  assignmentFilesModal: document.querySelector("#assignmentFilesModal"),
+  assignmentFilesTitle: document.querySelector("#assignmentFilesTitle"),
+  assignmentFilesBody: document.querySelector("#assignmentFilesBody"),
+  assignmentFilesClose: document.querySelector("#assignmentFilesClose"),
 };
 
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
@@ -39,6 +43,8 @@ let currentStudentCalendarView = {
   week: "",
 };
 let visibleStudentPathIds = null;
+let currentAssignmentFilesIndex = -1;
+let assignmentFilesRequestToken = 0;
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -1178,10 +1184,10 @@ function actionUnavailableLabel(assignment) {
 }
 
 function assignmentOpenAction(assignment, assignmentIndex = -1) {
-  if (!assignment.submitted) {
+  if (!assignment.submitted || !submissionFiles(assignment).length) {
     return `<button type="button" class="actionButton actionButtonDisabled" disabled>Apri consegna</button><span class="actionUnavailable">${escapeHtml(actionUnavailableLabel(assignment))}</span>`;
   }
-  return `<button type="button" class="actionButton" data-open-assignment-detail="${escapeHtml(assignmentIndex)}">Apri consegna</button>`;
+  return `<button type="button" class="actionButton" data-open-assignment-files="${escapeHtml(assignmentIndex)}">Apri file</button>`;
 }
 
 function renderAssignment(assignment, isNext = false, assignmentIndex = -1) {
@@ -1302,6 +1308,112 @@ function openAssignmentDetail(assignmentIndex) {
   els.assignmentDetailClose?.focus?.();
 }
 
+function submissionFiles(assignment) {
+  const files = Array.isArray(assignment?.files) ? assignment.files : [];
+  if (files.length) {
+    return files
+      .filter((file) => file && file.path)
+      .map((file) => ({
+        path: String(file.path).replaceAll("\\", "/"),
+        role: file.role || "supporto",
+        github_url: safeExternalHref(file.github_url || ""),
+      }));
+  }
+  return assignment?.source_path
+    ? [{
+        path: String(assignment.source_path).replaceAll("\\", "/"),
+        role: "soluzione",
+        github_url: safeExternalHref(assignment.source_github_url || ""),
+      }]
+    : [];
+}
+
+function renderAssignmentFiles(assignment, fileState = {}) {
+  const files = submissionFiles(assignment);
+  const selectedPath = fileState.requestedPath || fileState.path || files[0]?.path || "";
+  const selected = files.find((file) => file.path === selectedPath) || files[0];
+  const content = fileState.loading
+    ? "Caricamento file..."
+    : fileState.error
+      ? `Errore apertura file: ${fileState.error}`
+      : fileState.content ?? "Seleziona un file per visualizzarne il contenuto.";
+  if (!files.length) {
+    return '<p class="emptyFeedback">Nessun file consegnato disponibile.</p>';
+  }
+  return `
+    <div class="submissionFilesGrid">
+      <aside class="submissionFileList" aria-label="File consegnati">
+        <h3>File</h3>
+        ${files.map((file) => `
+          <button type="button" class="fileChoice${file.path === selected?.path ? " isActive" : ""}" data-assignment-file-path="${escapeHtml(file.path)}">
+            <strong>${escapeHtml(file.path.split("/").pop())}</strong>
+            <small>${escapeHtml(file.role)}</small>
+          </button>
+          ${file.github_url ? safeExternalLink(file.github_url, "Apri su GitHub") : ""}
+        `).join("")}
+      </aside>
+      <section class="submissionFilePreview">
+        <header>
+          <strong>${escapeHtml(fileState.displayPath || fileState.path || selected?.path || "File")}</strong>
+          ${selected?.github_url ? safeExternalLink(selected.github_url, "Apri su GitHub") : ""}
+        </header>
+        <pre class="${fileState.error ? "fileError" : ""}"><code>${escapeHtml(content)}</code></pre>
+      </section>
+    </div>
+  `;
+}
+
+async function openAssignmentFiles(assignmentIndex, preferredPath = "") {
+  const index = Number(assignmentIndex);
+  const assignment = currentDashboardPayload.assignments[index];
+  if (!assignment || !els.assignmentFilesModal || !els.assignmentFilesBody || !els.assignmentFilesTitle) return;
+  const requestToken = ++assignmentFilesRequestToken;
+  currentAssignmentFilesIndex = index;
+  const files = submissionFiles(assignment);
+  if (!files.length) {
+    els.assignmentFilesTitle.textContent = assignment.title || assignment.activity_id || "Consegna";
+    els.assignmentFilesBody.innerHTML = '<p class="emptyFeedback">Nessun file consegnato disponibile.</p>';
+    els.assignmentFilesModal.hidden = false;
+    document.body?.classList?.add("modalOpen");
+    return;
+  }
+  let fileState = {
+    path: preferredPath || files[0].path,
+    requestedPath: preferredPath || files[0].path,
+    loading: true,
+  };
+  els.assignmentFilesTitle.textContent = assignment.title || assignment.activity_id || "Consegna";
+  els.assignmentFilesBody.innerHTML = renderAssignmentFiles(assignment, fileState);
+  els.assignmentFilesModal.hidden = false;
+  document.body?.classList?.add("modalOpen");
+  try {
+    const payload = await api("/api/assignment-submissions/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        report_name: assignment.report_name,
+        student: currentDashboardPayload.student_id,
+        path: fileState.path,
+      }),
+    });
+    fileState = {
+      path: fileState.requestedPath,
+      requestedPath: fileState.requestedPath,
+      displayPath: payload.file.path,
+      content: payload.file.content,
+    };
+  } catch (error) {
+    fileState = {
+      path: fileState.requestedPath,
+      requestedPath: fileState.requestedPath,
+      error: error.message,
+    };
+  }
+  if (requestToken === assignmentFilesRequestToken && !els.assignmentFilesModal.hidden) {
+    els.assignmentFilesBody.innerHTML = renderAssignmentFiles(assignment, fileState);
+  }
+}
+
 function closeAssignmentDetail() {
   if (!els.assignmentDetailModal) return;
   els.assignmentDetailModal.hidden = true;
@@ -1364,6 +1476,7 @@ function isNextDeadlineAssignment(assignment, nextAssignment) {
 
 function renderDashboard(payload) {
   closeAssignmentDetail();
+  closeAssignmentFiles();
   const assignments = Array.isArray(payload.assignments) ? payload.assignments : [];
   currentDashboardPayload = { ...payload, assignments };
   const filterValue = els.assignmentFilter?.value || "all";
@@ -1475,9 +1588,9 @@ els.studentCalendar?.addEventListener("keydown", (event) => {
 });
 
 els.assignments?.addEventListener("click", (event) => {
-  const openButton = event.target.closest?.("[data-open-assignment-detail]");
+  const openButton = event.target.closest?.("[data-open-assignment-files]");
   if (openButton) {
-    openAssignmentDetail(openButton.dataset.openAssignmentDetail);
+    openAssignmentFiles(openButton.dataset.openAssignmentFiles);
     return;
   }
   const detailButton = event.target.closest?.("[data-detail-index]");
@@ -1491,8 +1604,28 @@ els.assignmentDetailModal?.addEventListener("click", (event) => {
   if (event.target === els.assignmentDetailModal) closeAssignmentDetail();
 });
 
+function closeAssignmentFiles() {
+  if (!els.assignmentFilesModal) return;
+  assignmentFilesRequestToken += 1;
+  els.assignmentFilesModal.hidden = true;
+  document.body?.classList?.remove("modalOpen");
+}
+
+els.assignmentFilesClose?.addEventListener("click", closeAssignmentFiles);
+els.assignmentFilesModal?.addEventListener("click", (event) => {
+  if (event.target === els.assignmentFilesModal) closeAssignmentFiles();
+  const fileButton = event.target.closest?.("[data-assignment-file-path]");
+  if (!fileButton) return;
+  if (currentAssignmentFilesIndex >= 0) {
+    openAssignmentFiles(currentAssignmentFilesIndex, fileButton.dataset.assignmentFilePath);
+  }
+});
+
 document.addEventListener?.("keydown", (event) => {
-  if (event.key === "Escape") closeAssignmentDetail();
+  if (event.key === "Escape") {
+    closeAssignmentDetail();
+    closeAssignmentFiles();
+  }
 });
 
 loadStudentOptions(els.studentId.value)

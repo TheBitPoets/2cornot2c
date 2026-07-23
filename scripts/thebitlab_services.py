@@ -220,6 +220,10 @@ class AssignmentOverviewService:
                             submission,
                             student.get("repo_github_url"),
                         ),
+                        "files": _submission_files(
+                            submission,
+                            student.get("repo_github_url"),
+                        ),
                         "grading": {
                             "status": grading.get("status", ""),
                             "passed": grading.get("passed"),
@@ -280,6 +284,40 @@ def _submission_file_github_urls(submission: dict[str, Any]) -> list[str]:
         ):
             urls.append(file_url)
     return urls
+
+
+def _submission_files(
+    submission: dict[str, Any],
+    repo_github_url: Any = None,
+) -> list[dict[str, str]]:
+    """Expose safe file metadata for the student file viewer."""
+
+    files = submission.get("files")
+    if not isinstance(files, list):
+        source_path = _normalized_path(submission.get("source_path"))
+        if not source_path:
+            return []
+        return [{
+            "path": source_path,
+            "role": "solution",
+            "github_url": _canonical_repo_file_url(repo_github_url, source_path) or "",
+        }]
+    result = []
+    for file_entry in files:
+        if not isinstance(file_entry, dict):
+            continue
+        path = _normalized_path(file_entry.get("path"))
+        if not path:
+            continue
+        github_url = _clean_optional_string(file_entry.get("github_url"))
+        if not github_url or _looks_like_broken_demo_url(github_url):
+            github_url = _canonical_repo_file_url(repo_github_url, path)
+        result.append({
+            "path": path,
+            "role": str(file_entry.get("role") or "supporto"),
+            "github_url": github_url or "",
+        })
+    return result
 
 
 def _normalized_path(value: Any) -> str:
