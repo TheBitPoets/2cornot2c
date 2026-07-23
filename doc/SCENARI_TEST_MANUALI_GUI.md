@@ -367,6 +367,9 @@ controllare testo, provider e contatori senza affidarsi soltanto al colore.
 </td>
 <td valign="top">
 
+<strong style="color:#1464c0">Step 1-5 - Blu: selezione e riepilogo studente</strong><br>
+Apri la dashboard docente, carica il registro, entra in <code>Studenti</code>, cerca <code>rossi-mario</code> e controlla riepilogo e contatori degli aiuti.<br><br>
+
 <strong style="color:#1464c0">Step 6-8 - Blu: dettagli aiuti</strong><br>
 <strong>1.</strong> Apri la dashboard docente e carica il registro demo.<br>
 <strong>2.</strong> Apri <code>Studenti</code>.<br>
