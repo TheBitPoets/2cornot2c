@@ -1026,6 +1026,83 @@ button:hover { transform: translateY(-1px); }
   font-weight: 800;
 }
 
+.submissionFilesGrid {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  gap: 1rem;
+  min-height: 22rem;
+}
+
+.submissionFileList,
+.submissionFilePreview {
+  min-width: 0;
+}
+
+.submissionFileList {
+  display: grid;
+  align-content: start;
+  gap: .5rem;
+}
+
+.submissionFileList h3 {
+  margin: 0 0 .25rem;
+}
+
+.fileChoice {
+  display: grid;
+  gap: .15rem;
+  width: 100%;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 8px;
+  padding: .65rem .75rem;
+  text-align: left;
+  background: #fafafa;
+}
+
+.fileChoice.isActive {
+  border-color: var(--accent, #235c9f);
+  background: #eef5ff;
+}
+
+.fileChoice small {
+  color: var(--muted);
+}
+
+.submissionFilePreview {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: .5rem;
+  min-height: 0;
+}
+
+.submissionFilePreview header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  min-width: 0;
+}
+
+.submissionFilePreview pre {
+  min-height: 18rem;
+  max-height: 32rem;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 8px;
+  padding: 1rem;
+  background: #17191d;
+  color: #f4f6f8;
+  white-space: pre;
+}
+
+.submissionFilePreview pre.fileError {
+  background: #fff1f0;
+  color: #9f1c18;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 720px) {
   .topNav {
     overflow-x: auto;
@@ -1100,5 +1177,9 @@ button:hover { transform: translateY(-1px); }
 
   .detailModalHead {
     display: grid;
+  }
+
+  .submissionFilesGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

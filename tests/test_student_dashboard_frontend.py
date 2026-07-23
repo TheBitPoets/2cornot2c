@@ -76,6 +76,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderStudentLab,
         renderAssignment,
         renderAssignmentDetail,
+        renderAssignmentFiles,
         openAssignmentDetail,
         closeAssignmentDetail,
         renderDashboard,
@@ -193,10 +194,10 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
         assert.match(tested.els.assignments.innerHTML, /Feedback docente/);
         assert.match(tested.els.assignments.innerHTML, /Hai gestito correttamente/);
         assert.match(tested.els.assignments.innerHTML, /Test superati/);
-        assert.match(tested.els.assignments.innerHTML, /Apri consegna/);
+        assert.match(tested.els.assignments.innerHTML, /Apri file/);
         assert.match(tested.els.assignments.innerHTML, /Dettaglio/);
         assert.match(tested.els.assignments.innerHTML, /data-detail-index="0"/);
-        assert.match(tested.els.assignments.innerHTML, /data-open-assignment-detail="0"/);
+        assert.match(tested.els.assignments.innerHTML, /data-open-assignment-files="0"/);
         assert.match(tested.els.assignments.innerHTML, /href="https:\\/\\/github.com\\/TheBitPoets\\/rossi-mario\\/blob\\/main\\/assignments\\/python-base-somma-001\\/main.py"/);
         assert.match(tested.els.studentLab.innerHTML, /Workspace pronto/);
         assert.match(tested.els.studentLab.innerHTML, /Report salvato/);
@@ -781,6 +782,23 @@ def test_student_dashboard_assignment_detail_modal_renders_selected_assignment()
 
         tested.closeAssignmentDetail();
         assert.equal(tested.els.assignmentDetailModal.hidden, true);
+        """
+    )
+
+
+def test_student_dashboard_file_modal_lists_submitted_files_separately() -> None:
+    run_student_dashboard_js(
+        """
+        const html = tested.renderAssignmentFiles({
+          source_path: "assignments/python-base-somma-001/main.py",
+          source_github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-base-somma-001/main.py",
+        }, { path: "assignments/python-base-somma-001/main.py", content: "print(1)" });
+
+        assert.match(html, /File/);
+        assert.match(html, /main\.py/);
+        assert.match(html, /soluzione/);
+        assert.match(html, /Apri su GitHub/);
+        assert.match(html, /print\(1\)/);
         """
     )
 
