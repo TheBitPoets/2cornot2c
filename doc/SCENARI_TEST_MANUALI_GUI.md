@@ -367,7 +367,7 @@ controllare testo, provider e contatori senza affidarsi soltanto al colore.
 </td>
 <td valign="top">
 
-<strong style="color:#1464c0">Step 1-8 - Blu: studente e dettagli</strong><br>
+<strong style="color:#1464c0">Step 6-8 - Blu: dettagli aiuti</strong><br>
 <strong>1.</strong> Apri la dashboard docente e carica il registro demo.<br>
 <strong>2.</strong> Apri <code>Studenti</code>.<br>
 <strong>3.</strong> Cerca <code>rossi-mario</code>.<br>
