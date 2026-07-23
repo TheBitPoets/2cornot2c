@@ -4209,3 +4209,14 @@ def test_assignment_dashboard_matches_display_name_when_opening_overview_submiss
         assert.equal(tested.studentByName("Rossi Mario").student, "rossi-mario");
         """
     )
+
+
+def test_assignment_dashboard_matches_accented_display_name_to_slug() -> None:
+    run_dashboard_js(
+        """
+        tested.state.report = {
+          students: [{ student: "jose-garcia", student_id: "jose-garcia", submission: { source_path: "assignments/demo/main.py" } }],
+        };
+        assert.equal(tested.studentByName("José García").student, "jose-garcia");
+        """
+    )
