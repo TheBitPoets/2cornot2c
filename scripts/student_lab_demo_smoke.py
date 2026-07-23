@@ -72,6 +72,18 @@ def write_demo_activity(root: Path) -> Path:
         context={"classe": "3A-TPSI", "team_github": "team-3a-tpsi", "percorso": "demo-lab"},
     )
     activity["student_support_mode"] = "ai-assisted"
+    activity["test_cases"] = [
+        {
+            "name": "somma positiva",
+            "stdin": "2 3\n",
+            "expected_stdout": "5\n",
+        },
+        {
+            "name": "somma negativa",
+            "stdin": "-2 -3\n",
+            "expected_stdout": "-5\n",
+        },
+    ]
     output = root / "activities" / f"{ACTIVITY_ID}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(activity, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -118,7 +130,11 @@ def write_demo_workspace(root: Path, *, student_id: str = STUDENT_ID, passing: b
     operation = "+" if passing else "-"
     (workspace / "main.py").write_text(
         "def somma(a, b):\n"
-        f"    return a {operation} b\n",
+        f"    return a {operation} b\n"
+        "\n"
+        "if __name__ == \"__main__\":\n"
+        "    a, b = map(int, input().split())\n"
+        "    print(somma(a, b))\n",
         encoding="utf-8",
     )
     (tests_dir / "test_main.py").write_text(

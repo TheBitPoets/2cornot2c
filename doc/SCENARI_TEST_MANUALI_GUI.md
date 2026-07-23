@@ -75,7 +75,7 @@ Ogni pannello, modal, vista e comando deve avere almeno uno scenario manuale. Qu
 | Calendario docente | Vista calendario | Verifica modalita, frecce, filtri, UDA programmate/reali e interruzioni | Playwright o Selenium |
 | TUI studente | Lista consegne | Avvia TUI e verifica legenda, colori opzionali, date compatte e selezione numerica | Test interattivo o snapshot terminale |
 | TUI studente | Dettaglio consegna | Apri una consegna e verifica sezioni, divisori, guida rapida e comandi | Test interattivo o snapshot terminale |
-| TUI studente | Comando `e` | Esegui test e salva report, poi verifica GUI studente/docente | Test interattivo piu assert su file |
+| TUI studente | Comando `e` | Esegui test e salva report con backend local e docker, poi verifica GUI studente/docente | Test interattivo piu assert su file |
 | TUI studente | Comando `a` | Chiedi aiuto, verifica guida locale e storico, annulla con `b`/invio, valida input non valido | Test interattivo con input finto |
 | TUI studente | Comando `h` | Mostra storico aiuti e torna alla consegna | Test interattivo con input finto |
 | TUI studente | Comando `o` | Apre workspace se presente, mostra errore chiaro se assente | Test con mock apertura |
@@ -254,14 +254,14 @@ La cattura usa la root `tmp/student-lab-demo`, il registro `demo/python-demo-som
 <strong style="color:#7b35b2">Step 3 - Viola: caricamento</strong><br>
 <strong>3.</strong> Clicca <code>Carica registro</code> e attendi il caricamento; usa <code>Ricarica</code> solo per rileggere i dati persistiti.<br><br>
 
-<strong style="color:#168a45">Step 4, 7-8 - Verde: riepilogo e consegna</strong><br>
-<strong>4.</strong> Controlla classe, activity, studenti, consegnati, mancanti e ritardi.<br>
-<strong>7.</strong> In <code>Apri studenti</code> cerca <code>rossi-mario</code> e apri la consegna.<br>
-<strong>8.</strong> Nel dettaglio seleziona <code>main.py</code> e <code>test_main.py</code>.<br><br>
+<strong style="color:#168a45">Step 4 - Verde: riepilogo</strong><br>
+<strong>4.</strong> Controlla classe, activity, studenti, consegnati, mancanti e ritardi.<br><br>
 
-<strong style="color:#c87800">Step 5-6 - Arancione: vista studenti</strong><br>
+<strong style="color:#c87800">Step 5-8 - Arancione: vista studenti e consegna</strong><br>
 <strong>5.</strong> Clicca <code>Apri studenti</code>.<br>
-<strong>6.</strong> Verifica che il modal mostri lo studente corretto e i suoi indicatori.
+<strong>6.</strong> Verifica che il modal mostri lo studente corretto e i suoi indicatori.<br>
+<strong>7.</strong> Nella riga di <code>rossi-mario</code>, clicca <code>Apri consegna</code>.<br>
+<strong>8.</strong> Seleziona <code>main.py</code> e <code>test_main.py</code>.
 
 </td>
 </tr>
@@ -362,24 +362,30 @@ controllare testo, provider e contatori senza affidarsi soltanto al colore.
 <tr>
 <td valign="top" width="52%">
 
-![Modal aiuti docente annotato](images/dashboard-guides/scenario-4-docente-aiuti-colori.png)
+![Scenario 4, passi 1-2: registro caricato](images/dashboard-guides/scenario-4-steps-1-2-registro-colori.png)
+
+![Scenario 4, passi 3-5: pannello Studenti](images/dashboard-guides/scenario-4-steps-3-5-studenti-colori.png)
+
+![Scenario 4, passi 6-8: modal dettagli aiuti](images/dashboard-guides/scenario-4-docente-aiuti-colori.png)
 
 </td>
 <td valign="top">
 
-<strong style="color:#1464c0">Step 1-5 - Blu: raggiungi lo studente</strong><br>
+<strong style="color:#1464c0">Step 1-5 - Blu: selezione e riepilogo studente</strong><br>
+Apri la dashboard docente, carica il registro, entra in <code>Studenti</code>, cerca <code>rossi-mario</code> e controlla riepilogo e contatori degli aiuti.<br><br>
+
+<strong style="color:#1464c0">Step 6-8 - Blu: dettagli aiuti</strong><br>
 <strong>1.</strong> Apri la dashboard docente e carica il registro demo.<br>
 <strong>2.</strong> Apri <code>Studenti</code>.<br>
 <strong>3.</strong> Cerca <code>rossi-mario</code>.<br>
 <strong>4.</strong> Controlla il riepilogo degli aiuti.<br>
 <strong>5.</strong> Verifica i contatori nella riga.<br><br>
 
-<strong style="color:#7b35b2">Step 6-8 - Viola: leggi i dettagli</strong><br>
 <strong>6.</strong> Clicca <code>Dettagli aiuti</code>.<br>
 <strong>7.</strong> Leggi prompt, risposta, provider e stato.<br>
 <strong>8.</strong> Confronta i token dichiarati con il riepilogo.<br><br>
 
-<strong style="color:#c87800">Step 9 - Arancione: ritorno</strong><br>
+<strong style="color:#c87800">Step 9 - Arancione: chiusura</strong><br>
 <strong>9.</strong> Chiudi il modal e verifica di restare nella stessa vista Studenti.
 
 </td>
@@ -428,21 +434,27 @@ il modal che deve contenere l'errore completo.
 <tr>
 <td valign="top" width="52%">
 
-![Modal dettaglio errori annotato](images/dashboard-guides/scenario-5-docente-errori-colori.png)
+![Scenario 5, passi 1-2: registro caricato](images/dashboard-guides/scenario-5-steps-1-2-registro-colori.png)
+
+![Scenario 5, passi 3-4: pannello Studenti](images/dashboard-guides/scenario-5-steps-3-4-studenti-colori.png)
+
+![Scenario 5, passo 5: modal dettaglio errori](images/dashboard-guides/scenario-5-docente-errori-colori.png)
 
 </td>
 <td valign="top">
 
-<strong style="color:#1464c0">Step 1-4 - Blu: selezione</strong><br>
+<strong style="color:#1464c0">Step 1-2 - Blu: registro</strong><br>
 <strong>1.</strong> Apri la dashboard docente.<br>
 <strong>2.</strong> Carica o ricarica il registro mutato.<br>
+<br>
+<strong style="color:#1464c0">Step 3-4 - Blu: selezione studente</strong><br>
 <strong>3.</strong> Apri <code>Studenti</code>.<br>
 <strong>4.</strong> Cerca <code>bianchi-luca</code>.<br><br>
 
 <strong style="color:#c87800">Step 5 - Arancione: dettaglio</strong><br>
 <strong>5.</strong> Clicca <code>Dettaglio errori</code> e verifica che il testo Python/pytest sia leggibile anche quando e lungo.<br><br>
 
-<strong style="color:#168a45">Chiusura - Verde: ritorno</strong><br>
+<strong style="color:#168a45">Chiusura - Step 6 - Verde: ritorno</strong><br>
 Chiudi il modal e verifica che la vista del registro resti invariata.
 
 </td>
@@ -521,9 +533,11 @@ eseguendo la TUI sulla root demo corrente.
 </details>
 
 </td><td valign="top">
-<strong style="color:#1464c0">Step 1-2 - Blu: esecuzione</strong><br>
+<strong style="color:#1464c0">Step 1-3 - Blu: selezione ed esecuzione</strong><br>
 Avvia la TUI, seleziona <code>Demo somma in Python</code> ed esegui il runner.<br><br>
-<strong style="color:#168a45">Step 3-6 - Verde: report e verifica GUI</strong><br>
+<strong style="color:#168a45">Step 3 - Verde: report e test</strong><br>
+Controlla nella TUI report, esito e test dell'esecuzione completata.<br><br>
+<strong style="color:#7b35b2">Step 4-6 - Viola: ritorno e verifica GUI</strong><br>
 Esci, apri la dashboard studente, seleziona <code>rossi-mario</code>, clicca <code>Carica</code> e confronta report, test, ultimo tentativo e aiuti con la TUI.
 </td></tr>
 </table>
@@ -549,6 +563,28 @@ Risultato atteso:
 ## Scenario 7 - Comandi TUI studente
 
 Obiettivo: verificare che la TUI sia comprensibile, robusta sugli input e coerente con dashboard e report.
+
+### Schermata annotata della procedura
+
+La schermata riassume gli stessi passaggi descritti sotto: input non valido, dettaglio, aiuto, runner
+locale e runner Docker. I colori dei blocchi corrispondono ai gruppi di passi della procedura.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Comandi TUI annotati](images/dashboard-guides/scenario-7-tui-comandi-colori.svg)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-5 - Blu: lista e input</strong><br>
+Avvia la TUI, prova un input non valido, seleziona la consegna con il numero e verifica che il dettaglio si apra.<br><br>
+<strong style="color:#168a45">Step 6-10 - Verde: dettaglio e annullamento aiuto</strong><br>
+Controlla le sezioni, apri lo storico, entra in aiuto e verifica che <code>b</code> e invio annullino senza creare richieste.<br><br>
+<strong style="color:#7b35b2">Step 11-15 - Viola: richiesta e storico</strong><br>
+Invia una richiesta consentita, controlla tipo, stato, risposta e presenza di prompt e risposta nello storico.<br><br>
+<strong style="color:#b45f06">Step 16-19 - Arancio: esecuzione e navigazione</strong><br>
+Esegui il runner, controlla report ed esito, poi usa <code>b</code>, <code>r</code> e <code>q</code>.<br><br>
+</td></tr>
+</table>
 
 1. Se stai continuando dagli scenari precedenti, ferma con `Ctrl+C` il server avviato durante il setup
    comune. Prepara quindi di nuovo la demo e avvia il server docente con provider Codex:
@@ -604,6 +640,73 @@ Risultato atteso:
 - Le richieste di aiuto salvate dalla TUI vengono viste dal docente.
 - Gli accenti e i testi italiani sono corretti.
 
+### Scenario 7A - Runner TUI locale e Docker
+
+Obiettivo: verificare separatamente il backend locale, il backend Docker, il report persistito e la coerenza
+con la dashboard studente.
+
+<table>
+<tr><td valign="top" width="52%">
+
+![Scenario 7A annotato](images/dashboard-guides/scenario-7a-tui-docker-colori.svg)
+
+</td><td valign="top">
+<strong style="color:#1464c0">Step 1-4 - Blu: runner locale</strong><br>
+Avvia la TUI con <code>--backend local</code>, seleziona la demo, premi <code>e</code> e verifica esecuzione completata,
+<code>passed</code>, test <code>2/2</code> e report salvato.<br><br>
+<strong style="color:#b45f06">Step 5-7 - Arancione: runner Docker</strong><br>
+Riavvia con <code>--backend docker</code>, ripeti l'esecuzione e controlla che il report persistito contenga
+<code>backend=docker</code>. Se Docker non e disponibile deve comparire un errore esplicito.<br><br>
+<strong style="color:#168a45">Step 8 - Verde: verifica dashboard</strong><br>
+Apri la dashboard studente, seleziona <code>rossi-mario</code> e confronta test, esito, ultimo tentativo e report.
+</td></tr>
+</table>
+
+Obiettivo: verificare che il comando `e` usi davvero il backend scelto all'avvio della TUI e che il
+report persistito mantenga lo stesso valore. Questo scenario usa una root separata per non sovrascrivere
+la demo corrente.
+
+1. Prepara una root demo dedicata:
+
+   ```powershell
+   python scripts/student_lab_demo_setup.py --root tmp/student-lab-docker-demo-20260723
+   ```
+
+2. Avvia la TUI con il backend locale:
+
+   ```powershell
+   python scripts/student_lab_cli.py --root tmp/student-lab-docker-demo-20260723 --student-id rossi-mario --backend local --no-clear --no-color
+   ```
+
+3. Seleziona `Demo somma in Python`, premi `e`, attendi il messaggio `Esecuzione completata`, premi invio,
+   poi `b` e `q`.
+4. Verifica nel dettaglio che compaiano `Backend: local`, `Stato runner: passed`, `Test: 2/2 test` e
+   `Report salvato`.
+5. Ripeti i passi 2-4 con il backend Docker:
+
+   ```powershell
+   python scripts/student_lab_cli.py --root tmp/student-lab-docker-demo-20260723 --student-id rossi-mario --backend docker --no-clear --no-color
+   ```
+
+6. Verifica nel dettaglio che ora compaiano `Backend: docker`, `Stato runner: passed`, `Test: 2/2 test` e
+   un nuovo percorso di report.
+7. Controlla il report persistito:
+
+   ```powershell
+   Get-Content tmp/student-lab-docker-demo-20260723/examples/assignment_tracking/student_repos/rossi-mario/reports/python-demo-somma-001/latest.json
+   ```
+
+   Nel JSON il campo `backend` deve valere `docker` dopo l'ultima esecuzione.
+8. Apri la dashboard studente, seleziona `rossi-mario` e verifica che test, esito e ultimo tentativo
+   corrispondano al report Docker.
+
+Risultato atteso:
+
+- Il backend locale produce `passed` e `2/2 test` nella demo Python.
+- Il backend Docker produce lo stesso esito isolando l'esecuzione nel container.
+- Il report viene ricaricato dalla TUI e dalla dashboard senza perdere il campo `backend`.
+- Se Docker non e disponibile, la TUI mostra un errore esplicito senza dichiarare la consegna superata.
+
 ## Scenario 8 - Percorso e calendario studente
 
 Obiettivo: verificare che la vista studente mostri il percorso associato e il calendario in sola lettura.
@@ -619,7 +722,7 @@ il controllo negativo della fixture demo; la procedura include anche una variant
 ![Percorso studente e calendario annotati](images/dashboard-guides/scenario-8-studente-percorso-colori.png)
 
 </td><td valign="top">
-<strong style="color:#1464c0">Step 1-5 - Blu: calendario</strong><br>
+<strong style="color:#1464c0">Step 1-2, 4-5 - Blu: calendario e filtri</strong><br>
 Apri la dashboard, seleziona <code>rossi-mario</code>, carica, scegli modalità, mese e filtro e prova lista/calendario.<br><br>
 <strong style="color:#7b35b2">Step 3 - Viola: percorso</strong><br>
 Controlla i percorsi associati e apri un paragrafo senza possibilità di modifica.<br><br>
@@ -723,10 +826,13 @@ La cattura mostra la vista iniziale del calendario con le date obbligatorie anco
 </td><td valign="top">
 <strong style="color:#1464c0">Step 1-2 - Blu: calendario e date</strong><br>
 Apri <code>school_calendar.html</code>, carica o crea un calendario e imposta inizio/fine lezioni.<br><br>
-<strong style="color:#c87800">Step 3 - Arancione: interruzioni</strong><br>
+<strong style="color:#c87800">Step 4 - Arancione: interruzioni</strong><br>
 Aggiungi o importa festivita e sospensioni e verifica che siano distinguibili.<br><br>
-<strong style="color:#168a45">Step 4 - Verde: viste</strong><br>
-Controlla calendario, Gantt UDA e riepilogo ore; prova modalita e filtri senza perdere dati.
+<strong style="color:#168a45">Step 3, 6-7 - Verde: vista calendario</strong><br>
+Salva il calendario, prova modalita, frecce e filtri senza perdere dati.<br><br>
+
+<strong style="color:#7b35b2">Step 5 - Viola: Gantt</strong><br>
+Controlla che le UDA compaiano nel Gantt quando sono presenti.
 </td></tr>
 </table>
 

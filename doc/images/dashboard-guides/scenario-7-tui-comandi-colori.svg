@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1260" viewBox="0 0 1000 1260">
+  <style>.page{fill:#f7f7f5}.title{font:700 26px Arial,sans-serif;fill:#111}.subtitle{font:14px Arial,sans-serif;fill:#555}.terminal{fill:#16181d;stroke:#343943;stroke-width:2}.terminal-text{font:12px 'Cascadia Mono','Consolas',monospace;fill:#e7e9ee}.label{font:700 13px Arial,sans-serif;fill:#fff}.blue{fill:#1464c0}.green{fill:#168a45}.purple{fill:#7b35b2}.orange{fill:#b45f06}</style>
+  <rect class="page" width="100%" height="100%"/>
+  <text x="28" y="38" class="title">Scenario 7 - Comandi TUI studente</text>
+  <text x="28" y="62" class="subtitle">Snapshot annotato: input, dettaglio, aiuto, runner locale e runner Docker</text>
+  <rect x="20" y="92" width="960" height="190" rx="8" class="terminal"/>
+  <rect x="36" y="104" width="190" height="24" rx="12" class="blue"/>
+  <text x="48" y="121" class="label">1-5 - lista e input</text>
+  <text x="38" y="150" class="terminal-text">TheBitLab - lab studente</text>
+  <text x="38" y="166" class="terminal-text">Studente: rossi-mario</text>
+  <text x="38" y="182" class="terminal-text">Comandi: numero = dettaglio | r = ricarica | q = esci</text>
+  <text x="38" y="198" class="terminal-text">Scelta: x</text>
+  <text x="38" y="214" class="terminal-text">Scelta non valida. Usa un numero, r oppure q.</text>
+  <text x="38" y="246" class="terminal-text">Scelta: 1</text>
+  <text x="38" y="262" class="terminal-text">Dettaglio consegna aperto</text>
+  <rect x="20" y="300" width="960" height="190" rx="8" class="terminal"/>
+  <rect x="36" y="312" width="160" height="24" rx="12" class="green"/>
+  <text x="48" y="329" class="label">6-10 - dettaglio e aiuto</text>
+  <text x="38" y="358" class="terminal-text">Dettaglio consegna | Somma in Python</text>
+  <text x="38" y="374" class="terminal-text">Azioni: e esegui | a aiuto | h storico | b indietro</text>
+  <text x="38" y="390" class="terminal-text">Comando: h</text>
+  <text x="38" y="406" class="terminal-text">Storico richieste aiuto</text>
+  <text x="38" y="422" class="terminal-text">Comando: a - tipo 1, 2, 3, b o invio</text>
+  <text x="38" y="438" class="terminal-text">Comando: b  Richiesta annullata</text>
+  <text x="38" y="470" class="terminal-text">Premi invio per tornare al dettaglio</text>
+  <rect x="20" y="508" width="960" height="190" rx="8" class="terminal"/>
+  <rect x="36" y="520" width="190" height="24" rx="12" class="purple"/>
+  <text x="48" y="537" class="label">11-15 - richiesta e storico</text>
+  <text x="38" y="566" class="terminal-text">Tipo aiuto: 3 - spiegazione concettuale</text>
+  <text x="38" y="582" class="terminal-text">Prompt: Mi spieghi il passaggio senza soluzione?</text>
+  <text x="38" y="598" class="terminal-text">Stato: ready | Provider: guida locale</text>
+  <text x="38" y="614" class="terminal-text">Risposta: controlla input, funzione e test...</text>
+  <text x="38" y="630" class="terminal-text">------------------------------------------------</text>
+  <text x="38" y="646" class="terminal-text">h - prompt e risposta presenti nello storico</text>
+  <text x="38" y="678" class="terminal-text">b - ritorno al dettaglio consegna</text>
+  <rect x="20" y="716" width="960" height="190" rx="8" class="terminal"/>
+  <rect x="36" y="728" width="185" height="24" rx="12" class="orange"/>
+  <text x="48" y="745" class="label">16-19 - runner locale</text>
+  <text x="38" y="774" class="terminal-text">Comando: e</text>
+  <text x="38" y="790" class="terminal-text">Dettaglio: Esecuzione completata</text>
+  <text x="38" y="806" class="terminal-text">Stato runner: passed | Esito: consegna superata</text>
+  <text x="38" y="822" class="terminal-text">Test: 2/2 test | Backend: local</text>
+  <text x="38" y="838" class="terminal-text">Report salvato: .../reports/python-demo-somma-001/latest.json</text>
+  <text x="38" y="870" class="terminal-text">b - lista | r - ricarica | q - esci</text>
+  <text x="38" y="886" class="terminal-text">Il report resta visibile dopo il ricaricamento.</text>
+  <text x="28" y="1160" class="subtitle">La procedura Docker dettagliata e nello scenario 7A.</text>
+</svg>
