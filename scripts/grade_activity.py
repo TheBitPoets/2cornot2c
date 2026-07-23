@@ -439,7 +439,8 @@ def docker_timeout_seconds(activity: dict[str, Any], timeout_seconds: int) -> in
 def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
     """Return a workspace-relative path or raise a teacher-friendly error."""
     try:
-        return str(path.resolve().relative_to(workspace.resolve()))
+        # Docker runs a Linux container even when the teacher host is Windows.
+        return path.resolve().relative_to(workspace.resolve()).as_posix()
     except ValueError as error:
         raise ValueError(f"{label} deve trovarsi dentro il workspace montato: {workspace}") from error
 

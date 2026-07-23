@@ -262,6 +262,8 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     assert "--report" not in command
     assert "--language" in command
     assert "c" in command
+    assert command[command.index("--activity") + 1] == "activity.json"
+    assert command[command.index("--source") + 1] == "main.c"
 
 
 def test_prepare_docker_workspace_copies_only_runner_inputs(tmp_path) -> None:
