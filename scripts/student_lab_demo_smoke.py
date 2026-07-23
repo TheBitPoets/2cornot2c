@@ -34,6 +34,22 @@ DUE_AT = "2026-10-19T23:59:00+02:00"
 NOW = "2026-10-18T18:30:00+02:00"
 
 
+def ensure_root_is_usable_for_cli(root: Path) -> None:
+    """Reject a populated root instead of failing halfway through the smoke flow."""
+
+    if not root.exists():
+        return
+    entries = list(root.iterdir())
+    if any(entry.name != ".thebitlab-server.lock" for entry in entries):
+        raise RuntimeError(
+            f"Root smoke non vuota: {root}. Usa una root nuova oppure student_lab_demo_setup.py."
+        )
+    if any(entry.name == ".thebitlab-server.lock" for entry in entries):
+        raise RuntimeError(
+            f"Root smoke protetta da un server attivo: {root}. Ferma il server prima dello smoke test."
+        )
+
+
 def relative(path: Path, root: Path) -> str:
     """Return a root-relative path for compact smoke output."""
 
@@ -252,6 +268,11 @@ def main() -> int:
     args = parse_args()
     if args.root:
         root = args.root.resolve(strict=False)
+        try:
+            ensure_root_is_usable_for_cli(root)
+        except RuntimeError as error:
+            print(f"Smoke test non riuscito: {error}", file=sys.stderr)
+            return 1
         root.mkdir(parents=True, exist_ok=True)
         summary = run_smoke(root)
         print(json.dumps(summary, ensure_ascii=False, indent=2))
