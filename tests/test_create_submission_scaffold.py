@@ -254,7 +254,43 @@ def test_create_scaffold_rejects_asset_target_reserved_for_scaffold(
     activity_path = write_activity(tmp_path, payload)
     target_dir = tmp_path / "student"
 
-    with pytest.raises(ValueError, match="riservato allo scaffold"):
+    with pytest.raises(ValueError, match="(riservato allo scaffold|non portabile)"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+        )
+
+    assert not (target_dir / "assignments").exists()
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "CON.txt",
+        "folder/aux.json",
+        "foo?.txt",
+        "foo:bar.txt",
+        "folder\\child.txt",
+        "trailing./file.txt",
+        "file.txt ",
+    ],
+)
+def test_create_scaffold_rejects_nonportable_asset_target(tmp_path, target) -> None:
+    (tmp_path / "asset.txt").write_text("contenuto\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "example",
+                "path": "asset.txt",
+                "target_path": target,
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
+
+    with pytest.raises(ValueError, match="(non portabile|separatore portabile)"):
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target_dir,
@@ -316,7 +352,7 @@ def test_create_scaffold_rejects_asset_below_scaffold_file(tmp_path, target) -> 
     activity_path = write_activity(tmp_path, payload)
     target_dir = tmp_path / "student"
 
-    with pytest.raises(ValueError, match="sovrapposto"):
+    with pytest.raises(ValueError, match="(sovrapposto|non portabile)"):
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target_dir,
@@ -1243,12 +1279,26 @@ def test_create_scaffold_rejects_empty_source_name(tmp_path) -> None:
 def test_create_scaffold_rejects_reserved_source_name(tmp_path, source_name) -> None:
     activity_path = write_activity(tmp_path)
 
-    with pytest.raises(ValueError, match="riservato allo scaffold"):
+    with pytest.raises(ValueError, match="(riservato allo scaffold|non portabile)"):
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=tmp_path / "student",
             source_name=source_name,
         )
+
+
+@pytest.mark.parametrize("source_name", ["CON.txt", "aux.py", "source.py."])
+def test_create_scaffold_rejects_nonportable_source_name(tmp_path, source_name) -> None:
+    activity_path = write_activity(tmp_path)
+
+    with pytest.raises(ValueError, match="non portabile"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=tmp_path / "student",
+            source_name=source_name,
+        )
+
+    assert not (tmp_path / "student" / "assignments").exists()
 
 
 def test_create_scaffold_rejects_source_asset_case_alias(tmp_path) -> None:

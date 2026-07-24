@@ -23,6 +23,31 @@ DEFAULT_SOURCE_NAME = "main.c"
 DEFAULT_THEBITLAB_REF = "main"
 MANAGED_ASSETS_STATE_DIR = ".thebitlab-scaffold-state"
 RESERVED_SCAFFOLD_TARGETS = {"activity.json", "README.md"}
+WINDOWS_RESERVED_NAMES = {
+    "con",
+    "prn",
+    "aux",
+    "nul",
+    "com1",
+    "com2",
+    "com3",
+    "com4",
+    "com5",
+    "com6",
+    "com7",
+    "com8",
+    "com9",
+    "lpt1",
+    "lpt2",
+    "lpt3",
+    "lpt4",
+    "lpt5",
+    "lpt6",
+    "lpt7",
+    "lpt8",
+    "lpt9",
+}
+WINDOWS_INVALID_PATH_CHARACTERS = frozenset('<>:"|?*')
 DEFAULT_SOURCE_NAMES = {
     "assembly": "main.asm",
     "c": "main.c",
@@ -230,6 +255,20 @@ def default_source_name_for(language: str) -> str:
     return DEFAULT_SOURCE_NAMES[language]
 
 
+def validate_portable_path_component(component: str, field_name: str) -> None:
+    """Reject a path component that cannot be represented portably."""
+    basename = component.split(".", 1)[0].casefold()
+    if (
+        not component
+        or component in {".", ".."}
+        or component != component.rstrip(" .")
+        or basename in WINDOWS_RESERVED_NAMES
+        or any(character in WINDOWS_INVALID_PATH_CHARACTERS for character in component)
+        or any(ord(character) < 32 for character in component)
+    ):
+        raise ValueError(f"{field_name} contiene un componente non portabile.")
+
+
 def validate_source_name(source_name: str) -> str:
     """Validate that a source name is a simple filename."""
     value = source_name.strip()
@@ -243,6 +282,7 @@ def validate_source_name(source_name: str) -> str:
         or not re.fullmatch(r"[A-Za-z0-9_.-]+", value)
     ):
         raise ValueError("source_name deve essere un nome file semplice, per esempio main.c.")
+    validate_portable_path_component(value, "source_name")
     if is_reserved_scaffold_target(Path(value)):
         raise ValueError(f"source_name riservato allo scaffold: {value}.")
     return value
@@ -252,10 +292,13 @@ def validate_relative_path(value: Any, field_name: str) -> Path:
     """Validate a relative asset path used inside an activity bundle or scaffold."""
     if not validate_activity.is_safe_relative_path(value):
         raise ValueError(f"{field_name} deve essere un path relativo sicuro.")
-    path = Path(str(value))
-    if any(not part.rstrip(" .") for part in path.parts):
-        raise ValueError(f"{field_name} contiene un componente non portabile.")
-    return path
+    raw_path = str(value)
+    if "\\" in raw_path:
+        raise ValueError(f"{field_name} deve usare '/' come separatore portabile.")
+    components = raw_path.split("/")
+    for component in components:
+        validate_portable_path_component(component, field_name)
+    return Path(*components)
 
 
 def validate_thebitlab_ref(value: str) -> str:
