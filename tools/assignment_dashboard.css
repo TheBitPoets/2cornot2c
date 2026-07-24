@@ -1917,6 +1917,7 @@ th.isResizableColumn:hover {
 .badge.hasTooltip {
   position: relative;
   cursor: help;
+  touch-action: manipulation;
 }
 
 .badge.hasTooltip:focus-visible {

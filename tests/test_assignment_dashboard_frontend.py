@@ -607,6 +607,8 @@ def test_attempt_tooltip_uses_viewport_layer() -> None:
     assert "position: fixed;" in css
     assert '.closest?.(".hasTooltip")' in source
     assert "document.body.append(dashboardTooltipElement)" in source
+    assert 'event.pointerType !== "touch"' in source
+    assert "activeDashboardTooltipTarget === target" in source
     assert 'window.addEventListener("scroll", () => hideDashboardTooltip(), true)' in source
     assert 'window.addEventListener("resize", () => hideDashboardTooltip())' in source
     assert ".badge.hasTooltip::after" not in css

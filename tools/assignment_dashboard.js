@@ -3959,6 +3959,20 @@ function setupDashboardTooltips() {
     const target = event.target.closest?.(".hasTooltip");
     if (target) hideDashboardTooltip(target);
   });
+  window.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "touch") return;
+    const target = event.target.closest?.(".hasTooltip");
+    if (!target) {
+      hideDashboardTooltip();
+      return;
+    }
+    event.preventDefault();
+    if (activeDashboardTooltipTarget === target) {
+      hideDashboardTooltip(target);
+    } else {
+      showDashboardTooltip(target);
+    }
+  });
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") hideDashboardTooltip();
   });
