@@ -269,6 +269,13 @@ def test_persist_standard_report_rejects_symlinked_history_parent(tmp_path) -> N
     report_path = tmp_path / "repo" / "reports" / ACTIVITY_ID / "latest.json"
     external = tmp_path / "external"
     external.mkdir()
+    external_history = (
+        external
+        / student_lab_attempts.assignment_storage_key(ASSIGNMENT_ID)
+        / "latest.json"
+    )
+    external_history.parent.mkdir()
+    external_history.write_text("external-data", encoding="utf-8")
     report_path.parent.mkdir(parents=True)
     assignments_link = report_path.parent / "assignments"
     try:
@@ -290,7 +297,7 @@ def test_persist_standard_report_rejects_symlinked_history_parent(tmp_path) -> N
             base_dir=tmp_path / "repo",
         )
 
-    assert list(external.iterdir()) == []
+    assert external_history.read_text(encoding="utf-8") == "external-data"
 
 
 def test_load_attempt_history_rejects_symlinked_attempts_directory(tmp_path) -> None:

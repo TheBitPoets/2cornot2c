@@ -84,6 +84,17 @@ def confined_directory(base_dir: Path, candidate: Path) -> Path | None:
     return resolved_candidate if resolved_candidate.is_dir() else None
 
 
+def confined_unlink(base_dir: Path, candidate: Path) -> bool:
+    """Remove a file only when its complete path remains confined."""
+
+    try:
+        safe_candidate = confined_destination(base_dir, candidate)
+    except ValueError:
+        return False
+    safe_candidate.unlink(missing_ok=True)
+    return True
+
+
 def json_bytes(payload: dict[str, Any]) -> bytes:
     """Serialize a JSON object using the repository text contract."""
 
@@ -153,7 +164,7 @@ def write_json_exclusive(path: Path, payload: dict[str, Any], *, base_dir: Path)
         sync_directory(output.parent)
     except BaseException:
         if published:
-            output.unlink(missing_ok=True)
+            confined_unlink(base_dir, output)
         raise
     finally:
         temporary_path.unlink(missing_ok=True)
@@ -219,7 +230,7 @@ def persist_attempt(
         if current_latest is None or attempt_sort_key(stored) >= attempt_sort_key(current_latest):
             write_json_atomic(assignment_latest_path, stored, base_dir=write_base)
     except BaseException:
-        attempt_path.unlink(missing_ok=True)
+        confined_unlink(write_base, attempt_path)
         raise
     return attempt_path, assignment_latest_path
 
@@ -249,13 +260,13 @@ def persist_standard_report(
             write_json_atomic(report_path, stored, base_dir=base_dir)
         except BaseException:
             if attempt_path is not None:
-                attempt_path.unlink(missing_ok=True)
+                confined_unlink(base_dir, attempt_path)
             if previous_history is None:
-                history_latest.unlink(missing_ok=True)
+                confined_unlink(base_dir, history_latest)
             else:
                 write_bytes_atomic(history_latest, previous_history, base_dir=base_dir)
             if previous_legacy is None:
-                report_path.unlink(missing_ok=True)
+                confined_unlink(base_dir, report_path)
             else:
                 write_bytes_atomic(report_path, previous_legacy, base_dir=base_dir)
             raise
