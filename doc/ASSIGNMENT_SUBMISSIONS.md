@@ -86,8 +86,10 @@ feedback/c-base-somma-001/
 ```
 
 Il file `latest.json` al livello activity rappresenta l'ultimo esito noto e mantiene la compatibilita con i lettori
-legacy e con lo stato operativo della dashboard studente. Un registro collegato a una vera assegnazione preferisce
-invece il tentativo `final` valido oppure il `latest.json` specifico dell'assegnazione come fallback provvisorio.
+legacy e con lo stato operativo della dashboard studente. Senza un binding remoto, un registro collegato a una vera
+assegnazione preferisce il tentativo `final` valido oppure il `latest.json` specifico dell'assegnazione come fallback
+provvisorio. Con un binding remoto usa invece soltanto l'artifact verificato e resta `submission_unknown` se
+l'acquisizione fallisce.
 
 I file `attempt-*.json` sono immutabili e conservano la storia tecnica della singola assegnazione. Il `latest.json`
 interno identifica l'ultimo tentativo di quella consegna, mentre `final.json` contiene solo il riferimento al
@@ -574,7 +576,7 @@ Per ogni studente contiene:
 | Campo | Significato |
 |---|---|
 | `assigned` | Lo studente era tra i destinatari della consegna |
-| `submitted` | Esiste un report locale valido e coerente con l'activity corrente |
+| `submitted` | Esiste un report valido, remoto verificato quando configurato oppure locale in assenza di binding |
 | `status` | Stato sintetico: `missing`, `submitted_on_time`, `submitted_late`, `not_graded`, ecc. |
 | `due_at` | Scadenza della consegna |
 | `submission` | Dati della consegna: sorgente, data invio, commit se disponibile |
@@ -714,14 +716,14 @@ Quando clicchi `Crea registro consegne`, il server locale:
 
 1. legge la activity;
 2. costruisce i target studenti;
-3. per ogni assegnazione cerca prima un tentativo `final` valido;
-4. se il definitivo non esiste, usa il `latest.json` specifico dell'assegnazione o il report legacy come risultato
-   provvisorio;
-5. se una selezione finale esiste ma non e valida, espone `invalid_final` senza attribuire un grading diverso;
-6. calcola stato consegna, ritardi e grading disponibile;
-7. registra in `submission.report_selection` la provenienza e in `grading.provisional` se l'esito non e definitivo;
-8. salva il JSON in `teacher-reports`;
-9. carica subito il risultato nella dashboard.
+3. per ogni assegnazione cerca prima un binding remoto e, se configurato, acquisisce l'artifact verificato;
+4. se il binding remoto fallisce, espone `submission_unknown` senza usare fallback locali;
+5. solo senza binding remoto cerca un tentativo `final`, poi `latest.json` assignment-scoped o legacy;
+6. se una selezione finale locale esiste ma non e valida, espone `invalid_final` senza attribuire un grading diverso;
+7. calcola stato consegna, ritardi e grading disponibile;
+8. registra in `submission.report_selection` la provenienza e in `grading.provisional` se l'esito non e definitivo;
+9. salva il JSON in `teacher-reports`;
+10. carica subito il risultato nella dashboard.
 
 Il file in `teacher-reports` e uno snapshot. Se lo studente cambia il tentativo finale, usa nuovamente
 `Crea registro consegne` per aggiornare la vista docente.
