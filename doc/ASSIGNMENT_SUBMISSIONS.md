@@ -248,10 +248,12 @@ scripts/thebitlab_grading_artifacts.py
 ```
 
 `GitHubActionsArtifactSource` riceve dal chiamante un riferimento `owner/repository`, il nome esatto
-dell'artifact, lo SHA completo atteso della consegna e un token GitHub mantenuto fuori dal repository. Il servizio:
+dell'artifact, lo SHA completo atteso della consegna, l'ID della workflow run attesa e un token GitHub
+mantenuto fuori dal repository. L'ID deve provenire da una sorgente docente fidata che abbia gia
+identificato la run del workflow autorizzato. Il servizio:
 
 1. interroga l'API GitHub Actions con paginazione limitata;
-2. considera solo artifact con nome esatto, non scaduti, legati allo SHA atteso e con metadati validi;
+2. considera solo artifact con nome esatto, non scaduti, legati allo SHA e alla workflow run attesi;
 3. sceglie il piu recente usando un timestamp timezone-aware;
 4. richiede il redirect firmato con autenticazione;
 5. scarica il file firmato senza inoltrare il token;
@@ -262,9 +264,9 @@ dell'artifact, lo SHA completo atteso della consegna e un token GitHub mantenuto
 La provenienza comprende repository, ID artifact, workflow run, SHA, data, URL API e digest dichiarato. Non
 contiene token o URL firmati temporanei.
 
-Lo SHA lega il report alla revisione consegnata, ma non dimostra da solo che il workflow sia fidato. Il flusso
-autorevole deve usare un workflow protetto o verificato dal docente; un workflow modificabile liberamente dallo
-studente produce soltanto un report remoto con provenienza, non una valutazione automaticamente attendibile.
+SHA e workflow run legano il report alla revisione e all'esecuzione scelte dal docente. Il flusso autorevole
+deve comunque usare un workflow protetto o verificato: affidare al repository dello studente anche la scelta
+della run renderebbe la provenienza insufficiente per una valutazione automaticamente attendibile.
 
 Questa fase non modifica ancora il registro docente. L'integrazione successiva usera la porta
 `GradingArtifactSource` per alimentare la raccolta dei report senza inserire chiamate GitHub dentro la

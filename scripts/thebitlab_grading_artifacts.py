@@ -80,6 +80,7 @@ class GradingArtifactSource(Protocol):
         repo_ref: str,
         artifact_name: str,
         expected_head_sha: str,
+        expected_workflow_run_id: int,
     ) -> AcquiredGradingReport:
         """Return the latest valid report artifact for one repository."""
 
@@ -158,12 +159,20 @@ class GitHubActionsArtifactSource:
         repo_ref: str,
         artifact_name: str,
         expected_head_sha: str,
+        expected_workflow_run_id: int,
     ) -> AcquiredGradingReport:
         owner, repo = normalize_github_repo_ref(repo_ref)
         clean_name = _safe_artifact_name(artifact_name)
         clean_head_sha = _safe_head_sha(expected_head_sha)
+        clean_workflow_run_id = _safe_workflow_run_id(expected_workflow_run_id)
         repository = f"{owner}/{repo}"
-        artifact = self._latest_artifact(owner, repo, clean_name, clean_head_sha)
+        artifact = self._latest_artifact(
+            owner,
+            repo,
+            clean_name,
+            clean_head_sha,
+            clean_workflow_run_id,
+        )
         archive_url = (
             f"{GITHUB_API_ROOT}/repos/{urllib.parse.quote(owner, safe='')}/"
             f"{urllib.parse.quote(repo, safe='')}/actions/artifacts/{artifact['id']}/zip"
@@ -214,6 +223,7 @@ class GitHubActionsArtifactSource:
         repo: str,
         artifact_name: str,
         expected_head_sha: str,
+        expected_workflow_run_id: int,
     ) -> dict[str, Any]:
         candidates: list[dict[str, Any]] = []
         total_count: int | None = None
@@ -240,6 +250,7 @@ class GitHubActionsArtifactSource:
                     artifact,
                     artifact_name,
                     expected_head_sha,
+                    expected_workflow_run_id,
                 )
                 if candidate is not None:
                     candidates.append(candidate)
@@ -347,6 +358,12 @@ def _safe_head_sha(value: str) -> str:
     return clean.lower()
 
 
+def _safe_workflow_run_id(value: int) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError("ID workflow run attesa non valido.")
+    return value
+
+
 def _safe_signed_download_url(value: str) -> str:
     clean = value.strip()
     parsed = urllib.parse.urlparse(clean)
@@ -377,6 +394,7 @@ def _artifact_candidate_for_commit(
     value: Any,
     artifact_name: str,
     expected_head_sha: str,
+    expected_workflow_run_id: int,
 ) -> dict[str, Any] | None:
     if not isinstance(value, dict) or value.get("name") != artifact_name:
         return None
@@ -390,10 +408,18 @@ def _artifact_candidate_for_commit(
         raise GradingArtifactError("Artifact di grading non valido: workflow_run.head_sha non valido.")
     if head_sha.lower() != expected_head_sha:
         return None
+    workflow_run_id = workflow_run.get("id")
+    if (
+        not isinstance(workflow_run_id, int)
+        or isinstance(workflow_run_id, bool)
+        or workflow_run_id <= 0
+    ):
+        raise GradingArtifactError("Artifact di grading non valido: workflow_run.id non valido.")
+    if workflow_run_id != expected_workflow_run_id:
+        return None
 
     artifact_id = value.get("id")
     size_in_bytes = value.get("size_in_bytes")
-    workflow_run_id = workflow_run.get("id")
     if not isinstance(artifact_id, int) or isinstance(artifact_id, bool) or artifact_id <= 0:
         raise GradingArtifactError("Artifact di grading non valido: id non valido.")
     if (
@@ -406,12 +432,6 @@ def _artifact_candidate_for_commit(
         raise GradingArtifactError(
             f"Artifact di grading troppo grande: supera {MAX_ARTIFACT_ARCHIVE_BYTES} byte."
         )
-    if (
-        not isinstance(workflow_run_id, int)
-        or isinstance(workflow_run_id, bool)
-        or workflow_run_id <= 0
-    ):
-        raise GradingArtifactError("Artifact di grading non valido: workflow_run.id non valido.")
     if _artifact_created_at(value) is None:
         raise GradingArtifactError("Artifact di grading non valido: created_at non valido.")
     return value

@@ -11,6 +11,7 @@ from scripts import thebitlab_grading_artifacts as artifacts
 
 TEST_SHA = "a" * 40
 OTHER_SHA = "b" * 40
+TEST_WORKFLOW_RUN_ID = 900
 
 
 class FakeTransport:
@@ -114,6 +115,7 @@ def test_github_source_acquires_latest_exact_non_expired_report() -> None:
         "TheBitPoets/rossi-mario",
         "thebitlab-demo-python-report",
         TEST_SHA,
+        913,
     )
 
     assert acquired.report == report
@@ -155,6 +157,7 @@ def test_github_source_rejects_missing_expired_or_different_artifact(payload: by
             "TheBitPoets/rossi-mario",
             "thebitlab-demo-python-report",
             TEST_SHA,
+            TEST_WORKFLOW_RUN_ID,
         )
 
 
@@ -180,6 +183,7 @@ def test_github_source_rejects_invalid_list_payload_and_candidates() -> None:
                 "TheBitPoets/rossi-mario",
                 "thebitlab-demo-python-report",
                 TEST_SHA,
+                TEST_WORKFLOW_RUN_ID,
             )
 
 
@@ -205,6 +209,7 @@ def test_github_source_paginates_before_selecting_latest_artifact() -> None:
         "TheBitPoets/rossi-mario",
         "thebitlab-demo-python-report",
         TEST_SHA,
+        9500,
     )
 
     assert acquired.provenance.artifact_id == 500
@@ -239,6 +244,7 @@ def test_github_source_accepts_exact_pagination_safety_limit() -> None:
         "TheBitPoets/rossi-mario",
         "thebitlab-demo-python-report",
         TEST_SHA,
+        TEST_WORKFLOW_RUN_ID,
     )
 
     assert acquired.provenance.artifact_id == total_count
@@ -263,6 +269,7 @@ def test_github_source_fails_when_pagination_safety_limit_is_exceeded() -> None:
             "TheBitPoets/rossi-mario",
             "thebitlab-demo-python-report",
             TEST_SHA,
+            TEST_WORKFLOW_RUN_ID,
         )
 
 
@@ -284,6 +291,7 @@ def test_github_source_rejects_invalid_total_count(total_count: object) -> None:
             "TheBitPoets/rossi-mario",
             "thebitlab-demo-python-report",
             TEST_SHA,
+            TEST_WORKFLOW_RUN_ID,
         )
 
 
@@ -312,6 +320,7 @@ def test_github_source_rejects_unsafe_download_redirect(location: str) -> None:
             "TheBitPoets/rossi-mario",
             "thebitlab-demo-python-report",
             TEST_SHA,
+            TEST_WORKFLOW_RUN_ID,
         )
 
 
@@ -361,14 +370,26 @@ def test_source_validates_token_repository_and_artifact_name() -> None:
 
     source = artifacts.GitHubActionsArtifactSource("github-secret", transport=FakeTransport([]))
     with pytest.raises(ValueError, match="Repository GitHub"):
-        source.acquire_latest_report("not-a-repo", "report", TEST_SHA)
+        source.acquire_latest_report("not-a-repo", "report", TEST_SHA, TEST_WORKFLOW_RUN_ID)
     with pytest.raises(ValueError, match="Nome artifact"):
-        source.acquire_latest_report("TheBitPoets/rossi-mario", " ", TEST_SHA)
+        source.acquire_latest_report(
+            "TheBitPoets/rossi-mario",
+            " ",
+            TEST_SHA,
+            TEST_WORKFLOW_RUN_ID,
+        )
     with pytest.raises(ValueError, match="SHA commit"):
-        source.acquire_latest_report("TheBitPoets/rossi-mario", "report", "abc123")
+        source.acquire_latest_report(
+            "TheBitPoets/rossi-mario",
+            "report",
+            "abc123",
+            TEST_WORKFLOW_RUN_ID,
+        )
+    with pytest.raises(ValueError, match="workflow run"):
+        source.acquire_latest_report("TheBitPoets/rossi-mario", "report", TEST_SHA, True)
 
 
-def test_github_source_ignores_newer_artifact_from_another_commit() -> None:
+def test_github_source_ignores_newer_artifacts_from_other_commit_or_run() -> None:
     expected = candidate(20, created_at="2026-07-24T10:00:00Z", workflow_run_id=920)
     unrelated = candidate(
         21,
@@ -376,9 +397,18 @@ def test_github_source_ignores_newer_artifact_from_another_commit() -> None:
         workflow_run_id=921,
         head_sha=OTHER_SHA,
     )
+    competing_run = candidate(
+        22,
+        created_at="2026-07-24T13:00:00Z",
+        workflow_run_id=922,
+    )
     transport = FakeTransport(
         [
-            artifacts.HttpResponse(200, {}, artifact_payload([expected, unrelated])),
+            artifacts.HttpResponse(
+                200,
+                {},
+                artifact_payload([expected, unrelated, competing_run]),
+            ),
             artifacts.HttpResponse(302, {"Location": "https://signed.example.test/report.zip"}, b""),
             artifacts.HttpResponse(200, {}, zip_bytes([("report.json", b'{"status":"passed"}')])),
         ]
@@ -391,6 +421,7 @@ def test_github_source_ignores_newer_artifact_from_another_commit() -> None:
         "TheBitPoets/rossi-mario",
         "thebitlab-demo-python-report",
         TEST_SHA,
+        920,
     )
 
     assert acquired.provenance.artifact_id == 20
@@ -421,6 +452,7 @@ def test_github_source_does_not_fall_back_when_newer_matching_artifact_is_unsafe
             "TheBitPoets/rossi-mario",
             "thebitlab-demo-python-report",
             TEST_SHA,
+            TEST_WORKFLOW_RUN_ID,
         )
 
 
