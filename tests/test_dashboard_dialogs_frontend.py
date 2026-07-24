@@ -135,10 +135,12 @@ def test_shared_dialog_supports_confirm_prompt_validation_and_queue() -> None:
         const dialog = find(document.body, (item) => item.id === "dashboardActionDialog");
         const title = find(dialog, (item) => item.id === "dashboardActionDialogTitle");
         const form = find(dialog, (item) => item.tagName === "FORM");
+        const cancelButton = find(dialog, (item) => item.className === "dashboardDialogCancel");
         const confirmButton = find(dialog, (item) => item.className === "dashboardDialogConfirm");
         assert.equal(dialog.open, true);
         assert.equal(title.textContent, "Elimina bozza");
         assert.equal(confirmButton.classList.contains("danger"), true);
+        assert.equal(document.activeElement, cancelButton);
         form.dispatchEvent({ type: "submit", preventDefault() {} });
         assert.equal(await first, true);
 

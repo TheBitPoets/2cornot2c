@@ -169,6 +169,8 @@
         if (mode === "prompt") {
           ui.input.focus();
           ui.input.select?.();
+        } else if (options.danger === true && !ui.cancelButton.hidden) {
+          ui.cancelButton.focus();
         } else {
           ui.confirmButton.focus();
         }
