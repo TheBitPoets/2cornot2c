@@ -461,7 +461,9 @@ runner_ref
 grading_report_id
 ```
 
-Per l'MVP puo essere derivato dal report `latest.json`, ma va previsto per vista studente, storico e modalita esame.
+Per l'MVP ogni esecuzione salvata produce un report immutabile separato per `assignment_id`. `latest.json` resta una
+proiezione compatibile; il miglior tentativo viene calcolato e la consegna definitiva richiede una selezione
+esplicita. I report locali restano modificabili dallo studente e non costituiscono da soli una fonte ufficiale.
 
 ### GradingReport
 

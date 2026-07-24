@@ -74,16 +74,24 @@ assignments/c-base-somma-001/
   README.md
 
 reports/c-base-somma-001/
-  attempt-001.json
   latest.json
+  assignments/<assignment-key>/
+    latest.json
+    final.json
+    attempts/
+      attempt-20260724T090000000000Z-a1b2c3d4.json
 
 feedback/c-base-somma-001/
   latest.md
 ```
 
-Il file `latest.json` rappresenta l'ultimo esito noto.
+Il file `latest.json` al livello activity rappresenta l'ultimo esito noto e mantiene la compatibilita con registro e
+dashboard esistenti.
 
-I file `attempt-*.json` permettono di conservare la storia dei tentativi.
+I file `attempt-*.json` sono immutabili e conservano la storia tecnica della singola assegnazione. Il `latest.json`
+interno identifica l'ultimo tentativo di quella consegna, mentre `final.json` contiene solo il riferimento al
+tentativo scelto esplicitamente come definitivo. Il miglior tentativo viene calcolato dai report e non viene
+salvato come copia separata.
 
 Nell'MVP, pero, il report autorevole e quello prodotto dalla GitHub Action come artifact o raccolto dal docente tramite automazione dedicata. I file dentro `reports/` nel repository studente sono copie informative o cache locali: non devono essere usati come unica fonte per metriche ufficiali, perche lo studente potrebbe modificarli manualmente.
 

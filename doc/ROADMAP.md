@@ -455,7 +455,11 @@ Il grading attuale e una base, ma il flusso reale richiede altri passi.
 6. Integrare GitHub Actions dedicate alle consegne studenti.
 7. Scaricare artifact/report GitHub Actions e collegarli ai registri.
 8. Garantire che i job che eseguono codice studente non abbiano segreti.
-9. Modellare i tentativi (`Attempt`) separatamente dalla consegna finale (`Submission`), cosi lo storico tecnico puo alimentare feedback, analytics e modalita esame senza confondere voto e processo.
+9. Estendere il backend gia introdotto per i tentativi (`Attempt`) separati dalla consegna finale (`Submission`):
+   - mostrare lo storico nella GUI/TUI;
+   - permettere allo studente e al docente di selezionare il tentativo definitivo secondo policy;
+   - usare una fonte autorevole server/GitHub per metriche ufficiali;
+   - aggiungere retention, fingerprint di activity/test e analytics senza confondere voto e processo.
 
 ## Priorita 5 - UI comune e pagine nuove
 

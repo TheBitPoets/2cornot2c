@@ -14,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from scripts import (
     assignment_records,
+    student_lab_attempts,
     student_help_service,
     student_support_policy,
     track_assignments,
@@ -220,6 +221,7 @@ def build_lab_assignment(
     student_id: str,
     now: str,
     expose_external_paths: bool = False,
+    allow_unscoped_legacy_report: bool = True,
 ) -> dict[str, Any]:
     """Build the student-lab contract for one assignment target."""
 
@@ -228,9 +230,60 @@ def build_lab_assignment(
     repo_path = target_repo_path(root, target, student_id)
     workspace_path = repo_path / "assignments" / activity_id if repo_path is not None else None
     report_path = repo_path / "reports" / activity_id / "latest.json" if repo_path is not None else None
+    assignment_id = normalized["id"]
     help_log_path = student_help_service.server_help_log_path(root, student_id, normalized["id"])
     safe_report_path = confined_regular_file(repo_path, report_path) if repo_path is not None and report_path else None
-    report = load_report(safe_report_path, activity_id) if safe_report_path is not None else None
+    legacy_report = load_report(safe_report_path, activity_id) if safe_report_path is not None else None
+    if legacy_report is not None:
+        legacy_assignment_id = clean_text(legacy_report.get("assignment_id"))
+        has_assignment_histories = bool(report_path and (report_path.parent / "assignments").is_dir())
+        if (legacy_assignment_id and legacy_assignment_id != assignment_id) or (
+            not legacy_assignment_id and (has_assignment_histories or not allow_unscoped_legacy_report)
+        ):
+            legacy_report = None
+    attempt_history = (
+        student_lab_attempts.load_attempt_history(
+            report_path,
+            assignment_id,
+            activity_id,
+            base_dir=repo_path,
+        )
+        if repo_path is not None and report_path is not None
+        else {"attempts": [], "count": 0, "truncated": False}
+    )
+    attempts = attempt_history["attempts"]
+    canonical_latest = (
+        student_lab_attempts.load_assignment_latest(
+            report_path,
+            assignment_id,
+            activity_id,
+            base_dir=repo_path,
+        )
+        if repo_path is not None and report_path is not None
+        else None
+    )
+    latest_attempt = canonical_latest or student_lab_attempts.select_latest_attempt(attempts)
+    best_attempt = None if attempt_history["truncated"] else student_lab_attempts.select_best_attempt(attempts)
+    final_attempt = (
+        student_lab_attempts.load_final_attempt(
+            report_path,
+            assignment_id,
+            activity_id,
+            base_dir=repo_path,
+        )
+        if repo_path is not None and report_path is not None
+        else None
+    )
+    report = latest_attempt or legacy_report
+    if attempt_history["truncated"]:
+        best_report = None
+    elif attempt_history["count"] == 0:
+        best_report = legacy_report
+    else:
+        best_report = best_attempt
+    effective_report_path = report_path
+    if latest_attempt is not None and report_path is not None:
+        effective_report_path = student_lab_attempts.assignment_history_dir(report_path, assignment_id) / "latest.json"
     submitted_at = clean_text(report.get("submitted_at")) if report else ""
     status = status_with_report(report, normalized["due_at"], now) if report else status_without_report(normalized["due_at"], now)
     activity = load_activity_summary(
@@ -259,7 +312,7 @@ def build_lab_assignment(
     runner_status = clean_text(report.get("status")) if report and clean_text(report.get("status")) else "not_run"
     runner_backend = clean_text(report.get("backend")) if report and clean_text(report.get("backend")) else "student_lab_service"
     return {
-        "assignment_id": normalized["id"],
+        "assignment_id": assignment_id,
         "activity_id": activity_id,
         "title": activity["title"] or activity_id,
         "student_support_mode": activity.get("student_support_mode", ""),
@@ -290,16 +343,23 @@ def build_lab_assignment(
             "path": (
                 relative_to_root(
                     root,
-                    report_path,
+                    effective_report_path,
                     expose_external_paths=expose_external_paths,
                 )
-                if report_path is not None
+                if effective_report_path is not None
                 else ""
             ),
             "exists": report is not None,
             "submitted_at": submitted_at,
             "commit": report.get("commit") if report else None,
             "tests": report_tests_summary(report),
+        },
+        "attempts": {
+            "count": attempt_history["count"] or int(legacy_report is not None),
+            "truncated": attempt_history["truncated"],
+            "latest": student_lab_attempts.attempt_summary(latest_attempt or legacy_report),
+            "best": student_lab_attempts.attempt_summary(best_report),
+            "final": student_lab_attempts.attempt_summary(final_attempt),
         },
         "grading": grading,
         "help": help_log,
@@ -355,6 +415,11 @@ def _list_student_lab_assignments(
             f"Identificativo studente ambiguo: {clean_student_id} e associato a repository diversi."
         )
 
+    activity_counts: dict[str, int] = {}
+    for assignment, _, _, _ in selected_assignments:
+        activity_id = clean_text(assignment.get("activity_id"))
+        activity_counts[activity_id] = activity_counts.get(activity_id, 0) + 1
+
     lab_assignments = [
         build_lab_assignment(
             root=root,
@@ -363,6 +428,7 @@ def _list_student_lab_assignments(
             student_id=canonical_student_id,
             now=current_time,
             expose_external_paths=expose_external_paths,
+            allow_unscoped_legacy_report=activity_counts.get(clean_text(assignment.get("activity_id")), 0) == 1,
         )
         for assignment, target, canonical_student_id, _ in selected_assignments
     ]

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,6 +17,18 @@ from scripts import create_activity
 
 ASSIGNMENT_SCHEMA_VERSION = "1.0"
 DEFAULT_ASSIGNMENTS_DIR = Path("teacher-assignments")
+ASSIGNMENT_STORAGE_KEY_PATTERN = re.compile(r"[^a-z0-9]+")
+
+
+def assignment_storage_key(assignment_id: str) -> str:
+    """Return a readable collision-resistant storage key."""
+
+    normalized = str(assignment_id or "").strip()
+    if not normalized:
+        raise ValueError("assignment_id mancante per lo storico tentativi.")
+    slug = ASSIGNMENT_STORAGE_KEY_PATTERN.sub("-", normalized.lower()).strip("-")[:48] or "assignment"
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
+    return f"{slug}-{digest}"
 
 
 def sync_directory(path: Path) -> None:

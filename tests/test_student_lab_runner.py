@@ -6,7 +6,7 @@ import subprocess
 
 import pytest
 
-from scripts import assignment_records, student_lab_runner, student_lab_service
+from scripts import assignment_records, student_lab_attempts, student_lab_runner, student_lab_service
 
 
 def write_activity(root, activity_id: str = "python-base-somma-001", **overrides) -> str:
@@ -172,6 +172,12 @@ def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path
     assert stored["activity_id"] == "python-base-somma-001"
     assert stored["submitted_at"] == report["generated_at"]
     assert stored["source"] == "assignments/python-base-somma-001/main.py"
+    assert stored["attempt_id"].startswith("attempt-")
+    history_dir = student_lab_attempts.assignment_history_dir(report_path, assignment["assignment_id"])
+    attempt_paths = list((history_dir / "attempts").glob("attempt-*.json"))
+    assert len(attempt_paths) == 1
+    assert json.loads(attempt_paths[0].read_text(encoding="utf-8")) == stored
+    assert json.loads((history_dir / "latest.json").read_text(encoding="utf-8")) == stored
 
     payload = student_lab_service.student_lab_payload(
         root=tmp_path,
@@ -187,6 +193,10 @@ def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path
     assert assignment_payload["grading"]["status"] == "graded_passed"
     assert assignment_payload["grading"]["tests_passed"] == 1
     assert assignment_payload["grading"]["tests_total"] == 1
+    assert assignment_payload["attempts"]["count"] == 1
+    assert assignment_payload["attempts"]["latest"]["id"] == stored["attempt_id"]
+    assert assignment_payload["attempts"]["best"]["id"] == stored["attempt_id"]
+    assert assignment_payload["attempts"]["final"] is None
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node non disponibile nell'ambiente di test")
@@ -248,6 +258,150 @@ def test_sql_assignment_flows_from_runner_to_service_grading(tmp_path) -> None:
     assert assignment_payload["grading"]["status"] == "graded_passed"
     assert assignment_payload["grading"]["tests_passed"] == 1
     assert assignment_payload["grading"]["tests_total"] == 1
+
+
+def test_write_student_report_keeps_attempts_when_runs_share_the_same_second(tmp_path, monkeypatch) -> None:
+    write_assignment(tmp_path, write_activity(tmp_path))
+    write_python_workspace(
+        tmp_path,
+        source="def somma(a, b):\n    return a + b\n",
+        test_source="from main import somma\n\ndef test_somma():\n    assert somma(2, 3) == 5\n",
+    )
+    assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+        now="2026-10-18T12:00:00+02:00",
+    )
+    report = student_lab_runner.run_local_assignment(assignment, root=tmp_path)
+    ids = iter(
+        [
+            "attempt-20261018T100000000000Z-11111111",
+            "attempt-20261018T100000000000Z-22222222",
+        ]
+    )
+    monkeypatch.setattr(student_lab_attempts, "new_attempt_id", lambda: next(ids))
+
+    report_path = student_lab_runner.write_student_report(tmp_path, assignment, report)
+    student_lab_runner.write_student_report(tmp_path, assignment, report)
+
+    history_dir = student_lab_attempts.assignment_history_dir(report_path, assignment["assignment_id"])
+    assert sorted(path.name for path in (history_dir / "attempts").glob("attempt-*.json")) == [
+        "attempt-20261018T100000000000Z-11111111.json",
+        "attempt-20261018T100000000000Z-22222222.json",
+    ]
+    latest = json.loads(report_path.read_text(encoding="utf-8"))
+    assert latest["attempt_id"] == "attempt-20261018T100000000000Z-22222222"
+
+
+def test_second_run_reuses_activity_report_root_after_service_reload(tmp_path) -> None:
+    write_assignment(tmp_path, write_activity(tmp_path))
+    write_python_workspace(
+        tmp_path,
+        source="def somma(a, b):\n    return a + b\n",
+        test_source="from main import somma\n\ndef test_somma():\n    assert somma(2, 3) == 5\n",
+    )
+    first_assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+        now="2026-10-18T12:00:00+02:00",
+    )
+    first_report = student_lab_runner.run_local_assignment(first_assignment, root=tmp_path)
+    report_path = student_lab_runner.write_student_report(tmp_path, first_assignment, first_report)
+    reloaded_assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+        now="2026-10-18T12:05:00+02:00",
+    )
+    second_report = student_lab_runner.run_local_assignment(reloaded_assignment, root=tmp_path)
+
+    second_path = student_lab_runner.write_student_report(tmp_path, reloaded_assignment, second_report)
+
+    history_dir = student_lab_attempts.assignment_history_dir(report_path, first_assignment["assignment_id"])
+    assert second_path == report_path
+    assert len(list((history_dir / "attempts").glob("attempt-*.json"))) == 2
+    assert not (history_dir / "assignments").exists()
+
+
+def test_write_student_report_custom_path_does_not_create_attempt_history(tmp_path) -> None:
+    write_assignment(tmp_path, write_activity(tmp_path))
+    write_python_workspace(
+        tmp_path,
+        source="def somma(a, b):\n    return a + b\n",
+        test_source="from main import somma\n\ndef test_somma():\n    assert somma(2, 3) == 5\n",
+    )
+    assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+        now="2026-10-18T12:00:00+02:00",
+    )
+    report = student_lab_runner.run_local_assignment(assignment, root=tmp_path)
+    custom_path = tmp_path / "exports" / "report.json"
+
+    written = student_lab_runner.write_student_report(tmp_path, assignment, report, custom_path)
+
+    assert written == custom_path
+    assert custom_path.is_file()
+    assert "attempt_id" not in json.loads(custom_path.read_text(encoding="utf-8"))
+    assert list(custom_path.parent.glob("attempt-*.json")) == []
+
+
+def test_finalize_report_attempt_selects_current_attempt(tmp_path) -> None:
+    write_assignment(tmp_path, write_activity(tmp_path))
+    write_python_workspace(
+        tmp_path,
+        source="def somma(a, b):\n    return a + b\n",
+        test_source="from main import somma\n\ndef test_somma():\n    assert somma(2, 3) == 5\n",
+    )
+    assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+        now="2026-10-18T12:00:00+02:00",
+    )
+    report = student_lab_runner.run_local_assignment(assignment, root=tmp_path)
+    report_path = student_lab_runner.write_student_report(tmp_path, assignment, report)
+
+    final_path = student_lab_runner.finalize_report_attempt(tmp_path, assignment, report_path)
+
+    final = json.loads(final_path.read_text(encoding="utf-8"))
+    latest = json.loads(report_path.read_text(encoding="utf-8"))
+    assert final["attempt_id"] == latest["attempt_id"]
+    payload = student_lab_service.student_lab_payload(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-20T12:00:00+02:00",
+    )
+    assert payload["assignments"][0]["attempts"]["final"]["id"] == latest["attempt_id"]
+
+
+def test_finalize_report_attempt_rejects_custom_report_path(tmp_path) -> None:
+    assignment = {"report": {"path": "reports/activity/latest.json"}}
+
+    with pytest.raises(ValueError, match="path report standard"):
+        student_lab_runner.finalize_report_attempt(
+            tmp_path,
+            assignment,
+            tmp_path / "exports" / "report.json",
+        )
+
+
+def test_write_json_atomic_removes_temporary_file_after_replace_failure(tmp_path, monkeypatch) -> None:
+    output = tmp_path / "latest.json"
+
+    def fail_replace(source, destination):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(student_lab_attempts.os, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="replace failed"):
+        student_lab_attempts.write_json_atomic(output, {"status": "passed"})
+
+    assert not output.exists()
+    assert list(tmp_path.glob("*.tmp")) == []
 
 
 def test_run_student_assignment_reports_python_pytest_failure(tmp_path) -> None:

@@ -9,6 +9,7 @@ from scripts import (
     student_help_auth,
     student_help_service,
     student_identity,
+    student_lab_attempts,
     student_lab_service,
     student_support_policy,
 )
@@ -722,6 +723,232 @@ def test_student_lab_uses_existing_report_and_grading_summary(tmp_path) -> None:
         {"name": "somma positiva", "passed": True, "status": "passed"},
         {"name": "somma negativa", "passed": True, "status": "passed"},
     ]
+    assert assignment["attempts"] == {
+        "count": 1,
+        "truncated": False,
+        "latest": {
+            "id": "",
+            "submitted_at": "2026-10-18T18:00:00+02:00",
+            "status": "passed",
+            "passed": True,
+            "tests_passed": 2,
+            "tests_total": 2,
+        },
+        "best": {
+            "id": "",
+            "submitted_at": "2026-10-18T18:00:00+02:00",
+            "status": "passed",
+            "passed": True,
+            "tests_passed": 2,
+            "tests_total": 2,
+        },
+        "final": None,
+    }
+
+
+def test_student_lab_does_not_claim_best_when_attempt_history_is_truncated(tmp_path, monkeypatch) -> None:
+    write_assignment(tmp_path, sample_assignment(tmp_path))
+    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    report_path = repo / "reports" / "python-base-somma-001" / "latest.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "status": "failed",
+                "passed": False,
+                "submitted_at": "2026-10-18T18:00:00+02:00",
+                "summary": {"passed": 1, "total": 2},
+                "tests": [
+                    {"name": "positivo", "status": "passed", "passed": True},
+                    {"name": "negativo", "status": "failed", "passed": False},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        student_lab_attempts,
+        "load_attempt_history",
+        lambda *args, **kwargs: {"attempts": [], "count": 0, "truncated": True},
+    )
+
+    assignment = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-20T12:00:00+02:00",
+    )[0]
+
+    assert assignment["attempts"]["truncated"] is True
+    assert assignment["attempts"]["latest"]["status"] == "failed"
+    assert assignment["attempts"]["best"] is None
+
+
+def test_student_lab_keeps_attempt_history_separate_for_repeated_activity(tmp_path) -> None:
+    first = sample_assignment(
+        tmp_path,
+        assignment_id="assignment-somma-primo",
+        assigned_at="2026-10-01T09:00:00+02:00",
+        due_at="2026-10-08T23:59:00+02:00",
+    )
+    second = sample_assignment(
+        tmp_path,
+        assignment_id="assignment-somma-secondo",
+        assigned_at="2026-10-12T09:00:00+02:00",
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+    write_assignment(tmp_path, first)
+    write_assignment(tmp_path, second)
+    report_path = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "reports"
+        / "python-base-somma-001"
+        / "latest.json"
+    )
+    first_report = {
+        "schema_version": "student_lab_run.v1",
+        "activity_id": "python-base-somma-001",
+        "student_id": "rossi-mario",
+        "status": "failed",
+        "passed": False,
+        "submitted_at": "2026-10-08T18:00:00+02:00",
+        "summary": {"passed": 1, "total": 2},
+        "tests": [
+            {"name": "positivo", "status": "passed", "passed": True},
+            {"name": "negativo", "status": "failed", "passed": False},
+        ],
+    }
+    second_report = {
+        **first_report,
+        "status": "passed",
+        "passed": True,
+        "submitted_at": "2026-10-18T18:00:00+02:00",
+        "summary": {"passed": 2, "total": 2},
+        "tests": [
+            {"name": "positivo", "status": "passed", "passed": True},
+            {"name": "negativo", "status": "passed", "passed": True},
+        ],
+    }
+    student_lab_attempts.persist_attempt(report_path, first["id"], first_report)
+    student_lab_attempts.persist_attempt(report_path, second["id"], second_report)
+    student_lab_attempts.write_json_atomic(report_path, second_report)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-20T12:00:00+02:00",
+    )
+
+    by_id = {item["assignment_id"]: item for item in assignments}
+    assert by_id[first["id"]]["grading"]["tests_passed"] == 1
+    assert by_id[first["id"]]["attempts"]["count"] == 1
+    assert by_id[second["id"]]["grading"]["tests_passed"] == 2
+    assert by_id[second["id"]]["attempts"]["count"] == 1
+    assert by_id[first["id"]]["attempts"]["latest"]["id"] != by_id[second["id"]]["attempts"]["latest"]["id"]
+
+
+def test_student_lab_does_not_reuse_legacy_latest_for_another_assignment(tmp_path) -> None:
+    first = sample_assignment(
+        tmp_path,
+        assignment_id="assignment-somma-primo",
+        assigned_at="2026-10-01T09:00:00+02:00",
+        due_at="2026-10-08T23:59:00+02:00",
+    )
+    second = sample_assignment(
+        tmp_path,
+        assignment_id="assignment-somma-secondo",
+        assigned_at="2026-10-12T09:00:00+02:00",
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+    write_assignment(tmp_path, first)
+    write_assignment(tmp_path, second)
+    report_path = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "reports"
+        / "python-base-somma-001"
+        / "latest.json"
+    )
+    first_report = {
+        "schema_version": "student_lab_run.v1",
+        "assignment_id": first["id"],
+        "activity_id": "python-base-somma-001",
+        "student_id": "rossi-mario",
+        "status": "passed",
+        "passed": True,
+        "submitted_at": "2026-10-08T18:00:00+02:00",
+        "summary": {"passed": 1, "total": 1},
+        "tests": [{"name": "somma", "status": "passed", "passed": True}],
+    }
+    student_lab_attempts.persist_attempt(report_path, first["id"], first_report)
+    student_lab_attempts.write_json_atomic(report_path, first_report)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-20T12:00:00+02:00",
+    )
+
+    by_id = {item["assignment_id"]: item for item in assignments}
+    assert by_id[first["id"]]["submitted"] is True
+    assert by_id[second["id"]]["submitted"] is False
+    assert by_id[second["id"]]["attempts"]["count"] == 0
+
+
+def test_student_lab_does_not_guess_unscoped_legacy_report_for_repeated_activity(tmp_path) -> None:
+    first = sample_assignment(
+        tmp_path,
+        assignment_id="assignment-somma-primo",
+        assigned_at="2026-10-01T09:00:00+02:00",
+        due_at="2026-10-08T23:59:00+02:00",
+    )
+    second = sample_assignment(
+        tmp_path,
+        assignment_id="assignment-somma-secondo",
+        assigned_at="2026-10-12T09:00:00+02:00",
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+    write_assignment(tmp_path, first)
+    write_assignment(tmp_path, second)
+    report_path = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "reports"
+        / "python-base-somma-001"
+        / "latest.json"
+    )
+    student_lab_attempts.write_json_atomic(
+        report_path,
+        {
+            "schema_version": "student_lab_run.v1",
+            "activity_id": "python-base-somma-001",
+            "student_id": "rossi-mario",
+            "status": "passed",
+            "passed": True,
+            "submitted_at": "2026-10-08T18:00:00+02:00",
+            "summary": {"passed": 1, "total": 1},
+            "tests": [{"name": "somma", "status": "passed", "passed": True}],
+        },
+    )
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-20T12:00:00+02:00",
+    )
+
+    assert all(item["submitted"] is False for item in assignments)
+    assert all(item["attempts"]["count"] == 0 for item in assignments)
 
 
 def test_student_lab_exposes_saved_failed_test_messages(tmp_path) -> None:

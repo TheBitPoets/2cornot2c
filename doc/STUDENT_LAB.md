@@ -175,6 +175,23 @@ Per salvare il risultato nel path standard dello studente:
 python scripts/student_lab_runner.py --student-id rossi-mario --activity-id python-base-somma-001 --write-report
 ```
 
+Ogni salvataggio standard conserva un tentativo immutabile e aggiorna il report compatibile `latest.json`.
+Se la stessa activity compare in piu consegne, usa `--assignment-id`: gli storici restano separati per
+assegnazione. Per marcare esplicitamente l'esecuzione appena prodotta come consegna definitiva:
+
+```powershell
+python scripts/student_lab_runner.py --student-id rossi-mario --assignment-id <assignment-id> --write-report --final
+```
+
+`latest`, `best` e `final` hanno significati diversi:
+
+- `latest` e l'ultima esecuzione salvata;
+- `best` e il risultato tecnico migliore, calcolato dai test con spareggio sul tentativo piu recente;
+- `final` e soltanto il tentativo scelto esplicitamente come definitivo e non cambia quando lo studente riprova.
+
+La dashboard e il registro continuano a usare il report `latest` per stato e grading finche il flusso docente non
+introdurra una decisione esplicita basata su `final`.
+
 Per usare la sandbox Docker minima sulle consegne C, Python, JavaScript/Node.js o SQL:
 
 ```powershell
@@ -268,7 +285,27 @@ Il payload ha schema `student_lab.v1` e contiene:
 - `runner`: stato del runner lab nel payload di consultazione.
 
 Nel payload di consultazione la TUI espone ancora `not_run`, perché l'esecuzione è un comando separato.
-Il runner locale produce un report JSON su stdout e, con `--write-report`, lo salva in `reports/<activity_id>/latest.json`.
+Il runner locale produce un report JSON su stdout e, con `--write-report`, salva:
+
+```text
+reports/<activity_id>/
+  latest.json
+  assignments/<assignment-key>/
+    latest.json
+    final.json                 # presente solo dopo una scelta esplicita
+    attempts/
+      attempt-<timestamp>-<id>.json
+```
+
+Il primo `latest.json` conserva il contratto storico. La directory indicizzata da `assignment-key` evita che due
+assegnazioni della stessa activity condividano tentativi, migliore risultato o selezione definitiva.
+
+Il servizio esamina al massimo 5000 file e carica al massimo 500 tentativi o 20 MiB per assegnazione in una singola
+risposta. Se lo storico supera uno dei limiti, `attempts.truncated` vale `true`, `attempts.count` conserva il numero
+di file rilevati prima del limite e il tentativo `final` viene comunque caricato direttamente dal suo identificativo.
+Il `latest` viene letto dalla proiezione canonica della consegna; se la scansione e troncata, `best` resta vuoto
+perche non sarebbe possibile garantirlo. Retention e indice autorevole restano passi successivi prima di usare lo
+storico locale per analytics ufficiali.
 Quando il report è salvato, il servizio lab lo rilegge e aggiorna stato consegna e riepilogo grading.
 
 ## Stati minimi
