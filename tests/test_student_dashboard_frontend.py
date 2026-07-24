@@ -361,6 +361,19 @@ def test_student_dashboard_attempt_history_handles_empty_and_truncated_data() ->
         assert.equal((truncated.match(/<li class=/g) || []).length, 20);
         assert.match(truncated, /storico disponibile e parziale/);
         assert.match(truncated, /Sono mostrati i 20 tentativi piu recenti/);
+
+        const withOlderFinal = tested.renderAttemptHistory({
+          attempts: {
+            count: 22,
+            truncated: false,
+            final: items[20],
+            items,
+          },
+        });
+        assert.equal((withOlderFinal.match(/<li class=/g) || []).length, 20);
+        assert.match(withOlderFinal, /attempt-021/);
+        assert.match(withOlderFinal, /19 tentativi piu recenti e il tentativo definitivo/);
+        assert.equal((withOlderFinal.match(/Definitivo/g) || []).length, 2);
         """
     )
 
