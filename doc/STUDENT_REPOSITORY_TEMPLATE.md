@@ -199,7 +199,10 @@ Lo stato non fa parte dello scaffold e non deve essere copiato nel repository
 dello studente. Permette di aggiornare i file ancora intatti, preservare quelli
 modificati e rimuovere in sicurezza gli asset che non sono piu pubblici.
 
-Per uno scaffold creato prima dell'introduzione di questo stato, la prima
-rigenerazione con asset gia distribuiti richiede
-`--force --overwrite-source`: salva prima eventuali modifiche dello studente.
-Con `--state-dir` puoi scegliere una directory docente diversa.
+Uno scaffold creato prima dell'introduzione di questo stato non viene
+aggiornato automaticamente: archivia o rinomina la vecchia cartella della
+consegna e rigenerane una pulita. In questo modo nessun metadato modificabile
+dallo studente viene usato per decidere quali file cancellare.
+
+Con `--state-dir` puoi scegliere una directory docente diversa, che deve
+restare esterna al repository studente.

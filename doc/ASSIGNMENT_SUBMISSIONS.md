@@ -556,9 +556,9 @@ Come per lo scaffold singolo, `--force` aggiorna i metadati della consegna, ma n
 Il motore conserva fuori dai repository studenti, nella directory docente
 `.thebitlab-scaffold-state`, gli hash degli asset pubblici distribuiti. In
 questo modo aggiorna soltanto le copie non modificate e non usa mai metadati
-controllabili dallo studente per autorizzare cancellazioni. Gli scaffold
-precedenti a questo stato richiedono una prima rigenerazione esplicita con
-`--force --overwrite-source`, dopo avere salvato eventuali modifiche.
+controllabili dallo studente per autorizzare cancellazioni. Per aggiornare uno
+scaffold precedente a questo stato, archivia o rinomina la vecchia cartella
+della consegna e rigenerane una pulita.
 
 Nella dashboard il docente seleziona activity, classe/team GitHub e repository studenti; il server locale
 chiama lo stesso core usato dalla CLI.
