@@ -281,6 +281,9 @@ La cattura usa la root `tmp/student-lab-demo`, il registro `demo/python-demo-som
 6. Apri il modal degli studenti, se disponibile.
 7. Nella riga di `rossi-mario`, clicca `Apri consegna`.
 8. Seleziona `main.py` e poi `test_main.py` dalla lista dei file.
+9. Nel pannello `Genera registro consegne`, seleziona un'assegnazione e premi `Cancella assegnazione`.
+   Controlla titolo e conseguenze nel dialog, quindi scegli `Mantieni`: questo scenario non deve cancellare
+   i dati demo.
 
 Risultato atteso:
 
@@ -293,6 +296,8 @@ Risultato atteso:
 - Le richieste di aiuto risultano visibili nel riepilogo docente.
 - Il modal della consegna mostra il contenuto di `main.py` e `test_main.py` senza errori 404.
 - I file aperti appartengono alla root demo corrente, non a una precedente cartella temporanea.
+- La conferma di cancellazione è un dialog integrato nella pagina; `Mantieni` lo chiude senza rimuovere
+  l'assegnazione e senza mostrare un `confirm()` nativo del browser.
 
 ## Scenario 3 - Quadro classe ed elenco consegne
 
@@ -780,7 +785,8 @@ Prova salva, ricarica, generazione AI e annullamento; ogni stato deve avere feed
 </td></tr>
 </table>
 
-Obiettivo: verificare creazione, modifica, persistenza, protezione dagli errori e accessibilità della pagina Percorso.
+Obiettivo: verificare creazione, modifica, persistenza, protezione dagli errori, dialog grafici e accessibilità
+della pagina Percorso. Nessun passaggio deve aprire i dialog nativi del browser (`alert`, `confirm` o `prompt`).
 
 1. Ferma con `Ctrl+C` il server dello Scenario 7, se ancora attivo. Avvia quindi il server senza root demo,
    usando i dati del repository:
@@ -790,17 +796,24 @@ Obiettivo: verificare creazione, modifica, persistenza, protezione dagli errori 
    ```
 
 2. Apri `http://localhost:8765/tools/course_board.html` e autenticati con le credenziali stampate dal server.
-3. Usa `Nuovo progetto` e crea `test-manuale-percorso.json`.
+3. Usa `Nuovo progetto`. Nel dialog di conferma premi `Esc` e verifica che il progetto corrente non cambi.
+   Riaprilo, conferma, lascia vuoto il nome e verifica l'errore inline; inserisci infine
+   `test-manuale-percorso.json` e crea il progetto.
 4. Aggiungi un percorso con settimane e ore valide. Prova poi a crearne uno con `0` settimane e verifica il bordo rosso e il messaggio di errore.
 5. Nel catalogo a sinistra usa il pulsante `+` su un paragrafo, poi premilo di nuovo sullo stesso paragrafo.
 5a. Clicca il titolo di un paragrafo e poi il comando `Testo`: verifica che si apra il modal con il contenuto completo.
 5b. Dentro una UDA ripeti dal titolo e dal comando `Testo`, poi usa `Apri sorgente su GitHub` e verifica l'ancora del paragrafo.
-6. Modifica una cornice e premi `Ricarica`: annulla la conferma e verifica che la modifica resti visibile; ripeti accettando e verifica che torni l'ultimo stato salvato.
-7. Usa `Salva progetto con nome` indicando di nuovo `test-manuale-percorso.json`: annulla la richiesta di sovrascrittura e verifica che l'archivio precedente non cambi.
+6. Modifica una cornice e premi `Ricarica`: nel dialog grafico premi `Resta qui` e verifica che la modifica
+   resti visibile e che il focus torni al comando precedente. Ripeti accettando `Scarta modifiche` e verifica
+   che torni l'ultimo stato salvato.
+7. Usa `Salva progetto con nome` indicando di nuovo `test-manuale-percorso.json`: nel dialog grafico
+   annulla la sovrascrittura e verifica che l'archivio precedente non cambi. Riprova e conferma per proseguire.
 8. Salva regolarmente il progetto. Se il provider AI è configurato, genera una sola cornice, avvia una nuova coda e usa `Annulla`; verifica che testo e indicatori di qualità tornino allo stato iniziale.
 9. Usa soltanto la tastiera per raggiungere il catalogo e aggiungere un paragrafo con il pulsante `+`.
 10. Restringi la finestra a circa `390 px`: pannelli, titoli, campi e pulsanti devono restare leggibili senza sovrapporsi.
-11. Cancella `test-manuale-percorso.json` dalla board per ripulire i dati di prova.
+11. Cancella `test-manuale-percorso.json` dalla board per ripulire i dati di prova. Verifica che il dialog
+    mostri chiaramente titolo, conseguenze, `Mantieni` e il comando distruttivo evidenziato; annulla una volta
+    prima di confermare davvero.
 
 Risultato atteso:
 
@@ -809,6 +822,9 @@ Risultato atteso:
 - Il titolo e il comando `Testo` aprono il modal con contenuto, fonte, riga e link GitHub coerenti.
 - Ricarica e navigazione non scartano modifiche senza conferma.
 - Un nome già esistente richiede conferma prima della sovrascrittura.
+- I dialog sono integrati nella pagina, si chiudono con `Esc`, ripristinano il focus e mostrano gli errori
+  obbligatori accanto al campo senza bloccare il browser o l'automazione Playwright.
+- Le azioni distruttive hanno un comando esplicito e visivamente distinto; l'annullamento non modifica dati.
 - L'annullamento AI ripristina sia il testo sia gli indicatori di qualità.
 - I comandi essenziali sono raggiungibili da tastiera e restano usabili su mobile.
 
