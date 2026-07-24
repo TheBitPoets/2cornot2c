@@ -587,6 +587,67 @@ def test_run_docker_assignment_supports_python(monkeypatch, tmp_path) -> None:
     assert report["language"] == "python"
 
 
+@pytest.mark.parametrize(
+    ("language", "source_name"),
+    [
+        ("javascript", "main.js"),
+        ("nodejs", "main.js"),
+        ("sql", "main.sql"),
+    ],
+)
+def test_run_docker_assignment_supports_node_and_sql(
+    monkeypatch,
+    tmp_path,
+    language,
+    source_name,
+) -> None:
+    activity_id = f"{language}-docker-001"
+    activity_path = write_activity(
+        tmp_path,
+        activity_id=activity_id,
+        language=language,
+        source_name=source_name,
+    )
+    write_assignment(tmp_path, activity_path, activity_id=activity_id)
+    workspace = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "assignments"
+        / activity_id
+    )
+    workspace.mkdir(parents=True)
+    (workspace / source_name).write_text("SELECT 1;\n" if language == "sql" else "console.log(1);\n", encoding="utf-8")
+
+    class Result:
+        returncode = 0
+        stdout = json.dumps(
+            {
+                "passed": True,
+                "status": "passed",
+                "language": language,
+                "tests": [{"name": "output", "passed": True, "status": "passed"}],
+                "summary": {"passed": 1, "total": 1},
+            }
+        )
+        stderr = ""
+
+    monkeypatch.setattr(student_lab_runner.subprocess, "run", lambda *args, **kwargs: Result())
+
+    report = student_lab_runner.run_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id=activity_id,
+        backend="docker",
+    )
+
+    assert report["backend"] == "docker"
+    assert report["status"] == "passed"
+    assert report["language"] == language
+
+
 def test_select_assignment_requires_disambiguation() -> None:
     try:
         student_lab_runner.select_assignment(
