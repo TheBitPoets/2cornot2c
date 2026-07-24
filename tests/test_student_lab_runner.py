@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
+
+import pytest
 
 from scripts import assignment_records, student_lab_runner, student_lab_service
 
@@ -63,6 +66,56 @@ def write_python_workspace(root, *, source: str, test_source: str) -> None:
     tests.mkdir(parents=True)
     (workspace / "main.py").write_text(source, encoding="utf-8")
     (tests / "test_main.py").write_text(test_source, encoding="utf-8")
+
+
+def run_store_and_reload_script_assignment(
+    root,
+    *,
+    activity_id: str,
+    language: str,
+    source_name: str,
+    source: str,
+    test_cases: list[dict],
+) -> tuple[dict, dict]:
+    """Run a script assignment and reload its grading through the lab service."""
+
+    activity_path = write_activity(
+        root,
+        activity_id=activity_id,
+        language=language,
+        source_name=source_name,
+        test_cases=test_cases,
+    )
+    write_assignment(root, activity_path, activity_id=activity_id)
+    workspace = (
+        root
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "assignments"
+        / activity_id
+    )
+    workspace.mkdir(parents=True)
+    (workspace / source_name).write_text(source, encoding="utf-8")
+
+    assignment = student_lab_runner.load_student_assignment(
+        root=root,
+        student_id="rossi-mario",
+        activity_id=activity_id,
+        now="2026-10-18T12:00:00+02:00",
+    )
+    report = student_lab_runner.run_local_assignment(assignment, root=root)
+    student_lab_runner.write_student_report(root, assignment, report)
+    payload = student_lab_service.student_lab_payload(
+        root=root,
+        student_id="rossi-mario",
+        now="2026-10-20T12:00:00+02:00",
+    )
+    assignment_payload = next(
+        item for item in payload["assignments"] if item["activity_id"] == activity_id
+    )
+    return report, assignment_payload
 
 
 def test_run_student_assignment_passes_python_pytest(tmp_path) -> None:
@@ -127,6 +180,67 @@ def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path
     assert assignment_payload["submitted"] is True
     assert assignment_payload["report"]["exists"] is True
     assert assignment_payload["report"]["submitted_at"] == report["generated_at"]
+    assert assignment_payload["grading"]["status"] == "graded_passed"
+    assert assignment_payload["grading"]["tests_passed"] == 1
+    assert assignment_payload["grading"]["tests_total"] == 1
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node non disponibile nell'ambiente di test")
+def test_node_assignment_flows_from_runner_to_service_grading(tmp_path) -> None:
+    report, assignment_payload = run_store_and_reload_script_assignment(
+        tmp_path,
+        activity_id="javascript-incremento-001",
+        language="javascript",
+        source_name="main.js",
+        source=(
+            "let value = '';\n"
+            "process.stdin.on('data', chunk => value += chunk)\n"
+            "  .on('end', () => console.log(Number(value) + 1));\n"
+        ),
+        test_cases=[
+            {
+                "name": "incremento",
+                "stdin": "4\n",
+                "expected_stdout": "5\n",
+            }
+        ],
+    )
+
+    assert report["backend"] == "local"
+    assert report["language"] == "javascript"
+    assert report["status"] == "passed"
+    assert report["summary"] == {"passed": 1, "total": 1}
+    assert assignment_payload["report"]["exists"] is True
+    assert assignment_payload["grading"]["status"] == "graded_passed"
+    assert assignment_payload["grading"]["tests_passed"] == 1
+    assert assignment_payload["grading"]["tests_total"] == 1
+
+
+def test_sql_assignment_flows_from_runner_to_service_grading(tmp_path) -> None:
+    report, assignment_payload = run_store_and_reload_script_assignment(
+        tmp_path,
+        activity_id="sql-studenti-001",
+        language="sql",
+        source_name="main.sql",
+        source=(
+            "CREATE TABLE studenti (nome TEXT, voto INTEGER);\n"
+            "INSERT INTO studenti VALUES ('Ada', 9), ('Linus', 8);\n"
+            "SELECT nome, voto FROM studenti ORDER BY nome;\n"
+        ),
+        test_cases=[
+            {
+                "name": "elenco studenti",
+                "expected_stdout": "Ada|9\nLinus|8\n",
+            }
+        ],
+    )
+
+    assert report["backend"] == "local"
+    assert report["language"] == "sql"
+    assert report["status"] == "passed"
+    assert report["summary"] == {"passed": 1, "total": 1}
+    assert report["tests"][0]["command"][0] == "python-stdlib"
+    assert assignment_payload["report"]["exists"] is True
     assert assignment_payload["grading"]["status"] == "graded_passed"
     assert assignment_payload["grading"]["tests_passed"] == 1
     assert assignment_payload["grading"]["tests_total"] == 1
