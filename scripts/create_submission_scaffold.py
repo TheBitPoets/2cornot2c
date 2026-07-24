@@ -271,6 +271,18 @@ def student_activity_payload(activity: dict[str, Any]) -> dict[str, Any]:
     payload = {key: value for key, value in activity.items() if key in STUDENT_ACTIVITY_FIELDS}
     if "assets" in payload:
         payload["assets"] = student_assets(activity)
+    public_tests = [
+        {
+            key: value
+            for key, value in test_case.items()
+            if key in {"name", "stdin", "expected_stdout"}
+        }
+        for test_case in activity.get("test_cases", [])
+        if isinstance(test_case, dict)
+        and test_case.get("visibility") in {"public", "student"}
+    ]
+    if public_tests:
+        payload["test_cases"] = public_tests
     return payload
 
 

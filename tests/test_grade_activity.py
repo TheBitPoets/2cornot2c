@@ -29,6 +29,10 @@ def activity() -> dict:
     }
 
 
+def write_valid_docker_activity(path) -> None:
+    path.write_text(json.dumps(activity()), encoding="utf-8")
+
+
 @pytest.mark.skipif(shutil.which("gcc") is None, reason="gcc non disponibile nell'ambiente di test")
 def test_grade_activity_passes_valid_c_program(tmp_path) -> None:
     source = tmp_path / "main.c"
@@ -553,16 +557,23 @@ def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> Non
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
     def missing_docker(*args, **kwargs):
         raise FileNotFoundError
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", missing_docker)
+    calls = {"count": 0}
+
+    def tracked_missing_docker(*args, **kwargs):
+        calls["count"] += 1
+        return missing_docker(*args, **kwargs)
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", tracked_missing_docker)
 
     assert grade_activity.run_docker_grading(Args()) == 1
+    assert calls["count"] == 1
 
 
 def test_run_docker_grading_reports_docker_timeout(monkeypatch, tmp_path) -> None:
@@ -574,16 +585,23 @@ def test_run_docker_grading_reports_docker_timeout(monkeypatch, tmp_path) -> Non
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
     def timeout_docker(*args, **kwargs):
         raise subprocess.TimeoutExpired(cmd="docker run", timeout=kwargs["timeout"])
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", timeout_docker)
+    calls = {"count": 0}
+
+    def tracked_timeout(*args, **kwargs):
+        calls["count"] += 1
+        return timeout_docker(*args, **kwargs)
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", tracked_timeout)
 
     assert grade_activity.run_docker_grading(Args()) == 1
+    assert calls["count"] == 1
 
 
 def test_docker_timeout_scales_with_test_cases() -> None:
@@ -617,7 +635,7 @@ def test_run_docker_grading_rejects_invalid_json_output(monkeypatch, tmp_path) -
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
@@ -641,7 +659,7 @@ def test_run_docker_grading_rejects_non_report_json_on_container_error(monkeypat
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
@@ -665,7 +683,7 @@ def test_run_docker_grading_rejects_non_report_json_on_success(monkeypatch, tmp_
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
@@ -689,7 +707,7 @@ def test_run_docker_grading_rejects_report_with_invalid_field_types(monkeypatch,
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
@@ -713,7 +731,7 @@ def test_run_docker_grading_rejects_success_report_on_container_error(monkeypatc
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 

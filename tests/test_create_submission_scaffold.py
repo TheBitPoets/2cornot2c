@@ -74,7 +74,13 @@ def test_create_scaffold_writes_assignment_files(tmp_path) -> None:
 def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
     payload = activity()
     payload["test_cases"] = [
-        {"name": "riservato", "stdin": "2 3\n", "expected_stdout": "5\n"}
+        {"name": "riservato", "stdin": "2 3\n", "expected_stdout": "5\n"},
+        {
+            "name": "pubblico",
+            "stdin": "1 1\n",
+            "expected_stdout": "2\n",
+            "visibility": "student",
+        },
     ]
     payload["rubrica"] = [{"criterio": "Correttezza", "punti": 100}]
     payload["soluzione_attesa"] = {
@@ -92,13 +98,15 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
     )
 
     distributed = json.loads((destination / "activity.json").read_text(encoding="utf-8"))
-    assert "test_cases" not in distributed
+    assert distributed["test_cases"] == [
+        {"name": "pubblico", "stdin": "1 1\n", "expected_stdout": "2\n"}
+    ]
     assert "rubrica" not in distributed
     assert "soluzione_attesa" not in distributed
     assert distributed["assets"] == []
     serialized = json.dumps(distributed)
-    assert "expected_stdout" not in serialized
     assert "riservato" not in serialized
+    assert "2 3" not in serialized
     assert "Differenza: 3" not in serialized
 
 

@@ -519,6 +519,11 @@ La copia studente di `activity.json` contiene soltanto metadati pubblici. Test r
 `expected_stdout`, rubrica e asset docente restano nella sorgente autorevole del docente e non vengono
 distribuiti nel repository dello studente.
 
+Un caso in `test_cases` viene incluso nella copia studente soltanto quando dichiara esplicitamente
+`"visibility": "student"` oppure `"visibility": "public"`. In quel caso input e output atteso sono
+intenzionalmente pubblici e possono alimentare il workflow locale di preview. I casi senza visibilita
+restano riservati e vengono usati solo dal grading autorevole.
+
 Il flusso e pensato in tre livelli:
 
 | Livello | Responsabilita |
