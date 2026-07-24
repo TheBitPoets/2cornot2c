@@ -1389,7 +1389,7 @@ def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) 
     assert row["submission"]["report_error"] is None
     assert row["submission"]["report_path"] is None
     assert row["submission"]["files"] == []
-    assert row["submission"]["local_preview_status"] == "commit_mismatch"
+    assert row["submission"]["local_preview_status"] == "remote_commit_only"
     assert source.requests == [
         thebitlab_tracking_reports.TrackingReportRequest(
             activity_id="python-base-somma-001",
@@ -1400,10 +1400,7 @@ def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) 
     ]
 
 
-def test_remote_report_allows_local_preview_only_at_verified_commit(
-    tmp_path,
-    monkeypatch,
-) -> None:
+def test_remote_report_never_reads_files_from_local_checkout(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "rossi-mario")
     assignment_id = "assignment-preview"
@@ -1429,12 +1426,6 @@ def test_remote_report_allows_local_preview_only_at_verified_commit(
             provenance={"repository": "TheBitPoets/rossi-mario"},
         )
     )
-    monkeypatch.setattr(
-        track_assignments,
-        "git_stdout_optional",
-        lambda args, cwd: commit if args == ["git", "rev-parse", "HEAD"] else "",
-    )
-
     row = track_assignments.track_assignments(
         activity_path=activity_path,
         targets=[student],
@@ -1443,25 +1434,9 @@ def test_remote_report_allows_local_preview_only_at_verified_commit(
         report_source=source,
     )["students"][0]
 
-    assert row["submission"]["local_preview_status"] == "available"
-    assert row["submission"]["source_path"].endswith("main.py")
-    assert row["submission"]["files"][0]["path"].endswith("main.py")
-
-
-def test_checkout_preview_rejects_dirty_worktree(monkeypatch, tmp_path) -> None:
-    student = target(tmp_path, "rossi-mario")
-    commit = "a" * 40
-
-    def fake_git_stdout(args, _cwd):
-        if args == ["git", "rev-parse", "HEAD"]:
-            return commit
-        if args == ["git", "status", "--porcelain", "--untracked-files=normal"]:
-            return " M assignments/python-base-somma-001/main.py"
-        return ""
-
-    monkeypatch.setattr(track_assignments, "git_stdout_optional", fake_git_stdout)
-
-    assert track_assignments.checkout_matches_commit(student, commit) is False
+    assert row["submission"]["local_preview_status"] == "remote_commit_only"
+    assert row["submission"]["source_path"] is None
+    assert row["submission"]["files"] == []
 
 
 def test_remote_provenance_supplies_missing_assignment_repository(tmp_path) -> None:

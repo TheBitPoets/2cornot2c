@@ -348,6 +348,10 @@ l'isolamento dei test riservati e tracciato in #515, mentre il pin completo dell
 tracciato in #516. Fino alla loro chiusura, il risultato automatico resta soggetto alla revisione
 docente e non deve essere pubblicato come voto definitivo senza controllo.
 
+La preview dei file locali viene disabilitata per i report remoti: un checkout locale potrebbe
+contenere file modificati, non tracciati o ignorati diversi dal commit valutato. Una futura preview
+remota dovra leggere i blob direttamente dallo SHA attestato.
+
 Per repository studenti privati, il secret `THEBITLAB_STUDENT_REPO_TOKEN` deve contenere un
 token GitHub App o PAT di sola lettura limitato ai repository necessari. La credenziale viene
 usata soltanto dal checkout con `persist-credentials: false`; il runner Docker esegue il codice
