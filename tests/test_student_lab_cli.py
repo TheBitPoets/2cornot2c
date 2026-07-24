@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import sys
+from types import SimpleNamespace
 import urllib.error
 from pathlib import Path
 
@@ -1455,8 +1456,11 @@ def test_open_workspace_resolves_relative_path_from_root(monkeypatch, tmp_path) 
     workspace.mkdir(parents=True)
     opened = []
 
-    monkeypatch.setattr(student_lab_cli.os, "startfile", opened.append, raising=False)
-    monkeypatch.setattr(student_lab_cli.os, "name", "nt")
+    monkeypatch.setattr(
+        student_lab_cli,
+        "os",
+        SimpleNamespace(name="nt", startfile=opened.append),
+    )
 
     assert student_lab_cli.open_workspace("student/assignments/python-base-somma-001", root=tmp_path) is True
     assert opened == [workspace.resolve()]
