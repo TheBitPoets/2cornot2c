@@ -212,6 +212,8 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
     submitted = payload.get("submitted", False)
     normalized["submitted"] = None if submitted is None else bool_value(submitted)
     normalized["status"] = first_text(payload, "status")
+    if normalized["status"] == "submission_unknown":
+        normalized["submitted"] = None
     normalized["late"] = bool_value(payload.get("late", False))
     submission = payload.get("submission") if isinstance(payload.get("submission"), dict) else {}
     grading = payload.get("grading") if isinstance(payload.get("grading"), dict) else {}

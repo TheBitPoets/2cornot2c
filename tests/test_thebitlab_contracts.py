@@ -183,11 +183,28 @@ def test_normalize_register_student_preserves_remote_tracking_states() -> None:
             "grading": {"provisional": True},
         }
     )
+    contradictory = thebitlab_contracts.normalize_register_student(
+        {
+            "student": "verdi-anna",
+            "submitted": False,
+            "status": "submission_unknown",
+            "submission": {"report_selection": "remote_error"},
+        }
+    )
+    missing_flag = thebitlab_contracts.normalize_register_student(
+        {
+            "student": "neri-giulia",
+            "status": "submission_unknown",
+            "submission": {"report_selection": "remote_error"},
+        }
+    )
 
     assert verified["grading"]["provisional"] is True
     assert unavailable["submitted"] is None
     assert unavailable["status"] == "submission_unknown"
     assert unavailable["grading"]["provisional"] is False
+    assert contradictory["submitted"] is None
+    assert missing_flag["submitted"] is None
 
 
 def test_normalize_submission_parses_late_string_conservatively() -> None:
