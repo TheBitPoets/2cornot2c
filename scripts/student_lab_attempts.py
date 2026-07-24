@@ -195,8 +195,12 @@ def persist_attempt(
         if confined_regular_file(write_base, assignment_latest_path)
         else None
     )
-    if current_latest is None or attempt_sort_key(stored) >= attempt_sort_key(current_latest):
-        write_json_atomic(assignment_latest_path, stored, base_dir=write_base)
+    try:
+        if current_latest is None or attempt_sort_key(stored) >= attempt_sort_key(current_latest):
+            write_json_atomic(assignment_latest_path, stored, base_dir=write_base)
+    except BaseException:
+        attempt_path.unlink(missing_ok=True)
+        raise
     return attempt_path, assignment_latest_path
 
 

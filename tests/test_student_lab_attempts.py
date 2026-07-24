@@ -181,6 +181,38 @@ def test_persist_standard_report_rolls_back_when_legacy_latest_fails(tmp_path, m
     assert not report_path.exists()
 
 
+def test_persist_attempt_rolls_back_when_assignment_latest_fails(tmp_path, monkeypatch) -> None:
+    report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
+    history_latest = student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID) / "latest.json"
+    original_write = student_lab_attempts.write_json_atomic
+
+    def fail_assignment_latest(path, payload, **kwargs):
+        if path == history_latest:
+            raise OSError("assignment latest failed")
+        return original_write(path, payload, **kwargs)
+
+    monkeypatch.setattr(student_lab_attempts, "write_json_atomic", fail_assignment_latest)
+
+    with pytest.raises(OSError, match="assignment latest failed"):
+        student_lab_attempts.persist_standard_report(
+            report_path,
+            ASSIGNMENT_ID,
+            report(
+                attempt_id="ignored",
+                passed=True,
+                tests_passed=1,
+                tests_total=1,
+                submitted_at="2026-10-18T10:00:00+02:00",
+            ),
+            base_dir=tmp_path,
+        )
+
+    history_dir = student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID)
+    assert list((history_dir / "attempts").glob("attempt-*.json")) == []
+    assert not history_latest.exists()
+    assert not report_path.exists()
+
+
 def test_persist_standard_report_rejects_symlinked_history_parent(tmp_path) -> None:
     report_path = tmp_path / "repo" / "reports" / ACTIVITY_ID / "latest.json"
     external = tmp_path / "external"
