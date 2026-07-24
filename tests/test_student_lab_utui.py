@@ -264,6 +264,25 @@ def test_dashboard_offset_reveals_lower_panels_in_a_24_line_terminal() -> None:
 
 
 @pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
+def test_expanded_sections_make_every_internal_row_globally_scrollable() -> None:
+    frame = student_lab_utui.render_assignment_frame(
+        ASSIGNMENT,
+        student_lab_layout.DEFAULT_LAYOUT,
+        width=120,
+        height=19,
+        color=False,
+        interaction={
+            "dashboard_offset": 40,
+            "expand_sections": True,
+        },
+    )
+    rendered = "\n".join(frame)
+
+    assert "Errore log:" in rendered
+    assert "q  Esci" in rendered
+
+
+@pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
 def test_reordered_collapsed_focus_snapshot_without_layout_mutation() -> None:
     layout = {
         **student_lab_layout.DEFAULT_LAYOUT,

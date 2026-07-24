@@ -1155,10 +1155,10 @@ def test_run_tui_scrolls_the_utui_detail(monkeypatch, tmp_path) -> None:
 
     assert result == 0
     assert interactions == [
-        {"dashboard_offset": 0},
-        {"dashboard_offset": 5},
-        {"dashboard_offset": 10},
-        {"dashboard_offset": 5},
+        {"dashboard_offset": 0, "expand_sections": True},
+        {"dashboard_offset": 5, "expand_sections": True},
+        {"dashboard_offset": 10, "expand_sections": True},
+        {"dashboard_offset": 5, "expand_sections": True},
     ]
 
 

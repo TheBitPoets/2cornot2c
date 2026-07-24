@@ -1233,7 +1233,10 @@ def run_tui(
                     use_color=use_color,
                     layout=student_lab_layout.load_layout(root),
                     renderer=selected_renderer,
-                    interaction={"dashboard_offset": dashboard_offset},
+                    interaction={
+                        "dashboard_offset": dashboard_offset,
+                        "expand_sections": True,
+                    },
                 )
             )
             if selected_renderer != "legacy":
