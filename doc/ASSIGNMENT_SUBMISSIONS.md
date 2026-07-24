@@ -464,13 +464,17 @@ Esempio ridotto:
 }
 ```
 
-Per ora il registro legge report locali nel path:
+Il registro legge report locali con questa priorita:
 
 ```text
+reports/<activity_id>/assignments/<assignment-key>/final.json
+reports/<activity_id>/assignments/<assignment-key>/latest.json
 reports/<activity_id>/latest.json
 ```
 
-In futuro la stessa struttura potra essere alimentata scaricando gli artifact GitHub Actions dei repository studenti.
+`final.json` seleziona il tentativo immutabile autorevole; i due `latest.json` sono fallback provvisori scoped e
+legacy. In futuro la stessa struttura potra essere alimentata scaricando gli artifact GitHub Actions dei repository
+studenti.
 
 ## Dashboard consegne docente
 
