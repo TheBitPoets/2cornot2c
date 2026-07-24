@@ -84,7 +84,7 @@ jobs:
           tests/test_track_assignments.py
           tests/test_course_board_server.py
 
-  utui-python311:
+  minimum-python:
     runs-on: ubuntu-latest
     env:
       THEBITLAB_REQUIRE_UTUI: "1"
@@ -97,8 +97,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install renderer test dependencies
+      - name: Install test dependencies
         run: python -m pip install -r requirements-dev.txt -r requirements-utui.txt
 
-      - name: Test uTUI adapter on minimum Python
-        run: python -m pytest tests/test_student_lab_utui.py
+      - name: Test full suite on minimum Python
+        run: python -m pytest
