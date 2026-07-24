@@ -202,9 +202,14 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         setItem(key, value) {{ this.store[key] = String(value); }},
         removeItem(key) {{ delete this.store[key]; }},
       }},
+      DashboardDialogs: {{
+        async confirm() {{ return true; }},
+        async prompt() {{ return null; }},
+        async message() {{}},
+        toast() {{}},
+      }},
       window: {{
         addEventListener() {{}},
-        confirm() {{ return true; }},
         location: {{
           reloaded: false,
           reload() {{ this.reloaded = true; }},
@@ -502,6 +507,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         localStorage,
         fetchCalls,
         fetchResponses,
+        DashboardDialogs,
         window,
       }};
     `, context);
@@ -688,7 +694,7 @@ def test_delete_selected_activity_stops_when_confirmation_is_cancelled() -> None
     run_dashboard_js(
         """
         (async () => {
-          tested.window.confirm = () => false;
+          tested.DashboardDialogs.confirm = async () => false;
           tested.state.activities = [{
             id: "somma-in-python",
             title: "Somma in Python",
@@ -1046,8 +1052,10 @@ def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> N
         """
         (async () => {
           let confirmation = "";
-          tested.window.confirm = (message) => {
-            confirmation = message;
+          let confirmationOptions = null;
+          tested.DashboardDialogs.confirm = async (options) => {
+            confirmationOptions = options;
+            confirmation = options.message;
             return true;
           };
           tested.state.dueAssignments = [{
@@ -1085,6 +1093,9 @@ def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> N
           assert.match(confirmation, /richieste di aiuto autorevoli/);
           assert.match(confirmation, /conteggio del budget/);
           assert.match(confirmation, /workspace e file.*non verranno rimossi/s);
+          assert.equal(confirmationOptions.title, "Cancella assegnazione");
+          assert.equal(confirmationOptions.confirmLabel, "Cancella assegnazione");
+          assert.equal(confirmationOptions.danger, true);
         })();
         """
     )
@@ -1157,7 +1168,7 @@ def test_delete_selected_assignment_stops_when_confirmation_is_cancelled() -> No
     run_dashboard_js(
         """
         (async () => {
-          tested.window.confirm = () => false;
+          tested.DashboardDialogs.confirm = async () => false;
           tested.state.dueAssignments = [{
             id: "assignment-python-base-somma-001-3a",
             activity_id: "python-base-somma-001",
