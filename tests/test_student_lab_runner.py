@@ -86,6 +86,10 @@ def run_store_and_reload_script_assignment(
         source_name=source_name,
         test_cases=test_cases,
     )
+    activity_file = root / activity_path
+    activity_payload = json.loads(activity_file.read_text(encoding="utf-8"))
+    activity_payload.pop("source_name")
+    activity_file.write_text(json.dumps(activity_payload), encoding="utf-8")
     write_assignment(root, activity_path, activity_id=activity_id)
     workspace = (
         root

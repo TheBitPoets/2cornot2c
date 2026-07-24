@@ -24,6 +24,9 @@ RUNNER_BACKENDS = {"local", "docker"}
 DEFAULT_SOURCE_NAMES = {
     "c": "main.c",
     "python": "main.py",
+    "javascript": "main.js",
+    "nodejs": "main.js",
+    "sql": "main.sql",
 }
 
 
