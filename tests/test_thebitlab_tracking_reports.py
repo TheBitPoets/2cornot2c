@@ -170,6 +170,7 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
     [
         ({"activity_id": "other"}, {}, "activity diversa"),
         ({"assignment_id": "other"}, {}, "assegnazione diversa"),
+        ({"student_id": "bianchi-luca"}, {}, "studente diverso"),
         ({"commit": "b" * 40}, {}, "Commit"),
         ({}, {"repository": "TheBitPoets/altro"}, "repository diverso"),
         ({}, {"head_sha": "b" * 40}, "SHA diverso"),
