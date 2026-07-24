@@ -471,10 +471,24 @@ def track_assignments(
         else:
             legacy_help_path = student_help_service.help_log_path(target.path, activity_id)
             help_log_path = student_identity.confined_regular_file(target.path, legacy_help_path)
-        safe_report_path = student_identity.confined_regular_file(target.path, report_path)
+        safe_report_path = None
+        if assignment_id:
+            assignment_report_path = (
+                report_path.parent
+                / "assignments"
+                / assignment_records.assignment_storage_key(assignment_id)
+                / "latest.json"
+            )
+            safe_report_path = student_identity.confined_regular_file(target.path, assignment_report_path)
+        if safe_report_path is None:
+            safe_report_path = student_identity.confined_regular_file(target.path, report_path)
         report = load_report(safe_report_path) if safe_report_path is not None else None
         if report is not None:
             validate_report_activity(report, activity_id, report_path)
+            report_assignment_id = clean_metadata(report.get("assignment_id"))
+            if assignment_id and report_assignment_id and report_assignment_id != assignment_id:
+                report = None
+                safe_report_path = None
         relative_report_path = (
             relative_to_root_or_repo(safe_report_path, target.path, server_root)
             if safe_report_path is not None

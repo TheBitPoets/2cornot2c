@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import hashlib
 import heapq
 import json
 import os
-import re
 import tempfile
 import uuid
 from contextlib import contextmanager
@@ -12,12 +10,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from scripts import track_assignments
+from scripts import assignment_records, track_assignments
 from scripts.student_identity import confined_regular_file
 
 
 ATTEMPT_SELECTION_SCHEMA = "student_lab_attempt_selection.v1"
-SAFE_KEY_PATTERN = re.compile(r"[^a-z0-9]+")
 MAX_ATTEMPTS_LOADED = 500
 MAX_ATTEMPT_FILES_SCANNED = 5000
 MAX_ATTEMPT_HISTORY_BYTES = 20 * 1024 * 1024
@@ -32,12 +29,7 @@ def clean_text(value: Any) -> str:
 def assignment_storage_key(assignment_id: str) -> str:
     """Return a readable collision-resistant directory name."""
 
-    normalized = clean_text(assignment_id)
-    if not normalized:
-        raise ValueError("assignment_id mancante per lo storico tentativi.")
-    slug = SAFE_KEY_PATTERN.sub("-", normalized.lower()).strip("-")[:48] or "assignment"
-    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
-    return f"{slug}-{digest}"
+    return assignment_records.assignment_storage_key(assignment_id)
 
 
 def assignment_history_dir(report_path: Path, assignment_id: str) -> Path:

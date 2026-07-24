@@ -792,6 +792,90 @@ def test_track_assignments_uses_stable_assignment_student_id_for_server_help(tmp
     assert help_summary["path"].startswith("teacher-help-events/student_id-")
 
 
+def test_track_assignments_reads_assignment_specific_report(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    first_id = "assignment-somma-primo"
+    second_id = "assignment-somma-secondo"
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    for assignment_id, assigned_at in (
+        (first_id, "2026-10-01T09:00:00+02:00"),
+        (second_id, "2026-10-12T09:00:00+02:00"),
+    ):
+        storage.write_assignment(
+            assignment_records.build_assignment_record(
+                assignment_id=assignment_id,
+                activity_id="python-base-somma-001",
+                activity_path=str(activity_path.relative_to(tmp_path)),
+                target_type="student",
+                assigned_at=assigned_at,
+                due_at="2026-10-21T08:00:00+02:00",
+                targets=[
+                    {
+                        "student_id": "rossi-mario",
+                        "repo_ref": student.repo,
+                        "path": str(student.path.relative_to(tmp_path)),
+                    }
+                ],
+            )
+        )
+    report_root = student.path / "reports" / "python-base-somma-001"
+    for assignment_id, passed in ((first_id, False), (second_id, True)):
+        path = (
+            report_root
+            / "assignments"
+            / assignment_records.assignment_storage_key(assignment_id)
+            / "latest.json"
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "activity_id": "python-base-somma-001",
+                    "assignment_id": assignment_id,
+                    "status": "passed" if passed else "failed",
+                    "passed": passed,
+                    "submitted_at": "2026-10-20T08:00:00+02:00",
+                    "tests": [{"name": "somma", "status": "passed" if passed else "failed", "passed": passed}],
+                }
+            ),
+            encoding="utf-8",
+        )
+    (report_root / "latest.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "assignment_id": second_id,
+                "status": "passed",
+                "passed": True,
+                "submitted_at": "2026-10-20T08:00:00+02:00",
+                "tests": [{"name": "somma", "status": "passed", "passed": True}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    first_index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=first_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+    )
+    second_index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=second_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+    )
+
+    assert first_index["students"][0]["grading"]["status"] == "graded_failed"
+    assert second_index["students"][0]["grading"]["status"] == "graded_passed"
+
+
 def test_track_assignments_uses_canonical_legacy_identity_for_server_help(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "Mario Rossi")
