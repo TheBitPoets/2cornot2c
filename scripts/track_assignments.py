@@ -384,6 +384,47 @@ def clean_metadata(value: str | None) -> str:
     return str(value or "").strip()
 
 
+def selected_final_report(
+    target: TrackingTarget,
+    report_path: Path,
+    assignment_id: str,
+    activity_id: str,
+) -> tuple[dict[str, Any] | None, Path | None, bool]:
+    """Return the valid final report and whether a final selection exists."""
+
+    # Imported lazily because the attempt module reuses report parsing helpers
+    # from this module.
+    from scripts import student_lab_attempts
+
+    final_path = student_lab_attempts.assignment_history_dir(report_path, assignment_id) / "final.json"
+    try:
+        final_path.lstat()
+    except FileNotFoundError:
+        return None, None, False
+    except OSError:
+        return None, None, True
+    if student_identity.confined_regular_file(target.path, final_path) is None:
+        return None, None, True
+    report = student_lab_attempts.load_final_attempt(
+        report_path,
+        assignment_id,
+        activity_id,
+        base_dir=target.path,
+    )
+    if report is None:
+        return None, None, True
+    attempt_id = clean_metadata(report.get("attempt_id"))
+    attempt_path = (
+        student_lab_attempts.assignment_history_dir(report_path, assignment_id)
+        / "attempts"
+        / f"{attempt_id}.json"
+    )
+    safe_path = student_identity.confined_regular_file(target.path, attempt_path)
+    if safe_path is None:
+        return None, None, True
+    return report, safe_path, True
+
+
 def assignment_student_id(
     target: TrackingTarget,
     assignment: dict[str, Any] | None,
@@ -480,24 +521,43 @@ def track_assignments(
             help_log_path = student_identity.confined_regular_file(target.path, legacy_help_path)
         safe_report_path = None
         uses_assignment_report = False
+        report = None
+        report_selection = None
         if assignment_id:
-            assignment_report_path = (
-                report_path.parent
-                / "assignments"
-                / assignment_records.assignment_storage_key(assignment_id)
-                / "latest.json"
+            report, safe_report_path, final_selection_exists = selected_final_report(
+                target,
+                report_path,
+                assignment_id,
+                activity_id,
             )
-            safe_report_path = student_identity.confined_regular_file(target.path, assignment_report_path)
-            uses_assignment_report = safe_report_path is not None
-        if safe_report_path is None:
-            safe_report_path = student_identity.confined_regular_file(target.path, report_path)
-        report = load_report(safe_report_path) if safe_report_path is not None else None
+            if report is not None:
+                uses_assignment_report = True
+                report_selection = "final"
+            elif final_selection_exists:
+                uses_assignment_report = True
+                report_selection = "invalid_final"
+            else:
+                assignment_report_path = (
+                    report_path.parent
+                    / "assignments"
+                    / assignment_records.assignment_storage_key(assignment_id)
+                    / "latest.json"
+                )
+                safe_report_path = student_identity.confined_regular_file(target.path, assignment_report_path)
+                uses_assignment_report = safe_report_path is not None
+        if report is None and report_selection != "invalid_final":
+            if safe_report_path is None:
+                safe_report_path = student_identity.confined_regular_file(target.path, report_path)
+            report = load_report(safe_report_path) if safe_report_path is not None else None
+            if report is not None:
+                report_selection = "latest" if uses_assignment_report else "legacy"
         if report is not None:
             validate_report_activity(report, activity_id, report_path)
             report_assignment_id = clean_metadata(report.get("assignment_id"))
             if assignment_id and report_assignment_id and report_assignment_id != assignment_id:
                 report = None
                 safe_report_path = None
+                report_selection = None
             elif assignment_id and not report_assignment_id and not uses_assignment_report:
                 matching_assignment_count = 0
                 for candidate in same_activity_assignments:
@@ -509,6 +569,7 @@ def track_assignments(
                 if matching_assignment_count != 1:
                     report = None
                     safe_report_path = None
+                    report_selection = None
         relative_report_path = (
             relative_to_root_or_repo(safe_report_path, target.path, server_root)
             if safe_report_path is not None
@@ -529,6 +590,8 @@ def track_assignments(
         else:
             help["path"] = relative_to_root_or_repo(help_log_path, target.path) if help_log_path else ""
         help["activity_id"] = activity_id
+        grading = grading_summary(report)
+        grading["provisional"] = report is not None and report_selection != "final"
         source_file_path = report_source_path(target, report.get("source")) if report else None
         source_path = relative_to_repo(source_file_path, target.path) if source_file_path is not None else None
         submitted = report is not None
@@ -562,8 +625,11 @@ def track_assignments(
                     "report_backend": report.get("backend") if report else None,
                     "report_schema_version": report.get("schema_version") if report else None,
                     "report_status": report.get("status") if report else None,
+                    "report_selection": report_selection,
+                    "attempt_id": report.get("attempt_id") if report else None,
+                    "final_selected": report_selection == "final",
                 },
-                "grading": grading_summary(report),
+                "grading": grading,
                 "help": help,
                 "ai_feedback": ai_feedback_placeholder(),
                 "report_path": relative_report_path,

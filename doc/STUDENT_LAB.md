@@ -198,8 +198,12 @@ pulsante `Tentativi` apre lo storico recente con data, esito e numero di test su
 resta un'azione esplicita della TUI autenticata tramite il comando `t`: consultare la dashboard non modifica dati.
 La GUI mostra al massimo 20 elementi e segnala quando il servizio restituisce uno storico parziale.
 
-La dashboard e il registro continuano a usare il report `latest` per stato e grading finche il flusso docente non
-introdurra una decisione esplicita basata su `final`.
+La dashboard studente usa `latest` per mostrare lo stato operativo dell'ultima esecuzione. Il registro docente usa
+invece il tentativo `final` quando lo studente ne ha selezionato uno valido; in assenza di una selezione definitiva
+continua a usare `latest` come fallback compatibile. Il campo `submission.report_selection` del registro dichiara
+esplicitamente se il report letto e `final`, `latest` o `legacy`; `invalid_final` segnala invece una selezione
+presente ma non valida, che non viene sostituita silenziosamente con un grading diverso. `grading.provisional`
+resta vero finche il registro sta usando un report non definitivo.
 
 Per usare la sandbox Docker minima sulle consegne C, Python, JavaScript/Node.js o SQL:
 
@@ -393,20 +397,30 @@ Il report salvato usa lo schema `student_lab_run.v1` e mantiene separati:
 - metadati di collegamento: `assignment_id`, `activity_id`, `student_id`, `language`, `source`, `backend`, `submitted_at`;
 - feedback AI: non presente in questo report, per evitare di mescolare esecuzione deterministica e suggerimenti generativi.
 
-Il registro docente legge lo stesso `reports/<activity_id>/latest.json` usato dal lab studente.
-Quando il report esiste, il registro salva nella `submission` anche:
+Il registro docente collegato a un'assegnazione usa il tentativo `final` valido quando presente. Se lo studente non
+ha ancora scelto un definitivo, usa il `latest.json` specifico dell'assegnazione come risultato provvisorio; i dati
+precedenti al modello dei tentativi possono ancora usare il `latest.json` legacy dell'activity. Una selezione finale
+presente ma non valida produce `invalid_final` e non viene sostituita silenziosamente con un altro grading.
+
+Quando il report viene accettato, il registro salva nella `submission` anche:
 
 - `report_path`: path relativo del report letto;
 - `report_backend`: backend che ha prodotto il report, per esempio `local` o `docker`;
 - `report_schema_version`: versione dello schema del report;
 - `report_status`: stato tecnico del report originale.
+- `report_selection`: provenienza `final`, `latest`, `legacy` o lo stato `invalid_final`;
+- `attempt_id` e `final_selected`: identita del tentativo e conferma della scelta definitiva.
+
+`grading.provisional` distingue il fallback dall'esito definitivo. Il registro resta uno snapshot: dopo una nuova
+scelta finale deve essere rigenerato per riflettere la decisione corrente.
 
 Quando il registro è collegato a un'assegnazione, il docente legge lo stesso log server-side
 `teacher-help-events/student_id-<sha256>/assignment_id-<sha256>/events.json` e aggiunge a ogni studente il riepilogo `help`.
 La dashboard docente può così mostrare numero di richieste, richieste AI, richieste bloccate, token dichiarati e prompt
 inviati dallo studente per quella consegna. Il riepilogo del registro somma gli stessi token per la classe corrente.
 
-In questo modo dashboard docente, dashboard studente e TUI leggono lo stesso risultato senza ricalcolare grading o stato in modi divergenti.
+In questo modo il risultato operativo piu recente resta visibile allo studente, mentre il registro docente conserva
+il grading del tentativo scelto come definitivo.
 
 Le prossime PR dovranno completare questo contratto con:
 

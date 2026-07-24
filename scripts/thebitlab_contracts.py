@@ -133,6 +133,7 @@ def normalize_grading(payload: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("failed_test_details", [])
     normalized.setdefault("score", None)
     normalized.setdefault("teacher_grade", None)
+    normalized["provisional"] = bool_value(payload.get("provisional", False))
     return normalized
 
 
@@ -161,6 +162,9 @@ def normalize_submission(payload: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("status", "")
     normalized["late"] = bool_value(payload.get("late", False))
     normalized.setdefault("files", [])
+    normalized.setdefault("attempt_id", None)
+    normalized.setdefault("report_selection", None)
+    normalized["final_selected"] = bool_value(payload.get("final_selected", False))
     return normalized
 
 
@@ -205,7 +209,15 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
     submission = payload.get("submission") if isinstance(payload.get("submission"), dict) else {}
     grading = payload.get("grading") if isinstance(payload.get("grading"), dict) else {}
     ai_feedback = payload.get("ai_feedback") if isinstance(payload.get("ai_feedback"), dict) else {}
-    normalized["submission"] = normalize_submission(submission)
-    normalized["grading"] = normalize_grading(grading)
+    normalized_submission = normalize_submission(submission)
+    normalized_grading = normalize_grading(grading)
+    if "provisional" not in grading:
+        normalized_grading["provisional"] = (
+            normalized["submitted"]
+            and normalized_submission.get("report_selection") != "final"
+            and not normalized_submission.get("final_selected")
+        )
+    normalized["submission"] = normalized_submission
+    normalized["grading"] = normalized_grading
     normalized["ai_feedback"] = normalize_ai_feedback(ai_feedback)
     return normalized
