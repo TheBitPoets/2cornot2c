@@ -133,6 +133,7 @@ def normalize_grading(payload: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("failed_test_details", [])
     normalized.setdefault("score", None)
     normalized.setdefault("teacher_grade", None)
+    normalized["provisional"] = bool_value(payload.get("provisional", False))
     return normalized
 
 
@@ -161,6 +162,9 @@ def normalize_submission(payload: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("status", "")
     normalized["late"] = bool_value(payload.get("late", False))
     normalized.setdefault("files", [])
+    normalized.setdefault("attempt_id", None)
+    normalized.setdefault("report_selection", None)
+    normalized["final_selected"] = bool_value(payload.get("final_selected", False))
     return normalized
 
 

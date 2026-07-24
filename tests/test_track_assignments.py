@@ -90,6 +90,43 @@ def target(tmp_path, name: str) -> track_assignments.TrackingTarget:
     return track_assignments.TrackingTarget(student=name, repo=f"TheBitPoets/{name}", path=root)
 
 
+def write_assignment_record(tmp_path, activity_path, student, assignment_id: str) -> None:
+    """Persist one student assignment used by assignment-scoped report tests."""
+
+    assignment_records.JsonAssignmentRecordStorage(tmp_path).write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id=assignment_id,
+            activity_id="python-base-somma-001",
+            activity_path=str(activity_path.relative_to(tmp_path)),
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-21T08:00:00+02:00",
+            targets=[
+                {
+                    "student_id": "rossi-mario",
+                    "repo_ref": student.repo,
+                    "path": str(student.path.relative_to(tmp_path)),
+                }
+            ],
+        )
+    )
+
+
+def attempt_report(assignment_id: str, attempt_id: str, *, passed: bool, submitted_at: str) -> dict:
+    """Return a compact immutable attempt fixture."""
+
+    return {
+        "activity_id": "python-base-somma-001",
+        "assignment_id": assignment_id,
+        "attempt_id": attempt_id,
+        "status": "passed" if passed else "failed",
+        "passed": passed,
+        "submitted_at": submitted_at,
+        "source": "assignments/python-base-somma-001/main.py",
+        "tests": [{"name": "somma", "status": "passed" if passed else "failed", "passed": passed}],
+    }
+
+
 def test_github_file_path_uses_project_root_for_repo_relative_paths(tmp_path, monkeypatch) -> None:
     project_root = tmp_path / "project"
     source_path = (
@@ -695,6 +732,8 @@ def test_track_assignments_exposes_student_lab_report_metadata(tmp_path) -> None
     assert row["submission"]["report_backend"] == "docker"
     assert row["submission"]["report_schema_version"] == "student_lab_run.v1"
     assert row["submission"]["report_status"] == "passed"
+    assert row["submission"]["report_selection"] == "legacy"
+    assert row["grading"]["provisional"] is True
     assert row["grading"]["status"] == "graded_passed"
 
 
@@ -874,6 +913,126 @@ def test_track_assignments_reads_assignment_specific_report(tmp_path) -> None:
 
     assert first_index["students"][0]["grading"]["status"] == "graded_failed"
     assert second_index["students"][0]["grading"]["status"] == "graded_passed"
+    assert first_index["students"][0]["submission"]["report_selection"] == "latest"
+    assert second_index["students"][0]["submission"]["report_selection"] == "latest"
+    assert first_index["students"][0]["grading"]["provisional"] is True
+    assert second_index["students"][0]["grading"]["provisional"] is True
+
+
+def test_track_assignments_uses_selected_final_attempt_instead_of_latest(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-somma-finale"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    source_path = student.path / "assignments" / "python-base-somma-001" / "main.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("print(3)\n", encoding="utf-8")
+    history_dir = (
+        student.path
+        / "reports"
+        / "python-base-somma-001"
+        / "assignments"
+        / assignment_records.assignment_storage_key(assignment_id)
+    )
+    attempts_dir = history_dir / "attempts"
+    attempts_dir.mkdir(parents=True)
+    final_report = attempt_report(
+        assignment_id,
+        "attempt-final",
+        passed=False,
+        submitted_at="2026-10-19T08:00:00+02:00",
+    )
+    latest_report = attempt_report(
+        assignment_id,
+        "attempt-latest",
+        passed=True,
+        submitted_at="2026-10-20T08:00:00+02:00",
+    )
+    (attempts_dir / "attempt-final.json").write_text(json.dumps(final_report), encoding="utf-8")
+    (attempts_dir / "attempt-latest.json").write_text(json.dumps(latest_report), encoding="utf-8")
+    (history_dir / "latest.json").write_text(json.dumps(latest_report), encoding="utf-8")
+    (history_dir / "final.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "student_lab_attempt_selection.v1",
+                "assignment_id": assignment_id,
+                "activity_id": "python-base-somma-001",
+                "attempt_id": "attempt-final",
+                "selected_at": "2026-10-20T08:05:00+02:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+    )
+
+    row = index["students"][0]
+    assert row["grading"]["status"] == "graded_failed"
+    assert row["grading"]["provisional"] is False
+    assert row["submission"]["submitted_at"] == "2026-10-19T08:00:00+02:00"
+    assert row["submission"]["report_selection"] == "final"
+    assert row["submission"]["attempt_id"] == "attempt-final"
+    assert row["submission"]["final_selected"] is True
+    assert row["submission"]["report_path"].endswith("/attempts/attempt-final.json")
+
+
+def test_track_assignments_does_not_grade_an_invalid_final_selection(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-somma-fallback"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    history_dir = (
+        student.path
+        / "reports"
+        / "python-base-somma-001"
+        / "assignments"
+        / assignment_records.assignment_storage_key(assignment_id)
+    )
+    history_dir.mkdir(parents=True)
+    latest_report = attempt_report(
+        assignment_id,
+        "attempt-latest",
+        passed=True,
+        submitted_at="2026-10-20T08:00:00+02:00",
+    )
+    (history_dir / "latest.json").write_text(json.dumps(latest_report), encoding="utf-8")
+    (history_dir / "final.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "student_lab_attempt_selection.v1",
+                "assignment_id": assignment_id,
+                "activity_id": "python-base-somma-001",
+                "attempt_id": "attempt-missing",
+                "selected_at": "2026-10-20T08:05:00+02:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+    )
+
+    row = index["students"][0]
+    assert row["submitted"] is False
+    assert row["grading"]["status"] == "not_graded"
+    assert row["grading"]["provisional"] is False
+    assert row["submission"]["report_selection"] == "invalid_final"
+    assert row["submission"]["attempt_id"] is None
+    assert row["submission"]["final_selected"] is False
+    assert row["submission"]["report_path"] is None
 
 
 def test_track_assignments_rejects_unscoped_legacy_report_for_repeated_activity(tmp_path) -> None:

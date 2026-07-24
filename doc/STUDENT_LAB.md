@@ -198,8 +198,12 @@ pulsante `Tentativi` apre lo storico recente con data, esito e numero di test su
 resta un'azione esplicita della TUI autenticata tramite il comando `t`: consultare la dashboard non modifica dati.
 La GUI mostra al massimo 20 elementi e segnala quando il servizio restituisce uno storico parziale.
 
-La dashboard e il registro continuano a usare il report `latest` per stato e grading finche il flusso docente non
-introdurra una decisione esplicita basata su `final`.
+La dashboard studente usa `latest` per mostrare lo stato operativo dell'ultima esecuzione. Il registro docente usa
+invece il tentativo `final` quando lo studente ne ha selezionato uno valido; in assenza di una selezione definitiva
+continua a usare `latest` come fallback compatibile. Il campo `submission.report_selection` del registro dichiara
+esplicitamente se il report letto e `final`, `latest` o `legacy`; `invalid_final` segnala invece una selezione
+presente ma non valida, che non viene sostituita silenziosamente con un grading diverso. `grading.provisional`
+resta vero finche il registro sta usando un report non definitivo.
 
 Per usare la sandbox Docker minima sulle consegne C, Python, JavaScript/Node.js o SQL:
 
