@@ -639,6 +639,39 @@ def remove_stale_managed_assets(
     return retained
 
 
+def validate_modified_stale_asset_collisions(
+    *,
+    destination: Path,
+    managed: dict[Path, str],
+    current_targets: set[Path],
+) -> None:
+    """Reject new targets overlapping student-modified stale assets."""
+    current_keys = {
+        portable_path_key(target)
+        for target in current_targets
+    }
+    for managed_target, expected_digest in managed.items():
+        managed_key = portable_path_key(managed_target)
+        if managed_key in current_keys:
+            continue
+        managed_path = confined_output_path(
+            destination,
+            managed_target,
+            create_parents=False,
+        )
+        if (
+            not managed_path.is_file()
+            or file_sha256(managed_path) == expected_digest
+        ):
+            continue
+        for current_target in current_targets:
+            if portable_paths_overlap(managed_target, current_target):
+                raise ValueError(
+                    "Asset studente modificato in conflitto con un nuovo target: "
+                    f"{managed_target} e {current_target}."
+                )
+
+
 def reconcile_managed_target_aliases(
     *,
     destination: Path,
@@ -873,6 +906,11 @@ def create_scaffold(
 
     managed_assets = load_managed_assets(manifest_path) if overwrite else {}
     if managed_assets:
+        validate_modified_stale_asset_collisions(
+            destination=destination,
+            managed=managed_assets,
+            current_targets=current_asset_targets,
+        )
         managed_assets = reconcile_managed_target_aliases(
             destination=destination,
             managed=managed_assets,

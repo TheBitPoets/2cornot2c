@@ -759,6 +759,65 @@ def test_create_scaffold_force_preserves_modified_stale_asset(tmp_path) -> None:
     assert stale_asset.read_text(encoding="utf-8") == "modifica studente\n"
 
 
+@pytest.mark.parametrize(
+    ("old_target", "new_target"),
+    [
+        ("data/input.txt", "data"),
+        ("data", "data/input.txt"),
+    ],
+)
+def test_create_scaffold_rejects_new_target_overlapping_modified_stale_asset(
+    tmp_path,
+    old_target,
+    new_target,
+) -> None:
+    old_teacher_asset = tmp_path / "old.txt"
+    old_teacher_asset.write_text("versione docente\n", encoding="utf-8")
+    new_teacher_asset = tmp_path / "new.txt"
+    new_teacher_asset.write_text("nuovo asset\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "example",
+                "path": "old.txt",
+                "target_path": old_target,
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    stale_asset = destination / old_target
+    stale_asset.write_text("modifica studente\n", encoding="utf-8")
+    original_activity = (destination / "activity.json").read_bytes()
+    original_readme = (destination / "README.md").read_bytes()
+
+    payload["title"] = "Titolo aggiornato"
+    payload["assets"] = [
+        {
+            "type": "example",
+            "path": "new.txt",
+            "target_path": new_target,
+        }
+    ]
+    write_activity(tmp_path, payload)
+
+    with pytest.raises(ValueError, match="modificato in conflitto"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+            overwrite=True,
+        )
+
+    assert stale_asset.read_text(encoding="utf-8") == "modifica studente\n"
+    assert (destination / "activity.json").read_bytes() == original_activity
+    assert (destination / "README.md").read_bytes() == original_readme
+
+
 def test_create_scaffold_force_updates_unchanged_managed_asset(tmp_path) -> None:
     (tmp_path / "tests").mkdir()
     teacher_asset = tmp_path / "tests" / "test_public.py"
