@@ -294,6 +294,37 @@ def test_write_student_report_keeps_attempts_when_runs_share_the_same_second(tmp
     assert latest["attempt_id"] == "attempt-20261018T100000000000Z-22222222"
 
 
+def test_second_run_reuses_activity_report_root_after_service_reload(tmp_path) -> None:
+    write_assignment(tmp_path, write_activity(tmp_path))
+    write_python_workspace(
+        tmp_path,
+        source="def somma(a, b):\n    return a + b\n",
+        test_source="from main import somma\n\ndef test_somma():\n    assert somma(2, 3) == 5\n",
+    )
+    first_assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+        now="2026-10-18T12:00:00+02:00",
+    )
+    first_report = student_lab_runner.run_local_assignment(first_assignment, root=tmp_path)
+    report_path = student_lab_runner.write_student_report(tmp_path, first_assignment, first_report)
+    reloaded_assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+        now="2026-10-18T12:05:00+02:00",
+    )
+    second_report = student_lab_runner.run_local_assignment(reloaded_assignment, root=tmp_path)
+
+    second_path = student_lab_runner.write_student_report(tmp_path, reloaded_assignment, second_report)
+
+    history_dir = student_lab_attempts.assignment_history_dir(report_path, first_assignment["assignment_id"])
+    assert second_path == report_path
+    assert len(list((history_dir / "attempts").glob("attempt-*.json"))) == 2
+    assert not (history_dir / "assignments").exists()
+
+
 def test_write_student_report_custom_path_does_not_create_attempt_history(tmp_path) -> None:
     write_assignment(tmp_path, write_activity(tmp_path))
     write_python_workspace(

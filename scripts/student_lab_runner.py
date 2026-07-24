@@ -600,6 +600,10 @@ def load_student_assignment(
 def assignment_report_path(root: Path, assignment: dict[str, Any]) -> Path:
     """Return the default report path for an assignment."""
 
+    repo_path = student_repo_path(root, assignment)
+    activity_id = clean_text(assignment.get("activity_id"))
+    if repo_path is not None and activity_id:
+        return repo_path / "reports" / activity_id / "latest.json"
     report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
     report_path_value = clean_text(report.get("path"))
     if not report_path_value:
@@ -645,27 +649,48 @@ def write_student_report(root: Path, assignment: dict[str, Any], report: dict[st
     stored = storage_report(root, assignment, report)
     if output.resolve(strict=False) == standard_output.resolve(strict=False):
         assignment_id = clean_text(assignment.get("assignment_id"))
-        _, assignment_latest = student_lab_attempts.persist_attempt(output, assignment_id, stored)
+        repo_path = student_repo_path(root, assignment)
+        if repo_path is None:
+            raise ValueError("Repository studente non disponibile per lo storico tentativi.")
+        _, assignment_latest = student_lab_attempts.persist_standard_report(
+            output,
+            assignment_id,
+            stored,
+            base_dir=repo_path,
+        )
         stored = json.loads(assignment_latest.read_text(encoding="utf-8"))
-    student_lab_attempts.write_json_atomic(output, stored)
+        report["attempt_id"] = clean_text(stored.get("attempt_id"))
+    else:
+        student_lab_attempts.write_json_atomic(output, stored)
     return output
 
 
-def finalize_report_attempt(root: Path, assignment: dict[str, Any], report_path: Path) -> Path:
+def finalize_report_attempt(
+    root: Path,
+    assignment: dict[str, Any],
+    report_path: Path,
+    attempt_id: str = "",
+) -> Path:
     """Mark the just-written canonical report as the final attempt."""
 
     standard_output = assignment_report_path(root, assignment)
     if report_path.resolve(strict=False) != standard_output.resolve(strict=False):
         raise ValueError("--final richiede il path report standard della consegna.")
-    stored = json.loads(report_path.read_text(encoding="utf-8"))
-    attempt_id = clean_text(stored.get("attempt_id"))
-    if not attempt_id:
+    selected_attempt_id = clean_text(attempt_id)
+    if not selected_attempt_id:
+        assignment_latest = student_lab_attempts.assignment_history_dir(
+            standard_output,
+            clean_text(assignment.get("assignment_id")),
+        ) / "latest.json"
+        stored = json.loads(assignment_latest.read_text(encoding="utf-8"))
+        selected_attempt_id = clean_text(stored.get("attempt_id"))
+    if not selected_attempt_id:
         raise ValueError("Il report salvato non contiene un tentativo selezionabile.")
     return student_lab_attempts.set_final_attempt(
         standard_output,
         clean_text(assignment.get("assignment_id")),
         clean_text(assignment.get("activity_id")),
-        attempt_id,
+        selected_attempt_id,
     )
 
 
@@ -733,7 +758,12 @@ def main() -> int:
                 args.report.resolve(strict=False) if args.report else None,
             )
             if args.final:
-                finalize_report_attempt(root, assignment, report_path)
+                finalize_report_attempt(
+                    root,
+                    assignment,
+                    report_path,
+                    clean_text(report.get("attempt_id")),
+                )
     except ValueError as error:
         print(f"Runner lab non disponibile:\n{error}", file=sys.stderr)
         return 1

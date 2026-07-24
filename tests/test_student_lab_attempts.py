@@ -104,6 +104,131 @@ def test_best_attempt_prefers_complete_result_and_latest_breaks_ties() -> None:
     assert student_lab_attempts.select_latest_attempt([partial, complete_new, complete_old]) == complete_new
 
 
+def test_latest_attempt_compares_timezone_offsets_in_utc() -> None:
+    earlier = report(
+        attempt_id="attempt-earlier",
+        passed=True,
+        tests_passed=1,
+        tests_total=1,
+        submitted_at="2026-10-18T12:00:00+02:00",
+    )
+    later = report(
+        attempt_id="attempt-later",
+        passed=True,
+        tests_passed=1,
+        tests_total=1,
+        submitted_at="2026-10-18T11:30:00+00:00",
+    )
+
+    assert student_lab_attempts.select_latest_attempt([later, earlier]) == later
+
+
+def test_persist_attempt_never_replaces_an_existing_attempt(tmp_path, monkeypatch) -> None:
+    report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
+    monkeypatch.setattr(student_lab_attempts, "new_attempt_id", lambda: "attempt-fixed")
+    original = report(
+        attempt_id="ignored",
+        passed=False,
+        tests_passed=0,
+        tests_total=1,
+        submitted_at="2026-10-18T10:00:00+02:00",
+    )
+    student_lab_attempts.persist_attempt(report_path, ASSIGNMENT_ID, original)
+    attempt_path = (
+        student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID)
+        / "attempts"
+        / "attempt-fixed.json"
+    )
+    original_bytes = attempt_path.read_bytes()
+
+    with pytest.raises(ValueError, match="ID tentativo già esistente"):
+        student_lab_attempts.persist_attempt(report_path, ASSIGNMENT_ID, {**original, "passed": True})
+
+    assert attempt_path.read_bytes() == original_bytes
+
+
+def test_persist_standard_report_rolls_back_when_legacy_latest_fails(tmp_path, monkeypatch) -> None:
+    report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
+    original_write = student_lab_attempts.write_json_atomic
+    failed = False
+
+    def fail_legacy_once(path, payload, **kwargs):
+        nonlocal failed
+        if path == report_path and not failed:
+            failed = True
+            raise OSError("legacy write failed")
+        return original_write(path, payload, **kwargs)
+
+    monkeypatch.setattr(student_lab_attempts, "write_json_atomic", fail_legacy_once)
+
+    with pytest.raises(OSError, match="legacy write failed"):
+        student_lab_attempts.persist_standard_report(
+            report_path,
+            ASSIGNMENT_ID,
+            report(
+                attempt_id="ignored",
+                passed=True,
+                tests_passed=1,
+                tests_total=1,
+                submitted_at="2026-10-18T10:00:00+02:00",
+            ),
+            base_dir=tmp_path,
+        )
+
+    history_dir = student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID)
+    assert list((history_dir / "attempts").glob("attempt-*.json")) == []
+    assert not (history_dir / "latest.json").exists()
+    assert not report_path.exists()
+
+
+def test_persist_standard_report_rejects_symlinked_history_parent(tmp_path) -> None:
+    report_path = tmp_path / "repo" / "reports" / ACTIVITY_ID / "latest.json"
+    external = tmp_path / "external"
+    external.mkdir()
+    report_path.parent.mkdir(parents=True)
+    assignments_link = report_path.parent / "assignments"
+    try:
+        assignments_link.symlink_to(external, target_is_directory=True)
+    except OSError:
+        pytest.skip("Creazione symlink non disponibile su questa piattaforma.")
+
+    with pytest.raises(ValueError, match="collegamento simbolico"):
+        student_lab_attempts.persist_standard_report(
+            report_path,
+            ASSIGNMENT_ID,
+            report(
+                attempt_id="ignored",
+                passed=True,
+                tests_passed=1,
+                tests_total=1,
+                submitted_at="2026-10-18T10:00:00+02:00",
+            ),
+            base_dir=tmp_path / "repo",
+        )
+
+    assert list(external.iterdir()) == []
+
+
+def test_load_attempts_caps_number_of_reports(tmp_path, monkeypatch) -> None:
+    report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
+    for index in range(3):
+        write_attempt(
+            report_path,
+            report(
+                attempt_id=f"attempt-{index}",
+                passed=True,
+                tests_passed=1,
+                tests_total=1,
+                submitted_at=f"2026-10-18T1{index}:00:00+02:00",
+            ),
+        )
+    monkeypatch.setattr(student_lab_attempts, "MAX_ATTEMPTS_LOADED", 2)
+
+    attempts = student_lab_attempts.load_attempts(report_path, ASSIGNMENT_ID, ACTIVITY_ID)
+
+    assert [item["attempt_id"] for item in attempts] == ["attempt-2", "attempt-1"]
+
+
 def test_final_attempt_remains_selected_after_a_new_attempt(tmp_path) -> None:
     report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
     selected = report(

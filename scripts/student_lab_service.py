@@ -233,16 +233,24 @@ def build_lab_assignment(
     help_log_path = student_help_service.server_help_log_path(root, student_id, normalized["id"])
     safe_report_path = confined_regular_file(repo_path, report_path) if repo_path is not None and report_path else None
     legacy_report = load_report(safe_report_path, activity_id) if safe_report_path is not None else None
-    attempts = (
-        student_lab_attempts.load_attempts(
+    if legacy_report is not None:
+        legacy_assignment_id = clean_text(legacy_report.get("assignment_id"))
+        has_assignment_histories = bool(report_path and (report_path.parent / "assignments").is_dir())
+        if (legacy_assignment_id and legacy_assignment_id != assignment_id) or (
+            not legacy_assignment_id and has_assignment_histories
+        ):
+            legacy_report = None
+    attempt_history = (
+        student_lab_attempts.load_attempt_history(
             report_path,
             assignment_id,
             activity_id,
             base_dir=repo_path,
         )
         if repo_path is not None and report_path is not None
-        else []
+        else {"attempts": [], "count": 0, "truncated": False}
     )
+    attempts = attempt_history["attempts"]
     latest_attempt = student_lab_attempts.select_latest_attempt(attempts)
     best_attempt = student_lab_attempts.select_best_attempt(attempts)
     final_attempt = (
@@ -330,7 +338,8 @@ def build_lab_assignment(
             "tests": report_tests_summary(report),
         },
         "attempts": {
-            "count": len(attempts) if attempts else int(legacy_report is not None),
+            "count": attempt_history["count"] or int(legacy_report is not None),
+            "truncated": attempt_history["truncated"],
             "latest": student_lab_attempts.attempt_summary(latest_attempt or legacy_report),
             "best": student_lab_attempts.attempt_summary(best_attempt or legacy_report),
             "final": student_lab_attempts.attempt_summary(final_attempt),

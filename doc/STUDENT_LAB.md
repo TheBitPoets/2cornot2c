@@ -299,6 +299,11 @@ reports/<activity_id>/
 
 Il primo `latest.json` conserva il contratto storico. La directory indicizzata da `assignment-key` evita che due
 assegnazioni della stessa activity condividano tentativi, migliore risultato o selezione definitiva.
+
+Il servizio carica al massimo 500 tentativi e 20 MiB per assegnazione in una singola risposta. Se lo storico supera
+uno dei limiti, `attempts.truncated` vale `true`, `attempts.count` conserva il numero di file rilevati e il tentativo
+`final` viene comunque caricato direttamente dal suo identificativo. Retention e indice autorevole restano passi
+successivi prima di usare lo storico locale per analytics ufficiali.
 Quando il report è salvato, il servizio lab lo rilegge e aggiorna stato consegna e riepilogo grading.
 
 ## Stati minimi
