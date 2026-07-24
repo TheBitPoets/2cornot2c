@@ -970,7 +970,12 @@ def create_scaffold(
     normalized_activity = validate_activity_contract_or_raise(activity, identifier)
     selected_language = language_for(normalized_activity, language)
     source_name = validate_source_name(
-        source_name if source_name is not None else default_source_name_for(selected_language)
+        source_name
+        if source_name is not None
+        else (
+            str(normalized_activity.get("source_name", "")).strip()
+            or default_source_name_for(selected_language)
+        )
     )
     thebitlab_ref = validate_thebitlab_ref(thebitlab_ref)
     destination = scaffold_dir(target_dir, identifier)

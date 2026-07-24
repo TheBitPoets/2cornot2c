@@ -1155,6 +1155,28 @@ def test_create_scaffold_supports_custom_source_name_and_language(tmp_path) -> N
     assert "source_path`: `assignments/c-base-somma-001/solution.py`" in readme
 
 
+def test_create_scaffold_uses_source_name_declared_by_activity(tmp_path) -> None:
+    payload = {
+        **canonical_activity(),
+        "source_name": "solution.py",
+    }
+    activity_path = write_activity(tmp_path, payload)
+
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+
+    assert (destination / "solution.py").is_file()
+    assert not (destination / "main.py").exists()
+    distributed_activity = json.loads(
+        (destination / "activity.json").read_text(encoding="utf-8")
+    )
+    assert distributed_activity["source_name"] == "solution.py"
+    readme = (destination / "README.md").read_text(encoding="utf-8")
+    assert "source_path`: `assignments/python-base-somma-001/solution.py`" in readme
+
+
 def test_create_scaffold_normalizes_language_aliases(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
 
