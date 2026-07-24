@@ -62,6 +62,28 @@ def confined_destination(base_dir: Path, candidate: Path) -> Path:
     return lexical_candidate
 
 
+def confined_directory(base_dir: Path, candidate: Path) -> Path | None:
+    """Return a real directory confined below base_dir without symlinks."""
+
+    lexical_base = base_dir.absolute()
+    lexical_candidate = candidate.absolute()
+    try:
+        relative = lexical_candidate.relative_to(lexical_base)
+    except ValueError:
+        return None
+    current = lexical_base
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            return None
+    try:
+        resolved_candidate = candidate.resolve(strict=True)
+        resolved_candidate.relative_to(base_dir.resolve(strict=True))
+    except (FileNotFoundError, ValueError):
+        return None
+    return resolved_candidate if resolved_candidate.is_dir() else None
+
+
 def json_bytes(payload: dict[str, Any]) -> bytes:
     """Serialize a JSON object using the repository text contract."""
 
@@ -250,7 +272,12 @@ def load_attempt_history(
     """Load a bounded attempt window and disclose when it is truncated."""
 
     attempts_dir = assignment_history_dir(report_path, assignment_id) / "attempts"
-    if not attempts_dir.is_dir():
+    if base_dir is not None:
+        safe_attempts_dir = confined_directory(base_dir, attempts_dir)
+        if safe_attempts_dir is None:
+            return {"attempts": [], "count": 0, "truncated": False}
+        attempts_dir = safe_attempts_dir
+    elif not attempts_dir.is_dir():
         return {"attempts": [], "count": 0, "truncated": False}
     attempts: list[dict[str, Any]] = []
     total_bytes = 0

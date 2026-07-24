@@ -293,6 +293,31 @@ def test_persist_standard_report_rejects_symlinked_history_parent(tmp_path) -> N
     assert list(external.iterdir()) == []
 
 
+def test_load_attempt_history_rejects_symlinked_attempts_directory(tmp_path) -> None:
+    report_path = tmp_path / "repo" / "reports" / ACTIVITY_ID / "latest.json"
+    external = tmp_path / "external"
+    external.mkdir()
+    external_attempt = external / "attempt-external.json"
+    external_attempt.write_text("not-json", encoding="utf-8")
+    history_dir = student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID)
+    history_dir.mkdir(parents=True)
+    attempts_link = history_dir / "attempts"
+    try:
+        attempts_link.symlink_to(external, target_is_directory=True)
+    except OSError:
+        pytest.skip("Creazione symlink non disponibile su questa piattaforma.")
+
+    history = student_lab_attempts.load_attempt_history(
+        report_path,
+        ASSIGNMENT_ID,
+        ACTIVITY_ID,
+        base_dir=tmp_path / "repo",
+    )
+
+    assert history == {"attempts": [], "count": 0, "truncated": False}
+    assert external_attempt.read_text(encoding="utf-8") == "not-json"
+
+
 def test_load_attempts_caps_number_of_reports(tmp_path, monkeypatch) -> None:
     report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
     for index in range(3):
