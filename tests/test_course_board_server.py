@@ -28,6 +28,11 @@ from scripts.student_help_provider import StudentHelpResponse
 def isolated_process_lock_dir(tmp_path, monkeypatch) -> None:
     lock_dir = tmp_path.parent / f"{tmp_path.name}-process-locks"
     monkeypatch.setenv("THEBITLAB_LOCK_DIR", str(lock_dir))
+    monkeypatch.setattr(
+        course_board_server,
+        "GRADING_BINDINGS_PATH",
+        tmp_path / "teacher-grading-bindings.json",
+    )
 
 
 def test_server_bind_rejects_clear_text_network_exposure_by_default() -> None:
@@ -2343,6 +2348,78 @@ def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatc
     assert result["report"]["assignment_id"] == "assignment-python-base-somma-001-3a"
     saved_payload = json.loads((tmp_path / "teacher-reports" / "demo" / "report.json").read_text(encoding="utf-8"))
     assert saved_payload["assignment_id"] == "assignment-python-base-somma-001-3a"
+
+
+def test_grading_tracking_report_source_composes_persisted_bindings(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    binding_path = tmp_path / "teacher-grading-bindings.json"
+    binding_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "thebitlab_grading_bindings.v1",
+                "bindings": [
+                    {
+                        "activity_id": "activity-001",
+                        "assignment_id": "assignment-001",
+                        "student_id": "rossi-mario",
+                        "student_repo_ref": "TheBitPoets/rossi-mario",
+                        "workflow_repo_ref": "TheBitPoets/2cornot2c",
+                        "artifact_name": "grading-assignment-001",
+                        "expected_student_head_sha": "a" * 40,
+                        "expected_workflow_head_sha": "b" * 40,
+                        "expected_submitted_at": "2026-10-20T08:00:00+02:00",
+                        "expected_workflow_run_id": 900,
+                        "final": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "GRADING_BINDINGS_PATH", binding_path)
+    monkeypatch.setenv("THEBITLAB_GRADING_GITHUB_TOKEN", "github-secret")
+
+    source = course_board_server.grading_tracking_report_source()
+
+    assert isinstance(source, course_board_server.thebitlab_tracking_reports.ArtifactTrackingReportSource)
+
+
+def test_grading_tracking_report_source_requires_token_for_configured_bindings(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    binding_path = tmp_path / "teacher-grading-bindings.json"
+    binding_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "thebitlab_grading_bindings.v1",
+                "bindings": [
+                    {
+                        "activity_id": "activity-001",
+                        "assignment_id": "assignment-001",
+                        "student_id": "rossi-mario",
+                        "student_repo_ref": "TheBitPoets/rossi-mario",
+                        "workflow_repo_ref": "TheBitPoets/2cornot2c",
+                        "artifact_name": "grading-assignment-001",
+                        "expected_student_head_sha": "a" * 40,
+                        "expected_workflow_head_sha": "b" * 40,
+                        "expected_submitted_at": "2026-10-20T08:00:00+02:00",
+                        "expected_workflow_run_id": 900,
+                        "final": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "GRADING_BINDINGS_PATH", binding_path)
+    monkeypatch.delenv("THEBITLAB_GRADING_GITHUB_TOKEN", raising=False)
+    monkeypatch.setattr(course_board_server, "read_secret_env", lambda: {})
+
+    with pytest.raises(ValueError, match="THEBITLAB_GRADING_GITHUB_TOKEN"):
+        course_board_server.grading_tracking_report_source()
 
 
 def test_regenerated_report_preserves_reviewed_ai_feedback() -> None:

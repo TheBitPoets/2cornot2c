@@ -356,6 +356,26 @@ def test_positive_int_rejects_zero() -> None:
         raise AssertionError("positive_int should reject zero")
 
 
+def test_report_metadata_enriches_remote_tracking_identity() -> None:
+    original = {"activity_id": "activity-001", "status": "passed"}
+
+    enriched = grade_activity.with_report_metadata(
+        original,
+        assignment_id=" assignment-001 ",
+        student_id=" rossi-mario ",
+        commit="a" * 40,
+        submitted_at="2026-07-24T18:00:00Z",
+        source_repo_path="assignments/activity-001/main.py",
+    )
+
+    assert original == {"activity_id": "activity-001", "status": "passed"}
+    assert enriched["assignment_id"] == "assignment-001"
+    assert enriched["student_id"] == "rossi-mario"
+    assert enriched["commit"] == "a" * 40
+    assert enriched["submitted_at"] == "2026-07-24T18:00:00Z"
+    assert enriched["source"] == "assignments/activity-001/main.py"
+
+
 def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     activity_path = tmp_path / "activity.json"
     source_path = tmp_path / "main.c"
@@ -413,6 +433,53 @@ def test_prepare_docker_workspace_copies_only_runner_inputs(tmp_path) -> None:
     assert copied_activity == workspace / "activity" / "activity.json"
     assert copied_source == workspace / "source" / "main.c"
     assert not (workspace / ".secret").exists()
+
+
+def test_prepare_docker_workspace_rejects_input_outside_authorized_root(tmp_path) -> None:
+    teacher_root = tmp_path / "teacher"
+    student_root = tmp_path / "student"
+    outside = tmp_path / "outside"
+    teacher_root.mkdir()
+    student_root.mkdir()
+    outside.mkdir()
+    activity_path = teacher_root / "activity.json"
+    source_path = outside / "main.py"
+    activity_path.write_text("{}", encoding="utf-8")
+    source_path.write_text("print(1)\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="source deve trovarsi dentro"):
+        grade_activity.prepare_docker_workspace(
+            activity_path,
+            source_path,
+            tmp_path / "docker",
+            activity_root=teacher_root,
+            source_root=student_root,
+        )
+
+
+def test_prepare_docker_workspace_rejects_symlink_escaping_source_root(tmp_path) -> None:
+    teacher_root = tmp_path / "teacher"
+    student_root = tmp_path / "student"
+    teacher_root.mkdir()
+    student_root.mkdir()
+    activity_path = teacher_root / "activity.json"
+    outside = tmp_path / "secret.py"
+    linked_source = student_root / "main.py"
+    activity_path.write_text("{}", encoding="utf-8")
+    outside.write_text("print('secret')\n", encoding="utf-8")
+    try:
+        linked_source.symlink_to(outside)
+    except OSError:
+        pytest.skip("Creazione symlink non consentita su questa piattaforma.")
+
+    with pytest.raises(ValueError, match="source deve trovarsi dentro"):
+        grade_activity.prepare_docker_workspace(
+            activity_path,
+            linked_source,
+            tmp_path / "docker",
+            activity_root=teacher_root,
+            source_root=student_root,
+        )
 
 
 def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> None:
@@ -621,6 +688,85 @@ def test_run_docker_grading_writes_report_on_host(monkeypatch, tmp_path) -> None
 
     assert grade_activity.run_docker_grading(Args()) == 0
     assert json.loads(Args.report.read_text(encoding="utf-8")) == {"passed": True, "status": "passed"}
+
+
+def test_run_docker_grading_enriches_stdout_report(monkeypatch, tmp_path, capsys) -> None:
+    class Args:
+        activity = tmp_path / "activity.json"
+        source = tmp_path / "main.c"
+        report = None
+        language = "c"
+        timeout = 5
+        docker_image = "thebitlab-assignment-runner"
+        assignment_id = "assignment-001"
+        student_id = "rossi-mario"
+        commit = "a" * 40
+        submitted_at = "2026-07-24T18:00:00Z"
+        source_repo_path = "assignments/activity-001/main.c"
+
+    Args.activity.write_text("{}", encoding="utf-8")
+    Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
+
+    class Result:
+        returncode = 0
+        stdout = json.dumps({"passed": True, "status": "passed"})
+        stderr = "warning docker"
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert grade_activity.run_docker_grading(Args()) == 0
+    captured = capsys.readouterr()
+    report = json.loads(captured.out)
+    assert captured.err.strip() == "warning docker"
+    assert report["assignment_id"] == "assignment-001"
+    assert report["student_id"] == "rossi-mario"
+    assert report["commit"] == "a" * 40
+    assert report["submitted_at"] == "2026-07-24T18:00:00Z"
+    assert report["source"] == "assignments/activity-001/main.c"
+
+
+def test_main_applies_authorized_roots_without_docker(monkeypatch, tmp_path) -> None:
+    teacher_root = tmp_path / "teacher"
+    student_root = tmp_path / "student"
+    outside = tmp_path / "outside"
+    teacher_root.mkdir()
+    student_root.mkdir()
+    outside.mkdir()
+    activity_path = teacher_root / "activity.json"
+    source_path = outside / "main.py"
+    activity_path.write_text(
+        json.dumps(
+            {
+                "id": "activity-001",
+                "linguaggio": "python",
+                "test_cases": [{"expected_stdout": "1\n"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_path.write_text("print(1)\n", encoding="utf-8")
+    monkeypatch.setattr(
+        grade_activity,
+        "parse_args",
+        lambda: argparse.Namespace(
+            activity=activity_path,
+            source=source_path,
+            activity_root=teacher_root,
+            source_root=student_root,
+            language="python",
+            timeout=5,
+            docker=False,
+            report=None,
+            assignment_id=None,
+            student_id=None,
+            commit=None,
+            submitted_at=None,
+            source_repo_path=None,
+        ),
+    )
+
+    with pytest.raises(ValueError, match="source deve trovarsi dentro"):
+        grade_activity.main()
 
 
 def test_docker_command_requires_paths_inside_workspace(tmp_path) -> None:

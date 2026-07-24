@@ -1,4 +1,4 @@
-name: TheBitLab grading
+name: TheBitLab local grading preview
 
 permissions:
   contents: read
@@ -10,6 +10,12 @@ on:
         description: "Identificativo stabile dell'attivita"
         required: true
         default: "c-base-somma-001"
+      assignment_id:
+        description: "Identificativo stabile dell'assegnazione"
+        required: true
+      student_id:
+        description: "Identificativo stabile dello studente"
+        required: true
       activity_path:
         description: "Path della activity JSON nel repository studente"
         required: true
@@ -48,12 +54,21 @@ jobs:
         run: docker build -t thebitlab-assignment-runner -f thebitlab/docker/assignment-runner/Dockerfile thebitlab
 
       - name: Run deterministic grading
+        env:
+          ACTIVITY_PATH: ${{ inputs.activity_path }}
+          SOURCE_PATH: ${{ inputs.source_path }}
+          LANGUAGE: ${{ inputs.language }}
+          ASSIGNMENT_ID: ${{ inputs.assignment_id }}
+          STUDENT_ID: ${{ inputs.student_id }}
         run: |
           mkdir -p "$RUNNER_TEMP/thebitlab-report"
           python thebitlab/scripts/grade_activity.py \
-            --activity "student-work/${{ inputs.activity_path }}" \
-            --source "student-work/${{ inputs.source_path }}" \
-            --language "${{ inputs.language }}" \
+            --activity "student-work/$ACTIVITY_PATH" \
+            --source "student-work/$SOURCE_PATH" \
+            --language "$LANGUAGE" \
+            --assignment-id "$ASSIGNMENT_ID" \
+            --student-id "$STUDENT_ID" \
+            --commit "${{ github.sha }}" \
             --docker \
             --report "$RUNNER_TEMP/thebitlab-report/report.json"
 

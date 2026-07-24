@@ -165,6 +165,61 @@ def test_normalize_register_student_parses_boolean_strings_conservatively() -> N
     assert other_student["late"] is True
 
 
+def test_normalize_register_student_preserves_remote_tracking_states() -> None:
+    verified = thebitlab_contracts.normalize_register_student(
+        {
+            "student": "rossi-mario",
+            "submitted": True,
+            "submission": {"report_selection": "github_actions_artifact"},
+            "grading": {"provisional": True},
+        }
+    )
+    unavailable = thebitlab_contracts.normalize_register_student(
+        {
+            "student": "bianchi-luca",
+            "submitted": None,
+            "status": "submission_unknown",
+            "submission": {"report_selection": "remote_error"},
+            "grading": {"provisional": True},
+        }
+    )
+    contradictory = thebitlab_contracts.normalize_register_student(
+        {
+            "student": "verdi-anna",
+            "submitted": False,
+            "late": True,
+            "status": "submission_unknown",
+            "submission": {"report_selection": "remote_error"},
+        }
+    )
+    missing_flag = thebitlab_contracts.normalize_register_student(
+        {
+            "student": "neri-giulia",
+            "status": "submission_unknown",
+            "submission": {"report_selection": "remote_error"},
+        }
+    )
+    contradictory_null = thebitlab_contracts.normalize_register_student(
+        {
+            "student": "gialli-paolo",
+            "submitted": None,
+            "status": "missing",
+            "late": True,
+        }
+    )
+
+    assert verified["grading"]["provisional"] is True
+    assert unavailable["submitted"] is None
+    assert unavailable["status"] == "submission_unknown"
+    assert unavailable["grading"]["provisional"] is False
+    assert contradictory["submitted"] is None
+    assert contradictory["late"] is False
+    assert missing_flag["submitted"] is None
+    assert contradictory_null["status"] == "submission_unknown"
+    assert contradictory_null["late"] is False
+    assert contradictory_null["grading"]["provisional"] is False
+
+
 def test_normalize_submission_parses_late_string_conservatively() -> None:
     submission = thebitlab_contracts.normalize_submission({"late": "false"})
     other_submission = thebitlab_contracts.normalize_submission({"late": "yes"})

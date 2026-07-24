@@ -209,9 +209,15 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
     normalized["student_id"] = first_text(payload, "student_id") or normalized["student"]
     normalized["repo"] = first_text(payload, "repo")
     normalized["repo_path"] = first_text(payload, "repo_path")
-    normalized["submitted"] = bool_value(payload.get("submitted", False))
+    submitted = payload.get("submitted", False)
+    normalized["submitted"] = None if submitted is None else bool_value(submitted)
     normalized["status"] = first_text(payload, "status")
+    if normalized["submitted"] is None or normalized["status"] == "submission_unknown":
+        normalized["submitted"] = None
+        normalized["status"] = "submission_unknown"
     normalized["late"] = bool_value(payload.get("late", False))
+    if normalized["status"] == "submission_unknown":
+        normalized["late"] = False
     submission = payload.get("submission") if isinstance(payload.get("submission"), dict) else {}
     grading = payload.get("grading") if isinstance(payload.get("grading"), dict) else {}
     ai_feedback = payload.get("ai_feedback") if isinstance(payload.get("ai_feedback"), dict) else {}
@@ -230,12 +236,17 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
     elif report_selection == "invalid_final":
         normalized_submission["final_selected"] = False
         normalized_grading["provisional"] = False
+    elif report_selection == "github_actions_artifact":
+        normalized_submission["final_selected"] = False
+    elif report_selection == "remote_error":
+        normalized_submission["final_selected"] = False
+        normalized_grading["provisional"] = False
     elif report_selection is not None:
         normalized_submission["final_selected"] = False
         normalized_grading["provisional"] = False
     else:
         normalized_submission["final_selected"] = False
-        normalized_grading["provisional"] = normalized["submitted"]
+        normalized_grading["provisional"] = bool(normalized["submitted"])
     normalized["submission"] = normalized_submission
     normalized["grading"] = normalized_grading
     normalized["ai_feedback"] = normalize_ai_feedback(ai_feedback)

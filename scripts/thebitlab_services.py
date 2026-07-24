@@ -146,6 +146,7 @@ class AssignmentOverviewService:
                 submission = student.get("submission") if isinstance(student.get("submission"), dict) else {}
                 grading = student.get("grading") if isinstance(student.get("grading"), dict) else {}
                 ai_feedback = student.get("ai_feedback") if isinstance(student.get("ai_feedback"), dict) else {}
+                submitted = student.get("submitted", False)
                 rows.append(
                     {
                         "report_name": report["name"],
@@ -162,7 +163,7 @@ class AssignmentOverviewService:
                         "student": student.get("student", ""),
                         "repo": student.get("repo", ""),
                         "status": student.get("status", ""),
-                        "submitted": bool(student.get("submitted", False)),
+                        "submitted": None if submitted is None else bool(submitted),
                         "late": bool(student.get("late", False)),
                         "submitted_at": submission.get("submitted_at"),
                         "commit": submission.get("commit"),
@@ -201,6 +202,7 @@ class AssignmentOverviewService:
                 submission = student.get("submission") if isinstance(student.get("submission"), dict) else {}
                 grading = student.get("grading") if isinstance(student.get("grading"), dict) else {}
                 ai_feedback = student.get("ai_feedback") if isinstance(student.get("ai_feedback"), dict) else {}
+                submitted = student.get("submitted", False)
                 assignments.append(
                     {
                         "report_name": report["name"],
@@ -213,7 +215,7 @@ class AssignmentOverviewService:
                         "assigned_at": payload.get("assigned_at") or "",
                         "due_at": payload.get("due_at") or "",
                         "status": student.get("status", ""),
-                        "submitted": bool(student.get("submitted", False)),
+                        "submitted": None if submitted is None else bool(submitted),
                         "late": bool(student.get("late", False)),
                         "repo": student.get("repo", ""),
                         "repo_github_url": student.get("repo_github_url", ""),

@@ -3,8 +3,11 @@ from __future__ import annotations
 import json
 import sqlite3
 
+import pytest
+
 from scripts.thebitlab_services import AssignmentOverviewService
 from scripts.thebitlab_sqlite_index import (
+    initialize_assignment_index,
     list_assignment_index_rows,
     rebuild_assignment_index_from_storage,
 )
@@ -51,6 +54,14 @@ def test_rebuild_assignment_index_from_storage_matches_assignment_overview(tmp_p
                         "late": False,
                         "grading": {"status": "not_run"},
                     },
+                    {
+                        "student": "verdi-anna",
+                        "repo": "TheBitPoets/verdi-anna",
+                        "status": "submission_unknown",
+                        "submitted": None,
+                        "late": False,
+                        "grading": {"status": "not_graded"},
+                    },
                 ],
             }
         ),
@@ -62,7 +73,7 @@ def test_rebuild_assignment_index_from_storage_matches_assignment_overview(tmp_p
     indexed_rows = list_assignment_index_rows(db_path)
     overview_rows = AssignmentOverviewService(storage).assignment_overview()
 
-    assert counts == {"reports": 1, "assignments": 1, "submissions": 2, "grading_results": 2}
+    assert counts == {"reports": 1, "assignments": 1, "submissions": 3, "grading_results": 3}
     assert len(indexed_rows) == len(overview_rows)
     assert indexed_rows[0] == {
         "report_path": "teacher-reports/activity.json",
@@ -87,6 +98,153 @@ def test_rebuild_assignment_index_from_storage_matches_assignment_overview(tmp_p
     assert indexed_rows[1]["student"] == "rossi-mario"
     assert indexed_rows[1]["submitted"] is True
     assert indexed_rows[1]["grading_status"] == "graded_passed"
+    assert indexed_rows[2]["student"] == "verdi-anna"
+    assert indexed_rows[2]["status"] == "submission_unknown"
+    assert indexed_rows[2]["submitted"] is None
+
+
+def test_initialize_assignment_index_migrates_legacy_submitted_constraint(tmp_path) -> None:
+    db_path = tmp_path / "legacy.sqlite"
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE assignments (
+              id TEXT PRIMARY KEY,
+              activity_id TEXT NOT NULL,
+              class_id TEXT NOT NULL DEFAULT '',
+              assigned_at TEXT,
+              due_at TEXT,
+              status TEXT NOT NULL DEFAULT '',
+              source_path TEXT,
+              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              payload_json TEXT
+            );
+            CREATE TABLE registers (
+              id TEXT PRIMARY KEY,
+              assignment_id TEXT,
+              class_id TEXT DEFAULT '',
+              report_path TEXT NOT NULL,
+              generated_at TEXT,
+              updated_at TEXT NOT NULL,
+              source_hash TEXT,
+              payload_json TEXT
+            );
+            CREATE TABLE submissions (
+              id TEXT PRIMARY KEY,
+              assignment_id TEXT NOT NULL,
+              student_id TEXT NOT NULL,
+              register_id TEXT,
+              status TEXT NOT NULL DEFAULT '',
+              submitted INTEGER NOT NULL DEFAULT 0,
+              submitted_at TEXT,
+              late INTEGER NOT NULL DEFAULT 0,
+              repo_ref TEXT,
+              commit_sha TEXT,
+              source_path TEXT,
+              updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              payload_json TEXT,
+              UNIQUE (assignment_id, student_id)
+            );
+            CREATE TABLE grading_results (
+              id TEXT PRIMARY KEY,
+              submission_id TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT '',
+              tests_passed INTEGER,
+              tests_total INTEGER,
+              score REAL,
+              teacher_grade REAL,
+              graded_at TEXT,
+              payload_json TEXT
+            );
+            INSERT INTO assignments(id, activity_id) VALUES ('assignment-1', 'activity-1');
+            INSERT INTO submissions(
+              id, assignment_id, student_id, status, submitted, late
+            ) VALUES ('submission-1', 'assignment-1', 'rossi-mario', 'missing', 0, 0);
+            INSERT INTO grading_results(id, submission_id, status)
+            VALUES ('grading-1', 'submission-1', 'not_run');
+            """
+        )
+        initialize_assignment_index(connection)
+
+        submitted_column = next(
+            row for row in connection.execute("PRAGMA table_info(submissions)")
+            if row[1] == "submitted"
+        )
+        submission = connection.execute(
+            "SELECT student_id, submitted FROM submissions"
+        ).fetchone()
+        grading = connection.execute(
+            "SELECT submission_id, status FROM grading_results"
+        ).fetchone()
+
+    assert submitted_column[3] == 0
+    assert tuple(submission) == ("rossi-mario", 0)
+    assert tuple(grading) == ("submission-1", "not_run")
+
+
+def test_nullable_submission_migration_rolls_back_and_can_retry(tmp_path) -> None:
+    db_path = tmp_path / "legacy-interrupted.sqlite"
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.executescript(
+            """
+            CREATE TABLE submissions (
+              id TEXT PRIMARY KEY,
+              assignment_id TEXT NOT NULL,
+              student_id TEXT NOT NULL,
+              register_id TEXT,
+              status TEXT NOT NULL DEFAULT '',
+              submitted INTEGER NOT NULL DEFAULT 0,
+              submitted_at TEXT,
+              late INTEGER NOT NULL DEFAULT 0,
+              repo_ref TEXT,
+              commit_sha TEXT,
+              source_path TEXT,
+              updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              payload_json TEXT,
+              UNIQUE (assignment_id, student_id)
+            );
+            CREATE TABLE grading_results (
+              id TEXT PRIMARY KEY,
+              submission_id TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT '',
+              tests_passed INTEGER,
+              tests_total INTEGER,
+              score REAL,
+              teacher_grade REAL,
+              graded_at TEXT,
+              payload_json TEXT
+            );
+            """
+        )
+
+        def deny_drop(action, _arg1, _arg2, _db_name, _trigger_name):
+            if action == sqlite3.SQLITE_DROP_TABLE:
+                return sqlite3.SQLITE_DENY
+            return sqlite3.SQLITE_OK
+
+        connection.set_authorizer(deny_drop)
+        with pytest.raises(sqlite3.DatabaseError):
+            initialize_assignment_index(connection)
+    finally:
+        connection.close()
+
+    with sqlite3.connect(db_path) as connection:
+        assert connection.execute(
+            "SELECT name FROM sqlite_master WHERE name='submissions'"
+        ).fetchone()
+        assert connection.execute(
+            "SELECT name FROM sqlite_master WHERE name='submissions_nullable'"
+        ).fetchone() is None
+
+        initialize_assignment_index(connection)
+        submitted_column = next(
+            row for row in connection.execute("PRAGMA table_info(submissions)")
+            if row[1] == "submitted"
+        )
+
+    assert submitted_column[3] == 0
 
 
 def test_rebuild_assignment_index_keeps_one_submission_per_student_assignment(tmp_path) -> None:

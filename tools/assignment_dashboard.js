@@ -51,6 +51,7 @@ const ASSIGNMENT_WIZARD_STEPS = [
 const OVERVIEW_STATUS_ORDER = [
   "missing",
   "pending",
+  "submission_unknown",
   "submitted_late",
   "submitted_unknown_time",
   "submitted_on_time",
@@ -2361,10 +2362,12 @@ function reportOutcome(report) {
   const expired = reportIsExpired(report);
   const counts = reportCounts(report);
   const notSubmitted = counts.missing;
+  const unknown = counts.unknown;
   const late = counts.late;
   const submitted = counts.submitted;
   const total = counts.total;
   if (expired && notSubmitted > 0) return { kind: "bad", label: `${notSubmitted} mancanti` };
+  if (unknown > 0) return { kind: "warn", label: `${unknown} da verificare` };
   if (late > 0) return { kind: "warn", label: `${late} ritardi` };
   if (total > 0 && submitted === total) return { kind: "ok", label: "tutti in tempo" };
   if (!expired && notSubmitted > 0) return { kind: "muted", label: `${notSubmitted} in corso` };
@@ -2380,7 +2383,7 @@ function reportCounts(report) {
   const students = Array.isArray(report?.students) ? report.students : [];
   const overviewRows = students.length ? [] : reportOverviewRows(report);
   const detailRows = students.length ? students : overviewRows;
-  const hasSummaryCounts = ["submitted", "not_submitted", "late"].some((key) => Object.prototype.hasOwnProperty.call(report || {}, key));
+  const hasSummaryCounts = ["submitted", "not_submitted", "unknown", "late"].some((key) => Object.prototype.hasOwnProperty.call(report || {}, key));
   const total = detailRows.length || Number(report?.students || 0);
   const submitted = detailRows.length
     ? detailRows.filter((student) => student.submitted).length
@@ -2391,10 +2394,14 @@ function reportCounts(report) {
   const late = detailRows.length
     ? detailRows.filter((student) => student.submitted && student.late).length
     : hasSummaryCounts ? Number(report?.late || 0) : 0;
+  const unknown = detailRows.length
+    ? detailRows.filter((student) => student.status === "submission_unknown" || student.submitted == null).length
+    : hasSummaryCounts ? Number(report?.unknown || 0) : 0;
   return {
     total: Number.isFinite(total) ? total : 0,
     submitted: Number.isFinite(submitted) ? submitted : 0,
     missing: Number.isFinite(missing) ? missing : 0,
+    unknown: Number.isFinite(unknown) ? unknown : 0,
     late: Number.isFinite(late) ? late : 0,
   };
 }
@@ -2403,7 +2410,7 @@ function coverageReportCounts(report) {
   const counts = reportCounts(report);
   return `
     <small class="coverageReportCounts">
-      ${escapeHtml(counts.total)} studenti - ${escapeHtml(counts.submitted)} consegnati - ${escapeHtml(counts.missing)} mancanti - ${escapeHtml(counts.late)} in ritardo
+      ${escapeHtml(counts.total)} studenti - ${escapeHtml(counts.submitted)} consegnati - ${escapeHtml(counts.missing)} mancanti - ${escapeHtml(counts.unknown)} da verificare - ${escapeHtml(counts.late)} in ritardo
     </small>
   `;
 }
@@ -2728,6 +2735,7 @@ function overviewStudents(rows) {
 function matrixCellKind(row) {
   if (!row) return "Empty";
   if (row.status === "missing") return "Bad";
+  if (row.status === "submission_unknown") return "Warn";
   if (row.status === "pending") return "Pending";
   if (row.late) return "Warn";
   if (row.grading_status === "graded_failed") return "Bad";
@@ -2738,6 +2746,7 @@ function matrixCellKind(row) {
 function matrixCellText(row) {
   if (!row) return "-";
   if (row.status === "missing") return "NP";
+  if (row.status === "submission_unknown") return "?";
   if (row.status === "pending") return "...";
   if (row.grading_status === "graded_failed") return "KO";
   if (row.status?.startsWith("submitted")) return row.late ? "RIT" : "OK";
@@ -3849,6 +3858,7 @@ async function generateReport() {
 
 function statusKind(status, late, grading) {
   if (status === "missing") return "bad";
+  if (status === "submission_unknown") return "warn";
   if (status === "pending") return "warn";
   if (late) return "warn";
   if (grading?.status === "graded_failed") return "bad";
@@ -4020,6 +4030,24 @@ function reportSelectionState(value) {
       compactLabel: "PROV",
       kind: "warn",
       tooltip: "Il grading deriva dall'ultimo report disponibile e puo cambiare quando viene scelto il definitivo.",
+    };
+  }
+  if (selection === "github_actions_artifact") {
+    return {
+      label: "Remoto verificato",
+      compactLabel: "REM",
+      kind: provisional === true ? "warn" : "ok",
+      tooltip: provisional === true
+        ? "Il grading arriva da un artifact GitHub Actions verificato, ma non e ancora stato scelto come definitivo."
+        : "Il grading arriva da un artifact GitHub Actions verificato e autorizzato dal docente.",
+    };
+  }
+  if (selection === "remote_error") {
+    return {
+      label: "Grading remoto non disponibile",
+      compactLabel: "ERR",
+      kind: "bad",
+      tooltip: "Il report remoto configurato non e stato acquisito o validato; lo stato della consegna resta da verificare.",
     };
   }
   if (selection != null) {
@@ -4496,6 +4524,7 @@ const SUMMARY_TOOLTIPS = {
   Scadenza: "Data e ora di scadenza del registro consegne selezionato.",
   Consegnati: "Numero di studenti che hanno effettuato una consegna.",
   Mancanti: "Numero di studenti senza consegna registrata.",
+  "Da verificare": "Numero di consegne il cui report remoto non e stato ancora verificato.",
   "In ritardo": "Numero di studenti che hanno consegnato oltre la scadenza.",
   Ritardo: "Numero di studenti che hanno consegnato oltre la scadenza.",
   KO: "Numero di studenti con grading o test falliti.",
@@ -4529,6 +4558,7 @@ function summaryCounts(students) {
     total: students.length,
     pending: students.filter((student) => student.status === "pending").length,
     missing: students.filter((student) => student.status === "missing").length,
+    unknown: students.filter((student) => student.status === "submission_unknown" || student.submitted == null).length,
     submitted: students.filter((student) => student.submitted).length,
     late: students.filter((student) => student.submitted && student.late).length,
     passed: students.filter((student) => student.grading?.status === "graded_passed").length,
@@ -4568,6 +4598,7 @@ function compactStudentsSummaryItems(counts) {
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
     ["Mancanti", counts.missing],
+    ["Da verificare", counts.unknown],
     ["Ritardo", counts.late],
     ["KO", counts.failed],
   ];
@@ -4582,6 +4613,7 @@ function detailedStudentsSummaryItems(counts) {
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
     ["Mancanti", counts.missing],
+    ["Da verificare", counts.unknown],
     ["Ritardo", counts.late],
     ["Pending", counts.pending],
     ["Grading OK", counts.passed],
@@ -4616,6 +4648,7 @@ function renderSummary(students) {
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
     ["Mancanti", counts.missing],
+    ["Da verificare", counts.unknown],
     ["In ritardo", counts.late],
   ];
   els.reportSummary.innerHTML = cards.map(([label, value]) => `

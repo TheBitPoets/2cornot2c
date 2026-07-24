@@ -86,8 +86,10 @@ feedback/c-base-somma-001/
 ```
 
 Il file `latest.json` al livello activity rappresenta l'ultimo esito noto e mantiene la compatibilita con i lettori
-legacy e con lo stato operativo della dashboard studente. Un registro collegato a una vera assegnazione preferisce
-invece il tentativo `final` valido oppure il `latest.json` specifico dell'assegnazione come fallback provvisorio.
+legacy e con lo stato operativo della dashboard studente. Senza un binding remoto, un registro collegato a una vera
+assegnazione preferisce il tentativo `final` valido oppure il `latest.json` specifico dell'assegnazione come fallback
+provvisorio. Quando il registro viene generato dal server/GUI, un binding remoto usa invece soltanto l'artifact
+verificato e resta `submission_unknown` se l'acquisizione fallisce.
 
 I file `attempt-*.json` sono immutabili e conservano la storia tecnica della singola assegnazione. Il `latest.json`
 interno identifica l'ultimo tentativo di quella consegna, mentre `final.json` contiene solo il riferimento al
@@ -268,9 +270,121 @@ SHA e workflow run legano il report alla revisione e all'esecuzione scelte dal d
 deve comunque usare un workflow protetto o verificato: affidare al repository dello studente anche la scelta
 della run renderebbe la provenienza insufficiente per una valutazione automaticamente attendibile.
 
-Questa fase non modifica ancora il registro docente. L'integrazione successiva usera la porta
-`GradingArtifactSource` per alimentare la raccolta dei report senza inserire chiamate GitHub dentro la
-logica di tracking.
+### Integrazione nel tracking docente
+
+L'adapter applicativo vive in:
+
+```text
+scripts/thebitlab_tracking_reports.py
+```
+
+`ArtifactTrackingReportSource` combina la porta `GradingArtifactSource` con binding forniti da una
+sorgente docente fidata. Ogni binding distingue repository e SHA dello studente da repository, SHA e run
+del workflow docente protetto, oltre a identificare assignment, studente, artifact e timestamp
+di consegna registrato. Questi dati descrivono una singola esecuzione: non fanno parte dell'activity,
+del target iniziale o di dati controllati dallo studente.
+
+`track_assignments()` accetta una `TrackingReportSource` opzionale. La precedenza e:
+
+1. report remoto configurato per assignment e studente;
+2. tentativo `final` locale, soltanto quando non esiste un binding remoto;
+3. report locale assignment-scoped;
+4. report locale legacy.
+
+Quando un binding remoto esiste ma acquisizione o validazione falliscono, il tracking non usa
+silenziosamente un report locale. La riga resta `not_graded`, usa lo stato `submission_unknown` invece di
+classificare lo studente come mancante e registra `remote_error`, autorita `remote_configured` ed errore di
+raccolta. `verified_remote` e riservato ai report acquisiti e validati. Se non esiste alcun binding, il
+comportamento locale precedente rimane invariato.
+
+Il server carica i binding docente da `teacher-grading-bindings.json`, ignorato da Git, con schema:
+
+```json
+{
+  "schema_version": "thebitlab_grading_bindings.v1",
+  "bindings": [
+    {
+      "activity_id": "python-base-somma-001",
+      "assignment_id": "assignment-3a-somma-001",
+      "student_id": "rossi-mario",
+      "student_repo_ref": "TheBitPoets/rossi-mario",
+      "workflow_repo_ref": "TheBitPoets/2cornot2c",
+      "artifact_name": "grading-assignment-3a-somma-001-rossi-mario",
+      "expected_student_head_sha": "0123456789abcdef0123456789abcdef01234567",
+      "expected_workflow_head_sha": "89abcdef0123456789abcdef0123456789abcdef",
+      "expected_submitted_at": "2026-10-20T08:00:00+02:00",
+      "expected_workflow_run_id": 123456789,
+      "final": false
+    }
+  ]
+}
+```
+
+I valori `activity_id`, `assignment_id`, `student_id`, repository studente e timestamp provengono
+dall'assegnazione e dalla consegna registrate dal docente. `workflow_repo_ref` e lo SHA del workflow
+identificano il repository docente e il commit immutabile che ha eseguito il grading. Il nome artifact
+deve coincidere con l'input del workflow; il run ID e il numero visibile nell'URL della relativa
+esecuzione GitHub Actions. Gli SHA devono essere completi, di 40 caratteri. `final: false` mantiene il
+voto provvisorio fino alla revisione docente.
+
+Quando la lista contiene binding, il token di sola lettura per acquisire gli artifact deve essere
+configurato in `THEBITLAB_GRADING_GITHUB_TOKEN`, tramite ambiente oppure `.secrets/ai.secret`.
+Se il file contiene binding ma il token manca, la generazione del registro si interrompe invece di
+ricadere sui report locali.
+
+Prima di accettare un report remoto, l'adapter verifica:
+
+- `activity_id`, `assignment_id` e `student_id`;
+- commit studente completo uguale allo SHA autorizzato;
+- repository docente, nome artifact, SHA del workflow e workflow run della provenienza.
+
+Il producer autorevole e `.github/workflows/grade-student-assignment.yml`, eseguito nel
+repository docente. Activity e test arrivano dal checkout docente immutabile; dal repository
+studente viene letto soltanto il sorgente allo SHA esatto. Il workflow riceve `submitted_at`
+dal binding docente anziche usare l'ora di avvio del grading, e conserva nel report il path
+repository del sorgente.
+
+`verified_remote` attesta oggi identita, provenienza e integrita del report rispetto al binding
+docente. Non attesta ancora un ambiente anti-cheating o una toolchain bit-per-bit riproducibile:
+l'isolamento dei test riservati e tracciato in #515, mentre il pin completo della toolchain e
+tracciato in #516. Fino alla loro chiusura, il risultato automatico resta soggetto alla revisione
+docente e non deve essere pubblicato come voto definitivo senza controllo.
+
+La preview dei file locali viene disabilitata per i report remoti: un checkout locale potrebbe
+contenere file modificati, non tracciati o ignorati diversi dal commit valutato. Una futura preview
+remota dovra leggere i blob direttamente dallo SHA attestato.
+
+Per repository studenti privati, il secret `THEBITLAB_STUDENT_REPO_TOKEN` deve contenere un
+token GitHub App o PAT di sola lettura limitato ai repository necessari. La credenziale viene
+usata soltanto dal checkout con `persist-credentials: false`; il runner Docker esegue il codice
+senza rete e senza segreti. Per repository pubblici il workflow puo usare il `GITHUB_TOKEN`.
+Il workflow presente nel template del repository studente e solo un'anteprima e i suoi
+artifact non devono essere configurati come autorevoli.
+
+Il registro conserva separatamente i dati del report e quelli attestati dall'applicazione:
+
+```json
+{
+  "submission": {
+    "report_selection": "github_actions_artifact",
+    "report_authority": "verified_remote",
+    "report_provenance": {
+      "source": "github_actions",
+      "repository": "TheBitPoets/rossi-mario",
+      "artifact_repository": "TheBitPoets/2cornot2c",
+      "artifact_id": 123,
+      "artifact_name": "grading-assignment-001",
+      "workflow_run_id": 456,
+      "head_sha": "fedcba9876543210fedcba9876543210fedcba98"
+    },
+    "report_error": null
+  }
+}
+```
+
+Il server compone adapter, token e binding persistiti quando genera il registro. La gestione dei binding
+tramite dashboard docente resta un passo successivo; fino ad allora il file JSON viene amministrato
+esplicitamente sulla macchina docente.
 
 ## Report
 
@@ -287,6 +401,9 @@ Esempio:
   "passed": false,
   "status": "failed",
   "activity_id": "c-base-somma-001",
+  "assignment_id": "assignment-c-base-somma-001-3a",
+  "student_id": "rossi-mario",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
   "language": "c",
   "summary": {
     "passed": 1,
@@ -371,10 +488,11 @@ TheBitLab potra automatizzare:
 - assegnazione activity a una classe;
 - apertura issue o PR per consegna;
 - commit/push assistito;
-- lettura stato GitHub Actions;
-- download artifact report;
 - generazione dashboard classe;
 - feedback AI assisted da report deterministico.
+
+La lettura della workflow run GitHub Actions e il download verificato dell'artifact report sono
+gia disponibili nel flusso server tramite binding docente.
 
 ## Assegnare una activity a repository studenti
 
@@ -401,9 +519,9 @@ Il flusso e pensato in tre livelli:
 
 | Livello | Responsabilita |
 |---|---|
-| Core Python | Funzioni riusabili da test, CLI e futura GUI |
+| Core Python | Funzioni riusabili da test, CLI e dashboard |
 | CLI | Wrapper operativo per docente, CI e debug |
-| GUI futura | Form e bottoni che chiamano lo stesso core, senza duplicare logica |
+| Dashboard docente | Form e bottoni che chiamano lo stesso core, senza duplicare logica |
 
 Se la classe ha molti repository, puoi usare un file di target:
 
@@ -426,7 +544,8 @@ Le righe vuote e le righe che iniziano con `#` vengono ignorate.
 
 Come per lo scaffold singolo, `--force` aggiorna i metadati della consegna, ma non sovrascrive il sorgente dello studente. Per rigenerare anche il sorgente serve `--overwrite-source`.
 
-Nella GUI futura il docente non dovra ricordare questi comandi: selezionera activity, classe/team GitHub e repository studenti; il server locale chiamera lo stesso core usato dalla CLI.
+Nella dashboard il docente seleziona activity, classe/team GitHub e repository studenti; il server locale
+chiama lo stesso core usato dalla CLI.
 
 ## Registro consegne con scadenza, voti e AI placeholder
 
@@ -451,15 +570,18 @@ python scripts/track_assignments.py \
 `--assignment-id` collega il registro alla consegna salvata e permette di leggere gli aiuti dal relativo storage docente.
 `--server-root` indica la root dati del server; nella normale esecuzione dalla root del progetto il valore predefinito è già corretto.
 Senza `--assignment-id` la CLI mantiene la lettura legacy per i registri storici.
+La CLI `track_assignments.py` non carica automaticamente `teacher-grading-bindings.json`: resta uno
+strumento locale per debug e compatibilita. La precedenza remota fail-closed e attiva nella generazione
+tramite server/GUI; l'eventuale composizione remota da CLI richiedera opzioni esplicite dedicate.
 
-Il registro prodotto e pensato per la futura GUI docente.
+Il registro prodotto alimenta la dashboard docente e la vista studente.
 
 Per ogni studente contiene:
 
 | Campo | Significato |
 |---|---|
 | `assigned` | Lo studente era tra i destinatari della consegna |
-| `submitted` | Esiste un report locale valido e coerente con l'activity corrente |
+| `submitted` | Esiste un report valido, remoto verificato quando configurato oppure locale in assenza di binding |
 | `status` | Stato sintetico: `missing`, `submitted_on_time`, `submitted_late`, `not_graded`, ecc. |
 | `due_at` | Scadenza della consegna |
 | `submission` | Dati della consegna: sorgente, data invio, commit se disponibile |
@@ -497,7 +619,7 @@ Esempio ridotto:
 }
 ```
 
-Il registro legge report locali con questa priorita:
+Quando non esiste un binding remoto, il registro legge report locali con questa priorita:
 
 ```text
 reports/<activity_id>/assignments/<assignment-key>/final.json
@@ -505,9 +627,9 @@ reports/<activity_id>/assignments/<assignment-key>/latest.json
 reports/<activity_id>/latest.json
 ```
 
-`final.json` seleziona il tentativo immutabile autorevole; i due `latest.json` sono fallback provvisori scoped e
-legacy. In futuro la stessa struttura potra essere alimentata scaricando gli artifact GitHub Actions dei repository
-studenti.
+`final.json` seleziona il tentativo locale; i due `latest.json` sono fallback provvisori scoped e
+legacy. Quando esiste un binding remoto, il server acquisisce invece l'artifact GitHub Actions verificato
+e non usa questi fallback locali in caso di errore.
 
 ## Dashboard consegne docente
 
@@ -599,14 +721,14 @@ Quando clicchi `Crea registro consegne`, il server locale:
 
 1. legge la activity;
 2. costruisce i target studenti;
-3. per ogni assegnazione cerca prima un tentativo `final` valido;
-4. se il definitivo non esiste, usa il `latest.json` specifico dell'assegnazione o il report legacy come risultato
-   provvisorio;
-5. se una selezione finale esiste ma non e valida, espone `invalid_final` senza attribuire un grading diverso;
-6. calcola stato consegna, ritardi e grading disponibile;
-7. registra in `submission.report_selection` la provenienza e in `grading.provisional` se l'esito non e definitivo;
-8. salva il JSON in `teacher-reports`;
-9. carica subito il risultato nella dashboard.
+3. per ogni assegnazione cerca prima un binding remoto e, se configurato, acquisisce l'artifact verificato;
+4. se il binding remoto fallisce, espone `submission_unknown` senza usare fallback locali;
+5. solo senza binding remoto cerca un tentativo `final`, poi `latest.json` assignment-scoped o legacy;
+6. se una selezione finale locale esiste ma non e valida, espone `invalid_final` senza attribuire un grading diverso;
+7. calcola stato consegna, ritardi e grading disponibile;
+8. registra in `submission.report_selection` la provenienza e in `grading.provisional` se l'esito non e definitivo;
+9. salva il JSON in `teacher-reports`;
+10. carica subito il risultato nella dashboard.
 
 Il file in `teacher-reports` e uno snapshot. Se lo studente cambia il tentativo finale, usa nuovamente
 `Crea registro consegne` per aggiornare la vista docente.
@@ -731,7 +853,7 @@ Per il flusso consegne restano aperti soprattutto:
 
 1. pagina GUI per creare, modificare, duplicare e assegnare activity a classi/team;
 2. gestione classi da GitHub Team, con sincronizzazione studenti;
-3. download artifact GitHub Actions e collegamento automatico al registro consegne;
+3. gestione dei binding GitHub Actions dalla dashboard e collaudo E2E con artifact reale;
 4. modalita studente e feedback assistito;
 5. supporto completo a consegne multi-file, fixture e directory di progetto;
 6. archiviazione e cancellazione sicura di registri, activity e assegnazioni;

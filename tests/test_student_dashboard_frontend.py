@@ -134,6 +134,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         uniqueStudentsFromOverview,
         populateStudentOptions,
         statusBadge,
+        labStatusBadge,
         gradingBadge,
         gradeValue,
         setCurrentCourseDesign: (design) => {{ currentCourseDesign = design; }},
@@ -454,6 +455,8 @@ def test_student_dashboard_hides_unapproved_feedback_payloads() -> None:
         assert.doesNotMatch(empty, /Bozza/);
         assert.equal(tested.gradeValue({ teacher_grade: null, score: 6 }), 6);
         assert.match(tested.statusBadge({ status: "missing", submitted: false, late: false }), /Mancante/);
+        assert.match(tested.statusBadge({ status: "submission_unknown", submitted: null }), /Consegna da verificare/);
+        assert.match(tested.labStatusBadge({ status: "submission_unknown", submitted: null }), /Report da verificare/);
         assert.match(tested.gradingBadge({ status: "graded_failed" }), /Test falliti/);
         """
     )
@@ -567,10 +570,17 @@ def test_student_dashboard_summarizes_next_open_due_date() -> None:
           status: "assigned",
           submitted: false,
         };
+        const unknown = {
+          activity_id: "remote-unknown",
+          due_at: "2026-10-17T23:59:00+02:00",
+          status: "submission_unknown",
+          submitted: null,
+        };
 
-        assert.equal(tested.nextOpenAssignment([submitted, openLater, openSooner, sameDeadline]).activity_id, "c-array-001");
-        assert.equal(tested.nextOpenDueAt([submitted, openLater, openSooner, sameDeadline]), "2026-10-18T23:59:00+02:00");
-        tested.renderDashboard({ student_id: "rossi-mario", assignments: [submitted, openLater, openSooner, sameDeadline] });
+        assert.equal(tested.nextOpenAssignment([submitted, unknown, openLater, openSooner, sameDeadline]).activity_id, "c-array-001");
+        assert.equal(tested.nextOpenDueAt([submitted, unknown, openLater, openSooner, sameDeadline]), "2026-10-18T23:59:00+02:00");
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [submitted, unknown, openLater, openSooner, sameDeadline] });
+        assert.match(tested.els.summary.innerHTML, /<strong>Da verificare<\\/strong>\\s*<span>1<\\/span>/);
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima attivita<\\/strong>\\s*<span>c-array-001<\\/span>/);
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima scadenza<\\/strong>\\s*<span>18\\/10\\/26, 23:59<\\/span>/);
         assert.match(tested.els.assignments.innerHTML, /Prossima scadenza/);
@@ -1016,6 +1026,27 @@ def test_student_dashboard_assignment_detail_modal_renders_selected_assignment()
 
         tested.closeAssignmentDetail();
         assert.equal(tested.els.assignmentDetailModal.hidden, true);
+        """
+    )
+
+
+def test_student_dashboard_detail_preserves_unknown_submission_state() -> None:
+    run_student_dashboard_js(
+        """
+        const assignment = {
+          activity_id: "remote-unknown",
+          title: "Report remoto",
+          status: "submission_unknown",
+          submitted: null,
+          grading: {},
+        };
+        const card = tested.renderAssignment(assignment, false, 0);
+        const detail = tested.renderAssignmentDetail(assignment);
+
+        assert.match(card, /Consegna da verificare/);
+        assert.doesNotMatch(card, /Consegna mancante/);
+        assert.match(detail, /<strong>Consegnata<\\/strong>\\s*<span>Da verificare<\\/span>/);
+        assert.doesNotMatch(detail, /<strong>Consegnata<\\/strong>\\s*<span>No<\\/span>/);
         """
     )
 

@@ -594,6 +594,35 @@ def test_assignment_reports_are_listed_with_counts(tmp_path) -> None:
     assert reports[0]["updated_at"]
 
 
+def test_assignment_report_counts_remote_unknown_separately(tmp_path) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    (reports_dir / "remote.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "students": [
+                    {"student": "consegnato", "submitted": True},
+                    {"student": "mancante", "submitted": False, "status": "missing"},
+                    {
+                        "student": "da-verificare",
+                        "submitted": None,
+                        "status": "submission_unknown",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = storage.list_assignment_reports()[0]
+
+    assert report["submitted"] == 1
+    assert report["not_submitted"] == 1
+    assert report["unknown"] == 1
+
+
 def test_read_assignment_report_normalizes_student_booleans(tmp_path) -> None:
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
     reports_dir = tmp_path / "teacher-reports"
@@ -696,6 +725,19 @@ def test_assignment_report_reload_canonicalizes_attempt_selection_state(tmp_path
                     "submission": {"report_selection": ["final"], "final_selected": True},
                     "grading": {"provisional": True},
                 },
+                {
+                    "student": "remoto-verificato",
+                    "submitted": True,
+                    "submission": {"report_selection": "github_actions_artifact"},
+                    "grading": {"provisional": True},
+                },
+                {
+                    "student": "remoto-non-disponibile",
+                    "submitted": None,
+                    "status": "submission_unknown",
+                    "submission": {"report_selection": "remote_error"},
+                    "grading": {"provisional": True},
+                },
             ],
         },
     )
@@ -714,6 +756,10 @@ def test_assignment_report_reload_canonicalizes_attempt_selection_state(tmp_path
     assert by_student["non-scalare"]["submission"]["report_selection"] == "invalid_value"
     assert by_student["non-scalare"]["submission"]["final_selected"] is False
     assert by_student["non-scalare"]["grading"]["provisional"] is False
+    assert by_student["remoto-verificato"]["grading"]["provisional"] is True
+    assert by_student["remoto-non-disponibile"]["submitted"] is None
+    assert by_student["remoto-non-disponibile"]["status"] == "submission_unknown"
+    assert by_student["remoto-non-disponibile"]["grading"]["provisional"] is False
 
 
 def test_ai_feedback_demo_report_exposes_teacher_review_states() -> None:

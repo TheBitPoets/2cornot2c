@@ -9,7 +9,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from scripts import assignment_records, assign_activity, create_submission_scaffold, student_help_service
+from scripts import (
+    assignment_records,
+    assign_activity,
+    create_submission_scaffold,
+    student_help_service,
+    thebitlab_tracking_reports,
+)
 from scripts import student_identity
 from scripts.thebitlab_contracts import (
     legacy_activity_validation_payload,
@@ -21,6 +27,7 @@ from scripts.thebitlab_technical_services import grading_dict_from_grade_activit
 
 
 NO_DUE_DATE_STATUS = "no_due_date"
+SUBMISSION_UNKNOWN_STATUS = "submission_unknown"
 EXCLUDED_SUBMISSION_DIRS = {".git", "__pycache__", ".pytest_cache", "node_modules", "bin", "build", "dist"}
 EXCLUDED_SUBMISSION_SUFFIXES = {".pyc", ".pyo", ".o", ".obj", ".exe", ".dll", ".so", ".dylib", ".class"}
 GITHUB_RE = re.compile(r"github\.com[:/](?P<owner>[^/\s]+)/(?P<repo>[^/\s]+?)(?:\.git)?/?$")
@@ -133,7 +140,17 @@ def local_repo_path(path: Path, server_root: Path | None) -> str:
 
 def git_stdout(args: list[str], cwd: Path) -> str:
     """Run a small git query and return stdout, or an empty string."""
-    completed = subprocess.run(args, cwd=cwd, capture_output=True, text=True, check=False, timeout=5)
+    try:
+        completed = subprocess.run(
+            args,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
     if completed.returncode:
         return ""
     return completed.stdout.strip()
@@ -425,15 +442,15 @@ def selected_final_report(
     return report, safe_path, True
 
 
-def assignment_student_id(
+def assignment_target_record(
     target: TrackingTarget,
     assignment: dict[str, Any] | None,
     server_root: Path,
-) -> str:
-    """Resolve the stable student id recorded for a tracking target."""
+) -> dict[str, Any] | None:
+    """Return the assignment target matching one local tracking target."""
 
     if assignment is None:
-        return target.student
+        return None
     target_path = target.path.resolve()
     target_repo = clean_metadata(target.repo)
     for assignment_target in assignment.get("targets", []):
@@ -455,11 +472,40 @@ def assignment_student_id(
         if target_repo and clean_metadata(assignment_target.get("repo_ref")) == target_repo:
             matches_target = True
         if matches_target:
-            student_id = student_identity.target_student_id(assignment_target)
-            return student_id or target.student
+            return assignment_target
     raise ValueError(
         f"Il target {target.student} non appartiene all'assegnazione richiesta."
     )
+
+
+def assignment_student_id(
+    target: TrackingTarget,
+    assignment: dict[str, Any] | None,
+    server_root: Path,
+) -> str:
+    """Resolve the stable student id recorded for a tracking target."""
+
+    assignment_target = assignment_target_record(target, assignment, server_root)
+    if assignment_target is None:
+        return target.student
+    student_id = student_identity.target_student_id(assignment_target)
+    return student_id or target.student
+
+
+def assignment_repository_ref(
+    target: TrackingTarget,
+    assignment: dict[str, Any] | None,
+    server_root: Path,
+) -> str:
+    """Resolve the GitHub repository recorded by the teacher assignment."""
+
+    assignment_target = assignment_target_record(target, assignment, server_root)
+    if assignment_target is not None:
+        repo_ref = clean_metadata(assignment_target.get("repo_ref"))
+        if repo_ref:
+            return repo_ref
+    target_repo = clean_metadata(target.repo)
+    return target_repo if OWNER_REPO_RE.fullmatch(target_repo) else ""
 
 
 def track_assignments(
@@ -474,6 +520,7 @@ def track_assignments(
     github_team: str | None = None,
     assignment_id: str | None = None,
     server_root: Path | None = None,
+    report_source: thebitlab_tracking_reports.TrackingReportSource | None = None,
 ) -> dict[str, Any]:
     """Build a teacher-facing tracking index for one activity."""
     activity = create_submission_scaffold.load_activity(activity_path)
@@ -510,42 +557,73 @@ def track_assignments(
 
     students: list[dict[str, Any]] = []
     for target in targets:
-        repo_url = github_repo_url(target)
         report_path = default_report_path(target, activity_id)
         stable_student_id = student_identity.legacy_display_student_id(target.student)
+        repository_ref = target.repo
         if assignment_id and server_root is not None:
             stable_student_id = assignment_student_id(target, assignment, server_root)
+            repository_ref = assignment_repository_ref(target, assignment, server_root)
             help_log_path = student_help_service.server_help_log_path(server_root, stable_student_id, assignment_id)
         else:
             legacy_help_path = student_help_service.help_log_path(target.path, activity_id)
             help_log_path = student_identity.confined_regular_file(target.path, legacy_help_path)
+        repo_url = github_url_from_remote(repository_ref) or github_repo_url(target)
         safe_report_path = None
         uses_assignment_report = False
         report = None
         report_selection = None
+        remote_report_result = None
         if assignment_id:
-            report, safe_report_path, final_selection_exists = selected_final_report(
-                target,
-                report_path,
-                assignment_id,
-                activity_id,
-            )
-            if report is not None:
-                uses_assignment_report = True
-                report_selection = "final"
-            elif final_selection_exists:
-                uses_assignment_report = True
-                report_selection = "invalid_final"
-            else:
-                assignment_report_path = (
-                    report_path.parent
-                    / "assignments"
-                    / assignment_records.assignment_storage_key(assignment_id)
-                    / "latest.json"
+            if report_source is not None:
+                remote_report_result = (
+                    thebitlab_tracking_reports.canonical_tracking_report_result(
+                        report_source.resolve(
+                            thebitlab_tracking_reports.TrackingReportRequest(
+                                activity_id=activity_id,
+                                assignment_id=assignment_id,
+                                student_id=stable_student_id,
+                                repo_ref=repository_ref,
+                            )
+                        )
+                    )
                 )
-                safe_report_path = student_identity.confined_regular_file(target.path, assignment_report_path)
-                uses_assignment_report = safe_report_path is not None
-        if report is None and report_selection != "invalid_final":
+            if remote_report_result is not None and remote_report_result.configured:
+                uses_assignment_report = True
+                report = remote_report_result.report
+                report_selection = remote_report_result.selection
+                if report is not None:
+                    repository_ref = str(
+                        (remote_report_result.provenance or {}).get("repository", "")
+                    )
+                    repo_url = github_url_from_remote(repository_ref)
+                elif not repository_ref:
+                    repo_url = None
+            else:
+                report, safe_report_path, final_selection_exists = selected_final_report(
+                    target,
+                    report_path,
+                    assignment_id,
+                    activity_id,
+                )
+                if report is not None:
+                    uses_assignment_report = True
+                    report_selection = "final"
+                elif final_selection_exists:
+                    uses_assignment_report = True
+                    report_selection = "invalid_final"
+                else:
+                    assignment_report_path = (
+                        report_path.parent
+                        / "assignments"
+                        / assignment_records.assignment_storage_key(assignment_id)
+                        / "latest.json"
+                    )
+                    safe_report_path = student_identity.confined_regular_file(
+                        target.path,
+                        assignment_report_path,
+                    )
+                    uses_assignment_report = safe_report_path is not None
+        if report is None and report_selection not in {"invalid_final", "remote_error"}:
             if safe_report_path is None:
                 safe_report_path = student_identity.confined_regular_file(target.path, report_path)
             report = load_report(safe_report_path) if safe_report_path is not None else None
@@ -591,22 +669,43 @@ def track_assignments(
             help["path"] = relative_to_root_or_repo(help_log_path, target.path) if help_log_path else ""
         help["activity_id"] = activity_id
         grading = grading_summary(report)
-        grading["provisional"] = report is not None and report_selection != "final"
-        source_file_path = report_source_path(target, report.get("source")) if report else None
-        source_path = relative_to_repo(source_file_path, target.path) if source_file_path is not None else None
-        submitted = report is not None
-        submitted_at = report.get("submitted_at") if report else None
-        status, late = submission_status(
-            submitted=submitted,
-            submitted_at=submitted_at,
-            due_at=normalized_due_at,
-            now=normalized_now,
+        if remote_report_result is not None and remote_report_result.configured and report is not None:
+            grading["provisional"] = remote_report_result.provisional
+        else:
+            grading["provisional"] = report is not None and report_selection != "final"
+        remote_report = (
+            remote_report_result is not None
+            and remote_report_result.configured
+            and report is not None
         )
+        local_preview_allowed = not remote_report
+        source_file_path = (
+            report_source_path(target, report.get("source"))
+            if report and local_preview_allowed
+            else None
+        )
+        source_path = relative_to_repo(source_file_path, target.path) if source_file_path is not None else None
+        remote_report_error = (
+            remote_report_result is not None
+            and remote_report_result.configured
+            and report is None
+        )
+        submitted = None if remote_report_error else report is not None
+        submitted_at = report.get("submitted_at") if report else None
+        if remote_report_error:
+            status, late = SUBMISSION_UNKNOWN_STATUS, False
+        else:
+            status, late = submission_status(
+                submitted=bool(submitted),
+                submitted_at=submitted_at,
+                due_at=normalized_due_at,
+                now=normalized_now,
+            )
         students.append(
             {
                 "student": target.student,
                 "student_id": stable_student_id,
-                "repo": target.repo,
+                "repo": repository_ref,
                 "repo_path": local_repo_path(target.path, server_root),
                 "repo_github_url": repo_url,
                 "assigned": True,
@@ -618,7 +717,14 @@ def track_assignments(
                 "submission": {
                     "source_path": source_path,
                     "source_github_url": github_file_url(target, repo_url, str(source_file_path) if source_file_path else None, report.get("commit") if report else None),
-                    "files": submission_files(target, activity_id, report, repo_url),
+                    "files": (
+                        submission_files(target, activity_id, report, repo_url)
+                        if local_preview_allowed
+                        else []
+                    ),
+                    "local_preview_status": (
+                        "available" if local_preview_allowed else "remote_commit_only"
+                    ),
                     "submitted_at": submitted_at,
                     "commit": report.get("commit") if report else None,
                     "report_path": relative_report_path,
@@ -626,6 +732,21 @@ def track_assignments(
                     "report_schema_version": report.get("schema_version") if report else None,
                     "report_status": report.get("status") if report else None,
                     "report_selection": report_selection,
+                    "report_authority": (
+                        remote_report_result.authority
+                        if remote_report_result is not None and remote_report_result.configured
+                        else ("local" if report is not None else None)
+                    ),
+                    "report_provenance": (
+                        remote_report_result.provenance
+                        if remote_report_result is not None and remote_report_result.configured
+                        else None
+                    ),
+                    "report_error": (
+                        remote_report_result.error
+                        if remote_report_result is not None and remote_report_result.configured
+                        else None
+                    ),
                     "attempt_id": report.get("attempt_id") if report else None,
                     "final_selected": report_selection == "final",
                 },
