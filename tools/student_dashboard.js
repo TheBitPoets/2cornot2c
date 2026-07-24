@@ -27,6 +27,10 @@ const els = {
   assignmentFilesTitle: document.querySelector("#assignmentFilesTitle"),
   assignmentFilesBody: document.querySelector("#assignmentFilesBody"),
   assignmentFilesClose: document.querySelector("#assignmentFilesClose"),
+  attemptHistoryModal: document.querySelector("#attemptHistoryModal"),
+  attemptHistoryTitle: document.querySelector("#attemptHistoryTitle"),
+  attemptHistoryBody: document.querySelector("#attemptHistoryBody"),
+  attemptHistoryClose: document.querySelector("#attemptHistoryClose"),
 };
 
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
@@ -45,6 +49,7 @@ let currentStudentCalendarView = {
 let visibleStudentPathIds = null;
 let currentAssignmentFilesIndex = -1;
 let assignmentFilesRequestToken = 0;
+let attemptHistoryInvoker = null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -317,10 +322,43 @@ function renderSupportPolicy(assignment) {
   `;
 }
 
-function renderLabAssignment(assignment) {
+function attemptOutcomeText(attempt) {
+  if (!attempt || typeof attempt !== "object") return "-";
+  const passed = Number.isInteger(attempt.tests_passed) ? attempt.tests_passed : "-";
+  const total = Number.isInteger(attempt.tests_total) ? attempt.tests_total : "-";
+  const outcome = attempt.passed === true
+    ? "Superato"
+    : attempt.passed === false
+      ? "Non superato"
+      : attempt.status || "Esito non disponibile";
+  return `${outcome} · ${passed}/${total} test`;
+}
+
+function attemptResultText(attempt) {
+  if (!attempt || typeof attempt !== "object") return "-";
+  return `${attemptOutcomeText(attempt)} · ${formatDate(attempt.submitted_at)}`;
+}
+
+function renderAttemptSummary(attempts) {
+  const summary = attempts && typeof attempts === "object" ? attempts : {};
+  return `
+    <section class="attemptSummary">
+      <div class="attemptSummaryGrid">
+        <span><strong>Tentativi</strong>${escapeHtml(summary.count ?? 0)}</span>
+        <span><strong>Ultimo</strong>${escapeHtml(attemptResultText(summary.latest))}</span>
+        <span><strong>Migliore</strong>${escapeHtml(attemptResultText(summary.best))}</span>
+        <span><strong>Definitivo</strong>${escapeHtml(attemptResultText(summary.final))}</span>
+      </div>
+      ${summary.truncated ? '<p class="attemptWarning">Lo storico disponibile e parziale.</p>' : ""}
+    </section>
+  `;
+}
+
+function renderLabAssignment(assignment, assignmentIndex) {
   const grading = assignment.grading || {};
   const workspace = assignment.workspace || {};
   const report = assignment.report || {};
+  const attempts = assignment.attempts || {};
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   return `
     <article class="studentLabCard">
@@ -348,6 +386,10 @@ function renderLabAssignment(assignment) {
         <span>Report: ${escapeHtml(report.path || "-")}</span>
         <span>Backend: ${escapeHtml(assignment.runner?.backend || "-")}</span>
       </p>
+      ${renderAttemptSummary(attempts)}
+      <div class="studentLabActions">
+        <button type="button" class="secondaryActionButton" data-attempt-history-index="${escapeHtml(assignmentIndex)}">Tentativi</button>
+      </div>
       ${renderSupportPolicy(assignment)}
       ${grading.detail ? `<p class="details">${escapeHtml(grading.detail)}</p>` : ""}
       ${failedTests.length ? `<p class="details">Test falliti: ${failedTests.map(escapeHtml).join(", ")}</p>` : ""}
@@ -372,6 +414,104 @@ function renderStudentLab(lab) {
   els.studentLab.innerHTML = assignments.length
     ? assignments.map(renderLabAssignment).join("")
     : '<p class="status">Nessuna consegna lab operativa disponibile per questo studente.</p>';
+}
+
+function attemptTone(attempt) {
+  if (attempt?.passed === true) return "attemptPassed";
+  if (attempt?.passed === false) return "attemptFailed";
+  return "attemptUnknown";
+}
+
+function renderAttemptHistory(assignment) {
+  const attempts = assignment?.attempts && typeof assignment.attempts === "object"
+    ? assignment.attempts
+    : {};
+  const allItems = Array.isArray(attempts.items) ? attempts.items : [];
+  const finalId = String(attempts.final?.id || "");
+  let items = allItems.slice(0, 20);
+  const finalInRecent = finalId && items.some((attempt) => String(attempt.id || "") === finalId);
+  const finalOutsideRecent = finalId && !finalInRecent
+    ? allItems.find((attempt) => String(attempt.id || "") === finalId) || attempts.final
+    : null;
+  if (finalOutsideRecent) items = [...items.slice(0, 19), finalOutsideRecent];
+  if (!items.length) {
+    return `
+      ${renderAttemptSummary(attempts)}
+      <p class="emptyFeedback">Nessun tentativo salvato per questa consegna.</p>
+    `;
+  }
+  return `
+    ${renderAttemptSummary(attempts)}
+    <ol class="attemptHistoryList">
+      ${items.map((attempt) => `
+        <li class="${attemptTone(attempt)}">
+          <div>
+            <strong>${escapeHtml(formatDate(attempt.submitted_at))}</strong>
+            ${String(attempt.id || "") === finalId ? badge("Definitivo", "badgeOk") : ""}
+          </div>
+          <span>${escapeHtml(attemptOutcomeText(attempt))}</span>
+          <code>${escapeHtml(attempt.id || "-")}</code>
+        </li>
+      `).join("")}
+    </ol>
+    ${finalOutsideRecent || allItems.length > items.length
+      ? `<p class="attemptWarning">${finalOutsideRecent
+        ? allItems.length >= 20
+          ? "Sono mostrati i 19 tentativi piu recenti e il tentativo definitivo."
+          : `Sono mostrati i ${allItems.length} tentativi recenti e il definitivo conservato separatamente.`
+        : `Sono mostrati i ${items.length} tentativi piu recenti.`
+      }</p>`
+      : ""}
+  `;
+}
+
+function attemptHistoryFocusableElements() {
+  if (!els.attemptHistoryModal?.querySelectorAll) return [];
+  return [...els.attemptHistoryModal.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )].filter((element) => !element.hidden);
+}
+
+function trapAttemptHistoryFocus(event) {
+  const focusable = attemptHistoryFocusableElements();
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && (document.activeElement === first || !focusable.includes(document.activeElement))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (document.activeElement === last || !focusable.includes(document.activeElement))) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function openAttemptHistory(assignmentIndex, invoker = null) {
+  const index = Number(assignmentIndex);
+  const assignments = Array.isArray(currentDashboardPayload.lab?.assignments)
+    ? currentDashboardPayload.lab.assignments
+    : [];
+  const assignment = assignments[index];
+  if (!assignment || !els.attemptHistoryModal || !els.attemptHistoryBody || !els.attemptHistoryTitle) return;
+  attemptHistoryInvoker = invoker || document.activeElement || null;
+  els.attemptHistoryTitle.textContent = assignment.title || assignment.activity_id || "Consegna";
+  els.attemptHistoryBody.innerHTML = renderAttemptHistory(assignment);
+  els.attemptHistoryModal.hidden = false;
+  document.body?.classList?.add("modalOpen");
+  els.attemptHistoryClose?.focus?.();
+}
+
+function closeAttemptHistory({ restoreFocus = true } = {}) {
+  if (!els.attemptHistoryModal) return;
+  const wasOpen = els.attemptHistoryModal.hidden === false;
+  const invoker = attemptHistoryInvoker;
+  attemptHistoryInvoker = null;
+  els.attemptHistoryModal.hidden = true;
+  document.body?.classList?.remove("modalOpen");
+  if (restoreFocus && wasOpen) invoker?.focus?.();
 }
 
 function isOpenAssignment(assignment) {
@@ -1495,6 +1635,7 @@ function isNextDeadlineAssignment(assignment, nextAssignment) {
 function renderDashboard(payload) {
   closeAssignmentDetail();
   closeAssignmentFiles();
+  closeAttemptHistory({ restoreFocus: false });
   const assignments = Array.isArray(payload.assignments) ? payload.assignments : [];
   currentDashboardPayload = { ...payload, assignments };
   const filterValue = els.assignmentFilter?.value || "all";
@@ -1616,6 +1757,12 @@ els.assignments?.addEventListener("click", (event) => {
   openAssignmentDetail(detailButton.dataset.detailIndex);
 });
 
+els.studentLab?.addEventListener("click", (event) => {
+  const historyButton = event.target.closest?.("[data-attempt-history-index]");
+  if (!historyButton) return;
+  openAttemptHistory(historyButton.dataset.attemptHistoryIndex, historyButton);
+});
+
 els.assignmentDetailClose?.addEventListener("click", closeAssignmentDetail);
 
 els.assignmentDetailModal?.addEventListener("click", (event) => {
@@ -1639,10 +1786,20 @@ els.assignmentFilesModal?.addEventListener("click", (event) => {
   }
 });
 
+els.attemptHistoryClose?.addEventListener("click", closeAttemptHistory);
+els.attemptHistoryModal?.addEventListener("click", (event) => {
+  if (event.target === els.attemptHistoryModal) closeAttemptHistory();
+});
+
 document.addEventListener?.("keydown", (event) => {
+  if (event.key === "Tab" && els.attemptHistoryModal?.hidden === false) {
+    trapAttemptHistoryFocus(event);
+    return;
+  }
   if (event.key === "Escape") {
     closeAssignmentDetail();
     closeAssignmentFiles();
+    closeAttemptHistory();
   }
 });
 

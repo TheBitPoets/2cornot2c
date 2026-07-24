@@ -278,6 +278,88 @@ button:hover { transform: translateY(-1px); }
   overflow-wrap: anywhere;
 }
 
+.attemptSummary {
+  display: grid;
+  gap: .55rem;
+  min-width: 0;
+  border-top: 1px solid rgba(17, 17, 17, .12);
+  border-bottom: 1px solid rgba(17, 17, 17, .12);
+  padding: .75rem 0;
+}
+
+.attemptSummaryGrid {
+  display: grid;
+  grid-template-columns: minmax(5rem, .55fr) repeat(3, minmax(10rem, 1fr));
+  gap: .75rem;
+  min-width: 0;
+}
+
+.attemptSummaryGrid span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.attemptSummaryGrid strong {
+  display: block;
+  margin-bottom: .2rem;
+  color: var(--muted);
+  font-size: .72rem;
+}
+
+.studentLabActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.attemptWarning {
+  margin: 0;
+  color: #8b4a00;
+  font-weight: 700;
+}
+
+.attemptHistoryList {
+  display: grid;
+  gap: .65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attemptHistoryList li {
+  display: grid;
+  gap: .4rem;
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-left-width: .35rem;
+  border-radius: 8px;
+  padding: .8rem;
+  background: #fafafa;
+}
+
+.attemptHistoryList li.attemptPassed {
+  border-left-color: #168a45;
+}
+
+.attemptHistoryList li.attemptFailed {
+  border-left-color: #b42318;
+}
+
+.attemptHistoryList li.attemptUnknown {
+  border-left-color: #8b6a00;
+}
+
+.attemptHistoryList li > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.attemptHistoryList code {
+  overflow-wrap: anywhere;
+}
+
 .studentCalendarControls {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1147,6 +1229,10 @@ button:hover { transform: translateY(-1px); }
   }
 
   .studentCalendarListItem {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .attemptSummaryGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 

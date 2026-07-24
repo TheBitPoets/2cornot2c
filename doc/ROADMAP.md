@@ -456,8 +456,8 @@ Il grading attuale e una base, ma il flusso reale richiede altri passi.
 7. Scaricare artifact/report GitHub Actions e collegarli ai registri.
 8. Garantire che i job che eseguono codice studente non abbiano segreti.
 9. Estendere il backend gia introdotto per i tentativi (`Attempt`) separati dalla consegna finale (`Submission`):
-   - mostrare lo storico nella GUI/TUI; la TUI espone gia conteggio, ultimo, migliore, definitivo e lista compatta,
-     mentre resta da aggiungere la vista web;
+   - mostrare lo storico nella GUI/TUI; TUI e dashboard studente espongono conteggio, ultimo, migliore, definitivo
+     e lista compatta recente;
    - permettere allo studente e al docente di selezionare il tentativo definitivo secondo policy; la selezione
      studente e disponibile nella TUI tramite servizio locale o API autenticata, mentre resta da progettare
      l'eventuale override docente;

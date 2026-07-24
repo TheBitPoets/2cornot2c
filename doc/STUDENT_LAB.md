@@ -193,6 +193,11 @@ python scripts/student_lab_runner.py --student-id rossi-mario --assignment-id <a
 - `best` e il risultato tecnico migliore, calcolato dai test con spareggio sul tentativo piu recente;
 - `final` e soltanto il tentativo scelto esplicitamente come definitivo e non cambia quando lo studente riprova.
 
+Nel pannello `Lab`, la dashboard studente mostra in sola lettura conteggio, ultimo, migliore e definitivo. Il
+pulsante `Tentativi` apre lo storico recente con data, esito e numero di test superati. La scelta del definitivo
+resta un'azione esplicita della TUI autenticata tramite il comando `t`: consultare la dashboard non modifica dati.
+La GUI mostra al massimo 20 elementi e segnala quando il servizio restituisce uno storico parziale.
+
 La dashboard e il registro continuano a usare il report `latest` per stato e grading finche il flusso docente non
 introdurra una decisione esplicita basata su `final`.
 
