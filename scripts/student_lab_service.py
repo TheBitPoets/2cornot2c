@@ -252,8 +252,18 @@ def build_lab_assignment(
         else {"attempts": [], "count": 0, "truncated": False}
     )
     attempts = attempt_history["attempts"]
-    latest_attempt = student_lab_attempts.select_latest_attempt(attempts)
-    best_attempt = student_lab_attempts.select_best_attempt(attempts)
+    canonical_latest = (
+        student_lab_attempts.load_assignment_latest(
+            report_path,
+            assignment_id,
+            activity_id,
+            base_dir=repo_path,
+        )
+        if repo_path is not None and report_path is not None
+        else None
+    )
+    latest_attempt = canonical_latest or student_lab_attempts.select_latest_attempt(attempts)
+    best_attempt = None if attempt_history["truncated"] else student_lab_attempts.select_best_attempt(attempts)
     final_attempt = (
         student_lab_attempts.load_final_attempt(
             report_path,

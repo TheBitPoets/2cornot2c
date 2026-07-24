@@ -128,14 +128,18 @@ def write_json_exclusive(path: Path, payload: dict[str, Any], *, base_dir: Path)
         suffix=".tmp",
     )
     temporary_path = Path(temporary_name)
+    published = False
     try:
         with os.fdopen(descriptor, "wb") as stream:
             stream.write(json_bytes(payload))
             stream.flush()
             os.fsync(stream.fileno())
         os.link(temporary_path, output)
+        published = True
         sync_directory(output.parent)
     except BaseException:
+        if published:
+            output.unlink(missing_ok=True)
         raise
     finally:
         temporary_path.unlink(missing_ok=True)
@@ -260,17 +264,19 @@ def load_attempt_history(
     total_bytes = 0
     newest_names: list[str] = []
     scanned_count = 0
+    candidate_count = 0
     scan_truncated = False
     with os.scandir(attempts_dir) as entries:
         for entry in entries:
-            if not entry.name.startswith("attempt-") or not entry.name.endswith(".json"):
-                continue
-            if not entry.is_file(follow_symlinks=False):
-                continue
             scanned_count += 1
             if scanned_count > MAX_ATTEMPT_FILES_SCANNED:
                 scan_truncated = True
                 break
+            if not entry.name.startswith("attempt-") or not entry.name.endswith(".json"):
+                continue
+            if not entry.is_file(follow_symlinks=False):
+                continue
+            candidate_count += 1
             if len(newest_names) < MAX_ATTEMPTS_LOADED:
                 heapq.heappush(newest_names, entry.name)
             elif entry.name > newest_names[0]:
@@ -302,8 +308,8 @@ def load_attempt_history(
         attempts.append(report)
     return {
         "attempts": attempts,
-        "count": scanned_count,
-        "truncated": scan_truncated or scanned_count > len(attempts),
+        "count": candidate_count,
+        "truncated": scan_truncated or candidate_count > len(attempts),
     }
 
 
@@ -352,6 +358,35 @@ def load_attempt_by_id(
     if clean_text(report.get("assignment_id")) != assignment_id:
         return None
     if clean_text(report.get("activity_id")) != activity_id:
+        return None
+    return report
+
+
+def load_assignment_latest(
+    report_path: Path,
+    assignment_id: str,
+    activity_id: str,
+    *,
+    base_dir: Path,
+) -> dict[str, Any] | None:
+    """Load and validate the assignment-specific latest projection."""
+
+    path = assignment_history_dir(report_path, assignment_id) / "latest.json"
+    safe_path = confined_regular_file(base_dir, path)
+    if safe_path is None:
+        return None
+    try:
+        report = track_assignments.load_report(safe_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    if report is None:
+        return None
+    if clean_text(report.get("assignment_id")) != assignment_id:
+        return None
+    if clean_text(report.get("activity_id")) != activity_id:
+        return None
+    attempt_id = clean_text(report.get("attempt_id"))
+    if not attempt_id:
         return None
     return report
 

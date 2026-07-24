@@ -303,7 +303,9 @@ assegnazioni della stessa activity condividano tentativi, migliore risultato o s
 Il servizio esamina al massimo 5000 file e carica al massimo 500 tentativi o 20 MiB per assegnazione in una singola
 risposta. Se lo storico supera uno dei limiti, `attempts.truncated` vale `true`, `attempts.count` conserva il numero
 di file rilevati prima del limite e il tentativo `final` viene comunque caricato direttamente dal suo identificativo.
-Retention e indice autorevole restano passi successivi prima di usare lo storico locale per analytics ufficiali.
+Il `latest` viene letto dalla proiezione canonica della consegna; se la scansione e troncata, `best` resta vuoto
+perche non sarebbe possibile garantirlo. Retention e indice autorevole restano passi successivi prima di usare lo
+storico locale per analytics ufficiali.
 Quando il report è salvato, il servizio lab lo rilegge e aggiorna stato consegna e riepilogo grading.
 
 ## Stati minimi

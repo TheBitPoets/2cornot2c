@@ -147,6 +147,32 @@ def test_persist_attempt_never_replaces_an_existing_attempt(tmp_path, monkeypatc
     assert attempt_path.read_bytes() == original_bytes
 
 
+def test_exclusive_attempt_is_removed_when_directory_sync_fails(tmp_path, monkeypatch) -> None:
+    report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
+    monkeypatch.setattr(student_lab_attempts, "new_attempt_id", lambda: "attempt-sync-failure")
+    monkeypatch.setattr(
+        student_lab_attempts,
+        "sync_directory",
+        lambda path: (_ for _ in ()).throw(OSError("sync failed")),
+    )
+
+    with pytest.raises(OSError, match="sync failed"):
+        student_lab_attempts.persist_attempt(
+            report_path,
+            ASSIGNMENT_ID,
+            report(
+                attempt_id="ignored",
+                passed=True,
+                tests_passed=1,
+                tests_total=1,
+                submitted_at="2026-10-18T10:00:00+02:00",
+            ),
+        )
+
+    history_dir = student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID)
+    assert not (history_dir / "attempts" / "attempt-sync-failure.json").exists()
+
+
 def test_persist_standard_report_rolls_back_when_legacy_latest_fails(tmp_path, monkeypatch) -> None:
     report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
     original_write = student_lab_attempts.write_json_atomic
@@ -304,9 +330,56 @@ def test_load_attempts_caps_directory_scan(tmp_path, monkeypatch) -> None:
 
     history = student_lab_attempts.load_attempt_history(report_path, ASSIGNMENT_ID, ACTIVITY_ID)
 
-    assert history["count"] == 3
+    assert history["count"] == 2
     assert history["truncated"] is True
     assert len(history["attempts"]) == 2
+
+
+def test_load_attempts_counts_unrelated_entries_toward_scan_limit(tmp_path, monkeypatch) -> None:
+    report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
+    attempts_dir = student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID) / "attempts"
+    attempts_dir.mkdir(parents=True)
+    for index in range(4):
+        (attempts_dir / f"noise-{index}.txt").write_text("noise", encoding="utf-8")
+    monkeypatch.setattr(student_lab_attempts, "MAX_ATTEMPT_FILES_SCANNED", 2)
+
+    history = student_lab_attempts.load_attempt_history(report_path, ASSIGNMENT_ID, ACTIVITY_ID)
+
+    assert history == {"attempts": [], "count": 0, "truncated": True}
+
+
+def test_assignment_latest_remains_available_when_history_scan_is_truncated(tmp_path, monkeypatch) -> None:
+    report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
+    older = report(
+        attempt_id="attempt-2",
+        passed=False,
+        tests_passed=0,
+        tests_total=1,
+        submitted_at="2026-10-18T10:00:00+02:00",
+    )
+    latest = report(
+        attempt_id="attempt-9",
+        passed=True,
+        tests_passed=1,
+        tests_total=1,
+        submitted_at="2026-10-18T12:00:00+02:00",
+    )
+    write_attempt(report_path, older)
+    write_attempt(report_path, latest)
+    history_latest = student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID) / "latest.json"
+    student_lab_attempts.write_json_atomic(history_latest, latest)
+    monkeypatch.setattr(student_lab_attempts, "MAX_ATTEMPT_FILES_SCANNED", 1)
+
+    history = student_lab_attempts.load_attempt_history(report_path, ASSIGNMENT_ID, ACTIVITY_ID)
+    canonical = student_lab_attempts.load_assignment_latest(
+        report_path,
+        ASSIGNMENT_ID,
+        ACTIVITY_ID,
+        base_dir=tmp_path,
+    )
+
+    assert history["truncated"] is True
+    assert canonical == latest
 
 
 def test_final_attempt_remains_selected_after_a_new_attempt(tmp_path) -> None:
