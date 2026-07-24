@@ -88,8 +88,8 @@ feedback/c-base-somma-001/
 Il file `latest.json` al livello activity rappresenta l'ultimo esito noto e mantiene la compatibilita con i lettori
 legacy e con lo stato operativo della dashboard studente. Senza un binding remoto, un registro collegato a una vera
 assegnazione preferisce il tentativo `final` valido oppure il `latest.json` specifico dell'assegnazione come fallback
-provvisorio. Con un binding remoto usa invece soltanto l'artifact verificato e resta `submission_unknown` se
-l'acquisizione fallisce.
+provvisorio. Quando il registro viene generato dal server/GUI, un binding remoto usa invece soltanto l'artifact
+verificato e resta `submission_unknown` se l'acquisizione fallisce.
 
 I file `attempt-*.json` sono immutabili e conservano la storia tecnica della singola assegnazione. Il `latest.json`
 interno identifica l'ultimo tentativo di quella consegna, mentre `final.json` contiene solo il riferimento al
@@ -488,10 +488,11 @@ TheBitLab potra automatizzare:
 - assegnazione activity a una classe;
 - apertura issue o PR per consegna;
 - commit/push assistito;
-- lettura stato GitHub Actions;
-- download artifact report;
 - generazione dashboard classe;
 - feedback AI assisted da report deterministico.
+
+La lettura della workflow run GitHub Actions e il download verificato dell'artifact report sono
+gia disponibili nel flusso server tramite binding docente.
 
 ## Assegnare una activity a repository studenti
 
@@ -568,6 +569,9 @@ python scripts/track_assignments.py \
 `--assignment-id` collega il registro alla consegna salvata e permette di leggere gli aiuti dal relativo storage docente.
 `--server-root` indica la root dati del server; nella normale esecuzione dalla root del progetto il valore predefinito è già corretto.
 Senza `--assignment-id` la CLI mantiene la lettura legacy per i registri storici.
+La CLI `track_assignments.py` non carica automaticamente `teacher-grading-bindings.json`: resta uno
+strumento locale per debug e compatibilita. La precedenza remota fail-closed e attiva nella generazione
+tramite server/GUI; l'eventuale composizione remota da CLI richiedera opzioni esplicite dedicate.
 
 Il registro prodotto e pensato per la futura GUI docente.
 
