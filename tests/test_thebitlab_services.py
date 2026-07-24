@@ -201,6 +201,52 @@ def test_assignment_overview_lists_student_rows(tmp_path) -> None:
     ]
 
 
+def test_assignment_overview_exposes_canonical_attempt_selection(tmp_path) -> None:
+    service = assignment_overview_service(tmp_path)
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    (reports_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "students": [
+                    {
+                        "student": "finale",
+                        "submitted": True,
+                        "submission": {"report_selection": "final", "final_selected": False},
+                        "grading": {"provisional": True},
+                    },
+                    {
+                        "student": "provvisorio",
+                        "submitted": True,
+                        "submission": {"report_selection": "latest", "final_selected": True},
+                        "grading": {"provisional": False},
+                    },
+                    {
+                        "student": "non-valido",
+                        "submitted": False,
+                        "submission": {"report_selection": "invalid_final", "final_selected": True},
+                        "grading": {"provisional": True},
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = {row["student"]: row for row in service.assignment_overview()}
+
+    assert rows["finale"]["report_selection"] == "final"
+    assert rows["finale"]["final_selected"] is True
+    assert rows["finale"]["grading_provisional"] is False
+    assert rows["provvisorio"]["report_selection"] == "latest"
+    assert rows["provvisorio"]["final_selected"] is False
+    assert rows["provvisorio"]["grading_provisional"] is True
+    assert rows["non-valido"]["report_selection"] == "invalid_final"
+    assert rows["non-valido"]["final_selected"] is False
+    assert rows["non-valido"]["grading_provisional"] is False
+
+
 def test_assignment_service_accepts_protocol_compatible_storage(tmp_path) -> None:
     class FakeAssignmentStorage:
         def safe_teacher_report_path(self, name: str) -> Path:

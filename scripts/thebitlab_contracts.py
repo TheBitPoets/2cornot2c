@@ -211,12 +211,25 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
     ai_feedback = payload.get("ai_feedback") if isinstance(payload.get("ai_feedback"), dict) else {}
     normalized_submission = normalize_submission(submission)
     normalized_grading = normalize_grading(grading)
-    if "provisional" not in grading:
-        normalized_grading["provisional"] = (
-            normalized["submitted"]
-            and normalized_submission.get("report_selection") != "final"
-            and not normalized_submission.get("final_selected")
-        )
+    report_selection = normalized_submission.get("report_selection")
+    if report_selection is None and normalized_submission.get("final_selected"):
+        report_selection = "final"
+        normalized_submission["report_selection"] = report_selection
+    if report_selection == "final":
+        normalized_submission["final_selected"] = True
+        normalized_grading["provisional"] = False
+    elif report_selection in {"latest", "legacy"}:
+        normalized_submission["final_selected"] = False
+        normalized_grading["provisional"] = True
+    elif report_selection == "invalid_final":
+        normalized_submission["final_selected"] = False
+        normalized_grading["provisional"] = False
+    elif report_selection is not None:
+        normalized_submission["final_selected"] = False
+        normalized_grading["provisional"] = False
+    else:
+        normalized_submission["final_selected"] = False
+        normalized_grading["provisional"] = normalized["submitted"]
     normalized["submission"] = normalized_submission
     normalized["grading"] = normalized_grading
     normalized["ai_feedback"] = normalize_ai_feedback(ai_feedback)

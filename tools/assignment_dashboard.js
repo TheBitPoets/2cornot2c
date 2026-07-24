@@ -3919,7 +3919,7 @@ function reportSelectionState(value) {
       tooltip: "La selezione definitiva non e valida: il registro non usa un altro tentativo al suo posto.",
     };
   }
-  if (selection === "final" || finalSelected === true) {
+  if (selection === "final") {
     return {
       label: "Finale",
       compactLabel: "FIN",
@@ -3927,7 +3927,31 @@ function reportSelectionState(value) {
       tooltip: "Il grading deriva dal tentativo scelto esplicitamente come definitivo.",
     };
   }
-  if (selection === "latest" || selection === "legacy" || provisional === true || (submitted && selection == null)) {
+  if (selection === "latest" || selection === "legacy") {
+    return {
+      label: "Provvisorio",
+      compactLabel: "PROV",
+      kind: "warn",
+      tooltip: "Il grading deriva dall'ultimo report disponibile e puo cambiare quando viene scelto il definitivo.",
+    };
+  }
+  if (selection != null) {
+    return {
+      label: "Stato tentativo non valido",
+      compactLabel: "ERR",
+      kind: "bad",
+      tooltip: "Il registro contiene uno stato del tentativo non riconosciuto e deve essere rigenerato o corretto.",
+    };
+  }
+  if (finalSelected === true) {
+    return {
+      label: "Finale",
+      compactLabel: "FIN",
+      kind: "ok",
+      tooltip: "Il grading deriva dal tentativo scelto esplicitamente come definitivo.",
+    };
+  }
+  if (provisional === true || submitted) {
     return {
       label: "Provvisorio",
       compactLabel: "PROV",
