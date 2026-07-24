@@ -349,8 +349,9 @@ Il registro conserva separatamente i dati del report e quelli attestati dall'app
 }
 ```
 
-In questa fase i binding sono iniettati a runtime. Il passo successivo e salvarli in record separati lato
-docente e comporre adapter, token e storage nel server o nella CLI.
+Il server compone adapter, token e binding persistiti quando genera il registro. La gestione dei binding
+tramite dashboard docente resta un passo successivo; fino ad allora il file JSON viene amministrato
+esplicitamente sulla macchina docente.
 
 ## Report
 
