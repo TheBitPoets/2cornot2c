@@ -119,6 +119,7 @@ REMOTE_STUDENT_API_ROUTES = frozenset(
         ("GET", "/api/student-lab/assignments"),
         ("GET", "/api/student-lab/help-history"),
         ("POST", "/api/student-lab/help"),
+        ("POST", "/api/student-lab/final-attempt"),
     }
 )
 _ASSIGNMENT_OPERATION_LOCKS: dict[str, dict[str, Any]] = {}
@@ -315,6 +316,12 @@ def student_help_operation_id(assignment_id: str, student_id: str) -> str:
     return f"help::{assignment_id}::{student_id}"
 
 
+def student_attempt_operation_id(assignment_id: str, student_id: str) -> str:
+    """Return the per-student lock key for final-attempt selection."""
+
+    return f"attempt::{assignment_id}::{student_id}"
+
+
 def unique_student_help_operation_ids(assignment_id: str, student_ids: set[str]) -> list[str]:
     """Return one operation id for each effective lock key."""
 
@@ -358,6 +365,23 @@ def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str
         except student_help_service.StudentHelpRequestNotFoundError:
             raise StudentHelpBusyError("Richiesta di aiuto gia in elaborazione per questa consegna.") from None
     return {"ok": True, "event": event}
+
+
+def select_student_final_attempt(payload: dict[str, Any], *, student_id: str) -> dict[str, Any]:
+    """Select one immutable attempt through the authenticated student API."""
+
+    assignment_id = str(payload.get("assignment_id", "")).strip()
+    with assignment_operation_lock(
+        student_attempt_operation_id(assignment_id, student_id),
+    ):
+        assignment = student_lab_service.select_student_final_attempt(
+            root=ROOT,
+            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+            student_id=student_id,
+            assignment_id=assignment_id,
+            attempt_id=payload.get("attempt_id", ""),
+        )
+    return {"ok": True, "assignment": assignment}
 
 
 def configure_data_root(root: Path) -> Path:
@@ -3414,6 +3438,28 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if self.reject_unauthenticated_teacher_api("POST", parsed.path):
             return
         if self.reject_unsafe_teacher_post(parsed.path):
+            return
+        if parsed.path == "/api/student-lab/final-attempt":
+            student_id = self.authenticated_student_id()
+            if student_id is None:
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except (TypeError, ValueError):
+                self.write_error_json(400, "Content-Length non valido.")
+                return
+            if length < 1 or length > MAX_STUDENT_HELP_REQUEST_BYTES:
+                self.write_error_json(413, "Richiesta troppo grande o vuota.")
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("Il payload della richiesta deve essere un oggetto JSON.")
+                self.write_json(select_student_final_attempt(payload, student_id=student_id))
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+                self.write_error_json(400, str(error))
+            except Exception:  # noqa: BLE001
+                self.write_error_json(500, "Selezione tentativo temporaneamente non disponibile.")
             return
         if parsed.path == "/api/student-lab/help":
             student_id = self.authenticated_student_id()

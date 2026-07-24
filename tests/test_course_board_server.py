@@ -3475,6 +3475,97 @@ def test_record_student_help_delegates_only_client_identifiers_to_service(monkey
     }
 
 
+def test_select_student_final_attempt_delegates_authenticated_identity(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    captured = {}
+
+    def fake_select(**kwargs):
+        captured.update(kwargs)
+        return {"assignment_id": "assignment-001", "attempts": {"final": {"id": "attempt-002"}}}
+
+    monkeypatch.setattr(
+        course_board_server.student_lab_service,
+        "select_student_final_attempt",
+        fake_select,
+    )
+
+    response = course_board_server.select_student_final_attempt(
+        {
+            "student_id": "client-controllato",
+            "assignment_id": "assignment-001",
+            "attempt_id": "attempt-002",
+        },
+        student_id="rossi-mario",
+    )
+
+    assert response["assignment"]["attempts"]["final"]["id"] == "attempt-002"
+    assert captured == {
+        "root": tmp_path,
+        "assignments_dir": tmp_path / "teacher-assignments",
+        "student_id": "rossi-mario",
+        "assignment_id": "assignment-001",
+        "attempt_id": "attempt-002",
+    }
+
+
+def test_final_attempt_http_endpoint_requires_student_token(monkeypatch) -> None:
+    secret = "demo-student-help-secret-for-final-attempt-tests"
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_SECRET", secret)
+    token = student_help_auth.create_student_token("rossi-mario", secret)
+    captured = {}
+    monkeypatch.setattr(
+        course_board_server,
+        "select_student_final_attempt",
+        lambda payload, student_id: captured.update(payload=payload, student_id=student_id)
+        or {"ok": True, "assignment": {"assignment_id": payload["assignment_id"]}},
+    )
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = "teacher-dashboard-token-for-final-attempt-tests"
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/api/student-lab/final-attempt"
+    body = json.dumps(
+        {"assignment_id": "assignment-001", "attempt_id": "attempt-002"}
+    ).encode("utf-8")
+    try:
+        unauthorized = urllib.request.Request(
+            url,
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(unauthorized, timeout=5)
+        assert error.value.code == 401
+
+        request = urllib.request.Request(
+            url,
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        assert payload["ok"] is True
+        assert captured == {
+            "payload": {
+                "assignment_id": "assignment-001",
+                "attempt_id": "attempt-002",
+            },
+            "student_id": "rossi-mario",
+        }
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
 def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, monkeypatch) -> None:
     original_root = course_board_server.ROOT
     student_lab_demo_setup.prepare_demo(tmp_path)

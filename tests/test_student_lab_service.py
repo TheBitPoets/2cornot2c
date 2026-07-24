@@ -743,6 +743,7 @@ def test_student_lab_uses_existing_report_and_grading_summary(tmp_path) -> None:
             "tests_total": 2,
         },
         "final": None,
+        "items": [],
     }
 
 
@@ -849,6 +850,52 @@ def test_student_lab_keeps_attempt_history_separate_for_repeated_activity(tmp_pa
     assert by_id[second["id"]]["grading"]["tests_passed"] == 2
     assert by_id[second["id"]]["attempts"]["count"] == 1
     assert by_id[first["id"]]["attempts"]["latest"]["id"] != by_id[second["id"]]["attempts"]["latest"]["id"]
+    assert by_id[first["id"]]["attempts"]["items"] == [by_id[first["id"]]["attempts"]["latest"]]
+    assert by_id[second["id"]]["attempts"]["items"] == [by_id[second["id"]]["attempts"]["latest"]]
+
+
+def test_student_can_select_an_existing_attempt_as_final(tmp_path) -> None:
+    assignment = sample_assignment(tmp_path)
+    write_assignment(tmp_path, assignment)
+    report_path = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "reports"
+        / "python-base-somma-001"
+        / "latest.json"
+    )
+    attempt_path, _ = student_lab_attempts.persist_attempt(
+        report_path,
+        assignment["id"],
+        {
+            "schema_version": "student_lab_run.v1",
+            "activity_id": "python-base-somma-001",
+            "student_id": "rossi-mario",
+            "status": "passed",
+            "passed": True,
+            "submitted_at": "2026-10-18T18:00:00+02:00",
+            "summary": {"passed": 2, "total": 2},
+            "tests": [],
+        },
+    )
+    attempt_id = attempt_path.stem
+
+    selected = student_lab_service.select_student_final_attempt(
+        root=tmp_path,
+        student_id="rossi-mario",
+        assignment_id=assignment["id"],
+        attempt_id=attempt_id,
+    )
+
+    assert selected["attempts"]["final"]["id"] == attempt_id
+    reloaded = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+    )[0]
+    assert reloaded["attempts"]["final"]["id"] == attempt_id
 
 
 def test_student_lab_does_not_reuse_legacy_latest_for_another_assignment(tmp_path) -> None:
