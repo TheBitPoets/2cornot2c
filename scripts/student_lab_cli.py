@@ -68,6 +68,7 @@ GUIDE_TERM_COLORS = {
 }
 GUIDE_TERM_BOLD_COLOR = "\033[1;37m"
 GUIDE_DESCRIPTION_COLOR = "\033[3;90m"
+MAX_ATTEMPTS_DISPLAYED = 20
 RESET_COLOR = "\033[0m"
 
 
@@ -367,6 +368,79 @@ def render_test_details(report: dict[str, Any], use_color: bool = False) -> list
     return lines
 
 
+def attempt_result_label(attempt: dict[str, Any] | None, use_color: bool = False) -> str:
+    """Return one compact attempt result for summaries and history."""
+
+    if not isinstance(attempt, dict):
+        return "-"
+    passed = attempt.get("tests_passed")
+    total = attempt.get("tests_total")
+    tests = f"{passed}/{total} test" if isinstance(passed, int) and isinstance(total, int) else "test n/d"
+    status = clean_text(attempt.get("status"), "esito n/d")
+    color = (
+        HELP_RESPONSE_COLOR
+        if attempt.get("passed") is True
+        else HELP_ERROR_COLOR
+        if attempt.get("passed") is False
+        else HELP_PROMPT_COLOR
+    )
+    return colorize(
+        f"{status}, {tests}, {compact_datetime(attempt.get('submitted_at'))}",
+        color,
+        use_color,
+    )
+
+
+def selectable_attempts(assignment: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the recent valid attempts exposed by the interactive TUI."""
+
+    attempts = assignment.get("attempts") if isinstance(assignment.get("attempts"), dict) else {}
+    items = attempts.get("items") if isinstance(attempts.get("items"), list) else []
+    return [
+        item
+        for item in items
+        if isinstance(item, dict) and clean_text(item.get("id"), "")
+    ][:MAX_ATTEMPTS_DISPLAYED]
+
+
+def render_attempt_history(assignment: dict[str, Any], use_color: bool = False) -> str:
+    """Render the bounded immutable attempt history for one assignment."""
+
+    attempts = assignment.get("attempts") if isinstance(assignment.get("attempts"), dict) else {}
+    all_items = attempts.get("items") if isinstance(attempts.get("items"), list) else []
+    items = selectable_attempts(assignment)
+    final = attempts.get("final") if isinstance(attempts.get("final"), dict) else {}
+    final_id = clean_text(final.get("id"), "")
+    lines = ["Storico tentativi", section_separator()]
+    if not items:
+        lines.append("Nessun tentativo selezionabile.")
+    for index, raw_attempt in enumerate(items, start=1):
+        attempt = raw_attempt if isinstance(raw_attempt, dict) else {}
+        marker = " [definitivo]" if clean_text(attempt.get("id"), "") == final_id else ""
+        lines.append(
+            f"{index:>2}. {attempt_result_label(attempt, use_color=use_color)}{marker}"
+        )
+        lines.append(f"    ID: {clean_text(attempt.get('id'), '-')}")
+    if attempts.get("truncated") is True:
+        lines.extend(
+            [
+                section_separator(),
+                "Avviso: lo storico mostrato e parziale; i tentativi piu vecchi non sono elencati.",
+            ]
+        )
+    if len(all_items) > len(items):
+        lines.append(
+            f"Sono mostrati solo i {len(items)} tentativi piu recenti su {attempts.get('count') or len(all_items)}."
+        )
+    lines.extend(
+        [
+            section_separator(),
+            "Scegli un numero per indicare il tentativo definitivo; invio o b annulla.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def render_assignment_detail(
     assignment: dict[str, Any],
     use_color: bool = False,
@@ -378,6 +452,7 @@ def render_assignment_detail(
     workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
     activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
     report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
+    attempts = assignment.get("attempts") if isinstance(assignment.get("attempts"), dict) else {}
     grading = assignment.get("grading") if isinstance(assignment.get("grading"), dict) else {}
     runner = assignment.get("runner") if isinstance(assignment.get("runner"), dict) else {}
     support_policy = assignment.get("support_policy") if isinstance(assignment.get("support_policy"), dict) else {}
@@ -426,6 +501,33 @@ def render_assignment_detail(
         detail_line("Esiste:", "si" if report.get("exists") else "no"),
         detail_line("Consegnata:", compact_datetime(report.get("submitted_at"))),
         detail_line("Commit:", report.get("commit")),
+        section_separator(),
+        "Tentativi",
+        detail_line("Totale:", attempts.get("count")),
+        detail_line(
+            "Ultimo:",
+            attempt_result_label(
+                attempts.get("latest") if isinstance(attempts.get("latest"), dict) else None,
+                use_color,
+            ),
+            formatted=True,
+        ),
+        detail_line(
+            "Migliore:",
+            attempt_result_label(
+                attempts.get("best") if isinstance(attempts.get("best"), dict) else None,
+                use_color,
+            ),
+            formatted=True,
+        ),
+        detail_line(
+            "Definitivo:",
+            attempt_result_label(
+                attempts.get("final") if isinstance(attempts.get("final"), dict) else None,
+                use_color,
+            ),
+            formatted=True,
+        ),
         *(
             [
                 section_separator(),
@@ -468,6 +570,7 @@ def render_assignment_detail(
         "Azioni principali",
         "  e  Esegui test e salva report",
         "  a  Chiedi aiuto",
+        "  t  Storico e tentativo definitivo",
         "  o  Apri workspace",
         "  v  Apri editor",
         "  l  Modifica layout pannelli",
@@ -585,7 +688,7 @@ def render_utui_detail_commands() -> str:
     return "\n".join(
         (
             "Navigazione: j = scorri giu | k = scorri su | l = modifica layout",
-            "Azioni: e = test/report | a = aiuto | o = workspace | v = editor",
+            "Azioni: e = test/report | t = tentativi | a = aiuto | o = workspace | v = editor",
             "Altri: h = storico aiuti | b/invio = lista | q = esci",
         )
     )
@@ -889,6 +992,56 @@ def fetch_help_history_from_server(
     if not isinstance(payload, dict) or not isinstance(payload.get("events"), list):
         raise ValueError("Il server aiuti ha restituito uno storico non valido.")
     return payload
+
+
+def select_final_attempt_from_server(
+    *,
+    assignment: dict[str, Any],
+    attempt_id: str,
+    server_url: str,
+    server_token: str,
+    allow_insecure_http: bool = False,
+) -> dict[str, Any]:
+    """Select one final attempt through the authenticated student API."""
+
+    assignment_id = clean_text(assignment.get("assignment_id"), "")
+    if not assignment_id:
+        raise ValueError("Identificativo consegna non disponibile.")
+    if not server_token.strip():
+        raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
+    safe_server_url = validated_server_url(server_url, allow_insecure_http)
+    body = json.dumps(
+        {
+            "assignment_id": assignment_id,
+            "attempt_id": clean_text(attempt_id, ""),
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        f"{safe_server_url}/api/student-lab/final-attempt",
+        data=body,
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "Authorization": f"Bearer {server_token.strip()}",
+        },
+        method="POST",
+    )
+    try:
+        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = _server_error_detail(error.read())
+        raise ValueError(f"Server tentativi: {detail or error.reason}") from error
+    except urllib.error.URLError as error:
+        raise ValueError(f"Server non raggiungibile su {server_url}.") from error
+    except TimeoutError as error:
+        raise ValueError("Il server tentativi non ha risposto entro il tempo previsto.") from error
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("Il server tentativi ha restituito una risposta non valida.") from error
+    selected = payload.get("assignment") if isinstance(payload, dict) else None
+    if not isinstance(selected, dict):
+        raise ValueError("Il server tentativi non ha restituito la consegna aggiornata.")
+    return selected
 
 
 def _server_error_detail(body: bytes) -> str:
@@ -1373,6 +1526,52 @@ def run_tui(
                         print_fn(render_help_history(assignment, root=root, use_color=use_color))
                 except ValueError as error:
                     print_fn(f"Storico aiuti non disponibile:\n{error}")
+                input_fn("Premi invio per continuare...")
+                continue
+            if action == "t":
+                print_fn(render_attempt_history(assignment, use_color=use_color))
+                items = selectable_attempts(assignment)
+                choice = input_fn("Tentativo definitivo: ").strip().lower()
+                if choice in {"", "b", "back", "indietro"}:
+                    print_fn("Selezione tentativo annullata.")
+                elif not choice.isdigit() or not 1 <= int(choice) <= len(items):
+                    print_fn("Tentativo non valido. Usa uno dei numeri mostrati, invio o b.")
+                else:
+                    selected_attempt = items[int(choice) - 1]
+                    attempt_id = (
+                        clean_text(selected_attempt.get("id"), "")
+                        if isinstance(selected_attempt, dict)
+                        else ""
+                    )
+                    try:
+                        if server_token.strip():
+                            select_final_attempt_from_server(
+                                assignment=assignment,
+                                attempt_id=attempt_id,
+                                server_url=server_url,
+                                server_token=server_token,
+                                allow_insecure_http=allow_insecure_http,
+                            )
+                        else:
+                            student_lab_service.select_student_final_attempt(
+                                root=root,
+                                student_id=student_id,
+                                assignment_id=selected_assignment_id,
+                                attempt_id=attempt_id,
+                                now=now,
+                            )
+                        payload = load_current_payload(
+                            root=root,
+                            student_id=student_id,
+                            now=now,
+                            server_url=server_url,
+                            server_token=server_token,
+                            allow_insecure_http=allow_insecure_http,
+                        )
+                    except ValueError as error:
+                        print_fn(f"Tentativo definitivo non salvato:\n{error}")
+                    else:
+                        print_fn("Tentativo definitivo salvato.")
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "e":

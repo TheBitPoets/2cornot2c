@@ -66,6 +66,45 @@ def sample_assignment(**overrides):
             "submitted_at": "",
             "commit": None,
         },
+        "attempts": {
+            "count": 2,
+            "truncated": False,
+            "latest": {
+                "id": "attempt-002",
+                "submitted_at": "2026-10-18T18:00:00+02:00",
+                "status": "passed",
+                "passed": True,
+                "tests_passed": 2,
+                "tests_total": 2,
+            },
+            "best": {
+                "id": "attempt-002",
+                "submitted_at": "2026-10-18T18:00:00+02:00",
+                "status": "passed",
+                "passed": True,
+                "tests_passed": 2,
+                "tests_total": 2,
+            },
+            "final": None,
+            "items": [
+                {
+                    "id": "attempt-002",
+                    "submitted_at": "2026-10-18T18:00:00+02:00",
+                    "status": "passed",
+                    "passed": True,
+                    "tests_passed": 2,
+                    "tests_total": 2,
+                },
+                {
+                    "id": "attempt-001",
+                    "submitted_at": "2026-10-17T18:00:00+02:00",
+                    "status": "failed",
+                    "passed": False,
+                    "tests_passed": 1,
+                    "tests_total": 2,
+                },
+            ],
+        },
         "grading": {
             "status": "not_graded",
             "tests_passed": None,
@@ -255,13 +294,52 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "Azioni principali" in rendered
     assert "  e  Esegui test e salva report" in rendered
     assert "  a  Chiedi aiuto" in rendered
+    assert "  t  Storico e tentativo definitivo" in rendered
     assert "  o  Apri workspace" in rendered
     assert "Altri comandi" in rendered
     assert "  h  Storico aiuti" in rendered
+    assert "Tentativi" in rendered
+    assert "Totale:" in rendered
+    assert "passed, 2/2 test, 2026-10-18 18:00" in rendered
     assert "  b  Torna alla lista" in rendered
     assert "  invio  Torna alla lista" in rendered
     assert "  q  Esci" in rendered
     assert "Comandi:" not in rendered
+
+
+def test_render_attempt_history_marks_final_and_truncation() -> None:
+    assignment = sample_assignment()
+    assignment["attempts"]["final"] = assignment["attempts"]["items"][1]
+    assignment["attempts"]["truncated"] = True
+
+    rendered = student_lab_cli.render_attempt_history(assignment)
+
+    assert "Storico tentativi" in rendered
+    assert "1. passed, 2/2 test, 2026-10-18 18:00" in rendered
+    assert "2. failed, 1/2 test, 2026-10-17 18:00 [definitivo]" in rendered
+    assert "storico mostrato e parziale" in rendered
+
+
+def test_render_attempt_history_limits_the_interactive_list() -> None:
+    assignment = sample_assignment()
+    assignment["attempts"]["count"] = 25
+    assignment["attempts"]["items"] = [
+        {
+            "id": f"attempt-{index:03d}",
+            "submitted_at": f"2026-10-{25 - index:02d}T18:00:00+02:00",
+            "status": "passed",
+            "passed": True,
+            "tests_passed": 2,
+            "tests_total": 2,
+        }
+        for index in range(25)
+    ]
+
+    rendered = student_lab_cli.render_attempt_history(assignment)
+
+    assert "20. passed" in rendered
+    assert "21. passed" not in rendered
+    assert "20 tentativi piu recenti su 25" in rendered
 
 
 def test_render_assignment_list_can_color_statuses() -> None:
@@ -1090,6 +1168,73 @@ def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
     assert result == 0
     assert any("TheBitLab - lab studente" in output for output in outputs)
     assert any("Dettaglio consegna" in output for output in outputs)
+
+
+def test_run_tui_can_select_a_local_final_attempt(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "t", "2", "", "", "q"])
+    selections = []
+    load_calls = []
+
+    def fake_load(root, student_id, now=None):
+        load_calls.append((root, student_id, now))
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "load_payload", fake_load)
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_service,
+        "select_student_final_attempt",
+        lambda **kwargs: selections.append(kwargs) or payload["assignments"][0],
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+    )
+
+    assert result == 0
+    assert len(load_calls) == 2
+    assert selections == [
+        {
+            "root": tmp_path,
+            "student_id": "rossi-mario",
+            "assignment_id": "assignment-python-base-somma-001-demo",
+            "attempt_id": "attempt-001",
+            "now": None,
+        }
+    ]
+    assert any("Storico tentativi" in output for output in outputs)
+    assert any("Tentativo definitivo salvato." in output for output in outputs)
+
+
+def test_run_tui_rejects_an_invalid_attempt_choice(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "t", "9", "", "", "q"])
+    selections = []
+
+    monkeypatch.setattr(student_lab_cli, "load_payload", lambda root, student_id, now=None: payload)
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_service,
+        "select_student_final_attempt",
+        lambda **kwargs: selections.append(kwargs),
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+    )
+
+    assert result == 0
+    assert selections == []
+    assert any("Tentativo non valido." in output for output in outputs)
 
 
 def test_run_tui_uses_utui_in_an_interactive_terminal(monkeypatch, tmp_path) -> None:

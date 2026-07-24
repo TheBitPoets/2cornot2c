@@ -360,6 +360,11 @@ def build_lab_assignment(
             "latest": student_lab_attempts.attempt_summary(latest_attempt or legacy_report),
             "best": student_lab_attempts.attempt_summary(best_report),
             "final": student_lab_attempts.attempt_summary(final_attempt),
+            "items": [
+                summary
+                for attempt in attempts
+                if (summary := student_lab_attempts.attempt_summary(attempt)) is not None
+            ],
         },
         "grading": grading,
         "help": help_log,
@@ -499,6 +504,71 @@ def assignment_repo_path(root: Path, assignment: dict[str, Any]) -> Path | None:
         resolved = resolve_local_path(root, workspace_path)
         return resolved.parents[1] if len(resolved.parents) >= 2 else None
     return None
+
+
+def select_student_final_attempt(
+    *,
+    root: Path,
+    student_id: str,
+    assignment_id: str,
+    attempt_id: str,
+    assignments_dir: Path | None = None,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Select one existing attempt as the student's final submission."""
+
+    clean_assignment_id = clean_text(assignment_id)
+    clean_attempt_id = clean_text(attempt_id)
+    if not clean_assignment_id:
+        raise ValueError("assignment_id obbligatorio.")
+    if not clean_attempt_id:
+        raise ValueError("attempt_id obbligatorio.")
+    assignments = list_student_lab_assignments(
+        root=root,
+        student_id=student_id,
+        assignments_dir=assignments_dir,
+        now=now,
+        expose_external_paths=True,
+    )
+    assignment = next(
+        (
+            item
+            for item in assignments
+            if clean_text(item.get("assignment_id")) == clean_assignment_id
+        ),
+        None,
+    )
+    if assignment is None:
+        raise ValueError("Consegna non trovata per lo studente indicato.")
+    repo_path = assignment_repo_path(root, assignment)
+    activity_id = clean_text(assignment.get("activity_id"))
+    if repo_path is None or not activity_id:
+        raise ValueError("Repository studente non disponibile per selezionare il tentativo.")
+    report_path = repo_path / "reports" / activity_id / "latest.json"
+    student_lab_attempts.set_final_attempt(
+        report_path,
+        clean_assignment_id,
+        activity_id,
+        clean_attempt_id,
+    )
+    refreshed = list_student_lab_assignments(
+        root=root,
+        student_id=student_id,
+        assignments_dir=assignments_dir,
+        now=now,
+        expose_external_paths=False,
+    )
+    selected = next(
+        (
+            item
+            for item in refreshed
+            if clean_text(item.get("assignment_id")) == clean_assignment_id
+        ),
+        None,
+    )
+    if selected is None:
+        raise ValueError("Consegna non disponibile dopo la selezione del tentativo.")
+    return selected
 
 
 def help_provider_context(assignment: dict[str, Any]) -> dict[str, Any]:

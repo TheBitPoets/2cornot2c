@@ -118,6 +118,36 @@ def test_project_assignment_keeps_missing_sections_visible() -> None:
     assert all(section["rows"] for section in sections)
 
 
+def test_project_assignment_adds_attempt_summaries_to_report_panel() -> None:
+    assignment = {
+        **ASSIGNMENT,
+        "attempts": {
+            "count": 2,
+            "latest": {
+                "status": "passed",
+                "submitted_at": "2026-07-23T18:10:00+02:00",
+                "tests_passed": 2,
+                "tests_total": 2,
+            },
+            "best": {
+                "status": "passed",
+                "submitted_at": "2026-07-23T18:10:00+02:00",
+                "tests_passed": 2,
+                "tests_total": 2,
+            },
+            "final": None,
+        },
+    }
+
+    sections = student_lab_utui.project_assignment_sections(assignment)
+    report_rows = next(section["rows"] for section in sections if section["id"] == "report")
+
+    assert "Tentativi: 2" in report_rows
+    assert "Ultimo: passed, 2/2 test, 23/07/2026 18:10" in report_rows
+    assert "Migliore: passed, 2/2 test, 23/07/2026 18:10" in report_rows
+    assert "Definitivo: -" in report_rows
+
+
 def test_project_assignment_removes_terminal_control_characters() -> None:
     assignment = {
         "title": "Titolo\niniettato\x1b]52;c;SGVsbG8=\x07",
