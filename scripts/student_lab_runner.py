@@ -213,18 +213,23 @@ def redact_student_grading_report(report: dict[str, Any]) -> dict[str, Any]:
     }
     tests = report.get("tests")
     if isinstance(tests, list):
-        redacted["tests"] = [
-            {
-                **{
-                    key: value
-                    for key, value in test.items()
-                    if key not in {"expected_stdout", "stdin", "name", "message", "detail"}
-                },
-                "name": f"Test {index}",
+        redacted_tests = []
+        for index, test in enumerate(tests, start=1):
+            if not isinstance(test, dict):
+                continue
+            contains_teacher_details = "expected_stdout" in test or "stdin" in test
+            forbidden = {"expected_stdout", "stdin"}
+            if contains_teacher_details:
+                forbidden.update({"name", "message", "detail"})
+            public_test = {
+                key: value
+                for key, value in test.items()
+                if key not in forbidden
             }
-            for index, test in enumerate(tests, start=1)
-            if isinstance(test, dict)
-        ]
+            if contains_teacher_details:
+                public_test["name"] = f"Test {index}"
+            redacted_tests.append(public_test)
+        redacted["tests"] = redacted_tests
     return redacted
 
 
