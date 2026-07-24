@@ -91,7 +91,14 @@ def target(tmp_path, name: str) -> track_assignments.TrackingTarget:
     return track_assignments.TrackingTarget(student=name, repo=f"TheBitPoets/{name}", path=root)
 
 
-def write_assignment_record(tmp_path, activity_path, student, assignment_id: str) -> None:
+def write_assignment_record(
+    tmp_path,
+    activity_path,
+    student,
+    assignment_id: str,
+    *,
+    repo_ref: str | None = None,
+) -> None:
     """Persist one student assignment used by assignment-scoped report tests."""
 
     assignment_records.JsonAssignmentRecordStorage(tmp_path).write_assignment(
@@ -105,7 +112,7 @@ def write_assignment_record(tmp_path, activity_path, student, assignment_id: str
             targets=[
                 {
                     "student_id": "rossi-mario",
-                    "repo_ref": student.repo,
+                    "repo_ref": repo_ref or student.repo,
                     "path": str(student.path.relative_to(tmp_path)),
                 }
             ],
@@ -1321,9 +1328,20 @@ class StaticTrackingReportSource:
 
 def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
-    student = target(tmp_path, "rossi-mario")
+    student_path = tmp_path / "rossi-mario"
+    student = track_assignments.TrackingTarget(
+        student="rossi-mario",
+        repo=str(student_path),
+        path=student_path,
+    )
     assignment_id = "assignment-remote"
-    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    write_assignment_record(
+        tmp_path,
+        activity_path,
+        student,
+        assignment_id,
+        repo_ref="TheBitPoets/rossi-mario",
+    )
     remote_report = attempt_report(
         assignment_id,
         "attempt-remote",
@@ -1340,7 +1358,7 @@ def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) 
             provisional=True,
             provenance={
                 "source": "github_actions",
-                "repository": student.repo,
+                "repository": "TheBitPoets/rossi-mario",
                 "artifact_id": 12,
                 "workflow_run_id": 900,
                 "head_sha": "a" * 40,
@@ -1372,7 +1390,7 @@ def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) 
             activity_id="python-base-somma-001",
             assignment_id=assignment_id,
             student_id="rossi-mario",
-            repo_ref=student.repo,
+            repo_ref="TheBitPoets/rossi-mario",
         )
     ]
 
@@ -1387,7 +1405,7 @@ def test_track_assignments_remote_error_does_not_fall_back_to_local_report(tmp_p
         thebitlab_tracking_reports.TrackingReportResult(
             configured=True,
             selection="remote_error",
-            authority="verified_remote",
+            authority="remote_configured",
             provisional=True,
             error="artifact non disponibile",
         )
@@ -1404,10 +1422,11 @@ def test_track_assignments_remote_error_does_not_fall_back_to_local_report(tmp_p
     )
 
     row = index["students"][0]
-    assert row["submitted"] is False
+    assert row["submitted"] is None
+    assert row["status"] == "submission_unknown"
     assert row["grading"]["status"] == "not_graded"
     assert row["submission"]["report_selection"] == "remote_error"
-    assert row["submission"]["report_authority"] == "verified_remote"
+    assert row["submission"]["report_authority"] == "remote_configured"
     assert row["submission"]["report_error"] == "artifact non disponibile"
     assert row["submission"]["report_path"] is None
 
@@ -1431,7 +1450,8 @@ def test_track_assignments_malformed_configured_source_still_fails_closed(tmp_pa
     )
 
     row = index["students"][0]
-    assert row["submitted"] is False
+    assert row["submitted"] is None
+    assert row["status"] == "submission_unknown"
     assert row["submission"]["report_selection"] == "remote_error"
     assert row["submission"]["report_path"] is None
 

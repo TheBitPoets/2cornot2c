@@ -96,7 +96,7 @@ class ArtifactTrackingReportSource:
             return TrackingReportResult(
                 configured=True,
                 selection="remote_error",
-                authority="verified_remote",
+                authority="remote_configured",
                 provisional=not binding.final,
                 error=str(error),
             )
@@ -150,21 +150,23 @@ def _validate_request(
     request: TrackingReportRequest,
     binding: TrustedGradingBinding,
 ) -> None:
-    owner, repo = normalize_github_repo_ref(request.repo_ref)
     expected = (
         binding.activity_id,
         binding.assignment_id,
         binding.student_id,
-        binding.repo_ref.lower(),
     )
     actual = (
         request.activity_id,
         request.assignment_id,
         request.student_id,
-        f"{owner}/{repo}".lower(),
     )
     if actual != expected:
-        raise ValueError("Binding grading non coerente con assignment, studente o repository.")
+        raise ValueError("Binding grading non coerente con assignment o studente.")
+    request_repo = str(request.repo_ref or "").strip()
+    if request_repo:
+        owner, repo = normalize_github_repo_ref(request_repo)
+        if f"{owner}/{repo}".lower() != binding.repo_ref.lower():
+            raise ValueError("Binding grading non coerente con il repository.")
 
 
 def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding) -> None:  # noqa: ANN001

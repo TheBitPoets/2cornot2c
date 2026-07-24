@@ -289,8 +289,10 @@ del target iniziale o di dati controllati dallo studente.
 4. report locale legacy.
 
 Quando un binding remoto esiste ma acquisizione o validazione falliscono, il tracking non usa
-silenziosamente un report locale. La riga resta `not_graded` e registra `remote_error`, autorita ed errore
-di raccolta. Se non esiste alcun binding, il comportamento locale precedente rimane invariato.
+silenziosamente un report locale. La riga resta `not_graded`, usa lo stato `submission_unknown` invece di
+classificare lo studente come mancante e registra `remote_error`, autorita `remote_configured` ed errore di
+raccolta. `verified_remote` e riservato ai report acquisiti e validati. Se non esiste alcun binding, il
+comportamento locale precedente rimane invariato.
 
 Prima di accettare un report remoto, l'adapter verifica:
 

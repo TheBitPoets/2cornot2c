@@ -27,6 +27,7 @@ from scripts.thebitlab_technical_services import grading_dict_from_grade_activit
 
 
 NO_DUE_DATE_STATUS = "no_due_date"
+SUBMISSION_UNKNOWN_STATUS = "submission_unknown"
 EXCLUDED_SUBMISSION_DIRS = {".git", "__pycache__", ".pytest_cache", "node_modules", "bin", "build", "dist"}
 EXCLUDED_SUBMISSION_SUFFIXES = {".pyc", ".pyo", ".o", ".obj", ".exe", ".dll", ".so", ".dylib", ".class"}
 GITHUB_RE = re.compile(r"github\.com[:/](?P<owner>[^/\s]+)/(?P<repo>[^/\s]+?)(?:\.git)?/?$")
@@ -431,15 +432,15 @@ def selected_final_report(
     return report, safe_path, True
 
 
-def assignment_student_id(
+def assignment_target_record(
     target: TrackingTarget,
     assignment: dict[str, Any] | None,
     server_root: Path,
-) -> str:
-    """Resolve the stable student id recorded for a tracking target."""
+) -> dict[str, Any] | None:
+    """Return the assignment target matching one local tracking target."""
 
     if assignment is None:
-        return target.student
+        return None
     target_path = target.path.resolve()
     target_repo = clean_metadata(target.repo)
     for assignment_target in assignment.get("targets", []):
@@ -461,11 +462,40 @@ def assignment_student_id(
         if target_repo and clean_metadata(assignment_target.get("repo_ref")) == target_repo:
             matches_target = True
         if matches_target:
-            student_id = student_identity.target_student_id(assignment_target)
-            return student_id or target.student
+            return assignment_target
     raise ValueError(
         f"Il target {target.student} non appartiene all'assegnazione richiesta."
     )
+
+
+def assignment_student_id(
+    target: TrackingTarget,
+    assignment: dict[str, Any] | None,
+    server_root: Path,
+) -> str:
+    """Resolve the stable student id recorded for a tracking target."""
+
+    assignment_target = assignment_target_record(target, assignment, server_root)
+    if assignment_target is None:
+        return target.student
+    student_id = student_identity.target_student_id(assignment_target)
+    return student_id or target.student
+
+
+def assignment_repository_ref(
+    target: TrackingTarget,
+    assignment: dict[str, Any] | None,
+    server_root: Path,
+) -> str:
+    """Resolve the GitHub repository recorded by the teacher assignment."""
+
+    assignment_target = assignment_target_record(target, assignment, server_root)
+    if assignment_target is not None:
+        repo_ref = clean_metadata(assignment_target.get("repo_ref"))
+        if repo_ref:
+            return repo_ref
+    target_repo = clean_metadata(target.repo)
+    return target_repo if OWNER_REPO_RE.fullmatch(target_repo) else ""
 
 
 def track_assignments(
@@ -551,7 +581,11 @@ def track_assignments(
                             activity_id=activity_id,
                             assignment_id=assignment_id,
                             student_id=stable_student_id,
-                            repo_ref=target.repo,
+                            repo_ref=assignment_repository_ref(
+                                target,
+                                assignment,
+                                server_root,
+                            ),
                         )
                     )
                     if remote_report_result.configured:
@@ -624,14 +658,22 @@ def track_assignments(
             grading["provisional"] = report is not None and report_selection != "final"
         source_file_path = report_source_path(target, report.get("source")) if report else None
         source_path = relative_to_repo(source_file_path, target.path) if source_file_path is not None else None
-        submitted = report is not None
-        submitted_at = report.get("submitted_at") if report else None
-        status, late = submission_status(
-            submitted=submitted,
-            submitted_at=submitted_at,
-            due_at=normalized_due_at,
-            now=normalized_now,
+        remote_report_error = (
+            remote_report_result is not None
+            and remote_report_result.configured
+            and report is None
         )
+        submitted = None if remote_report_error else report is not None
+        submitted_at = report.get("submitted_at") if report else None
+        if remote_report_error:
+            status, late = SUBMISSION_UNKNOWN_STATUS, False
+        else:
+            status, late = submission_status(
+                submitted=bool(submitted),
+                submitted_at=submitted_at,
+                due_at=normalized_due_at,
+                now=normalized_now,
+            )
         students.append(
             {
                 "student": target.student,

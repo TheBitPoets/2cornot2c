@@ -171,7 +171,7 @@ def test_artifact_tracking_source_fails_closed_on_mismatched_report_or_provenanc
     assert result.configured is True
     assert result.report is None
     assert result.selection == "remote_error"
-    assert result.authority == "verified_remote"
+    assert result.authority == "remote_configured"
     assert result.provisional is False
     assert message in result.error
 
@@ -187,7 +187,23 @@ def test_artifact_tracking_source_normalizes_expected_acquisition_error() -> Non
     assert result.configured is True
     assert result.report is None
     assert result.selection == "remote_error"
+    assert result.authority == "remote_configured"
     assert result.error == "artifact non disponibile"
+
+
+def test_artifact_tracking_source_accepts_missing_runtime_repo_when_binding_is_trusted() -> None:
+    artifact_source = FakeArtifactSource(
+        AcquiredGradingReport(report=report(), provenance=provenance())
+    )
+    source = tracking_reports.ArtifactTrackingReportSource(
+        artifact_source,
+        [binding()],
+    )
+
+    result = source.resolve(request(repo_ref=""))
+
+    assert result.configured is True
+    assert result.authority == "verified_remote"
 
 
 def test_artifact_tracking_source_rejects_duplicate_or_invalid_bindings() -> None:
