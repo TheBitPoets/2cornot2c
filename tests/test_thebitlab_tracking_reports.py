@@ -53,6 +53,7 @@ def binding(**overrides) -> tracking_reports.TrustedGradingBinding:
         "artifact_name": "grading-assignment-001",
         "expected_student_head_sha": HEAD_SHA,
         "expected_workflow_head_sha": WORKFLOW_SHA,
+        "expected_submitted_at": "2026-10-20T08:00:00+02:00",
         "expected_workflow_run_id": 900,
         "final": False,
     }
@@ -186,6 +187,7 @@ def test_grader_report_is_accepted_after_workflow_metadata_enrichment(tmp_path) 
         assignment_id="assignment-001",
         student_id="rossi-mario",
         commit=HEAD_SHA,
+        submitted_at="2026-10-20T08:00:00+02:00",
     )
     source = tracking_reports.ArtifactTrackingReportSource(
         FakeArtifactSource(
@@ -222,6 +224,7 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
         ({"student_id": ""}, {}, "privo dell'identificativo studente"),
         ({"student_id": "bianchi-luca"}, {}, "studente diverso"),
         ({"commit": "b" * 40}, {}, "Commit"),
+        ({"submitted_at": "2026-10-21T08:00:00+02:00"}, {}, "Timestamp"),
         ({}, {"repository": "TheBitPoets/altro"}, "repository diverso"),
         ({}, {"head_sha": "c" * 40}, "SHA diverso"),
         ({}, {"workflow_run_id": 901}, "workflow run diversa"),
@@ -293,4 +296,9 @@ def test_artifact_tracking_source_rejects_duplicate_or_invalid_bindings() -> Non
         tracking_reports.ArtifactTrackingReportSource(
             artifact_source,
             [binding(expected_student_head_sha="abc")],
+        )
+    with pytest.raises(ValueError, match="fuso orario"):
+        tracking_reports.ArtifactTrackingReportSource(
+            artifact_source,
+            [binding(expected_submitted_at="2026-10-20T08:00:00")],
         )

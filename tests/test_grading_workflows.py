@@ -14,7 +14,8 @@ def test_trusted_grading_workflow_separates_student_and_workflow_commits() -> No
     assert '--activity "thebitlab/$ACTIVITY_PATH"' in source
     assert '--source "student-work/$SOURCE_PATH"' in source
     assert '--commit "$STUDENT_HEAD_SHA"' in source
-    assert '--submitted-at "$(date -u' in source
+    assert "submitted_at:" in source
+    assert '--submitted-at "$SUBMITTED_AT"' in source
     assert '--source-repo-path "$SOURCE_PATH"' in source
     assert '--activity-root "thebitlab"' in source
     assert '--source-root "student-work"' in source

@@ -278,7 +278,8 @@ scripts/thebitlab_tracking_reports.py
 
 `ArtifactTrackingReportSource` combina la porta `GradingArtifactSource` con binding forniti da una
 sorgente docente fidata. Ogni binding distingue repository e SHA dello studente da repository, SHA e run
-del workflow docente protetto, oltre a identificare assignment, studente e artifact. Questi dati descrivono una singola esecuzione: non fanno parte dell'activity,
+del workflow docente protetto, oltre a identificare assignment, studente, artifact e timestamp
+di consegna registrato. Questi dati descrivono una singola esecuzione: non fanno parte dell'activity,
 del target iniziale o di dati controllati dallo studente.
 
 `track_assignments()` accetta una `TrackingReportSource` opzionale. La precedenza e:
@@ -302,9 +303,9 @@ Prima di accettare un report remoto, l'adapter verifica:
 
 Il producer autorevole e `.github/workflows/grade-student-assignment.yml`, eseguito nel
 repository docente. Activity e test arrivano dal checkout docente immutabile; dal repository
-studente viene letto soltanto il sorgente allo SHA esatto. Il workflow registra come
-`submitted_at` il momento di ricezione da parte del grading docente e conserva nel report il
-path repository del sorgente.
+studente viene letto soltanto il sorgente allo SHA esatto. Il workflow riceve `submitted_at`
+dal binding docente anziche usare l'ora di avvio del grading, e conserva nel report il path
+repository del sorgente.
 
 Per repository studenti privati, il secret `THEBITLAB_STUDENT_REPO_TOKEN` deve contenere un
 token GitHub App o PAT di sola lettura limitato ai repository necessari. La credenziale viene

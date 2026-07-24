@@ -18,6 +18,9 @@ on:
       student_id:
         description: "Identificativo stabile dello studente"
         required: true
+      submitted_at:
+        description: "Timestamp ISO-8601 di consegna registrato dal docente"
+        required: true
       activity_id:
         description: "Identificativo stabile dell'attivita"
         required: true
@@ -56,6 +59,7 @@ jobs:
       STUDENT_HEAD_SHA: ${{ inputs.student_head_sha }}
       ASSIGNMENT_ID: ${{ inputs.assignment_id }}
       STUDENT_ID: ${{ inputs.student_id }}
+      SUBMITTED_AT: ${{ inputs.submitted_at }}
       ACTIVITY_ID: ${{ inputs.activity_id }}
       ACTIVITY_PATH: ${{ inputs.activity_path }}
       SOURCE_PATH: ${{ inputs.source_path }}
@@ -69,6 +73,7 @@ jobs:
           import os
           from pathlib import PurePosixPath
           import re
+          from datetime import datetime
 
           slug = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
           repo = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
@@ -81,6 +86,11 @@ jobs:
           for name in ("ASSIGNMENT_ID", "STUDENT_ID", "ACTIVITY_ID", "ARTIFACT_NAME"):
               if not slug.fullmatch(os.environ[name]):
                   raise SystemExit(f"{name.lower()} non valido")
+          submitted_at = datetime.fromisoformat(
+              os.environ["SUBMITTED_AT"].replace("Z", "+00:00")
+          )
+          if submitted_at.tzinfo is None:
+              raise SystemExit("submitted_at deve includere il fuso orario")
           for name in ("ACTIVITY_PATH", "SOURCE_PATH"):
               path = PurePosixPath(os.environ[name])
               if path.is_absolute() or ".." in path.parts or not path.parts:
@@ -115,7 +125,7 @@ jobs:
             --assignment-id "$ASSIGNMENT_ID" \
             --student-id "$STUDENT_ID" \
             --commit "$STUDENT_HEAD_SHA" \
-            --submitted-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --submitted-at "$SUBMITTED_AT" \
             --source-repo-path "$SOURCE_PATH" \
             --activity-root "thebitlab" \
             --source-root "student-work" \

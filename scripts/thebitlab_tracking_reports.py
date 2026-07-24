@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from datetime import datetime
 import re
 from typing import Any, Iterable, Protocol
 
@@ -38,6 +39,7 @@ class TrustedGradingBinding:
     artifact_name: str
     expected_student_head_sha: str
     expected_workflow_head_sha: str
+    expected_submitted_at: str
     expected_workflow_run_id: int
     final: bool = False
 
@@ -192,6 +194,10 @@ def _validated_binding(binding: TrustedGradingBinding) -> TrustedGradingBinding:
         raise ValueError("expected_student_head_sha deve contenere 40 caratteri esadecimali.")
     if not GIT_SHA_RE.fullmatch(workflow_head_sha):
         raise ValueError("expected_workflow_head_sha deve contenere 40 caratteri esadecimali.")
+    submitted_at = _required_timestamp(
+        binding.expected_submitted_at,
+        "expected_submitted_at",
+    )
     run_id = binding.expected_workflow_run_id
     if not isinstance(run_id, int) or isinstance(run_id, bool) or run_id <= 0:
         raise ValueError("expected_workflow_run_id non valido.")
@@ -206,6 +212,7 @@ def _validated_binding(binding: TrustedGradingBinding) -> TrustedGradingBinding:
         artifact_name=artifact_name,
         expected_student_head_sha=student_head_sha,
         expected_workflow_head_sha=workflow_head_sha,
+        expected_submitted_at=submitted_at,
         expected_workflow_run_id=run_id,
         final=binding.final,
     )
@@ -247,6 +254,8 @@ def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding
     commit = str(report.get("commit", "")).strip().lower()
     if commit != binding.expected_student_head_sha:
         raise ValueError("Commit del report remoto diverso dallo SHA autorizzato.")
+    if str(report.get("submitted_at", "") or "").strip() != binding.expected_submitted_at:
+        raise ValueError("Timestamp di consegna del report remoto diverso da quello autorizzato.")
     if provenance.repository.lower() != binding.workflow_repo_ref.lower():
         raise ValueError("Provenienza remota riferita a un repository diverso.")
     if provenance.head_sha.lower() != binding.expected_workflow_head_sha:
@@ -266,3 +275,14 @@ def _tracking_provenance(provenance, binding: TrustedGradingBinding) -> dict[str
         "artifact_repository": artifact_repository,
         **artifact_provenance,
     }
+
+
+def _required_timestamp(value: str, field_name: str) -> str:
+    clean = _required_text(value, field_name)
+    try:
+        parsed = datetime.fromisoformat(clean.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ValueError(f"{field_name} deve essere un timestamp ISO-8601 valido.") from error
+    if parsed.tzinfo is None:
+        raise ValueError(f"{field_name} deve includere il fuso orario.")
+    return clean
