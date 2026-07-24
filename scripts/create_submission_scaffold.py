@@ -431,9 +431,20 @@ def managed_assets_path(
     state_dir: Path | None = None,
 ) -> Path:
     """Return the teacher-side state path for one student scaffold."""
-    selected_state_dir = state_dir or target_dir.parent / MANAGED_ASSETS_STATE_DIR
+    target_root = target_dir.resolve()
+    selected_state_dir = (
+        state_dir.resolve()
+        if state_dir is not None
+        else target_root.parent / MANAGED_ASSETS_STATE_DIR
+    )
+    try:
+        selected_state_dir.relative_to(target_root)
+    except ValueError:
+        pass
+    else:
+        raise ValueError("La directory di stato docente deve essere esterna al repository studente.")
     target_key = hashlib.sha256(
-        str(target_dir.resolve()).encode("utf-8")
+        str(target_root).encode("utf-8")
     ).hexdigest()
     return selected_state_dir / target_key / f"{identifier}.json"
 

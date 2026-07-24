@@ -484,6 +484,30 @@ def test_create_scaffold_ignores_student_repository_manifest(tmp_path) -> None:
     assert forged_manifest.exists()
 
 
+def test_managed_asset_state_for_dot_target_is_outside_repository(tmp_path, monkeypatch) -> None:
+    repository = tmp_path / "student"
+    repository.mkdir()
+    monkeypatch.chdir(repository)
+
+    manifest_path = create_submission_scaffold.managed_assets_path(
+        create_submission_scaffold.DEFAULT_TARGET_DIR,
+        "python-base-somma-001",
+    )
+
+    assert manifest_path.parents[1] == repository.parent / create_submission_scaffold.MANAGED_ASSETS_STATE_DIR
+
+
+def test_managed_asset_state_rejects_directory_inside_repository(tmp_path) -> None:
+    repository = tmp_path / "student"
+
+    with pytest.raises(ValueError, match="esterna al repository"):
+        create_submission_scaffold.managed_assets_path(
+            repository,
+            "python-base-somma-001",
+            repository / ".state",
+        )
+
+
 def test_create_scaffold_does_not_follow_student_manifest_symlink(tmp_path) -> None:
     activity_path = write_activity(tmp_path, canonical_activity())
     target_dir = tmp_path / "student"
