@@ -3,6 +3,8 @@ from __future__ import annotations
 import copy
 import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -305,36 +307,56 @@ def test_reordered_collapsed_focus_snapshot_without_layout_mutation() -> None:
 
 
 @pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
-def test_explicit_utui_cli_smoke_uses_the_real_adapter(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    payload = {
-        "schema_version": "student_lab.v1",
-        "student_id": "rossi-mario",
-        "assignments": [ASSIGNMENT],
+def test_explicit_utui_cli_smoke_uses_a_real_demo_root(tmp_path: Path) -> None:
+    demo_root = tmp_path / "student-lab-utui"
+    environment = {
+        **os.environ,
+        "PYTHONUTF8": "1",
+        "THEBITLAB_REQUIRE_UTUI": "1",
     }
-    outputs: list[str] = []
-    inputs = iter(("1", "", "q"))
-    monkeypatch.setattr(
-        student_lab_cli,
-        "load_payload",
-        lambda root, student_id, now=None: payload,
+    setup = subprocess.run(
+        [
+            sys.executable,
+            str(student_lab_cli.PROJECT_ROOT / "scripts" / "student_lab_demo_setup.py"),
+            "--root",
+            str(demo_root),
+        ],
+        cwd=student_lab_cli.PROJECT_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+        check=False,
+    )
+    assert setup.returncode == 0, setup.stderr
+
+    cli = subprocess.run(
+        [
+            sys.executable,
+            str(student_lab_cli.PROJECT_ROOT / "scripts" / "student_lab_cli.py"),
+            "--root",
+            str(demo_root),
+            "--student-id",
+            "rossi-mario",
+            "--renderer",
+            "utui",
+            "--no-clear",
+            "--no-color",
+        ],
+        cwd=student_lab_cli.PROJECT_ROOT,
+        env=environment,
+        input="1\n\nq\n",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+        check=False,
     )
 
-    result = student_lab_cli.run_tui(
-        student_id="rossi-mario",
-        root=tmp_path,
-        input_fn=lambda _prompt: next(inputs),
-        print_fn=outputs.append,
-        clear=False,
-        use_color=False,
-        renderer="utui",
-        interactive=False,
-    )
-
-    assert result == 0
-    rendered = "\n".join(outputs)
+    assert cli.returncode == 0, cli.stderr
+    rendered = cli.stdout
+    assert "Demo somma in Python" in rendered
     assert "+ > Dettaglio consegna" in rendered
     assert "Navigazione: j = scorri giu" in rendered
     assert "Azioni: e = test/report" in rendered
