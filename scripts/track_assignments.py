@@ -450,15 +450,22 @@ def track_assignments(
     normalized_class_label = clean_metadata(class_label) or normalized_class_id
     normalized_github_team = clean_metadata(github_team) or clean_metadata(normalized_activity.get("github_team"))
     assignment = None
+    same_activity_assignments: list[dict[str, Any]] = []
     if assignment_id and server_root is None:
         raise ValueError("server_root obbligatorio quando assignment_id e specificato.")
     if assignment_id:
+        assignment_storage = assignment_records.JsonAssignmentRecordStorage(server_root)
         try:
-            assignment = assignment_records.JsonAssignmentRecordStorage(server_root).read_assignment(assignment_id)
+            assignment = assignment_storage.read_assignment(assignment_id)
         except FileNotFoundError as error:
             raise ValueError(f"Assegnazione non trovata: {assignment_id}") from error
         if clean_metadata(assignment.get("activity_id")) != activity_id:
             raise ValueError("L'assegnazione richiesta appartiene a un'altra activity.")
+        same_activity_assignments = [
+            candidate
+            for candidate in assignment_storage.list_assignments()
+            if clean_metadata(candidate.get("activity_id")) == activity_id
+        ]
 
     students: list[dict[str, Any]] = []
     for target in targets:
@@ -472,6 +479,7 @@ def track_assignments(
             legacy_help_path = student_help_service.help_log_path(target.path, activity_id)
             help_log_path = student_identity.confined_regular_file(target.path, legacy_help_path)
         safe_report_path = None
+        uses_assignment_report = False
         if assignment_id:
             assignment_report_path = (
                 report_path.parent
@@ -480,6 +488,7 @@ def track_assignments(
                 / "latest.json"
             )
             safe_report_path = student_identity.confined_regular_file(target.path, assignment_report_path)
+            uses_assignment_report = safe_report_path is not None
         if safe_report_path is None:
             safe_report_path = student_identity.confined_regular_file(target.path, report_path)
         report = load_report(safe_report_path) if safe_report_path is not None else None
@@ -489,6 +498,17 @@ def track_assignments(
             if assignment_id and report_assignment_id and report_assignment_id != assignment_id:
                 report = None
                 safe_report_path = None
+            elif assignment_id and not report_assignment_id and not uses_assignment_report:
+                matching_assignment_count = 0
+                for candidate in same_activity_assignments:
+                    try:
+                        assignment_student_id(target, candidate, server_root)
+                    except ValueError:
+                        continue
+                    matching_assignment_count += 1
+                if matching_assignment_count != 1:
+                    report = None
+                    safe_report_path = None
         relative_report_path = (
             relative_to_root_or_repo(safe_report_path, target.path, server_root)
             if safe_report_path is not None

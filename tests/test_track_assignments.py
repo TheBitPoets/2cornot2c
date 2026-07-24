@@ -876,6 +876,63 @@ def test_track_assignments_reads_assignment_specific_report(tmp_path) -> None:
     assert second_index["students"][0]["grading"]["status"] == "graded_passed"
 
 
+def test_track_assignments_rejects_unscoped_legacy_report_for_repeated_activity(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    first_id = "assignment-somma-primo"
+    second_id = "assignment-somma-secondo"
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    for assignment_id, assigned_at in (
+        (first_id, "2026-10-01T09:00:00+02:00"),
+        (second_id, "2026-10-12T09:00:00+02:00"),
+    ):
+        storage.write_assignment(
+            assignment_records.build_assignment_record(
+                assignment_id=assignment_id,
+                activity_id="python-base-somma-001",
+                activity_path=str(activity_path.relative_to(tmp_path)),
+                target_type="student",
+                assigned_at=assigned_at,
+                due_at="2026-10-21T08:00:00+02:00",
+                targets=[
+                    {
+                        "student_id": "rossi-mario",
+                        "repo_ref": student.repo,
+                        "path": str(student.path.relative_to(tmp_path)),
+                    }
+                ],
+            )
+        )
+    legacy_report = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    legacy_report.parent.mkdir(parents=True)
+    legacy_report.write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "status": "passed",
+                "passed": True,
+                "submitted_at": "2026-10-20T08:00:00+02:00",
+                "tests": [{"name": "somma", "status": "passed", "passed": True}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=first_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+    )
+
+    row = index["students"][0]
+    assert row["submitted"] is False
+    assert row["grading"]["status"] == "not_graded"
+    assert row["report_path"] is None
+
+
 def test_track_assignments_uses_canonical_legacy_identity_for_server_help(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "Mario Rossi")
