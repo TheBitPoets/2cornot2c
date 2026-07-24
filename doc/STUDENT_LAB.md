@@ -175,13 +175,29 @@ Per salvare il risultato nel path standard dello studente:
 python scripts/student_lab_runner.py --student-id rossi-mario --activity-id python-base-somma-001 --write-report
 ```
 
-Per usare la sandbox Docker minima, per ora sulle consegne C:
+Per usare la sandbox Docker minima sulle consegne C, Python, JavaScript/Node.js o SQL:
 
 ```powershell
 python scripts/student_lab_runner.py --student-id rossi-mario --activity-id c-base-somma-001 --backend docker --write-report
 ```
 
 Il backend Docker usa l'immagine `thebitlab-assignment-runner`. Se Docker non è installato o non è avviato, il runner produce un report `docker-not-found` invece di interrompere la TUI con uno stack trace.
+
+Il collaudo reale Node.js/SQL, comprensivo di report persistito e grading riletto dal servizio, si esegue dopo aver
+costruito l'immagine:
+
+```powershell
+docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .
+$env:THEBITLAB_RUN_DOCKER_TESTS = "1"
+python -m pytest -q tests/test_student_lab_runner_docker.py
+```
+
+Su Linux:
+
+```bash
+docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .
+THEBITLAB_RUN_DOCKER_TESTS=1 python -m pytest -q tests/test_student_lab_runner_docker.py
+```
 
 La TUI usa colori ANSI quando il terminale li supporta. Per disattivarli:
 
