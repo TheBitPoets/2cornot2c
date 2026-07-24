@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import heapq
 import json
 import os
 import re
@@ -18,6 +19,7 @@ from scripts.student_identity import confined_regular_file
 ATTEMPT_SELECTION_SCHEMA = "student_lab_attempt_selection.v1"
 SAFE_KEY_PATTERN = re.compile(r"[^a-z0-9]+")
 MAX_ATTEMPTS_LOADED = 500
+MAX_ATTEMPT_FILES_SCANNED = 5000
 MAX_ATTEMPT_HISTORY_BYTES = 20 * 1024 * 1024
 
 
@@ -190,12 +192,12 @@ def persist_attempt(
     except FileExistsError as error:
         raise ValueError(f"ID tentativo già esistente: {attempt_id}") from error
     assignment_latest_path = history_dir / "latest.json"
-    current_latest = (
-        track_assignments.load_report(assignment_latest_path)
-        if confined_regular_file(write_base, assignment_latest_path)
-        else None
-    )
     try:
+        current_latest = (
+            track_assignments.load_report(assignment_latest_path)
+            if confined_regular_file(write_base, assignment_latest_path)
+            else None
+        )
         if current_latest is None or attempt_sort_key(stored) >= attempt_sort_key(current_latest):
             write_json_atomic(assignment_latest_path, stored, base_dir=write_base)
     except BaseException:
@@ -256,8 +258,25 @@ def load_attempt_history(
         return {"attempts": [], "count": 0, "truncated": False}
     attempts: list[dict[str, Any]] = []
     total_bytes = 0
-    paths = sorted(attempts_dir.glob("attempt-*.json"), reverse=True)
-    for path in paths[:MAX_ATTEMPTS_LOADED]:
+    newest_names: list[str] = []
+    scanned_count = 0
+    scan_truncated = False
+    with os.scandir(attempts_dir) as entries:
+        for entry in entries:
+            if not entry.name.startswith("attempt-") or not entry.name.endswith(".json"):
+                continue
+            if not entry.is_file(follow_symlinks=False):
+                continue
+            scanned_count += 1
+            if scanned_count > MAX_ATTEMPT_FILES_SCANNED:
+                scan_truncated = True
+                break
+            if len(newest_names) < MAX_ATTEMPTS_LOADED:
+                heapq.heappush(newest_names, entry.name)
+            elif entry.name > newest_names[0]:
+                heapq.heapreplace(newest_names, entry.name)
+    paths = [attempts_dir / name for name in sorted(newest_names, reverse=True)]
+    for path in paths:
         safe_path = confined_regular_file(base_dir, path) if base_dir is not None else path
         if safe_path is None:
             continue
@@ -283,8 +302,8 @@ def load_attempt_history(
         attempts.append(report)
     return {
         "attempts": attempts,
-        "count": len(paths),
-        "truncated": len(paths) > len(attempts),
+        "count": scanned_count,
+        "truncated": scan_truncated or scanned_count > len(attempts),
     }
 
 

@@ -213,6 +213,32 @@ def test_persist_attempt_rolls_back_when_assignment_latest_fails(tmp_path, monke
     assert not report_path.exists()
 
 
+def test_persist_attempt_rolls_back_when_existing_latest_is_corrupt(tmp_path) -> None:
+    report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
+    history_latest = student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID) / "latest.json"
+    history_latest.parent.mkdir(parents=True)
+    history_latest.write_text("{", encoding="utf-8")
+
+    with pytest.raises(json.JSONDecodeError):
+        student_lab_attempts.persist_standard_report(
+            report_path,
+            ASSIGNMENT_ID,
+            report(
+                attempt_id="ignored",
+                passed=True,
+                tests_passed=1,
+                tests_total=1,
+                submitted_at="2026-10-18T10:00:00+02:00",
+            ),
+            base_dir=tmp_path,
+        )
+
+    history_dir = student_lab_attempts.assignment_history_dir(report_path, ASSIGNMENT_ID)
+    assert list((history_dir / "attempts").glob("attempt-*.json")) == []
+    assert history_latest.read_text(encoding="utf-8") == "{"
+    assert not report_path.exists()
+
+
 def test_persist_standard_report_rejects_symlinked_history_parent(tmp_path) -> None:
     report_path = tmp_path / "repo" / "reports" / ACTIVITY_ID / "latest.json"
     external = tmp_path / "external"
@@ -259,6 +285,28 @@ def test_load_attempts_caps_number_of_reports(tmp_path, monkeypatch) -> None:
     attempts = student_lab_attempts.load_attempts(report_path, ASSIGNMENT_ID, ACTIVITY_ID)
 
     assert [item["attempt_id"] for item in attempts] == ["attempt-2", "attempt-1"]
+
+
+def test_load_attempts_caps_directory_scan(tmp_path, monkeypatch) -> None:
+    report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
+    for index in range(4):
+        write_attempt(
+            report_path,
+            report(
+                attempt_id=f"attempt-{index}",
+                passed=True,
+                tests_passed=1,
+                tests_total=1,
+                submitted_at=f"2026-10-18T1{index}:00:00+02:00",
+            ),
+        )
+    monkeypatch.setattr(student_lab_attempts, "MAX_ATTEMPT_FILES_SCANNED", 2)
+
+    history = student_lab_attempts.load_attempt_history(report_path, ASSIGNMENT_ID, ACTIVITY_ID)
+
+    assert history["count"] == 3
+    assert history["truncated"] is True
+    assert len(history["attempts"]) == 2
 
 
 def test_final_attempt_remains_selected_after_a_new_attempt(tmp_path) -> None:
