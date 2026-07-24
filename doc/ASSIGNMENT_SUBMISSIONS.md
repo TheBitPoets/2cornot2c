@@ -612,7 +612,7 @@ Esempio ridotto:
 }
 ```
 
-Il registro legge report locali con questa priorita:
+Quando non esiste un binding remoto, il registro legge report locali con questa priorita:
 
 ```text
 reports/<activity_id>/assignments/<assignment-key>/final.json
@@ -620,9 +620,9 @@ reports/<activity_id>/assignments/<assignment-key>/latest.json
 reports/<activity_id>/latest.json
 ```
 
-`final.json` seleziona il tentativo immutabile autorevole; i due `latest.json` sono fallback provvisori scoped e
-legacy. In futuro la stessa struttura potra essere alimentata scaricando gli artifact GitHub Actions dei repository
-studenti.
+`final.json` seleziona il tentativo locale; i due `latest.json` sono fallback provvisori scoped e
+legacy. Quando esiste un binding remoto, il server acquisisce invece l'artifact GitHub Actions verificato
+e non usa questi fallback locali in caso di errore.
 
 ## Dashboard consegne docente
 
@@ -846,7 +846,7 @@ Per il flusso consegne restano aperti soprattutto:
 
 1. pagina GUI per creare, modificare, duplicare e assegnare activity a classi/team;
 2. gestione classi da GitHub Team, con sincronizzazione studenti;
-3. download artifact GitHub Actions e collegamento automatico al registro consegne;
+3. gestione dei binding GitHub Actions dalla dashboard e collaudo E2E con artifact reale;
 4. modalita studente e feedback assistito;
 5. supporto completo a consegne multi-file, fixture e directory di progetto;
 6. archiviazione e cancellazione sicura di registri, activity e assegnazioni;

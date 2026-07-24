@@ -87,7 +87,8 @@ Limiti noti:
 - applica limiti iniziali di memoria, CPU e numero processi, ma non ha ancora una policy configurabile per classe, linguaggio o difficolta dell'esercizio;
 - non gestisce ancora quote su file generati;
 - non isola in modo fine tutti i linguaggi futuri;
-- non integra ancora GitHub Actions dedicate alle consegne studenti;
+- integra un workflow GitHub Actions docente per il grading remoto, ma richiede ancora il collaudo
+  live e gli hardening tracciati in #515 e #516;
 - non sostituisce una futura policy completa di sicurezza.
 
 ## Regola di sicurezza
