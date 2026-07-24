@@ -521,6 +521,7 @@ def render_assignment_view(
     terminal_width: int | None = None,
     terminal_height: int | None = None,
     interaction: dict[str, Any] | None = None,
+    renderer_observer: Callable[[str], None] | None = None,
 ) -> str:
     """Render one assignment through the selected CLI presentation backend."""
 
@@ -537,9 +538,17 @@ def render_assignment_view(
         )
 
     if renderer == "legacy":
+        if renderer_observer is not None:
+            renderer_observer("legacy")
         return legacy()
     if renderer == "auto":
-        return student_lab_utui.render_assignment_or_fallback(
+        fallback_used = False
+
+        def mark_fallback() -> None:
+            nonlocal fallback_used
+            fallback_used = True
+
+        rendered = student_lab_utui.render_assignment_or_fallback(
             assignment,
             layout,
             width=width,
@@ -547,9 +556,13 @@ def render_assignment_view(
             color=use_color,
             fallback=legacy,
             interaction=interaction,
+            on_fallback=mark_fallback,
         )
+        if renderer_observer is not None:
+            renderer_observer("legacy" if fallback_used else "utui")
+        return rendered
     try:
-        return "\n".join(
+        rendered = "\n".join(
             student_lab_utui.render_assignment_frame(
                 assignment,
                 layout,
@@ -559,6 +572,9 @@ def render_assignment_view(
                 interaction=interaction,
             )
         )
+        if renderer_observer is not None:
+            renderer_observer("utui")
+        return rendered
     except Exception as error:
         raise ValueError(f"Renderer utui non riuscito: {error}") from error
 
@@ -1227,6 +1243,7 @@ def run_tui(
                 break
             if clear:
                 clear_screen()
+            rendered_with = ["utui" if selected_renderer == "auto" else selected_renderer]
             print_fn(
                 render_assignment_view(
                     assignment,
@@ -1237,19 +1254,23 @@ def run_tui(
                         "dashboard_offset": dashboard_offset,
                         "expand_sections": True,
                     },
+                    renderer_observer=lambda actual: rendered_with.__setitem__(0, actual),
                 )
             )
-            if selected_renderer != "legacy":
+            actual_renderer = rendered_with[0]
+            if selected_renderer == "auto" and actual_renderer == "legacy":
+                selected_renderer = "legacy"
+            if actual_renderer == "utui":
                 print_fn(render_utui_detail_commands())
             action = input_fn("\nDettaglio: ").strip().lower()
             if action in {"", "b", "back", "indietro"}:
                 break
             if action in {"q", "quit", "esci"}:
                 return 0
-            if selected_renderer != "legacy" and action in {"j", "down", "giu"}:
+            if actual_renderer == "utui" and action in {"j", "down", "giu"}:
                 dashboard_offset += 5
                 continue
-            if selected_renderer != "legacy" and action in {"k", "up", "su"}:
+            if actual_renderer == "utui" and action in {"k", "up", "su"}:
                 dashboard_offset = max(0, dashboard_offset - 5)
                 continue
             if action == "o":

@@ -155,6 +155,7 @@ def test_assignment_view_uses_auto_renderer_with_legacy_fallback(monkeypatch) ->
     assert captured["kwargs"]["width"] == 96
     assert captured["kwargs"]["height"] == 28
     assert captured["kwargs"]["interaction"] is None
+    assert callable(captured["kwargs"]["on_fallback"])
     assert "Dettaglio consegna" in captured["kwargs"]["fallback"]()
 
 
@@ -1160,6 +1161,44 @@ def test_run_tui_scrolls_the_utui_detail(monkeypatch, tmp_path) -> None:
         {"dashboard_offset": 10, "expand_sections": True},
         {"dashboard_offset": 5, "expand_sections": True},
     ]
+
+
+def test_run_tui_hides_utui_controls_after_auto_fallback(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "j", "", "q"])
+    render_attempts = []
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: payload,
+    )
+    monkeypatch.setattr(student_lab_cli.student_lab_utui, "is_available", lambda: True)
+
+    def fail_render(*args, **kwargs):
+        render_attempts.append(True)
+        raise RuntimeError("frame rotto")
+
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_utui,
+        "render_assignment_frame",
+        fail_render,
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        renderer="auto",
+        interactive=True,
+    )
+
+    assert result == 0
+    assert render_attempts == [True]
+    assert any("Dettaglio consegna" in output for output in outputs)
+    assert not any("Navigazione: j = scorri giu" in output for output in outputs)
 
 
 def test_run_tui_connects_utui_to_the_layout_editor(monkeypatch, tmp_path) -> None:

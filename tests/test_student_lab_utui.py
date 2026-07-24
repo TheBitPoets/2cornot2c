@@ -310,6 +310,7 @@ def test_render_falls_back_after_adapter_failure(monkeypatch: pytest.MonkeyPatch
 
     monkeypatch.setattr(student_lab_utui, "render_assignment_frame", fail)
 
+    fallback_calls = []
     rendered = student_lab_utui.render_assignment_or_fallback(
         ASSIGNMENT,
         student_lab_layout.DEFAULT_LAYOUT,
@@ -317,6 +318,8 @@ def test_render_falls_back_after_adapter_failure(monkeypatch: pytest.MonkeyPatch
         height=30,
         color=False,
         fallback=lambda: "legacy renderer",
+        on_fallback=lambda: fallback_calls.append(True),
     )
 
     assert rendered == "legacy renderer"
+    assert fallback_calls == [True]

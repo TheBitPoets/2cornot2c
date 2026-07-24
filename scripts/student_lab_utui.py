@@ -591,6 +591,7 @@ def render_assignment_or_fallback(
     color: bool,
     fallback: Callable[[], str],
     interaction: Mapping[str, Any] | None = None,
+    on_fallback: Callable[[], None] | None = None,
 ) -> str:
     """Render with uTUI and use the existing renderer after any adapter failure."""
 
@@ -606,4 +607,6 @@ def render_assignment_or_fallback(
             )
         )
     except Exception:
+        if on_fallback is not None:
+            on_fallback()
         return fallback()
