@@ -723,6 +723,50 @@ def test_run_docker_grading_enriches_stdout_report(monkeypatch, tmp_path, capsys
     assert report["source"] == "assignments/activity-001/main.c"
 
 
+def test_main_applies_authorized_roots_without_docker(monkeypatch, tmp_path) -> None:
+    teacher_root = tmp_path / "teacher"
+    student_root = tmp_path / "student"
+    outside = tmp_path / "outside"
+    teacher_root.mkdir()
+    student_root.mkdir()
+    outside.mkdir()
+    activity_path = teacher_root / "activity.json"
+    source_path = outside / "main.py"
+    activity_path.write_text(
+        json.dumps(
+            {
+                "id": "activity-001",
+                "linguaggio": "python",
+                "test_cases": [{"expected_stdout": "1\n"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_path.write_text("print(1)\n", encoding="utf-8")
+    monkeypatch.setattr(
+        grade_activity,
+        "parse_args",
+        lambda: argparse.Namespace(
+            activity=activity_path,
+            source=source_path,
+            activity_root=teacher_root,
+            source_root=student_root,
+            language="python",
+            timeout=5,
+            docker=False,
+            report=None,
+            assignment_id=None,
+            student_id=None,
+            commit=None,
+            submitted_at=None,
+            source_repo_path=None,
+        ),
+    )
+
+    with pytest.raises(ValueError, match="source deve trovarsi dentro"):
+        grade_activity.main()
+
+
 def test_docker_command_requires_paths_inside_workspace(tmp_path) -> None:
     outside = tmp_path.parent / "outside.c"
     outside.write_text("int main(void){return 0;}", encoding="utf-8")

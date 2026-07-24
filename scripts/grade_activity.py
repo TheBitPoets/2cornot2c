@@ -820,9 +820,19 @@ def main() -> int:
     if args.docker:
         return run_docker_grading(args)
 
-    activity = load_activity(args.activity)
+    activity_path = (
+        confined_regular_input(args.activity, args.activity_root, "activity")
+        if args.activity_root
+        else args.activity
+    )
+    source_path = (
+        confined_regular_input(args.source, args.source_root, "source")
+        if args.source_root
+        else args.source
+    )
+    activity = load_activity(activity_path)
     report = with_report_metadata(
-        grade_activity(activity, args.source, timeout_seconds=args.timeout, language=args.language),
+        grade_activity(activity, source_path, timeout_seconds=args.timeout, language=args.language),
         assignment_id=args.assignment_id,
         student_id=args.student_id,
         commit=args.commit,
