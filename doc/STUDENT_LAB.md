@@ -24,9 +24,24 @@ temporaneamente a un commit verificato:
 py -3.12 -m pip install -r requirements-utui.txt
 ```
 
-La prima integrazione espone soltanto l'adapter puro in `scripts/student_lab_utui.py` e i relativi
-snapshot. La CLI continua a usare il renderer testuale esistente: selezione del renderer, input e
-resize verranno collegati in una PR successiva, mantenendo il renderer storico come fallback.
+La CLI espone tre modalita di rendering per il dettaglio della consegna:
+
+- `--renderer auto` (predefinito): usa `utui` in un terminale interattivo quando l'extra e disponibile;
+  negli output non interattivi e in caso di errore usa il renderer testuale storico;
+- `--renderer utui`: richiede esplicitamente Python 3.11+ e `requirements-utui.txt`, segnalando
+  chiaramente un errore se il renderer non puo partire;
+- `--renderer legacy`: usa sempre il renderer testuale storico.
+
+La modalita si puo anche impostare con `THEBITLAB_TUI_RENDERER`. Il comando `l` conserva gli stessi
+controlli di layout con entrambi i renderer; con `utui`, resize, focus, ordine e pannelli compressi
+vengono proiettati direttamente nel frame a pannelli. Nel dettaglio `utui`, `j` scorre verso il basso
+e `k` verso l'alto; navigazione e azioni restano visibili sotto il frame anche nei terminali bassi.
+
+Per verificare esplicitamente il nuovo renderer:
+
+```powershell
+py -3.12 scripts/student_lab_cli.py --student-id rossi-mario --renderer utui
+```
 
 Le richieste di aiuto non invocano provider dentro la TUI. La TUI le invia al server locale della macchina docente,
 che ricarica consegna, policy e budget dai propri dati e usa Codex CLI installato localmente. Server e TUI devono
@@ -156,6 +171,13 @@ La TUI usa colori ANSI quando il terminale li supporta. Per disattivarli:
 python scripts/student_lab_cli.py --student-id rossi-mario --no-color
 ```
 
+Per confrontare il renderer a pannelli con quello storico senza cambiare dati:
+
+```powershell
+python scripts/student_lab_cli.py --student-id rossi-mario --renderer utui
+python scripts/student_lab_cli.py --student-id rossi-mario --renderer legacy
+```
+
 Comandi disponibili nella TUI minima:
 
 - numero della riga: apre il dettaglio della consegna;
@@ -168,6 +190,7 @@ Nel dettaglio della consegna i comandi sono divisi in:
 
 - azioni principali: `e` esegue il runner e salva il report, `a` registra una richiesta di aiuto, `o` apre la cartella workspace, `v` apre l'editor;
 - altri comandi: `h` mostra lo storico aiuti, `b` o invio torna alla lista, `q` esce.
+- navigazione `utui`: `j` scorre i pannelli verso il basso e `k` verso l'alto.
 
 Il comando `v` cerca un editor terminale nell'ordine `micro`, `nvim`, `vim`, `hx`, `nano` (e `notepad` su Windows).
 Per scegliere esplicitamente un editor, imposta `THEBITLAB_EDITOR`, per esempio `micro --clean` o `nvim`.

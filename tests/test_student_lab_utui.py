@@ -241,6 +241,48 @@ def test_panel_and_dashboard_offsets_reveal_later_rows_without_mutation() -> Non
 
 
 @pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
+def test_dashboard_offset_reveals_lower_panels_in_a_24_line_terminal() -> None:
+    first_page = student_lab_utui.render_assignment_frame(
+        ASSIGNMENT,
+        student_lab_layout.DEFAULT_LAYOUT,
+        width=120,
+        height=19,
+        color=False,
+        interaction={"dashboard_offset": 0},
+    )
+    lower_page = student_lab_utui.render_assignment_frame(
+        ASSIGNMENT,
+        student_lab_layout.DEFAULT_LAYOUT,
+        width=120,
+        height=19,
+        color=False,
+        interaction={"dashboard_offset": 10},
+    )
+
+    assert not any("Richieste aiuto" in line for line in first_page)
+    assert any("Richieste aiuto" in line for line in lower_page)
+
+
+@pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
+def test_expanded_sections_make_every_internal_row_globally_scrollable() -> None:
+    frame = student_lab_utui.render_assignment_frame(
+        ASSIGNMENT,
+        student_lab_layout.DEFAULT_LAYOUT,
+        width=120,
+        height=19,
+        color=False,
+        interaction={
+            "dashboard_offset": 40,
+            "expand_sections": True,
+        },
+    )
+    rendered = "\n".join(frame)
+
+    assert "Errore log:" in rendered
+    assert "q  Esci" in rendered
+
+
+@pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
 def test_reordered_collapsed_focus_snapshot_without_layout_mutation() -> None:
     layout = {
         **student_lab_layout.DEFAULT_LAYOUT,
@@ -268,6 +310,7 @@ def test_render_falls_back_after_adapter_failure(monkeypatch: pytest.MonkeyPatch
 
     monkeypatch.setattr(student_lab_utui, "render_assignment_frame", fail)
 
+    fallback_calls = []
     rendered = student_lab_utui.render_assignment_or_fallback(
         ASSIGNMENT,
         student_lab_layout.DEFAULT_LAYOUT,
@@ -275,6 +318,8 @@ def test_render_falls_back_after_adapter_failure(monkeypatch: pytest.MonkeyPatch
         height=30,
         color=False,
         fallback=lambda: "legacy renderer",
+        on_fallback=lambda: fallback_calls.append(True),
     )
 
     assert rendered == "legacy renderer"
+    assert fallback_calls == [True]

@@ -94,6 +94,7 @@ def test_main_reads_student_token_only_from_environment(monkeypatch, tmp_path) -
 
     assert student_lab_cli.main() == 0
     assert captured["server_token"] == "token-da-ambiente"
+    assert captured["renderer"] == "auto"
 
     monkeypatch.setattr(
         sys,
@@ -102,6 +103,76 @@ def test_main_reads_student_token_only_from_environment(monkeypatch, tmp_path) -
     )
     with pytest.raises(SystemExit):
         student_lab_cli.parse_args()
+
+
+def test_renderer_selection_preserves_legacy_for_non_interactive_output(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(student_lab_cli.student_lab_utui, "is_available", lambda: True)
+
+    assert student_lab_cli.resolve_tui_renderer("auto", interactive=False) == "legacy"
+    assert student_lab_cli.resolve_tui_renderer("auto", interactive=True) == "auto"
+    assert student_lab_cli.resolve_tui_renderer("legacy", interactive=True) == "legacy"
+
+
+def test_explicit_utui_requires_the_optional_renderer(monkeypatch) -> None:
+    monkeypatch.setattr(student_lab_cli.student_lab_utui, "is_available", lambda: False)
+
+    with pytest.raises(ValueError, match="requirements-utui.txt"):
+        student_lab_cli.resolve_tui_renderer("utui", interactive=True)
+
+
+def test_assignment_view_uses_auto_renderer_with_legacy_fallback(monkeypatch) -> None:
+    assignment = sample_assignment()
+    captured = {}
+
+    def fake_render(assignment, presentation, **kwargs):
+        captured.update(
+            assignment=assignment,
+            presentation=presentation,
+            kwargs=kwargs,
+        )
+        return "frame utui"
+
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_utui,
+        "render_assignment_or_fallback",
+        fake_render,
+    )
+
+    rendered = student_lab_cli.render_assignment_view(
+        assignment,
+        use_color=False,
+        layout=student_lab_cli.student_lab_layout.DEFAULT_LAYOUT,
+        renderer="auto",
+        terminal_width=96,
+        terminal_height=28,
+    )
+
+    assert rendered == "frame utui"
+    assert captured["assignment"] is assignment
+    assert captured["presentation"] == student_lab_cli.student_lab_layout.DEFAULT_LAYOUT
+    assert captured["kwargs"]["width"] == 96
+    assert captured["kwargs"]["height"] == 28
+    assert captured["kwargs"]["interaction"] is None
+    assert callable(captured["kwargs"]["on_fallback"])
+    assert "Dettaglio consegna" in captured["kwargs"]["fallback"]()
+
+
+def test_assignment_view_reports_explicit_utui_failures(monkeypatch) -> None:
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_utui,
+        "render_assignment_frame",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("frame rotto")),
+    )
+
+    with pytest.raises(ValueError, match="Renderer utui non riuscito: frame rotto"):
+        student_lab_cli.render_assignment_view(
+            sample_assignment(),
+            use_color=False,
+            layout=student_lab_cli.student_lab_layout.DEFAULT_LAYOUT,
+            renderer="utui",
+        )
 
 
 def sample_payload(assignments=None):
@@ -1019,6 +1090,160 @@ def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
     assert result == 0
     assert any("TheBitLab - lab studente" in output for output in outputs)
     assert any("Dettaglio consegna" in output for output in outputs)
+
+
+def test_run_tui_uses_utui_in_an_interactive_terminal(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "", "q"])
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: payload,
+    )
+    monkeypatch.setattr(student_lab_cli.student_lab_utui, "is_available", lambda: True)
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_utui,
+        "render_assignment_or_fallback",
+        lambda *args, **kwargs: "frame utui interattivo",
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        renderer="auto",
+        interactive=True,
+    )
+
+    assert result == 0
+    assert "frame utui interattivo" in outputs
+    assert any("Navigazione: j = scorri giu" in output for output in outputs)
+
+
+def test_run_tui_scrolls_the_utui_detail(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    inputs = iter(["1", "j", "j", "k", "", "q"])
+    interactions = []
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: payload,
+    )
+    monkeypatch.setattr(student_lab_cli.student_lab_utui, "is_available", lambda: True)
+
+    def fake_render(*args, **kwargs):
+        interactions.append(kwargs["interaction"].copy())
+        return "frame utui"
+
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_utui,
+        "render_assignment_or_fallback",
+        fake_render,
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=lambda output: None,
+        clear=False,
+        renderer="auto",
+        interactive=True,
+    )
+
+    assert result == 0
+    assert interactions == [
+        {"dashboard_offset": 0, "expand_sections": True},
+        {"dashboard_offset": 5, "expand_sections": True},
+        {"dashboard_offset": 10, "expand_sections": True},
+        {"dashboard_offset": 5, "expand_sections": True},
+    ]
+
+
+def test_run_tui_hides_utui_controls_after_auto_fallback(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "j", "", "q"])
+    render_attempts = []
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: payload,
+    )
+    monkeypatch.setattr(student_lab_cli.student_lab_utui, "is_available", lambda: True)
+
+    def fail_render(*args, **kwargs):
+        render_attempts.append(True)
+        raise RuntimeError("frame rotto")
+
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_utui,
+        "render_assignment_frame",
+        fail_render,
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        renderer="auto",
+        interactive=True,
+    )
+
+    assert result == 0
+    assert render_attempts == [True]
+    assert any("Dettaglio consegna" in output for output in outputs)
+    assert not any("Navigazione: j = scorri giu" in output for output in outputs)
+
+
+def test_run_tui_connects_utui_to_the_layout_editor(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    inputs = iter(["1", "l", "", "q"])
+    captured = {}
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: payload,
+    )
+    monkeypatch.setattr(student_lab_cli.student_lab_utui, "is_available", lambda: True)
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_utui,
+        "render_assignment_or_fallback",
+        lambda *args, **kwargs: "frame utui layout",
+    )
+
+    def fake_layout_editor(lines, **kwargs):
+        captured.update(lines=lines, kwargs=kwargs)
+        return student_lab_cli.student_lab_layout.DEFAULT_LAYOUT
+
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_layout,
+        "run_layout_editor",
+        fake_layout_editor,
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=lambda output: None,
+        clear=False,
+        renderer="auto",
+        interactive=True,
+    )
+
+    assert result == 0
+    renderer = captured["kwargs"]["layout_renderer"]
+    assert renderer is not None
+    assert (
+        renderer(student_lab_cli.student_lab_layout.DEFAULT_LAYOUT, 100, 30)
+        == "frame utui layout"
+    )
 
 
 def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> None:

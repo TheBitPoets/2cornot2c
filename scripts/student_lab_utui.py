@@ -75,7 +75,7 @@ class _DashboardFrame:
 def is_available() -> bool:
     """Return whether the optional renderer can be used."""
 
-    return UTUI_IMPORT_ERROR is None
+    return sys.version_info >= MINIMUM_PYTHON and UTUI_IMPORT_ERROR is None
 
 
 def _require_utui() -> None:
@@ -426,6 +426,7 @@ def _build_panel(
     focused: bool,
     collapsed: bool,
     scroll_offset: int,
+    expand_body: bool,
 ) -> tuple[Any, int]:
     title = SECTION_TITLES[identifier]
     rows: Sequence[Any] = ()
@@ -444,7 +445,11 @@ def _build_panel(
         )[: len(normalized_rows)]
     )
     body_limit = 7 if identifier == "assignment" else PANEL_BODY_ROWS
-    body_height = min(body_limit, len(normalized_rows))
+    body_height = (
+        len(normalized_rows)
+        if expand_body
+        else min(body_limit, len(normalized_rows))
+    )
     height = 3 if collapsed else max(3, body_height + 2)
     labels = [
         Label(row, style=style)
@@ -509,6 +514,9 @@ def build_dashboard(
         or dashboard_offset < 0
     ):
         raise ValueError("dashboard_offset deve essere un intero non negativo")
+    expand_sections = transient.get("expand_sections", False)
+    if not isinstance(expand_sections, bool):
+        raise ValueError("expand_sections deve essere booleano")
     entries = [
         _build_panel(
             identifier,
@@ -516,6 +524,7 @@ def build_dashboard(
             focused=normalized["focus"] == identifier,
             collapsed=identifier in normalized["collapsed"],
             scroll_offset=section_offsets.get(identifier, 0),
+            expand_body=expand_sections,
         )
         for identifier in order
     ]
@@ -582,6 +591,7 @@ def render_assignment_or_fallback(
     color: bool,
     fallback: Callable[[], str],
     interaction: Mapping[str, Any] | None = None,
+    on_fallback: Callable[[], None] | None = None,
 ) -> str:
     """Render with uTUI and use the existing renderer after any adapter failure."""
 
@@ -597,4 +607,6 @@ def render_assignment_or_fallback(
             )
         )
     except Exception:
+        if on_fallback is not None:
+            on_fallback()
         return fallback()

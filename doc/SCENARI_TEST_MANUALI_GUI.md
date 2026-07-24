@@ -550,11 +550,12 @@ Esci, apri la dashboard studente, seleziona <code>rossi-mario</code>, clicca <co
 1. Avvia la TUI:
 
    ```powershell
-   python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario
+   python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario --renderer auto
    ```
 
 2. Seleziona la consegna `Demo somma in Python`.
-3. Esegui il runner con il comando indicato dalla TUI.
+3. In un terminale basso, usa `j` e `k` e verifica che i pannelli fuori dalla prima viewport siano
+   raggiungibili mentre la legenda dei comandi resta visibile; esegui quindi il runner con `e`.
 4. Esci dalla TUI.
 5. Apri `http://localhost:8765/tools/student_dashboard.html`.
 6. Seleziona `rossi-mario`.
@@ -564,6 +565,8 @@ Risultato atteso:
 - La dashboard studente vede lo stesso report prodotto dalla TUI.
 - Workspace, report, test e ultimo tentativo sono coerenti.
 - Le richieste di aiuto registrate dalla TUI compaiono nella dashboard.
+- Con Python 3.11+ e `requirements-utui.txt` installato, il dettaglio usa il frame `utui`;
+  senza l'extra, `auto` conserva il dettaglio legacy e lo scenario resta eseguibile.
 
 ## Scenario 7 - Comandi TUI studente
 
