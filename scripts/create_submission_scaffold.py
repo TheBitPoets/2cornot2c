@@ -645,6 +645,7 @@ def copy_student_assets(
     destination: Path,
     asset_plan: list[tuple[Path, Path]],
     managed_assets: dict[Path, str],
+    source_name: str,
     overwrite_source: bool,
 ) -> list[Path]:
     """Copy a validated set of student-visible assets into the scaffold."""
@@ -655,7 +656,8 @@ def copy_student_assets(
             target_rel,
             create_parents=True,
         )
-        if target_path.exists() and not overwrite_source:
+        force_target = overwrite_source and target_rel == Path(source_name)
+        if target_path.exists() and not force_target:
             managed_digest = managed_assets.get(target_rel)
             if (
                 managed_digest is None
@@ -764,6 +766,7 @@ def create_scaffold(
         destination=destination,
         asset_plan=asset_plan,
         managed_assets=managed_assets,
+        source_name=source_name,
         overwrite_source=overwrite_source,
     )
     for copied_path in copied_assets:

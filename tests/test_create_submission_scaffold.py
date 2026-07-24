@@ -774,6 +774,41 @@ def test_create_scaffold_overwrite_keeps_teacher_starter_asset(tmp_path) -> None
     assert (destination / "main.py").read_text(encoding="utf-8") == "print('starter docente')\n"
 
 
+def test_create_scaffold_overwrite_source_preserves_modified_non_source_asset(tmp_path) -> None:
+    (tmp_path / "examples").mkdir()
+    teacher_example = tmp_path / "examples" / "example.txt"
+    teacher_example.write_text("esempio docente v1\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "example",
+                "path": "examples/example.txt",
+                "target_path": "example.txt",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    student_example = destination / "example.txt"
+    student_example.write_text("annotazioni studente\n", encoding="utf-8")
+    teacher_example.write_text("esempio docente v2\n", encoding="utf-8")
+
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+        overwrite=True,
+        overwrite_source=True,
+    )
+
+    assert student_example.read_text(encoding="utf-8") == "annotazioni studente\n"
+    assert "Scrivi qui" in (destination / "main.py").read_text(encoding="utf-8")
+
+
 def test_create_scaffold_supports_custom_source_name_and_language(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
 
