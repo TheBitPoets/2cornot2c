@@ -840,6 +840,18 @@ def run_bounded_process(
     output = bytearray()
     output_exceeded = threading.Event()
 
+    def write_stdin() -> None:
+        assert process.stdin is not None
+        try:
+            process.stdin.write(input_text.encode("utf-8"))
+        except BrokenPipeError:
+            pass
+        finally:
+            try:
+                process.stdin.close()
+            except BrokenPipeError:
+                pass
+
     def read_stdout() -> None:
         assert process.stdout is not None
         while chunk := process.stdout.read(65536):
@@ -851,20 +863,17 @@ def run_bounded_process(
                 process.kill()
                 break
 
+    writer = threading.Thread(target=write_stdin, daemon=True)
     reader = threading.Thread(target=read_stdout, daemon=True)
+    writer.start()
     reader.start()
     try:
-        assert process.stdin is not None
-        try:
-            process.stdin.write(input_text.encode("utf-8"))
-            process.stdin.close()
-        except BrokenPipeError:
-            pass
         try:
             returncode = process.wait(timeout=timeout)
         except subprocess.TimeoutExpired as error:
             process.kill()
             process.wait()
+            writer.join()
             reader.join()
             raise subprocess.TimeoutExpired(
                 command,
@@ -876,6 +885,7 @@ def run_bounded_process(
         if process.poll() is None:
             process.kill()
             process.wait()
+        writer.join()
         reader.join()
 
     if output_exceeded.is_set():

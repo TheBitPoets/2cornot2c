@@ -5,6 +5,7 @@ import argparse
 import shutil
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -638,6 +639,19 @@ def test_run_bounded_process_discards_stderr() -> None:
     assert result.returncode == 0
     assert result.stdout.strip() == "{}"
     assert result.stderr == ""
+
+
+def test_run_bounded_process_times_out_while_stdin_is_blocked() -> None:
+    started = time.monotonic()
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        grade_activity.run_bounded_process(
+            [sys.executable, "-c", "import time; time.sleep(10)"],
+            input_text="x" * (8 * 1024 * 1024),
+            timeout=0.1,
+        )
+
+    assert time.monotonic() - started < 2
 
 
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:
