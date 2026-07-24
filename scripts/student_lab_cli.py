@@ -22,13 +22,20 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import student_help_service, student_lab_layout, student_lab_runner, student_lab_service
+from scripts import (
+    student_help_service,
+    student_lab_layout,
+    student_lab_runner,
+    student_lab_service,
+    student_lab_utui,
+)
 
 
 InputFn = Callable[[str], str]
 PrintFn = Callable[[str], None]
 DEFAULT_SERVER_URL = "http://127.0.0.1:8765"
 HELP_REQUEST_TIMEOUT_SECONDS = 150
+TUI_RENDERERS = {"auto", "legacy", "utui"}
 
 
 class StudentHelpRequestPendingError(ValueError):
@@ -364,6 +371,7 @@ def render_assignment_detail(
     assignment: dict[str, Any],
     use_color: bool = False,
     layout: dict[str, Any] | None = None,
+    terminal_width: int | None = None,
 ) -> str:
     """Render the detail page for one lab assignment."""
 
@@ -471,8 +479,85 @@ def render_assignment_detail(
         "  q  Esci",
     ]
     if layout is not None:
-        return student_lab_layout.render_layout(lines, layout, use_color=use_color)
+        return student_lab_layout.render_layout(
+            lines,
+            layout,
+            terminal_width=terminal_width,
+            use_color=use_color,
+        )
     return "\n".join(lines)
+
+
+def resolve_tui_renderer(
+    requested: str,
+    *,
+    interactive: bool | None = None,
+) -> str:
+    """Resolve the requested renderer without changing non-interactive output."""
+
+    renderer = clean_text(requested, "auto").lower()
+    if renderer not in TUI_RENDERERS:
+        choices = ", ".join(sorted(TUI_RENDERERS))
+        raise ValueError(f"Renderer TUI non supportato: {renderer}. Valori: {choices}.")
+    if renderer == "legacy":
+        return "legacy"
+    if renderer == "utui":
+        if not student_lab_utui.is_available():
+            raise ValueError(
+                "Renderer utui non disponibile. Usa Python 3.11 o successivo e "
+                "installa requirements-utui.txt, oppure scegli --renderer legacy."
+            )
+        return "utui"
+    terminal_interactive = sys.stdout.isatty() if interactive is None else interactive
+    return "auto" if terminal_interactive and student_lab_utui.is_available() else "legacy"
+
+
+def render_assignment_view(
+    assignment: dict[str, Any],
+    *,
+    use_color: bool,
+    layout: dict[str, Any],
+    renderer: str,
+    terminal_width: int | None = None,
+    terminal_height: int | None = None,
+) -> str:
+    """Render one assignment through the selected CLI presentation backend."""
+
+    terminal_size = shutil.get_terminal_size((120, 40))
+    width = terminal_width or terminal_size.columns
+    height = terminal_height or max(8, terminal_size.lines - 2)
+
+    def legacy() -> str:
+        return render_assignment_detail(
+            assignment,
+            use_color=use_color,
+            layout=layout,
+            terminal_width=width,
+        )
+
+    if renderer == "legacy":
+        return legacy()
+    if renderer == "auto":
+        return student_lab_utui.render_assignment_or_fallback(
+            assignment,
+            layout,
+            width=width,
+            height=height,
+            color=use_color,
+            fallback=legacy,
+        )
+    try:
+        return "\n".join(
+            student_lab_utui.render_assignment_frame(
+                assignment,
+                layout,
+                width=width,
+                height=height,
+                color=use_color,
+            )
+        )
+    except Exception as error:
+        raise ValueError(f"Renderer utui non riuscito: {error}") from error
 
 
 def runner_result_message(report: dict[str, Any], report_path: Path, use_color: bool = False) -> str:
@@ -1075,9 +1160,12 @@ def run_tui(
     backend: str = "local",
     timeout_seconds: int = student_lab_runner.DEFAULT_TIMEOUT_SECONDS,
     docker_image: str = student_lab_runner.DEFAULT_DOCKER_IMAGE,
+    renderer: str = "auto",
+    interactive: bool | None = None,
 ) -> int:
     """Run the interactive student lab loop."""
 
+    selected_renderer = resolve_tui_renderer(renderer, interactive=interactive)
     payload = load_current_payload(
         root=root,
         student_id=student_id,
@@ -1124,10 +1212,11 @@ def run_tui(
             if clear:
                 clear_screen()
             print_fn(
-                render_assignment_detail(
+                render_assignment_view(
                     assignment,
                     use_color=use_color,
                     layout=student_lab_layout.load_layout(root),
+                    renderer=selected_renderer,
                 )
             )
             action = input_fn("\nDettaglio: ").strip().lower()
@@ -1153,12 +1242,23 @@ def run_tui(
                 input_fn("Premi invio per continuare...")
                 continue
             if action in {"l", "layout"}:
+                layout_renderer = None
+                if selected_renderer != "legacy":
+                    layout_renderer = lambda current, width, height: render_assignment_view(
+                        assignment,
+                        use_color=use_color,
+                        layout=current,
+                        renderer=selected_renderer,
+                        terminal_width=width,
+                        terminal_height=height,
+                    )
                 student_lab_layout.run_layout_editor(
                     render_assignment_detail(assignment, use_color=use_color).splitlines(),
                     root=root,
                     use_color=use_color,
                     clear=clear,
                     print_fn=print_fn,
+                    layout_renderer=layout_renderer,
                 )
                 continue
             if action == "a":
@@ -1267,6 +1367,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-clear", action="store_true", help="Non pulire lo schermo tra una vista e l'altra.")
     parser.add_argument("--no-color", action="store_true", help="Disabilita colori ANSI.")
     parser.add_argument(
+        "--renderer",
+        choices=sorted(TUI_RENDERERS),
+        default=os.environ.get("THEBITLAB_TUI_RENDERER", "auto"),
+        help="Renderer dettaglio: auto usa utui se disponibile, legacy conserva quello storico.",
+    )
+    parser.add_argument(
         "--backend",
         choices=sorted(student_lab_runner.RUNNER_BACKENDS),
         default="local",
@@ -1313,6 +1419,7 @@ def main() -> int:
             backend=args.backend,
             timeout_seconds=args.timeout,
             docker_image=args.docker_image,
+            renderer=args.renderer,
         )
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)

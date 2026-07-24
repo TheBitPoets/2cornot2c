@@ -75,7 +75,7 @@ class _DashboardFrame:
 def is_available() -> bool:
     """Return whether the optional renderer can be used."""
 
-    return UTUI_IMPORT_ERROR is None
+    return sys.version_info >= MINIMUM_PYTHON and UTUI_IMPORT_ERROR is None
 
 
 def _require_utui() -> None:
