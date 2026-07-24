@@ -1036,7 +1036,7 @@ def test_help_log_staging_syncs_transaction_and_rename_directories(tmp_path, mon
     assert log_path.is_file()
 
 
-def test_sync_file_tree_flushes_regular_files_on_windows(tmp_path, monkeypatch) -> None:
+def test_sync_file_tree_flushes_regular_files(tmp_path, monkeypatch) -> None:
     root = tmp_path / "rollback"
     first = root / "student-a" / "events.json"
     second = root / "student-b" / "events.json"
@@ -1045,7 +1045,6 @@ def test_sync_file_tree_flushes_regular_files_on_windows(tmp_path, monkeypatch) 
     first.write_text("{}\n", encoding="utf-8")
     second.write_text("{}\n", encoding="utf-8")
     flushed = []
-    monkeypatch.setattr(course_board_server.os, "name", "nt")
     monkeypatch.setattr(course_board_server.os, "fsync", lambda descriptor: flushed.append(descriptor))
 
     course_board_server.sync_file_tree(root)
