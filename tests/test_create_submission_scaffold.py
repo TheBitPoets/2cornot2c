@@ -231,7 +231,10 @@ def test_create_scaffold_rejects_missing_student_asset(tmp_path) -> None:
     assert not (tmp_path / "assignments").exists()
 
 
-@pytest.mark.parametrize("reserved_target", ["activity.json", "README.md"])
+@pytest.mark.parametrize(
+    "reserved_target",
+    ["activity.json", "ACTIVITY.JSON", "README.md", "readme.md", "README.md."],
+)
 def test_create_scaffold_rejects_asset_target_reserved_for_scaffold(
     tmp_path,
     reserved_target,
@@ -1011,7 +1014,10 @@ def test_create_scaffold_rejects_empty_source_name(tmp_path) -> None:
         raise AssertionError("create_scaffold should reject empty source_name")
 
 
-@pytest.mark.parametrize("source_name", ["activity.json", "README.md"])
+@pytest.mark.parametrize(
+    "source_name",
+    ["activity.json", "ACTIVITY.JSON", "README.md", "readme.md", "README.md."],
+)
 def test_create_scaffold_rejects_reserved_source_name(tmp_path, source_name) -> None:
     activity_path = write_activity(tmp_path)
 
@@ -1021,3 +1027,27 @@ def test_create_scaffold_rejects_reserved_source_name(tmp_path, source_name) -> 
             target_dir=tmp_path / "student",
             source_name=source_name,
         )
+
+
+def test_create_scaffold_canonicalizes_source_asset_case_alias(tmp_path) -> None:
+    (tmp_path / "starter").mkdir()
+    (tmp_path / "starter" / "main.py").write_text("print('docente')\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "starter",
+                "path": "starter/main.py",
+                "target_path": "MAIN.PY",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+
+    assert (destination / "main.py").read_text(encoding="utf-8") == "print('docente')\n"
+    assert "main.py" in {path.name for path in destination.iterdir()}

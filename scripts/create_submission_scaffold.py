@@ -128,6 +128,17 @@ STUDENT_ACTIVITY_FIELDS = {
 }
 
 
+def portable_path_key(path: Path) -> tuple[str, ...]:
+    """Return a conservative path identity compatible with Windows."""
+    return tuple(part.rstrip(" .").casefold() for part in path.parts)
+
+
+def is_reserved_scaffold_target(path: Path) -> bool:
+    """Return whether a path aliases a scaffold-owned top-level file."""
+    key = portable_path_key(path)
+    return any(key == portable_path_key(Path(value)) for value in RESERVED_SCAFFOLD_TARGETS)
+
+
 def is_safe_slug(value: str) -> bool:
     """Return whether a value is safe for activity ids and artifact names."""
     return bool(re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", value))
@@ -222,7 +233,7 @@ def validate_source_name(source_name: str) -> str:
         or not re.fullmatch(r"[A-Za-z0-9_.-]+", value)
     ):
         raise ValueError("source_name deve essere un nome file semplice, per esempio main.c.")
-    if value in RESERVED_SCAFFOLD_TARGETS:
+    if is_reserved_scaffold_target(Path(value)):
         raise ValueError(f"source_name riservato allo scaffold: {value}.")
     return value
 
@@ -231,7 +242,10 @@ def validate_relative_path(value: Any, field_name: str) -> Path:
     """Validate a relative asset path used inside an activity bundle or scaffold."""
     if not validate_activity.is_safe_relative_path(value):
         raise ValueError(f"{field_name} deve essere un path relativo sicuro.")
-    return Path(str(value))
+    path = Path(str(value))
+    if any(not part.rstrip(" .") for part in path.parts):
+        raise ValueError(f"{field_name} contiene un componente non portabile.")
+    return path
 
 
 def validate_thebitlab_ref(value: str) -> str:
@@ -406,14 +420,19 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
     planned_assets: list[tuple[Path, Path]] = []
     activity_root = activity_path.parent
     activity_root_resolved = activity_root.resolve()
+    target_keys: set[tuple[str, ...]] = set()
     for index, asset in enumerate(student_assets(activity)):
         source_rel = validate_relative_path(asset.get("path"), f"assets[{index}].path")
         target_rel = validate_relative_path(
             asset.get("target_path", asset.get("path")),
             f"assets[{index}].target_path",
         )
-        if target_rel.as_posix() in RESERVED_SCAFFOLD_TARGETS:
+        if is_reserved_scaffold_target(target_rel):
             raise ValueError(f"Target asset riservato allo scaffold: {target_rel}.")
+        target_key = portable_path_key(target_rel)
+        if target_key in target_keys:
+            raise ValueError(f"Target asset duplicato o equivalente: {target_rel}.")
+        target_keys.add(target_key)
         source_path = activity_root / source_rel
         current = activity_root
         for part in source_rel.parts:
@@ -577,13 +596,13 @@ def remove_stale_managed_assets(
     *,
     destination: Path,
     managed: dict[Path, str],
-    current_targets: set[Path],
+    current_target_keys: set[tuple[str, ...]],
     protected_source: str,
 ) -> dict[Path, str]:
     """Remove only unchanged managed assets that are no longer public."""
     retained: dict[Path, str] = {}
     for target_rel, expected_digest in managed.items():
-        if target_rel in current_targets:
+        if portable_path_key(target_rel) in current_target_keys:
             retained[target_rel] = expected_digest
             continue
         if target_rel == Path(protected_source):
@@ -661,9 +680,19 @@ def copy_student_assets(
             target_rel,
             create_parents=True,
         )
-        force_target = overwrite_source and target_rel == Path(source_name)
+        force_target = (
+            overwrite_source
+            and portable_path_key(target_rel) == portable_path_key(Path(source_name))
+        )
         if target_path.exists() and not force_target:
-            managed_digest = managed_assets.get(target_rel)
+            managed_digest = next(
+                (
+                    digest
+                    for managed_target, digest in managed_assets.items()
+                    if portable_path_key(managed_target) == portable_path_key(target_rel)
+                ),
+                None,
+            )
             if (
                 managed_digest is None
                 or target_path.is_symlink()
@@ -739,7 +768,20 @@ def create_scaffold(
     destination = scaffold_dir(target_dir, identifier)
     manifest_path = managed_assets_path(target_dir, identifier, state_dir)
     asset_plan = student_asset_copy_plan(activity_path, activity)
+    asset_plan = [
+        (
+            source_path,
+            Path(source_name)
+            if portable_path_key(target_rel) == portable_path_key(Path(source_name))
+            else target_rel,
+        )
+        for source_path, target_rel in asset_plan
+    ]
     current_asset_targets = {target_rel for _, target_rel in asset_plan}
+    current_asset_target_keys = {
+        portable_path_key(target_rel)
+        for target_rel in current_asset_targets
+    }
 
     prepare_scaffold_destination(target_dir, destination)
     has_existing_scaffold = any(destination.iterdir())
@@ -758,7 +800,7 @@ def create_scaffold(
         managed_assets = remove_stale_managed_assets(
             destination=destination,
             managed=managed_assets,
-            current_targets=current_asset_targets,
+            current_target_keys=current_asset_target_keys,
             protected_source=source_name,
         )
     atomic_write_text(
@@ -784,7 +826,7 @@ def create_scaffold(
         Path(source_name),
         create_parents=True,
     )
-    source_is_managed_asset = Path(source_name) in current_asset_targets
+    source_is_managed_asset = portable_path_key(Path(source_name)) in current_asset_target_keys
     if not source_is_managed_asset and (overwrite_source or not source_path.exists()):
         atomic_write_text(
             destination,
