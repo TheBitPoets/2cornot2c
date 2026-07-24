@@ -9,7 +9,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from scripts import assignment_records, assign_activity, create_submission_scaffold, student_help_service
+from scripts import (
+    assignment_records,
+    assign_activity,
+    create_submission_scaffold,
+    student_help_service,
+    thebitlab_tracking_reports,
+)
 from scripts import student_identity
 from scripts.thebitlab_contracts import (
     legacy_activity_validation_payload,
@@ -474,6 +480,7 @@ def track_assignments(
     github_team: str | None = None,
     assignment_id: str | None = None,
     server_root: Path | None = None,
+    report_source: thebitlab_tracking_reports.TrackingReportSource | None = None,
 ) -> dict[str, Any]:
     """Build a teacher-facing tracking index for one activity."""
     activity = create_submission_scaffold.load_activity(activity_path)
@@ -523,6 +530,7 @@ def track_assignments(
         uses_assignment_report = False
         report = None
         report_selection = None
+        remote_report_result = None
         if assignment_id:
             report, safe_report_path, final_selection_exists = selected_final_report(
                 target,
@@ -537,15 +545,34 @@ def track_assignments(
                 uses_assignment_report = True
                 report_selection = "invalid_final"
             else:
-                assignment_report_path = (
-                    report_path.parent
-                    / "assignments"
-                    / assignment_records.assignment_storage_key(assignment_id)
-                    / "latest.json"
-                )
-                safe_report_path = student_identity.confined_regular_file(target.path, assignment_report_path)
-                uses_assignment_report = safe_report_path is not None
-        if report is None and report_selection != "invalid_final":
+                if report_source is not None:
+                    remote_report_result = report_source.resolve(
+                        thebitlab_tracking_reports.TrackingReportRequest(
+                            activity_id=activity_id,
+                            assignment_id=assignment_id,
+                            student_id=stable_student_id,
+                            repo_ref=target.repo,
+                        )
+                    )
+                    if remote_report_result.configured:
+                        uses_assignment_report = True
+                        report = remote_report_result.report
+                        report_selection = remote_report_result.selection or (
+                            "github_actions_artifact" if report is not None else "remote_error"
+                        )
+                if remote_report_result is None or not remote_report_result.configured:
+                    assignment_report_path = (
+                        report_path.parent
+                        / "assignments"
+                        / assignment_records.assignment_storage_key(assignment_id)
+                        / "latest.json"
+                    )
+                    safe_report_path = student_identity.confined_regular_file(
+                        target.path,
+                        assignment_report_path,
+                    )
+                    uses_assignment_report = safe_report_path is not None
+        if report is None and report_selection not in {"invalid_final", "remote_error"}:
             if safe_report_path is None:
                 safe_report_path = student_identity.confined_regular_file(target.path, report_path)
             report = load_report(safe_report_path) if safe_report_path is not None else None
@@ -591,7 +618,10 @@ def track_assignments(
             help["path"] = relative_to_root_or_repo(help_log_path, target.path) if help_log_path else ""
         help["activity_id"] = activity_id
         grading = grading_summary(report)
-        grading["provisional"] = report is not None and report_selection != "final"
+        if remote_report_result is not None and remote_report_result.configured and report is not None:
+            grading["provisional"] = remote_report_result.provisional
+        else:
+            grading["provisional"] = report is not None and report_selection != "final"
         source_file_path = report_source_path(target, report.get("source")) if report else None
         source_path = relative_to_repo(source_file_path, target.path) if source_file_path is not None else None
         submitted = report is not None
@@ -626,6 +656,21 @@ def track_assignments(
                     "report_schema_version": report.get("schema_version") if report else None,
                     "report_status": report.get("status") if report else None,
                     "report_selection": report_selection,
+                    "report_authority": (
+                        remote_report_result.authority
+                        if remote_report_result is not None and remote_report_result.configured
+                        else ("local" if report is not None else None)
+                    ),
+                    "report_provenance": (
+                        remote_report_result.provenance
+                        if remote_report_result is not None and remote_report_result.configured
+                        else None
+                    ),
+                    "report_error": (
+                        remote_report_result.error
+                        if remote_report_result is not None and remote_report_result.configured
+                        else None
+                    ),
                     "attempt_id": report.get("attempt_id") if report else None,
                     "final_selected": report_selection == "final",
                 },

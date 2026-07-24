@@ -268,9 +268,58 @@ SHA e workflow run legano il report alla revisione e all'esecuzione scelte dal d
 deve comunque usare un workflow protetto o verificato: affidare al repository dello studente anche la scelta
 della run renderebbe la provenienza insufficiente per una valutazione automaticamente attendibile.
 
-Questa fase non modifica ancora il registro docente. L'integrazione successiva usera la porta
-`GradingArtifactSource` per alimentare la raccolta dei report senza inserire chiamate GitHub dentro la
-logica di tracking.
+### Integrazione nel tracking docente
+
+L'adapter applicativo vive in:
+
+```text
+scripts/thebitlab_tracking_reports.py
+```
+
+`ArtifactTrackingReportSource` combina la porta `GradingArtifactSource` con binding forniti da una
+sorgente docente fidata. Ogni binding identifica assignment, studente, repository, artifact, SHA completo
+e workflow run autorizzata. Questi dati descrivono una singola esecuzione: non fanno parte dell'activity,
+del target iniziale o di dati controllati dallo studente.
+
+`track_assignments()` accetta una `TrackingReportSource` opzionale. La precedenza e:
+
+1. tentativo `final` gia selezionato dal docente;
+2. report remoto configurato per assignment e studente;
+3. report locale assignment-scoped;
+4. report locale legacy.
+
+Quando un binding remoto esiste ma acquisizione o validazione falliscono, il tracking non usa
+silenziosamente un report locale. La riga resta `not_graded` e registra `remote_error`, autorita ed errore
+di raccolta. Se non esiste alcun binding, il comportamento locale precedente rimane invariato.
+
+Prima di accettare un report remoto, l'adapter verifica:
+
+- `activity_id` e `assignment_id`;
+- commit completo uguale allo SHA autorizzato;
+- repository, nome artifact, SHA e workflow run della provenienza.
+
+Il registro conserva separatamente i dati del report e quelli attestati dall'applicazione:
+
+```json
+{
+  "submission": {
+    "report_selection": "github_actions_artifact",
+    "report_authority": "verified_remote",
+    "report_provenance": {
+      "source": "github_actions",
+      "repository": "TheBitPoets/rossi-mario",
+      "artifact_id": 123,
+      "artifact_name": "grading-assignment-001",
+      "workflow_run_id": 456,
+      "head_sha": "0123456789abcdef0123456789abcdef01234567"
+    },
+    "report_error": null
+  }
+}
+```
+
+In questa fase i binding sono iniettati a runtime. Il passo successivo e salvarli in record separati lato
+docente e comporre adapter, token e storage nel server o nella CLI.
 
 ## Report
 

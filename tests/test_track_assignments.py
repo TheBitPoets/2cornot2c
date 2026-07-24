@@ -15,6 +15,7 @@ from scripts import (
     student_support_policy,
     track_assignments,
 )
+from scripts import thebitlab_tracking_reports
 from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
 
 
@@ -1303,6 +1304,226 @@ def test_track_assignments_rejects_report_without_activity_id(tmp_path) -> None:
         assert "manca activity_id" in str(error)
     else:
         raise AssertionError("track_assignments should reject reports without activity_id")
+
+
+class StaticTrackingReportSource:
+    def __init__(self, result: thebitlab_tracking_reports.TrackingReportResult) -> None:
+        self.result = result
+        self.requests: list[thebitlab_tracking_reports.TrackingReportRequest] = []
+
+    def resolve(
+        self,
+        request: thebitlab_tracking_reports.TrackingReportRequest,
+    ) -> thebitlab_tracking_reports.TrackingReportResult:
+        self.requests.append(request)
+        return self.result
+
+
+def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-remote"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    remote_report = attempt_report(
+        assignment_id,
+        "attempt-remote",
+        passed=True,
+        submitted_at="2026-10-20T08:00:00+02:00",
+    )
+    remote_report["commit"] = "a" * 40
+    source = StaticTrackingReportSource(
+        thebitlab_tracking_reports.TrackingReportResult(
+            configured=True,
+            report=remote_report,
+            selection="github_actions_artifact",
+            authority="verified_remote",
+            provisional=True,
+            provenance={
+                "source": "github_actions",
+                "repository": student.repo,
+                "artifact_id": 12,
+                "workflow_run_id": 900,
+                "head_sha": "a" * 40,
+            },
+        )
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+        report_source=source,
+    )
+
+    row = index["students"][0]
+    assert row["submitted"] is True
+    assert row["grading"]["status"] == "graded_passed"
+    assert row["grading"]["provisional"] is True
+    assert row["submission"]["report_selection"] == "github_actions_artifact"
+    assert row["submission"]["report_authority"] == "verified_remote"
+    assert row["submission"]["report_provenance"]["artifact_id"] == 12
+    assert row["submission"]["report_error"] is None
+    assert row["submission"]["report_path"] is None
+    assert source.requests == [
+        thebitlab_tracking_reports.TrackingReportRequest(
+            activity_id="python-base-somma-001",
+            assignment_id=assignment_id,
+            student_id="rossi-mario",
+            repo_ref=student.repo,
+        )
+    ]
+
+
+def test_track_assignments_remote_error_does_not_fall_back_to_local_report(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-remote-error"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    write_report(student.path, "2026-10-20T08:00:00+02:00")
+    source = StaticTrackingReportSource(
+        thebitlab_tracking_reports.TrackingReportResult(
+            configured=True,
+            selection="remote_error",
+            authority="verified_remote",
+            provisional=True,
+            error="artifact non disponibile",
+        )
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+        report_source=source,
+    )
+
+    row = index["students"][0]
+    assert row["submitted"] is False
+    assert row["grading"]["status"] == "not_graded"
+    assert row["submission"]["report_selection"] == "remote_error"
+    assert row["submission"]["report_authority"] == "verified_remote"
+    assert row["submission"]["report_error"] == "artifact non disponibile"
+    assert row["submission"]["report_path"] is None
+
+
+def test_track_assignments_malformed_configured_source_still_fails_closed(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-malformed-remote"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    write_report(student.path, "2026-10-20T08:00:00+02:00")
+    source = StaticTrackingReportSource(
+        thebitlab_tracking_reports.TrackingReportResult(configured=True)
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        report_source=source,
+    )
+
+    row = index["students"][0]
+    assert row["submitted"] is False
+    assert row["submission"]["report_selection"] == "remote_error"
+    assert row["submission"]["report_path"] is None
+
+
+def test_track_assignments_uses_local_report_when_remote_binding_is_absent(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-local-fallback"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    write_report(student.path, "2026-10-20T08:00:00+02:00")
+    source = StaticTrackingReportSource(
+        thebitlab_tracking_reports.TrackingReportResult(configured=False)
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+        report_source=source,
+    )
+
+    row = index["students"][0]
+    assert row["submitted"] is True
+    assert row["grading"]["status"] == "graded_passed"
+    assert row["submission"]["report_selection"] == "legacy"
+    assert row["submission"]["report_authority"] == "local"
+    assert row["submission"]["report_provenance"] is None
+    assert row["submission"]["report_error"] is None
+
+
+def test_track_assignments_keeps_teacher_selected_final_before_remote_source(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-final-before-remote"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    report_path = track_assignments.default_report_path(student, "python-base-somma-001")
+    history_dir = (
+        report_path.parent
+        / "assignments"
+        / assignment_records.assignment_storage_key(assignment_id)
+    )
+    attempts_dir = history_dir / "attempts"
+    attempts_dir.mkdir(parents=True)
+    final_report = attempt_report(
+        assignment_id,
+        "attempt-final",
+        passed=False,
+        submitted_at="2026-10-20T08:00:00+02:00",
+    )
+    (attempts_dir / "attempt-final.json").write_text(
+        json.dumps(final_report),
+        encoding="utf-8",
+    )
+    (history_dir / "final.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "student_lab_attempt_selection.v1",
+                "assignment_id": assignment_id,
+                "activity_id": "python-base-somma-001",
+                "attempt_id": "attempt-final",
+                "selected_at": "2026-10-20T08:05:00+02:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+    source = StaticTrackingReportSource(
+        thebitlab_tracking_reports.TrackingReportResult(
+            configured=True,
+            selection="remote_error",
+            error="non deve essere usato",
+        )
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+        report_source=source,
+    )
+
+    row = index["students"][0]
+    assert row["grading"]["status"] == "graded_failed"
+    assert row["grading"]["provisional"] is False
+    assert row["submission"]["report_selection"] == "final"
+    assert row["submission"]["report_authority"] == "local"
+    assert source.requests == []
 
 
 def test_write_tracking_index_creates_parent_directories(tmp_path) -> None:
