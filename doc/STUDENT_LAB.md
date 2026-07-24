@@ -53,6 +53,14 @@ $env:THEBITLAB_REQUIRE_UTUI="1"
 py -3.12 -m pytest tests/test_student_lab_utui.py tests/test_student_lab_layout.py tests/test_student_lab_cli.py
 ```
 
+Su Linux con Bash:
+
+```bash
+python3 -m pip install -r requirements-dev.txt -r requirements-utui.txt
+export THEBITLAB_REQUIRE_UTUI=1
+python3 -m pytest tests/test_student_lab_utui.py tests/test_student_lab_layout.py tests/test_student_lab_cli.py
+```
+
 Le richieste di aiuto non invocano provider dentro la TUI. La TUI le invia al server locale della macchina docente,
 che ricarica consegna, policy e budget dai propri dati e usa Codex CLI installato localmente. Server e TUI devono
 puntare alla stessa root dati. Per la demo:
