@@ -315,7 +315,11 @@ def run_docker_runner(
         temp_root = Path(temp_dir)
         try:
             workspace, copied_activity, copied_source = grade_activity.prepare_docker_workspace(activity_path, source, temp_root)
-            docker_timeout = grade_activity.docker_timeout_seconds(grade_activity.load_activity(copied_activity), timeout_seconds)
+            docker_timeout = grade_activity.docker_timeout_seconds(
+                grade_activity.load_activity(copied_activity),
+                timeout_seconds,
+                language,
+            )
             command = grade_activity.docker_command(
                 activity=copied_activity,
                 source=copied_source,

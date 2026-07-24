@@ -550,12 +550,16 @@ def has_minimal_report_shape(value: Any) -> bool:
     return isinstance(value, dict) and isinstance(value.get("passed"), bool) and isinstance(value.get("status"), str)
 
 
-def docker_timeout_seconds(activity: dict[str, Any], timeout_seconds: int) -> int:
+def docker_timeout_seconds(
+    activity: dict[str, Any],
+    timeout_seconds: int,
+    language: str | None = None,
+) -> int:
     """Return the outer Docker timeout for compile plus all declared test cases."""
     test_cases = activity.get("test_cases", [])
     test_count = len(test_cases) if isinstance(test_cases, list) else 0
     test_timeout = timeout_seconds
-    if activity_language(activity) in {"javascript", "nodejs"}:
+    if activity_language(activity, language) in {"javascript", "nodejs"}:
         test_timeout += DEFAULT_NODE_STARTUP_GRACE_SECONDS
     return (test_count * test_timeout) + timeout_seconds + DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS
 
@@ -653,7 +657,7 @@ def run_docker_grading(args: argparse.Namespace) -> int:
         temp_root = Path(temp_dir)
         try:
             workspace, activity, source = prepare_docker_workspace(args.activity, args.source, temp_root)
-            docker_timeout = docker_timeout_seconds(load_activity(activity), args.timeout)
+            docker_timeout = docker_timeout_seconds(load_activity(activity), args.timeout, args.language)
             command = docker_command(
                 activity=activity,
                 source=source,

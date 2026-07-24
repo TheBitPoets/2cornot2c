@@ -461,6 +461,7 @@ def test_docker_timeout_scales_with_test_cases() -> None:
 
     assert grade_activity.docker_timeout_seconds(activity, 5) == 30
     assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "javascript"}, 5) == 60
+    assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "c"}, 5, "javascript") == 60
 
 
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:
