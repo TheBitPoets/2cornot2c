@@ -1388,6 +1388,8 @@ def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) 
     assert row["submission"]["report_provenance"]["artifact_id"] == 12
     assert row["submission"]["report_error"] is None
     assert row["submission"]["report_path"] is None
+    assert row["submission"]["files"] == []
+    assert row["submission"]["local_preview_status"] == "commit_mismatch"
     assert source.requests == [
         thebitlab_tracking_reports.TrackingReportRequest(
             activity_id="python-base-somma-001",
@@ -1396,6 +1398,54 @@ def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) 
             repo_ref="TheBitPoets/rossi-mario",
         )
     ]
+
+
+def test_remote_report_allows_local_preview_only_at_verified_commit(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-preview"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    source_path = student.path / "assignments" / "python-base-somma-001" / "main.py"
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_path.write_text("print(3)\n", encoding="utf-8")
+    commit = "a" * 40
+    remote_report = attempt_report(
+        assignment_id,
+        "attempt-remote",
+        passed=True,
+        submitted_at="2026-10-20T08:00:00+02:00",
+    )
+    remote_report["commit"] = commit
+    remote_report["source"] = str(source_path)
+    source = StaticTrackingReportSource(
+        thebitlab_tracking_reports.TrackingReportResult(
+            configured=True,
+            report=remote_report,
+            selection="github_actions_artifact",
+            authority="verified_remote",
+            provenance={"repository": "TheBitPoets/rossi-mario"},
+        )
+    )
+    monkeypatch.setattr(
+        track_assignments,
+        "git_stdout",
+        lambda args, cwd: commit if args == ["git", "rev-parse", "HEAD"] else "",
+    )
+
+    row = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        report_source=source,
+    )["students"][0]
+
+    assert row["submission"]["local_preview_status"] == "available"
+    assert row["submission"]["source_path"].endswith("main.py")
+    assert row["submission"]["files"][0]["path"].endswith("main.py")
 
 
 def test_remote_provenance_supplies_missing_assignment_repository(tmp_path) -> None:

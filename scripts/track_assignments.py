@@ -140,7 +140,17 @@ def local_repo_path(path: Path, server_root: Path | None) -> str:
 
 def git_stdout(args: list[str], cwd: Path) -> str:
     """Run a small git query and return stdout, or an empty string."""
-    completed = subprocess.run(args, cwd=cwd, capture_output=True, text=True, check=False, timeout=5)
+    try:
+        completed = subprocess.run(
+            args,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
     if completed.returncode:
         return ""
     return completed.stdout.strip()
@@ -161,6 +171,15 @@ def git_root(path: Path) -> Path | None:
     """Return the git root that contains path, if available."""
     output = git_stdout(["git", "rev-parse", "--show-toplevel"], path)
     return Path(output).resolve() if output else None
+
+
+def checkout_matches_commit(target: TrackingTarget, commit: str | None) -> bool:
+    """Return whether the local checkout is exactly the report commit."""
+
+    clean_commit = str(commit or "").strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{40}", clean_commit):
+        return False
+    return git_stdout(["git", "rev-parse", "HEAD"], target.path).lower() == clean_commit
 
 
 def github_repo_url(target: TrackingTarget) -> str | None:
@@ -663,7 +682,20 @@ def track_assignments(
             grading["provisional"] = remote_report_result.provisional
         else:
             grading["provisional"] = report is not None and report_selection != "final"
-        source_file_path = report_source_path(target, report.get("source")) if report else None
+        remote_report = (
+            remote_report_result is not None
+            and remote_report_result.configured
+            and report is not None
+        )
+        local_preview_allowed = (
+            not remote_report
+            or checkout_matches_commit(target, report.get("commit"))
+        )
+        source_file_path = (
+            report_source_path(target, report.get("source"))
+            if report and local_preview_allowed
+            else None
+        )
         source_path = relative_to_repo(source_file_path, target.path) if source_file_path is not None else None
         remote_report_error = (
             remote_report_result is not None
@@ -697,7 +729,14 @@ def track_assignments(
                 "submission": {
                     "source_path": source_path,
                     "source_github_url": github_file_url(target, repo_url, str(source_file_path) if source_file_path else None, report.get("commit") if report else None),
-                    "files": submission_files(target, activity_id, report, repo_url),
+                    "files": (
+                        submission_files(target, activity_id, report, repo_url)
+                        if local_preview_allowed
+                        else []
+                    ),
+                    "local_preview_status": (
+                        "available" if local_preview_allowed else "commit_mismatch"
+                    ),
                     "submitted_at": submitted_at,
                     "commit": report.get("commit") if report else None,
                     "report_path": relative_report_path,
