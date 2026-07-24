@@ -1323,9 +1323,19 @@ function renderFeedback(feedback) {
 }
 
 function actionUnavailableLabel(assignment) {
+  if (assignment.status === "submission_unknown" || assignment.submitted == null) {
+    return "Consegna da verificare";
+  }
   return assignment.status === "missing" || !assignment.submitted
     ? "Consegna mancante"
     : "File consegna non disponibile";
+}
+
+function submittedLabel(assignment) {
+  if (assignment.status === "submission_unknown" || assignment.submitted == null) {
+    return "Da verificare";
+  }
+  return assignment.submitted ? "Si" : "No";
 }
 
 function assignmentOpenAction(assignment, assignmentIndex = -1) {
@@ -1425,7 +1435,7 @@ function renderAssignmentDetail(assignment) {
       <h3>Consegna</h3>
       <div class="detailGrid">
         ${detailItem("Stato", assignment.status || "-")}
-        ${detailItem("Consegnata", assignment.submitted ? "Si" : "No")}
+        ${detailItem("Consegnata", submittedLabel(assignment))}
         ${detailItem("In ritardo", assignment.late ? "Si" : "No")}
         ${detailItem("Consegnato il", formatDate(assignment.submitted_at))}
         ${detailItem("Commit", assignment.commit || "-")}

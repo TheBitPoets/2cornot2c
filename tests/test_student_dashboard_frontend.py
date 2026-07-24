@@ -1030,6 +1030,27 @@ def test_student_dashboard_assignment_detail_modal_renders_selected_assignment()
     )
 
 
+def test_student_dashboard_detail_preserves_unknown_submission_state() -> None:
+    run_student_dashboard_js(
+        """
+        const assignment = {
+          activity_id: "remote-unknown",
+          title: "Report remoto",
+          status: "submission_unknown",
+          submitted: null,
+          grading: {},
+        };
+        const card = tested.renderAssignment(assignment, false, 0);
+        const detail = tested.renderAssignmentDetail(assignment);
+
+        assert.match(card, /Consegna da verificare/);
+        assert.doesNotMatch(card, /Consegna mancante/);
+        assert.match(detail, /<strong>Consegnata<\\/strong>\\s*<span>Da verificare<\\/span>/);
+        assert.doesNotMatch(detail, /<strong>Consegnata<\\/strong>\\s*<span>No<\\/span>/);
+        """
+    )
+
+
 def test_student_dashboard_file_modal_lists_submitted_files_separately() -> None:
     run_student_dashboard_js(
         """
