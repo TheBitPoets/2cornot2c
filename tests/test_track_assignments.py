@@ -1570,7 +1570,7 @@ def test_track_assignments_uses_local_report_when_remote_binding_is_absent(tmp_p
     assert row["submission"]["report_error"] is None
 
 
-def test_track_assignments_keeps_teacher_selected_final_before_remote_source(tmp_path) -> None:
+def test_track_assignments_remote_binding_rejects_student_selected_final(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "rossi-mario")
     assignment_id = "assignment-final-before-remote"
@@ -1624,11 +1624,19 @@ def test_track_assignments_keeps_teacher_selected_final_before_remote_source(tmp
     )
 
     row = index["students"][0]
-    assert row["grading"]["status"] == "graded_failed"
-    assert row["grading"]["provisional"] is False
-    assert row["submission"]["report_selection"] == "final"
-    assert row["submission"]["report_authority"] == "local"
-    assert source.requests == []
+    assert row["submitted"] is None
+    assert row["status"] == "submission_unknown"
+    assert row["grading"]["status"] == "not_graded"
+    assert row["submission"]["report_selection"] == "remote_error"
+    assert row["submission"]["report_authority"] == "remote_configured"
+    assert source.requests == [
+        thebitlab_tracking_reports.TrackingReportRequest(
+            activity_id="python-base-somma-001",
+            assignment_id=assignment_id,
+            student_id="rossi-mario",
+            repo_ref="TheBitPoets/rossi-mario",
+        )
+    ]
 
 
 def test_write_tracking_index_creates_parent_directories(tmp_path) -> None:

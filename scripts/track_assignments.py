@@ -564,44 +564,44 @@ def track_assignments(
         report_selection = None
         remote_report_result = None
         if assignment_id:
-            report, safe_report_path, final_selection_exists = selected_final_report(
-                target,
-                report_path,
-                assignment_id,
-                activity_id,
-            )
-            if report is not None:
-                uses_assignment_report = True
-                report_selection = "final"
-            elif final_selection_exists:
-                uses_assignment_report = True
-                report_selection = "invalid_final"
-            else:
-                if report_source is not None:
-                    remote_report_result = (
-                        thebitlab_tracking_reports.canonical_tracking_report_result(
-                            report_source.resolve(
-                                thebitlab_tracking_reports.TrackingReportRequest(
-                                    activity_id=activity_id,
-                                    assignment_id=assignment_id,
-                                    student_id=stable_student_id,
-                                    repo_ref=repository_ref,
-                                )
+            if report_source is not None:
+                remote_report_result = (
+                    thebitlab_tracking_reports.canonical_tracking_report_result(
+                        report_source.resolve(
+                            thebitlab_tracking_reports.TrackingReportRequest(
+                                activity_id=activity_id,
+                                assignment_id=assignment_id,
+                                student_id=stable_student_id,
+                                repo_ref=repository_ref,
                             )
                         )
                     )
-                    if remote_report_result.configured:
-                        uses_assignment_report = True
-                        report = remote_report_result.report
-                        report_selection = remote_report_result.selection
-                        if report is not None:
-                            repository_ref = str(
-                                (remote_report_result.provenance or {}).get("repository", "")
-                            )
-                            repo_url = github_url_from_remote(repository_ref)
-                        elif not repository_ref:
-                            repo_url = None
-                if remote_report_result is None or not remote_report_result.configured:
+                )
+            if remote_report_result is not None and remote_report_result.configured:
+                uses_assignment_report = True
+                report = remote_report_result.report
+                report_selection = remote_report_result.selection
+                if report is not None:
+                    repository_ref = str(
+                        (remote_report_result.provenance or {}).get("repository", "")
+                    )
+                    repo_url = github_url_from_remote(repository_ref)
+                elif not repository_ref:
+                    repo_url = None
+            else:
+                report, safe_report_path, final_selection_exists = selected_final_report(
+                    target,
+                    report_path,
+                    assignment_id,
+                    activity_id,
+                )
+                if report is not None:
+                    uses_assignment_report = True
+                    report_selection = "final"
+                elif final_selection_exists:
+                    uses_assignment_report = True
+                    report_selection = "invalid_final"
+                else:
                     assignment_report_path = (
                         report_path.parent
                         / "assignments"
