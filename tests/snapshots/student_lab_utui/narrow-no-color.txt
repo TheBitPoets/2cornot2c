@@ -1,10 +1,10 @@
 + > Dettaglio consegna ------------------------------------------------+
 |Titolo: Somma in Python                                               |
+|Stato: Consegnata                                                     |
 |Activity: python-demo-somma-001                                       |
 |Assegnazione: assignment-demo-001                                     |
 |Classe: 3A Informatica                                                |
 |Assegnata: 20/07/2026 08:30                                           |
-|Scadenza: 25/07/2026 23:59                                            |
 +----------------------------------------------------------------------+
 + Workspace -----------------------------------------------------------+
 |Path: tmp/demo/rossi-mario/python-demo-somma-001                      |
@@ -24,12 +24,12 @@
 |Non permesso: soluzione completa                                      |
 +----------------------------------------------------------------------+
 + Richieste aiuto -----------------------------------------------------+
-|Stato log: -                                                          |
-|Errore log: -                                                         |
+|AI budget: 2/5 usate, 3 rimanenti                                     |
+|Esito ultima: consentita                                              |
 |Eventi: 2                                                             |
 |Consentite: 2                                                         |
 |Bloccate: 0                                                           |
-|AI budget: 2/5 usate, 3 rimanenti                                     |
+|Ultima: 23/07/2026 18:05                                              |
 +----------------------------------------------------------------------+
 + Report --------------------------------------------------------------+
 |Path: teacher-reports/demo/python-demo-somma-001.json                 |

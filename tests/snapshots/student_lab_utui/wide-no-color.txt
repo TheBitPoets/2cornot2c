@@ -1,10 +1,10 @@
 + > Dettaglio consegna --------------------------------------+ | + Report ---------------------------------------------+
 |Titolo: Somma in Python                                     | | |Path: teacher-reports/demo/python-demo-somma-001.json|
-|Activity: python-demo-somma-001                             | | |Esiste: si                                           |
-|Assegnazione: assignment-demo-001                           | | |Consegnata: 23/07/2026 18:10                         |
-|Classe: 3A Informatica                                      | | |Commit: abc1234                                      |
-|Assegnata: 20/07/2026 08:30                                 | | +-----------------------------------------------------+
-|Scadenza: 25/07/2026 23:59                                  | | + Ultimo dettaglio test ------------------------------+
+|Stato: Consegnata                                           | | |Esiste: si                                           |
+|Activity: python-demo-somma-001                             | | |Consegnata: 23/07/2026 18:10                         |
+|Assegnazione: assignment-demo-001                           | | |Commit: abc1234                                      |
+|Classe: 3A Informatica                                      | | +-----------------------------------------------------+
+|Assegnata: 20/07/2026 08:30                                 | | + Ultimo dettaglio test ------------------------------+
 +------------------------------------------------------------+ | |[ok] test_somma_positivi                             |
 + Workspace -------------------------------------------------+ | |[ko] test_somma_negativi                             |
 |Path: tmp/demo/rossi-mario/python-demo-somma-001            | | |atteso -3, ottenuto 3                                |
@@ -24,10 +24,10 @@
 |Non permesso: soluzione completa                            | | |Report: risultato letto da dashboard e registro.     |
 +------------------------------------------------------------+ | |                                                     |
 + Richieste aiuto -------------------------------------------+ | |Flusso consigliato                                   |
-|Stato log: -                                                | | +-----------------------------------------------------+
-|Errore log: -                                               | |
+|AI budget: 2/5 usate, 3 rimanenti                           | | +-----------------------------------------------------+
+|Esito ultima: consentita                                    | |
 |Eventi: 2                                                   | |
 |Consentite: 2                                               | |
 |Bloccate: 0                                                 | |
-|AI budget: 2/5 usate, 3 rimanenti                           | |
+|Ultima: 23/07/2026 18:05                                    | |
 +------------------------------------------------------------+ |
