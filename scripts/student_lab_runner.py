@@ -218,28 +218,15 @@ def redact_student_grading_report(report: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(test, dict):
                 continue
             is_public = test.get("visibility") in {"public", "student"}
-            contains_teacher_details = not is_public
-            forbidden: set[str] = set()
-            if contains_teacher_details:
-                forbidden.update(
-                    {
-                        "command",
-                        "detail",
-                        "expected_stdout",
-                        "message",
-                        "name",
-                        "stdin",
-                        "stderr",
-                        "stdout",
-                    }
-                )
-            public_test = {
-                key: value
-                for key, value in test.items()
-                if key not in forbidden
-            }
-            if contains_teacher_details:
-                public_test["name"] = f"Test {index}"
+            if not is_public:
+                passed = test.get("passed") is True
+                public_test = {
+                    "name": f"Test {index}",
+                    "passed": passed,
+                    "status": "passed" if passed else "failed",
+                }
+            else:
+                public_test = dict(test)
             redacted_tests.append(public_test)
         redacted["tests"] = redacted_tests
     return redacted

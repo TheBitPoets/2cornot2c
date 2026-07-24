@@ -217,7 +217,8 @@ def test_write_student_report_redacts_teacher_only_test_details(tmp_path) -> Non
             {
                 "name": "nome-riservato",
                 "passed": False,
-                "status": "failed",
+                "status": "runtime-startup-timeout",
+                "returncode": 105,
                 "stdin": "input-riservato",
                 "expected_stdout": "output-riservato",
                 "stdout": "input-riservato",
@@ -238,6 +239,8 @@ def test_write_student_report_redacts_teacher_only_test_details(tmp_path) -> Non
     assert "output-riservato" not in serialized
     assert "stdout" not in stored["tests"][0]
     assert "stderr" not in stored["tests"][0]
+    assert "returncode" not in stored["tests"][0]
+    assert stored["tests"][0]["status"] == "failed"
 
 
 def test_write_student_report_keeps_public_pytest_failure_details(tmp_path) -> None:
