@@ -1914,6 +1914,49 @@ th.isResizableColumn:hover {
 .badgeBad { background: #fdecea; color: #8f1d14; }
 .badgeMuted { background: #eeeeee; color: #666666; }
 
+.badge.hasTooltip {
+  position: relative;
+  cursor: help;
+  touch-action: manipulation;
+}
+
+.badge.hasTooltip:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.dashboardTooltip {
+  position: fixed;
+  z-index: 1000;
+  width: max-content;
+  max-width: min(18rem, calc(100vw - 24px));
+  transform: translate(-50%, -100%);
+  border: 1px solid rgba(17, 17, 17, .22);
+  border-radius: 6px;
+  background: #111111;
+  color: #ffffff;
+  padding: .45rem .55rem;
+  font-size: .72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  pointer-events: none;
+  text-align: left;
+  white-space: normal;
+}
+
+.dashboardTooltip[data-placement="below"] {
+  transform: translateX(-50%);
+}
+
+.dashboardTooltip[hidden] {
+  display: none;
+}
+
+.reportSelectionBadge {
+  display: inline-block;
+  margin-top: .35rem;
+}
+
 .overviewRow {
   border-left: 4px solid transparent;
 }
@@ -2081,6 +2124,12 @@ th.isResizableColumn:hover {
   line-height: 1.05;
 }
 
+.matrixCellWrap {
+  display: inline-grid;
+  place-items: center;
+  gap: .25rem;
+}
+
 button.matrixCell {
   cursor: pointer;
 }
@@ -2103,6 +2152,13 @@ button.matrixCell:disabled:focus-visible {
 .matrixCell small {
   font-size: .66rem;
   font-weight: 800;
+}
+
+.matrixSelectionState {
+  min-width: 3.7rem;
+  justify-content: center;
+  font-size: .58rem;
+  font-weight: 900;
 }
 
 .matrixCellOk { background: #eaf7ef; color: #0f6b3d; }
@@ -2417,6 +2473,10 @@ code {
 .fileList h3 {
   margin-bottom: .85rem;
   font-size: 1rem;
+}
+
+.reviewSelectionState {
+  margin: -.35rem 0 .85rem;
 }
 
 .fileList button {

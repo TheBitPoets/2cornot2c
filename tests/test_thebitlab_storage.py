@@ -659,6 +659,63 @@ def test_assignment_report_reload_marks_legacy_grading_as_provisional(tmp_path) 
     assert students[1]["grading"]["provisional"] is False
 
 
+def test_assignment_report_reload_canonicalizes_attempt_selection_state(tmp_path) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    storage.write_assignment_report(
+        "attempt-selection.json",
+        {
+            "activity_id": "activity",
+            "students": [
+                {
+                    "student": "finale",
+                    "submitted": True,
+                    "submission": {"report_selection": "final", "final_selected": False},
+                    "grading": {"provisional": True},
+                },
+                {
+                    "student": "provvisorio",
+                    "submitted": True,
+                    "submission": {"report_selection": "latest", "final_selected": True},
+                    "grading": {"provisional": False},
+                },
+                {
+                    "student": "finale-non-valido",
+                    "submitted": False,
+                    "submission": {"report_selection": "invalid_final", "final_selected": True},
+                    "grading": {"provisional": True},
+                },
+                {
+                    "student": "sconosciuto",
+                    "submitted": True,
+                    "submission": {"report_selection": "future_state", "final_selected": True},
+                    "grading": {"provisional": True},
+                },
+                {
+                    "student": "non-scalare",
+                    "submitted": True,
+                    "submission": {"report_selection": ["final"], "final_selected": True},
+                    "grading": {"provisional": True},
+                },
+            ],
+        },
+    )
+
+    students = storage.read_assignment_report("attempt-selection.json")["students"]
+    by_student = {student["student"]: student for student in students}
+
+    assert by_student["finale"]["submission"]["final_selected"] is True
+    assert by_student["finale"]["grading"]["provisional"] is False
+    assert by_student["provvisorio"]["submission"]["final_selected"] is False
+    assert by_student["provvisorio"]["grading"]["provisional"] is True
+    assert by_student["finale-non-valido"]["submission"]["final_selected"] is False
+    assert by_student["finale-non-valido"]["grading"]["provisional"] is False
+    assert by_student["sconosciuto"]["submission"]["final_selected"] is False
+    assert by_student["sconosciuto"]["grading"]["provisional"] is False
+    assert by_student["non-scalare"]["submission"]["report_selection"] == "invalid_value"
+    assert by_student["non-scalare"]["submission"]["final_selected"] is False
+    assert by_student["non-scalare"]["grading"]["provisional"] is False
+
+
 def test_ai_feedback_demo_report_exposes_teacher_review_states() -> None:
     root = Path(__file__).resolve().parents[1]
     storage = JsonAssignmentStorage(root, root / "teacher-reports", [])

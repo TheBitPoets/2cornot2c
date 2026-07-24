@@ -286,7 +286,8 @@ La cattura usa la root `tmp/student-lab-demo`, il registro `demo/python-demo-som
 6. Apri il modal degli studenti, se disponibile.
 7. Nella riga di `rossi-mario`, clicca `Apri consegna`.
 8. Seleziona `main.py` e poi `test_main.py` dalla lista dei file.
-9. Nel pannello `Genera registro consegne`, seleziona un'assegnazione e premi `Cancella assegnazione`.
+9. Controlla che il badge `Provvisorio` sia visibile sia nella riga sia nel modal della consegna.
+10. Nel pannello `Genera registro consegne`, seleziona un'assegnazione e premi `Cancella assegnazione`.
    Controlla titolo e conseguenze nel dialog, quindi scegli `Mantieni`: questo scenario non deve cancellare
    i dati demo.
 
@@ -300,6 +301,7 @@ Risultato atteso:
 - Il backend report risulta locale.
 - Le richieste di aiuto risultano visibili nel riepilogo docente.
 - Il modal della consegna mostra il contenuto di `main.py` e `test_main.py` senza errori 404.
+- Il badge `Provvisorio` e giallo, contiene testo leggibile e il tooltip spiega che il grading puo cambiare.
 - I file aperti appartengono alla root demo corrente, non a una precedente cartella temporanea.
 - La conferma di cancellazione è un dialog integrato nella pagina; `Mantieni` lo chiude senza rimuovere
   l'assegnazione e senza mostrare un `confirm()` nativo del browser.
@@ -349,13 +351,14 @@ La cattura mostra il modal <code>Quadro classe</code> aperto sul registro demo, 
 2. Carica il registro `demo/python-demo-somma-001.json`.
 3. Nel pannello `Quadro classe` controlla i filtri attivi.
 4. Apri la vista `Elenco`.
-5. Cerca la riga dello studente `rossi-mario`.
+5. Cerca la riga dello studente `rossi-mario` e controlla il badge `Provvisorio`.
 6. Usa il bottone `Consegna`, se abilitato.
 
 Risultato atteso:
 
 - Il filtro classe e coerente con il registro caricato.
 - La riga resta compatta e non rompe l'altezza della tabella.
+- Lo stato della consegna mostra `Provvisorio` senza affidarsi soltanto al colore.
 - Il bottone `Consegna` apre la consegna dello studente, non il registro generale.
 - Se una consegna non ha link disponibile, il bottone resta disabilitato e la mancanza e indicata chiaramente.
 

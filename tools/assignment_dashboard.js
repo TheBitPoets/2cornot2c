@@ -2799,18 +2799,22 @@ function renderOverviewMatrix(rows) {
         const row = byStudentActivity.get(`${student}::${activityKey(activity)}`);
         const kind = matrixCellKind(row);
         const score = matrixScore(row);
+        const selection = reportSelectionState(row);
         const hasSubmission = row?.submitted || row?.status?.startsWith("submitted");
         const submissionTitle = hasSubmission
           ? `Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.`
           : "Consegna non disponibile: lo studente non ha ancora consegnato.";
         return `
           <td>
-            ${row ? `
-              <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
-                <strong>${escapeHtml(matrixCellText(row))}</strong>
-                ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
-              </button>
-            ` : '<span class="matrixCell matrixCellEmpty">-</span>'}
+            <div class="matrixCellWrap">
+              ${row ? `
+                <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
+                  <strong>${escapeHtml(matrixCellText(row))}</strong>
+                  ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
+                </button>
+                ${selection ? reportSelectionCompactBadge(row) : ""}
+              ` : '<span class="matrixCell matrixCellEmpty">-</span>'}
+            </div>
           </td>
         `;
       }).join("")}
@@ -2863,6 +2867,7 @@ function renderOverview() {
     const submissionTitle = hasSubmission
       ? `Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.`
       : "Consegna non disponibile: lo studente non ha ancora consegnato.";
+    const selectionBadge = reportSelectionBadge(row);
     const tr = document.createElement("tr");
     tr.className = `overviewRow ${kindRowClass(row.kind)}`;
     tr.innerHTML = `
@@ -2875,7 +2880,10 @@ function renderOverview() {
       <td>${kindLabel(row.kind)}</td>
       <td>${escapeHtml(row.student_support_mode || "-")}</td>
       <td>${escapeHtml(formatDate(row.due_at))}</td>
-      <td>${badge(row.status, statusKind(row.status, row.late, { status: row.grading_status }))}</td>
+      <td>
+        ${badge(row.status, statusKind(row.status, row.late, { status: row.grading_status }))}
+        ${selectionBadge ? `<br><span class="reportSelectionBadge">${selectionBadge}</span>` : ""}
+      </td>
       <td>
         <code>${escapeHtml(testText)}</code>
         ${row.failed_tests?.length || row.failed_test_details?.length
@@ -3884,14 +3892,177 @@ function studentLabel(studentName) {
   return `<span class="studentName studentName${colorIndex}">${escapeHtml(name)}</span>`;
 }
 
-function badge(text, kind = "muted") {
+function tooltipAttributes(label, title) {
+  if (!title) return "";
+  return ` tabindex="0" aria-label="${escapeHtml(`${label}. ${title}`)}" data-tooltip="${escapeHtml(title)}"`;
+}
+
+let activeDashboardTooltipTarget = null;
+let dashboardTooltipElement = null;
+
+function dashboardTooltip() {
+  if (dashboardTooltipElement) return dashboardTooltipElement;
+  dashboardTooltipElement = document.createElement("div");
+  dashboardTooltipElement.className = "dashboardTooltip";
+  dashboardTooltipElement.setAttribute("role", "tooltip");
+  dashboardTooltipElement.hidden = true;
+  document.body.append(dashboardTooltipElement);
+  return dashboardTooltipElement;
+}
+
+function showDashboardTooltip(target) {
+  const text = target?.dataset?.tooltip;
+  if (!text) return;
+  activeDashboardTooltipTarget = target;
+  const tooltip = dashboardTooltip();
+  tooltip.textContent = text;
+  tooltip.hidden = false;
+  const targetRect = target.getBoundingClientRect();
+  tooltip.style.left = `${targetRect.left + (targetRect.width / 2)}px`;
+  tooltip.style.top = `${targetRect.top - 8}px`;
+  tooltip.dataset.placement = "above";
+  requestAnimationFrame(() => {
+    if (activeDashboardTooltipTarget !== target) return;
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const horizontalMargin = 12;
+    const centeredLeft = targetRect.left + (targetRect.width / 2);
+    const minLeft = horizontalMargin + (tooltipRect.width / 2);
+    const maxLeft = window.innerWidth - horizontalMargin - (tooltipRect.width / 2);
+    tooltip.style.left = `${Math.max(minLeft, Math.min(centeredLeft, maxLeft))}px`;
+    if (targetRect.top - tooltipRect.height < 8) {
+      tooltip.style.top = `${targetRect.bottom + 8}px`;
+      tooltip.dataset.placement = "below";
+    }
+  });
+}
+
+function hideDashboardTooltip(target = null) {
+  if (target && activeDashboardTooltipTarget !== target) return;
+  activeDashboardTooltipTarget = null;
+  if (dashboardTooltipElement) dashboardTooltipElement.hidden = true;
+}
+
+function setupDashboardTooltips() {
+  window.addEventListener("mouseover", (event) => {
+    const target = event.target.closest?.(".hasTooltip");
+    if (target) showDashboardTooltip(target);
+  });
+  window.addEventListener("mouseout", (event) => {
+    const target = event.target.closest?.(".hasTooltip");
+    if (target && !target.contains(event.relatedTarget)) hideDashboardTooltip(target);
+  });
+  window.addEventListener("focusin", (event) => {
+    const target = event.target.closest?.(".hasTooltip");
+    if (target) showDashboardTooltip(target);
+  });
+  window.addEventListener("focusout", (event) => {
+    const target = event.target.closest?.(".hasTooltip");
+    if (target) hideDashboardTooltip(target);
+  });
+  window.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "touch") return;
+    const target = event.target.closest?.(".hasTooltip");
+    if (!target) {
+      hideDashboardTooltip();
+      return;
+    }
+    event.preventDefault();
+    if (activeDashboardTooltipTarget === target) {
+      hideDashboardTooltip(target);
+    } else {
+      showDashboardTooltip(target);
+    }
+  });
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hideDashboardTooltip();
+  });
+  window.addEventListener("scroll", () => hideDashboardTooltip(), true);
+  window.addEventListener("resize", () => hideDashboardTooltip());
+}
+
+function badge(text, kind = "muted", title = "") {
   const className = {
     ok: "badgeOk",
     warn: "badgeWarn",
     bad: "badgeBad",
     muted: "badgeMuted",
   }[kind] || "badgeMuted";
-  return `<span class="badge ${className}">${escapeHtml(text || "-")}</span>`;
+  const label = text || "-";
+  return `<span class="badge ${className}${title ? " hasTooltip" : ""}"${tooltipAttributes(label, title)}>${escapeHtml(label)}</span>`;
+}
+
+function reportSelectionState(value) {
+  const submission = value?.submission || value || {};
+  const grading = value?.grading || value || {};
+  const selection = submission.report_selection ?? value?.report_selection;
+  const finalSelected = submission.final_selected ?? value?.final_selected;
+  const provisional = grading.provisional ?? value?.grading_provisional;
+  const submitted = value?.submitted ?? Boolean(submission.submitted_at || submission.report_path);
+  if (selection === "invalid_final") {
+    return {
+      label: "Finale non valido",
+      compactLabel: "ERR",
+      kind: "bad",
+      tooltip: "La selezione definitiva non e valida: il registro non usa un altro tentativo al suo posto.",
+    };
+  }
+  if (selection === "final") {
+    return {
+      label: "Finale",
+      compactLabel: "FIN",
+      kind: "ok",
+      tooltip: "Il grading deriva dal tentativo scelto esplicitamente come definitivo.",
+    };
+  }
+  if (selection === "latest" || selection === "legacy") {
+    return {
+      label: "Provvisorio",
+      compactLabel: "PROV",
+      kind: "warn",
+      tooltip: "Il grading deriva dall'ultimo report disponibile e puo cambiare quando viene scelto il definitivo.",
+    };
+  }
+  if (selection != null) {
+    return {
+      label: "Stato tentativo non valido",
+      compactLabel: "ERR",
+      kind: "bad",
+      tooltip: "Il registro contiene uno stato del tentativo non riconosciuto e deve essere rigenerato o corretto.",
+    };
+  }
+  if (finalSelected === true) {
+    return {
+      label: "Finale",
+      compactLabel: "FIN",
+      kind: "ok",
+      tooltip: "Il grading deriva dal tentativo scelto esplicitamente come definitivo.",
+    };
+  }
+  if (provisional === true || submitted) {
+    return {
+      label: "Provvisorio",
+      compactLabel: "PROV",
+      kind: "warn",
+      tooltip: "Il grading deriva dall'ultimo report disponibile e puo cambiare quando viene scelto il definitivo.",
+    };
+  }
+  return null;
+}
+
+function reportSelectionBadge(value) {
+  const selection = reportSelectionState(value);
+  return selection ? badge(selection.label, selection.kind, selection.tooltip) : "";
+}
+
+function reportSelectionCompactBadge(value) {
+  const selection = reportSelectionState(value);
+  if (!selection) return "";
+  const className = {
+    ok: "badgeOk",
+    warn: "badgeWarn",
+    bad: "badgeBad",
+  }[selection.kind] || "badgeMuted";
+  return `<span class="matrixSelectionState badge ${className} hasTooltip"${tooltipAttributes(selection.label, selection.tooltip)}>${escapeHtml(selection.compactLabel)}</span>`;
 }
 
 const AI_FEEDBACK_STATES = {
@@ -4529,6 +4700,7 @@ function renderStudents(students) {
     const reviewTitle = canReview
       ? `Apri i file consegnati da ${student.student} nella vista Revisione consegna.`
       : `Nessuna consegna apribile per ${student.student}: lo studente non ha consegnato o non ci sono file disponibili.`;
+    const selectionBadge = reportSelectionBadge(student);
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>
@@ -4539,6 +4711,7 @@ function renderStudents(students) {
       <td>${escapeHtml(formatDate(student.due_at))}</td>
       <td>
         ${escapeHtml(formatDate(submission.submitted_at))}<br>
+        ${selectionBadge ? `<span class="reportSelectionBadge">${selectionBadge}</span><br>` : ""}
         <small>${submission.commit ? `commit ${escapeHtml(submission.commit)}` : "commit non disponibile"}</small><br>
         <small>${submission.source_path ? escapeHtml(submission.source_path) : "sorgente non indicato"}</small>
         ${submission.report_path ? `<br><small>report ${escapeHtml(submission.report_path)}</small>` : ""}
@@ -4835,10 +5008,12 @@ function renderReview(isError = false) {
   }
   const files = submissionFiles(student);
   const currentFile = files.find((file) => file.path === state.reviewFilePath) || files[0] || {};
+  const selectionBadge = reportSelectionBadge(student);
   els.submissionReview.className = "reviewGrid";
   els.submissionReview.innerHTML = `
     <aside class="fileList">
       <h3>${escapeHtml(student.student)}</h3>
+      ${selectionBadge ? `<div class="reviewSelectionState">${selectionBadge}</div>` : ""}
       ${files.map((file) => `
         <button type="button" class="${file.path === state.reviewFilePath ? "isActive" : ""}" data-review-file="${escapeHtml(file.path)}" title="Mostra il contenuto del file ${escapeHtml(file.path)}.">
           <span>${escapeHtml(file.path.split("/").pop())}</span>
@@ -5357,6 +5532,7 @@ els.filterButtons.forEach((button) => {
 });
 
 applyPanelOrder();
+setupDashboardTooltips();
 setupCollapsiblePanels();
 setupPanelDragAndDrop();
 setFilter("all");
