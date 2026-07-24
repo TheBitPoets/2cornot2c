@@ -10,6 +10,10 @@ scheda attivita -> sorgente -> runner linguaggio -> test -> report JSON
 
 I runner iniziali sono C, Python, JavaScript/Node.js e SQL. Gli altri linguaggi vengono previsti nel modello per evitare di legare TheBitLab a un solo linguaggio.
 
+Nel backend locale, C richiede `gcc` e JavaScript/Node.js richiede il comando `node`. Python usa l'interprete che
+avvia TheBitLab; SQL usa il modulo `sqlite3` della standard library Python e non richiede l'omonima CLI esterna.
+Il backend Docker include tutti questi runtime nell'immagine del runner.
+
 ## Linguaggi previsti
 
 | Linguaggio | Stato iniziale |
