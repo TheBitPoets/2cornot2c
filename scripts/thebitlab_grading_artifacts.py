@@ -218,11 +218,14 @@ class GitHubActionsArtifactSource:
         candidates: list[dict[str, Any]] = []
         for page in range(1, MAX_ARTIFACT_LIST_PAGES + 1):
             artifacts = self._artifact_page(owner, repo, artifact_name, page)
-            candidates.extend(
-                artifact
-                for artifact in artifacts
-                if _valid_artifact_candidate(artifact, artifact_name, expected_head_sha)
-            )
+            for artifact in artifacts:
+                candidate = _artifact_candidate_for_commit(
+                    artifact,
+                    artifact_name,
+                    expected_head_sha,
+                )
+                if candidate is not None:
+                    candidates.append(candidate)
             if len(artifacts) < ARTIFACTS_PER_PAGE:
                 break
         else:
@@ -347,28 +350,48 @@ def _json_object(data: bytes, label: str) -> dict[str, Any]:
     return payload
 
 
-def _valid_artifact_candidate(value: Any, artifact_name: str, expected_head_sha: str) -> bool:
-    if not isinstance(value, dict) or value.get("name") != artifact_name or value.get("expired") is not False:
-        return False
+def _artifact_candidate_for_commit(
+    value: Any,
+    artifact_name: str,
+    expected_head_sha: str,
+) -> dict[str, Any] | None:
+    if not isinstance(value, dict) or value.get("name") != artifact_name:
+        return None
+    if value.get("expired") is not False:
+        return None
+    workflow_run = value.get("workflow_run")
+    if not isinstance(workflow_run, dict):
+        raise GradingArtifactError("Artifact di grading non valido: workflow_run mancante.")
+    head_sha = workflow_run.get("head_sha")
+    if not isinstance(head_sha, str) or not GIT_SHA_RE.fullmatch(head_sha):
+        raise GradingArtifactError("Artifact di grading non valido: workflow_run.head_sha non valido.")
+    if head_sha.lower() != expected_head_sha:
+        return None
+
     artifact_id = value.get("id")
     size_in_bytes = value.get("size_in_bytes")
-    workflow_run = value.get("workflow_run")
-    workflow_run_id = workflow_run.get("id") if isinstance(workflow_run, dict) else None
-    head_sha = workflow_run.get("head_sha") if isinstance(workflow_run, dict) else None
-    return (
-        isinstance(artifact_id, int)
-        and not isinstance(artifact_id, bool)
-        and artifact_id > 0
-        and isinstance(size_in_bytes, int)
-        and not isinstance(size_in_bytes, bool)
-        and 0 <= size_in_bytes <= MAX_ARTIFACT_ARCHIVE_BYTES
-        and isinstance(workflow_run_id, int)
-        and not isinstance(workflow_run_id, bool)
-        and workflow_run_id > 0
-        and isinstance(head_sha, str)
-        and head_sha.lower() == expected_head_sha
-        and _artifact_created_at(value) is not None
-    )
+    workflow_run_id = workflow_run.get("id")
+    if not isinstance(artifact_id, int) or isinstance(artifact_id, bool) or artifact_id <= 0:
+        raise GradingArtifactError("Artifact di grading non valido: id non valido.")
+    if (
+        not isinstance(size_in_bytes, int)
+        or isinstance(size_in_bytes, bool)
+        or size_in_bytes < 0
+    ):
+        raise GradingArtifactError("Artifact di grading non valido: size_in_bytes non valido.")
+    if size_in_bytes > MAX_ARTIFACT_ARCHIVE_BYTES:
+        raise GradingArtifactError(
+            f"Artifact di grading troppo grande: supera {MAX_ARTIFACT_ARCHIVE_BYTES} byte."
+        )
+    if (
+        not isinstance(workflow_run_id, int)
+        or isinstance(workflow_run_id, bool)
+        or workflow_run_id <= 0
+    ):
+        raise GradingArtifactError("Artifact di grading non valido: workflow_run.id non valido.")
+    if _artifact_created_at(value) is None:
+        raise GradingArtifactError("Artifact di grading non valido: created_at non valido.")
+    return value
 
 
 def _artifact_created_at(value: Mapping[str, Any]) -> datetime | None:

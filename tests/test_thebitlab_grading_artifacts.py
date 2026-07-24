@@ -318,6 +318,33 @@ def test_github_source_ignores_newer_artifact_from_another_commit() -> None:
     assert acquired.provenance.head_sha == TEST_SHA
 
 
+def test_github_source_does_not_fall_back_when_newer_matching_artifact_is_unsafe() -> None:
+    older = candidate(30, created_at="2026-07-24T10:00:00Z")
+    newer_oversized = {
+        **candidate(31, created_at="2026-07-24T12:00:00Z"),
+        "size_in_bytes": artifacts.MAX_ARTIFACT_ARCHIVE_BYTES + 1,
+    }
+    source = artifacts.GitHubActionsArtifactSource(
+        "github-secret",
+        transport=FakeTransport(
+            [
+                artifacts.HttpResponse(
+                    200,
+                    {},
+                    artifact_payload([older, newer_oversized]),
+                )
+            ]
+        ),
+    )
+
+    with pytest.raises(artifacts.GradingArtifactError, match="troppo grande"):
+        source.acquire_latest_report(
+            "TheBitPoets/rossi-mario",
+            "thebitlab-demo-python-report",
+            TEST_SHA,
+        )
+
+
 class FakeBoundedStream(BytesIO):
     def __init__(self, content: bytes, content_length: str | None = None) -> None:
         super().__init__(content)
