@@ -284,8 +284,8 @@ del target iniziale o di dati controllati dallo studente.
 
 `track_assignments()` accetta una `TrackingReportSource` opzionale. La precedenza e:
 
-1. tentativo `final` gia selezionato dal docente;
-2. report remoto configurato per assignment e studente;
+1. report remoto configurato per assignment e studente;
+2. tentativo `final` locale, soltanto quando non esiste un binding remoto;
 3. report locale assignment-scoped;
 4. report locale legacy.
 
