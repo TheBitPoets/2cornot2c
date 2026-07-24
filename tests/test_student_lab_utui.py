@@ -241,6 +241,29 @@ def test_panel_and_dashboard_offsets_reveal_later_rows_without_mutation() -> Non
 
 
 @pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
+def test_dashboard_offset_reveals_lower_panels_in_a_24_line_terminal() -> None:
+    first_page = student_lab_utui.render_assignment_frame(
+        ASSIGNMENT,
+        student_lab_layout.DEFAULT_LAYOUT,
+        width=120,
+        height=19,
+        color=False,
+        interaction={"dashboard_offset": 0},
+    )
+    lower_page = student_lab_utui.render_assignment_frame(
+        ASSIGNMENT,
+        student_lab_layout.DEFAULT_LAYOUT,
+        width=120,
+        height=19,
+        color=False,
+        interaction={"dashboard_offset": 10},
+    )
+
+    assert not any("Richieste aiuto" in line for line in first_page)
+    assert any("Richieste aiuto" in line for line in lower_page)
+
+
+@pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
 def test_reordered_collapsed_focus_snapshot_without_layout_mutation() -> None:
     layout = {
         **student_lab_layout.DEFAULT_LAYOUT,

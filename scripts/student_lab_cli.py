@@ -520,12 +520,13 @@ def render_assignment_view(
     renderer: str,
     terminal_width: int | None = None,
     terminal_height: int | None = None,
+    interaction: dict[str, Any] | None = None,
 ) -> str:
     """Render one assignment through the selected CLI presentation backend."""
 
     terminal_size = shutil.get_terminal_size((120, 40))
     width = terminal_width or terminal_size.columns
-    height = terminal_height or max(8, terminal_size.lines - 2)
+    height = terminal_height or max(8, terminal_size.lines - 5)
 
     def legacy() -> str:
         return render_assignment_detail(
@@ -545,6 +546,7 @@ def render_assignment_view(
             height=height,
             color=use_color,
             fallback=legacy,
+            interaction=interaction,
         )
     try:
         return "\n".join(
@@ -554,10 +556,23 @@ def render_assignment_view(
                 width=width,
                 height=height,
                 color=use_color,
+                interaction=interaction,
             )
         )
     except Exception as error:
         raise ValueError(f"Renderer utui non riuscito: {error}") from error
+
+
+def render_utui_detail_commands() -> str:
+    """Keep navigation and assignment actions visible below the clipped frame."""
+
+    return "\n".join(
+        (
+            "Navigazione: j = scorri giu | k = scorri su | l = modifica layout",
+            "Azioni: e = test/report | a = aiuto | o = workspace | v = editor",
+            "Altri: h = storico aiuti | b/invio = lista | q = esci",
+        )
+    )
 
 
 def runner_result_message(report: dict[str, Any], report_path: Path, use_color: bool = False) -> str:
@@ -1203,6 +1218,7 @@ def run_tui(
         if index < 0 or index >= len(assignments):
             continue
         selected_assignment_id = clean_text(assignments[index].get("assignment_id"), "")
+        dashboard_offset = 0
         while True:
             assignment = find_assignment(payload, selected_assignment_id, index)
             if assignment is None:
@@ -1217,13 +1233,22 @@ def run_tui(
                     use_color=use_color,
                     layout=student_lab_layout.load_layout(root),
                     renderer=selected_renderer,
+                    interaction={"dashboard_offset": dashboard_offset},
                 )
             )
+            if selected_renderer != "legacy":
+                print_fn(render_utui_detail_commands())
             action = input_fn("\nDettaglio: ").strip().lower()
             if action in {"", "b", "back", "indietro"}:
                 break
             if action in {"q", "quit", "esci"}:
                 return 0
+            if selected_renderer != "legacy" and action in {"j", "down", "giu"}:
+                dashboard_offset += 5
+                continue
+            if selected_renderer != "legacy" and action in {"k", "up", "su"}:
+                dashboard_offset = max(0, dashboard_offset - 5)
+                continue
             if action == "o":
                 workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
                 if not open_workspace(clean_text(workspace.get("path"), ""), root=root):

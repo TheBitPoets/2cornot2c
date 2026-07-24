@@ -154,6 +154,7 @@ def test_assignment_view_uses_auto_renderer_with_legacy_fallback(monkeypatch) ->
     assert captured["presentation"] == student_lab_cli.student_lab_layout.DEFAULT_LAYOUT
     assert captured["kwargs"]["width"] == 96
     assert captured["kwargs"]["height"] == 28
+    assert captured["kwargs"]["interaction"] is None
     assert "Dettaglio consegna" in captured["kwargs"]["fallback"]()
 
 
@@ -1118,6 +1119,47 @@ def test_run_tui_uses_utui_in_an_interactive_terminal(monkeypatch, tmp_path) -> 
 
     assert result == 0
     assert "frame utui interattivo" in outputs
+    assert any("Navigazione: j = scorri giu" in output for output in outputs)
+
+
+def test_run_tui_scrolls_the_utui_detail(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    inputs = iter(["1", "j", "j", "k", "", "q"])
+    interactions = []
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: payload,
+    )
+    monkeypatch.setattr(student_lab_cli.student_lab_utui, "is_available", lambda: True)
+
+    def fake_render(*args, **kwargs):
+        interactions.append(kwargs["interaction"].copy())
+        return "frame utui"
+
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_utui,
+        "render_assignment_or_fallback",
+        fake_render,
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=lambda output: None,
+        clear=False,
+        renderer="auto",
+        interactive=True,
+    )
+
+    assert result == 0
+    assert interactions == [
+        {"dashboard_offset": 0},
+        {"dashboard_offset": 5},
+        {"dashboard_offset": 10},
+        {"dashboard_offset": 5},
+    ]
 
 
 def test_run_tui_connects_utui_to_the_layout_editor(monkeypatch, tmp_path) -> None:

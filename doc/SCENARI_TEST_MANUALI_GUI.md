@@ -554,7 +554,8 @@ Esci, apri la dashboard studente, seleziona <code>rossi-mario</code>, clicca <co
    ```
 
 2. Seleziona la consegna `Demo somma in Python`.
-3. Esegui il runner con il comando indicato dalla TUI.
+3. In un terminale basso, usa `j` e `k` e verifica che i pannelli fuori dalla prima viewport siano
+   raggiungibili mentre la legenda dei comandi resta visibile; esegui quindi il runner con `e`.
 4. Esci dalla TUI.
 5. Apri `http://localhost:8765/tools/student_dashboard.html`.
 6. Seleziona `rossi-mario`.
