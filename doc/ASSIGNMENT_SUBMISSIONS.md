@@ -519,9 +519,9 @@ Il flusso e pensato in tre livelli:
 
 | Livello | Responsabilita |
 |---|---|
-| Core Python | Funzioni riusabili da test, CLI e futura GUI |
+| Core Python | Funzioni riusabili da test, CLI e dashboard |
 | CLI | Wrapper operativo per docente, CI e debug |
-| GUI futura | Form e bottoni che chiamano lo stesso core, senza duplicare logica |
+| Dashboard docente | Form e bottoni che chiamano lo stesso core, senza duplicare logica |
 
 Se la classe ha molti repository, puoi usare un file di target:
 
@@ -544,7 +544,8 @@ Le righe vuote e le righe che iniziano con `#` vengono ignorate.
 
 Come per lo scaffold singolo, `--force` aggiorna i metadati della consegna, ma non sovrascrive il sorgente dello studente. Per rigenerare anche il sorgente serve `--overwrite-source`.
 
-Nella GUI futura il docente non dovra ricordare questi comandi: selezionera activity, classe/team GitHub e repository studenti; il server locale chiamera lo stesso core usato dalla CLI.
+Nella dashboard il docente seleziona activity, classe/team GitHub e repository studenti; il server locale
+chiama lo stesso core usato dalla CLI.
 
 ## Registro consegne con scadenza, voti e AI placeholder
 
@@ -573,7 +574,7 @@ La CLI `track_assignments.py` non carica automaticamente `teacher-grading-bindin
 strumento locale per debug e compatibilita. La precedenza remota fail-closed e attiva nella generazione
 tramite server/GUI; l'eventuale composizione remota da CLI richiedera opzioni esplicite dedicate.
 
-Il registro prodotto e pensato per la futura GUI docente.
+Il registro prodotto alimenta la dashboard docente e la vista studente.
 
 Per ogni studente contiene:
 
