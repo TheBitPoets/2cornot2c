@@ -164,7 +164,6 @@ def test_grade_activity_passes_valid_javascript_program(tmp_path) -> None:
     assert report["language"] == "javascript"
 
 
-@pytest.mark.skipif(shutil.which("sqlite3") is None, reason="sqlite3 non disponibile nell'ambiente di test")
 def test_grade_activity_passes_valid_sql_script(tmp_path) -> None:
     source = tmp_path / "main.sql"
     source.write_text("SELECT 2 + 3;\n", encoding="utf-8")
@@ -176,6 +175,72 @@ def test_grade_activity_passes_valid_sql_script(tmp_path) -> None:
 
     assert report["passed"] is True
     assert report["language"] == "sql"
+
+
+def test_grade_activity_sql_matches_sqlite_cli_rows_and_nulls(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text(
+        "CREATE TABLE studenti (nome TEXT, voto INTEGER);\n"
+        "INSERT INTO studenti VALUES ('Ada', 9), ('Linus', NULL);\n"
+        "SELECT nome, voto FROM studenti ORDER BY nome;\n",
+        encoding="utf-8",
+    )
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-rows-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": "Ada|9\nLinus|\n"}],
+        },
+        source,
+    )
+
+    assert report["passed"] is True
+    assert report["tests"][0]["stdout"] == "Ada|9\nLinus|\n"
+
+
+def test_grade_activity_reports_sql_error(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text("SELECT colonna_inesistente FROM studenti;\n", encoding="utf-8")
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-error-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": ""}],
+        },
+        source,
+    )
+
+    assert report["passed"] is False
+    assert report["status"] == "failed"
+    assert report["tests"][0]["status"] == "execution-error"
+    assert report["tests"][0]["returncode"] == 1
+    assert report["tests"][0]["stderr"]
+
+
+def test_grade_activity_reports_sql_timeout(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text(
+        "WITH RECURSIVE numeri(n) AS ("
+        "SELECT 1 UNION ALL SELECT n + 1 FROM numeri WHERE n < 1000000"
+        ") SELECT sum(n) FROM numeri;\n",
+        encoding="utf-8",
+    )
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-timeout-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": ""}],
+        },
+        source,
+        timeout_seconds=0,
+    )
+
+    assert report["passed"] is False
+    assert report["tests"][0]["status"] == "timeout"
+    assert report["tests"][0]["returncode"] is None
 
 
 def test_grade_activity_reports_unknown_language(tmp_path) -> None:

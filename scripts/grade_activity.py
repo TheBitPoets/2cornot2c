@@ -4,9 +4,11 @@ import argparse
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import tempfile
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -190,7 +192,64 @@ def run_sql_test_case(source: Path, test_case: dict[str, Any], *, timeout_second
     """Run one SQL script against an isolated in-memory SQLite database."""
 
     sql = source.read_text(encoding="utf-8") + "\n" + str(test_case.get("stdin", ""))
-    return run_command_test_case(["sqlite3", ":memory:"], {**test_case, "stdin": sql}, timeout_seconds=timeout_seconds)
+    expected_stdout = str(test_case.get("expected_stdout", ""))
+    name = str(test_case.get("name", "test"))
+    command = ["python-stdlib", "sqlite3", ":memory:"]
+    deadline = time.monotonic() + timeout_seconds
+    timed_out = False
+    output_lines: list[str] = []
+
+    def stop_after_deadline() -> int:
+        nonlocal timed_out
+        timed_out = time.monotonic() >= deadline
+        return 1 if timed_out else 0
+
+    try:
+        with sqlite3.connect(":memory:") as connection:
+            connection.set_progress_handler(stop_after_deadline, 1000)
+            statement_buffer = ""
+            for character in sql:
+                statement_buffer += character
+                if character != ";" or not sqlite3.complete_statement(statement_buffer):
+                    continue
+                cursor = connection.execute(statement_buffer)
+                if cursor.description:
+                    output_lines.extend(
+                        "|".join("" if value is None else str(value) for value in row)
+                        for row in cursor.fetchall()
+                    )
+                statement_buffer = ""
+            if statement_buffer.strip():
+                cursor = connection.execute(statement_buffer)
+                if cursor.description:
+                    output_lines.extend(
+                        "|".join("" if value is None else str(value) for value in row)
+                        for row in cursor.fetchall()
+                    )
+    except sqlite3.Error as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "timeout" if timed_out else "execution-error",
+            "command": command,
+            "returncode": None if timed_out else 1,
+            "stdout": "\n".join(output_lines) + ("\n" if output_lines else ""),
+            "stderr": f"Timeout dopo {timeout_seconds} secondi." if timed_out else str(error),
+            "expected_stdout": expected_stdout,
+        }
+
+    actual_stdout = "\n".join(output_lines) + ("\n" if output_lines else "")
+    passed = normalize_output(actual_stdout) == normalize_output(expected_stdout)
+    return {
+        "name": name,
+        "passed": passed,
+        "status": "passed" if passed else "failed",
+        "command": command,
+        "returncode": 0,
+        "stdout": actual_stdout,
+        "stderr": "",
+        "expected_stdout": expected_stdout,
+    }
 
 
 def validate_test_cases(test_cases: Any) -> list[str]:
