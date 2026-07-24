@@ -342,6 +342,52 @@ def test_create_scaffold_force_removes_asset_that_became_teacher_only(tmp_path) 
     assert (destination / "notes.txt").read_text(encoding="utf-8") == "file studente\n"
 
 
+def test_create_scaffold_requires_explicit_regeneration_for_legacy_assets(tmp_path) -> None:
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_secret.py").write_text("SECRET = 'old-public'\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "visible_test",
+                "path": "tests/test_secret.py",
+                "target_path": "tests/test_secret.py",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+    (destination / create_submission_scaffold.MANAGED_ASSETS_FILE).unlink()
+
+    payload["assets"][0]["type"] = "hidden_test"
+    payload["assets"][0]["visibility"] = "teacher"
+    write_activity(tmp_path, payload)
+
+    try:
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=tmp_path / "student",
+            overwrite=True,
+        )
+    except ValueError as error:
+        assert "--force --overwrite-source" in str(error)
+    else:
+        raise AssertionError("legacy scaffold should require explicit regeneration")
+
+    assert (destination / "tests" / "test_secret.py").exists()
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+        overwrite=True,
+        overwrite_source=True,
+    )
+    assert not (destination / "tests" / "test_secret.py").exists()
+    assert (destination / create_submission_scaffold.MANAGED_ASSETS_FILE).exists()
+
+
 def test_create_scaffold_force_removes_public_asset_deleted_from_activity(tmp_path) -> None:
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "test_old.py").write_text("def test_old(): pass\n", encoding="utf-8")
