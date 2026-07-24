@@ -3,10 +3,12 @@ from __future__ import annotations
 import copy
 import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
-from scripts import student_lab_layout, student_lab_utui
+from scripts import student_lab_cli, student_lab_layout, student_lab_utui
 
 
 SNAPSHOT_ROOT = Path(__file__).with_name("snapshots") / "student_lab_utui"
@@ -302,6 +304,62 @@ def test_reordered_collapsed_focus_snapshot_without_layout_mutation() -> None:
 
     assert layout == original
     assert_snapshot("reordered-collapsed.txt", "\n".join(frame))
+
+
+@pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
+def test_explicit_utui_cli_smoke_uses_a_real_demo_root(tmp_path: Path) -> None:
+    demo_root = tmp_path / "student-lab-utui"
+    environment = {
+        **os.environ,
+        "PYTHONUTF8": "1",
+        "THEBITLAB_REQUIRE_UTUI": "1",
+    }
+    setup = subprocess.run(
+        [
+            sys.executable,
+            str(student_lab_cli.PROJECT_ROOT / "scripts" / "student_lab_demo_setup.py"),
+            "--root",
+            str(demo_root),
+        ],
+        cwd=student_lab_cli.PROJECT_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+        check=False,
+    )
+    assert setup.returncode == 0, setup.stderr
+
+    cli = subprocess.run(
+        [
+            sys.executable,
+            str(student_lab_cli.PROJECT_ROOT / "scripts" / "student_lab_cli.py"),
+            "--root",
+            str(demo_root),
+            "--student-id",
+            "rossi-mario",
+            "--renderer",
+            "utui",
+            "--no-clear",
+            "--no-color",
+        ],
+        cwd=student_lab_cli.PROJECT_ROOT,
+        env=environment,
+        input="1\n\nq\n",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+        check=False,
+    )
+
+    assert cli.returncode == 0, cli.stderr
+    rendered = cli.stdout
+    assert "Demo somma in Python" in rendered
+    assert "+ > Dettaglio consegna" in rendered
+    assert "Navigazione: j = scorri giu" in rendered
+    assert "Azioni: e = test/report" in rendered
 
 
 def test_render_falls_back_after_adapter_failure(monkeypatch: pytest.MonkeyPatch) -> None:

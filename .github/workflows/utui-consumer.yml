@@ -1,0 +1,74 @@
+name: uTUI consumer evidence
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/**"
+      - "tests/test_student_lab_cli.py"
+      - "tests/test_student_lab_layout.py"
+      - "tests/test_student_lab_utui.py"
+      - "tests/snapshots/student_lab_utui/**"
+      - "requirements-dev.txt"
+      - "requirements-utui.txt"
+      - ".github/workflows/utui-consumer.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/**"
+      - "tests/test_student_lab_cli.py"
+      - "tests/test_student_lab_layout.py"
+      - "tests/test_student_lab_utui.py"
+      - "tests/snapshots/student_lab_utui/**"
+      - "requirements-dev.txt"
+      - "requirements-utui.txt"
+      - ".github/workflows/utui-consumer.yml"
+
+jobs:
+  consumer:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+        python:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    env:
+      THEBITLAB_REQUIRE_UTUI: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            requirements-utui.txt
+
+      - name: Install consumer dependencies
+        run: python -m pip install -r requirements-dev.txt -r requirements-utui.txt
+
+      - name: Require the real uTUI adapter
+        run: >-
+          python -c
+          "from scripts import student_lab_utui;
+          assert student_lab_utui.is_available(), repr(student_lab_utui.UTUI_IMPORT_ERROR)"
+
+      - name: Run consumer adapter, layout, and CLI tests
+        run: >-
+          python -m pytest
+          tests/test_student_lab_utui.py
+          tests/test_student_lab_layout.py
+          tests/test_student_lab_cli.py
