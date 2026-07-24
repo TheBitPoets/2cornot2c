@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import errno
 import json
+import os
 
 import pytest
 
@@ -145,6 +147,84 @@ def test_persist_attempt_never_replaces_an_existing_attempt(tmp_path, monkeypatc
         student_lab_attempts.persist_attempt(report_path, ASSIGNMENT_ID, {**original, "passed": True})
 
     assert attempt_path.read_bytes() == original_bytes
+
+
+def test_exclusive_write_falls_back_when_hard_links_are_unsupported(tmp_path, monkeypatch) -> None:
+    output = tmp_path / "attempt.json"
+    payload = {"attempt_id": "attempt-exfat", "passed": True}
+
+    def unsupported_link(source, destination):
+        error = OSError(errno.EPERM, "hard links unsupported")
+        if os.name == "nt":
+            error.winerror = 1
+        raise error
+
+    monkeypatch.setattr(student_lab_attempts.os, "link", unsupported_link)
+
+    student_lab_attempts.write_json_exclusive(output, payload, base_dir=tmp_path)
+
+    assert json.loads(output.read_text(encoding="utf-8")) == payload
+    with pytest.raises(FileExistsError):
+        student_lab_attempts.write_json_exclusive(output, {**payload, "passed": False}, base_dir=tmp_path)
+    assert json.loads(output.read_text(encoding="utf-8")) == payload
+
+
+def test_linux_no_replace_fails_safely_when_libc_wrapper_is_missing(tmp_path) -> None:
+    class FakeLibc:
+        pass
+
+    with pytest.raises(OSError) as raised:
+        student_lab_attempts.linux_rename_no_replace(
+            tmp_path / "attempt.tmp",
+            tmp_path / "attempt.json",
+            libc=FakeLibc(),
+        )
+    assert raised.value.errno == errno.ENOSYS
+
+
+def test_exclusive_write_does_not_mask_unrelated_link_errors(tmp_path, monkeypatch) -> None:
+    output = tmp_path / "attempt.json"
+
+    def denied_link(source, destination):
+        raise OSError(errno.EACCES, "link denied")
+
+    monkeypatch.setattr(student_lab_attempts.os, "link", denied_link)
+
+    with pytest.raises(PermissionError, match="link denied"):
+        student_lab_attempts.write_json_exclusive(
+            output,
+            {"attempt_id": "attempt-denied"},
+            base_dir=tmp_path,
+        )
+
+    assert not output.exists()
+
+
+def test_exclusive_fallback_failure_leaves_no_placeholder(tmp_path, monkeypatch) -> None:
+    output = tmp_path / "attempt.json"
+
+    def unsupported_link(source, destination):
+        error = OSError(errno.EPERM, "hard links unsupported")
+        if os.name == "nt":
+            error.winerror = 1
+        raise error
+
+    monkeypatch.setattr(student_lab_attempts.os, "link", unsupported_link)
+    monkeypatch.setattr(
+        student_lab_attempts,
+        "rename_no_replace",
+        lambda source, destination: (_ for _ in ()).throw(OSError("publish failed")),
+    )
+
+    with pytest.raises(OSError, match="publish failed"):
+        student_lab_attempts.write_json_exclusive(
+            output,
+            {"attempt_id": "attempt-failed"},
+            base_dir=tmp_path,
+        )
+
+    assert not output.exists()
+    assert list(tmp_path.glob(".*.tmp")) == []
 
 
 def test_exclusive_attempt_is_removed_when_directory_sync_fails(tmp_path, monkeypatch) -> None:

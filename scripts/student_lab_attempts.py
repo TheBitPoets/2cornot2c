@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import ctypes
+import errno
 import heapq
 import json
 import os
+import sys
 import tempfile
 import uuid
 from contextlib import contextmanager
@@ -142,6 +145,70 @@ def write_json_atomic(path: Path, payload: dict[str, Any], *, base_dir: Path | N
     write_bytes_atomic(path, json_bytes(payload), base_dir=base_dir)
 
 
+def hard_link_is_unsupported(error: OSError) -> bool:
+    """Return whether the current platform can try an atomic no-replace rename."""
+
+    if os.name == "nt":
+        return getattr(error, "winerror", None) in {1, 50}
+    if sys.platform.startswith("linux"):
+        return error.errno in {errno.EPERM, errno.ENOTSUP, errno.EOPNOTSUPP}
+    return False
+
+
+def linux_rename_no_replace(
+    temporary_path: Path,
+    output: Path,
+    *,
+    libc: Any | None = None,
+) -> None:
+    """Call libc renameat2 with RENAME_NOREPLACE."""
+
+    libc = libc or ctypes.CDLL(None, use_errno=True)
+    source_bytes = os.fsencode(temporary_path)
+    output_bytes = os.fsencode(output)
+    renameat2 = getattr(libc, "renameat2", None)
+    if renameat2 is None:
+        raise OSError(errno.ENOSYS, "libc renameat2 is not available", output)
+    renameat2.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    renameat2.restype = ctypes.c_int
+    result = renameat2(-100, source_bytes, -100, output_bytes, 1)
+    if result != 0:
+        error_code = ctypes.get_errno()
+        raise OSError(error_code, os.strerror(error_code), output)
+
+
+def rename_no_replace(temporary_path: Path, output: Path) -> None:
+    """Atomically rename without replacing an existing path on Windows or Linux."""
+
+    if os.name == "nt":
+        os.rename(temporary_path, output)
+        return
+    if not sys.platform.startswith("linux"):
+        raise OSError(errno.ENOTSUP, "Atomic no-replace rename is not supported", output)
+    linux_rename_no_replace(temporary_path, output)
+
+
+def publish_exclusive(temporary_path: Path, output: Path) -> None:
+    """Publish a complete file without replacing an existing destination."""
+
+    try:
+        os.link(temporary_path, output)
+        return
+    except FileExistsError:
+        raise
+    except OSError as error:
+        if not hard_link_is_unsupported(error):
+            raise
+
+    rename_no_replace(temporary_path, output)
+
+
 def write_json_exclusive(path: Path, payload: dict[str, Any], *, base_dir: Path) -> None:
     """Publish an immutable JSON file without replacing an existing attempt."""
 
@@ -159,7 +226,7 @@ def write_json_exclusive(path: Path, payload: dict[str, Any], *, base_dir: Path)
             stream.write(json_bytes(payload))
             stream.flush()
             os.fsync(stream.fileno())
-        os.link(temporary_path, output)
+        publish_exclusive(temporary_path, output)
         published = True
         sync_directory(output.parent)
     except BaseException:

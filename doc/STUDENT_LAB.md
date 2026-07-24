@@ -103,6 +103,10 @@ Le scritture JSON usano file temporanei, replace atomico e sincronizzazione dell
 Su Windows il replace resta atomico, ma Python non espone un equivalente portabile del `fsync` della directory:
 il journal consente il recupero dopo un arresto del processo, mentre non garantisce la persistenza assoluta in caso
 di interruzione dell'alimentazione nel brevissimo intervallo successivo al replace.
+I tentativi immutabili usano hard link quando disponibili. Su Windows, anche i volumi exFAT sono supportati tramite
+rename atomico senza sostituzione. Su Linux, un filesystem privo di hard link richiede una libc che esponga
+`renameat2` (glibc 2.28 o successiva); in assenza del wrapper il salvataggio fallisce esplicitamente senza rischiare
+di sovrascrivere un tentativo esistente.
 
 In un secondo terminale:
 
