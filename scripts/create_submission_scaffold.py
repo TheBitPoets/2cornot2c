@@ -3,8 +3,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +21,7 @@ from scripts.thebitlab_contracts import (
 DEFAULT_TARGET_DIR = Path(".")
 DEFAULT_SOURCE_NAME = "main.c"
 DEFAULT_THEBITLAB_REF = "main"
-MANAGED_ASSETS_FILE = ".thebitlab-managed-assets.json"
+MANAGED_ASSETS_STATE_DIR = ".thebitlab-scaffold-state"
 DEFAULT_SOURCE_NAMES = {
     "assembly": "main.asm",
     "c": "main.c",
@@ -423,9 +425,23 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def load_managed_assets(destination: Path) -> dict[Path, str]:
+def managed_assets_path(
+    target_dir: Path,
+    identifier: str,
+    state_dir: Path | None = None,
+) -> Path:
+    """Return the teacher-side state path for one student scaffold."""
+    selected_state_dir = state_dir or target_dir.parent / MANAGED_ASSETS_STATE_DIR
+    target_key = hashlib.sha256(
+        str(target_dir.resolve()).encode("utf-8")
+    ).hexdigest()
+    return selected_state_dir / target_key / f"{identifier}.json"
+
+
+def load_managed_assets(manifest_path: Path) -> dict[Path, str]:
     """Load the validated manifest of assets copied by this tool."""
-    manifest_path = destination / MANAGED_ASSETS_FILE
+    if manifest_path.is_symlink():
+        raise ValueError("Il manifest docente degli asset non puo essere un link simbolico.")
     if not manifest_path.is_file():
         return {}
     try:
@@ -520,7 +536,7 @@ def remove_stale_managed_assets(
     return retained
 
 
-def write_managed_assets(destination: Path, managed: dict[Path, str]) -> None:
+def write_managed_assets(manifest_path: Path, managed: dict[Path, str]) -> None:
     """Persist the public asset paths and original content hashes."""
     payload = {
         "schema_version": "thebitlab.managed-assets.v1",
@@ -529,11 +545,35 @@ def write_managed_assets(destination: Path, managed: dict[Path, str]) -> None:
             for target, digest in sorted(managed.items(), key=lambda item: item[0].as_posix())
         },
     }
-    (destination / MANAGED_ASSETS_FILE).write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
+    state_root_path = manifest_path.parents[1]
+    state_root_path.mkdir(parents=True, exist_ok=True)
+    if state_root_path.is_symlink():
+        raise ValueError("La directory di stato degli asset non puo essere un link simbolico.")
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    if manifest_path.parent.is_symlink() or manifest_path.is_symlink():
+        raise ValueError("Il percorso di stato degli asset non puo contenere link simbolici.")
+    state_root = state_root_path.resolve()
+    try:
+        manifest_path.parent.resolve().relative_to(state_root)
+    except ValueError as error:
+        raise ValueError("Manifest degli asset fuori dalla directory di stato.") from error
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            newline="\n",
+            dir=manifest_path.parent,
+            prefix=f".{manifest_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temporary_path = Path(stream.name)
+            stream.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        os.replace(temporary_path, manifest_path)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
 
 
 def copy_student_assets(
@@ -612,6 +652,7 @@ def create_scaffold(
     thebitlab_ref: str = DEFAULT_THEBITLAB_REF,
     overwrite: bool = False,
     overwrite_source: bool = False,
+    state_dir: Path | None = None,
 ) -> Path:
     """Create an assignment scaffold in a student repository."""
     activity = load_activity(activity_path)
@@ -623,13 +664,14 @@ def create_scaffold(
     )
     thebitlab_ref = validate_thebitlab_ref(thebitlab_ref)
     destination = scaffold_dir(target_dir, identifier)
+    manifest_path = managed_assets_path(target_dir, identifier, state_dir)
     asset_plan = student_asset_copy_plan(activity_path, activity)
     current_asset_targets = {target_rel for _, target_rel in asset_plan}
 
     if destination.exists() and any(destination.iterdir()) and not overwrite:
         raise ValueError(f"Consegna gia esistente: {destination}. Usa --force per sovrascrivere.")
 
-    manifest_exists = (destination / MANAGED_ASSETS_FILE).is_file()
+    manifest_exists = manifest_path.is_file()
     legacy_targets = (
         load_legacy_public_asset_targets(destination)
         if overwrite and destination.exists() and not manifest_exists
@@ -649,7 +691,7 @@ def create_scaffold(
             current_targets=current_asset_targets,
             protected_source=source_name,
         )
-    managed_assets = load_managed_assets(destination) if overwrite else {}
+    managed_assets = load_managed_assets(manifest_path) if overwrite else {}
     if managed_assets:
         managed_assets = remove_stale_managed_assets(
             destination=destination,
@@ -672,7 +714,7 @@ def create_scaffold(
     for copied_path in copied_assets:
         target_rel = copied_path.relative_to(destination)
         managed_assets[target_rel] = file_sha256(copied_path)
-    write_managed_assets(destination, managed_assets)
+    write_managed_assets(manifest_path, managed_assets)
 
     source_path = destination / source_name
     if overwrite_source or not source_path.exists():
@@ -695,6 +737,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--thebitlab-ref", default=DEFAULT_THEBITLAB_REF, help="Branch, tag o commit TheBitLab da indicare nel README.")
     parser.add_argument("--force", action="store_true", help="Sovrascrive una consegna gia esistente.")
     parser.add_argument("--overwrite-source", action="store_true", help="Sovrascrive anche il sorgente se esiste.")
+    parser.add_argument("--state-dir", type=Path, help="Directory docente per lo stato degli asset gestiti.")
     return parser.parse_args()
 
 
@@ -709,6 +752,7 @@ def main() -> int:
             thebitlab_ref=args.thebitlab_ref,
             overwrite=args.force,
             overwrite_source=args.overwrite_source,
+            state_dir=args.state_dir,
         )
     except ValueError as error:
         print(f"Scaffold consegna non creato:\n{error}")

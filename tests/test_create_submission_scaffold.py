@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from scripts import create_submission_scaffold
 
 
@@ -356,11 +358,16 @@ def test_create_scaffold_requires_explicit_regeneration_for_legacy_assets(tmp_pa
         ],
     }
     activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
     destination = create_submission_scaffold.create_scaffold(
         activity_path=activity_path,
-        target_dir=tmp_path / "student",
+        target_dir=target_dir,
     )
-    (destination / create_submission_scaffold.MANAGED_ASSETS_FILE).unlink()
+    manifest_path = create_submission_scaffold.managed_assets_path(
+        target_dir,
+        "python-base-somma-001",
+    )
+    manifest_path.unlink()
 
     payload["assets"][0]["type"] = "hidden_test"
     payload["assets"][0]["visibility"] = "teacher"
@@ -369,7 +376,7 @@ def test_create_scaffold_requires_explicit_regeneration_for_legacy_assets(tmp_pa
     try:
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
-            target_dir=tmp_path / "student",
+            target_dir=target_dir,
             overwrite=True,
         )
     except ValueError as error:
@@ -380,12 +387,12 @@ def test_create_scaffold_requires_explicit_regeneration_for_legacy_assets(tmp_pa
     assert (destination / "tests" / "test_secret.py").exists()
     create_submission_scaffold.create_scaffold(
         activity_path=activity_path,
-        target_dir=tmp_path / "student",
+        target_dir=target_dir,
         overwrite=True,
         overwrite_source=True,
     )
     assert not (destination / "tests" / "test_secret.py").exists()
-    assert (destination / create_submission_scaffold.MANAGED_ASSETS_FILE).exists()
+    assert manifest_path.exists()
 
 
 def test_create_scaffold_force_removes_public_asset_deleted_from_activity(tmp_path) -> None:
@@ -443,6 +450,63 @@ def test_create_scaffold_force_preserves_unmanaged_private_target(tmp_path) -> N
     )
 
     assert (destination / "notes.txt").read_text(encoding="utf-8") == "file studente\n"
+
+
+def test_create_scaffold_ignores_student_repository_manifest(tmp_path) -> None:
+    payload = canonical_activity()
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    notes = destination / "notes.txt"
+    notes.write_text("file studente\n", encoding="utf-8")
+    forged_manifest = destination / ".thebitlab-managed-assets.json"
+    forged_manifest.write_text(
+        json.dumps(
+            {
+                "assets": {
+                    "notes.txt": create_submission_scaffold.file_sha256(notes),
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+        overwrite=True,
+    )
+
+    assert notes.read_text(encoding="utf-8") == "file studente\n"
+    assert forged_manifest.exists()
+
+
+def test_create_scaffold_does_not_follow_student_manifest_symlink(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, canonical_activity())
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    external = tmp_path / "external.txt"
+    external.write_text("non modificare\n", encoding="utf-8")
+    forged_manifest = destination / ".thebitlab-managed-assets.json"
+    try:
+        forged_manifest.symlink_to(external)
+    except OSError:
+        pytest.skip("Creazione symlink non consentita su questa piattaforma.")
+
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+        overwrite=True,
+    )
+
+    assert external.read_text(encoding="utf-8") == "non modificare\n"
+    assert forged_manifest.is_symlink()
 
 
 def test_create_scaffold_force_preserves_modified_stale_asset(tmp_path) -> None:
