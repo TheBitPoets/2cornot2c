@@ -1045,6 +1045,7 @@ def test_sync_file_tree_flushes_regular_files(tmp_path, monkeypatch) -> None:
     first.write_text("{}\n", encoding="utf-8")
     second.write_text("{}\n", encoding="utf-8")
     flushed = []
+    monkeypatch.setattr(course_board_server.assignment_records, "sync_directory", lambda path: None)
     monkeypatch.setattr(course_board_server.os, "fsync", lambda descriptor: flushed.append(descriptor))
 
     course_board_server.sync_file_tree(root)
