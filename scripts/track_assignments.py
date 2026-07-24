@@ -594,6 +594,13 @@ def track_assignments(
                         uses_assignment_report = True
                         report = remote_report_result.report
                         report_selection = remote_report_result.selection
+                        if report is not None:
+                            repository_ref = str(
+                                (remote_report_result.provenance or {}).get("repository", "")
+                            )
+                            repo_url = github_url_from_remote(repository_ref)
+                        elif not repository_ref:
+                            repo_url = None
                 if remote_report_result is None or not remote_report_result.configured:
                     assignment_report_path = (
                         report_path.parent

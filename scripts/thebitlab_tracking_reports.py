@@ -86,13 +86,27 @@ def canonical_tracking_report_result(result: TrackingReportResult) -> TrackingRe
             provisional=False,
             error=result.error or "Provenienza del report remoto non verificabile.",
         )
+    try:
+        owner, repo = normalize_github_repo_ref(
+            str(result.provenance.get("repository", "") or "")
+        )
+    except ValueError:
+        return TrackingReportResult(
+            configured=True,
+            selection="remote_error",
+            authority="remote_configured",
+            provisional=False,
+            error=result.error or "Repository del report remoto non verificabile.",
+        )
+    provenance = dict(result.provenance)
+    provenance["repository"] = f"{owner}/{repo}"
     return TrackingReportResult(
         configured=True,
         report=result.report,
         selection="github_actions_artifact",
         authority="verified_remote",
         provisional=bool(result.provisional),
-        provenance=dict(result.provenance),
+        provenance=provenance,
     )
 
 

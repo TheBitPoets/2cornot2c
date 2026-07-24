@@ -114,6 +114,15 @@ def test_canonical_tracking_result_rejects_contradictory_remote_states() -> None
             authority="verified_remote",
         )
     )
+    invalid_repository = tracking_reports.canonical_tracking_report_result(
+        tracking_reports.TrackingReportResult(
+            configured=True,
+            report={"status": "passed"},
+            selection="github_actions_artifact",
+            authority="verified_remote",
+            provenance={"repository": "not a repository"},
+        )
+    )
 
     assert missing_report.selection == "remote_error"
     assert missing_report.authority == "remote_configured"
@@ -121,6 +130,8 @@ def test_canonical_tracking_result_rejects_contradictory_remote_states() -> None
     assert missing_provenance.selection == "remote_error"
     assert missing_provenance.report is None
     assert "Provenienza" in missing_provenance.error
+    assert invalid_repository.selection == "remote_error"
+    assert "Repository" in invalid_repository.error
 
 
 def test_artifact_tracking_source_resolves_verified_remote_report() -> None:

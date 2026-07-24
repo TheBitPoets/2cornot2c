@@ -112,7 +112,7 @@ def write_assignment_record(
             targets=[
                 {
                     "student_id": "rossi-mario",
-                    "repo_ref": repo_ref or student.repo,
+                    "repo_ref": student.repo if repo_ref is None else repo_ref,
                     "path": str(student.path.relative_to(tmp_path)),
                 }
             ],
@@ -1396,6 +1396,45 @@ def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) 
             repo_ref="TheBitPoets/rossi-mario",
         )
     ]
+
+
+def test_remote_provenance_supplies_missing_assignment_repository(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student_path = tmp_path / "rossi-mario"
+    student = track_assignments.TrackingTarget(
+        student="rossi-mario",
+        repo=str(student_path),
+        path=student_path,
+    )
+    assignment_id = "assignment-remote-repository"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id, repo_ref="")
+    remote_report = attempt_report(
+        assignment_id,
+        "attempt-remote",
+        passed=True,
+        submitted_at="2026-10-20T08:00:00+02:00",
+    )
+    source = StaticTrackingReportSource(
+        thebitlab_tracking_reports.TrackingReportResult(
+            configured=True,
+            report=remote_report,
+            selection="github_actions_artifact",
+            authority="verified_remote",
+            provenance={"repository": "TheBitPoets/rossi-mario"},
+        )
+    )
+
+    row = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        report_source=source,
+    )["students"][0]
+
+    assert source.requests[0].repo_ref == ""
+    assert row["repo"] == "TheBitPoets/rossi-mario"
+    assert row["repo_github_url"] == "https://github.com/TheBitPoets/rossi-mario"
 
 
 def test_track_assignments_remote_error_does_not_fall_back_to_local_report(tmp_path) -> None:
