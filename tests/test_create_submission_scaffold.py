@@ -1067,6 +1067,12 @@ def test_create_scaffold_supports_custom_source_name_and_language(tmp_path) -> N
     )
 
     assert (destination / "solution.py").exists()
+    distributed_activity = json.loads(
+        (destination / "activity.json").read_text(encoding="utf-8")
+    )
+    assert distributed_activity["language"] == "python"
+    assert distributed_activity["linguaggio"] == "python"
+    assert distributed_activity["source_name"] == "solution.py"
     readme = (destination / "README.md").read_text(encoding="utf-8")
     assert "language`: `python`" in readme
     assert "source_path`: `assignments/c-base-somma-001/solution.py`" in readme

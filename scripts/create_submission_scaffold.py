@@ -961,10 +961,15 @@ def create_scaffold(
             current_target_keys=current_asset_target_keys,
             protected_source=source_name,
         )
+    distributed_activity = student_activity_payload(activity)
+    distributed_activity["language"] = selected_language
+    distributed_activity["source_name"] = source_name
+    if "linguaggio" in distributed_activity:
+        distributed_activity["linguaggio"] = selected_language
     atomic_write_text(
         destination,
         Path("activity.json"),
-        json.dumps(student_activity_payload(activity), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(distributed_activity, ensure_ascii=False, indent=2) + "\n",
     )
 
     copied_assets = copy_student_assets(
