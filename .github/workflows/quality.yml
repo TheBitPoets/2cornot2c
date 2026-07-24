@@ -71,13 +71,15 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install -r requirements-dev.txt -r requirements-utui.txt
 
-      - name: Test storage, lab and deletion workflows
+      - name: Test storage, lab, runner and deletion workflows
         run: >-
           python -m pytest
           tests/test_assignment_records.py
+          tests/test_grade_activity.py
           tests/test_student_help_service.py
           tests/test_student_help_codex_adapter.py
           tests/test_student_lab_service.py
+          tests/test_student_lab_runner.py
           tests/test_student_lab_cli.py
           tests/test_student_lab_utui.py
           tests/test_student_lab_demo_setup.py
