@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import textwrap
+from pathlib import Path
 
 
 def run_student_dashboard_js(assertions: str) -> None:
@@ -76,6 +77,10 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderCoursePath,
         renderFeedback,
         renderStudentLab,
+        renderAttemptSummary,
+        renderAttemptHistory,
+        openAttemptHistory,
+        closeAttemptHistory,
         renderAssignment,
         renderAssignmentDetail,
         renderAssignmentFiles,
@@ -121,6 +126,15 @@ def run_student_dashboard_js(assertions: str) -> None:
     }});
     """
     subprocess.run(["node", "-e", textwrap.dedent(script)], check=True)
+
+
+def test_student_dashboard_declares_attempt_history_dialog() -> None:
+    source = Path("tools/student_dashboard.html").read_text(encoding="utf-8")
+
+    assert 'id="attemptHistoryModal"' in source
+    assert 'aria-labelledby="attemptHistoryTitle"' in source
+    assert 'id="attemptHistoryBody"' in source
+    assert 'id="attemptHistoryClose"' in source
 
 
 def test_student_dashboard_renders_summary_and_assignment_card() -> None:
@@ -182,6 +196,35 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
               report: { path: "examples/assignment_tracking/student_repos/rossi-mario/reports/python-base-somma-001/latest.json", exists: true, submitted_at: "2026-10-18T18:22:10+02:00" },
               grading: { status: "graded_passed", tests_passed: 2, tests_total: 2, failed_tests: [] },
               runner: { backend: "local" },
+              attempts: {
+                count: 2,
+                truncated: false,
+                latest: {
+                  id: "attempt-002",
+                  status: "passed",
+                  passed: true,
+                  tests_passed: 2,
+                  tests_total: 2,
+                  submitted_at: "2026-10-18T18:22:10+02:00",
+                },
+                best: {
+                  id: "attempt-002",
+                  status: "passed",
+                  passed: true,
+                  tests_passed: 2,
+                  tests_total: 2,
+                  submitted_at: "2026-10-18T18:22:10+02:00",
+                },
+                final: {
+                  id: "attempt-001",
+                  status: "failed",
+                  passed: false,
+                  tests_passed: 1,
+                  tests_total: 2,
+                  submitted_at: "2026-10-18T17:10:00+02:00",
+                },
+                items: [],
+              },
             }],
           },
           assignments: [assignment, { activity_id: "python-loop-001", status: "missing", submitted: false, late: false }],
@@ -211,7 +254,113 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
         assert.match(tested.els.studentLab.innerHTML, /soluzioni complete/);
         assert.match(tested.els.studentLab.innerHTML, /Aiuti tracciati: 2/);
         assert.match(tested.els.studentLab.innerHTML, /Bloccati: 1/);
+        assert.match(tested.els.studentLab.innerHTML, /<strong>Tentativi<\\/strong>2/);
+        assert.match(tested.els.studentLab.innerHTML, /<strong>Ultimo<\\/strong>Superato .* 2\\/2 test/);
+        assert.match(tested.els.studentLab.innerHTML, /<strong>Definitivo<\\/strong>Non superato .* 1\\/2 test/);
+        assert.match(tested.els.studentLab.innerHTML, /data-attempt-history-index="0"/);
         assert.match(tested.els.studentLabStatus.textContent, /1 consegne lab · 1 report salvati/);
+        """
+    )
+
+
+def test_student_dashboard_opens_readonly_attempt_history() -> None:
+    run_student_dashboard_js(
+        """
+        const attempts = {
+          count: 2,
+          truncated: false,
+          latest: {
+            id: "attempt-002",
+            status: "passed",
+            passed: true,
+            tests_passed: 2,
+            tests_total: 2,
+            submitted_at: "2026-10-18T18:22:10+02:00",
+          },
+          best: {
+            id: "attempt-002",
+            status: "passed",
+            passed: true,
+            tests_passed: 2,
+            tests_total: 2,
+            submitted_at: "2026-10-18T18:22:10+02:00",
+          },
+          final: {
+            id: "attempt-001",
+            status: "failed",
+            passed: false,
+            tests_passed: 1,
+            tests_total: 2,
+            submitted_at: "2026-10-18T17:10:00+02:00",
+          },
+          items: [
+            {
+              id: "attempt-002",
+              status: "passed",
+              passed: true,
+              tests_passed: 2,
+              tests_total: 2,
+              submitted_at: "2026-10-18T18:22:10+02:00",
+            },
+            {
+              id: "attempt-001",
+              status: "failed",
+              passed: false,
+              tests_passed: 1,
+              tests_total: 2,
+              submitted_at: "2026-10-18T17:10:00+02:00",
+            },
+          ],
+        };
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [],
+          lab: {
+            assignments: [{
+              activity_id: "python-base-somma-001",
+              title: "Somma in Python",
+              attempts,
+            }],
+          },
+        });
+
+        tested.openAttemptHistory(0);
+
+        assert.equal(tested.els.attemptHistoryModal.hidden, false);
+        assert.equal(tested.els.attemptHistoryTitle.textContent, "Somma in Python");
+        assert.match(tested.els.attemptHistoryBody.innerHTML, /attemptPassed/);
+        assert.match(tested.els.attemptHistoryBody.innerHTML, /attemptFailed/);
+        assert.match(tested.els.attemptHistoryBody.innerHTML, /attempt-002/);
+        assert.match(tested.els.attemptHistoryBody.innerHTML, /attempt-001/);
+        assert.equal((tested.els.attemptHistoryBody.innerHTML.match(/Definitivo/g) || []).length, 2);
+        assert.doesNotMatch(tested.els.attemptHistoryBody.innerHTML, /<button/);
+
+        tested.closeAttemptHistory();
+        assert.equal(tested.els.attemptHistoryModal.hidden, true);
+        """
+    )
+
+
+def test_student_dashboard_attempt_history_handles_empty_and_truncated_data() -> None:
+    run_student_dashboard_js(
+        """
+        const empty = tested.renderAttemptHistory({ attempts: { count: 0, items: [] } });
+        assert.match(empty, /Nessun tentativo salvato/);
+
+        const items = Array.from({ length: 22 }, (_, index) => ({
+          id: `attempt-${String(index + 1).padStart(3, "0")}`,
+          status: index % 2 === 0 ? "passed" : "failed",
+          passed: index % 2 === 0,
+          tests_passed: index % 2 === 0 ? 2 : 1,
+          tests_total: 2,
+          submitted_at: `2026-10-18T${String(index % 20).padStart(2, "0")}:00:00+02:00`,
+        }));
+        const truncated = tested.renderAttemptHistory({
+          attempts: { count: 22, truncated: true, items },
+        });
+        assert.equal((truncated.match(/<li class=/g) || []).length, 20);
+        assert.match(truncated, /storico disponibile e parziale/);
+        assert.match(truncated, /Sono mostrati i 20 tentativi piu recenti/);
         """
     )
 
