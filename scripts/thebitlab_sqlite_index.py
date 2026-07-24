@@ -9,7 +9,7 @@ from typing import Any
 from scripts.thebitlab_storage_ports import AssignmentStorage
 
 
-SCHEMA_VERSION = "0001_assignment_index"
+SCHEMA_VERSION = "0002_nullable_submission_state"
 
 
 def connect_assignment_index(db_path: Path) -> sqlite3.Connection:
@@ -25,6 +25,7 @@ def connect_assignment_index(db_path: Path) -> sqlite3.Connection:
 def initialize_assignment_index(connection: sqlite3.Connection) -> None:
     """Create the minimal SQLite schema for the assignment overview spike."""
 
+    _migrate_nullable_submitted(connection)
     connection.executescript(
         """
         CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -71,7 +72,7 @@ def initialize_assignment_index(connection: sqlite3.Connection) -> None:
           student_id TEXT NOT NULL,
           register_id TEXT REFERENCES registers(id),
           status TEXT NOT NULL DEFAULT '',
-          submitted INTEGER NOT NULL DEFAULT 0,
+          submitted INTEGER,
           submitted_at TEXT,
           late INTEGER NOT NULL DEFAULT 0,
           repo_ref TEXT,
@@ -190,7 +191,7 @@ def rebuild_assignment_index_from_storage(storage: AssignmentStorage, db_path: P
                         str(student.get("student", "")),
                         register_id,
                         str(student.get("status", "")),
-                        _to_int_bool(student.get("submitted", False)),
+                        _to_optional_int_bool(student.get("submitted", False)),
                         submission.get("submitted_at"),
                         _to_int_bool(student.get("late", False)),
                         student.get("repo"),
@@ -264,7 +265,7 @@ def list_assignment_index_rows(db_path: Path) -> list[dict[str, Any]]:
         {
             **{key: row[key] for key in row.keys() if key != "commit_sha"},
             "commit": row["commit_sha"],
-            "submitted": bool(row["submitted"]),
+            "submitted": None if row["submitted"] is None else bool(row["submitted"]),
             "late": bool(row["late"]),
         }
         for row in rows
@@ -312,3 +313,73 @@ def _to_int_bool(value: Any) -> int:
     if isinstance(value, str):
         return 1 if value.strip().lower() in {"1", "true", "yes", "si"} else 0
     return 1 if bool(value) else 0
+
+
+def _to_optional_int_bool(value: Any) -> int | None:
+    if value is None:
+        return None
+    return _to_int_bool(value)
+
+
+def _migrate_nullable_submitted(connection: sqlite3.Connection) -> None:
+    """Preserve derived rows while removing the legacy NOT NULL constraint."""
+
+    table = connection.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='submissions'"
+    ).fetchone()
+    if table is None:
+        return
+    submitted_column = next(
+        (row for row in connection.execute("PRAGMA table_info(submissions)") if row["name"] == "submitted"),
+        None,
+    )
+    if submitted_column is None or not submitted_column["notnull"]:
+        return
+
+    connection.commit()
+    connection.execute("PRAGMA foreign_keys = OFF")
+    try:
+        connection.executescript(
+            """
+            CREATE TABLE submissions_nullable (
+              id TEXT PRIMARY KEY,
+              assignment_id TEXT NOT NULL REFERENCES assignments(id),
+              student_id TEXT NOT NULL,
+              register_id TEXT REFERENCES registers(id),
+              status TEXT NOT NULL DEFAULT '',
+              submitted INTEGER,
+              submitted_at TEXT,
+              late INTEGER NOT NULL DEFAULT 0,
+              repo_ref TEXT,
+              commit_sha TEXT,
+              source_path TEXT,
+              updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              payload_json TEXT,
+              UNIQUE (assignment_id, student_id)
+            );
+            INSERT INTO submissions_nullable
+            SELECT * FROM submissions;
+
+            CREATE TABLE grading_results_nullable (
+              id TEXT PRIMARY KEY,
+              submission_id TEXT NOT NULL REFERENCES submissions_nullable(id),
+              status TEXT NOT NULL DEFAULT '',
+              tests_passed INTEGER,
+              tests_total INTEGER,
+              score REAL,
+              teacher_grade REAL,
+              graded_at TEXT,
+              payload_json TEXT
+            );
+            INSERT INTO grading_results_nullable
+            SELECT * FROM grading_results;
+
+            DROP TABLE grading_results;
+            DROP TABLE submissions;
+            ALTER TABLE submissions_nullable RENAME TO submissions;
+            ALTER TABLE grading_results_nullable RENAME TO grading_results;
+            """
+        )
+        connection.commit()
+    finally:
+        connection.execute("PRAGMA foreign_keys = ON")
