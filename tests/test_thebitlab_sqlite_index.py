@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import sqlite3
 
+import pytest
+
 from scripts.thebitlab_services import AssignmentOverviewService
 from scripts.thebitlab_sqlite_index import (
     initialize_assignment_index,
@@ -179,6 +181,70 @@ def test_initialize_assignment_index_migrates_legacy_submitted_constraint(tmp_pa
     assert submitted_column[3] == 0
     assert tuple(submission) == ("rossi-mario", 0)
     assert tuple(grading) == ("submission-1", "not_run")
+
+
+def test_nullable_submission_migration_rolls_back_and_can_retry(tmp_path) -> None:
+    db_path = tmp_path / "legacy-interrupted.sqlite"
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.executescript(
+            """
+            CREATE TABLE submissions (
+              id TEXT PRIMARY KEY,
+              assignment_id TEXT NOT NULL,
+              student_id TEXT NOT NULL,
+              register_id TEXT,
+              status TEXT NOT NULL DEFAULT '',
+              submitted INTEGER NOT NULL DEFAULT 0,
+              submitted_at TEXT,
+              late INTEGER NOT NULL DEFAULT 0,
+              repo_ref TEXT,
+              commit_sha TEXT,
+              source_path TEXT,
+              updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              payload_json TEXT,
+              UNIQUE (assignment_id, student_id)
+            );
+            CREATE TABLE grading_results (
+              id TEXT PRIMARY KEY,
+              submission_id TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT '',
+              tests_passed INTEGER,
+              tests_total INTEGER,
+              score REAL,
+              teacher_grade REAL,
+              graded_at TEXT,
+              payload_json TEXT
+            );
+            """
+        )
+
+        def deny_drop(action, _arg1, _arg2, _db_name, _trigger_name):
+            if action == sqlite3.SQLITE_DROP_TABLE:
+                return sqlite3.SQLITE_DENY
+            return sqlite3.SQLITE_OK
+
+        connection.set_authorizer(deny_drop)
+        with pytest.raises(sqlite3.DatabaseError):
+            initialize_assignment_index(connection)
+    finally:
+        connection.close()
+
+    with sqlite3.connect(db_path) as connection:
+        assert connection.execute(
+            "SELECT name FROM sqlite_master WHERE name='submissions'"
+        ).fetchone()
+        assert connection.execute(
+            "SELECT name FROM sqlite_master WHERE name='submissions_nullable'"
+        ).fetchone() is None
+
+        initialize_assignment_index(connection)
+        submitted_column = next(
+            row for row in connection.execute("PRAGMA table_info(submissions)")
+            if row[1] == "submitted"
+        )
+
+    assert submitted_column[3] == 0
 
 
 def test_rebuild_assignment_index_keeps_one_submission_per_student_assignment(tmp_path) -> None:

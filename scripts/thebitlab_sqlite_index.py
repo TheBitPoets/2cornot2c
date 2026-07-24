@@ -345,6 +345,10 @@ def _migrate_nullable_submitted(connection: sqlite3.Connection) -> None:
     try:
         connection.executescript(
             """
+            BEGIN IMMEDIATE;
+            DROP TABLE IF EXISTS grading_results_nullable;
+            DROP TABLE IF EXISTS submissions_nullable;
+
             CREATE TABLE submissions_nullable (
               id TEXT PRIMARY KEY,
               assignment_id TEXT NOT NULL REFERENCES assignments(id),
@@ -382,8 +386,12 @@ def _migrate_nullable_submitted(connection: sqlite3.Connection) -> None:
             DROP TABLE submissions;
             ALTER TABLE submissions_nullable RENAME TO submissions;
             ALTER TABLE grading_results_nullable RENAME TO grading_results;
+            COMMIT;
             """
         )
-        connection.commit()
+    except Exception:
+        if connection.in_transaction:
+            connection.rollback()
+        raise
     finally:
         connection.execute("PRAGMA foreign_keys = ON")
