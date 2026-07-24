@@ -14,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from scripts import (
     assignment_records,
+    student_lab_attempts,
     student_help_service,
     student_support_policy,
     track_assignments,
@@ -228,9 +229,36 @@ def build_lab_assignment(
     repo_path = target_repo_path(root, target, student_id)
     workspace_path = repo_path / "assignments" / activity_id if repo_path is not None else None
     report_path = repo_path / "reports" / activity_id / "latest.json" if repo_path is not None else None
+    assignment_id = normalized["id"]
     help_log_path = student_help_service.server_help_log_path(root, student_id, normalized["id"])
     safe_report_path = confined_regular_file(repo_path, report_path) if repo_path is not None and report_path else None
-    report = load_report(safe_report_path, activity_id) if safe_report_path is not None else None
+    legacy_report = load_report(safe_report_path, activity_id) if safe_report_path is not None else None
+    attempts = (
+        student_lab_attempts.load_attempts(
+            report_path,
+            assignment_id,
+            activity_id,
+            base_dir=repo_path,
+        )
+        if repo_path is not None and report_path is not None
+        else []
+    )
+    latest_attempt = student_lab_attempts.select_latest_attempt(attempts)
+    best_attempt = student_lab_attempts.select_best_attempt(attempts)
+    final_attempt = (
+        student_lab_attempts.load_final_attempt(
+            report_path,
+            assignment_id,
+            activity_id,
+            base_dir=repo_path,
+        )
+        if repo_path is not None and report_path is not None
+        else None
+    )
+    report = latest_attempt or legacy_report
+    effective_report_path = report_path
+    if latest_attempt is not None and report_path is not None:
+        effective_report_path = student_lab_attempts.assignment_history_dir(report_path, assignment_id) / "latest.json"
     submitted_at = clean_text(report.get("submitted_at")) if report else ""
     status = status_with_report(report, normalized["due_at"], now) if report else status_without_report(normalized["due_at"], now)
     activity = load_activity_summary(
@@ -259,7 +287,7 @@ def build_lab_assignment(
     runner_status = clean_text(report.get("status")) if report and clean_text(report.get("status")) else "not_run"
     runner_backend = clean_text(report.get("backend")) if report and clean_text(report.get("backend")) else "student_lab_service"
     return {
-        "assignment_id": normalized["id"],
+        "assignment_id": assignment_id,
         "activity_id": activity_id,
         "title": activity["title"] or activity_id,
         "student_support_mode": activity.get("student_support_mode", ""),
@@ -290,16 +318,22 @@ def build_lab_assignment(
             "path": (
                 relative_to_root(
                     root,
-                    report_path,
+                    effective_report_path,
                     expose_external_paths=expose_external_paths,
                 )
-                if report_path is not None
+                if effective_report_path is not None
                 else ""
             ),
             "exists": report is not None,
             "submitted_at": submitted_at,
             "commit": report.get("commit") if report else None,
             "tests": report_tests_summary(report),
+        },
+        "attempts": {
+            "count": len(attempts) if attempts else int(legacy_report is not None),
+            "latest": student_lab_attempts.attempt_summary(latest_attempt or legacy_report),
+            "best": student_lab_attempts.attempt_summary(best_attempt or legacy_report),
+            "final": student_lab_attempts.attempt_summary(final_attempt),
         },
         "grading": grading,
         "help": help_log,
