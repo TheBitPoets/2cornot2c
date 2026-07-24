@@ -246,7 +246,7 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
         normalized_grading["provisional"] = False
     else:
         normalized_submission["final_selected"] = False
-        normalized_grading["provisional"] = normalized["submitted"]
+        normalized_grading["provisional"] = bool(normalized["submitted"])
     normalized["submission"] = normalized_submission
     normalized["grading"] = normalized_grading
     normalized["ai_feedback"] = normalize_ai_feedback(ai_feedback)

@@ -217,6 +217,7 @@ def test_normalize_register_student_preserves_remote_tracking_states() -> None:
     assert missing_flag["submitted"] is None
     assert contradictory_null["status"] == "submission_unknown"
     assert contradictory_null["late"] is False
+    assert contradictory_null["grading"]["provisional"] is False
 
 
 def test_normalize_submission_parses_late_string_conservatively() -> None:
