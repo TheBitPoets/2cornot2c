@@ -618,6 +618,38 @@ def test_create_scaffold_can_overwrite_source_explicitly(tmp_path) -> None:
     assert "Scrivi qui" in (destination / "main.c").read_text(encoding="utf-8")
 
 
+def test_create_scaffold_overwrite_keeps_teacher_starter_asset(tmp_path) -> None:
+    (tmp_path / "starter").mkdir()
+    teacher_starter = tmp_path / "starter" / "main.py"
+    teacher_starter.write_text("print('starter docente')\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "starter",
+                "path": "starter/main.py",
+                "target_path": "main.py",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    (destination / "main.py").write_text("modifica studente\n", encoding="utf-8")
+
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+        overwrite=True,
+        overwrite_source=True,
+    )
+
+    assert (destination / "main.py").read_text(encoding="utf-8") == "print('starter docente')\n"
+
+
 def test_create_scaffold_supports_custom_source_name_and_language(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
 

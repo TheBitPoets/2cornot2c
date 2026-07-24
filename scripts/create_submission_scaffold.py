@@ -717,7 +717,8 @@ def create_scaffold(
     write_managed_assets(manifest_path, managed_assets)
 
     source_path = destination / source_name
-    if overwrite_source or not source_path.exists():
+    source_is_managed_asset = Path(source_name) in current_asset_targets
+    if not source_is_managed_asset and (overwrite_source or not source_path.exists()):
         source_path.write_text(starter_source(selected_language), encoding="utf-8", newline="\n")
 
     (destination / "README.md").write_text(
