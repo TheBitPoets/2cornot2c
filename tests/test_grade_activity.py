@@ -164,6 +164,20 @@ def test_grade_activity_passes_valid_javascript_program(tmp_path) -> None:
     assert report["language"] == "javascript"
 
 
+def test_node_runner_adds_runtime_startup_grace(monkeypatch, tmp_path) -> None:
+    captured: dict[str, int] = {}
+
+    def fake_run(command, test_case, *, timeout_seconds):
+        captured["timeout_seconds"] = timeout_seconds
+        return {"passed": True, "status": "passed"}
+
+    monkeypatch.setattr(grade_activity, "run_command_test_case", fake_run)
+
+    grade_activity.run_node_test_case(tmp_path / "main.js", {}, timeout_seconds=2)
+
+    assert captured["timeout_seconds"] == 2 + grade_activity.DEFAULT_NODE_STARTUP_GRACE_SECONDS
+
+
 def test_grade_activity_passes_valid_sql_script(tmp_path) -> None:
     source = tmp_path / "main.sql"
     source.write_text("SELECT 2 + 3;\n", encoding="utf-8")
@@ -432,6 +446,7 @@ def test_docker_timeout_scales_with_test_cases() -> None:
     activity = {"test_cases": [{"name": "uno"}, {"name": "due"}, {"name": "tre"}]}
 
     assert grade_activity.docker_timeout_seconds(activity, 5) == 30
+    assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "javascript"}, 5) == 45
 
 
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:

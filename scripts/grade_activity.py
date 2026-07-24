@@ -14,6 +14,7 @@ from typing import Any
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
+DEFAULT_NODE_STARTUP_GRACE_SECONDS = 5
 DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS = 10
 DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
 SUPPORTED_LANGUAGES = {
@@ -185,7 +186,11 @@ def run_python_test_case(source: Path, test_case: dict[str, Any], *, timeout_sec
 def run_node_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
     """Run one JavaScript source file through Node.js."""
 
-    return run_command_test_case(["node", str(source)], test_case, timeout_seconds=timeout_seconds)
+    return run_command_test_case(
+        ["node", str(source)],
+        test_case,
+        timeout_seconds=timeout_seconds + DEFAULT_NODE_STARTUP_GRACE_SECONDS,
+    )
 
 
 def sqlite_output_value(value: Any) -> str:
@@ -516,7 +521,10 @@ def docker_timeout_seconds(activity: dict[str, Any], timeout_seconds: int) -> in
     """Return the outer Docker timeout for compile plus all declared test cases."""
     test_cases = activity.get("test_cases", [])
     test_count = len(test_cases) if isinstance(test_cases, list) else 0
-    return ((test_count + 1) * timeout_seconds) + DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS
+    test_timeout = timeout_seconds
+    if activity_language(activity) in {"javascript", "nodejs"}:
+        test_timeout += DEFAULT_NODE_STARTUP_GRACE_SECONDS
+    return (test_count * test_timeout) + timeout_seconds + DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS
 
 
 def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
