@@ -306,6 +306,42 @@ def test_create_scaffold_force_preserves_existing_source(tmp_path) -> None:
     assert (destination / "main.c").read_text(encoding="utf-8") == "custom\n"
 
 
+def test_create_scaffold_force_removes_asset_that_became_teacher_only(tmp_path) -> None:
+    (tmp_path / "tests").mkdir()
+    asset_source = tmp_path / "tests" / "test_secret.py"
+    asset_source.write_text("SECRET = 'teacher-only'\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "visible_test",
+                "path": "tests/test_secret.py",
+                "target_path": "tests/test_secret.py",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+    (destination / "notes.txt").write_text("file studente\n", encoding="utf-8")
+    (destination / "main.py").write_text("codice studente\n", encoding="utf-8")
+
+    payload["assets"][0]["type"] = "hidden_test"
+    payload["assets"][0]["visibility"] = "teacher"
+    write_activity(tmp_path, payload)
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+        overwrite=True,
+    )
+
+    assert not (destination / "tests" / "test_secret.py").exists()
+    assert (destination / "main.py").read_text(encoding="utf-8") == "codice studente\n"
+    assert (destination / "notes.txt").read_text(encoding="utf-8") == "file studente\n"
+
+
 def test_create_scaffold_can_overwrite_source_explicitly(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     destination = create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
