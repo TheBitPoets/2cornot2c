@@ -11,6 +11,7 @@ from typing import Any, Mapping, Protocol
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from zipfile import BadZipFile, ZipFile
 
 from scripts.thebitlab_repository_providers import normalize_github_repo_ref
@@ -482,6 +483,10 @@ def _report_from_archive(data: bytes) -> dict[str, Any]:
     except NotImplementedError as error:
         raise GradingArtifactError(
             "Artifact di grading usa un metodo di compressione ZIP non supportato."
+        ) from error
+    except zlib.error as error:
+        raise GradingArtifactError(
+            "Artifact di grading contiene dati compressi non validi."
         ) from error
     if len(report_bytes) > MAX_GRADING_REPORT_BYTES:
         raise GradingArtifactError(f"Report grading troppo grande: supera {MAX_GRADING_REPORT_BYTES} byte.")

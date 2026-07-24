@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 import json
-from zipfile import ZipFile, ZipInfo
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import pytest
 
@@ -49,6 +49,20 @@ def zip_bytes_with_unsupported_compression() -> bytes:
     unsupported_method = (99).to_bytes(2, "little")
     data[local_header + 8 : local_header + 10] = unsupported_method
     data[central_header + 10 : central_header + 12] = unsupported_method
+    return bytes(data)
+
+
+def corrupted_deflate_zip_bytes() -> bytes:
+    stream = BytesIO()
+    with ZipFile(stream, "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("report.json", b'{"data":"' + b"a" * 1024 + b'"}')
+    data = bytearray(stream.getvalue())
+    local_header = data.find(b"PK\x03\x04")
+    assert local_header >= 0
+    filename_length = int.from_bytes(data[local_header + 26 : local_header + 28], "little")
+    extra_length = int.from_bytes(data[local_header + 28 : local_header + 30], "little")
+    payload_start = local_header + 30 + filename_length + extra_length
+    data[payload_start] ^= 0xFF
     return bytes(data)
 
 
@@ -363,6 +377,11 @@ def test_report_archive_rejects_symbolic_link_and_too_many_members() -> None:
 def test_report_archive_normalizes_unsupported_compression_error() -> None:
     with pytest.raises(artifacts.GradingArtifactError, match="compressione ZIP non supportato"):
         artifacts._report_from_archive(zip_bytes_with_unsupported_compression())
+
+
+def test_report_archive_normalizes_corrupt_deflate_error() -> None:
+    with pytest.raises(artifacts.GradingArtifactError, match="dati compressi non validi"):
+        artifacts._report_from_archive(corrupted_deflate_zip_bytes())
 
 
 def test_source_validates_token_repository_and_artifact_name() -> None:
