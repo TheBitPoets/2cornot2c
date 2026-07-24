@@ -387,7 +387,12 @@ def grade_activity(
         return grade_python_activity(activity, source, timeout_seconds=timeout_seconds)
 
     if selected_language in {"javascript", "nodejs"}:
-        return grade_node_activity(activity, source, timeout_seconds=timeout_seconds)
+        return grade_node_activity(
+            activity,
+            source,
+            timeout_seconds=timeout_seconds,
+            language=selected_language,
+        )
 
     if selected_language == "sql":
         return grade_sql_activity(activity, source, timeout_seconds=timeout_seconds)
@@ -515,13 +520,19 @@ def grade_python_activity(activity: dict[str, Any], source: Path, *, timeout_sec
     )
 
 
-def grade_node_activity(activity: dict[str, Any], source: Path, *, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
+def grade_node_activity(
+    activity: dict[str, Any],
+    source: Path,
+    *,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    language: str = "javascript",
+) -> dict[str, Any]:
     """Execute and grade a Node.js source file using activity test cases."""
 
     return grade_script_activity(
         activity,
         source,
-        language="javascript",
+        language=language,
         test_runner=run_node_test_case,
         timeout_seconds=timeout_seconds,
     )
