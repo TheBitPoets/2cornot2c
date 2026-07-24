@@ -811,9 +811,9 @@ della pagina Percorso. Nessun passaggio deve aprire i dialog nativi del browser 
 8. Salva regolarmente il progetto. Se il provider AI è configurato, genera una sola cornice, avvia una nuova coda e usa `Annulla`; verifica che testo e indicatori di qualità tornino allo stato iniziale.
 9. Usa soltanto la tastiera per raggiungere il catalogo e aggiungere un paragrafo con il pulsante `+`.
 10. Restringi la finestra a circa `390 px`: pannelli, titoli, campi e pulsanti devono restare leggibili senza sovrapporsi.
-11. Cancella `test-manuale-percorso.json` dalla board per ripulire i dati di prova. Verifica che il dialog
-    mostri chiaramente titolo, conseguenze, `Mantieni` e il comando distruttivo evidenziato; annulla una volta
-    prima di confermare davvero.
+11. Avvia la cancellazione di `test-manuale-percorso.json`. Verifica che il dialog mostri chiaramente titolo,
+    conseguenze, `Mantieni` e il comando distruttivo evidenziato, quindi scegli `Mantieni`: il progetto serve
+    ancora allo Scenario 10.
 
 Risultato atteso:
 
@@ -864,6 +864,8 @@ Obiettivo: verificare che il calendario docente resti coerente con il percorso e
    considerare superato il controllo.
 6. Prova modalità `settimana`, `mese` e `anno`.
 7. Prova frecce avanti/indietro e filtri visibili, verificando che interruzioni e UDA restino distinguibili.
+8. Torna a `course_board.html`, seleziona `test-manuale-percorso.json` e cancellalo. Nel dialog dei calendari
+   associati inserisci `tutto`: progetto e calendario di prova devono essere rimossi insieme soltanto ora.
 
 Risultato atteso:
 
@@ -872,6 +874,7 @@ Risultato atteso:
 - I filtri non nascondono dati senza indicarlo.
 - Le UDA reali e programmate sono distinguibili quando presenti.
 - Le interruzioni sono visibili e non si confondono con consegne mancanti.
+- La pulizia finale elimina il progetto e il calendario di prova associato, senza coinvolgere altri calendari.
 
 ## Template per nuovi scenari
 
