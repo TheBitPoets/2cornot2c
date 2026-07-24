@@ -429,8 +429,9 @@ function renderAttemptHistory(assignment) {
   const allItems = Array.isArray(attempts.items) ? attempts.items : [];
   const finalId = String(attempts.final?.id || "");
   let items = allItems.slice(0, 20);
-  const finalOutsideRecent = finalId
-    ? allItems.find((attempt, index) => index >= 20 && String(attempt.id || "") === finalId)
+  const finalInRecent = finalId && items.some((attempt) => String(attempt.id || "") === finalId);
+  const finalOutsideRecent = finalId && !finalInRecent
+    ? allItems.find((attempt) => String(attempt.id || "") === finalId) || attempts.final
     : null;
   if (finalOutsideRecent) items = [...items.slice(0, 19), finalOutsideRecent];
   if (!items.length) {
@@ -453,9 +454,11 @@ function renderAttemptHistory(assignment) {
         </li>
       `).join("")}
     </ol>
-    ${allItems.length > items.length
+    ${finalOutsideRecent || allItems.length > items.length
       ? `<p class="attemptWarning">${finalOutsideRecent
-        ? "Sono mostrati i 19 tentativi piu recenti e il tentativo definitivo."
+        ? allItems.length >= 20
+          ? "Sono mostrati i 19 tentativi piu recenti e il tentativo definitivo."
+          : `Sono mostrati i ${allItems.length} tentativi recenti e il definitivo conservato separatamente.`
         : `Sono mostrati i ${items.length} tentativi piu recenti.`
       }</p>`
       : ""}

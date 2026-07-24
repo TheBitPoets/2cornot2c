@@ -421,6 +421,27 @@ def test_student_dashboard_attempt_history_handles_empty_and_truncated_data() ->
         assert.match(withOlderFinal, /attempt-021/);
         assert.match(withOlderFinal, /19 tentativi piu recenti e il tentativo definitivo/);
         assert.equal((withOlderFinal.match(/Definitivo/g) || []).length, 2);
+
+        const standaloneFinal = {
+          id: "attempt-final-outside-window",
+          status: "failed",
+          passed: false,
+          tests_passed: 1,
+          tests_total: 2,
+          submitted_at: "2026-10-10T10:00:00+02:00",
+        };
+        const withStandaloneFinal = tested.renderAttemptHistory({
+          attempts: {
+            count: 501,
+            truncated: true,
+            final: standaloneFinal,
+            items: items.slice(0, 20),
+          },
+        });
+        assert.equal((withStandaloneFinal.match(/<li class=/g) || []).length, 20);
+        assert.match(withStandaloneFinal, /attempt-final-outside-window/);
+        assert.match(withStandaloneFinal, /19 tentativi piu recenti e il tentativo definitivo/);
+        assert.equal((withStandaloneFinal.match(/Definitivo/g) || []).length, 2);
         """
     )
 
