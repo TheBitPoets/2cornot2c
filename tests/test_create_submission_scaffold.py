@@ -231,6 +231,34 @@ def test_create_scaffold_rejects_missing_student_asset(tmp_path) -> None:
     assert not (tmp_path / "assignments").exists()
 
 
+@pytest.mark.parametrize("reserved_target", ["activity.json", "README.md"])
+def test_create_scaffold_rejects_asset_target_reserved_for_scaffold(
+    tmp_path,
+    reserved_target,
+) -> None:
+    (tmp_path / "asset.txt").write_text("contenuto\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "example",
+                "path": "asset.txt",
+                "target_path": reserved_target,
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
+
+    with pytest.raises(ValueError, match="riservato allo scaffold"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+        )
+
+    assert not (target_dir / "assignments").exists()
+
+
 def test_create_scaffold_rejects_linked_asset_outside_activity_bundle(tmp_path) -> None:
     bundle = tmp_path / "bundle"
     bundle.mkdir()
@@ -981,3 +1009,15 @@ def test_create_scaffold_rejects_empty_source_name(tmp_path) -> None:
         assert "nome file semplice" in str(error)
     else:
         raise AssertionError("create_scaffold should reject empty source_name")
+
+
+@pytest.mark.parametrize("source_name", ["activity.json", "README.md"])
+def test_create_scaffold_rejects_reserved_source_name(tmp_path, source_name) -> None:
+    activity_path = write_activity(tmp_path)
+
+    with pytest.raises(ValueError, match="riservato allo scaffold"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=tmp_path / "student",
+            source_name=source_name,
+        )

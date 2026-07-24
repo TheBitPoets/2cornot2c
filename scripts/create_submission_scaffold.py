@@ -22,6 +22,7 @@ DEFAULT_TARGET_DIR = Path(".")
 DEFAULT_SOURCE_NAME = "main.c"
 DEFAULT_THEBITLAB_REF = "main"
 MANAGED_ASSETS_STATE_DIR = ".thebitlab-scaffold-state"
+RESERVED_SCAFFOLD_TARGETS = {"activity.json", "README.md"}
 DEFAULT_SOURCE_NAMES = {
     "assembly": "main.asm",
     "c": "main.c",
@@ -221,6 +222,8 @@ def validate_source_name(source_name: str) -> str:
         or not re.fullmatch(r"[A-Za-z0-9_.-]+", value)
     ):
         raise ValueError("source_name deve essere un nome file semplice, per esempio main.c.")
+    if value in RESERVED_SCAFFOLD_TARGETS:
+        raise ValueError(f"source_name riservato allo scaffold: {value}.")
     return value
 
 
@@ -409,6 +412,8 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
             asset.get("target_path", asset.get("path")),
             f"assets[{index}].target_path",
         )
+        if target_rel.as_posix() in RESERVED_SCAFFOLD_TARGETS:
+            raise ValueError(f"Target asset riservato allo scaffold: {target_rel}.")
         source_path = activity_root / source_rel
         current = activity_root
         for part in source_rel.parts:
