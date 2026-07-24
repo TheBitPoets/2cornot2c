@@ -60,6 +60,7 @@ def report(**overrides) -> dict:
     values = {
         "activity_id": "python-base-somma-001",
         "assignment_id": "assignment-001",
+        "student_id": "rossi-mario",
         "commit": HEAD_SHA,
         "status": "passed",
         "passed": True,
@@ -181,6 +182,7 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
     [
         ({"activity_id": "other"}, {}, "activity diversa"),
         ({"assignment_id": "other"}, {}, "assegnazione diversa"),
+        ({"student_id": ""}, {}, "privo dell'identificativo studente"),
         ({"student_id": "bianchi-luca"}, {}, "studente diverso"),
         ({"commit": "b" * 40}, {}, "Commit"),
         ({}, {"repository": "TheBitPoets/altro"}, "repository diverso"),

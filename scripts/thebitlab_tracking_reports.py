@@ -225,7 +225,9 @@ def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding
     if report.get("assignment_id") != binding.assignment_id:
         raise ValueError("Report remoto riferito a un'assegnazione diversa.")
     report_student_id = str(report.get("student_id", "") or "").strip()
-    if report_student_id and report_student_id != binding.student_id:
+    if not report_student_id:
+        raise ValueError("Report remoto privo dell'identificativo studente.")
+    if report_student_id != binding.student_id:
         raise ValueError("Report remoto riferito a uno studente diverso.")
     commit = str(report.get("commit", "")).strip().lower()
     if commit != binding.expected_head_sha:
