@@ -764,6 +764,24 @@ def validate_current_asset_destinations(
             )
 
 
+def validate_scaffold_owned_destinations(
+    *,
+    destination: Path,
+    source_name: str,
+) -> None:
+    """Reject structural collisions on files owned by the scaffold."""
+    for owned_target in (Path(source_name), Path("activity.json"), Path("README.md")):
+        target_path = confined_output_path(
+            destination,
+            owned_target,
+            create_parents=False,
+        )
+        if target_path.exists() and not target_path.is_file():
+            raise ValueError(
+                f"Il percorso posseduto dallo scaffold non e un file: {owned_target}."
+            )
+
+
 def reconcile_managed_target_aliases(
     *,
     destination: Path,
@@ -1004,6 +1022,10 @@ def create_scaffold(
             current_targets=current_asset_targets,
             protected_source=source_name,
         )
+    validate_scaffold_owned_destinations(
+        destination=destination,
+        source_name=source_name,
+    )
     validate_current_asset_destinations(
         destination=destination,
         current_targets=current_asset_targets,

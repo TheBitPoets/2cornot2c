@@ -911,6 +911,42 @@ def test_create_scaffold_rejects_unmanaged_structural_asset_collision_before_wri
     assert (destination / "README.md").read_bytes() == original_readme
 
 
+@pytest.mark.parametrize("owned_target", ["main.py", "activity.json", "README.md"])
+def test_create_scaffold_preflights_owned_file_collisions(
+    tmp_path,
+    owned_target,
+) -> None:
+    activity_path = write_activity(tmp_path, canonical_activity())
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    blocked_path = destination / owned_target
+    blocked_path.unlink()
+    blocked_path.mkdir()
+    unaffected_path = (
+        destination / "README.md"
+        if owned_target != "README.md"
+        else destination / "main.py"
+    )
+    unaffected_content = unaffected_path.read_bytes()
+
+    payload = canonical_activity()
+    payload["title"] = "Titolo aggiornato"
+    write_activity(tmp_path, payload)
+
+    with pytest.raises(ValueError, match="posseduto dallo scaffold non e un file"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+            overwrite=True,
+        )
+
+    assert blocked_path.is_dir()
+    assert unaffected_path.read_bytes() == unaffected_content
+
+
 def test_create_scaffold_rejects_modified_legacy_asset_below_new_source(tmp_path) -> None:
     legacy_teacher_asset = tmp_path / "legacy.txt"
     legacy_teacher_asset.write_text("asset legacy\n", encoding="utf-8")
