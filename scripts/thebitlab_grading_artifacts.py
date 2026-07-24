@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
 import json
+import lzma
 from pathlib import PurePosixPath
 import re
 import stat
@@ -484,9 +485,16 @@ def _report_from_archive(data: bytes) -> dict[str, Any]:
         raise GradingArtifactError(
             "Artifact di grading usa un metodo di compressione ZIP non supportato."
         ) from error
-    except zlib.error as error:
+    except (
+        EOFError,
+        OSError,
+        UnicodeDecodeError,
+        ValueError,
+        lzma.LZMAError,
+        zlib.error,
+    ) as error:
         raise GradingArtifactError(
-            "Artifact di grading contiene dati compressi non validi."
+            "Artifact di grading contiene dati ZIP corrotti."
         ) from error
     if len(report_bytes) > MAX_GRADING_REPORT_BYTES:
         raise GradingArtifactError(f"Report grading troppo grande: supera {MAX_GRADING_REPORT_BYTES} byte.")

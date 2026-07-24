@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 import json
-from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+from zipfile import ZIP_BZIP2, ZIP_DEFLATED, ZIP_LZMA, ZipFile, ZipInfo
 
 import pytest
 
@@ -52,9 +52,9 @@ def zip_bytes_with_unsupported_compression() -> bytes:
     return bytes(data)
 
 
-def corrupted_deflate_zip_bytes() -> bytes:
+def corrupted_compressed_zip_bytes(compression: int, mutation_offset: int = 0) -> bytes:
     stream = BytesIO()
-    with ZipFile(stream, "w", compression=ZIP_DEFLATED) as archive:
+    with ZipFile(stream, "w", compression=compression) as archive:
         archive.writestr("report.json", b'{"data":"' + b"a" * 1024 + b'"}')
     data = bytearray(stream.getvalue())
     local_header = data.find(b"PK\x03\x04")
@@ -62,7 +62,7 @@ def corrupted_deflate_zip_bytes() -> bytes:
     filename_length = int.from_bytes(data[local_header + 26 : local_header + 28], "little")
     extra_length = int.from_bytes(data[local_header + 28 : local_header + 30], "little")
     payload_start = local_header + 30 + filename_length + extra_length
-    data[payload_start] ^= 0xFF
+    data[payload_start + mutation_offset] ^= 0xFF
     return bytes(data)
 
 
@@ -379,9 +379,22 @@ def test_report_archive_normalizes_unsupported_compression_error() -> None:
         artifacts._report_from_archive(zip_bytes_with_unsupported_compression())
 
 
-def test_report_archive_normalizes_corrupt_deflate_error() -> None:
-    with pytest.raises(artifacts.GradingArtifactError, match="dati compressi non validi"):
-        artifacts._report_from_archive(corrupted_deflate_zip_bytes())
+@pytest.mark.parametrize(
+    ("compression", "mutation_offset"),
+    [
+        (ZIP_DEFLATED, 0),
+        (ZIP_BZIP2, 0),
+        (ZIP_LZMA, 4),
+    ],
+)
+def test_report_archive_normalizes_corrupt_compression_errors(
+    compression: int,
+    mutation_offset: int,
+) -> None:
+    with pytest.raises(artifacts.GradingArtifactError, match="dati ZIP corrotti"):
+        artifacts._report_from_archive(
+            corrupted_compressed_zip_bytes(compression, mutation_offset)
+        )
 
 
 def test_source_validates_token_repository_and_artifact_name() -> None:
