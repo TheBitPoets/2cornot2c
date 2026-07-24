@@ -199,6 +199,12 @@ def run_sql_test_case(source: Path, test_case: dict[str, Any], *, timeout_second
     timed_out = False
     output_lines: list[str] = []
 
+    def ensure_before_deadline() -> None:
+        nonlocal timed_out
+        if time.monotonic() >= deadline:
+            timed_out = True
+            raise TimeoutError
+
     def stop_after_deadline() -> int:
         nonlocal timed_out
         timed_out = time.monotonic() >= deadline
@@ -207,26 +213,34 @@ def run_sql_test_case(source: Path, test_case: dict[str, Any], *, timeout_second
     try:
         with sqlite3.connect(":memory:") as connection:
             connection.set_progress_handler(stop_after_deadline, 1000)
-            statement_buffer = ""
-            for character in sql:
-                statement_buffer += character
-                if character != ";" or not sqlite3.complete_statement(statement_buffer):
+            statement_buffer: list[str] = []
+            for index, character in enumerate(sql):
+                if index % 1024 == 0:
+                    ensure_before_deadline()
+                statement_buffer.append(character)
+                if character != ";":
                     continue
-                cursor = connection.execute(statement_buffer)
+                statement = "".join(statement_buffer)
+                if not sqlite3.complete_statement(statement):
+                    continue
+                ensure_before_deadline()
+                cursor = connection.execute(statement)
                 if cursor.description:
                     output_lines.extend(
                         "|".join("" if value is None else str(value) for value in row)
                         for row in cursor.fetchall()
                     )
-                statement_buffer = ""
-            if statement_buffer.strip():
-                cursor = connection.execute(statement_buffer)
+                statement_buffer.clear()
+            trailing_statement = "".join(statement_buffer)
+            if trailing_statement.strip():
+                ensure_before_deadline()
+                cursor = connection.execute(trailing_statement)
                 if cursor.description:
                     output_lines.extend(
                         "|".join("" if value is None else str(value) for value in row)
                         for row in cursor.fetchall()
                     )
-    except sqlite3.Error as error:
+    except (sqlite3.Error, TimeoutError) as error:
         return {
             "name": name,
             "passed": False,

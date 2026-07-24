@@ -243,6 +243,24 @@ def test_grade_activity_reports_sql_timeout(tmp_path) -> None:
     assert report["tests"][0]["returncode"] is None
 
 
+def test_grade_activity_applies_sql_timeout_during_parsing(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text("-- " + ("commento " * 10000), encoding="utf-8")
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-parse-timeout-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": ""}],
+        },
+        source,
+        timeout_seconds=0,
+    )
+
+    assert report["passed"] is False
+    assert report["tests"][0]["status"] == "timeout"
+
+
 def test_grade_activity_reports_unknown_language(tmp_path) -> None:
     source = tmp_path / "main.xyz"
     source.write_text("contenuto\n", encoding="utf-8")
