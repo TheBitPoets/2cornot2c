@@ -151,20 +151,48 @@ def test_grade_activity_reports_python_wrong_output(tmp_path) -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node non disponibile nell'ambiente di test")
-def test_grade_activity_passes_valid_javascript_program(tmp_path) -> None:
+@pytest.mark.parametrize("language", ["javascript", "nodejs"])
+def test_grade_activity_passes_valid_javascript_program(tmp_path, language) -> None:
     source = tmp_path / "main.js"
     source.write_text("let value = ''; process.stdin.on('data', chunk => value += chunk).on('end', () => console.log(Number(value) + 1));\n", encoding="utf-8")
 
     report = grade_activity.grade_activity(
-        {"id": "js-001", "linguaggio": "javascript", "test_cases": [{"stdin": "4\n", "expected_stdout": "5\n"}]},
+        {"id": "js-001", "linguaggio": language, "test_cases": [{"stdin": "4\n", "expected_stdout": "5\n"}]},
         source,
     )
 
     assert report["passed"] is True
-    assert report["language"] == "javascript"
+    assert report["language"] == language
 
 
-@pytest.mark.skipif(shutil.which("sqlite3") is None, reason="sqlite3 non disponibile nell'ambiente di test")
+def test_node_runner_keeps_startup_grace_separate_from_student_timeout(monkeypatch, tmp_path) -> None:
+    captured: dict[str, int | list[str]] = {}
+
+    class StartupResult:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_startup(command, **kwargs):
+        captured["startup_command"] = command
+        captured["startup_timeout"] = kwargs["timeout"]
+        return StartupResult()
+
+    def fake_run(command, test_case, *, timeout_seconds):
+        captured["student_timeout"] = timeout_seconds
+        return {"passed": True, "status": "passed"}
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", fake_startup)
+    monkeypatch.setattr(grade_activity, "run_command_test_case", fake_run)
+    source = tmp_path / "main.js"
+
+    grade_activity.run_node_test_case(source, {}, timeout_seconds=2)
+
+    assert captured["startup_command"] == ["node", "--check", str(source)]
+    assert captured["startup_timeout"] == grade_activity.DEFAULT_NODE_STARTUP_GRACE_SECONDS
+    assert captured["student_timeout"] == 2
+
+
 def test_grade_activity_passes_valid_sql_script(tmp_path) -> None:
     source = tmp_path / "main.sql"
     source.write_text("SELECT 2 + 3;\n", encoding="utf-8")
@@ -176,6 +204,107 @@ def test_grade_activity_passes_valid_sql_script(tmp_path) -> None:
 
     assert report["passed"] is True
     assert report["language"] == "sql"
+
+
+def test_grade_activity_sql_matches_sqlite_cli_rows_and_nulls(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text(
+        "CREATE TABLE studenti (nome TEXT, voto INTEGER);\n"
+        "INSERT INTO studenti VALUES ('Ada', 9), ('Linus', NULL);\n"
+        "SELECT nome, voto FROM studenti ORDER BY nome;\n",
+        encoding="utf-8",
+    )
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-rows-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": "Ada|9\nLinus|\n"}],
+        },
+        source,
+    )
+
+    assert report["passed"] is True
+    assert report["tests"][0]["stdout"] == "Ada|9\nLinus|\n"
+
+
+def test_grade_activity_sql_matches_sqlite_cli_blob_output(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text("SELECT X'4142';\n", encoding="utf-8")
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-blob-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": "AB\n"}],
+        },
+        source,
+    )
+
+    assert report["passed"] is True
+    assert report["tests"][0]["stdout"] == "AB\n"
+
+
+def test_grade_activity_reports_sql_error(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text("SELECT colonna_inesistente FROM studenti;\n", encoding="utf-8")
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-error-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": ""}],
+        },
+        source,
+    )
+
+    assert report["passed"] is False
+    assert report["status"] == "failed"
+    assert report["tests"][0]["status"] == "execution-error"
+    assert report["tests"][0]["returncode"] == 1
+    assert report["tests"][0]["stderr"]
+
+
+def test_grade_activity_reports_sql_timeout(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text(
+        "WITH RECURSIVE numeri(n) AS ("
+        "SELECT 1 UNION ALL SELECT n + 1 FROM numeri WHERE n < 1000000"
+        ") SELECT sum(n) FROM numeri;\n",
+        encoding="utf-8",
+    )
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-timeout-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": ""}],
+        },
+        source,
+        timeout_seconds=0,
+    )
+
+    assert report["passed"] is False
+    assert report["tests"][0]["status"] == "timeout"
+    assert report["tests"][0]["returncode"] is None
+
+
+def test_grade_activity_applies_sql_timeout_during_parsing(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text("-- " + ("commento " * 10000), encoding="utf-8")
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-parse-timeout-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": ""}],
+        },
+        source,
+        timeout_seconds=0,
+    )
+
+    assert report["passed"] is False
+    assert report["tests"][0]["status"] == "timeout"
 
 
 def test_grade_activity_reports_unknown_language(tmp_path) -> None:
@@ -332,6 +461,8 @@ def test_docker_timeout_scales_with_test_cases() -> None:
     activity = {"test_cases": [{"name": "uno"}, {"name": "due"}, {"name": "tre"}]}
 
     assert grade_activity.docker_timeout_seconds(activity, 5) == 30
+    assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "javascript"}, 5) == 60
+    assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "c"}, 5, "javascript") == 60
 
 
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:

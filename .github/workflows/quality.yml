@@ -84,6 +84,13 @@ jobs:
           tests/test_track_assignments.py
           tests/test_course_board_server.py
 
+      - name: Test portable Node.js and SQL runners
+        run: >-
+          python -m pytest
+          tests/test_grade_activity.py
+          tests/test_student_lab_runner.py
+          -k "javascript or node or sql"
+
   minimum-python:
     runs-on: ubuntu-latest
     env:

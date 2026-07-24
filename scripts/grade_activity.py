@@ -4,14 +4,17 @@ import argparse
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import tempfile
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
+DEFAULT_NODE_STARTUP_GRACE_SECONDS = 10
 DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS = 10
 DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
 SUPPORTED_LANGUAGES = {
@@ -183,14 +186,132 @@ def run_python_test_case(source: Path, test_case: dict[str, Any], *, timeout_sec
 def run_node_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
     """Run one JavaScript source file through Node.js."""
 
-    return run_command_test_case(["node", str(source)], test_case, timeout_seconds=timeout_seconds)
+    name = str(test_case.get("name", "test"))
+    expected_stdout = str(test_case.get("expected_stdout", ""))
+    startup_command = ["node", "--check", str(source)]
+    try:
+        subprocess.run(
+            startup_command,
+            capture_output=True,
+            text=True,
+            timeout=DEFAULT_NODE_STARTUP_GRACE_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "runtime-startup-timeout",
+            "command": startup_command,
+            "returncode": None,
+            "stdout": error.stdout or "",
+            "stderr": error.stderr or "",
+            "expected_stdout": expected_stdout,
+        }
+    except OSError as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "execution-error",
+            "command": startup_command,
+            "returncode": None,
+            "stdout": "",
+            "stderr": str(error),
+            "expected_stdout": expected_stdout,
+        }
+    return run_command_test_case(
+        ["node", str(source)],
+        test_case,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def sqlite_output_value(value: Any) -> str:
+    """Serialize one SQLite value like the previous text-mode CLI runner."""
+
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
 
 
 def run_sql_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
     """Run one SQL script against an isolated in-memory SQLite database."""
 
     sql = source.read_text(encoding="utf-8") + "\n" + str(test_case.get("stdin", ""))
-    return run_command_test_case(["sqlite3", ":memory:"], {**test_case, "stdin": sql}, timeout_seconds=timeout_seconds)
+    expected_stdout = str(test_case.get("expected_stdout", ""))
+    name = str(test_case.get("name", "test"))
+    command = ["python-stdlib", "sqlite3", ":memory:"]
+    deadline = time.monotonic() + timeout_seconds
+    timed_out = False
+    output_lines: list[str] = []
+
+    def ensure_before_deadline() -> None:
+        nonlocal timed_out
+        if time.monotonic() >= deadline:
+            timed_out = True
+            raise TimeoutError
+
+    def stop_after_deadline() -> int:
+        nonlocal timed_out
+        timed_out = time.monotonic() >= deadline
+        return 1 if timed_out else 0
+
+    try:
+        with sqlite3.connect(":memory:") as connection:
+            connection.set_progress_handler(stop_after_deadline, 1000)
+            statement_buffer: list[str] = []
+            for index, character in enumerate(sql):
+                if index % 1024 == 0:
+                    ensure_before_deadline()
+                statement_buffer.append(character)
+                if character != ";":
+                    continue
+                statement = "".join(statement_buffer)
+                if not sqlite3.complete_statement(statement):
+                    continue
+                ensure_before_deadline()
+                cursor = connection.execute(statement)
+                if cursor.description:
+                    output_lines.extend(
+                        "|".join(sqlite_output_value(value) for value in row)
+                        for row in cursor.fetchall()
+                    )
+                statement_buffer.clear()
+            trailing_statement = "".join(statement_buffer)
+            if trailing_statement.strip():
+                ensure_before_deadline()
+                cursor = connection.execute(trailing_statement)
+                if cursor.description:
+                    output_lines.extend(
+                        "|".join(sqlite_output_value(value) for value in row)
+                        for row in cursor.fetchall()
+                    )
+    except (sqlite3.Error, TimeoutError) as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "timeout" if timed_out else "execution-error",
+            "command": command,
+            "returncode": None if timed_out else 1,
+            "stdout": "\n".join(output_lines) + ("\n" if output_lines else ""),
+            "stderr": f"Timeout dopo {timeout_seconds} secondi." if timed_out else str(error),
+            "expected_stdout": expected_stdout,
+        }
+
+    actual_stdout = "\n".join(output_lines) + ("\n" if output_lines else "")
+    passed = normalize_output(actual_stdout) == normalize_output(expected_stdout)
+    return {
+        "name": name,
+        "passed": passed,
+        "status": "passed" if passed else "failed",
+        "command": command,
+        "returncode": 0,
+        "stdout": actual_stdout,
+        "stderr": "",
+        "expected_stdout": expected_stdout,
+    }
 
 
 def validate_test_cases(test_cases: Any) -> list[str]:
@@ -266,7 +387,12 @@ def grade_activity(
         return grade_python_activity(activity, source, timeout_seconds=timeout_seconds)
 
     if selected_language in {"javascript", "nodejs"}:
-        return grade_node_activity(activity, source, timeout_seconds=timeout_seconds)
+        return grade_node_activity(
+            activity,
+            source,
+            timeout_seconds=timeout_seconds,
+            language=selected_language,
+        )
 
     if selected_language == "sql":
         return grade_sql_activity(activity, source, timeout_seconds=timeout_seconds)
@@ -394,13 +520,19 @@ def grade_python_activity(activity: dict[str, Any], source: Path, *, timeout_sec
     )
 
 
-def grade_node_activity(activity: dict[str, Any], source: Path, *, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
+def grade_node_activity(
+    activity: dict[str, Any],
+    source: Path,
+    *,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    language: str = "javascript",
+) -> dict[str, Any]:
     """Execute and grade a Node.js source file using activity test cases."""
 
     return grade_script_activity(
         activity,
         source,
-        language="javascript",
+        language=language,
         test_runner=run_node_test_case,
         timeout_seconds=timeout_seconds,
     )
@@ -429,11 +561,18 @@ def has_minimal_report_shape(value: Any) -> bool:
     return isinstance(value, dict) and isinstance(value.get("passed"), bool) and isinstance(value.get("status"), str)
 
 
-def docker_timeout_seconds(activity: dict[str, Any], timeout_seconds: int) -> int:
+def docker_timeout_seconds(
+    activity: dict[str, Any],
+    timeout_seconds: int,
+    language: str | None = None,
+) -> int:
     """Return the outer Docker timeout for compile plus all declared test cases."""
     test_cases = activity.get("test_cases", [])
     test_count = len(test_cases) if isinstance(test_cases, list) else 0
-    return ((test_count + 1) * timeout_seconds) + DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS
+    test_timeout = timeout_seconds
+    if activity_language(activity, language) in {"javascript", "nodejs"}:
+        test_timeout += DEFAULT_NODE_STARTUP_GRACE_SECONDS
+    return (test_count * test_timeout) + timeout_seconds + DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS
 
 
 def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
@@ -529,7 +668,7 @@ def run_docker_grading(args: argparse.Namespace) -> int:
         temp_root = Path(temp_dir)
         try:
             workspace, activity, source = prepare_docker_workspace(args.activity, args.source, temp_root)
-            docker_timeout = docker_timeout_seconds(load_activity(activity), args.timeout)
+            docker_timeout = docker_timeout_seconds(load_activity(activity), args.timeout, args.language)
             command = docker_command(
                 activity=activity,
                 source=source,

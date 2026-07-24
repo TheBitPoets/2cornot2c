@@ -21,6 +21,8 @@ L'immagine contiene:
 - `gcc`;
 - librerie C essenziali;
 - `python3`;
+- `nodejs`;
+- `sqlite3`;
 - utente non root `runner`;
 - working directory `/workspace`.
 
