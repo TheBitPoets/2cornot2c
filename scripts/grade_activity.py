@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 import shutil
 import sqlite3
 import subprocess
@@ -832,11 +833,17 @@ def run_bounded_process(
 ) -> subprocess.CompletedProcess[str]:
     """Run a process while bounding captured stdout and discarding stderr."""
     deadline = time.monotonic() + timeout
+    popen_options: dict[str, Any] = {}
+    if os.name == "nt":
+        popen_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        popen_options["start_new_session"] = True
     process = subprocess.Popen(
         command,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
+        **popen_options,
     )
     output = bytearray()
     output_exceeded = threading.Event()
@@ -845,24 +852,67 @@ def run_bounded_process(
         assert process.stdin is not None
         try:
             process.stdin.write(input_text.encode("utf-8"))
-        except BrokenPipeError:
+        except (BrokenPipeError, OSError, ValueError):
             pass
         finally:
             try:
                 process.stdin.close()
-            except BrokenPipeError:
+            except (BrokenPipeError, OSError, ValueError):
                 pass
 
     def read_stdout() -> None:
         assert process.stdout is not None
-        while chunk := process.stdout.read(65536):
-            remaining = max_output_bytes + 1 - len(output)
-            if remaining > 0:
-                output.extend(chunk[:remaining])
-            if len(output) > max_output_bytes:
-                output_exceeded.set()
+        read_chunk = getattr(process.stdout, "read1", process.stdout.read)
+        try:
+            while chunk := read_chunk(65536):
+                remaining = max_output_bytes + 1 - len(output)
+                if remaining > 0:
+                    output.extend(chunk[:remaining])
+                if len(output) > max_output_bytes:
+                    output_exceeded.set()
+                    process.kill()
+                    break
+        except (OSError, ValueError):
+            pass
+
+    def terminate_process_group() -> None:
+        if os.name == "nt":
+            try:
+                os.kill(process.pid, signal.CTRL_BREAK_EVENT)
+            except OSError:
+                pass
+            if process.poll() is None:
+                try:
+                    subprocess.run(
+                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=1,
+                        check=False,
+                    )
+                except (OSError, subprocess.TimeoutExpired):
+                    process.kill()
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if process.poll() is None:
+            try:
+                process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
                 process.kill()
-                break
+                process.wait()
+
+    def close_pipe(pipe: Any) -> None:
+        try:
+            raw_pipe = getattr(pipe, "raw", None)
+            if raw_pipe is not None:
+                raw_pipe.close()
+            else:
+                pipe.close()
+        except (OSError, ValueError):
+            pass
 
     writer = threading.Thread(target=write_stdin, daemon=True)
     reader = threading.Thread(target=read_stdout, daemon=True)
@@ -872,8 +922,7 @@ def run_bounded_process(
         try:
             returncode = process.wait(timeout=max(0, deadline - time.monotonic()))
         except subprocess.TimeoutExpired as error:
-            process.kill()
-            process.wait()
+            terminate_process_group()
             raise subprocess.TimeoutExpired(
                 command,
                 timeout,
@@ -888,9 +937,12 @@ def run_bounded_process(
                 output=bytes(output),
             )
     finally:
-        if process.poll() is None:
-            process.kill()
-            process.wait()
+        if process.poll() is None or writer.is_alive() or reader.is_alive():
+            terminate_process_group()
+        close_pipe(process.stdin)
+        close_pipe(process.stdout)
+        writer.join(timeout=0.2)
+        reader.join(timeout=0.2)
 
     if output_exceeded.is_set():
         raise ValueError(

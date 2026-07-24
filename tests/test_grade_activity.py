@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -656,21 +657,43 @@ def test_run_bounded_process_times_out_while_stdin_is_blocked() -> None:
 
 def test_run_bounded_process_times_out_when_descendant_keeps_stdout_open() -> None:
     started = time.monotonic()
-    child_code = "import time; time.sleep(3)"
+    child_code = "import time; time.sleep(30)"
     parent_code = (
         "import subprocess, sys; "
-        f"subprocess.Popen([sys.executable, '-c', {child_code!r}], "
-        "stdin=sys.stdin, stdout=sys.stdout)"
+        f"child = subprocess.Popen([sys.executable, '-c', {child_code!r}], "
+        "stdin=sys.stdin, stdout=sys.stdout); "
+        "print(child.pid, flush=True)"
     )
 
-    with pytest.raises(subprocess.TimeoutExpired):
+    with pytest.raises(subprocess.TimeoutExpired) as raised:
         grade_activity.run_bounded_process(
             [sys.executable, "-c", parent_code],
             input_text="",
-            timeout=0.1,
+            timeout=0.5,
         )
 
     assert time.monotonic() - started < 2
+    child_pid = int(raised.value.output.decode("ascii").strip())
+
+    def child_is_running() -> bool:
+        if os.name == "nt":
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {child_pid}", "/FO", "CSV", "/NH"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            return f'"{child_pid}"' in result.stdout
+        try:
+            os.kill(child_pid, 0)
+        except OSError:
+            return False
+        return True
+
+    process_deadline = time.monotonic() + 2
+    while time.monotonic() < process_deadline and child_is_running():
+        time.sleep(0.05)
+    assert not child_is_running(), "Il processo discendente e rimasto attivo dopo il timeout."
 
 
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:
