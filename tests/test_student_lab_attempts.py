@@ -169,30 +169,17 @@ def test_exclusive_write_falls_back_when_hard_links_are_unsupported(tmp_path, mo
     assert json.loads(output.read_text(encoding="utf-8")) == payload
 
 
-def test_linux_no_replace_uses_syscall_when_libc_wrapper_is_missing(tmp_path, monkeypatch) -> None:
-    calls = []
-
-    class FakeSyscall:
-        restype = None
-
-        def __call__(self, *args):
-            calls.append(args)
-            return 0
-
+def test_linux_no_replace_fails_safely_when_libc_wrapper_is_missing(tmp_path) -> None:
     class FakeLibc:
-        syscall = FakeSyscall()
+        pass
 
-    monkeypatch.setattr(student_lab_attempts.platform, "machine", lambda: "x86_64")
-    source = tmp_path / "attempt.tmp"
-    output = tmp_path / "attempt.json"
-
-    student_lab_attempts.linux_rename_no_replace(source, output, libc=FakeLibc())
-
-    assert calls
-    assert calls[0][0].value == 316
-    assert calls[0][-1].value == 1
-    assert calls[0][2].value == os.fsencode(source)
-    assert calls[0][4].value == os.fsencode(output)
+    with pytest.raises(OSError) as raised:
+        student_lab_attempts.linux_rename_no_replace(
+            tmp_path / "attempt.tmp",
+            tmp_path / "attempt.json",
+            libc=FakeLibc(),
+        )
+    assert raised.value.errno == errno.ENOSYS
 
 
 def test_exclusive_write_does_not_mask_unrelated_link_errors(tmp_path, monkeypatch) -> None:

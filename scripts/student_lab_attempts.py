@@ -5,7 +5,6 @@ import errno
 import heapq
 import json
 import os
-import platform
 import sys
 import tempfile
 import uuid
@@ -156,62 +155,29 @@ def hard_link_is_unsupported(error: OSError) -> bool:
     return False
 
 
-def linux_renameat2_syscall_number() -> int | None:
-    """Return the renameat2 syscall number for supported Linux architectures."""
-
-    machine = platform.machine().lower()
-    return {
-        "x86_64": 316,
-        "amd64": 316,
-        "i386": 353,
-        "i686": 353,
-        "aarch64": 276,
-        "arm64": 276,
-        "armv6l": 382,
-        "armv7l": 382,
-        "ppc64": 357,
-        "ppc64le": 357,
-        "s390x": 347,
-        "riscv64": 276,
-    }.get(machine)
-
-
 def linux_rename_no_replace(
     temporary_path: Path,
     output: Path,
     *,
     libc: Any | None = None,
 ) -> None:
-    """Call renameat2 with RENAME_NOREPLACE through libc or its syscall entry."""
+    """Call libc renameat2 with RENAME_NOREPLACE."""
 
     libc = libc or ctypes.CDLL(None, use_errno=True)
     source_bytes = os.fsencode(temporary_path)
     output_bytes = os.fsencode(output)
     renameat2 = getattr(libc, "renameat2", None)
-    if renameat2 is not None:
-        renameat2.argtypes = [
-            ctypes.c_int,
-            ctypes.c_char_p,
-            ctypes.c_int,
-            ctypes.c_char_p,
-            ctypes.c_uint,
-        ]
-        renameat2.restype = ctypes.c_int
-        result = renameat2(-100, source_bytes, -100, output_bytes, 1)
-    else:
-        syscall_number = linux_renameat2_syscall_number()
-        syscall = getattr(libc, "syscall", None)
-        if syscall_number is None or syscall is None:
-            raise OSError(errno.ENOSYS, "renameat2 is not available", output)
-        syscall.restype = ctypes.c_long
-        result = syscall(
-            ctypes.c_long(syscall_number),
-            ctypes.c_int(-100),
-            ctypes.c_char_p(source_bytes),
-            ctypes.c_int(-100),
-            ctypes.c_char_p(output_bytes),
-            ctypes.c_uint(1),
-        )
+    if renameat2 is None:
+        raise OSError(errno.ENOSYS, "libc renameat2 is not available", output)
+    renameat2.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    renameat2.restype = ctypes.c_int
+    result = renameat2(-100, source_bytes, -100, output_bytes, 1)
     if result != 0:
         error_code = ctypes.get_errno()
         raise OSError(error_code, os.strerror(error_code), output)
