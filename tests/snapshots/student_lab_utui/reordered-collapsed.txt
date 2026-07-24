@@ -7,7 +7,7 @@
 |Comandi: e test, a aiuto, o workspace, v editor.            | | |Permesso: errori, concetti                           |
 +------------------------------------------------------------+ | |Non permesso: soluzione completa                     |
 + > Runner --------------------------------------------------+ | +-----------------------------------------------------+
-|Stato: completed                                            | | + Activity -------------------------------------------+
+|Stato: passed                                               | | + Activity -------------------------------------------+
 |Backend: docker                                             | | |Path: activities/python-demo-somma-001.json          |
 +------------------------------------------------------------+ | |Tipo: laboratorio                                    |
 + Grading ---------------------------------------------------+ | |Linguaggio: python                                   |

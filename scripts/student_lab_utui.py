@@ -18,6 +18,19 @@ PANEL_BODY_ROWS = 6
 SECTION_IDS = tuple(student_lab_layout.PANEL_NAMES)
 SECTION_TITLES = dict(student_lab_layout.PANEL_TITLES)
 MINIMUM_PYTHON = (3, 11)
+ASSIGNMENT_STATUS_LABELS = {
+    "pending": "Da fare",
+    "missing": "Mancante",
+    "submitted": "Consegnata",
+    "submitted_late": "Consegnata in ritardo",
+}
+SEMANTIC_COLORS = {
+    "success": "bright_green",
+    "warning": "bright_yellow",
+    "error": "bright_red",
+    "info": "bright_cyan",
+    "late": "bright_magenta",
+}
 
 try:
     from utui import (
@@ -31,12 +44,13 @@ try:
         Row,
         ScrollView,
         Size,
+        Style,
         Widget,
         render_lines,
     )
 except ImportError as error:  # pragma: no cover - depends on the optional extra
     Canvas = Column = Divider = Label = Modal = Panel = Rect = Row = ScrollView = None
-    Size = Widget = render_lines = None
+    Size = Style = Widget = render_lines = None
     UTUI_IMPORT_ERROR: ImportError | None = error
 else:
     UTUI_IMPORT_ERROR = None
@@ -139,6 +153,61 @@ def _ai_budget_text(value: Any) -> str:
     return f"{label} (esaurito)" if budget.get("exhausted") is True else label
 
 
+def _ai_budget_tone(value: Any) -> str:
+    budget = _mapping(value)
+    limit = budget.get("limit")
+    remaining = budget.get("remaining")
+    if (
+        not isinstance(limit, int)
+        or isinstance(limit, bool)
+        or limit <= 0
+        or not isinstance(remaining, int)
+        or isinstance(remaining, bool)
+    ):
+        return "error"
+    if budget.get("exhausted") is True or remaining <= 0:
+        return "error"
+    return "warning" if remaining <= max(1, (limit + 1) // 2) else "success"
+
+
+def _assignment_status(value: Any) -> tuple[str, str | None]:
+    status = _text(value, "")
+    tone = {
+        "pending": "warning",
+        "missing": "error",
+        "submitted": "success",
+        "submitted_late": "late",
+    }.get(status)
+    return ASSIGNMENT_STATUS_LABELS.get(status, status or MISSING_VALUE), tone
+
+
+def _help_decision(value: Any) -> tuple[str, str]:
+    decision = _text(value, "")
+    if decision == "consentita":
+        return decision, "success"
+    if decision == "bloccata":
+        return decision, "error"
+    return "nessuna richiesta", "warning"
+
+
+def _grade_tone(value: Any) -> str | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        grade = float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+    if 7 <= grade <= 10:
+        return "success"
+    if 5 <= grade < 7:
+        return "warning"
+    return "error"
+
+
+def _runner_tone(value: Any) -> str:
+    return "success" if _text(value, "not_run") == "passed" else "error"
+
+
 def _grading_status(grading: Mapping[str, Any]) -> str:
     status = _text(grading.get("status"), "non valutata")
     passed = grading.get("tests_passed")
@@ -152,16 +221,24 @@ def _rows(*values: tuple[str, Any]) -> tuple[str, ...]:
     return tuple(f"{label}: {_text(value)}" for label, value in values)
 
 
-def _test_rows(report: Mapping[str, Any]) -> tuple[str, ...]:
+def _test_rows(report: Mapping[str, Any]) -> tuple[tuple[str, ...], tuple[str | None, ...]]:
     tests = _sequence(report.get("tests"))
     if not tests:
-        return ("Dettaglio non disponibile nel report.",)
+        return ("Dettaglio non disponibile nel report.",), (None,)
     rows: list[str] = []
+    tones: list[str | None] = []
     for index, raw_test in enumerate(tests, start=1):
         test = _mapping(raw_test)
         result = "ok" if test.get("passed") is True else "ko" if test.get("passed") is False else "?"
         name = _text(test.get("name"), f"test {index}")
         rows.append(f"[{result}] {name}")
+        tones.append(
+            "success"
+            if test.get("passed") is True
+            else "error"
+            if test.get("passed") is False
+            else None
+        )
         if test.get("passed") is not True:
             detail = next(
                 (
@@ -173,7 +250,8 @@ def _test_rows(report: Mapping[str, Any]) -> tuple[str, ...]:
             )
             if detail:
                 rows.append(f"  {' '.join(detail.split())}")
-    return tuple(rows) or ("Dettaglio non disponibile nel report.",)
+                tones.append(None)
+    return tuple(rows), tuple(tones)
 
 
 def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
@@ -189,6 +267,9 @@ def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str
     grade = grading.get("teacher_grade")
     if grade is None:
         grade = grading.get("score")
+    assignment_status, assignment_tone = _assignment_status(assignment.get("status"))
+    help_decision, help_decision_tone = _help_decision(help_summary.get("last_decision"))
+    test_rows, test_tones = _test_rows(report)
     sections = (
         {
             "id": "assignment",
@@ -200,8 +281,9 @@ def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str
                 ("Classe", assignment.get("class_label") or assignment.get("class_id")),
                 ("Assegnata", _datetime_text(assignment.get("assigned_at"))),
                 ("Scadenza", _datetime_text(assignment.get("due_at"))),
-                ("Stato", assignment.get("status")),
+                ("Stato", assignment_status),
             ),
+            "row_styles": (None, None, None, None, None, None, assignment_tone),
         },
         {
             "id": "workspace",
@@ -243,7 +325,17 @@ def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str
                 ("Bloccate", help_summary.get("denied")),
                 ("AI budget", _ai_budget_text(help_summary.get("ai_budget"))),
                 ("Ultima", _datetime_text(help_summary.get("last_requested_at"))),
-                ("Esito ultima", help_summary.get("last_decision")),
+                ("Esito ultima", help_decision),
+            ),
+            "row_styles": (
+                None,
+                None,
+                None,
+                None,
+                None,
+                _ai_budget_tone(help_summary.get("ai_budget")),
+                None,
+                help_decision_tone,
             ),
         },
         {
@@ -259,7 +351,8 @@ def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str
         {
             "id": "tests",
             "title": SECTION_TITLES["tests"],
-            "rows": _test_rows(report),
+            "rows": test_rows,
+            "row_styles": test_tones,
         },
         {
             "id": "grading",
@@ -268,6 +361,7 @@ def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str
                 ("Stato", _grading_status(grading)),
                 ("Voto", grade),
             ),
+            "row_styles": (None, _grade_tone(grade)),
         },
         {
             "id": "runner",
@@ -276,6 +370,7 @@ def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str
                 ("Stato", runner.get("status")),
                 ("Backend", runner.get("backend")),
             ),
+            "row_styles": (_runner_tone(runner.get("status")), None),
         },
         {
             "id": "guide",
@@ -318,16 +413,33 @@ def _build_panel(
 ) -> tuple[Any, int]:
     title = SECTION_TITLES[identifier]
     rows: Sequence[Any] = ()
+    row_styles: Sequence[Any] = ()
     if section is not None:
         title = _text(section.get("title"), title)
         rows = _sequence(section.get("rows"))
+        row_styles = _sequence(section.get("row_styles"))
     normalized_rows = tuple(_text(row) for row in rows) or ("non disponibile",)
+    normalized_styles = tuple(
+        Style(foreground=SEMANTIC_COLORS[tone])
+        if tone in SEMANTIC_COLORS
+        else Style()
+        for tone in (
+            tuple(row_styles) + (None,) * max(0, len(normalized_rows) - len(row_styles))
+        )[: len(normalized_rows)]
+    )
     body_height = min(PANEL_BODY_ROWS, len(normalized_rows))
     height = 3 if collapsed else max(3, body_height + 2)
+    labels = [
+        Label(row, style=style)
+        for row, style in zip(normalized_rows, normalized_styles, strict=True)
+    ]
     return (
         Panel(
             ScrollView(
-                Label("\n".join(normalized_rows)),
+                Column(
+                    labels,
+                    sizes=[Size.fixed_size(1) for _row in normalized_rows],
+                ),
                 content_height=len(normalized_rows),
                 scroll_offset=scroll_offset,
             ),

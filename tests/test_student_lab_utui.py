@@ -39,14 +39,14 @@ ASSIGNMENT = {
         "not_allowed": ["soluzione completa"],
     },
     "help": {
-        "status": "ready",
+        "status": "",
         "error": None,
         "total": 2,
         "allowed": 2,
         "denied": 0,
         "ai_budget": {"limit": 5, "used": 2, "remaining": 3, "exhausted": False},
         "last_requested_at": "2026-07-23T18:05:00+02:00",
-        "last_decision": "allowed",
+        "last_decision": "consentita",
     },
     "report": {
         "path": "teacher-reports/demo/python-demo-somma-001.json",
@@ -68,7 +68,7 @@ ASSIGNMENT = {
         "tests_total": 2,
         "score": 7,
     },
-    "runner": {"status": "completed", "backend": "docker"},
+    "runner": {"status": "passed", "backend": "docker"},
 }
 
 
@@ -87,11 +87,18 @@ def test_project_assignment_contains_all_stable_sections_without_mutation() -> N
     assert ASSIGNMENT == original
     by_id = {section["id"]: section for section in sections}
     assert by_id["assignment"]["rows"][0] == "Titolo: Somma in Python"
+    assert by_id["assignment"]["rows"][-1] == "Stato: Consegnata"
+    assert by_id["assignment"]["row_styles"][-1] == "success"
     assert by_id["tests"]["rows"] == (
         "[ok] test_somma_positivi",
         "[ko] test_somma_negativi",
         "  atteso -3, ottenuto 3",
     )
+    assert by_id["tests"]["row_styles"] == ("success", "error", None)
+    assert by_id["help"]["row_styles"][5] == "warning"
+    assert by_id["help"]["row_styles"][-1] == "success"
+    assert by_id["grading"]["row_styles"][-1] == "success"
+    assert by_id["runner"]["row_styles"][0] == "success"
 
 
 def test_project_assignment_keeps_missing_sections_visible() -> None:
@@ -166,6 +173,18 @@ def test_color_and_no_color_have_identical_visible_geometry() -> None:
     )
 
     assert [student_lab_layout.visible_text(line) for line in colored] == plain
+    rendered = "\n".join(colored)
+    assert "\x1b[92m" in rendered
+    assert "\x1b[91m" in rendered
+    help_scrolled = student_lab_utui.render_assignment_frame(
+        ASSIGNMENT,
+        student_lab_layout.DEFAULT_LAYOUT,
+        width=100,
+        height=30,
+        color=True,
+        interaction={"section_offsets": {"help": 5}},
+    )
+    assert "\x1b[93m" in "\n".join(help_scrolled)
 
 
 @pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")

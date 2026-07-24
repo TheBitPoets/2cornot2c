@@ -14,7 +14,7 @@
 |Path: activities/python-demo-somma-001.json                 | | |Voto: 7                                              |
 |Tipo: laboratorio                                           | | +-----------------------------------------------------+
 |Linguaggio: python                                          | | + Runner ---------------------------------------------+
-|Sorgente: main.py                                           | | |Stato: completed                                     |
+|Sorgente: main.py                                           | | |Stato: passed                                        |
 |Argomenti: funzioni, somma, input                           | | |Backend: docker                                      |
 +------------------------------------------------------------+ | +-----------------------------------------------------+
 + Aiuto consentito ------------------------------------------+ | + Guida rapida ---------------------------------------+
@@ -24,7 +24,7 @@
 |Non permesso: soluzione completa                            | | |Report: risultato letto da dashboard e registro.     |
 +------------------------------------------------------------+ | |Flusso: apri, modifica, esegui test, controlla.      |
 + Richieste aiuto -------------------------------------------+ | |Comandi: e test, a aiuto, o workspace, v editor.     |
-|Stato log: ready                                            | | +-----------------------------------------------------+
+|Stato log: -                                                | | +-----------------------------------------------------+
 |Errore log: -                                               | |
 |Eventi: 2                                                   | |
 |Consentite: 2                                               | |
