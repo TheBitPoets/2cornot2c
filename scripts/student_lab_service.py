@@ -221,6 +221,7 @@ def build_lab_assignment(
     student_id: str,
     now: str,
     expose_external_paths: bool = False,
+    allow_unscoped_legacy_report: bool = True,
 ) -> dict[str, Any]:
     """Build the student-lab contract for one assignment target."""
 
@@ -237,7 +238,7 @@ def build_lab_assignment(
         legacy_assignment_id = clean_text(legacy_report.get("assignment_id"))
         has_assignment_histories = bool(report_path and (report_path.parent / "assignments").is_dir())
         if (legacy_assignment_id and legacy_assignment_id != assignment_id) or (
-            not legacy_assignment_id and has_assignment_histories
+            not legacy_assignment_id and (has_assignment_histories or not allow_unscoped_legacy_report)
         ):
             legacy_report = None
     attempt_history = (
@@ -398,6 +399,11 @@ def _list_student_lab_assignments(
             f"Identificativo studente ambiguo: {clean_student_id} e associato a repository diversi."
         )
 
+    activity_counts: dict[str, int] = {}
+    for assignment, _, _, _ in selected_assignments:
+        activity_id = clean_text(assignment.get("activity_id"))
+        activity_counts[activity_id] = activity_counts.get(activity_id, 0) + 1
+
     lab_assignments = [
         build_lab_assignment(
             root=root,
@@ -406,6 +412,7 @@ def _list_student_lab_assignments(
             student_id=canonical_student_id,
             now=current_time,
             expose_external_paths=expose_external_paths,
+            allow_unscoped_legacy_report=activity_counts.get(clean_text(assignment.get("activity_id")), 0) == 1,
         )
         for assignment, target, canonical_student_id, _ in selected_assignments
     ]
