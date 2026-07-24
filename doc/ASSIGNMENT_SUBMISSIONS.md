@@ -300,9 +300,30 @@ Il server carica i binding docente da `teacher-grading-bindings.json`, ignorato 
 ```json
 {
   "schema_version": "thebitlab_grading_bindings.v1",
-  "bindings": []
+  "bindings": [
+    {
+      "activity_id": "python-base-somma-001",
+      "assignment_id": "assignment-3a-somma-001",
+      "student_id": "rossi-mario",
+      "student_repo_ref": "TheBitPoets/rossi-mario",
+      "workflow_repo_ref": "TheBitPoets/2cornot2c",
+      "artifact_name": "grading-assignment-3a-somma-001-rossi-mario",
+      "expected_student_head_sha": "0123456789abcdef0123456789abcdef01234567",
+      "expected_workflow_head_sha": "89abcdef0123456789abcdef0123456789abcdef",
+      "expected_submitted_at": "2026-10-20T08:00:00+02:00",
+      "expected_workflow_run_id": 123456789,
+      "final": false
+    }
+  ]
 }
 ```
+
+I valori `activity_id`, `assignment_id`, `student_id`, repository studente e timestamp provengono
+dall'assegnazione e dalla consegna registrate dal docente. `workflow_repo_ref` e lo SHA del workflow
+identificano il repository docente e il commit immutabile che ha eseguito il grading. Il nome artifact
+deve coincidere con l'input del workflow; il run ID e il numero visibile nell'URL della relativa
+esecuzione GitHub Actions. Gli SHA devono essere completi, di 40 caratteri. `final: false` mantiene il
+voto provvisorio fino alla revisione docente.
 
 Quando la lista contiene binding, il token di sola lettura per acquisire gli artifact deve essere
 configurato in `THEBITLAB_GRADING_GITHUB_TOKEN`, tramite ambiente oppure `.secrets/ai.secret`.
