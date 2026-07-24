@@ -20,6 +20,7 @@ teacher-reports/**/*.json
 tmp/
 activities/drafts/*.json
 teacher-assignments/*.json
+teacher-grading-bindings.json
 examples/assignment_tracking/student_repos/*/assignments/*/
 examples/assignment_tracking/student_repos/*/reports/*/
 examples/assignment_tracking/student_repos/*/help/

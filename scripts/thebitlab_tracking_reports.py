@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import datetime
+import json
+from pathlib import Path
 import re
 from typing import Any, Iterable, Protocol
 
@@ -55,6 +57,34 @@ class TrackingReportResult:
     provisional: bool = False
     provenance: dict[str, Any] | None = None
     error: str | None = None
+
+
+def load_trusted_grading_bindings(path: Path) -> list[TrustedGradingBinding]:
+    """Load teacher-controlled remote grading bindings from JSON."""
+
+    if not path.is_file():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(f"Binding grading non leggibili: {path}") from error
+    if not isinstance(payload, dict):
+        raise ValueError("Il file dei binding grading deve contenere un oggetto JSON.")
+    if payload.get("schema_version") != "thebitlab_grading_bindings.v1":
+        raise ValueError("Versione schema binding grading non supportata.")
+    entries = payload.get("bindings")
+    if not isinstance(entries, list):
+        raise ValueError("bindings deve essere una lista.")
+    bindings: list[TrustedGradingBinding] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise ValueError(f"Binding grading {index + 1} non valido.")
+        try:
+            binding = TrustedGradingBinding(**entry)
+        except TypeError as error:
+            raise ValueError(f"Campi binding grading {index + 1} non validi.") from error
+        bindings.append(_validated_binding(binding))
+    return bindings
 
 
 class TrackingReportSource(Protocol):
@@ -201,6 +231,8 @@ def _validated_binding(binding: TrustedGradingBinding) -> TrustedGradingBinding:
     run_id = binding.expected_workflow_run_id
     if not isinstance(run_id, int) or isinstance(run_id, bool) or run_id <= 0:
         raise ValueError("expected_workflow_run_id non valido.")
+    if not isinstance(binding.final, bool):
+        raise ValueError("final deve essere booleano.")
     if not isinstance(binding.final, bool):
         raise ValueError("final deve essere booleano.")
     return TrustedGradingBinding(

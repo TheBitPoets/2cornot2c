@@ -58,8 +58,10 @@ from scripts import (
     student_help_codex_adapter,
     student_help_service,
     student_lab_service,
+    thebitlab_grading_artifacts,
     thebitlab_services,
     thebitlab_storage,
+    thebitlab_tracking_reports,
     track_assignments,
     validate_activity,
 )
@@ -71,6 +73,7 @@ COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
 SCHOOL_CALENDARS_DIR = ROOT / "doc" / "calendars"
 TEACHER_REPORTS_DIR = ROOT / "teacher-reports"
 TEACHER_ASSIGNMENTS_DIR = ROOT / "teacher-assignments"
+GRADING_BINDINGS_PATH = ROOT / "teacher-grading-bindings.json"
 ACTIVITY_DIRS = [ROOT / "activities", ROOT / "examples" / "assignment_tracking"]
 COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 README_PATH = ROOT / "README.md"
@@ -393,6 +396,7 @@ def configure_data_root(root: Path) -> Path:
     global SCHOOL_CALENDARS_DIR
     global TEACHER_REPORTS_DIR
     global TEACHER_ASSIGNMENTS_DIR
+    global GRADING_BINDINGS_PATH
     global ACTIVITY_DIRS
     global COURSE_PLAN_MD_PATH
     global README_PATH
@@ -406,6 +410,7 @@ def configure_data_root(root: Path) -> Path:
     SCHOOL_CALENDARS_DIR = ROOT / "doc" / "calendars"
     TEACHER_REPORTS_DIR = ROOT / "teacher-reports"
     TEACHER_ASSIGNMENTS_DIR = ROOT / "teacher-assignments"
+    GRADING_BINDINGS_PATH = ROOT / "teacher-grading-bindings.json"
     ACTIVITY_DIRS = [ROOT / "activities", ROOT / "examples" / "assignment_tracking"]
     COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
     README_PATH = ROOT / "README.md"
@@ -444,6 +449,26 @@ def assignment_record_storage() -> assignment_records.JsonAssignmentRecordStorag
     """Return the JSON storage adapter for explicit assignment records."""
 
     return assignment_records.JsonAssignmentRecordStorage(ROOT, TEACHER_ASSIGNMENTS_DIR)
+
+
+def grading_tracking_report_source() -> thebitlab_tracking_reports.TrackingReportSource | None:
+    """Compose the production remote report adapter when bindings exist."""
+
+    bindings = thebitlab_tracking_reports.load_trusted_grading_bindings(
+        GRADING_BINDINGS_PATH,
+    )
+    if not bindings:
+        return None
+    token = secret_value("THEBITLAB_GRADING_GITHUB_TOKEN").strip()
+    if not token:
+        raise ValueError(
+            "THEBITLAB_GRADING_GITHUB_TOKEN obbligatorio quando esistono binding grading remoti."
+        )
+    artifact_source = thebitlab_grading_artifacts.GitHubActionsArtifactSource(token)
+    return thebitlab_tracking_reports.ArtifactTrackingReportSource(
+        artifact_source,
+        bindings,
+    )
 
 
 def assignment_record_operation_id(
@@ -1830,6 +1855,7 @@ def generate_assignment_report(payload: dict) -> dict:
             github_team=payload.get("github_team") or None,
             assignment_id=canonical_assignment_id or None,
             server_root=ROOT if canonical_assignment_id else None,
+            report_source=grading_tracking_report_source() if canonical_assignment_id else None,
         )
         with assignment_operation_lock(assignment_report_operation_id(storage, output_name)):
             if output_path.is_file():

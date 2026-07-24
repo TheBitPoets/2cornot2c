@@ -295,6 +295,20 @@ classificare lo studente come mancante e registra `remote_error`, autorita `remo
 raccolta. `verified_remote` e riservato ai report acquisiti e validati. Se non esiste alcun binding, il
 comportamento locale precedente rimane invariato.
 
+Il server carica i binding docente da `teacher-grading-bindings.json`, ignorato da Git, con schema:
+
+```json
+{
+  "schema_version": "thebitlab_grading_bindings.v1",
+  "bindings": []
+}
+```
+
+Quando la lista contiene binding, il token di sola lettura per acquisire gli artifact deve essere
+configurato in `THEBITLAB_GRADING_GITHUB_TOKEN`, tramite ambiente oppure `.secrets/ai.secret`.
+Se il file contiene binding ma il token manca, la generazione del registro si interrompe invece di
+ricadere sui report locali.
+
 Prima di accettare un report remoto, l'adapter verifica:
 
 - `activity_id`, `assignment_id` e `student_id`;

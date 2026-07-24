@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import asdict, replace
+import json
 
 import pytest
 
@@ -302,3 +303,53 @@ def test_artifact_tracking_source_rejects_duplicate_or_invalid_bindings() -> Non
             artifact_source,
             [binding(expected_submitted_at="2026-10-20T08:00:00")],
         )
+
+
+def test_load_trusted_grading_bindings_reads_teacher_json(tmp_path) -> None:
+    path = tmp_path / "teacher-grading-bindings.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "thebitlab_grading_bindings.v1",
+                "bindings": [asdict(binding())],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = tracking_reports.load_trusted_grading_bindings(path)
+
+    assert loaded == [binding()]
+
+
+@pytest.mark.parametrize(
+    "payload, message",
+    [
+        ([], "oggetto JSON"),
+        ({"schema_version": "other", "bindings": []}, "schema"),
+        (
+            {
+                "schema_version": "thebitlab_grading_bindings.v1",
+                "bindings": [{"unexpected": True}],
+            },
+            "Campi",
+        ),
+        (
+            {
+                "schema_version": "thebitlab_grading_bindings.v1",
+                "bindings": [{**asdict(binding()), "final": "false"}],
+            },
+            "booleano",
+        ),
+    ],
+)
+def test_load_trusted_grading_bindings_rejects_invalid_payload(
+    tmp_path,
+    payload,
+    message,
+) -> None:
+    path = tmp_path / "teacher-grading-bindings.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        tracking_reports.load_trusted_grading_bindings(path)
