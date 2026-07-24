@@ -277,8 +277,8 @@ scripts/thebitlab_tracking_reports.py
 ```
 
 `ArtifactTrackingReportSource` combina la porta `GradingArtifactSource` con binding forniti da una
-sorgente docente fidata. Ogni binding identifica assignment, studente, repository, artifact, SHA completo
-e workflow run autorizzata. Questi dati descrivono una singola esecuzione: non fanno parte dell'activity,
+sorgente docente fidata. Ogni binding distingue repository e SHA dello studente da repository, SHA e run
+del workflow docente protetto, oltre a identificare assignment, studente e artifact. Questi dati descrivono una singola esecuzione: non fanno parte dell'activity,
 del target iniziale o di dati controllati dallo studente.
 
 `track_assignments()` accetta una `TrackingReportSource` opzionale. La precedenza e:
@@ -296,9 +296,14 @@ comportamento locale precedente rimane invariato.
 
 Prima di accettare un report remoto, l'adapter verifica:
 
-- `activity_id` e `assignment_id`;
-- commit completo uguale allo SHA autorizzato;
-- repository, nome artifact, SHA e workflow run della provenienza.
+- `activity_id`, `assignment_id` e `student_id`;
+- commit studente completo uguale allo SHA autorizzato;
+- repository docente, nome artifact, SHA del workflow e workflow run della provenienza.
+
+Il producer autorevole e `.github/workflows/grade-student-assignment.yml`, eseguito nel
+repository docente. Il workflow effettua il checkout dello SHA studente esatto e usa il
+runner Docker senza segreti. Il workflow presente nel template del repository studente e
+solo un'anteprima e i suoi artifact non devono essere configurati come autorevoli.
 
 Il registro conserva separatamente i dati del report e quelli attestati dall'applicazione:
 
@@ -310,10 +315,11 @@ Il registro conserva separatamente i dati del report e quelli attestati dall'app
     "report_provenance": {
       "source": "github_actions",
       "repository": "TheBitPoets/rossi-mario",
+      "artifact_repository": "TheBitPoets/2cornot2c",
       "artifact_id": 123,
       "artifact_name": "grading-assignment-001",
       "workflow_run_id": 456,
-      "head_sha": "0123456789abcdef0123456789abcdef01234567"
+      "head_sha": "fedcba9876543210fedcba9876543210fedcba98"
     },
     "report_error": null
   }
@@ -338,6 +344,9 @@ Esempio:
   "passed": false,
   "status": "failed",
   "activity_id": "c-base-somma-001",
+  "assignment_id": "assignment-c-base-somma-001-3a",
+  "student_id": "rossi-mario",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
   "language": "c",
   "summary": {
     "passed": 1,

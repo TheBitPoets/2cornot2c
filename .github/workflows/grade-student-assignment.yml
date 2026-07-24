@@ -1,0 +1,124 @@
+name: Grade student assignment
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      student_repo:
+        description: "Repository studente owner/repo"
+        required: true
+      student_head_sha:
+        description: "SHA completo del commit studente"
+        required: true
+      assignment_id:
+        description: "Identificativo stabile dell'assegnazione"
+        required: true
+      student_id:
+        description: "Identificativo stabile dello studente"
+        required: true
+      activity_id:
+        description: "Identificativo stabile dell'attivita"
+        required: true
+      activity_path:
+        description: "Path della activity JSON nel repository studente"
+        required: true
+      source_path:
+        description: "Path del sorgente nel repository studente"
+        required: true
+      language:
+        description: "Linguaggio della consegna"
+        required: true
+        type: choice
+        options:
+          - assembly
+          - c
+          - cpp
+          - go
+          - html
+          - java
+          - javascript
+          - nodejs
+          - php
+          - python
+          - sql
+      artifact_name:
+        description: "Nome artifact concordato con il binding docente"
+        required: true
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STUDENT_REPO: ${{ inputs.student_repo }}
+      STUDENT_HEAD_SHA: ${{ inputs.student_head_sha }}
+      ASSIGNMENT_ID: ${{ inputs.assignment_id }}
+      STUDENT_ID: ${{ inputs.student_id }}
+      ACTIVITY_ID: ${{ inputs.activity_id }}
+      ACTIVITY_PATH: ${{ inputs.activity_path }}
+      SOURCE_PATH: ${{ inputs.source_path }}
+      LANGUAGE: ${{ inputs.language }}
+      ARTIFACT_NAME: ${{ inputs.artifact_name }}
+    steps:
+      - name: Validate trusted grading inputs
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import PurePosixPath
+          import re
+
+          slug = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+          repo = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+          sha = re.compile(r"^[0-9a-fA-F]{40}$")
+
+          if not repo.fullmatch(os.environ["STUDENT_REPO"]):
+              raise SystemExit("student_repo non valido")
+          if not sha.fullmatch(os.environ["STUDENT_HEAD_SHA"]):
+              raise SystemExit("student_head_sha non valido")
+          for name in ("ASSIGNMENT_ID", "STUDENT_ID", "ACTIVITY_ID", "ARTIFACT_NAME"):
+              if not slug.fullmatch(os.environ[name]):
+                  raise SystemExit(f"{name.lower()} non valido")
+          for name in ("ACTIVITY_PATH", "SOURCE_PATH"):
+              path = PurePosixPath(os.environ[name])
+              if path.is_absolute() or ".." in path.parts or not path.parts:
+                  raise SystemExit(f"{name.lower()} non valido")
+          PY
+
+      - name: Checkout trusted TheBitLab source
+        uses: actions/checkout@v4
+        with:
+          path: thebitlab
+
+      - name: Checkout exact student commit
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.student_repo }}
+          ref: ${{ inputs.student_head_sha }}
+          path: student-work
+
+      - name: Build grading Docker image
+        run: docker build -t thebitlab-assignment-runner -f thebitlab/docker/assignment-runner/Dockerfile thebitlab
+
+      - name: Run deterministic grading
+        run: |
+          mkdir -p "$RUNNER_TEMP/thebitlab-report"
+          python thebitlab/scripts/grade_activity.py \
+            --activity "student-work/$ACTIVITY_PATH" \
+            --source "student-work/$SOURCE_PATH" \
+            --language "$LANGUAGE" \
+            --assignment-id "$ASSIGNMENT_ID" \
+            --student-id "$STUDENT_ID" \
+            --commit "$STUDENT_HEAD_SHA" \
+            --docker \
+            --report "$RUNNER_TEMP/thebitlab-report/report.json"
+
+      - name: Upload authoritative grading report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ runner.temp }}/thebitlab-report/report.json
+          if-no-files-found: error

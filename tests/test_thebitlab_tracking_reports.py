@@ -14,6 +14,7 @@ from scripts.thebitlab_grading_artifacts import (
 
 
 HEAD_SHA = "a" * 40
+WORKFLOW_SHA = "b" * 40
 
 
 class FakeArtifactSource:
@@ -47,9 +48,11 @@ def binding(**overrides) -> tracking_reports.TrustedGradingBinding:
         "activity_id": "python-base-somma-001",
         "assignment_id": "assignment-001",
         "student_id": "rossi-mario",
-        "repo_ref": "TheBitPoets/rossi-mario",
+        "student_repo_ref": "TheBitPoets/rossi-mario",
+        "workflow_repo_ref": "TheBitPoets/2cornot2c",
         "artifact_name": "grading-assignment-001",
-        "expected_head_sha": HEAD_SHA,
+        "expected_student_head_sha": HEAD_SHA,
+        "expected_workflow_head_sha": WORKFLOW_SHA,
         "expected_workflow_run_id": 900,
         "final": False,
     }
@@ -74,14 +77,14 @@ def report(**overrides) -> dict:
 
 def provenance(**overrides) -> GradingArtifactProvenance:
     values = {
-        "repository": "TheBitPoets/rossi-mario",
+        "repository": "TheBitPoets/2cornot2c",
         "artifact_id": 12,
         "artifact_name": "grading-assignment-001",
         "workflow_run_id": 900,
-        "head_sha": HEAD_SHA,
+        "head_sha": WORKFLOW_SHA,
         "created_at": "2026-10-20T08:05:00Z",
         "archive_download_url": (
-            "https://api.github.com/repos/TheBitPoets/rossi-mario/actions/artifacts/12/zip"
+            "https://api.github.com/repos/TheBitPoets/2cornot2c/actions/artifacts/12/zip"
         ),
         "digest": "sha256:abc",
     }
@@ -154,12 +157,14 @@ def test_artifact_tracking_source_resolves_verified_remote_report() -> None:
     assert result.provisional is True
     assert result.error is None
     assert result.provenance["source"] == "github_actions"
+    assert result.provenance["repository"] == "TheBitPoets/rossi-mario"
+    assert result.provenance["artifact_repository"] == "TheBitPoets/2cornot2c"
     assert result.provenance["artifact_id"] == 12
     assert artifact_source.calls == [
         (
-            "TheBitPoets/rossi-mario",
+            "TheBitPoets/2cornot2c",
             "grading-assignment-001",
-            HEAD_SHA,
+            WORKFLOW_SHA,
             900,
         )
     ]
@@ -218,7 +223,7 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
         ({"student_id": "bianchi-luca"}, {}, "studente diverso"),
         ({"commit": "b" * 40}, {}, "Commit"),
         ({}, {"repository": "TheBitPoets/altro"}, "repository diverso"),
-        ({}, {"head_sha": "b" * 40}, "SHA diverso"),
+        ({}, {"head_sha": "c" * 40}, "SHA diverso"),
         ({}, {"workflow_run_id": 901}, "workflow run diversa"),
         ({}, {"artifact_name": "altro"}, "artifact diverso"),
     ],
@@ -287,5 +292,5 @@ def test_artifact_tracking_source_rejects_duplicate_or_invalid_bindings() -> Non
     with pytest.raises(ValueError, match="40 caratteri"):
         tracking_reports.ArtifactTrackingReportSource(
             artifact_source,
-            [binding(expected_head_sha="abc")],
+            [binding(expected_student_head_sha="abc")],
         )

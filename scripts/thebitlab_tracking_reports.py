@@ -33,9 +33,11 @@ class TrustedGradingBinding:
     activity_id: str
     assignment_id: str
     student_id: str
-    repo_ref: str
+    student_repo_ref: str
+    workflow_repo_ref: str
     artifact_name: str
-    expected_head_sha: str
+    expected_student_head_sha: str
+    expected_workflow_head_sha: str
     expected_workflow_run_id: int
     final: bool = False
 
@@ -136,9 +138,9 @@ class ArtifactTrackingReportSource:
         try:
             _validate_request(request, binding)
             acquired = self.artifact_source.acquire_latest_report(
-                binding.repo_ref,
+                binding.workflow_repo_ref,
                 binding.artifact_name,
-                binding.expected_head_sha,
+                binding.expected_workflow_head_sha,
                 binding.expected_workflow_run_id,
             )
             _validate_acquired_report(acquired.report, acquired.provenance, binding)
@@ -156,10 +158,7 @@ class ArtifactTrackingReportSource:
             selection="github_actions_artifact",
             authority="verified_remote",
             provisional=not binding.final,
-            provenance={
-                "source": "github_actions",
-                **asdict(acquired.provenance),
-            },
+            provenance=_tracking_provenance(acquired.provenance, binding),
         )
 
 
@@ -174,11 +173,25 @@ def _validated_binding(binding: TrustedGradingBinding) -> TrustedGradingBinding:
     activity_id = _required_text(binding.activity_id, "activity_id")
     assignment_id = _required_text(binding.assignment_id, "assignment_id")
     student_id = _required_text(binding.student_id, "student_id")
-    owner, repo = normalize_github_repo_ref(_required_text(binding.repo_ref, "repo_ref"))
+    student_owner, student_repo = normalize_github_repo_ref(
+        _required_text(binding.student_repo_ref, "student_repo_ref")
+    )
+    workflow_owner, workflow_repo = normalize_github_repo_ref(
+        _required_text(binding.workflow_repo_ref, "workflow_repo_ref")
+    )
     artifact_name = _required_text(binding.artifact_name, "artifact_name")
-    head_sha = _required_text(binding.expected_head_sha, "expected_head_sha").lower()
-    if not GIT_SHA_RE.fullmatch(head_sha):
-        raise ValueError("expected_head_sha deve contenere 40 caratteri esadecimali.")
+    student_head_sha = _required_text(
+        binding.expected_student_head_sha,
+        "expected_student_head_sha",
+    ).lower()
+    workflow_head_sha = _required_text(
+        binding.expected_workflow_head_sha,
+        "expected_workflow_head_sha",
+    ).lower()
+    if not GIT_SHA_RE.fullmatch(student_head_sha):
+        raise ValueError("expected_student_head_sha deve contenere 40 caratteri esadecimali.")
+    if not GIT_SHA_RE.fullmatch(workflow_head_sha):
+        raise ValueError("expected_workflow_head_sha deve contenere 40 caratteri esadecimali.")
     run_id = binding.expected_workflow_run_id
     if not isinstance(run_id, int) or isinstance(run_id, bool) or run_id <= 0:
         raise ValueError("expected_workflow_run_id non valido.")
@@ -188,9 +201,11 @@ def _validated_binding(binding: TrustedGradingBinding) -> TrustedGradingBinding:
         activity_id=activity_id,
         assignment_id=assignment_id,
         student_id=student_id,
-        repo_ref=f"{owner}/{repo}",
+        student_repo_ref=f"{student_owner}/{student_repo}",
+        workflow_repo_ref=f"{workflow_owner}/{workflow_repo}",
         artifact_name=artifact_name,
-        expected_head_sha=head_sha,
+        expected_student_head_sha=student_head_sha,
+        expected_workflow_head_sha=workflow_head_sha,
         expected_workflow_run_id=run_id,
         final=binding.final,
     )
@@ -215,7 +230,7 @@ def _validate_request(
     request_repo = str(request.repo_ref or "").strip()
     if request_repo:
         owner, repo = normalize_github_repo_ref(request_repo)
-        if f"{owner}/{repo}".lower() != binding.repo_ref.lower():
+        if f"{owner}/{repo}".lower() != binding.student_repo_ref.lower():
             raise ValueError("Binding grading non coerente con il repository.")
 
 
@@ -230,13 +245,24 @@ def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding
     if report_student_id != binding.student_id:
         raise ValueError("Report remoto riferito a uno studente diverso.")
     commit = str(report.get("commit", "")).strip().lower()
-    if commit != binding.expected_head_sha:
+    if commit != binding.expected_student_head_sha:
         raise ValueError("Commit del report remoto diverso dallo SHA autorizzato.")
-    if provenance.repository.lower() != binding.repo_ref.lower():
+    if provenance.repository.lower() != binding.workflow_repo_ref.lower():
         raise ValueError("Provenienza remota riferita a un repository diverso.")
-    if provenance.head_sha.lower() != binding.expected_head_sha:
+    if provenance.head_sha.lower() != binding.expected_workflow_head_sha:
         raise ValueError("Provenienza remota riferita a uno SHA diverso.")
     if provenance.workflow_run_id != binding.expected_workflow_run_id:
         raise ValueError("Provenienza remota riferita a una workflow run diversa.")
     if provenance.artifact_name != binding.artifact_name:
         raise ValueError("Provenienza remota riferita a un artifact diverso.")
+
+
+def _tracking_provenance(provenance, binding: TrustedGradingBinding) -> dict[str, Any]:  # noqa: ANN001
+    artifact_provenance = asdict(provenance)
+    artifact_repository = artifact_provenance.pop("repository")
+    return {
+        "source": "github_actions",
+        "repository": binding.student_repo_ref,
+        "artifact_repository": artifact_repository,
+        **artifact_provenance,
+    }
