@@ -145,11 +145,12 @@ def test_run_student_assignment_passes_python_pytest(tmp_path) -> None:
     assert report["summary"] == {"passed": 1, "total": 1}
     assert report["tests"] == [
         {
-            "name": "tests/test_main.py::test_somma",
-            "passed": True,
-            "status": "passed",
-        }
-    ]
+                "name": "tests/test_main.py::test_somma",
+                "passed": True,
+                "status": "passed",
+                "visibility": "student",
+            }
+        ]
 
 
 def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path) -> None:
@@ -219,7 +220,8 @@ def test_write_student_report_redacts_teacher_only_test_details(tmp_path) -> Non
                 "status": "failed",
                 "stdin": "input-riservato",
                 "expected_stdout": "output-riservato",
-                "stdout": "output-studente",
+                "stdout": "input-riservato",
+                "stderr": "input-riservato",
                 "message": "Atteso output-riservato",
             }
         ],
@@ -234,6 +236,8 @@ def test_write_student_report_redacts_teacher_only_test_details(tmp_path) -> Non
     assert "nome-riservato" not in serialized
     assert "input-riservato" not in serialized
     assert "output-riservato" not in serialized
+    assert "stdout" not in stored["tests"][0]
+    assert "stderr" not in stored["tests"][0]
 
 
 def test_write_student_report_keeps_public_pytest_failure_details(tmp_path) -> None:
@@ -251,6 +255,7 @@ def test_write_student_report_keeps_public_pytest_failure_details(tmp_path) -> N
         "tests": [
             {
                 "name": "tests/test_main.py::test_somma",
+                "visibility": "student",
                 "passed": False,
                 "status": "failed",
                 "message": "AssertionError: assert 4 == 5",
@@ -320,7 +325,8 @@ def test_sql_assignment_flows_from_runner_to_service_grading(tmp_path) -> None:
     assert report["language"] == "sql"
     assert report["status"] == "passed"
     assert report["summary"] == {"passed": 1, "total": 1}
-    assert report["tests"][0]["command"][0] == "python-stdlib"
+    assert report["tests"][0]["name"] == "Test 1"
+    assert "command" not in report["tests"][0]
     assert assignment_payload["report"]["exists"] is True
     assert assignment_payload["grading"]["status"] == "graded_passed"
     assert assignment_payload["grading"]["tests_passed"] == 1
@@ -639,7 +645,7 @@ def test_run_local_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> N
     )
 
     assert report["status"] == "failed"
-    assert report["tests"][0]["message"] == "Output ottenuto: 4"
+    assert report["tests"][0]["message"] == "Test non superato: failed"
     assert "expected_stdout" not in report["tests"][0]
 
 
@@ -723,7 +729,7 @@ def test_run_docker_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> 
     assert report["backend"] == "docker"
     assert report["status"] == "failed"
     assert report["tests"][0]["name"] == "Test 1"
-    assert report["tests"][0]["message"] == "Output ottenuto: 5"
+    assert report["tests"][0]["message"] == "Test non superato: failed"
     assert "expected_stdout" not in report["tests"][0]
     assert "stdin" not in report["tests"][0]
 

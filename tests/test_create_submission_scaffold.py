@@ -117,7 +117,12 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
 
     distributed = json.loads((destination / "activity.json").read_text(encoding="utf-8"))
     assert distributed["test_cases"] == [
-        {"name": "pubblico", "stdin": "1 1\n", "expected_stdout": "2\n"}
+        {
+            "name": "pubblico",
+            "stdin": "1 1\n",
+            "expected_stdout": "2\n",
+            "visibility": "student",
+        }
     ]
     assert "rubrica" not in distributed
     assert "soluzione_attesa" not in distributed

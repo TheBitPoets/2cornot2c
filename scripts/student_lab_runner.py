@@ -217,10 +217,22 @@ def redact_student_grading_report(report: dict[str, Any]) -> dict[str, Any]:
         for index, test in enumerate(tests, start=1):
             if not isinstance(test, dict):
                 continue
-            contains_teacher_details = "expected_stdout" in test or "stdin" in test
-            forbidden = {"expected_stdout", "stdin"}
+            is_public = test.get("visibility") in {"public", "student"}
+            contains_teacher_details = not is_public
+            forbidden: set[str] = set()
             if contains_teacher_details:
-                forbidden.update({"name", "message", "detail"})
+                forbidden.update(
+                    {
+                        "command",
+                        "detail",
+                        "expected_stdout",
+                        "message",
+                        "name",
+                        "stdin",
+                        "stderr",
+                        "stdout",
+                    }
+                )
             public_test = {
                 key: value
                 for key, value in test.items()
@@ -292,6 +304,8 @@ def run_python_pytest(
         stdout=result.stdout,
         stderr=result.stderr,
     )
+    for test in test_results:
+        test["visibility"] = "student"
     return {
         **report_base(assignment, language="python", source=source),
         "passed": result.returncode == 0,

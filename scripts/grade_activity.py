@@ -443,6 +443,8 @@ def grade_c_activity(activity: dict[str, Any], source: Path, *, timeout_seconds:
             }
 
         tests = [run_test_case(binary, test_case, timeout_seconds=timeout_seconds) for test_case in test_cases]
+        for test, test_case in zip(tests, test_cases):
+            test["visibility"] = str(test_case.get("visibility", "teacher"))
         passed = all(test["passed"] for test in tests)
         return {
             "passed": passed,
@@ -494,6 +496,8 @@ def grade_script_activity(
         }
 
     tests = [test_runner(source, test_case, timeout_seconds=timeout_seconds) for test_case in test_cases]
+    for test, test_case in zip(tests, test_cases):
+        test["visibility"] = str(test_case.get("visibility", "teacher"))
     passed = all(test["passed"] for test in tests)
     return {
         "passed": passed,
@@ -667,6 +671,7 @@ def finalize_worker_report(
         test.update(
             {
                 "name": str(expected_test.get("name", "test")),
+                "visibility": str(expected_test.get("visibility", "teacher")),
                 "passed": passed,
                 "status": "passed" if passed else ("failed" if execution_ok else raw_status),
                 "stdin": str(expected_test.get("stdin", "")),

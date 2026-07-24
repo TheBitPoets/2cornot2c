@@ -383,7 +383,7 @@ def student_activity_payload(activity: dict[str, Any]) -> dict[str, Any]:
         {
             key: value
             for key, value in test_case.items()
-            if key in {"name", "stdin", "expected_stdout"} and isinstance(value, str)
+            if key in {"name", "stdin", "expected_stdout", "visibility"} and isinstance(value, str)
         }
         for test_case in activity.get("test_cases", [])
         if isinstance(test_case, dict)
