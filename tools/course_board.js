@@ -201,9 +201,15 @@ function isBoardContextCurrent(context) {
     && state.isNewDesign === context.isNewDesign;
 }
 
-function confirmDiscardChanges() {
+async function confirmDiscardChanges() {
   if (!hasUnsavedChanges()) return true;
-  return confirm("Ci sono modifiche non salvate. Vuoi scartarle e continuare?");
+  return DashboardDialogs.confirm({
+    title: "Modifiche non salvate",
+    message: "Ci sono modifiche non salvate. Vuoi scartarle e continuare?",
+    confirmLabel: "Scarta modifiche",
+    cancelLabel: "Resta qui",
+    danger: true,
+  });
 }
 
 async function runAsyncAction(action, label) {
@@ -471,7 +477,13 @@ async function loadDesignFromMenu(name) {
 }
 
 async function loadCurrentDesign() {
-  if (!confirm("Caricare il progetto corrente da doc/course_design.json? Le modifiche non salvate nella vista corrente saranno perse.")) return;
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Carica progetto corrente",
+    message: "Caricare il progetto corrente da doc/course_design.json? Le modifiche non salvate nella vista corrente saranno perse.",
+    confirmLabel: "Carica progetto",
+    cancelLabel: "Annulla",
+  });
+  if (!confirmed) return;
   setStatus("Caricamento progetto corrente...");
   state.design = await api("/api/course-design");
   state.activeSavedDesign = "";
@@ -489,7 +501,15 @@ async function loadCurrentDesign() {
 
 async function loadSavedDesignByName(name, options = {}) {
   const { confirmFirst = true, render = true } = options;
-  if (confirmFirst && !confirm(`Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`)) return;
+  if (confirmFirst) {
+    const confirmed = await DashboardDialogs.confirm({
+      title: "Carica progetto salvato",
+      message: `Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`,
+      confirmLabel: "Carica progetto",
+      cancelLabel: "Annulla",
+    });
+    if (!confirmed) return;
+  }
   setStatus(`Caricamento progetto salvato "${name}"...`);
   const payload = await api("/api/saved-designs/load", {
     method: "POST",
@@ -521,14 +541,28 @@ async function saveArchiveDesign() {
     await saveArchiveDesignWithName(state.activeSavedDesign, { overwrite: true });
     return;
   }
-  const name = prompt("Nome file archivio JSON:", defaultName);
+  const name = await DashboardDialogs.prompt({
+    title: "Salva progetto in archivio",
+    message: "Scegli il nome del file JSON da creare nell'archivio.",
+    label: "Nome file JSON",
+    defaultValue: defaultName,
+    confirmLabel: "Salva",
+    required: true,
+  });
   if (!name) return;
   await saveArchiveDesignWithName(name);
 }
 
 async function saveArchiveDesignAs() {
   const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
-  const name = prompt("Nome file archivio JSON:", defaultName);
+  const name = await DashboardDialogs.prompt({
+    title: "Salva una copia",
+    message: "Scegli il nome del nuovo file JSON nell'archivio.",
+    label: "Nome file JSON",
+    defaultValue: defaultName,
+    confirmLabel: "Salva copia",
+    required: true,
+  });
   if (!name) return;
   await saveArchiveDesignWithName(name, { confirmOverwrite: true });
 }
@@ -562,7 +596,14 @@ async function persistArchiveDesignWithName(name, options = {}) {
     });
   } catch (error) {
     if (error.status === 409 && confirmOverwrite) {
-      if (!confirm(`Esiste già un progetto chiamato "${name}". Vuoi sostituirlo?`)) {
+      const confirmed = await DashboardDialogs.confirm({
+        title: "Sostituisci progetto esistente",
+        message: `Esiste già un progetto chiamato "${name}". Vuoi sostituirlo?`,
+        confirmLabel: "Sostituisci",
+        cancelLabel: "Mantieni esistente",
+        danger: true,
+      });
+      if (!confirmed) {
         setStatus("Salvataggio annullato: il progetto esistente non è stato modificato.");
         return false;
       }
@@ -663,23 +704,37 @@ async function deleteArchiveDesign() {
   let deleteCalendars = false;
   if (linkedCalendars.length) {
     const calendarList = linkedCalendars.map((calendar) => `- ${calendar.name}`).join("\n");
-    const choice = prompt(
-      `Il progetto "${name}" ha ${linkedCalendars.length} calendario/i associato/i:\n\n${calendarList}\n\n` +
-      "Scrivi:\n" +
-      "- progetto: cancella solo il progetto\n" +
-      "- tutto: cancella progetto e calendari associati\n" +
-      "- annulla: interrompi"
-    );
+    const choice = await DashboardDialogs.prompt({
+      title: "Cancella progetto con calendari associati",
+      message:
+        `Il progetto "${name}" ha ${linkedCalendars.length} calendario/i associato/i:\n\n${calendarList}\n\n` +
+        'Scrivi "progetto" per cancellare solo il progetto oppure "tutto" per cancellare anche i calendari associati.',
+      label: "Ambito della cancellazione",
+      placeholder: "progetto oppure tutto",
+      confirmLabel: "Continua",
+      danger: true,
+      required: true,
+      validate(value) {
+        const normalized = String(value || "").trim().toLowerCase();
+        return ["progetto", "tutto"].includes(normalized)
+          ? ""
+          : 'Inserisci "progetto" oppure "tutto".';
+      },
+    });
     const normalized = (choice || "").trim().toLowerCase();
     if (!normalized || normalized === "annulla") return;
     if (normalized === "tutto") {
       deleteCalendars = true;
-    } else if (normalized !== "progetto") {
-      setStatus("Cancellazione annullata: scelta non riconosciuta.");
-      return;
     }
-  } else if (!confirm(`Cancellare definitivamente il progetto archiviato "${name}"?`)) {
-    return;
+  } else {
+    const confirmed = await DashboardDialogs.confirm({
+      title: "Cancella progetto archiviato",
+      message: `Cancellare definitivamente il progetto archiviato "${name}"?`,
+      confirmLabel: "Cancella progetto",
+      cancelLabel: "Mantieni",
+      danger: true,
+    });
+    if (!confirmed) return;
   }
   setStatus(`Cancellazione progetto "${name}"...`);
   const payload = await api("/api/saved-designs/delete", {
@@ -722,8 +777,21 @@ async function deleteArchiveDesign() {
 }
 
 async function newCourseDesign() {
-  if (!confirm("Creare un nuovo percorso vuoto? Le modifiche non salvate nella vista corrente saranno perse.")) return;
-  const name = prompt("Nome file del nuovo percorso JSON:", "course_design_as_25_26.json");
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Crea un nuovo percorso",
+    message: "Creare un nuovo percorso vuoto? Le modifiche non salvate nella vista corrente saranno perse.",
+    confirmLabel: "Crea percorso",
+    cancelLabel: "Annulla",
+  });
+  if (!confirmed) return;
+  const name = await DashboardDialogs.prompt({
+    title: "Nome del nuovo percorso",
+    message: "Scegli il nome del file JSON da creare nell'archivio.",
+    label: "Nome file JSON",
+    defaultValue: "course_design_as_25_26.json",
+    confirmLabel: "Crea e salva",
+    required: true,
+  });
   if (!name) return;
   const design = emptyCourseDesign();
   const saved = await saveArchiveDesignWithName(name, { design, confirmOverwrite: true });
@@ -942,7 +1010,7 @@ function toggleHeading(headingId) {
   renderHeadings();
 }
 
-function addHeadingWithDestination(heading) {
+async function addHeadingWithDestination(heading) {
   const destinations = (state.design.years || []).flatMap((year) =>
     (year.udas || []).map((uda) => ({ year, uda }))
   );
@@ -955,20 +1023,37 @@ function addHeadingWithDestination(heading) {
     const choices = destinations
       .map(({ year, uda }, index) => `${index + 1}. ${year.title} - ${uda.id.toUpperCase()}: ${uda.title}`)
       .join("\n");
-    const answer = prompt(`Scegli la UDA di destinazione:\n\n${choices}`, "1");
+    const answer = await DashboardDialogs.prompt({
+      title: "Scegli la UDA di destinazione",
+      message: choices,
+      label: `Numero UDA, da 1 a ${destinations.length}`,
+      defaultValue: "1",
+      confirmLabel: "Aggiungi",
+      required: true,
+      validate(value) {
+        const normalized = String(value || "").trim();
+        const selectedIndex = /^\d+$/.test(normalized) ? Number.parseInt(normalized, 10) - 1 : -1;
+        return Number.isInteger(selectedIndex) && selectedIndex >= 0 && selectedIndex < destinations.length
+          ? ""
+          : `Inserisci un numero da 1 a ${destinations.length}.`;
+      },
+    });
     if (answer === null || answer.trim() === "") {
       setStatus("Inserimento annullato: nessuna UDA selezionata.");
       return;
     }
     const normalizedAnswer = answer.trim();
     const selectedIndex = /^\d+$/.test(normalizedAnswer) ? Number.parseInt(normalizedAnswer, 10) - 1 : -1;
-    if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= destinations.length) {
-      setStatus(`Scelta non valida. Inserisci un numero da 1 a ${destinations.length}.`);
-      return;
-    }
     destination = destinations[selectedIndex];
   }
   const { year, uda } = destination;
+  const destinationStillExists = (state.design.years || []).some(
+    (candidateYear) => candidateYear === year && (candidateYear.udas || []).includes(uda)
+  );
+  if (!destinationStillExists || !state.headings.includes(heading)) {
+    setStatus("Inserimento annullato: percorso o paragrafo sono cambiati durante la scelta.");
+    return;
+  }
   if (isHeadingTreeAssignedToYear(heading, year.id)) {
     setStatus(`"${heading.title}" o un suo sottoparagrafo è già presente in ${year.title}.`);
     return;
@@ -1156,9 +1241,19 @@ function renderCourse() {
   renderCourseActions();
 }
 
-function removeYear(year) {
-  const confirmed = confirm(`Eliminare "${year.title}"?\n\nSaranno eliminate anche tutte le UDA e gli argomenti collegati a questo percorso.`);
+async function removeYear(year) {
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Elimina percorso",
+    message: `Eliminare "${year.title}"?\n\nSaranno eliminate anche tutte le UDA e gli argomenti collegati a questo percorso.`,
+    confirmLabel: "Elimina percorso",
+    cancelLabel: "Mantieni",
+    danger: true,
+  });
   if (!confirmed) return;
+  if (!(state.design.years || []).includes(year)) {
+    setStatus("Eliminazione annullata: il percorso aperto è cambiato.");
+    return;
+  }
   state.design.years = (state.design.years || []).filter((candidate) => candidate !== year);
   renderCourse();
   renderHeadings();
@@ -1933,21 +2028,32 @@ function updateFrameEditorQuality(details, item) {
   }
 }
 
-function showTextQuality(textarea, output, item, fieldKey, label) {
+async function showTextQuality(textarea, output, item, fieldKey, label) {
   if (!textarea.value.trim()) {
     showToolbarMessage(output, "Campo vuoto: niente da controllare.", "neutral");
     return;
   }
-  const result = applyLocalTextFixes(textarea.value);
+  const original = textarea.value;
+  const result = applyLocalTextFixes(original);
   if (!result.changes.length) {
     setFrameFieldQuality(item, fieldKey, label, "local");
     showToolbarMessage(output, "Nessuna correzione locale sicura trovata. Per dubbi di contesto usa AI grammatica.", "ok");
     return;
   }
   const message = `Trovate correzioni locali sicure:\n- ${result.changes.join("\n- ")}\n\nApplicarle al campo selezionato?`;
-  if (!confirm(message)) {
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Applica correzioni locali",
+    message,
+    confirmLabel: "Applica correzioni",
+    cancelLabel: "Non applicare",
+  });
+  if (!confirmed) {
     output.innerHTML = `<strong>Correzioni non applicate:</strong><br>${result.changes.map(escapeHtml).join("<br>")}`;
     output.className = "textQuality textQualityWarn";
+    return;
+  }
+  if (textarea.value !== original) {
+    showToolbarMessage(output, "Il testo è cambiato durante la verifica: ripeti il controllo prima di applicare le correzioni.", "warn");
     return;
   }
   textarea.value = result.text;
@@ -1999,8 +2105,18 @@ async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
       changes.length ? `Modifiche:\n- ${changes.join("\n- ")}` : "Modifiche: la AI non ha fornito un elenco dettagliato.",
       notes ? `\nNote:\n${notes}` : "",
     ].join("\n");
-    if (!confirm(summary)) {
+    const confirmed = await DashboardDialogs.confirm({
+      title: "Applica correzione AI",
+      message: summary,
+      confirmLabel: "Applica correzione",
+      cancelLabel: "Non applicare",
+    });
+    if (!confirmed) {
       showToolbarMessage(output, "Correzione AI non applicata.", "neutral");
+      return;
+    }
+    if (textarea.value !== original) {
+      showToolbarMessage(output, "Il testo è cambiato durante la verifica AI: la proposta non è stata applicata.", "warn");
       return;
     }
     textarea.value = corrected;
@@ -2244,10 +2360,15 @@ async function persistDesignAsCurrent() {
     renderCourseActions();
     return;
   }
-  const confirmed = confirm(
-    "Confermi di voler impostare questo percorso come corrente?\n\n" +
-    "Questa operazione sovrascrive doc/course_design.json."
-  );
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Imposta percorso corrente",
+    message:
+      "Confermi di voler impostare questo percorso come corrente?\n\n" +
+      "Questa operazione sovrascrive doc/course_design.json.",
+    confirmLabel: "Imposta corrente",
+    cancelLabel: "Annulla",
+    danger: true,
+  });
   if (!confirmed) return;
   normalizeCourseDesignFrames();
   const savedSnapshot = designSnapshot();
@@ -2313,8 +2434,8 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-els.reloadBtn.addEventListener("click", () => {
-  if (!confirmDiscardChanges()) return;
+els.reloadBtn.addEventListener("click", async () => {
+  if (!await confirmDiscardChanges()) return;
   runAsyncAction(loadAll, "Ricarica");
 });
 els.saveBtn.addEventListener("click", () => runAsyncAction(saveDesign, "Impostazione progetto corrente"));
@@ -2381,16 +2502,12 @@ document.addEventListener("click", (event) => {
 });
 
 for (const link of document.querySelectorAll(".topNav a:not([target='_blank'])")) {
-  link.addEventListener("click", (event) => {
+  link.addEventListener("click", async (event) => {
     if (!hasUnsavedChanges()) return;
-    if (!confirmDiscardChanges()) {
-      event.preventDefault();
-      return;
-    }
+    event.preventDefault();
+    if (!await confirmDiscardChanges()) return;
     allowNextUnloadWithoutWarning = true;
-    setTimeout(() => {
-      allowNextUnloadWithoutWarning = false;
-    }, 0);
+    window.location.href = link.href;
   });
 }
 

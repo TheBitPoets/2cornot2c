@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import subprocess
 import textwrap
 
@@ -178,3 +179,12 @@ def test_dashboard_pages_load_shared_dialog_assets_before_application_scripts() 
         html = (Path("tools") / name).read_text(encoding="utf-8")
         assert "dashboard_dialogs.css" in html
         assert html.index("dashboard_dialogs.js") < html.index(application_script)
+
+
+def test_dashboard_sources_do_not_use_native_prompt_or_confirm() -> None:
+    native_call = re.compile(r"(?<![.\w])(?:confirm|prompt)\s*(?:\?\.)?\s*\(")
+    for source_name in ("course_board.js", "assignment_dashboard.js"):
+        source = (Path("tools") / source_name).read_text(encoding="utf-8")
+        assert not native_call.search(source), source_name
+        assert "window.confirm" not in source
+        assert "window.prompt" not in source
