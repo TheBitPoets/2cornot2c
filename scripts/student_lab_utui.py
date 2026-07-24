@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import sys
 from typing import Any
+import unicodedata
 
 from scripts import student_lab_layout
 
@@ -88,7 +89,14 @@ def _sequence(value: Any) -> Sequence[Any]:
 def _text(value: Any, fallback: str = MISSING_VALUE) -> str:
     if value is None:
         return fallback
-    rendered = str(value).strip()
+    rendered = "".join(
+        " "
+        if character in "\r\n\t"
+        else ""
+        if unicodedata.category(character).startswith("C")
+        else character
+        for character in str(value)
+    ).strip()
     return rendered or fallback
 
 

@@ -101,6 +101,22 @@ def test_project_assignment_keeps_missing_sections_visible() -> None:
     assert all(section["rows"] for section in sections)
 
 
+def test_project_assignment_removes_terminal_control_characters() -> None:
+    assignment = {
+        "title": "Titolo\niniettato\x1b]52;c;SGVsbG8=\x07",
+        "activity_id": "demo\x1b[2J",
+    }
+
+    sections = student_lab_utui.project_assignment_sections(assignment)
+    rows = [row for section in sections for row in section["rows"]]
+    rendered = "\n".join(rows)
+
+    assert "Titolo iniettato]52;c;SGVsbG8=" in rendered
+    assert all("\n" not in row for row in rows)
+    assert "\x1b" not in rendered
+    assert "\x07" not in rendered
+
+
 def test_required_utui_dependency_is_importable() -> None:
     if os.environ.get("THEBITLAB_REQUIRE_UTUI") == "1":
         assert student_lab_utui.is_available(), repr(student_lab_utui.UTUI_IMPORT_ERROR)
