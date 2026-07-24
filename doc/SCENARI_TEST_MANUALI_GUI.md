@@ -78,6 +78,7 @@ Ogni pannello, modal, vista e comando deve avere almeno uno scenario manuale. Qu
 | TUI studente | Comando `e` | Esegui test e salva report con backend local e docker, poi verifica GUI studente/docente | Test interattivo piu assert su file |
 | TUI studente | Comando `a` | Chiedi aiuto, verifica guida locale e storico, annulla con `b`/invio, valida input non valido | Test interattivo con input finto |
 | TUI studente | Comando `h` | Mostra storico aiuti e torna alla consegna | Test interattivo con input finto |
+| TUI studente | Comando `t` | Mostra tentativi, annulla con `b`/invio e salva una scelta definitiva valida | Test interattivo con input finto e assert su `final.json` |
 | TUI studente | Comando `o` | Apre workspace se presente, mostra errore chiaro se assente | Test con mock apertura |
 | TUI studente | Comandi `b`, `r`, `q` | Torna indietro, ricarica, esce senza perdere stato | Test interattivo con input finto |
 

@@ -239,9 +239,15 @@ Comandi disponibili nella TUI minima:
 
 Nel dettaglio della consegna i comandi sono divisi in:
 
-- azioni principali: `e` esegue il runner e salva il report, `a` registra una richiesta di aiuto, `o` apre la cartella workspace, `v` apre l'editor;
+- azioni principali: `e` esegue il runner e salva il report, `t` mostra lo storico e seleziona il tentativo
+  definitivo, `a` registra una richiesta di aiuto, `o` apre la cartella workspace, `v` apre l'editor;
 - altri comandi: `h` mostra lo storico aiuti, `b` o invio torna alla lista, `q` esce.
 - navigazione `utui`: `j` scorre i pannelli verso il basso e `k` verso l'alto.
+
+Il comando `t` elenca i tentativi immutabili dal piu recente, evidenzia quello gia scelto come definitivo e accetta
+solo uno dei numeri mostrati. `b` o invio annullano senza modificare lo stato. Quando la TUI usa un bearer token,
+la selezione viene inviata a `POST /api/student-lab/final-attempt`: il server ricava lo studente dal token e valida
+consegna e tentativo sui propri dati. Senza token, la stessa operazione applicativa lavora sulla root locale.
 
 Il comando `v` cerca un editor terminale nell'ordine `micro`, `nvim`, `vim`, `hx`, `nano` (e `notepad` su Windows).
 Per scegliere esplicitamente un editor, imposta `THEBITLAB_EDITOR`, per esempio `micro --clean` o `nvim`.
@@ -281,6 +287,8 @@ Il payload ha schema `student_lab.v1` e contiene:
 - `workspace`: cartella locale `assignments/<activity_id>` in cui lo studente lavora;
 - `activity`: metadati minimi della activity collegata;
 - `report`: report locale `reports/<activity_id>/latest.json`, se esiste;
+- `attempts`: conteggio, indicatore di storico parziale, riepiloghi `latest`, `best`, `final` e lista compatta
+  `items` dei tentativi selezionabili;
 - `grading`: riepilogo deterministico del report, se esiste;
 - `runner`: stato del runner lab nel payload di consultazione.
 
