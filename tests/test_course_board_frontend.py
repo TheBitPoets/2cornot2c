@@ -339,6 +339,31 @@ def test_remove_course_can_be_cancelled_from_the_custom_dialog() -> None:
     )
 
 
+def test_project_replacement_dialogs_are_marked_as_dangerous() -> None:
+    run_course_board_js(
+        """
+        (async () => {
+          const confirmations = [];
+          DashboardDialogs.confirm = async (options) => {
+            confirmations.push(options);
+            return false;
+          };
+
+          await loadCurrentDesign();
+          await loadSavedDesignByName("archivio.json");
+          await newCourseDesign();
+
+          assert.equal(confirmations.length, 3);
+          assert.deepEqual(
+            confirmations.map((options) => options.title),
+            ["Carica progetto corrente", "Carica progetto salvato", "Crea un nuovo percorso"],
+          );
+          assert.equal(confirmations.every((options) => options.danger === true), true);
+        })();
+        """
+    )
+
+
 def test_create_course_rejects_invalid_weeks_and_hours() -> None:
     run_course_board_js(
         """

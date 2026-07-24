@@ -482,6 +482,7 @@ async function loadCurrentDesign() {
     message: "Caricare il progetto corrente da doc/course_design.json? Le modifiche non salvate nella vista corrente saranno perse.",
     confirmLabel: "Carica progetto",
     cancelLabel: "Annulla",
+    danger: true,
   });
   if (!confirmed) return;
   setStatus("Caricamento progetto corrente...");
@@ -507,6 +508,7 @@ async function loadSavedDesignByName(name, options = {}) {
       message: `Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`,
       confirmLabel: "Carica progetto",
       cancelLabel: "Annulla",
+      danger: true,
     });
     if (!confirmed) return;
   }
@@ -782,6 +784,7 @@ async function newCourseDesign() {
     message: "Creare un nuovo percorso vuoto? Le modifiche non salvate nella vista corrente saranno perse.",
     confirmLabel: "Crea percorso",
     cancelLabel: "Annulla",
+    danger: true,
   });
   if (!confirmed) return;
   const name = await DashboardDialogs.prompt({
