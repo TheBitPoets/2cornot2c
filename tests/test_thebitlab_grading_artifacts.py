@@ -9,6 +9,10 @@ import pytest
 from scripts import thebitlab_grading_artifacts as artifacts
 
 
+TEST_SHA = "a" * 40
+OTHER_SHA = "b" * 40
+
+
 class FakeTransport:
     def __init__(self, responses: list[artifacts.HttpResponse]) -> None:
         self.responses = list(responses)
@@ -46,6 +50,7 @@ def candidate(
     expired: bool = False,
     created_at: str = "2026-07-24T10:00:00Z",
     workflow_run_id: int = 900,
+    head_sha: str = TEST_SHA,
 ) -> dict[str, object]:
     return {
         "id": artifact_id,
@@ -54,7 +59,7 @@ def candidate(
         "created_at": created_at,
         "size_in_bytes": 1024,
         "digest": f"sha256:digest-{artifact_id}",
-        "workflow_run": {"id": workflow_run_id},
+        "workflow_run": {"id": workflow_run_id, "head_sha": head_sha},
     }
 
 
@@ -84,7 +89,11 @@ def test_github_source_acquires_latest_exact_non_expired_report() -> None:
     )
     source = artifacts.GitHubActionsArtifactSource("github-secret", transport=transport)
 
-    acquired = source.acquire_latest_report("TheBitPoets/rossi-mario", "thebitlab-demo-python-report")
+    acquired = source.acquire_latest_report(
+        "TheBitPoets/rossi-mario",
+        "thebitlab-demo-python-report",
+        TEST_SHA,
+    )
 
     assert acquired.report == report
     assert acquired.provenance == artifacts.GradingArtifactProvenance(
@@ -92,6 +101,7 @@ def test_github_source_acquires_latest_exact_non_expired_report() -> None:
         artifact_id=13,
         artifact_name="thebitlab-demo-python-report",
         workflow_run_id=913,
+        head_sha=TEST_SHA,
         created_at="2026-07-24T11:00:00Z",
         archive_download_url="https://api.github.com/repos/TheBitPoets/rossi-mario/actions/artifacts/13/zip",
         digest="sha256:digest-13",
@@ -120,7 +130,11 @@ def test_github_source_rejects_missing_expired_or_different_artifact(payload: by
     )
 
     with pytest.raises(artifacts.GradingArtifactError, match="non trovato o scaduto"):
-        source.acquire_latest_report("TheBitPoets/rossi-mario", "thebitlab-demo-python-report")
+        source.acquire_latest_report(
+            "TheBitPoets/rossi-mario",
+            "thebitlab-demo-python-report",
+            TEST_SHA,
+        )
 
 
 def test_github_source_rejects_invalid_list_payload_and_candidates() -> None:
@@ -141,7 +155,11 @@ def test_github_source_rejects_invalid_list_payload_and_candidates() -> None:
             transport=FakeTransport([artifacts.HttpResponse(200, {}, payload)]),
         )
         with pytest.raises(artifacts.GradingArtifactError):
-            source.acquire_latest_report("TheBitPoets/rossi-mario", "thebitlab-demo-python-report")
+            source.acquire_latest_report(
+                "TheBitPoets/rossi-mario",
+                "thebitlab-demo-python-report",
+                TEST_SHA,
+            )
 
 
 def test_github_source_paginates_before_selecting_latest_artifact() -> None:
@@ -162,7 +180,11 @@ def test_github_source_paginates_before_selecting_latest_artifact() -> None:
     acquired = artifacts.GitHubActionsArtifactSource(
         "github-secret",
         transport=transport,
-    ).acquire_latest_report("TheBitPoets/rossi-mario", "thebitlab-demo-python-report")
+    ).acquire_latest_report(
+        "TheBitPoets/rossi-mario",
+        "thebitlab-demo-python-report",
+        TEST_SHA,
+    )
 
     assert acquired.provenance.artifact_id == 500
     assert "page=1" in transport.calls[0]["url"]
@@ -184,7 +206,11 @@ def test_github_source_fails_when_pagination_safety_limit_is_reached() -> None:
     )
 
     with pytest.raises(artifacts.GradingArtifactError, match="Troppi artifact"):
-        source.acquire_latest_report("TheBitPoets/rossi-mario", "thebitlab-demo-python-report")
+        source.acquire_latest_report(
+            "TheBitPoets/rossi-mario",
+            "thebitlab-demo-python-report",
+            TEST_SHA,
+        )
 
 
 @pytest.mark.parametrize(
@@ -208,7 +234,11 @@ def test_github_source_rejects_unsafe_download_redirect(location: str) -> None:
     )
 
     with pytest.raises(artifacts.GradingArtifactError, match="Redirect"):
-        source.acquire_latest_report("TheBitPoets/rossi-mario", "thebitlab-demo-python-report")
+        source.acquire_latest_report(
+            "TheBitPoets/rossi-mario",
+            "thebitlab-demo-python-report",
+            TEST_SHA,
+        )
 
 
 @pytest.mark.parametrize(
@@ -252,9 +282,40 @@ def test_source_validates_token_repository_and_artifact_name() -> None:
 
     source = artifacts.GitHubActionsArtifactSource("github-secret", transport=FakeTransport([]))
     with pytest.raises(ValueError, match="Repository GitHub"):
-        source.acquire_latest_report("not-a-repo", "report")
+        source.acquire_latest_report("not-a-repo", "report", TEST_SHA)
     with pytest.raises(ValueError, match="Nome artifact"):
-        source.acquire_latest_report("TheBitPoets/rossi-mario", " ")
+        source.acquire_latest_report("TheBitPoets/rossi-mario", " ", TEST_SHA)
+    with pytest.raises(ValueError, match="SHA commit"):
+        source.acquire_latest_report("TheBitPoets/rossi-mario", "report", "abc123")
+
+
+def test_github_source_ignores_newer_artifact_from_another_commit() -> None:
+    expected = candidate(20, created_at="2026-07-24T10:00:00Z", workflow_run_id=920)
+    unrelated = candidate(
+        21,
+        created_at="2026-07-24T12:00:00Z",
+        workflow_run_id=921,
+        head_sha=OTHER_SHA,
+    )
+    transport = FakeTransport(
+        [
+            artifacts.HttpResponse(200, {}, artifact_payload([expected, unrelated])),
+            artifacts.HttpResponse(302, {"Location": "https://signed.example.test/report.zip"}, b""),
+            artifacts.HttpResponse(200, {}, zip_bytes([("report.json", b'{"status":"passed"}')])),
+        ]
+    )
+
+    acquired = artifacts.GitHubActionsArtifactSource(
+        "github-secret",
+        transport=transport,
+    ).acquire_latest_report(
+        "TheBitPoets/rossi-mario",
+        "thebitlab-demo-python-report",
+        TEST_SHA,
+    )
+
+    assert acquired.provenance.artifact_id == 20
+    assert acquired.provenance.head_sha == TEST_SHA
 
 
 class FakeBoundedStream(BytesIO):

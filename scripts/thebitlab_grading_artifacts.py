@@ -5,6 +5,7 @@ from datetime import datetime
 from io import BytesIO
 import json
 from pathlib import PurePosixPath
+import re
 import stat
 from typing import Any, Mapping, Protocol
 import urllib.error
@@ -24,6 +25,7 @@ MAX_ARCHIVE_MEMBERS = 32
 MAX_ARTIFACT_LIST_PAGES = 10
 ARTIFACTS_PER_PAGE = 100
 REQUEST_TIMEOUT_SECONDS = 30
+GIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 
 
 class GradingArtifactError(RuntimeError):
@@ -58,6 +60,7 @@ class GradingArtifactProvenance:
     artifact_id: int
     artifact_name: str
     workflow_run_id: int
+    head_sha: str
     created_at: str
     archive_download_url: str
     digest: str
@@ -72,7 +75,12 @@ class AcquiredGradingReport:
 class GradingArtifactSource(Protocol):
     """Port for retrieving one authoritative grading report."""
 
-    def acquire_latest_report(self, repo_ref: str, artifact_name: str) -> AcquiredGradingReport:
+    def acquire_latest_report(
+        self,
+        repo_ref: str,
+        artifact_name: str,
+        expected_head_sha: str,
+    ) -> AcquiredGradingReport:
         """Return the latest valid report artifact for one repository."""
 
 
@@ -145,11 +153,17 @@ class GitHubActionsArtifactSource:
         self.transport = transport or UrllibHttpTransport()
         self.timeout = timeout
 
-    def acquire_latest_report(self, repo_ref: str, artifact_name: str) -> AcquiredGradingReport:
+    def acquire_latest_report(
+        self,
+        repo_ref: str,
+        artifact_name: str,
+        expected_head_sha: str,
+    ) -> AcquiredGradingReport:
         owner, repo = normalize_github_repo_ref(repo_ref)
         clean_name = _safe_artifact_name(artifact_name)
+        clean_head_sha = _safe_head_sha(expected_head_sha)
         repository = f"{owner}/{repo}"
-        artifact = self._latest_artifact(owner, repo, clean_name)
+        artifact = self._latest_artifact(owner, repo, clean_name, clean_head_sha)
         archive_url = (
             f"{GITHUB_API_ROOT}/repos/{urllib.parse.quote(owner, safe='')}/"
             f"{urllib.parse.quote(repo, safe='')}/actions/artifacts/{artifact['id']}/zip"
@@ -187,20 +201,27 @@ class GitHubActionsArtifactSource:
                 artifact_id=artifact["id"],
                 artifact_name=clean_name,
                 workflow_run_id=workflow_run["id"],
+                head_sha=clean_head_sha,
                 created_at=artifact.get("created_at", ""),
                 archive_download_url=archive_url,
                 digest=artifact.get("digest", "") if isinstance(artifact.get("digest"), str) else "",
             ),
         )
 
-    def _latest_artifact(self, owner: str, repo: str, artifact_name: str) -> dict[str, Any]:
+    def _latest_artifact(
+        self,
+        owner: str,
+        repo: str,
+        artifact_name: str,
+        expected_head_sha: str,
+    ) -> dict[str, Any]:
         candidates: list[dict[str, Any]] = []
         for page in range(1, MAX_ARTIFACT_LIST_PAGES + 1):
             artifacts = self._artifact_page(owner, repo, artifact_name, page)
             candidates.extend(
                 artifact
                 for artifact in artifacts
-                if _valid_artifact_candidate(artifact, artifact_name)
+                if _valid_artifact_candidate(artifact, artifact_name, expected_head_sha)
             )
             if len(artifacts) < ARTIFACTS_PER_PAGE:
                 break
@@ -209,7 +230,9 @@ class GitHubActionsArtifactSource:
                 f"Troppi artifact omonimi: superato il limite di {MAX_ARTIFACT_LIST_PAGES} pagine."
             )
         if not candidates:
-            raise GradingArtifactError(f"Artifact di grading non trovato o scaduto: {artifact_name}")
+            raise GradingArtifactError(
+                f"Artifact di grading non trovato o scaduto per il commit {expected_head_sha}: {artifact_name}"
+            )
         return max(candidates, key=lambda artifact: (_artifact_created_at(artifact), artifact["id"]))
 
     def _artifact_page(
@@ -291,6 +314,13 @@ def _safe_artifact_name(value: str) -> str:
     return clean
 
 
+def _safe_head_sha(value: str) -> str:
+    clean = value.strip()
+    if not GIT_SHA_RE.fullmatch(clean):
+        raise ValueError("SHA commit atteso non valido: sono richiesti 40 caratteri esadecimali.")
+    return clean.lower()
+
+
 def _safe_signed_download_url(value: str) -> str:
     clean = value.strip()
     parsed = urllib.parse.urlparse(clean)
@@ -317,13 +347,14 @@ def _json_object(data: bytes, label: str) -> dict[str, Any]:
     return payload
 
 
-def _valid_artifact_candidate(value: Any, artifact_name: str) -> bool:
+def _valid_artifact_candidate(value: Any, artifact_name: str, expected_head_sha: str) -> bool:
     if not isinstance(value, dict) or value.get("name") != artifact_name or value.get("expired") is not False:
         return False
     artifact_id = value.get("id")
     size_in_bytes = value.get("size_in_bytes")
     workflow_run = value.get("workflow_run")
     workflow_run_id = workflow_run.get("id") if isinstance(workflow_run, dict) else None
+    head_sha = workflow_run.get("head_sha") if isinstance(workflow_run, dict) else None
     return (
         isinstance(artifact_id, int)
         and not isinstance(artifact_id, bool)
@@ -334,6 +365,8 @@ def _valid_artifact_candidate(value: Any, artifact_name: str) -> bool:
         and isinstance(workflow_run_id, int)
         and not isinstance(workflow_run_id, bool)
         and workflow_run_id > 0
+        and isinstance(head_sha, str)
+        and head_sha.lower() == expected_head_sha
         and _artifact_created_at(value) is not None
     )
 

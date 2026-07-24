@@ -248,10 +248,10 @@ scripts/thebitlab_grading_artifacts.py
 ```
 
 `GitHubActionsArtifactSource` riceve dal chiamante un riferimento `owner/repository`, il nome esatto
-dell'artifact e un token GitHub mantenuto fuori dal repository. Il servizio:
+dell'artifact, lo SHA completo atteso della consegna e un token GitHub mantenuto fuori dal repository. Il servizio:
 
 1. interroga l'API GitHub Actions con paginazione limitata;
-2. considera solo artifact con nome esatto, non scaduti e con metadati validi;
+2. considera solo artifact con nome esatto, non scaduti, legati allo SHA atteso e con metadati validi;
 3. sceglie il piu recente usando un timestamp timezone-aware;
 4. richiede il redirect firmato con autenticazione;
 5. scarica il file firmato senza inoltrare il token;
@@ -259,8 +259,12 @@ dell'artifact e un token GitHub mantenuto fuori dal repository. Il servizio:
 7. rifiuta ZIP traversal, link simbolici, report multipli e JSON non valido;
 8. restituisce separatamente report e provenienza GitHub.
 
-La provenienza comprende repository, ID artifact, workflow run, data, URL API e digest dichiarato. Non
+La provenienza comprende repository, ID artifact, workflow run, SHA, data, URL API e digest dichiarato. Non
 contiene token o URL firmati temporanei.
+
+Lo SHA lega il report alla revisione consegnata, ma non dimostra da solo che il workflow sia fidato. Il flusso
+autorevole deve usare un workflow protetto o verificato dal docente; un workflow modificabile liberamente dallo
+studente produce soltanto un report remoto con provenienza, non una valutazione automaticamente attendibile.
 
 Questa fase non modifica ancora il registro docente. L'integrazione successiva usera la porta
 `GradingArtifactSource` per alimentare la raccolta dei report senza inserire chiamate GitHub dentro la
