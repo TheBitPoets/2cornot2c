@@ -51,8 +51,17 @@ def zip_bytes_with_unsupported_compression() -> bytes:
     return bytes(data)
 
 
-def artifact_payload(items: list[dict[str, object]]) -> bytes:
-    return json.dumps({"artifacts": items}).encode("utf-8")
+def artifact_payload(
+    items: list[dict[str, object]],
+    *,
+    total_count: int | None = None,
+) -> bytes:
+    return json.dumps(
+        {
+            "total_count": len(items) if total_count is None else total_count,
+            "artifacts": items,
+        }
+    ).encode("utf-8")
 
 
 def candidate(
@@ -182,8 +191,8 @@ def test_github_source_paginates_before_selecting_latest_artifact() -> None:
     latest = candidate(500, created_at="2026-07-24T14:00:00Z", workflow_run_id=9500)
     transport = FakeTransport(
         [
-            artifacts.HttpResponse(200, {}, artifact_payload(first_page)),
-            artifacts.HttpResponse(200, {}, artifact_payload([latest])),
+            artifacts.HttpResponse(200, {}, artifact_payload(first_page, total_count=101)),
+            artifacts.HttpResponse(200, {}, artifact_payload([latest], total_count=101)),
             artifacts.HttpResponse(302, {"Location": "https://signed.example.test/report.zip"}, b""),
             artifacts.HttpResponse(200, {}, zip_bytes([("report.json", b'{"status":"passed"}')])),
         ]
@@ -203,21 +212,74 @@ def test_github_source_paginates_before_selecting_latest_artifact() -> None:
     assert "page=2" in transport.calls[1]["url"]
 
 
-def test_github_source_fails_when_pagination_safety_limit_is_reached() -> None:
+def test_github_source_accepts_exact_pagination_safety_limit() -> None:
+    total_count = artifacts.MAX_ARTIFACT_LIST_PAGES * artifacts.ARTIFACTS_PER_PAGE
+    pages = [
+        artifact_payload(
+            [
+                candidate(page * artifacts.ARTIFACTS_PER_PAGE + index + 1)
+                for index in range(artifacts.ARTIFACTS_PER_PAGE)
+            ],
+            total_count=total_count,
+        )
+        for page in range(artifacts.MAX_ARTIFACT_LIST_PAGES)
+    ]
+    transport = FakeTransport(
+        [
+            *[artifacts.HttpResponse(200, {}, payload) for payload in pages],
+            artifacts.HttpResponse(302, {"Location": "https://signed.example.test/report.zip"}, b""),
+            artifacts.HttpResponse(200, {}, zip_bytes([("report.json", b'{"status":"passed"}')])),
+        ]
+    )
+
+    acquired = artifacts.GitHubActionsArtifactSource(
+        "github-secret",
+        transport=transport,
+    ).acquire_latest_report(
+        "TheBitPoets/rossi-mario",
+        "thebitlab-demo-python-report",
+        TEST_SHA,
+    )
+
+    assert acquired.provenance.artifact_id == total_count
+    assert len(transport.calls) == artifacts.MAX_ARTIFACT_LIST_PAGES + 2
+
+
+def test_github_source_fails_when_pagination_safety_limit_is_exceeded() -> None:
+    total_count = artifacts.MAX_ARTIFACT_LIST_PAGES * artifacts.ARTIFACTS_PER_PAGE + 1
     full_page = artifact_payload(
-        [candidate(index + 1) for index in range(artifacts.ARTIFACTS_PER_PAGE)]
+        [candidate(index + 1) for index in range(artifacts.ARTIFACTS_PER_PAGE)],
+        total_count=total_count,
     )
     source = artifacts.GitHubActionsArtifactSource(
         "github-secret",
         transport=FakeTransport(
-            [
-                artifacts.HttpResponse(200, {}, full_page)
-                for _ in range(artifacts.MAX_ARTIFACT_LIST_PAGES)
-            ]
+            [artifacts.HttpResponse(200, {}, full_page)]
         ),
     )
 
     with pytest.raises(artifacts.GradingArtifactError, match="Troppi artifact"):
+        source.acquire_latest_report(
+            "TheBitPoets/rossi-mario",
+            "thebitlab-demo-python-report",
+            TEST_SHA,
+        )
+
+
+@pytest.mark.parametrize("total_count", [None, -1, True, "1"])
+def test_github_source_rejects_invalid_total_count(total_count: object) -> None:
+    payload = json.dumps(
+        {
+            **({} if total_count is None else {"total_count": total_count}),
+            "artifacts": [],
+        }
+    ).encode("utf-8")
+    source = artifacts.GitHubActionsArtifactSource(
+        "github-secret",
+        transport=FakeTransport([artifacts.HttpResponse(200, {}, payload)]),
+    )
+
+    with pytest.raises(artifacts.GradingArtifactError, match="total_count"):
         source.acquire_latest_report(
             "TheBitPoets/rossi-mario",
             "thebitlab-demo-python-report",

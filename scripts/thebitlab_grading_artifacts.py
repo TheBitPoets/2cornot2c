@@ -216,8 +216,25 @@ class GitHubActionsArtifactSource:
         expected_head_sha: str,
     ) -> dict[str, Any]:
         candidates: list[dict[str, Any]] = []
-        for page in range(1, MAX_ARTIFACT_LIST_PAGES + 1):
-            artifacts = self._artifact_page(owner, repo, artifact_name, page)
+        total_count: int | None = None
+        fetched_count = 0
+        page = 1
+        while True:
+            artifacts, page_total_count = self._artifact_page(owner, repo, artifact_name, page)
+            if total_count is None:
+                total_count = page_total_count
+                if total_count > MAX_ARTIFACT_LIST_PAGES * ARTIFACTS_PER_PAGE:
+                    raise GradingArtifactError(
+                        f"Troppi artifact omonimi: superato il limite di "
+                        f"{MAX_ARTIFACT_LIST_PAGES * ARTIFACTS_PER_PAGE}."
+                    )
+            elif page_total_count != total_count:
+                raise GradingArtifactError(
+                    "Elenco artifact GitHub cambiato durante la paginazione."
+                )
+            fetched_count += len(artifacts)
+            if fetched_count > total_count:
+                raise GradingArtifactError("Paginazione artifact GitHub non coerente.")
             for artifact in artifacts:
                 candidate = _artifact_candidate_for_commit(
                     artifact,
@@ -226,12 +243,11 @@ class GitHubActionsArtifactSource:
                 )
                 if candidate is not None:
                     candidates.append(candidate)
-            if len(artifacts) < ARTIFACTS_PER_PAGE:
+            if fetched_count == total_count:
                 break
-        else:
-            raise GradingArtifactError(
-                f"Troppi artifact omonimi: superato il limite di {MAX_ARTIFACT_LIST_PAGES} pagine."
-            )
+            if len(artifacts) < ARTIFACTS_PER_PAGE or page >= MAX_ARTIFACT_LIST_PAGES:
+                raise GradingArtifactError("Paginazione artifact GitHub incompleta.")
+            page += 1
         if not candidates:
             raise GradingArtifactError(
                 f"Artifact di grading non trovato o scaduto per il commit {expected_head_sha}: {artifact_name}"
@@ -244,7 +260,7 @@ class GitHubActionsArtifactSource:
         repo: str,
         artifact_name: str,
         page: int,
-    ) -> list[Any]:
+    ) -> tuple[list[Any], int]:
         query = urllib.parse.urlencode(
             {
                 "name": artifact_name,
@@ -269,7 +285,14 @@ class GitHubActionsArtifactSource:
         artifacts = payload.get("artifacts")
         if not isinstance(artifacts, list):
             raise GradingArtifactError("Risposta GitHub non valida: artifacts deve essere una lista.")
-        return artifacts
+        total_count = payload.get("total_count")
+        if (
+            not isinstance(total_count, int)
+            or isinstance(total_count, bool)
+            or total_count < 0
+        ):
+            raise GradingArtifactError("Risposta GitHub non valida: total_count non valido.")
+        return artifacts, total_count
 
     def _github_headers(self, accept: str) -> dict[str, str]:
         return {
