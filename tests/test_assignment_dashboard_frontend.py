@@ -587,6 +587,7 @@ def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> 
         assert.match(accessibleBadge, /tabindex="0"/);
         assert.match(accessibleBadge, /aria-label="Provvisorio[.]/);
         assert.match(accessibleBadge, /data-tooltip=/);
+        assert.doesNotMatch(accessibleBadge, / title=/);
         const compactInvalid = tested.reportSelectionCompactBadge({
           submitted: false,
           report_selection: "invalid_final",

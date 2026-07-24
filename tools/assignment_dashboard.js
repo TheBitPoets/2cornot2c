@@ -3894,7 +3894,7 @@ function studentLabel(studentName) {
 
 function tooltipAttributes(label, title) {
   if (!title) return "";
-  return ` title="${escapeHtml(title)}" tabindex="0" aria-label="${escapeHtml(`${label}. ${title}`)}" data-tooltip="${escapeHtml(title)}"`;
+  return ` tabindex="0" aria-label="${escapeHtml(`${label}. ${title}`)}" data-tooltip="${escapeHtml(title)}"`;
 }
 
 let activeDashboardTooltipTarget = null;
