@@ -389,6 +389,9 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         filteredOverviewRows,
         focusOverviewClassFromReport,
         summaryCounts,
+        reportCounts,
+        reportOutcome,
+        coverageReportCounts,
         renderStudentsSummaryCards,
         activeStudentFilterLabel,
         reportSelectionState,
@@ -2926,14 +2929,16 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           { status: "submitted", submitted: true, late: false, grading: { status: "graded_passed", score: 8 } },
           { status: "submitted_late", submitted: true, late: true, grading: { status: "graded_failed", teacher_grade: 5 } },
           { status: "submitted", submitted: true, late: false, grading: { status: "graded_passed", teacher_grade: "" } },
+          { status: "submission_unknown", submitted: null, late: false, grading: {} },
         ]);
         tested.state.report = { class_id: "3A-TPSI", class_label: "3A TPSI", activity_id: "somma", title: "Somma base" };
         tested.state.reportName = "demo-3a/somma.json";
         tested.state.filter = "late";
         assert.equal(JSON.stringify(counts), JSON.stringify({
-          total: 5,
+          total: 6,
           pending: 1,
           missing: 1,
+          unknown: 1,
           submitted: 3,
           late: 1,
           passed: 2,
@@ -2944,16 +2949,17 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           helpAiMissingUsage: 0,
           helpDenied: 0,
           averageGrade: 6.5,
-          missingGrades: 3,
+          missingGrades: 4,
         }));
         assert.equal(JSON.stringify(tested.compactStudentsSummaryItems(counts)), JSON.stringify([
           ["Classe", "3A TPSI"],
           ["Activity", "Somma base"],
           ["Registro", "demo-3a/somma.json"],
           ["Filtri", "In ritardo"],
-          ["Studenti", 5],
+          ["Studenti", 6],
           ["Consegnati", 3],
           ["Mancanti", 1],
+          ["Da verificare", 1],
           ["Ritardo", 1],
           ["KO", 1],
         ]));
@@ -2962,15 +2968,16 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           ["Activity", "Somma base"],
           ["Registro", "demo-3a/somma.json"],
           ["Filtri", "In ritardo"],
-          ["Studenti", 5],
+          ["Studenti", 6],
           ["Consegnati", 3],
           ["Mancanti", 1],
+          ["Da verificare", 1],
           ["Ritardo", 1],
           ["Pending", 1],
           ["Grading OK", 2],
           ["Grading KO", 1],
           ["Media voto", "6.5"],
-          ["Voti mancanti", 3],
+          ["Voti mancanti", 4],
           ["Aiuti", 0],
           ["Aiuti AI", 0],
           ["Token AI dichiarati", 0],
@@ -2979,6 +2986,29 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
         ]));
         tested.state.filter = "all";
         assert.equal(tested.activeStudentFilterLabel(), "nessuno");
+        """
+    )
+
+
+def test_report_coverage_counts_unknown_submissions_separately() -> None:
+    run_dashboard_js(
+        """
+        const report = {
+          students: [
+            { status: "submitted", submitted: true, late: false },
+            { status: "missing", submitted: false, late: false },
+            { status: "submission_unknown", submitted: null, late: false },
+          ],
+        };
+        assert.equal(JSON.stringify(tested.reportCounts(report)), JSON.stringify({
+          total: 3,
+          submitted: 1,
+          missing: 1,
+          unknown: 1,
+          late: 0,
+        }));
+        assert.equal(tested.reportOutcome(report).label, "1 da verificare");
+        assert.match(tested.coverageReportCounts(report), /1 da verificare/);
         """
     )
 
