@@ -789,7 +789,7 @@ def test_run_docker_grading_writes_report_on_host(monkeypatch, tmp_path) -> None
     assert report["summary"] == {"passed": 1, "total": 1}
 
 
-def test_run_docker_grading_enriches_stdout_report(monkeypatch, tmp_path, capsys) -> None:
+def test_run_docker_grading_omits_worker_stderr_from_cli_output(monkeypatch, tmp_path, capsys) -> None:
     class Args:
         activity = tmp_path / "activity.json"
         source = tmp_path / "main.c"
@@ -826,14 +826,15 @@ def test_run_docker_grading_enriches_stdout_report(monkeypatch, tmp_path, capsys
                 "tests": [{"name": "test", "status": "failed", "returncode": 0, "stdout": "ok\n", "stderr": ""}],
             }
         )
-        stderr = "warning docker"
+        stderr = "THEBITLAB_HIDDEN_STDIN_91d5f0"
 
     monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 0
     captured = capsys.readouterr()
     report = json.loads(captured.out)
-    assert captured.err.strip() == "warning docker"
+    assert captured.err == ""
+    assert "THEBITLAB_HIDDEN_STDIN_91d5f0" not in captured.out
     assert report["assignment_id"] == "assignment-001"
     assert report["student_id"] == "rossi-mario"
     assert report["commit"] == "a" * 40

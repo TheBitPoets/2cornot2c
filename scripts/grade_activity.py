@@ -901,7 +901,7 @@ def grade_activity_in_docker(
 def run_docker_grading(args: argparse.Namespace) -> int:
     """Run authoritative grading through isolated Docker workers."""
     try:
-        report, worker_stderr = grade_activity_in_docker(
+        report, _worker_stderr = grade_activity_in_docker(
             args.activity,
             args.source,
             timeout_seconds=args.timeout,
@@ -932,8 +932,6 @@ def run_docker_grading(args: argparse.Namespace) -> int:
         write_report(report, args.report)
     else:
         print(json.dumps(report, ensure_ascii=False, indent=2))
-    if worker_stderr:
-        print(worker_stderr, file=sys.stderr)
     return 0 if report["passed"] else 1
 
 
