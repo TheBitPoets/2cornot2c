@@ -1924,34 +1924,31 @@ th.isResizableColumn:hover {
   outline-offset: 2px;
 }
 
-.badge.hasTooltip::after {
-  position: absolute;
-  z-index: 20;
-  bottom: calc(100% + .45rem);
-  left: 50%;
+.dashboardTooltip {
+  position: fixed;
+  z-index: 1000;
   width: max-content;
-  max-width: 18rem;
-  transform: translateX(-50%);
+  max-width: min(18rem, calc(100vw - 24px));
+  transform: translate(-50%, -100%);
   border: 1px solid rgba(17, 17, 17, .22);
   border-radius: 6px;
   background: #111111;
   color: #ffffff;
-  content: attr(data-tooltip);
-  opacity: 0;
   padding: .45rem .55rem;
   font-size: .72rem;
   font-weight: 600;
   line-height: 1.35;
   pointer-events: none;
   text-align: left;
-  visibility: hidden;
   white-space: normal;
 }
 
-.badge.hasTooltip:hover::after,
-.badge.hasTooltip:focus-visible::after {
-  opacity: 1;
-  visibility: visible;
+.dashboardTooltip[data-placement="below"] {
+  transform: translateX(-50%);
+}
+
+.dashboardTooltip[hidden] {
+  display: none;
 }
 
 .reportSelectionBadge {

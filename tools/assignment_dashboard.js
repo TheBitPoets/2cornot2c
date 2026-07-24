@@ -3897,6 +3897,73 @@ function tooltipAttributes(label, title) {
   return ` title="${escapeHtml(title)}" tabindex="0" aria-label="${escapeHtml(`${label}. ${title}`)}" data-tooltip="${escapeHtml(title)}"`;
 }
 
+let activeDashboardTooltipTarget = null;
+let dashboardTooltipElement = null;
+
+function dashboardTooltip() {
+  if (dashboardTooltipElement) return dashboardTooltipElement;
+  dashboardTooltipElement = document.createElement("div");
+  dashboardTooltipElement.className = "dashboardTooltip";
+  dashboardTooltipElement.setAttribute("role", "tooltip");
+  dashboardTooltipElement.hidden = true;
+  document.body.append(dashboardTooltipElement);
+  return dashboardTooltipElement;
+}
+
+function showDashboardTooltip(target) {
+  const text = target?.dataset?.tooltip;
+  if (!text) return;
+  activeDashboardTooltipTarget = target;
+  const tooltip = dashboardTooltip();
+  tooltip.textContent = text;
+  tooltip.hidden = false;
+  const targetRect = target.getBoundingClientRect();
+  tooltip.style.left = `${targetRect.left + (targetRect.width / 2)}px`;
+  tooltip.style.top = `${targetRect.top - 8}px`;
+  tooltip.dataset.placement = "above";
+  requestAnimationFrame(() => {
+    if (activeDashboardTooltipTarget !== target) return;
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const horizontalMargin = 12;
+    const centeredLeft = targetRect.left + (targetRect.width / 2);
+    const minLeft = horizontalMargin + (tooltipRect.width / 2);
+    const maxLeft = window.innerWidth - horizontalMargin - (tooltipRect.width / 2);
+    tooltip.style.left = `${Math.max(minLeft, Math.min(centeredLeft, maxLeft))}px`;
+    if (targetRect.top - tooltipRect.height < 8) {
+      tooltip.style.top = `${targetRect.bottom + 8}px`;
+      tooltip.dataset.placement = "below";
+    }
+  });
+}
+
+function hideDashboardTooltip(target = null) {
+  if (target && activeDashboardTooltipTarget !== target) return;
+  activeDashboardTooltipTarget = null;
+  if (dashboardTooltipElement) dashboardTooltipElement.hidden = true;
+}
+
+function setupDashboardTooltips() {
+  window.addEventListener("mouseover", (event) => {
+    const target = event.target.closest?.(".hasTooltip");
+    if (target) showDashboardTooltip(target);
+  });
+  window.addEventListener("mouseout", (event) => {
+    const target = event.target.closest?.(".hasTooltip");
+    if (target && !target.contains(event.relatedTarget)) hideDashboardTooltip(target);
+  });
+  window.addEventListener("focusin", (event) => {
+    const target = event.target.closest?.(".hasTooltip");
+    if (target) showDashboardTooltip(target);
+  });
+  window.addEventListener("focusout", (event) => {
+    const target = event.target.closest?.(".hasTooltip");
+    if (target) hideDashboardTooltip(target);
+  });
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hideDashboardTooltip();
+  });
+}
+
 function badge(text, kind = "muted", title = "") {
   const className = {
     ok: "badgeOk",
@@ -5449,6 +5516,7 @@ els.filterButtons.forEach((button) => {
 });
 
 applyPanelOrder();
+setupDashboardTooltips();
 setupCollapsiblePanels();
 setupPanelDragAndDrop();
 setFilter("all");

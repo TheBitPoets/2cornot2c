@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import textwrap
+from pathlib import Path
 
 
 def run_dashboard_js(assertions: str) -> None:
@@ -596,6 +597,17 @@ def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> 
         assert.match(compactInvalid, /aria-label="Finale non valido[.]/);
         """
     )
+
+
+def test_attempt_tooltip_uses_viewport_layer() -> None:
+    css = Path("tools/assignment_dashboard.css").read_text(encoding="utf-8")
+    source = Path("tools/assignment_dashboard.js").read_text(encoding="utf-8")
+
+    assert ".dashboardTooltip {" in css
+    assert "position: fixed;" in css
+    assert '.closest?.(".hasTooltip")' in source
+    assert "document.body.append(dashboardTooltipElement)" in source
+    assert ".badge.hasTooltip::after" not in css
 
 
 def test_students_and_review_modal_show_final_selection_badge() -> None:
