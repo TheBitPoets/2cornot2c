@@ -4,6 +4,7 @@ import json
 import argparse
 import shutil
 import subprocess
+import sys
 
 import pytest
 
@@ -570,7 +571,7 @@ def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> Non
         calls["count"] += 1
         return missing_docker(*args, **kwargs)
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", tracked_missing_docker)
+    monkeypatch.setattr(grade_activity, "run_bounded_process", tracked_missing_docker)
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert calls["count"] == 1
@@ -598,7 +599,7 @@ def test_run_docker_grading_reports_docker_timeout(monkeypatch, tmp_path) -> Non
         calls["count"] += 1
         return timeout_docker(*args, **kwargs)
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", tracked_timeout)
+    monkeypatch.setattr(grade_activity, "run_bounded_process", tracked_timeout)
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert calls["count"] == 1
@@ -610,6 +611,33 @@ def test_docker_timeout_scales_with_test_cases() -> None:
     assert grade_activity.docker_timeout_seconds(activity, 5) == 30
     assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "javascript"}, 5) == 60
     assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "c"}, 5, "javascript") == 60
+
+
+def test_run_bounded_process_rejects_excessive_output() -> None:
+    with pytest.raises(ValueError, match="limite output"):
+        grade_activity.run_bounded_process(
+            [sys.executable, "-c", "print('x' * 4096)"],
+            input_text="",
+            timeout=5,
+            max_output_bytes=128,
+        )
+
+
+def test_run_bounded_process_discards_stderr() -> None:
+    result = grade_activity.run_bounded_process(
+        [
+            sys.executable,
+            "-c",
+            "import sys; sys.stderr.write('x' * 4096); print('{}')",
+        ],
+        input_text="",
+        timeout=5,
+        max_output_bytes=128,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == "{}"
+    assert result.stderr == ""
 
 
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:
@@ -644,7 +672,7 @@ def test_run_docker_grading_rejects_invalid_json_output(monkeypatch, tmp_path) -
         stdout = "non-json"
         stderr = "errore container"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -668,7 +696,7 @@ def test_run_docker_grading_rejects_non_report_json_on_container_error(monkeypat
         stdout = json.dumps({"error": "errore infrastrutturale"})
         stderr = "errore container"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -692,7 +720,7 @@ def test_run_docker_grading_rejects_non_report_json_on_success(monkeypatch, tmp_
         stdout = json.dumps({"ok": True})
         stderr = ""
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -716,7 +744,7 @@ def test_run_docker_grading_rejects_report_with_invalid_field_types(monkeypatch,
         stdout = json.dumps({"passed": "false", "status": 500})
         stderr = "errore container"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -740,7 +768,7 @@ def test_run_docker_grading_rejects_success_report_on_container_error(monkeypatc
         stdout = json.dumps({"passed": True, "status": "passed"})
         stderr = "errore container"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -781,7 +809,7 @@ def test_run_docker_grading_writes_report_on_host(monkeypatch, tmp_path) -> None
         )
         stderr = ""
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 0
     report = json.loads(Args.report.read_text(encoding="utf-8"))
@@ -828,7 +856,7 @@ def test_run_docker_grading_omits_worker_stderr_from_cli_output(monkeypatch, tmp
         )
         stderr = "THEBITLAB_HIDDEN_STDIN_91d5f0"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 0
     captured = capsys.readouterr()

@@ -7,6 +7,7 @@ import shutil
 import sqlite3
 import subprocess
 import tempfile
+import threading
 import sys
 import time
 from pathlib import Path
@@ -17,6 +18,7 @@ DEFAULT_TIMEOUT_SECONDS = 5
 DEFAULT_NODE_STARTUP_GRACE_SECONDS = 10
 DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS = 10
 DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
+MAX_DOCKER_OUTPUT_BYTES = 1024 * 1024
 DOCKER_WORKER_SCHEMA = "thebitlab.grading-worker.v1"
 SUPPORTED_LANGUAGES = {
     "c": "implemented",
@@ -821,6 +823,73 @@ def docker_command(
     return command
 
 
+def run_bounded_process(
+    command: list[str],
+    *,
+    input_text: str,
+    timeout: int,
+    max_output_bytes: int = MAX_DOCKER_OUTPUT_BYTES,
+) -> subprocess.CompletedProcess[str]:
+    """Run a process while bounding captured stdout and discarding stderr."""
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    output = bytearray()
+    output_exceeded = threading.Event()
+
+    def read_stdout() -> None:
+        assert process.stdout is not None
+        while chunk := process.stdout.read(65536):
+            remaining = max_output_bytes + 1 - len(output)
+            if remaining > 0:
+                output.extend(chunk[:remaining])
+            if len(output) > max_output_bytes:
+                output_exceeded.set()
+                process.kill()
+                break
+
+    reader = threading.Thread(target=read_stdout, daemon=True)
+    reader.start()
+    try:
+        assert process.stdin is not None
+        try:
+            process.stdin.write(input_text.encode("utf-8"))
+            process.stdin.close()
+        except BrokenPipeError:
+            pass
+        try:
+            returncode = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired as error:
+            process.kill()
+            process.wait()
+            reader.join()
+            raise subprocess.TimeoutExpired(
+                command,
+                timeout,
+                output=bytes(output),
+            ) from error
+        reader.join()
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+        reader.join()
+
+    if output_exceeded.is_set():
+        raise ValueError(
+            f"Sandbox Docker ha superato il limite output di {max_output_bytes} byte."
+        )
+    return subprocess.CompletedProcess(
+        command,
+        returncode,
+        bytes(output).decode("utf-8", errors="replace"),
+        "",
+    )
+
+
 def grade_activity_in_docker(
     activity_path: Path,
     source_path: Path,
@@ -864,16 +933,12 @@ def grade_activity_in_docker(
         )
 
         worker_reports: list[dict[str, Any]] = []
-        worker_stderr: list[str] = []
         for test_case in activity["test_cases"]:
             worker_request = build_worker_request(activity, test_case, language)
-            result = subprocess.run(
+            result = run_bounded_process(
                 command,
-                input=json.dumps(worker_request, ensure_ascii=False),
-                capture_output=True,
-                text=True,
+                input_text=json.dumps(worker_request, ensure_ascii=False),
                 timeout=docker_timeout,
-                check=False,
             )
 
             try:
@@ -885,8 +950,6 @@ def grade_activity_in_docker(
             if result.returncode != 0:
                 raise ValueError("Sandbox Docker worker terminata con un errore infrastrutturale.")
             worker_reports.append(worker_report)
-            if result.stderr:
-                worker_stderr.append(result.stderr)
             if not worker_report.get("tests"):
                 break
         report = finalize_worker_report(
@@ -895,7 +958,7 @@ def grade_activity_in_docker(
             source_path,
             language=language,
         )
-        return report, "\n".join(worker_stderr)
+        return report, ""
 
 
 def run_docker_grading(args: argparse.Namespace) -> int:

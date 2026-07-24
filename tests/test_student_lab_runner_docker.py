@@ -292,3 +292,44 @@ def test_docker_student_report_omits_container_stderr(tmp_path) -> None:
     assert report["passed"] is True
     assert "runner_stderr" not in report
     assert hidden_marker not in json.dumps(report)
+
+
+def test_docker_runner_stops_excessive_container_output(tmp_path) -> None:
+    activity_path = tmp_path / "teacher" / "activity.json"
+    source_path = tmp_path / "student" / "main.py"
+    activity_path.parent.mkdir()
+    source_path.parent.mkdir()
+    activity_path.write_text(
+        json.dumps(
+            {
+                "id": "python-output-limit",
+                "language": "python",
+                "test_cases": [{"stdin": "", "expected_stdout": ""}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_path.write_text(
+        (
+            "with open('/proc/1/fd/1', 'w') as stream:\n"
+            "    stream.write('x' * (2 * 1024 * 1024))\n"
+        ),
+        encoding="utf-8",
+    )
+    assignment = {
+        "assignment_id": "assignment-output-limit",
+        "activity_id": "python-output-limit",
+        "student_id": "rossi-mario",
+    }
+
+    report = student_lab_runner.run_docker_runner(
+        assignment,
+        activity_path=activity_path,
+        source=source_path,
+        timeout_seconds=5,
+        language="python",
+    )
+
+    assert report["status"] == "docker-setup-error"
+    assert "limite output" in report["error"]
+    assert len(json.dumps(report)) < 4096
