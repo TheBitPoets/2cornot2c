@@ -557,6 +557,7 @@ def track_assignments(
             if assignment_id and report_assignment_id and report_assignment_id != assignment_id:
                 report = None
                 safe_report_path = None
+                report_selection = None
             elif assignment_id and not report_assignment_id and not uses_assignment_report:
                 matching_assignment_count = 0
                 for candidate in same_activity_assignments:
@@ -568,6 +569,7 @@ def track_assignments(
                 if matching_assignment_count != 1:
                     report = None
                     safe_report_path = None
+                    report_selection = None
         relative_report_path = (
             relative_to_root_or_repo(safe_report_path, target.path, server_root)
             if safe_report_path is not None

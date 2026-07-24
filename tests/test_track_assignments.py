@@ -1114,6 +1114,7 @@ def test_track_assignments_rejects_unscoped_legacy_report_for_repeated_activity(
     assert row["submitted"] is False
     assert row["grading"]["status"] == "not_graded"
     assert row["report_path"] is None
+    assert row["submission"]["report_selection"] is None
 
 
 def test_track_assignments_uses_canonical_legacy_identity_for_server_help(tmp_path) -> None:
