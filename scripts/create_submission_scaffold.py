@@ -74,6 +74,25 @@ PUBLIC_REFERENCE_FIELDS = {
     "description",
     "type",
 }
+PUBLIC_STRING_FIELDS = {
+    "schema_version",
+    "id",
+    "titolo",
+    "title",
+    "tipo",
+    "kind",
+    "difficolta",
+    "difficulty",
+    "linguaggio",
+    "language",
+    "source_name",
+    "consegna",
+    "instructions",
+    "student_support_mode",
+    "support_mode",
+    "modalita_studente",
+}
+PUBLIC_STRING_LIST_FIELDS = {"argomenti", "topics", "vincoli"}
 STUDENT_ACTIVITY_FIELDS = {
     "schema_version",
     "id",
@@ -293,11 +312,21 @@ def student_activity_payload(activity: dict[str, Any]) -> dict[str, Any]:
     """Return public activity metadata without teacher-only grading data."""
 
     payload = {key: value for key, value in activity.items() if key in STUDENT_ACTIVITY_FIELDS}
+    for key in PUBLIC_STRING_FIELDS & payload.keys():
+        if not isinstance(payload[key], str):
+            payload.pop(key)
+    for key in PUBLIC_STRING_LIST_FIELDS & payload.keys():
+        value = payload[key]
+        payload[key] = [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
     for key in ("contesto",):
         if key in payload:
             value = payload[key]
             payload[key] = (
-                {field: item for field, item in value.items() if field in PUBLIC_CONTEXT_FIELDS}
+                {
+                    field: item
+                    for field, item in value.items()
+                    if field in PUBLIC_CONTEXT_FIELDS and isinstance(item, str)
+                }
                 if isinstance(value, dict)
                 else {}
             )
@@ -305,39 +334,56 @@ def student_activity_payload(activity: dict[str, Any]) -> dict[str, Any]:
         if key in payload:
             value = payload[key]
             payload[key] = (
-                {field: item for field, item in value.items() if field in PUBLIC_GRADING_FIELDS}
+                {
+                    field: item
+                    for field, item in value.items()
+                    if field in PUBLIC_GRADING_FIELDS and isinstance(item, bool)
+                }
                 if isinstance(value, dict)
                 else {}
             )
     if "metriche" in payload:
         value = payload["metriche"]
-        payload["metriche"] = (
-            {field: item for field, item in value.items() if field in PUBLIC_METRIC_FIELDS}
-            if isinstance(value, dict)
-            else {}
-        )
+        public_metrics: dict[str, Any] = {}
+        if isinstance(value, dict):
+            estimated = value.get("tempo_stimato_minuti")
+            if isinstance(estimated, (int, float)) and not isinstance(estimated, bool):
+                public_metrics["tempo_stimato_minuti"] = estimated
+            for field in PUBLIC_METRIC_FIELDS - {"tempo_stimato_minuti"}:
+                if isinstance(value.get(field), bool):
+                    public_metrics[field] = value[field]
+        payload["metriche"] = public_metrics
     for key in ("materiali", "source_refs"):
         if key in payload:
             value = payload[key]
-            payload[key] = [
-                (
-                    {field: item for field, item in entry.items() if field in PUBLIC_REFERENCE_FIELDS}
-                    if isinstance(entry, dict)
-                    else entry
-                )
-                for entry in value
-                if isinstance(entry, (dict, str))
-            ] if isinstance(value, list) else []
+            public_references: list[Any] = []
+            if isinstance(value, list):
+                for entry in value:
+                    if isinstance(entry, str):
+                        public_references.append(entry)
+                    elif isinstance(entry, dict):
+                        public_entry = {
+                            field: item
+                            for field, item in entry.items()
+                            if field in PUBLIC_REFERENCE_FIELDS and isinstance(item, str)
+                        }
+                        if public_entry:
+                            public_references.append(public_entry)
+            payload[key] = public_references
     if "assets" in payload:
         payload["assets"] = [
-            {key: value for key, value in asset.items() if key in PUBLIC_ASSET_FIELDS}
+            {
+                key: value
+                for key, value in asset.items()
+                if key in PUBLIC_ASSET_FIELDS and isinstance(value, str)
+            }
             for asset in student_assets(activity)
         ]
     public_tests = [
         {
             key: value
             for key, value in test_case.items()
-            if key in {"name", "stdin", "expected_stdout"}
+            if key in {"name", "stdin", "expected_stdout"} and isinstance(value, str)
         }
         for test_case in activity.get("test_cases", [])
         if isinstance(test_case, dict)

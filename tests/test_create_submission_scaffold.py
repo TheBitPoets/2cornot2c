@@ -95,6 +95,14 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
             "expected_stdout": "SEGRETO_ANNIDATO",
         }
     ]
+    payload["contesto"] = {
+        "classe": {"expected_stdout": "SEGRETO_TIPO"},
+        "percorso": "terzo-anno",
+    }
+    payload["source_refs"].append(
+        {"description": {"expected_stdout": "SEGRETO_TIPO"}}
+    )
+    payload["vincoli"] = ["usa scanf", {"expected_stdout": "SEGRETO_TIPO"}]
     payload["correzione"]["expected_stdout"] = "SEGRETO_ANNIDATO"
     payload["metriche"]["teacher_notes"] = "SEGRETO_ANNIDATO"
     payload["assets"] = [
@@ -115,12 +123,17 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
     assert "soluzione_attesa" not in distributed
     assert distributed["assets"] == []
     assert distributed["support_mode"] == "feedback-tecnico"
-    assert distributed["source_refs"] == [{"path": "doc/dispensa.md", "heading": "Array"}]
+    assert distributed["source_refs"] == [
+        {"path": "doc/dispensa.md", "heading": "Array"},
+    ]
+    assert distributed["vincoli"] == ["usa scanf"]
+    assert distributed["contesto"] == {"percorso": "terzo-anno"}
     serialized = json.dumps(distributed)
     assert "riservato" not in serialized
     assert "2 3" not in serialized
     assert "Differenza: 3" not in serialized
     assert "SEGRETO_ANNIDATO" not in serialized
+    assert "SEGRETO_TIPO" not in serialized
 
 
 def test_create_scaffold_supports_canonical_activity_metadata(tmp_path) -> None:
