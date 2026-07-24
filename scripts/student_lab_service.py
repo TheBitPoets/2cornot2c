@@ -556,7 +556,7 @@ def select_student_final_attempt(
         student_id=student_id,
         assignments_dir=assignments_dir,
         now=now,
-        expose_external_paths=True,
+        expose_external_paths=False,
     )
     selected = next(
         (
