@@ -121,3 +121,27 @@ def test_run_layout_editor_saves_with_injected_keys(tmp_path: Path) -> None:
     assert student_lab_layout.load_layout(tmp_path) == layout
     assert any("Pannello spostato" in output for output in outputs)
     assert any("Pannello attivo:" in output for output in outputs)
+
+
+def test_layout_editor_can_use_a_consumer_renderer(tmp_path: Path) -> None:
+    keys = iter(["right", "tab", "enter"])
+    render_calls = []
+
+    layout = student_lab_layout.run_layout_editor(
+        ["contenuto legacy"],
+        root=tmp_path,
+        key_reader=lambda: next(keys),
+        terminal_width=96,
+        clear=False,
+        print_fn=lambda _output: None,
+        layout_renderer=lambda current, width, height: (
+            render_calls.append((current.copy(), width, height)) or "frame consumer"
+        ),
+    )
+
+    assert len(render_calls) == 3
+    assert all(width == 96 for _current, width, _height in render_calls)
+    assert all(height >= 8 for _current, _width, height in render_calls)
+    assert render_calls[1][0]["left_width"] == 66
+    assert render_calls[2][0]["focus"] == "workspace"
+    assert layout == render_calls[2][0]

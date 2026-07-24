@@ -39,6 +39,7 @@ SELECTED_PANEL_BACKGROUND = "\033[48;5;253m"
 PANEL_TITLE_STYLE = "\033[1;97m"
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 KeyReader = Callable[[], str]
+LayoutRenderer = Callable[[dict, int, int], str]
 
 
 def normalize_layout(value: object) -> dict:
@@ -381,6 +382,7 @@ def run_layout_editor(
     terminal_width: int | None = None,
     clear: bool = True,
     print_fn: Callable[[str], None] = print,
+    layout_renderer: LayoutRenderer | None = None,
 ) -> dict:
     """Edit and save the layout until Enter, Escape or q is pressed."""
 
@@ -391,15 +393,21 @@ def run_layout_editor(
         while True:
             if clear:
                 print_fn("\x1b[2J\x1b[H")
-            print_fn(
-                render_layout(
+            terminal_size = shutil.get_terminal_size((120, 40))
+            width = terminal_width or terminal_size.columns
+            content_height = max(8, terminal_size.lines - 7)
+            rendered = (
+                layout_renderer(layout, width, content_height)
+                if layout_renderer is not None
+                else render_layout(
                     lines,
                     layout,
-                    terminal_width,
+                    width,
                     use_color=use_color,
                     highlight_focus=True,
                 )
             )
+            print_fn(rendered)
             print_fn(f"Pannello attivo: {PANEL_TITLES[layout['focus']]} (indicato da >)")
             print_fn("\nResize: frecce sinistra/destra o [ ] ridimensionano il pannello sinistro")
             print_fn("Tab seleziona | h/l sposta orizzontalmente | k/j sposta verticalmente")
