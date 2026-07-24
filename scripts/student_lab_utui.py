@@ -217,6 +217,19 @@ def _grading_status(grading: Mapping[str, Any]) -> str:
     return status
 
 
+def _attempt_text(value: Any) -> str:
+    """Return one compact attempt summary for the report panel."""
+
+    attempt = _mapping(value)
+    if not attempt:
+        return MISSING_VALUE
+    passed = attempt.get("tests_passed")
+    total = attempt.get("tests_total")
+    tests = f"{passed}/{total} test" if isinstance(passed, int) and isinstance(total, int) else "test n/d"
+    status = _text(attempt.get("status"), "esito n/d")
+    return f"{status}, {tests}, {_datetime_text(attempt.get('submitted_at'))}"
+
+
 def _rows(*values: tuple[str, Any]) -> tuple[str, ...]:
     return tuple(f"{label}: {_text(value)}" for label, value in values)
 
@@ -262,6 +275,7 @@ def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str
     support = _mapping(assignment.get("support_policy"))
     help_summary = _mapping(assignment.get("help"))
     report = _mapping(assignment.get("report"))
+    attempts = _mapping(assignment.get("attempts"))
     grading = _mapping(assignment.get("grading"))
     runner = _mapping(assignment.get("runner"))
     grade = grading.get("teacher_grade")
@@ -346,6 +360,16 @@ def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str
                 ("Esiste", _yes_no(report.get("exists"))),
                 ("Consegnata", _datetime_text(report.get("submitted_at"))),
                 ("Commit", report.get("commit")),
+                *(
+                    (
+                        ("Tentativi", attempts.get("count")),
+                        ("Ultimo", _attempt_text(attempts.get("latest"))),
+                        ("Migliore", _attempt_text(attempts.get("best"))),
+                        ("Definitivo", _attempt_text(attempts.get("final"))),
+                    )
+                    if attempts
+                    else ()
+                ),
             ),
         },
         {
