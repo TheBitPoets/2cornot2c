@@ -477,6 +477,68 @@ def test_create_scaffold_force_preserves_modified_stale_asset(tmp_path) -> None:
     assert stale_asset.read_text(encoding="utf-8") == "modifica studente\n"
 
 
+def test_create_scaffold_force_updates_unchanged_managed_asset(tmp_path) -> None:
+    (tmp_path / "tests").mkdir()
+    teacher_asset = tmp_path / "tests" / "test_public.py"
+    teacher_asset.write_text("VERSION = 1\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "visible_test",
+                "path": "tests/test_public.py",
+                "target_path": "tests/test_public.py",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+
+    teacher_asset.write_text("VERSION = 2\n", encoding="utf-8")
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+        overwrite=True,
+    )
+
+    assert (destination / "tests" / "test_public.py").read_text(encoding="utf-8") == "VERSION = 2\n"
+
+
+def test_create_scaffold_force_preserves_modified_current_asset(tmp_path) -> None:
+    (tmp_path / "tests").mkdir()
+    teacher_asset = tmp_path / "tests" / "test_public.py"
+    teacher_asset.write_text("VERSION = 1\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "visible_test",
+                "path": "tests/test_public.py",
+                "target_path": "tests/test_public.py",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+    student_asset = destination / "tests" / "test_public.py"
+    student_asset.write_text("MODIFICA = 'studente'\n", encoding="utf-8")
+
+    teacher_asset.write_text("VERSION = 2\n", encoding="utf-8")
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+        overwrite=True,
+    )
+
+    assert student_asset.read_text(encoding="utf-8") == "MODIFICA = 'studente'\n"
+
+
 def test_create_scaffold_can_overwrite_source_explicitly(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     destination = create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)

@@ -540,6 +540,7 @@ def copy_student_assets(
     *,
     destination: Path,
     asset_plan: list[tuple[Path, Path]],
+    managed_assets: dict[Path, str],
     overwrite_source: bool,
 ) -> list[Path]:
     """Copy a validated set of student-visible assets into the scaffold."""
@@ -548,7 +549,14 @@ def copy_student_assets(
         target_path = destination / target_rel
         target_path.parent.mkdir(parents=True, exist_ok=True)
         if target_path.exists() and not overwrite_source:
-            continue
+            managed_digest = managed_assets.get(target_rel)
+            if (
+                managed_digest is None
+                or target_path.is_symlink()
+                or not target_path.is_file()
+                or file_sha256(target_path) != managed_digest
+            ):
+                continue
         shutil.copyfile(source_path, target_path)
         copied_paths.append(target_path)
     return copied_paths
@@ -658,6 +666,7 @@ def create_scaffold(
     copied_assets = copy_student_assets(
         destination=destination,
         asset_plan=asset_plan,
+        managed_assets=managed_assets,
         overwrite_source=overwrite_source,
     )
     for copied_path in copied_assets:
