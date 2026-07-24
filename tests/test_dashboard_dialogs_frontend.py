@@ -151,8 +151,12 @@ def test_shared_dialog_supports_confirm_prompt_validation_and_queue() -> None:
         form.dispatchEvent({ type: "submit", preventDefault() {} });
         assert.equal(dialog.open, true);
         assert.equal(error.hidden, false);
+        assert.equal(input.attributes["aria-invalid"], "true");
 
         input.value = "<script>test</script>";
+        input.dispatchEvent({ type: "input" });
+        assert.equal(error.hidden, true);
+        assert.equal(input.attributes["aria-invalid"], undefined);
         form.dispatchEvent({ type: "submit", preventDefault() {} });
         assert.equal(await second, "<script>test</script>");
         assert.equal(opener, document.activeElement);

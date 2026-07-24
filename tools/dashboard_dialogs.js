@@ -74,6 +74,7 @@
       event.preventDefault();
       completeFromInput();
     });
+    input.addEventListener("input", resetError);
     cancelButton.addEventListener("click", () => completeRequest(null));
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();
