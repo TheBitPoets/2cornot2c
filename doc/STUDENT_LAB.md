@@ -43,6 +43,16 @@ Per verificare esplicitamente il nuovo renderer:
 py -3.12 scripts/student_lab_cli.py --student-id rossi-mario --renderer utui
 ```
 
+La GitHub Action `uTUI consumer evidence` installa obbligatoriamente l'extra ed esegue adapter,
+layout e smoke CLI su Windows e Linux con Python 3.11, 3.12 e 3.13. Per riprodurre localmente
+il nucleo della stessa verifica:
+
+```powershell
+py -3.12 -m pip install -r requirements-dev.txt -r requirements-utui.txt
+$env:THEBITLAB_REQUIRE_UTUI="1"
+py -3.12 -m pytest tests/test_student_lab_utui.py tests/test_student_lab_layout.py tests/test_student_lab_cli.py
+```
+
 Le richieste di aiuto non invocano provider dentro la TUI. La TUI le invia al server locale della macchina docente,
 che ricarica consegna, policy e budget dai propri dati e usa Codex CLI installato localmente. Server e TUI devono
 puntare alla stessa root dati. Per la demo:
