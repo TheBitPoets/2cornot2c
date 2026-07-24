@@ -163,13 +163,11 @@ def test_initialize_assignment_index_migrates_legacy_submitted_constraint(tmp_pa
             VALUES ('grading-1', 'submission-1', 'not_run');
             """
         )
-        connection.row_factory = sqlite3.Row
-
         initialize_assignment_index(connection)
 
         submitted_column = next(
             row for row in connection.execute("PRAGMA table_info(submissions)")
-            if row["name"] == "submitted"
+            if row[1] == "submitted"
         )
         submission = connection.execute(
             "SELECT student_id, submitted FROM submissions"
@@ -178,7 +176,7 @@ def test_initialize_assignment_index_migrates_legacy_submitted_constraint(tmp_pa
             "SELECT submission_id, status FROM grading_results"
         ).fetchone()
 
-    assert submitted_column["notnull"] == 0
+    assert submitted_column[3] == 0
     assert tuple(submission) == ("rossi-mario", 0)
     assert tuple(grading) == ("submission-1", "not_run")
 

@@ -330,10 +330,14 @@ def _migrate_nullable_submitted(connection: sqlite3.Connection) -> None:
     if table is None:
         return
     submitted_column = next(
-        (row for row in connection.execute("PRAGMA table_info(submissions)") if row["name"] == "submitted"),
+        (
+            row
+            for row in connection.execute("PRAGMA table_info(submissions)")
+            if row[1] == "submitted"
+        ),
         None,
     )
-    if submitted_column is None or not submitted_column["notnull"]:
+    if submitted_column is None or not submitted_column[3]:
         return
 
     connection.commit()
