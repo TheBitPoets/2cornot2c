@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -18,6 +19,7 @@ from scripts.thebitlab_contracts import (
 DEFAULT_TARGET_DIR = Path(".")
 DEFAULT_SOURCE_NAME = "main.c"
 DEFAULT_THEBITLAB_REF = "main"
+MANAGED_ASSETS_FILE = ".thebitlab-managed-assets.json"
 DEFAULT_SOURCE_NAMES = {
     "assembly": "main.asm",
     "c": "main.c",
@@ -412,56 +414,79 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
     return planned_assets
 
 
-def private_asset_targets(activity: dict[str, Any]) -> list[Path]:
-    """Return trusted scaffold paths that must not remain student-visible."""
-    assets = activity.get("assets")
-    if not isinstance(assets, list):
-        return []
-    targets: list[Path] = []
-    for index, asset in enumerate(assets):
-        if not isinstance(asset, dict):
-            continue
-        if (
-            asset.get("type") in STUDENT_ASSET_TYPES
-            and asset_visibility(asset) == "student"
-        ):
-            continue
-        targets.append(
-            validate_relative_path(
-                asset.get("target_path", asset.get("path")),
-                f"assets[{index}].target_path",
-            )
-        )
-    return targets
+def file_sha256(path: Path) -> str:
+    """Return the SHA-256 digest of one scaffold file."""
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
-def remove_private_assets(
+def load_managed_assets(destination: Path) -> dict[Path, str]:
+    """Load the validated manifest of assets copied by this tool."""
+    manifest_path = destination / MANAGED_ASSETS_FILE
+    if not manifest_path.is_file():
+        return {}
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError("Manifest degli asset gestiti non valido.") from error
+    assets = payload.get("assets") if isinstance(payload, dict) else None
+    if not isinstance(assets, dict):
+        raise ValueError("Manifest degli asset gestiti non valido.")
+    managed: dict[Path, str] = {}
+    for raw_path, digest in assets.items():
+        target = validate_relative_path(raw_path, "managed_assets.path")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError("Manifest degli asset gestiti non valido.")
+        managed[target] = digest
+    return managed
+
+
+def remove_stale_managed_assets(
     *,
     destination: Path,
-    targets: list[Path],
+    managed: dict[Path, str],
+    current_targets: set[Path],
     protected_source: str,
-) -> None:
-    """Remove newly private managed assets without touching student source files."""
-    destination_root = destination.resolve()
-    for target_rel in targets:
+) -> dict[Path, str]:
+    """Remove only unchanged managed assets that are no longer public."""
+    retained: dict[Path, str] = {}
+    for target_rel, expected_digest in managed.items():
+        if target_rel in current_targets:
+            retained[target_rel] = expected_digest
+            continue
         if target_rel == Path(protected_source):
             continue
         target_path = destination / target_rel
-        if target_path.is_symlink():
+        if (
+            target_path.is_file()
+            and not target_path.is_symlink()
+            and file_sha256(target_path) == expected_digest
+        ):
             target_path.unlink()
-        elif target_path.is_file():
-            try:
-                target_path.resolve().relative_to(destination_root)
-            except ValueError as error:
-                raise ValueError(f"Asset riservato fuori dallo scaffold: {target_rel}") from error
-            target_path.unlink()
-        elif target_path.exists():
-            raise ValueError(f"L'asset riservato non e un file: {target_rel}")
+            parent = target_path.parent
+            while parent != destination and parent.is_dir() and not any(parent.iterdir()):
+                parent.rmdir()
+                parent = parent.parent
+    return retained
 
-        parent = target_path.parent
-        while parent != destination and parent.is_dir() and not any(parent.iterdir()):
-            parent.rmdir()
-            parent = parent.parent
+
+def write_managed_assets(destination: Path, managed: dict[Path, str]) -> None:
+    """Persist the public asset paths and original content hashes."""
+    payload = {
+        "schema_version": "thebitlab.managed-assets.v1",
+        "assets": {
+            target.as_posix(): digest
+            for target, digest in sorted(managed.items(), key=lambda item: item[0].as_posix())
+        },
+    }
+    (destination / MANAGED_ASSETS_FILE).write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
 
 
 def copy_student_assets(
@@ -544,15 +569,18 @@ def create_scaffold(
     thebitlab_ref = validate_thebitlab_ref(thebitlab_ref)
     destination = scaffold_dir(target_dir, identifier)
     asset_plan = student_asset_copy_plan(activity_path, activity)
+    current_asset_targets = {target_rel for _, target_rel in asset_plan}
 
     if destination.exists() and any(destination.iterdir()) and not overwrite:
         raise ValueError(f"Consegna gia esistente: {destination}. Usa --force per sovrascrivere.")
 
     destination.mkdir(parents=True, exist_ok=True)
-    if overwrite:
-        remove_private_assets(
+    managed_assets = load_managed_assets(destination) if overwrite else {}
+    if managed_assets:
+        managed_assets = remove_stale_managed_assets(
             destination=destination,
-            targets=private_asset_targets(activity),
+            managed=managed_assets,
+            current_targets=current_asset_targets,
             protected_source=source_name,
         )
     (destination / "activity.json").write_text(
@@ -561,11 +589,15 @@ def create_scaffold(
         newline="\n",
     )
 
-    copy_student_assets(
+    copied_assets = copy_student_assets(
         destination=destination,
         asset_plan=asset_plan,
         overwrite_source=overwrite_source,
     )
+    for copied_path in copied_assets:
+        target_rel = copied_path.relative_to(destination)
+        managed_assets[target_rel] = file_sha256(copied_path)
+    write_managed_assets(destination, managed_assets)
 
     source_path = destination / source_name
     if overwrite_source or not source_path.exists():

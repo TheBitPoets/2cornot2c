@@ -342,6 +342,95 @@ def test_create_scaffold_force_removes_asset_that_became_teacher_only(tmp_path) 
     assert (destination / "notes.txt").read_text(encoding="utf-8") == "file studente\n"
 
 
+def test_create_scaffold_force_removes_public_asset_deleted_from_activity(tmp_path) -> None:
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_old.py").write_text("def test_old(): pass\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "visible_test",
+                "path": "tests/test_old.py",
+                "target_path": "tests/test_old.py",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+
+    payload["assets"] = []
+    write_activity(tmp_path, payload)
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+        overwrite=True,
+    )
+
+    assert not (destination / "tests" / "test_old.py").exists()
+
+
+def test_create_scaffold_force_preserves_unmanaged_private_target(tmp_path) -> None:
+    payload = canonical_activity()
+    activity_path = write_activity(tmp_path, payload)
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+    (destination / "notes.txt").write_text("file studente\n", encoding="utf-8")
+
+    payload["assets"] = [
+        {
+            "type": "hidden_test",
+            "path": "teacher/hidden.py",
+            "target_path": "notes.txt",
+            "visibility": "teacher",
+        }
+    ]
+    write_activity(tmp_path, payload)
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+        overwrite=True,
+    )
+
+    assert (destination / "notes.txt").read_text(encoding="utf-8") == "file studente\n"
+
+
+def test_create_scaffold_force_preserves_modified_stale_asset(tmp_path) -> None:
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_old.py").write_text("def test_old(): pass\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "visible_test",
+                "path": "tests/test_old.py",
+                "target_path": "tests/test_old.py",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+    stale_asset = destination / "tests" / "test_old.py"
+    stale_asset.write_text("modifica studente\n", encoding="utf-8")
+
+    payload["assets"] = []
+    write_activity(tmp_path, payload)
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+        overwrite=True,
+    )
+
+    assert stale_asset.read_text(encoding="utf-8") == "modifica studente\n"
+
+
 def test_create_scaffold_can_overwrite_source_explicitly(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     destination = create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
