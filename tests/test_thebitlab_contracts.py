@@ -187,6 +187,7 @@ def test_normalize_register_student_preserves_remote_tracking_states() -> None:
         {
             "student": "verdi-anna",
             "submitted": False,
+            "late": True,
             "status": "submission_unknown",
             "submission": {"report_selection": "remote_error"},
         }
@@ -204,6 +205,7 @@ def test_normalize_register_student_preserves_remote_tracking_states() -> None:
     assert unavailable["status"] == "submission_unknown"
     assert unavailable["grading"]["provisional"] is False
     assert contradictory["submitted"] is None
+    assert contradictory["late"] is False
     assert missing_flag["submitted"] is None
 
 
