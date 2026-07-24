@@ -133,6 +133,16 @@ def portable_path_key(path: Path) -> tuple[str, ...]:
     return tuple(part.rstrip(" .").casefold() for part in path.parts)
 
 
+def portable_paths_overlap(left: Path, right: Path) -> bool:
+    """Return whether two portable paths are equal or parent/child."""
+    left_key = portable_path_key(left)
+    right_key = portable_path_key(right)
+    return (
+        left_key[: len(right_key)] == right_key
+        or right_key[: len(left_key)] == left_key
+    )
+
+
 def is_reserved_scaffold_target(path: Path) -> bool:
     """Return whether a path aliases a scaffold-owned top-level file."""
     key = portable_path_key(path)
@@ -824,6 +834,18 @@ def create_scaffold(
     manifest_path = managed_assets_path(target_dir, identifier, state_dir)
     asset_plan = student_asset_copy_plan(activity_path, activity)
     for _, target_rel in asset_plan:
+        for reserved_target in RESERVED_SCAFFOLD_TARGETS:
+            if portable_paths_overlap(target_rel, Path(reserved_target)):
+                raise ValueError(
+                    f"Target asset sovrapposto a un file riservato allo scaffold: {target_rel}."
+                )
+        if (
+            portable_path_key(target_rel) != portable_path_key(Path(source_name))
+            and portable_paths_overlap(target_rel, Path(source_name))
+        ):
+            raise ValueError(
+                f"Target asset sovrapposto al file sorgente dello scaffold: {target_rel}."
+            )
         if (
             portable_path_key(target_rel) == portable_path_key(Path(source_name))
             and target_rel.as_posix() != Path(source_name).as_posix()

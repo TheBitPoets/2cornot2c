@@ -292,6 +292,39 @@ def test_create_scaffold_rejects_parent_child_asset_targets(tmp_path, targets) -
     assert not (target_dir / "assignments").exists()
 
 
+@pytest.mark.parametrize(
+    "target",
+    [
+        "main.py/tests.txt",
+        "README.md/file.txt",
+        "activity.json/file.txt",
+        "readme.md./file.txt",
+    ],
+)
+def test_create_scaffold_rejects_asset_below_scaffold_file(tmp_path, target) -> None:
+    (tmp_path / "asset.txt").write_text("contenuto\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "example",
+                "path": "asset.txt",
+                "target_path": target,
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
+
+    with pytest.raises(ValueError, match="sovrapposto"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+        )
+
+    assert not (target_dir / "assignments").exists()
+
+
 def test_create_scaffold_rejects_linked_asset_outside_activity_bundle(tmp_path) -> None:
     bundle = tmp_path / "bundle"
     bundle.mkdir()
