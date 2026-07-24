@@ -2504,13 +2504,27 @@ document.addEventListener("click", (event) => {
   els.loadSavedDesignBtn.setAttribute("aria-expanded", "false");
 });
 
+function continueTopNavigation(link, intent = {}) {
+  if (intent.newTab || intent.newWindow) {
+    const features = intent.newWindow ? "popup" : undefined;
+    const opened = window.open(link.href, "_blank", features);
+    if (!opened) setStatus("Il browser ha bloccato l'apertura della nuova scheda o finestra.");
+    return;
+  }
+  allowNextUnloadWithoutWarning = true;
+  window.location.href = link.href;
+}
+
 for (const link of document.querySelectorAll(".topNav a:not([target='_blank'])")) {
   link.addEventListener("click", async (event) => {
     if (!hasUnsavedChanges()) return;
+    const intent = {
+      newTab: Boolean(event.ctrlKey || event.metaKey),
+      newWindow: Boolean(event.shiftKey),
+    };
     event.preventDefault();
     if (!await confirmDiscardChanges()) return;
-    allowNextUnloadWithoutWarning = true;
-    window.location.href = link.href;
+    continueTopNavigation(link, intent);
   });
 }
 

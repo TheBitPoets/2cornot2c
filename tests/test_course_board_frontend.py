@@ -63,6 +63,12 @@ def run_course_board_js(assertions: str) -> None:
         toast() {{}},
       }},
     }};
+    context.window.location = {{ href: "" }};
+    context.window.openCalls = [];
+    context.window.open = (...args) => {{
+      context.window.openCalls.push(args);
+      return {{}};
+    }};
 
     let source = fs.readFileSync("tools/course_board.js", "utf8");
     source = source.replace(/loadAll\(\)\.catch\(\(error\) => \{{[\s\S]*?\}}\);\s*$/, "");
@@ -360,6 +366,31 @@ def test_project_replacement_dialogs_are_marked_as_dangerous() -> None:
           );
           assert.equal(confirmations.every((options) => options.danger === true), true);
         })();
+        """
+    )
+
+
+def test_confirmed_navigation_preserves_tab_and_window_intent() -> None:
+    run_course_board_js(
+        """
+        const link = { href: "http://localhost/tools/assignment_dashboard.html" };
+
+        continueTopNavigation(link, { newTab: true });
+        continueTopNavigation(link, { newWindow: true });
+
+        assert.equal(window.openCalls.length, 2);
+        assert.equal(window.openCalls[0][0], link.href);
+        assert.equal(window.openCalls[0][1], "_blank");
+        assert.equal(window.openCalls[0][2], undefined);
+        assert.equal(window.openCalls[1][0], link.href);
+        assert.equal(window.openCalls[1][1], "_blank");
+        assert.equal(window.openCalls[1][2], "popup");
+        assert.equal(window.location.href, "");
+        assert.equal(allowNextUnloadWithoutWarning, false);
+
+        continueTopNavigation(link);
+        assert.equal(window.location.href, link.href);
+        assert.equal(allowNextUnloadWithoutWarning, true);
         """
     )
 
