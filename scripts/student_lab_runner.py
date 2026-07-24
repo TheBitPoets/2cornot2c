@@ -14,7 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import grade_activity, student_lab_service
+from scripts import grade_activity, student_lab_attempts, student_lab_service
 from scripts.thebitlab_contracts import normalize_activity
 
 
@@ -640,14 +640,33 @@ def storage_report(root: Path, assignment: dict[str, Any], report: dict[str, Any
 def write_student_report(root: Path, assignment: dict[str, Any], report: dict[str, Any], report_path: Path | None = None) -> Path:
     """Persist a student lab report as JSON."""
 
-    output = report_path or assignment_report_path(root, assignment)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(storage_report(root, assignment, report), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
+    standard_output = assignment_report_path(root, assignment)
+    output = report_path or standard_output
+    stored = storage_report(root, assignment, report)
+    if output.resolve(strict=False) == standard_output.resolve(strict=False):
+        assignment_id = clean_text(assignment.get("assignment_id"))
+        _, assignment_latest = student_lab_attempts.persist_attempt(output, assignment_id, stored)
+        stored = json.loads(assignment_latest.read_text(encoding="utf-8"))
+    student_lab_attempts.write_json_atomic(output, stored)
     return output
+
+
+def finalize_report_attempt(root: Path, assignment: dict[str, Any], report_path: Path) -> Path:
+    """Mark the just-written canonical report as the final attempt."""
+
+    standard_output = assignment_report_path(root, assignment)
+    if report_path.resolve(strict=False) != standard_output.resolve(strict=False):
+        raise ValueError("--final richiede il path report standard della consegna.")
+    stored = json.loads(report_path.read_text(encoding="utf-8"))
+    attempt_id = clean_text(stored.get("attempt_id"))
+    if not attempt_id:
+        raise ValueError("Il report salvato non contiene un tentativo selezionabile.")
+    return student_lab_attempts.set_final_attempt(
+        standard_output,
+        clean_text(assignment.get("assignment_id")),
+        clean_text(assignment.get("activity_id")),
+        attempt_id,
+    )
 
 
 def positive_int(value: str) -> int:
@@ -676,6 +695,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout del runner locale.")
     parser.add_argument("--write-report", action="store_true", help="Scrive il report nel path standard dello studente.")
     parser.add_argument("--report", type=Path, help="Path alternativo del report JSON da scrivere.")
+    parser.add_argument(
+        "--final",
+        action="store_true",
+        help="Marca come definitiva l'esecuzione appena salvata; richiede --write-report senza --report.",
+    )
     return parser.parse_args()
 
 
@@ -699,8 +723,17 @@ def main() -> int:
             timeout_seconds=args.timeout,
             docker_image=args.docker_image,
         )
+        if args.final and (not args.write_report or args.report):
+            raise ValueError("--final richiede --write-report e non può essere usato con --report.")
         if args.write_report or args.report:
-            write_student_report(root, assignment, report, args.report.resolve(strict=False) if args.report else None)
+            report_path = write_student_report(
+                root,
+                assignment,
+                report,
+                args.report.resolve(strict=False) if args.report else None,
+            )
+            if args.final:
+                finalize_report_attempt(root, assignment, report_path)
     except ValueError as error:
         print(f"Runner lab non disponibile:\n{error}", file=sys.stderr)
         return 1
