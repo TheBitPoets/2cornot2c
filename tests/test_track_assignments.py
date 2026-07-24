@@ -1431,7 +1431,7 @@ def test_remote_report_allows_local_preview_only_at_verified_commit(
     )
     monkeypatch.setattr(
         track_assignments,
-        "git_stdout",
+        "git_stdout_optional",
         lambda args, cwd: commit if args == ["git", "rev-parse", "HEAD"] else "",
     )
 
@@ -1446,6 +1446,22 @@ def test_remote_report_allows_local_preview_only_at_verified_commit(
     assert row["submission"]["local_preview_status"] == "available"
     assert row["submission"]["source_path"].endswith("main.py")
     assert row["submission"]["files"][0]["path"].endswith("main.py")
+
+
+def test_checkout_preview_rejects_dirty_worktree(monkeypatch, tmp_path) -> None:
+    student = target(tmp_path, "rossi-mario")
+    commit = "a" * 40
+
+    def fake_git_stdout(args, _cwd):
+        if args == ["git", "rev-parse", "HEAD"]:
+            return commit
+        if args == ["git", "status", "--porcelain", "--untracked-files=normal"]:
+            return " M assignments/python-base-somma-001/main.py"
+        return ""
+
+    monkeypatch.setattr(track_assignments, "git_stdout_optional", fake_git_stdout)
+
+    assert track_assignments.checkout_matches_commit(student, commit) is False
 
 
 def test_remote_provenance_supplies_missing_assignment_repository(tmp_path) -> None:

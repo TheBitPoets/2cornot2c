@@ -140,6 +140,12 @@ def local_repo_path(path: Path, server_root: Path | None) -> str:
 
 def git_stdout(args: list[str], cwd: Path) -> str:
     """Run a small git query and return stdout, or an empty string."""
+    return git_stdout_optional(args, cwd) or ""
+
+
+def git_stdout_optional(args: list[str], cwd: Path) -> str | None:
+    """Run a small git query while preserving command failure."""
+
     try:
         completed = subprocess.run(
             args,
@@ -150,9 +156,9 @@ def git_stdout(args: list[str], cwd: Path) -> str:
             timeout=5,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return ""
+        return None
     if completed.returncode:
-        return ""
+        return None
     return completed.stdout.strip()
 
 
@@ -179,7 +185,15 @@ def checkout_matches_commit(target: TrackingTarget, commit: str | None) -> bool:
     clean_commit = str(commit or "").strip().lower()
     if not re.fullmatch(r"[0-9a-f]{40}", clean_commit):
         return False
-    return git_stdout(["git", "rev-parse", "HEAD"], target.path).lower() == clean_commit
+    head = git_stdout_optional(["git", "rev-parse", "HEAD"], target.path)
+    head_matches = head is not None and head.lower() == clean_commit
+    if not head_matches:
+        return False
+    status = git_stdout_optional(
+        ["git", "status", "--porcelain", "--untracked-files=normal"],
+        target.path,
+    )
+    return status == ""
 
 
 def github_repo_url(target: TrackingTarget) -> str | None:
