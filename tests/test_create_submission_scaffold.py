@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
@@ -254,6 +255,35 @@ def test_create_scaffold_rejects_asset_target_reserved_for_scaffold(
     target_dir = tmp_path / "student"
 
     with pytest.raises(ValueError, match="riservato allo scaffold"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+        )
+
+    assert not (target_dir / "assignments").exists()
+
+
+@pytest.mark.parametrize(
+    "targets",
+    [
+        ("data", "data/input.txt"),
+        ("data/input.txt", "data"),
+    ],
+)
+def test_create_scaffold_rejects_parent_child_asset_targets(tmp_path, targets) -> None:
+    (tmp_path / "first.txt").write_text("primo\n", encoding="utf-8")
+    (tmp_path / "second.txt").write_text("secondo\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {"type": "example", "path": "first.txt", "target_path": targets[0]},
+            {"type": "example", "path": "second.txt", "target_path": targets[1]},
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
+
+    with pytest.raises(ValueError, match="sovrapposto"):
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target_dir,
@@ -1029,7 +1059,7 @@ def test_create_scaffold_rejects_reserved_source_name(tmp_path, source_name) -> 
         )
 
 
-def test_create_scaffold_canonicalizes_source_asset_case_alias(tmp_path) -> None:
+def test_create_scaffold_rejects_source_asset_case_alias(tmp_path) -> None:
     (tmp_path / "starter").mkdir()
     (tmp_path / "starter" / "main.py").write_text("print('docente')\n", encoding="utf-8")
     payload = {
@@ -1044,10 +1074,52 @@ def test_create_scaffold_canonicalizes_source_asset_case_alias(tmp_path) -> None
     }
     activity_path = write_activity(tmp_path, payload)
 
+    with pytest.raises(ValueError, match="nome canonico main.py"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=tmp_path / "student",
+        )
+
+    assert not (tmp_path / "student" / "assignments").exists()
+
+
+def test_create_scaffold_reconciles_trusted_source_alias_on_case_sensitive_fs(tmp_path) -> None:
+    if os.name == "nt":
+        pytest.skip("Scenario di trasferimento da Windows a filesystem case-sensitive.")
+    (tmp_path / "starter").mkdir()
+    (tmp_path / "starter" / "main.py").write_text("print('docente')\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "starter",
+                "path": "starter/main.py",
+                "target_path": "main.py",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
     destination = create_submission_scaffold.create_scaffold(
         activity_path=activity_path,
-        target_dir=tmp_path / "student",
+        target_dir=target_dir,
+    )
+    source = destination / "main.py"
+    source.write_text("print('studente')\n", encoding="utf-8")
+    source.rename(destination / "MAIN.PY")
+    manifest_path = create_submission_scaffold.managed_assets_path(
+        target_dir,
+        "python-base-somma-001",
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["assets"]["MAIN.PY"] = manifest["assets"].pop("main.py")
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+        overwrite=True,
     )
 
-    assert (destination / "main.py").read_text(encoding="utf-8") == "print('docente')\n"
-    assert "main.py" in {path.name for path in destination.iterdir()}
+    assert (destination / "main.py").read_text(encoding="utf-8") == "print('studente')\n"
+    assert not (destination / "MAIN.PY").exists()

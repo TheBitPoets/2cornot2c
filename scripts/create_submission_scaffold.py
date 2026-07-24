@@ -430,8 +430,13 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
         if is_reserved_scaffold_target(target_rel):
             raise ValueError(f"Target asset riservato allo scaffold: {target_rel}.")
         target_key = portable_path_key(target_rel)
-        if target_key in target_keys:
-            raise ValueError(f"Target asset duplicato o equivalente: {target_rel}.")
+        if any(
+            target_key == existing_key
+            or target_key[: len(existing_key)] == existing_key
+            or existing_key[: len(target_key)] == target_key
+            for existing_key in target_keys
+        ):
+            raise ValueError(f"Target asset duplicato, equivalente o sovrapposto: {target_rel}.")
         target_keys.add(target_key)
         source_path = activity_root / source_rel
         current = activity_root
@@ -605,7 +610,7 @@ def remove_stale_managed_assets(
         if portable_path_key(target_rel) in current_target_keys:
             retained[target_rel] = expected_digest
             continue
-        if target_rel == Path(protected_source):
+        if portable_path_key(target_rel) == portable_path_key(Path(protected_source)):
             continue
         target_path = confined_output_path(
             destination,
@@ -622,6 +627,56 @@ def remove_stale_managed_assets(
                 parent.rmdir()
                 parent = parent.parent
     return retained
+
+
+def reconcile_managed_target_aliases(
+    *,
+    destination: Path,
+    managed: dict[Path, str],
+    current_targets: set[Path],
+) -> dict[Path, str]:
+    """Move trusted legacy aliases to current portable target names."""
+    current_by_key = {
+        portable_path_key(target): target
+        for target in current_targets
+    }
+    reconciled: dict[Path, str] = {}
+    seen_keys: set[tuple[str, ...]] = set()
+    for managed_target, digest in managed.items():
+        key = portable_path_key(managed_target)
+        if key in seen_keys:
+            raise ValueError("Lo stato docente contiene target equivalenti duplicati.")
+        seen_keys.add(key)
+        current_target = current_by_key.get(key)
+        if current_target is None or managed_target == current_target:
+            reconciled[managed_target] = digest
+            continue
+
+        old_path = confined_output_path(
+            destination,
+            managed_target,
+            create_parents=False,
+        )
+        new_path = confined_output_path(
+            destination,
+            current_target,
+            create_parents=True,
+        )
+        old_exists = old_path.is_file()
+        new_exists = new_path.is_file()
+        if old_exists and new_exists:
+            try:
+                same_file = old_path.samefile(new_path)
+            except OSError:
+                same_file = False
+            if not same_file:
+                raise ValueError(
+                    f"Alias asset in conflitto: {managed_target} e {current_target}."
+                )
+        elif old_exists:
+            os.replace(old_path, new_path)
+        reconciled[current_target] = digest
+    return reconciled
 
 
 def write_managed_assets(manifest_path: Path, managed: dict[Path, str]) -> None:
@@ -768,15 +823,14 @@ def create_scaffold(
     destination = scaffold_dir(target_dir, identifier)
     manifest_path = managed_assets_path(target_dir, identifier, state_dir)
     asset_plan = student_asset_copy_plan(activity_path, activity)
-    asset_plan = [
-        (
-            source_path,
-            Path(source_name)
-            if portable_path_key(target_rel) == portable_path_key(Path(source_name))
-            else target_rel,
-        )
-        for source_path, target_rel in asset_plan
-    ]
+    for _, target_rel in asset_plan:
+        if (
+            portable_path_key(target_rel) == portable_path_key(Path(source_name))
+            and target_rel.as_posix() != Path(source_name).as_posix()
+        ):
+            raise ValueError(
+                f"Il target del sorgente deve usare il nome canonico {source_name}: {target_rel}."
+            )
     current_asset_targets = {target_rel for _, target_rel in asset_plan}
     current_asset_target_keys = {
         portable_path_key(target_rel)
@@ -797,6 +851,11 @@ def create_scaffold(
 
     managed_assets = load_managed_assets(manifest_path) if overwrite else {}
     if managed_assets:
+        managed_assets = reconcile_managed_target_aliases(
+            destination=destination,
+            managed=managed_assets,
+            current_targets=current_asset_targets,
+        )
         managed_assets = remove_stale_managed_assets(
             destination=destination,
             managed=managed_assets,
