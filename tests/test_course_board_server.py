@@ -28,6 +28,11 @@ from scripts.student_help_provider import StudentHelpResponse
 def isolated_process_lock_dir(tmp_path, monkeypatch) -> None:
     lock_dir = tmp_path.parent / f"{tmp_path.name}-process-locks"
     monkeypatch.setenv("THEBITLAB_LOCK_DIR", str(lock_dir))
+    monkeypatch.setattr(
+        course_board_server,
+        "GRADING_BINDINGS_PATH",
+        tmp_path / "teacher-grading-bindings.json",
+    )
 
 
 def test_server_bind_rejects_clear_text_network_exposure_by_default() -> None:
