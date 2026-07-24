@@ -770,7 +770,7 @@ def test_student_lab_does_not_claim_best_when_attempt_history_is_truncated(tmp_p
     monkeypatch.setattr(
         student_lab_attempts,
         "load_attempt_history",
-        lambda *args, **kwargs: {"attempts": [], "count": 501, "truncated": True},
+        lambda *args, **kwargs: {"attempts": [], "count": 0, "truncated": True},
     )
 
     assignment = student_lab_service.list_student_lab_assignments(

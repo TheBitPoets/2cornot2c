@@ -275,7 +275,12 @@ def build_lab_assignment(
         else None
     )
     report = latest_attempt or legacy_report
-    best_report = legacy_report if attempt_history["count"] == 0 else best_attempt
+    if attempt_history["truncated"]:
+        best_report = None
+    elif attempt_history["count"] == 0:
+        best_report = legacy_report
+    else:
+        best_report = best_attempt
     effective_report_path = report_path
     if latest_attempt is not None and report_path is not None:
         effective_report_path = student_lab_attempts.assignment_history_dir(report_path, assignment_id) / "latest.json"
