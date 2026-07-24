@@ -3962,6 +3962,8 @@ function setupDashboardTooltips() {
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") hideDashboardTooltip();
   });
+  window.addEventListener("scroll", () => hideDashboardTooltip(), true);
+  window.addEventListener("resize", () => hideDashboardTooltip());
 }
 
 function badge(text, kind = "muted", title = "") {
