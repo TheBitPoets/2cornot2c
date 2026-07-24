@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import ctypes
 import errno
 import heapq
 import json
 import os
+import sys
 import tempfile
 import uuid
 from contextlib import contextmanager
@@ -144,12 +146,45 @@ def write_json_atomic(path: Path, payload: dict[str, Any], *, base_dir: Path | N
 
 
 def hard_link_is_unsupported(error: OSError) -> bool:
-    """Return whether an exclusive hard-link publish needs the portable fallback."""
+    """Return whether the current platform can try an atomic no-replace rename."""
 
-    return getattr(error, "winerror", None) in {1, 50} or error.errno in {
-        errno.ENOTSUP,
-        errno.EOPNOTSUPP,
-    }
+    if os.name == "nt":
+        return getattr(error, "winerror", None) in {1, 50}
+    if sys.platform.startswith("linux"):
+        return error.errno in {errno.EPERM, errno.ENOTSUP, errno.EOPNOTSUPP}
+    return False
+
+
+def rename_no_replace(temporary_path: Path, output: Path) -> None:
+    """Atomically rename without replacing an existing path on Windows or Linux."""
+
+    if os.name == "nt":
+        os.rename(temporary_path, output)
+        return
+    if not sys.platform.startswith("linux"):
+        raise OSError(errno.ENOTSUP, "Atomic no-replace rename is not supported", output)
+
+    renameat2 = getattr(ctypes.CDLL(None, use_errno=True), "renameat2", None)
+    if renameat2 is None:
+        raise OSError(errno.ENOSYS, "renameat2 is not available", output)
+    renameat2.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    renameat2.restype = ctypes.c_int
+    result = renameat2(
+        -100,
+        os.fsencode(temporary_path),
+        -100,
+        os.fsencode(output),
+        1,
+    )
+    if result != 0:
+        error_code = ctypes.get_errno()
+        raise OSError(error_code, os.strerror(error_code), output)
 
 
 def publish_exclusive(temporary_path: Path, output: Path) -> None:
@@ -164,20 +199,7 @@ def publish_exclusive(temporary_path: Path, output: Path) -> None:
         if not hard_link_is_unsupported(error):
             raise
 
-    reserved = False
-    descriptor: int | None = None
-    try:
-        descriptor = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        reserved = True
-        os.close(descriptor)
-        descriptor = None
-        os.replace(temporary_path, output)
-    except BaseException:
-        if descriptor is not None:
-            os.close(descriptor)
-        if reserved:
-            output.unlink(missing_ok=True)
-        raise
+    rename_no_replace(temporary_path, output)
 
 
 def write_json_exclusive(path: Path, payload: dict[str, Any], *, base_dir: Path) -> None:

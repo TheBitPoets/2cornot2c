@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import errno
 import json
+import os
 
 import pytest
 
@@ -152,8 +154,9 @@ def test_exclusive_write_falls_back_when_hard_links_are_unsupported(tmp_path, mo
     payload = {"attempt_id": "attempt-exfat", "passed": True}
 
     def unsupported_link(source, destination):
-        error = OSError("hard links unsupported")
-        error.winerror = 1
+        error = OSError(errno.EPERM, "hard links unsupported")
+        if os.name == "nt":
+            error.winerror = 1
         raise error
 
     monkeypatch.setattr(student_lab_attempts.os, "link", unsupported_link)
@@ -170,7 +173,7 @@ def test_exclusive_write_does_not_mask_unrelated_link_errors(tmp_path, monkeypat
     output = tmp_path / "attempt.json"
 
     def denied_link(source, destination):
-        raise PermissionError("link denied")
+        raise OSError(errno.EACCES, "link denied")
 
     monkeypatch.setattr(student_lab_attempts.os, "link", denied_link)
 
@@ -182,6 +185,33 @@ def test_exclusive_write_does_not_mask_unrelated_link_errors(tmp_path, monkeypat
         )
 
     assert not output.exists()
+
+
+def test_exclusive_fallback_failure_leaves_no_placeholder(tmp_path, monkeypatch) -> None:
+    output = tmp_path / "attempt.json"
+
+    def unsupported_link(source, destination):
+        error = OSError(errno.EPERM, "hard links unsupported")
+        if os.name == "nt":
+            error.winerror = 1
+        raise error
+
+    monkeypatch.setattr(student_lab_attempts.os, "link", unsupported_link)
+    monkeypatch.setattr(
+        student_lab_attempts,
+        "rename_no_replace",
+        lambda source, destination: (_ for _ in ()).throw(OSError("publish failed")),
+    )
+
+    with pytest.raises(OSError, match="publish failed"):
+        student_lab_attempts.write_json_exclusive(
+            output,
+            {"attempt_id": "attempt-failed"},
+            base_dir=tmp_path,
+        )
+
+    assert not output.exists()
+    assert list(tmp_path.glob(".*.tmp")) == []
 
 
 def test_exclusive_attempt_is_removed_when_directory_sync_fails(tmp_path, monkeypatch) -> None:
