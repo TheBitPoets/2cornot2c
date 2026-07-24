@@ -654,6 +654,25 @@ def test_run_bounded_process_times_out_while_stdin_is_blocked() -> None:
     assert time.monotonic() - started < 2
 
 
+def test_run_bounded_process_times_out_when_descendant_keeps_stdout_open() -> None:
+    started = time.monotonic()
+    child_code = "import time; time.sleep(3)"
+    parent_code = (
+        "import subprocess, sys; "
+        f"subprocess.Popen([sys.executable, '-c', {child_code!r}], "
+        "stdin=sys.stdin, stdout=sys.stdout)"
+    )
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        grade_activity.run_bounded_process(
+            [sys.executable, "-c", parent_code],
+            input_text="",
+            timeout=0.1,
+        )
+
+    assert time.monotonic() - started < 2
+
+
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:
     class Args:
         activity = tmp_path / "missing.json"

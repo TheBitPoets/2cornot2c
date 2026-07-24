@@ -827,10 +827,11 @@ def run_bounded_process(
     command: list[str],
     *,
     input_text: str,
-    timeout: int,
+    timeout: float,
     max_output_bytes: int = MAX_DOCKER_OUTPUT_BYTES,
 ) -> subprocess.CompletedProcess[str]:
     """Run a process while bounding captured stdout and discarding stderr."""
+    deadline = time.monotonic() + timeout
     process = subprocess.Popen(
         command,
         stdin=subprocess.PIPE,
@@ -869,24 +870,27 @@ def run_bounded_process(
     reader.start()
     try:
         try:
-            returncode = process.wait(timeout=timeout)
+            returncode = process.wait(timeout=max(0, deadline - time.monotonic()))
         except subprocess.TimeoutExpired as error:
             process.kill()
             process.wait()
-            writer.join()
-            reader.join()
             raise subprocess.TimeoutExpired(
                 command,
                 timeout,
                 output=bytes(output),
             ) from error
-        reader.join()
+        writer.join(timeout=max(0, deadline - time.monotonic()))
+        reader.join(timeout=max(0, deadline - time.monotonic()))
+        if writer.is_alive() or reader.is_alive():
+            raise subprocess.TimeoutExpired(
+                command,
+                timeout,
+                output=bytes(output),
+            )
     finally:
         if process.poll() is None:
             process.kill()
             process.wait()
-        writer.join()
-        reader.join()
 
     if output_exceeded.is_set():
         raise ValueError(
