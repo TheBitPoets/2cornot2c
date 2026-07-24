@@ -67,6 +67,9 @@ jobs:
             --activity "$RUNNER_TEMP/student-work/assignments/c-base-somma-001/activity.json" \
             --source "$RUNNER_TEMP/student-work/assignments/c-base-somma-001/main.c" \
             --language c \
+            --assignment-id "assignment-smoke-001" \
+            --student-id "studente-smoke-001" \
+            --commit "${GITHUB_SHA}" \
             --docker \
             --report "$RUNNER_TEMP/thebitlab-report/report.json"
           python - <<'PY'
@@ -77,4 +80,7 @@ jobs:
           report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "thebitlab-report" / "report.json").read_text(encoding="utf-8"))
           assert report["passed"] is True
           assert report["status"] == "passed"
+          assert report["assignment_id"] == "assignment-smoke-001"
+          assert report["student_id"] == "studente-smoke-001"
+          assert report["commit"] == os.environ["GITHUB_SHA"]
           PY

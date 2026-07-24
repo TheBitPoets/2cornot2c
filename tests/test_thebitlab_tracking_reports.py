@@ -5,6 +5,7 @@ from dataclasses import replace
 import pytest
 
 from scripts import thebitlab_tracking_reports as tracking_reports
+from scripts import grade_activity
 from scripts.thebitlab_grading_artifacts import (
     AcquiredGradingReport,
     GradingArtifactError,
@@ -162,6 +163,37 @@ def test_artifact_tracking_source_resolves_verified_remote_report() -> None:
             900,
         )
     ]
+
+
+def test_grader_report_is_accepted_after_workflow_metadata_enrichment(tmp_path) -> None:
+    source_path = tmp_path / "main.py"
+    source_path.write_text("print(5)\n", encoding="utf-8")
+    produced = grade_activity.grade_activity(
+        {
+            "id": "python-base-somma-001",
+            "linguaggio": "python",
+            "test_cases": [{"name": "output", "expected_stdout": "5\n"}],
+        },
+        source_path,
+    )
+    produced = grade_activity.with_report_metadata(
+        produced,
+        assignment_id="assignment-001",
+        student_id="rossi-mario",
+        commit=HEAD_SHA,
+    )
+    source = tracking_reports.ArtifactTrackingReportSource(
+        FakeArtifactSource(
+            AcquiredGradingReport(report=produced, provenance=provenance())
+        ),
+        [binding()],
+    )
+
+    result = source.resolve(request())
+
+    assert result.selection == "github_actions_artifact"
+    assert result.authority == "verified_remote"
+    assert result.report["passed"] is True
 
 
 def test_artifact_tracking_source_skips_students_without_binding() -> None:

@@ -10,6 +10,12 @@ on:
         description: "Identificativo stabile dell'attivita"
         required: true
         default: "c-base-somma-001"
+      assignment_id:
+        description: "Identificativo stabile dell'assegnazione"
+        required: true
+      student_id:
+        description: "Identificativo stabile dello studente"
+        required: true
       activity_path:
         description: "Path della activity JSON nel repository studente"
         required: true
@@ -54,6 +60,9 @@ jobs:
             --activity "student-work/${{ inputs.activity_path }}" \
             --source "student-work/${{ inputs.source_path }}" \
             --language "${{ inputs.language }}" \
+            --assignment-id "${{ inputs.assignment_id }}" \
+            --student-id "${{ inputs.student_id }}" \
+            --commit "${{ github.sha }}" \
             --docker \
             --report "$RUNNER_TEMP/thebitlab-report/report.json"
 

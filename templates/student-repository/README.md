@@ -64,12 +64,18 @@ Richiede questi input:
 | Input | Esempio |
 |---|---|
 | `activity_id` | `c-base-somma-001` |
+| `assignment_id` | `assignment-c-base-somma-001-3a` |
+| `student_id` | `rossi-mario` |
 | `activity_path` | `assignments/c-base-somma-001/activity.json` |
 | `source_path` | `assignments/c-base-somma-001/main.c` |
 | `language` | `c` |
 | `thebitlab_ref` | `main`, oppure tag/commit indicato dal docente |
 
 `activity_id` deve essere scritto come slug sicuro: usa lettere minuscole, numeri e trattini. Evita spazi, slash e caratteri speciali.
+
+`assignment_id` e `student_id` devono coincidere con i valori comunicati dal docente:
+entrano nel report autorevole e impediscono di attribuire il grading alla consegna o allo
+studente sbagliati.
 
 Il workflow:
 

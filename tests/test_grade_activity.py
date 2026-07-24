@@ -356,6 +356,22 @@ def test_positive_int_rejects_zero() -> None:
         raise AssertionError("positive_int should reject zero")
 
 
+def test_report_metadata_enriches_remote_tracking_identity() -> None:
+    original = {"activity_id": "activity-001", "status": "passed"}
+
+    enriched = grade_activity.with_report_metadata(
+        original,
+        assignment_id=" assignment-001 ",
+        student_id=" rossi-mario ",
+        commit="a" * 40,
+    )
+
+    assert original == {"activity_id": "activity-001", "status": "passed"}
+    assert enriched["assignment_id"] == "assignment-001"
+    assert enriched["student_id"] == "rossi-mario"
+    assert enriched["commit"] == "a" * 40
+
+
 def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     activity_path = tmp_path / "activity.json"
     source_path = tmp_path / "main.c"

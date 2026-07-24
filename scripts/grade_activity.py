@@ -710,6 +710,12 @@ def run_docker_grading(args: argparse.Namespace) -> int:
                 if result.stderr:
                     print(result.stderr)
                 return 1
+            report = with_report_metadata(
+                report,
+                assignment_id=getattr(args, "assignment_id", None),
+                student_id=getattr(args, "student_id", None),
+                commit=getattr(args, "commit", None),
+            )
             write_report(report, args.report)
             if result.stderr:
                 print(result.stderr)
@@ -732,12 +738,36 @@ def positive_int(value: str) -> int:
     return number
 
 
+def with_report_metadata(
+    report: dict[str, Any],
+    *,
+    assignment_id: str | None = None,
+    student_id: str | None = None,
+    commit: str | None = None,
+) -> dict[str, Any]:
+    """Return a report enriched with explicit remote-tracking identities."""
+
+    enriched = dict(report)
+    for key, value in (
+        ("assignment_id", assignment_id),
+        ("student_id", student_id),
+        ("commit", commit),
+    ):
+        clean = str(value or "").strip()
+        if clean:
+            enriched[key] = clean
+    return enriched
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Corregge in modo deterministico una consegna TheBitLab.")
     parser.add_argument("--activity", type=Path, required=True, help="Scheda attivita JSON con test_cases.")
     parser.add_argument("--source", type=Path, required=True, help="File sorgente da correggere.")
     parser.add_argument("--language", choices=sorted(SUPPORTED_LANGUAGES), help="Linguaggio da usare, se diverso dalla scheda.")
     parser.add_argument("--report", type=Path, help="Percorso report JSON da scrivere.")
+    parser.add_argument("--assignment-id", help="Identificativo assegnazione da includere nel report.")
+    parser.add_argument("--student-id", help="Identificativo studente da includere nel report.")
+    parser.add_argument("--commit", help="SHA del commit studente da includere nel report.")
     parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout compilazione/esecuzione.")
     parser.add_argument("--docker", action="store_true", help="Esegue il grading dentro la sandbox Docker.")
     parser.add_argument("--docker-image", default=DEFAULT_DOCKER_IMAGE, help="Immagine Docker da usare con --docker.")
@@ -750,7 +780,12 @@ def main() -> int:
         return run_docker_grading(args)
 
     activity = load_activity(args.activity)
-    report = grade_activity(activity, args.source, timeout_seconds=args.timeout, language=args.language)
+    report = with_report_metadata(
+        grade_activity(activity, args.source, timeout_seconds=args.timeout, language=args.language),
+        assignment_id=args.assignment_id,
+        student_id=args.student_id,
+        commit=args.commit,
+    )
 
     if args.report:
         write_report(report, args.report)
