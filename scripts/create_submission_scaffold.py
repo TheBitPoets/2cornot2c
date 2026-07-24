@@ -53,6 +53,31 @@ LANGUAGE_ALIASES = {
 }
 STUDENT_ASSET_TYPES = {"starter", "example", "fixture", "visible_test"}
 TEACHER_ASSET_TYPES = {"hidden_test", "runner", "teacher_only"}
+STUDENT_ACTIVITY_FIELDS = {
+    "schema_version",
+    "id",
+    "titolo",
+    "title",
+    "tipo",
+    "kind",
+    "difficolta",
+    "difficulty",
+    "argomenti",
+    "topics",
+    "linguaggio",
+    "language",
+    "source_name",
+    "consegna",
+    "instructions",
+    "student_support_mode",
+    "contesto",
+    "vincoli",
+    "materiali",
+    "correzione",
+    "grading_policy",
+    "metriche",
+    "assets",
+}
 
 
 def is_safe_slug(value: str) -> bool:
@@ -243,11 +268,7 @@ def student_assets(activity: dict[str, Any]) -> list[dict[str, Any]]:
 def student_activity_payload(activity: dict[str, Any]) -> dict[str, Any]:
     """Return public activity metadata without teacher-only grading data."""
 
-    payload = {
-        key: value
-        for key, value in activity.items()
-        if key not in {"test_cases", "rubrica"}
-    }
+    payload = {key: value for key, value in activity.items() if key in STUDENT_ACTIVITY_FIELDS}
     if "assets" in payload:
         payload["assets"] = student_assets(activity)
     return payload

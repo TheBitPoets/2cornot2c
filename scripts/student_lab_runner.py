@@ -206,7 +206,11 @@ def normalize_c_tests(tests: Any) -> list[dict[str, Any]]:
 def redact_student_grading_report(report: dict[str, Any]) -> dict[str, Any]:
     """Remove teacher-only test details before persisting a student report."""
 
-    redacted = dict(report)
+    redacted = {
+        key: value
+        for key, value in report.items()
+        if key not in {"expected_stdout", "test_cases", "rubrica", "soluzione_attesa"}
+    }
     tests = report.get("tests")
     if isinstance(tests, list):
         redacted["tests"] = [
@@ -214,7 +218,7 @@ def redact_student_grading_report(report: dict[str, Any]) -> dict[str, Any]:
                 **{
                     key: value
                     for key, value in test.items()
-                    if key not in {"expected_stdout", "stdin", "name"}
+                    if key not in {"expected_stdout", "stdin", "name", "message", "detail"}
                 },
                 "name": f"Test {index}",
             }
@@ -299,11 +303,12 @@ def run_python_pytest(
 def wrap_runner_report(assignment: dict[str, Any], source: Path, report: dict[str, Any], language: str) -> dict[str, Any]:
     """Wrap deterministic grader output in the student lab runner contract."""
 
-    summary = report.get("summary") if isinstance(report.get("summary"), dict) else {"passed": 0, "total": 0}
-    tests = normalize_c_tests(report.get("tests"))
+    student_report = redact_student_grading_report(report)
+    summary = student_report.get("summary") if isinstance(student_report.get("summary"), dict) else {"passed": 0, "total": 0}
+    tests = normalize_c_tests(student_report.get("tests"))
     return {
         **report_base(assignment, language=language, source=source),
-        **report,
+        **student_report,
         "schema_version": "student_lab_run.v1",
         "backend": "local",
         "assignment_id": clean_text(assignment.get("assignment_id")),
@@ -368,12 +373,7 @@ def run_docker_runner(
             error=str(error),
             backend="docker",
         )
-    wrapped = wrap_runner_report(
-        assignment,
-        source,
-        redact_student_grading_report(report),
-        language,
-    )
+    wrapped = wrap_runner_report(assignment, source, report, language)
     wrapped["backend"] = "docker"
     if worker_stderr:
         wrapped["runner_stderr"] = worker_stderr
@@ -616,7 +616,7 @@ def student_repo_path(root: Path, assignment: dict[str, Any]) -> Path | None:
 def storage_report(root: Path, assignment: dict[str, Any], report: dict[str, Any]) -> dict[str, Any]:
     """Return a report normalized for storage in the student repository."""
 
-    stored = dict(report)
+    stored = redact_student_grading_report(report)
     stored.setdefault("submitted_at", clean_text(report.get("generated_at")) or datetime.now().astimezone().isoformat(timespec="seconds"))
     repo_path = student_repo_path(root, assignment)
     source_value = clean_text(stored.get("source"))

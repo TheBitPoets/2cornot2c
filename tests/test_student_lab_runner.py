@@ -200,6 +200,42 @@ def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path
     assert assignment_payload["attempts"]["final"] is None
 
 
+def test_write_student_report_redacts_teacher_only_test_details(tmp_path) -> None:
+    write_assignment(tmp_path, write_activity(tmp_path))
+    assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+    )
+    report = {
+        "passed": False,
+        "status": "failed",
+        "activity_id": "python-base-somma-001",
+        "language": "python",
+        "tests": [
+            {
+                "name": "nome-riservato",
+                "passed": False,
+                "status": "failed",
+                "stdin": "input-riservato",
+                "expected_stdout": "output-riservato",
+                "stdout": "output-studente",
+                "message": "Atteso output-riservato",
+            }
+        ],
+        "summary": {"passed": 0, "total": 1},
+    }
+
+    report_path = student_lab_runner.write_student_report(tmp_path, assignment, report)
+
+    stored = json.loads(report_path.read_text(encoding="utf-8"))
+    serialized = json.dumps(stored)
+    assert stored["tests"][0]["name"] == "Test 1"
+    assert "nome-riservato" not in serialized
+    assert "input-riservato" not in serialized
+    assert "output-riservato" not in serialized
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="node non disponibile nell'ambiente di test")
 def test_node_assignment_flows_from_runner_to_service_grading(tmp_path) -> None:
     report, assignment_payload = run_store_and_reload_script_assignment(
@@ -573,7 +609,8 @@ def test_run_local_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> N
     )
 
     assert report["status"] == "failed"
-    assert report["tests"][0]["message"] == "Output atteso: 5; output ottenuto: 4"
+    assert report["tests"][0]["message"] == "Output ottenuto: 4"
+    assert "expected_stdout" not in report["tests"][0]
 
 
 def test_run_docker_assignment_wraps_container_report(monkeypatch, tmp_path) -> None:

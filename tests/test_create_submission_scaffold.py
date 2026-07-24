@@ -77,6 +77,10 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
         {"name": "riservato", "stdin": "2 3\n", "expected_stdout": "5\n"}
     ]
     payload["rubrica"] = [{"criterio": "Correttezza", "punti": 100}]
+    payload["soluzione_attesa"] = {
+        "tipo": "programma-c",
+        "output_atteso": "Differenza: 3",
+    }
     payload["assets"] = [
         {"type": "hidden_test", "path": "tests/hidden.py", "visibility": "teacher"},
     ]
@@ -90,10 +94,12 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
     distributed = json.loads((destination / "activity.json").read_text(encoding="utf-8"))
     assert "test_cases" not in distributed
     assert "rubrica" not in distributed
+    assert "soluzione_attesa" not in distributed
     assert distributed["assets"] == []
     serialized = json.dumps(distributed)
     assert "expected_stdout" not in serialized
     assert "riservato" not in serialized
+    assert "Differenza: 3" not in serialized
 
 
 def test_create_scaffold_supports_canonical_activity_metadata(tmp_path) -> None:
