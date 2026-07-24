@@ -734,9 +734,17 @@ def validate_current_asset_destinations(
     *,
     destination: Path,
     current_targets: set[Path],
+    managed: dict[Path, str],
+    protected_source: str,
 ) -> None:
     """Reject existing filesystem nodes that cannot represent asset files."""
+    managed_keys = {
+        portable_path_key(target)
+        for target in managed
+    }
+    source_key = portable_path_key(Path(protected_source))
     for current_target in current_targets:
+        current_key = portable_path_key(current_target)
         target_path = confined_output_path(
             destination,
             current_target,
@@ -745,6 +753,14 @@ def validate_current_asset_destinations(
         if target_path.exists() and not target_path.is_file():
             raise ValueError(
                 f"Il target asset esistente non e un file: {current_target}."
+            )
+        if (
+            target_path.is_file()
+            and current_key not in managed_keys
+            and current_key != source_key
+        ):
+            raise ValueError(
+                f"Un file studente non gestito occupa il nuovo target asset: {current_target}."
             )
 
 
@@ -991,6 +1007,8 @@ def create_scaffold(
     validate_current_asset_destinations(
         destination=destination,
         current_targets=current_asset_targets,
+        managed=managed_assets,
+        protected_source=source_name,
     )
     if managed_assets:
         managed_assets = reconcile_managed_target_aliases(

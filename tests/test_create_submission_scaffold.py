@@ -855,14 +855,16 @@ def test_create_scaffold_rejects_new_target_overlapping_modified_stale_asset(
 
 
 @pytest.mark.parametrize(
-    ("blocking_path", "new_target"),
+    ("blocking_kind", "blocking_path", "new_target"),
     [
-        ("data", "data"),
-        ("data", "data/input.txt"),
+        ("directory", "data", "data"),
+        ("file", "data", "data/input.txt"),
+        ("file", "example.txt", "example.txt"),
     ],
 )
 def test_create_scaffold_rejects_unmanaged_structural_asset_collision_before_writes(
     tmp_path,
+    blocking_kind,
     blocking_path,
     new_target,
 ) -> None:
@@ -875,7 +877,7 @@ def test_create_scaffold_rejects_unmanaged_structural_asset_collision_before_wri
         target_dir=target_dir,
     )
     unmanaged_path = destination / blocking_path
-    if blocking_path == new_target:
+    if blocking_kind == "directory":
         unmanaged_path.mkdir()
     else:
         unmanaged_path.write_text("file studente\n", encoding="utf-8")
@@ -895,7 +897,10 @@ def test_create_scaffold_rejects_unmanaged_structural_asset_collision_before_wri
     }
     write_activity(tmp_path, payload)
 
-    with pytest.raises(ValueError, match="non e (un file|una directory)"):
+    with pytest.raises(
+        ValueError,
+        match="(non e (un file|una directory)|non gestito occupa)",
+    ):
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target_dir,
