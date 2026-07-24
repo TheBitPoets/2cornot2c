@@ -566,6 +566,15 @@ def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> 
           report_selection: "legacy",
           grading_provisional: true,
         }), /badgeWarn/);
+        const accessibleBadge = tested.reportSelectionBadge({
+          submitted: true,
+          report_selection: "latest",
+          grading_provisional: true,
+        });
+        assert.match(accessibleBadge, /class="badge badgeWarn hasTooltip"/);
+        assert.match(accessibleBadge, /tabindex="0"/);
+        assert.match(accessibleBadge, /aria-label="Provvisorio[.]/);
+        assert.match(accessibleBadge, /data-tooltip=/);
         """
     )
 

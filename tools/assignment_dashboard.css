@@ -1914,6 +1914,46 @@ th.isResizableColumn:hover {
 .badgeBad { background: #fdecea; color: #8f1d14; }
 .badgeMuted { background: #eeeeee; color: #666666; }
 
+.badge.hasTooltip {
+  position: relative;
+  cursor: help;
+}
+
+.badge.hasTooltip:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.badge.hasTooltip::after {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + .45rem);
+  left: 50%;
+  width: max-content;
+  max-width: 18rem;
+  transform: translateX(-50%);
+  border: 1px solid rgba(17, 17, 17, .22);
+  border-radius: 6px;
+  background: #111111;
+  color: #ffffff;
+  content: attr(data-tooltip);
+  opacity: 0;
+  padding: .45rem .55rem;
+  font-size: .72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  pointer-events: none;
+  text-align: left;
+  visibility: hidden;
+  white-space: normal;
+}
+
+.badge.hasTooltip:hover::after,
+.badge.hasTooltip:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 .reportSelectionBadge {
   display: inline-block;
   margin-top: .35rem;

@@ -3897,8 +3897,11 @@ function badge(text, kind = "muted", title = "") {
     bad: "badgeBad",
     muted: "badgeMuted",
   }[kind] || "badgeMuted";
-  const titleAttribute = title ? ` title="${escapeHtml(title)}"` : "";
-  return `<span class="badge ${className}"${titleAttribute}>${escapeHtml(text || "-")}</span>`;
+  const label = text || "-";
+  const tooltipAttributes = title
+    ? ` title="${escapeHtml(title)}" tabindex="0" aria-label="${escapeHtml(`${label}. ${title}`)}" data-tooltip="${escapeHtml(title)}"`
+    : "";
+  return `<span class="badge ${className}${title ? " hasTooltip" : ""}"${tooltipAttributes}>${escapeHtml(label)}</span>`;
 }
 
 function reportSelectionState(value) {
