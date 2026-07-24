@@ -129,6 +129,7 @@ def test_github_source_acquires_latest_exact_non_expired_report() -> None:
         archive_download_url="https://api.github.com/repos/TheBitPoets/rossi-mario/actions/artifacts/13/zip",
         digest="sha256:digest-13",
     )
+    assert "/actions/runs/913/artifacts?" in transport.calls[0]["url"]
     assert "name=thebitlab-demo-python-report" in transport.calls[0]["url"]
     assert transport.calls[0]["headers"]["Authorization"] == "Bearer github-secret"
     assert transport.calls[1]["headers"]["Authorization"] == "Bearer github-secret"

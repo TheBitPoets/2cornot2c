@@ -230,7 +230,13 @@ class GitHubActionsArtifactSource:
         fetched_count = 0
         page = 1
         while True:
-            artifacts, page_total_count = self._artifact_page(owner, repo, artifact_name, page)
+            artifacts, page_total_count = self._artifact_page(
+                owner,
+                repo,
+                artifact_name,
+                expected_workflow_run_id,
+                page,
+            )
             if total_count is None:
                 total_count = page_total_count
                 if total_count > MAX_ARTIFACT_LIST_PAGES * ARTIFACTS_PER_PAGE:
@@ -270,6 +276,7 @@ class GitHubActionsArtifactSource:
         owner: str,
         repo: str,
         artifact_name: str,
+        workflow_run_id: int,
         page: int,
     ) -> tuple[list[Any], int]:
         query = urllib.parse.urlencode(
@@ -281,7 +288,7 @@ class GitHubActionsArtifactSource:
         )
         url = (
             f"{GITHUB_API_ROOT}/repos/{urllib.parse.quote(owner, safe='')}/"
-            f"{urllib.parse.quote(repo, safe='')}/actions/artifacts?{query}"
+            f"{urllib.parse.quote(repo, safe='')}/actions/runs/{workflow_run_id}/artifacts?{query}"
         )
         response = self.transport.request(
             url,

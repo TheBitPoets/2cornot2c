@@ -252,7 +252,7 @@ dell'artifact, lo SHA completo atteso della consegna, l'ID della workflow run at
 mantenuto fuori dal repository. L'ID deve provenire da una sorgente docente fidata che abbia gia
 identificato la run del workflow autorizzato. Il servizio:
 
-1. interroga l'API GitHub Actions con paginazione limitata;
+1. interroga l'endpoint artifact della sola workflow run attesa con paginazione limitata;
 2. considera solo artifact con nome esatto, non scaduti, legati allo SHA e alla workflow run attesi;
 3. sceglie il piu recente usando un timestamp timezone-aware;
 4. richiede il redirect firmato con autenticazione;
