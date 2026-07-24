@@ -127,14 +127,15 @@ La schermata annotata e stata catturata sulla dashboard reale usando la root `tm
 <strong>7.</strong> Verifica stato completata/consegnata, non mancante.<br>
 <strong>8.</strong> Controlla scadenza e indicazione del grading.<br><br>
 
-<strong style="color:#168a45">Step 9-12 - Verde: dettaglio e test</strong><br>
+<strong style="color:#168a45">Step 9-13 - Verde: dettaglio, test e tentativi</strong><br>
 <strong>9.</strong> Apri <code>Dettaglio</code> o <code>Apri consegna</code>.<br>
 <strong>10.</strong> Verifica workspace e file, inclusi <code>main.py</code> e <code>tests/test_main.py</code> quando disponibili.<br>
 <strong>11.</strong> Chiudi il modal e apri il pannello <code>Lab</code>.<br>
-<strong>12.</strong> Controlla report, ultimo tentativo e risultato <code>2/2</code>.<br><br>
+<strong>12.</strong> Controlla report, riepilogo tentativi e risultato <code>2/2</code>.<br>
+<strong>13.</strong> Clicca <code>Tentativi</code> e verifica nel modal data, esito, test e tentativo definitivo.<br><br>
 
-<strong style="color:#c87800">Step 13 - Arancione: aiuti e feedback</strong><br>
-<strong>13.</strong> Verifica <code>Aiuti tracciati</code> e che il feedback AI non approvato non venga mostrato come definitivo.
+<strong style="color:#c87800">Step 14 - Arancione: aiuti e feedback</strong><br>
+<strong>14.</strong> Verifica <code>Aiuti tracciati</code> e che il feedback AI non approvato non venga mostrato come definitivo.
 
 </td>
 </tr>
@@ -147,7 +148,7 @@ La schermata annotata e stata catturata sulla dashboard reale usando la root `tm
 </details>
 
 <details>
-<summary>Evidenza Step 9-12: pannello Lab con workspace, report e test</summary>
+<summary>Evidenza Step 9-13: pannello Lab con workspace, report, test e accesso ai tentativi</summary>
 
 ![Pannello Lab con workspace, report e test](images/dashboard-guides/scenario-1-studente-lab.png)
 </details>
@@ -194,8 +195,10 @@ Il secondo comando resta attivo nel terminale. Usa un browser separato per la pr
 9. Apri `Dettaglio` o `Apri consegna` nella riga della demo.
 10. Nel dettaglio verifica che il workspace risulti presente e che siano elencati i file dell'attivita, inclusi `main.py` e `tests/test_main.py` quando disponibili.
 11. Chiudi il modal, torna alla vista della consegna e apri il pannello `Lab`.
-12. Controlla il report, l'ultimo tentativo e il risultato dei test.
-13. Verifica che gli aiuti tracciati siano valorizzati e che un eventuale feedback AI non approvato dal docente non venga mostrato come feedback definitivo.
+12. Controlla il report, il riepilogo con conteggio, ultimo, migliore e definitivo, e il risultato dei test.
+13. Clicca `Tentativi`. Nel modal verifica che ogni elemento mostri data, esito, test superati e identificativo;
+    il tentativo scelto deve avere il badge `Definitivo`. Chiudi il modal e controlla che nessun dato sia cambiato.
+14. Verifica che gli aiuti tracciati siano valorizzati e che un eventuale feedback AI non approvato dal docente non venga mostrato come feedback definitivo.
 
 ### Risultato atteso
 
@@ -203,7 +206,8 @@ Il secondo comando resta attivo nel terminale. Usa un browser separato per la pr
 - Il workspace risulta presente.
 - Il report risulta presente.
 - I test risultano passati: `2/2`.
-- L'ultimo tentativo e valorizzato.
+- Ultimo e migliore sono valorizzati; il definitivo compare solo se e stato scelto esplicitamente.
+- Il modal `Tentativi` mostra lo storico recente in sola lettura senza controlli di modifica.
 - Gli aiuti tracciati sono valorizzati.
 - Il feedback AI non approvato dal docente non viene mostrato allo studente come feedback definitivo.
 
