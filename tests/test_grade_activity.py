@@ -164,18 +164,32 @@ def test_grade_activity_passes_valid_javascript_program(tmp_path) -> None:
     assert report["language"] == "javascript"
 
 
-def test_node_runner_adds_runtime_startup_grace(monkeypatch, tmp_path) -> None:
-    captured: dict[str, int] = {}
+def test_node_runner_keeps_startup_grace_separate_from_student_timeout(monkeypatch, tmp_path) -> None:
+    captured: dict[str, int | list[str]] = {}
+
+    class StartupResult:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_startup(command, **kwargs):
+        captured["startup_command"] = command
+        captured["startup_timeout"] = kwargs["timeout"]
+        return StartupResult()
 
     def fake_run(command, test_case, *, timeout_seconds):
-        captured["timeout_seconds"] = timeout_seconds
+        captured["student_timeout"] = timeout_seconds
         return {"passed": True, "status": "passed"}
 
+    monkeypatch.setattr(grade_activity.subprocess, "run", fake_startup)
     monkeypatch.setattr(grade_activity, "run_command_test_case", fake_run)
+    source = tmp_path / "main.js"
 
-    grade_activity.run_node_test_case(tmp_path / "main.js", {}, timeout_seconds=2)
+    grade_activity.run_node_test_case(source, {}, timeout_seconds=2)
 
-    assert captured["timeout_seconds"] == 2 + grade_activity.DEFAULT_NODE_STARTUP_GRACE_SECONDS
+    assert captured["startup_command"] == ["node", "--check", str(source)]
+    assert captured["startup_timeout"] == grade_activity.DEFAULT_NODE_STARTUP_GRACE_SECONDS
+    assert captured["student_timeout"] == 2
 
 
 def test_grade_activity_passes_valid_sql_script(tmp_path) -> None:
@@ -446,7 +460,7 @@ def test_docker_timeout_scales_with_test_cases() -> None:
     activity = {"test_cases": [{"name": "uno"}, {"name": "due"}, {"name": "tre"}]}
 
     assert grade_activity.docker_timeout_seconds(activity, 5) == 30
-    assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "javascript"}, 5) == 45
+    assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "javascript"}, 5) == 60
 
 
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:

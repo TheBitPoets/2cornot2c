@@ -14,7 +14,7 @@ from typing import Any
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
-DEFAULT_NODE_STARTUP_GRACE_SECONDS = 5
+DEFAULT_NODE_STARTUP_GRACE_SECONDS = 10
 DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS = 10
 DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
 SUPPORTED_LANGUAGES = {
@@ -186,10 +186,43 @@ def run_python_test_case(source: Path, test_case: dict[str, Any], *, timeout_sec
 def run_node_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
     """Run one JavaScript source file through Node.js."""
 
+    name = str(test_case.get("name", "test"))
+    expected_stdout = str(test_case.get("expected_stdout", ""))
+    startup_command = ["node", "--check", str(source)]
+    try:
+        subprocess.run(
+            startup_command,
+            capture_output=True,
+            text=True,
+            timeout=DEFAULT_NODE_STARTUP_GRACE_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "runtime-startup-timeout",
+            "command": startup_command,
+            "returncode": None,
+            "stdout": error.stdout or "",
+            "stderr": error.stderr or "",
+            "expected_stdout": expected_stdout,
+        }
+    except OSError as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "execution-error",
+            "command": startup_command,
+            "returncode": None,
+            "stdout": "",
+            "stderr": str(error),
+            "expected_stdout": expected_stdout,
+        }
     return run_command_test_case(
         ["node", str(source)],
         test_case,
-        timeout_seconds=timeout_seconds + DEFAULT_NODE_STARTUP_GRACE_SECONDS,
+        timeout_seconds=timeout_seconds,
     )
 
 
