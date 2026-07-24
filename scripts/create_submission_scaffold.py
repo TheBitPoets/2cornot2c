@@ -672,6 +672,24 @@ def validate_modified_stale_asset_collisions(
                 )
 
 
+def validate_current_asset_destinations(
+    *,
+    destination: Path,
+    current_targets: set[Path],
+) -> None:
+    """Reject existing filesystem nodes that cannot represent asset files."""
+    for current_target in current_targets:
+        target_path = confined_output_path(
+            destination,
+            current_target,
+            create_parents=False,
+        )
+        if target_path.exists() and not target_path.is_file():
+            raise ValueError(
+                f"Il target asset esistente non e un file: {current_target}."
+            )
+
+
 def reconcile_managed_target_aliases(
     *,
     destination: Path,
@@ -911,6 +929,11 @@ def create_scaffold(
             managed=managed_assets,
             current_targets=current_asset_targets,
         )
+    validate_current_asset_destinations(
+        destination=destination,
+        current_targets=current_asset_targets,
+    )
+    if managed_assets:
         managed_assets = reconcile_managed_target_aliases(
             destination=destination,
             managed=managed_assets,

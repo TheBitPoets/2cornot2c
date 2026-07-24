@@ -818,6 +818,58 @@ def test_create_scaffold_rejects_new_target_overlapping_modified_stale_asset(
     assert (destination / "README.md").read_bytes() == original_readme
 
 
+@pytest.mark.parametrize(
+    ("blocking_path", "new_target"),
+    [
+        ("data", "data"),
+        ("data", "data/input.txt"),
+    ],
+)
+def test_create_scaffold_rejects_unmanaged_structural_asset_collision_before_writes(
+    tmp_path,
+    blocking_path,
+    new_target,
+) -> None:
+    new_teacher_asset = tmp_path / "new.txt"
+    new_teacher_asset.write_text("nuovo asset\n", encoding="utf-8")
+    activity_path = write_activity(tmp_path, canonical_activity())
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    unmanaged_path = destination / blocking_path
+    if blocking_path == new_target:
+        unmanaged_path.mkdir()
+    else:
+        unmanaged_path.write_text("file studente\n", encoding="utf-8")
+    original_activity = (destination / "activity.json").read_bytes()
+    original_readme = (destination / "README.md").read_bytes()
+
+    payload = {
+        **canonical_activity(),
+        "title": "Titolo aggiornato",
+        "assets": [
+            {
+                "type": "example",
+                "path": "new.txt",
+                "target_path": new_target,
+            }
+        ],
+    }
+    write_activity(tmp_path, payload)
+
+    with pytest.raises(ValueError, match="non e (un file|una directory)"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+            overwrite=True,
+        )
+
+    assert (destination / "activity.json").read_bytes() == original_activity
+    assert (destination / "README.md").read_bytes() == original_readme
+
+
 def test_create_scaffold_force_updates_unchanged_managed_asset(tmp_path) -> None:
     (tmp_path / "tests").mkdir()
     teacher_asset = tmp_path / "tests" / "test_public.py"
