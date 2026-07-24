@@ -584,8 +584,36 @@ def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
         raise ValueError(f"{label} deve trovarsi dentro il workspace montato: {workspace}") from error
 
 
-def prepare_docker_workspace(activity: Path, source: Path, root: Path) -> tuple[Path, Path, Path]:
+def confined_regular_input(path: Path, root: Path, label: str) -> Path:
+    """Resolve one input without following links outside its authorized root."""
+
+    resolved_root = root.resolve(strict=True)
+    resolved = path.resolve(strict=True)
+    try:
+        relative = resolved.relative_to(resolved_root)
+    except ValueError as error:
+        raise ValueError(f"{label} deve trovarsi dentro {resolved_root}.") from error
+    candidate = resolved_root
+    for part in relative.parts:
+        candidate = candidate / part
+        if candidate.is_symlink():
+            raise ValueError(f"{label} non puo essere un collegamento simbolico.")
+    if not resolved.is_file():
+        raise ValueError(f"{label} deve essere un file regolare.")
+    return resolved
+
+
+def prepare_docker_workspace(
+    activity: Path,
+    source: Path,
+    root: Path,
+    *,
+    activity_root: Path | None = None,
+    source_root: Path | None = None,
+) -> tuple[Path, Path, Path]:
     """Create a minimal Docker workspace with only grading inputs."""
+    safe_activity = confined_regular_input(activity, activity_root or activity.parent, "activity")
+    safe_source = confined_regular_input(source, source_root or source.parent, "source")
     workspace = root / "workspace"
     scripts_dir = workspace / "scripts"
     activity_dir = workspace / "activity"
@@ -599,8 +627,8 @@ def prepare_docker_workspace(activity: Path, source: Path, root: Path) -> tuple[
     source_copy = source_dir / source.name
 
     shutil.copy2(Path(__file__).resolve(), script_copy)
-    shutil.copy2(activity.resolve(), activity_copy)
-    shutil.copy2(source.resolve(), source_copy)
+    shutil.copy2(safe_activity, activity_copy)
+    shutil.copy2(safe_source, source_copy)
 
     return workspace, activity_copy, source_copy
 
@@ -667,7 +695,13 @@ def run_docker_grading(args: argparse.Namespace) -> int:
     with tempfile.TemporaryDirectory(prefix="thebitlab-docker-") as temp_dir:
         temp_root = Path(temp_dir)
         try:
-            workspace, activity, source = prepare_docker_workspace(args.activity, args.source, temp_root)
+            workspace, activity, source = prepare_docker_workspace(
+                args.activity,
+                args.source,
+                temp_root,
+                activity_root=getattr(args, "activity_root", None),
+                source_root=getattr(args, "source_root", None),
+            )
             docker_timeout = docker_timeout_seconds(load_activity(activity), args.timeout, args.language)
             command = docker_command(
                 activity=activity,
@@ -690,40 +724,39 @@ def run_docker_grading(args: argparse.Namespace) -> int:
             print("Docker non trovato. Installa Docker oppure esegui senza --docker.")
             return 1
 
-        if args.report:
-            try:
-                report = json.loads(result.stdout)
-            except json.JSONDecodeError:
-                print("Sandbox Docker non ha prodotto un report JSON valido.")
-                if result.stdout:
-                    print(result.stdout)
-                if result.stderr:
-                    print(result.stderr)
-                return 1
-            if not has_minimal_report_shape(report):
-                print("Sandbox Docker non ha prodotto un report di grading valido.")
-                if result.stderr:
-                    print(result.stderr)
-                return 1
-            if result.returncode != 0 and report.get("passed") is True:
-                print("Sandbox Docker ha prodotto un report incoerente con l'esito del container.")
-                if result.stderr:
-                    print(result.stderr)
-                return 1
-            report = with_report_metadata(
-                report,
-                assignment_id=getattr(args, "assignment_id", None),
-                student_id=getattr(args, "student_id", None),
-                commit=getattr(args, "commit", None),
-            )
-            write_report(report, args.report)
-            if result.stderr:
-                print(result.stderr)
-        else:
+        try:
+            report = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            print("Sandbox Docker non ha prodotto un report JSON valido.")
             if result.stdout:
                 print(result.stdout)
             if result.stderr:
                 print(result.stderr)
+            return 1
+        if not has_minimal_report_shape(report):
+            print("Sandbox Docker non ha prodotto un report di grading valido.")
+            if result.stderr:
+                print(result.stderr)
+            return 1
+        if result.returncode != 0 and report.get("passed") is True:
+            print("Sandbox Docker ha prodotto un report incoerente con l'esito del container.")
+            if result.stderr:
+                print(result.stderr)
+            return 1
+        report = with_report_metadata(
+            report,
+            assignment_id=getattr(args, "assignment_id", None),
+            student_id=getattr(args, "student_id", None),
+            commit=getattr(args, "commit", None),
+            submitted_at=getattr(args, "submitted_at", None),
+            source_repo_path=getattr(args, "source_repo_path", None),
+        )
+        if args.report:
+            write_report(report, args.report)
+        else:
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+        if result.stderr:
+            print(result.stderr)
         return result.returncode
 
 
@@ -744,6 +777,8 @@ def with_report_metadata(
     assignment_id: str | None = None,
     student_id: str | None = None,
     commit: str | None = None,
+    submitted_at: str | None = None,
+    source_repo_path: str | None = None,
 ) -> dict[str, Any]:
     """Return a report enriched with explicit remote-tracking identities."""
 
@@ -752,6 +787,8 @@ def with_report_metadata(
         ("assignment_id", assignment_id),
         ("student_id", student_id),
         ("commit", commit),
+        ("submitted_at", submitted_at),
+        ("source", source_repo_path),
     ):
         clean = str(value or "").strip()
         if clean:
@@ -768,6 +805,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--assignment-id", help="Identificativo assegnazione da includere nel report.")
     parser.add_argument("--student-id", help="Identificativo studente da includere nel report.")
     parser.add_argument("--commit", help="SHA del commit studente da includere nel report.")
+    parser.add_argument("--submitted-at", help="Timestamp ISO-8601 di ricezione della consegna.")
+    parser.add_argument("--source-repo-path", help="Path del sorgente nel repository studente.")
+    parser.add_argument("--activity-root", type=Path, help="Root autorizzata per la activity.")
+    parser.add_argument("--source-root", type=Path, help="Root autorizzata per il sorgente.")
     parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout compilazione/esecuzione.")
     parser.add_argument("--docker", action="store_true", help="Esegue il grading dentro la sandbox Docker.")
     parser.add_argument("--docker-image", default=DEFAULT_DOCKER_IMAGE, help="Immagine Docker da usare con --docker.")
@@ -785,6 +826,8 @@ def main() -> int:
         assignment_id=args.assignment_id,
         student_id=args.student_id,
         commit=args.commit,
+        submitted_at=args.submitted_at,
+        source_repo_path=args.source_repo_path,
     )
 
     if args.report:

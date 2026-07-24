@@ -301,9 +301,17 @@ Prima di accettare un report remoto, l'adapter verifica:
 - repository docente, nome artifact, SHA del workflow e workflow run della provenienza.
 
 Il producer autorevole e `.github/workflows/grade-student-assignment.yml`, eseguito nel
-repository docente. Il workflow effettua il checkout dello SHA studente esatto e usa il
-runner Docker senza segreti. Il workflow presente nel template del repository studente e
-solo un'anteprima e i suoi artifact non devono essere configurati come autorevoli.
+repository docente. Activity e test arrivano dal checkout docente immutabile; dal repository
+studente viene letto soltanto il sorgente allo SHA esatto. Il workflow registra come
+`submitted_at` il momento di ricezione da parte del grading docente e conserva nel report il
+path repository del sorgente.
+
+Per repository studenti privati, il secret `THEBITLAB_STUDENT_REPO_TOKEN` deve contenere un
+token GitHub App o PAT di sola lettura limitato ai repository necessari. La credenziale viene
+usata soltanto dal checkout con `persist-credentials: false`; il runner Docker esegue il codice
+senza rete e senza segreti. Per repository pubblici il workflow puo usare il `GITHUB_TOKEN`.
+Il workflow presente nel template del repository studente e solo un'anteprima e i suoi
+artifact non devono essere configurati come autorevoli.
 
 Il registro conserva separatamente i dati del report e quelli attestati dall'applicazione:
 

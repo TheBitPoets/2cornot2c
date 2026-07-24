@@ -22,7 +22,7 @@ on:
         description: "Identificativo stabile dell'attivita"
         required: true
       activity_path:
-        description: "Path della activity JSON nel repository studente"
+        description: "Path della activity JSON fidata nel repository TheBitLab"
         required: true
       source_path:
         description: "Path del sorgente nel repository studente"
@@ -91,6 +91,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: thebitlab
+          persist-credentials: false
 
       - name: Checkout exact student commit
         uses: actions/checkout@v4
@@ -98,6 +99,8 @@ jobs:
           repository: ${{ inputs.student_repo }}
           ref: ${{ inputs.student_head_sha }}
           path: student-work
+          token: ${{ secrets.THEBITLAB_STUDENT_REPO_TOKEN || github.token }}
+          persist-credentials: false
 
       - name: Build grading Docker image
         run: docker build -t thebitlab-assignment-runner -f thebitlab/docker/assignment-runner/Dockerfile thebitlab
@@ -106,12 +109,16 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/thebitlab-report"
           python thebitlab/scripts/grade_activity.py \
-            --activity "student-work/$ACTIVITY_PATH" \
+            --activity "thebitlab/$ACTIVITY_PATH" \
             --source "student-work/$SOURCE_PATH" \
             --language "$LANGUAGE" \
             --assignment-id "$ASSIGNMENT_ID" \
             --student-id "$STUDENT_ID" \
             --commit "$STUDENT_HEAD_SHA" \
+            --submitted-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --source-repo-path "$SOURCE_PATH" \
+            --activity-root "thebitlab" \
+            --source-root "student-work" \
             --docker \
             --report "$RUNNER_TEMP/thebitlab-report/report.json"
 

@@ -91,7 +91,9 @@ Il workflow di anteprima:
 
 Questo artifact non viene usato come fonte autorevole dal registro docente. Il
 docente avvia il workflow protetto nel repository TheBitLab, fissando repository e
-SHA della consegna, identita dello studente e assegnazione.
+SHA della consegna, identita dello studente e assegnazione. Activity e test usati
+per il voto provengono dal repository docente: dal repository studente viene letto
+soltanto il sorgente consegnato.
 
 Il nome dell'artifact contiene activity e linguaggio, per esempio:
 
