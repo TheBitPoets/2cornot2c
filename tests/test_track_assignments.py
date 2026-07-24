@@ -1035,6 +1035,30 @@ def test_track_assignments_does_not_grade_an_invalid_final_selection(tmp_path) -
     assert row["submission"]["report_path"] is None
 
 
+def test_selected_final_report_rejects_a_non_regular_selection_without_fallback(tmp_path) -> None:
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-somma-directory"
+    report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    final_path = (
+        report_path.parent
+        / "assignments"
+        / assignment_records.assignment_storage_key(assignment_id)
+        / "final.json"
+    )
+    final_path.mkdir(parents=True)
+
+    report, selected_path, selection_exists = track_assignments.selected_final_report(
+        student,
+        report_path,
+        assignment_id,
+        "python-base-somma-001",
+    )
+
+    assert report is None
+    assert selected_path is None
+    assert selection_exists is True
+
+
 def test_track_assignments_rejects_unscoped_legacy_report_for_repeated_activity(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "rossi-mario")

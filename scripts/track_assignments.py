@@ -397,8 +397,14 @@ def selected_final_report(
     from scripts import student_lab_attempts
 
     final_path = student_lab_attempts.assignment_history_dir(report_path, assignment_id) / "final.json"
-    if student_identity.confined_regular_file(target.path, final_path) is None:
+    try:
+        final_path.lstat()
+    except FileNotFoundError:
         return None, None, False
+    except OSError:
+        return None, None, True
+    if student_identity.confined_regular_file(target.path, final_path) is None:
+        return None, None, True
     report = student_lab_attempts.load_final_attempt(
         report_path,
         assignment_id,
