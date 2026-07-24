@@ -1,0 +1,9 @@
+*
+!docker/
+docker/*
+!docker/assignment-runner/
+docker/assignment-runner/*
+!docker/assignment-runner/Dockerfile
+!scripts/
+scripts/*
+!scripts/grade_activity.py

@@ -377,20 +377,17 @@ def test_report_metadata_enriches_remote_tracking_identity() -> None:
 
 
 def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
-    activity_path = tmp_path / "activity.json"
     source_path = tmp_path / "main.c"
-    activity_path.write_text("{}", encoding="utf-8")
     source_path.write_text("int main(void){return 0;}", encoding="utf-8")
 
     command = grade_activity.docker_command(
-        activity=activity_path,
         source=source_path,
-        language="c",
         timeout_seconds=5,
         workspace=tmp_path,
     )
 
     assert "--network" in command
+    assert "-i" in command
     assert "none" in command
     assert "--read-only" in command
     assert "--cap-drop" in command
@@ -403,15 +400,15 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     assert "256m" in command
     assert "--cpus" in command
     assert "1" in command
-    assert f"{tmp_path.resolve()}:/workspace:ro" in command
+    assert f"{tmp_path.resolve()}:/submission:ro" in command
     assert "--tmpfs" in command
     assert "/thebitlab-work:rw,exec,nosuid,nodev,mode=1777,size=64m" in command
     assert "TMPDIR=/thebitlab-work" in command
     assert "/thebitlab-output" not in command
     assert "--report" not in command
-    assert "--language" in command
-    assert "c" in command
-    assert command[command.index("--activity") + 1] == "activity.json"
+    assert "--activity" not in command
+    assert "--language" not in command
+    assert "--worker" in command
     assert command[command.index("--source") + 1] == "main.c"
 
 
@@ -423,16 +420,81 @@ def test_prepare_docker_workspace_copies_only_runner_inputs(tmp_path) -> None:
     source_path.write_text("int main(void){return 0;}", encoding="utf-8")
     secret_path.write_text("non deve entrare nel container", encoding="utf-8")
 
-    workspace, copied_activity, copied_source = grade_activity.prepare_docker_workspace(
+    workspace, copied_source = grade_activity.prepare_docker_workspace(
         activity_path,
         source_path,
         tmp_path / "docker",
     )
 
-    assert (workspace / "scripts" / "grade_activity.py").exists()
-    assert copied_activity == workspace / "activity" / "activity.json"
     assert copied_source == workspace / "source" / "main.c"
+    assert not (workspace / "activity").exists()
+    assert not (workspace / "scripts").exists()
     assert not (workspace / ".secret").exists()
+
+
+def test_worker_request_contains_only_current_input() -> None:
+    test_case = activity()["test_cases"][0]
+
+    request = grade_activity.build_worker_request(activity(), test_case, "c")
+
+    assert request == {
+        "schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+        "language": "c",
+        "stdin": "2 3\n",
+    }
+    serialized = json.dumps(request)
+    assert "expected_stdout" not in serialized
+    assert "somma positiva" not in serialized
+    assert "somma con negativo" not in serialized
+
+
+def test_worker_rejects_teacher_only_fields() -> None:
+    request = {
+        "schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+        "language": "python",
+        "stdin": "",
+        "expected_stdout": "segreto",
+    }
+
+    with pytest.raises(ValueError, match="campi non consentiti"):
+        grade_activity.load_worker_request(__import__("io").StringIO(json.dumps(request)))
+
+
+def test_finalize_worker_report_compares_expected_output_only_on_host(tmp_path) -> None:
+    teacher_activity = {
+        "id": "python-hidden",
+        "language": "python",
+        "test_cases": [
+            {"name": "caso riservato", "stdin": "4\n", "expected_stdout": "5\n"},
+        ],
+    }
+    worker_report = {
+        "passed": False,
+        "status": "failed",
+        "language": "python",
+        "source": "/submission/source/main.py",
+        "worker_schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+        "tests": [
+            {
+                "name": "test",
+                "status": "failed",
+                "returncode": 0,
+                "stdout": "5\n",
+                "stderr": "",
+            }
+        ],
+    }
+
+    report = grade_activity.finalize_worker_report(
+        teacher_activity,
+        [worker_report],
+        tmp_path / "main.py",
+    )
+
+    assert report["passed"] is True
+    assert report["summary"] == {"passed": 1, "total": 1}
+    assert report["tests"][0]["name"] == "caso riservato"
+    assert report["tests"][0]["expected_stdout"] == "5\n"
 
 
 def test_prepare_docker_workspace_rejects_input_outside_authorized_root(tmp_path) -> None:
@@ -675,19 +737,38 @@ def test_run_docker_grading_writes_report_on_host(monkeypatch, tmp_path) -> None
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    Args.activity.write_text(
+        json.dumps(
+            {
+                "id": "c-one",
+                "language": "c",
+                "test_cases": [{"name": "uno", "stdin": "", "expected_stdout": "5\n"}],
+            }
+        ),
+        encoding="utf-8",
+    )
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
     class Result:
         returncode = 0
-        stdout = json.dumps({"passed": True, "status": "passed"})
+        stdout = json.dumps(
+            {
+                "passed": False,
+                "status": "failed",
+                "language": "c",
+                "worker_schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+                "tests": [{"name": "test", "status": "failed", "returncode": 0, "stdout": "5\n", "stderr": ""}],
+            }
+        )
         stderr = ""
 
     monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 0
-    assert json.loads(Args.report.read_text(encoding="utf-8")) == {"passed": True, "status": "passed"}
+    report = json.loads(Args.report.read_text(encoding="utf-8"))
+    assert report["passed"] is True
+    assert report["summary"] == {"passed": 1, "total": 1}
 
 
 def test_run_docker_grading_enriches_stdout_report(monkeypatch, tmp_path, capsys) -> None:
@@ -704,12 +785,29 @@ def test_run_docker_grading_enriches_stdout_report(monkeypatch, tmp_path, capsys
         submitted_at = "2026-07-24T18:00:00Z"
         source_repo_path = "assignments/activity-001/main.c"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    Args.activity.write_text(
+        json.dumps(
+            {
+                "id": "activity-001",
+                "language": "c",
+                "test_cases": [{"name": "uno", "stdin": "", "expected_stdout": "ok\n"}],
+            }
+        ),
+        encoding="utf-8",
+    )
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
 
     class Result:
         returncode = 0
-        stdout = json.dumps({"passed": True, "status": "passed"})
+        stdout = json.dumps(
+            {
+                "passed": False,
+                "status": "failed",
+                "language": "c",
+                "worker_schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+                "tests": [{"name": "test", "status": "failed", "returncode": 0, "stdout": "ok\n", "stderr": ""}],
+            }
+        )
         stderr = "warning docker"
 
     monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
@@ -772,14 +870,9 @@ def test_main_applies_authorized_roots_without_docker(monkeypatch, tmp_path) -> 
 def test_docker_command_requires_paths_inside_workspace(tmp_path) -> None:
     outside = tmp_path.parent / "outside.c"
     outside.write_text("int main(void){return 0;}", encoding="utf-8")
-    activity_path = tmp_path / "activity.json"
-    activity_path.write_text("{}", encoding="utf-8")
-
     try:
         grade_activity.docker_command(
-            activity=activity_path,
             source=outside,
-            language="c",
             timeout_seconds=5,
             workspace=tmp_path,
         )

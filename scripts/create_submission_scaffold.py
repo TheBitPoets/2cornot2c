@@ -240,6 +240,19 @@ def student_assets(activity: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def student_activity_payload(activity: dict[str, Any]) -> dict[str, Any]:
+    """Return public activity metadata without teacher-only grading data."""
+
+    payload = {
+        key: value
+        for key, value in activity.items()
+        if key not in {"test_cases", "rubrica"}
+    }
+    if "assets" in payload:
+        payload["assets"] = student_assets(activity)
+    return payload
+
+
 def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> list[tuple[Path, Path]]:
     """Validate student-visible assets and return source/target relative paths."""
     planned_assets: list[tuple[Path, Path]] = []
@@ -344,7 +357,7 @@ def create_scaffold(
 
     destination.mkdir(parents=True, exist_ok=True)
     (destination / "activity.json").write_text(
-        json.dumps(activity, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(student_activity_payload(activity), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
         newline="\n",
     )

@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from scripts import assignment_records, student_lab_runner, student_lab_service
+from scripts import assignment_records, grade_activity, student_lab_runner, student_lab_service
 
 
 pytestmark = pytest.mark.skipif(
@@ -137,3 +137,108 @@ def test_docker_assignment_flows_through_report_and_service(
     assert assignment_payload["grading"]["status"] == "graded_passed"
     assert assignment_payload["grading"]["tests_passed"] == 1
     assert assignment_payload["grading"]["tests_total"] == 1
+
+
+@pytest.mark.parametrize(
+    ("language", "source_name", "source"),
+    [
+        (
+            "python",
+            "main.py",
+            (
+                "from pathlib import Path\n"
+                "parts = []\n"
+                "for root in ('/submission', '/workspace', '/opt/thebitlab'):\n"
+                "    path = Path(root)\n"
+                "    if path.exists():\n"
+                "        for item in path.rglob('*'):\n"
+                "            if item.is_file():\n"
+                "                try: parts.append(item.read_text(errors='ignore'))\n"
+                "                except OSError: pass\n"
+                "for item in ('/proc/self/cmdline', '/proc/self/environ'):\n"
+                "    try: parts.append(Path(item).read_text(errors='ignore'))\n"
+                "    except OSError: pass\n"
+                "print(''.join(parts))\n"
+            ),
+        ),
+        (
+            "nodejs",
+            "main.js",
+            (
+                "const fs = require('fs');\n"
+                "let out = '';\n"
+                "for (const p of ['/proc/self/cmdline','/proc/self/environ',"
+                "'/submission/activity/activity.json','/workspace/activity/activity.json']) {\n"
+                "  try { out += fs.readFileSync(p, 'utf8'); } catch (_) {}\n"
+                "}\n"
+                "console.log(out);\n"
+            ),
+        ),
+        (
+            "c",
+            "main.c",
+            (
+                "#include <stdio.h>\n"
+                "int main(void) {\n"
+                "  const char *paths[] = {\"/proc/self/cmdline\", \"/proc/self/environ\","
+                " \"/submission/activity/activity.json\", \"/workspace/activity/activity.json\"};\n"
+                "  char buffer[4096];\n"
+                "  for (int i = 0; i < 4; ++i) {\n"
+                "    FILE *file = fopen(paths[i], \"rb\");\n"
+                "    if (!file) continue;\n"
+                "    size_t count;\n"
+                "    while ((count = fread(buffer, 1, sizeof buffer, file)) > 0)"
+                " fwrite(buffer, 1, count, stdout);\n"
+                "    fclose(file);\n"
+                "  }\n"
+                "  return 0;\n"
+                "}\n"
+            ),
+        ),
+        (
+            "sql",
+            "main.sql",
+            "PRAGMA database_list;\n",
+        ),
+    ],
+)
+def test_docker_worker_cannot_read_teacher_expected_output(
+    tmp_path,
+    language,
+    source_name,
+    source,
+) -> None:
+    hidden_marker = "THEBITLAB_TEACHER_ONLY_EXPECTED_7b03d3"
+    activity_path = tmp_path / "teacher" / "activity.json"
+    source_path = tmp_path / "student" / source_name
+    activity_path.parent.mkdir()
+    source_path.parent.mkdir()
+    activity_path.write_text(
+        json.dumps(
+            {
+                "id": f"{language}-adversarial",
+                "language": language,
+                "test_cases": [
+                    {
+                        "name": "nome-riservato",
+                        "stdin": "",
+                        "expected_stdout": hidden_marker,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_path.write_text(source, encoding="utf-8")
+
+    report, worker_stderr = grade_activity.grade_activity_in_docker(
+        activity_path,
+        source_path,
+        timeout_seconds=5,
+        language=language,
+    )
+
+    assert report["passed"] is False
+    assert hidden_marker not in report["tests"][0]["stdout"]
+    assert hidden_marker not in report["tests"][0]["stderr"]
+    assert hidden_marker not in worker_stderr

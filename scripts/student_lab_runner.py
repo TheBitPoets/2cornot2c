@@ -5,7 +5,6 @@ import json
 import re
 import subprocess
 import sys
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -175,8 +174,10 @@ def c_test_message(test: dict[str, Any]) -> str:
             return " ".join(value.split())
     expected = clean_text(test.get("expected_stdout"))
     actual = clean_text(test.get("stdout"))
-    if expected or actual:
-        return f"Output atteso: {expected or '-'}; output ottenuto: {actual or '-'}"
+    if expected:
+        return f"Output atteso: {expected}; output ottenuto: {actual or '-'}"
+    if actual:
+        return f"Output ottenuto: {actual}"
     status = clean_text(test.get("status"))
     return f"Test non superato: {status}" if status else ""
 
@@ -200,6 +201,27 @@ def normalize_c_tests(tests: Any) -> list[dict[str, Any]]:
                 test["message"] = message
         normalized.append(test)
     return normalized
+
+
+def redact_student_grading_report(report: dict[str, Any]) -> dict[str, Any]:
+    """Remove teacher-only test details before persisting a student report."""
+
+    redacted = dict(report)
+    tests = report.get("tests")
+    if isinstance(tests, list):
+        redacted["tests"] = [
+            {
+                **{
+                    key: value
+                    for key, value in test.items()
+                    if key not in {"expected_stdout", "stdin", "name"}
+                },
+                "name": f"Test {index}",
+            }
+            for index, test in enumerate(tests, start=1)
+            if isinstance(test, dict)
+        ]
+    return redacted
 
 
 def run_python_pytest(
@@ -300,7 +322,7 @@ def run_docker_runner(
     language: str = "c",
     docker_image: str = DEFAULT_DOCKER_IMAGE,
 ) -> dict[str, Any]:
-    """Run a supported assignment through the existing Docker grading sandbox."""
+    """Run a supported assignment through the authoritative Docker harness."""
 
     if not source.is_file():
         return error_report(
@@ -311,83 +333,50 @@ def run_docker_runner(
             error=f"Sorgente non trovato: {source}",
             backend="docker",
         )
-    with tempfile.TemporaryDirectory(prefix="thebitlab-student-docker-") as temp_dir:
-        temp_root = Path(temp_dir)
-        try:
-            workspace, copied_activity, copied_source = grade_activity.prepare_docker_workspace(activity_path, source, temp_root)
-            docker_timeout = grade_activity.docker_timeout_seconds(
-                grade_activity.load_activity(copied_activity),
-                timeout_seconds,
-                language,
-            )
-            command = grade_activity.docker_command(
-                activity=copied_activity,
-                source=copied_source,
-                language=language,
-                timeout_seconds=timeout_seconds,
-                image=docker_image,
-                workspace=workspace,
-            )
-        except (OSError, ValueError) as error:
-            return error_report(
-                assignment,
-                language=language,
-                source=source,
-                status="docker-setup-error",
-                error=str(error),
-                backend="docker",
-            )
-        try:
-            result = subprocess.run(command, capture_output=True, text=True, timeout=docker_timeout, check=False)
-        except subprocess.TimeoutExpired:
-            return error_report(
-                assignment,
-                language=language,
-                source=source,
-                status="docker-timeout",
-                error=f"Timeout Docker dopo {docker_timeout} secondi.",
-                backend="docker",
-            )
-        except FileNotFoundError:
-            return error_report(
-                assignment,
-                language=language,
-                source=source,
-                status="docker-not-found",
-                error="Docker non trovato. Installa Docker oppure usa --backend local.",
-                backend="docker",
-            )
     try:
-        report = json.loads(result.stdout)
-    except json.JSONDecodeError:
+        report, worker_stderr = grade_activity.grade_activity_in_docker(
+            activity_path,
+            source,
+            timeout_seconds=timeout_seconds,
+            language=language,
+            image=docker_image,
+        )
+    except subprocess.TimeoutExpired as error:
         return error_report(
             assignment,
             language=language,
             source=source,
-            status="docker-invalid-output",
-            error=result.stderr or result.stdout or "Il container non ha prodotto JSON valido.",
+            status="docker-timeout",
+            error=f"Timeout Docker dopo {error.timeout} secondi.",
             backend="docker",
         )
-    if not grade_activity.has_minimal_report_shape(report):
+    except FileNotFoundError:
         return error_report(
             assignment,
             language=language,
             source=source,
-            status="docker-invalid-report",
-            error=result.stderr or "Il container non ha prodotto un report di grading valido.",
+            status="docker-not-found",
+            error="Docker non trovato. Installa Docker oppure usa --backend local.",
             backend="docker",
         )
-    if result.returncode != 0 and report.get("passed") is True:
+    except (OSError, ValueError) as error:
         return error_report(
             assignment,
             language=language,
             source=source,
-            status="docker-inconsistent-report",
-            error=result.stderr or "Il container ha fallito ma ha prodotto un report di successo.",
+            status="docker-setup-error",
+            error=str(error),
             backend="docker",
         )
-    wrapped = wrap_runner_report(assignment, source, report, language)
+    wrapped = wrap_runner_report(
+        assignment,
+        source,
+        redact_student_grading_report(report),
+        language,
+    )
     wrapped["backend"] = "docker"
+    if worker_stderr:
+        wrapped["runner_stderr"] = worker_stderr
     return wrapped
 
 

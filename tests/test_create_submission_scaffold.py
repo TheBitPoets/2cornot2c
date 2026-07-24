@@ -71,6 +71,31 @@ def test_create_scaffold_writes_assignment_files(tmp_path) -> None:
     assert "thebitlab_ref`: `main`" in readme
 
 
+def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
+    payload = activity()
+    payload["test_cases"] = [
+        {"name": "riservato", "stdin": "2 3\n", "expected_stdout": "5\n"}
+    ]
+    payload["rubrica"] = [{"criterio": "Correttezza", "punti": 100}]
+    payload["assets"] = [
+        {"type": "hidden_test", "path": "tests/hidden.py", "visibility": "teacher"},
+    ]
+    activity_path = write_activity(tmp_path, payload)
+
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path / "student",
+    )
+
+    distributed = json.loads((destination / "activity.json").read_text(encoding="utf-8"))
+    assert "test_cases" not in distributed
+    assert "rubrica" not in distributed
+    assert distributed["assets"] == []
+    serialized = json.dumps(distributed)
+    assert "expected_stdout" not in serialized
+    assert "riservato" not in serialized
+
+
 def test_create_scaffold_supports_canonical_activity_metadata(tmp_path) -> None:
     activity_path = write_activity(tmp_path, canonical_activity())
 

@@ -515,6 +515,10 @@ assignments/<activity_id>/
   README.md
 ```
 
+La copia studente di `activity.json` contiene soltanto metadati pubblici. Test riservati,
+`expected_stdout`, rubrica e asset docente restano nella sorgente autorevole del docente e non vengono
+distribuiti nel repository dello studente.
+
 Il flusso e pensato in tre livelli:
 
 | Livello | Responsabilita |
