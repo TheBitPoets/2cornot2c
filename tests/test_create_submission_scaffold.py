@@ -537,6 +537,68 @@ def test_create_scaffold_does_not_follow_student_manifest_symlink(tmp_path) -> N
     assert forged_manifest.is_symlink()
 
 
+def test_create_scaffold_rejects_metadata_symlink_on_force(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, canonical_activity())
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    external = tmp_path / "external.json"
+    external.write_text("non modificare\n", encoding="utf-8")
+    scaffold_activity = destination / "activity.json"
+    scaffold_activity.unlink()
+    try:
+        scaffold_activity.symlink_to(external)
+    except OSError:
+        pytest.skip("Creazione symlink non consentita su questa piattaforma.")
+
+    with pytest.raises(ValueError, match="link simbolico"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+            overwrite=True,
+        )
+
+    assert external.read_text(encoding="utf-8") == "non modificare\n"
+
+
+def test_create_scaffold_rejects_asset_parent_symlink_on_force(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, canonical_activity())
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    teacher_tests = tmp_path / "tests"
+    teacher_tests.mkdir()
+    (teacher_tests / "test_public.py").write_text("def test_public(): pass\n", encoding="utf-8")
+    external = tmp_path / "external"
+    external.mkdir()
+    try:
+        (destination / "tests").symlink_to(external, target_is_directory=True)
+    except OSError:
+        pytest.skip("Creazione symlink non consentita su questa piattaforma.")
+    payload = canonical_activity()
+    payload["assets"] = [
+        {
+            "type": "visible_test",
+            "path": "tests/test_public.py",
+            "target_path": "tests/test_public.py",
+        }
+    ]
+    write_activity(tmp_path, payload)
+
+    with pytest.raises(ValueError, match="link simbolico"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+            overwrite=True,
+        )
+
+    assert not (external / "test_public.py").exists()
+
+
 def test_create_scaffold_force_preserves_modified_stale_asset(tmp_path) -> None:
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "test_old.py").write_text("def test_old(): pass\n", encoding="utf-8")

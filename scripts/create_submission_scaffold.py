@@ -425,6 +425,93 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def prepare_scaffold_destination(target_dir: Path, destination: Path) -> None:
+    """Create a scaffold directory without following student-controlled links."""
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_root = target_dir.resolve()
+    assignments_dir = target_dir / "assignments"
+    if assignments_dir.is_symlink():
+        raise ValueError("La directory assignments non puo essere un link simbolico.")
+    assignments_dir.mkdir(exist_ok=True)
+    if destination.is_symlink():
+        raise ValueError("La directory della consegna non puo essere un link simbolico.")
+    if destination.exists() and not destination.is_dir():
+        raise ValueError("Il percorso della consegna esiste ma non e una directory.")
+    destination.mkdir(exist_ok=True)
+    try:
+        destination.resolve().relative_to(target_root)
+    except ValueError as error:
+        raise ValueError("La consegna deve restare dentro il repository studente.") from error
+
+
+def confined_output_path(root: Path, target_rel: Path, *, create_parents: bool) -> Path:
+    """Return an output path after rejecting links and escapes from root."""
+    root_resolved = root.resolve()
+    if root.is_symlink():
+        raise ValueError("La directory della consegna non puo essere un link simbolico.")
+    current = root
+    for part in target_rel.parts[:-1]:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError(f"Il percorso di output contiene un link simbolico: {target_rel}")
+        if current.exists() and not current.is_dir():
+            raise ValueError(f"Il parent dell'output non e una directory: {target_rel}")
+        if create_parents:
+            current.mkdir(exist_ok=True)
+    target_path = root / target_rel
+    if target_path.is_symlink():
+        raise ValueError(f"Il file di output non puo essere un link simbolico: {target_rel}")
+    try:
+        target_path.parent.resolve().relative_to(root_resolved)
+    except ValueError as error:
+        raise ValueError(f"Il percorso di output esce dalla consegna: {target_rel}") from error
+    return target_path
+
+
+def atomic_write_text(root: Path, target_rel: Path, content: str) -> Path:
+    """Write UTF-8 text inside root without following an existing link."""
+    target_path = confined_output_path(root, target_rel, create_parents=True)
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            newline="\n",
+            dir=target_path.parent,
+            prefix=f".{target_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temporary_path = Path(stream.name)
+            stream.write(content)
+        os.replace(temporary_path, target_path)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
+    return target_path
+
+
+def atomic_copy_file(source_path: Path, root: Path, target_rel: Path) -> Path:
+    """Copy one file inside root without following student-controlled links."""
+    target_path = confined_output_path(root, target_rel, create_parents=True)
+    temporary_path: Path | None = None
+    try:
+        with source_path.open("rb") as source_stream, tempfile.NamedTemporaryFile(
+            "wb",
+            dir=target_path.parent,
+            prefix=f".{target_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as target_stream:
+            temporary_path = Path(target_stream.name)
+            shutil.copyfileobj(source_stream, target_stream)
+        os.replace(temporary_path, target_path)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
+    return target_path
+
+
 def managed_assets_path(
     target_dir: Path,
     identifier: str,
@@ -486,10 +573,13 @@ def remove_stale_managed_assets(
             continue
         if target_rel == Path(protected_source):
             continue
-        target_path = destination / target_rel
+        target_path = confined_output_path(
+            destination,
+            target_rel,
+            create_parents=False,
+        )
         if (
             target_path.is_file()
-            and not target_path.is_symlink()
             and file_sha256(target_path) == expected_digest
         ):
             target_path.unlink()
@@ -550,8 +640,11 @@ def copy_student_assets(
     """Copy a validated set of student-visible assets into the scaffold."""
     copied_paths: list[Path] = []
     for source_path, target_rel in asset_plan:
-        target_path = destination / target_rel
-        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path = confined_output_path(
+            destination,
+            target_rel,
+            create_parents=True,
+        )
         if target_path.exists() and not overwrite_source:
             managed_digest = managed_assets.get(target_rel)
             if (
@@ -561,8 +654,7 @@ def copy_student_assets(
                 or file_sha256(target_path) != managed_digest
             ):
                 continue
-        shutil.copyfile(source_path, target_path)
-        copied_paths.append(target_path)
+        copied_paths.append(atomic_copy_file(source_path, destination, target_rel))
     return copied_paths
 
 
@@ -632,7 +724,8 @@ def create_scaffold(
     asset_plan = student_asset_copy_plan(activity_path, activity)
     current_asset_targets = {target_rel for _, target_rel in asset_plan}
 
-    has_existing_scaffold = destination.exists() and any(destination.iterdir())
+    prepare_scaffold_destination(target_dir, destination)
+    has_existing_scaffold = any(destination.iterdir())
     if has_existing_scaffold and not overwrite:
         raise ValueError(f"Consegna gia esistente: {destination}. Usa --force per sovrascrivere.")
 
@@ -643,7 +736,6 @@ def create_scaffold(
             "la cartella esistente e rigenera una nuova consegna pulita."
         )
 
-    destination.mkdir(parents=True, exist_ok=True)
     managed_assets = load_managed_assets(manifest_path) if overwrite else {}
     if managed_assets:
         managed_assets = remove_stale_managed_assets(
@@ -652,10 +744,10 @@ def create_scaffold(
             current_targets=current_asset_targets,
             protected_source=source_name,
         )
-    (destination / "activity.json").write_text(
+    atomic_write_text(
+        destination,
+        Path("activity.json"),
         json.dumps(student_activity_payload(activity), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
     )
 
     copied_assets = copy_student_assets(
@@ -669,15 +761,23 @@ def create_scaffold(
         managed_assets[target_rel] = file_sha256(copied_path)
     write_managed_assets(manifest_path, managed_assets)
 
-    source_path = destination / source_name
+    source_path = confined_output_path(
+        destination,
+        Path(source_name),
+        create_parents=True,
+    )
     source_is_managed_asset = Path(source_name) in current_asset_targets
     if not source_is_managed_asset and (overwrite_source or not source_path.exists()):
-        source_path.write_text(starter_source(selected_language), encoding="utf-8", newline="\n")
+        atomic_write_text(
+            destination,
+            Path(source_name),
+            starter_source(selected_language),
+        )
 
-    (destination / "README.md").write_text(
+    atomic_write_text(
+        destination,
+        Path("README.md"),
         assignment_readme(activity, identifier, source_name, selected_language, thebitlab_ref),
-        encoding="utf-8",
-        newline="\n",
     )
     return destination
 
