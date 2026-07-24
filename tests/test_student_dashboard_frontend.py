@@ -18,6 +18,8 @@ def run_student_dashboard_js(assertions: str) -> None:
         this.textContent = "";
         this.innerHTML = "";
         this.disabled = false;
+        this.hidden = false;
+        this.listeners = {{}};
         this.dataset = selector.includes("list")
           ? {{ studentCalendarDisplay: "list" }}
           : selector.includes("calendar")
@@ -29,14 +31,29 @@ def run_student_dashboard_js(assertions: str) -> None:
             if (force) this.classList.values.add(name);
             else this.classList.values.delete(name);
           }},
+          add: (name) => this.classList.values.add(name),
+          remove: (name) => this.classList.values.delete(name),
           contains: (name) => this.classList.values.has(name),
         }};
       }}
-      addEventListener() {{}}
+      addEventListener(type, handler) {{
+        this.listeners[type] = this.listeners[type] || [];
+        this.listeners[type].push(handler);
+      }}
+      dispatchEvent(event) {{
+        event.target ||= this;
+        event.preventDefault ||= () => {{ event.defaultPrevented = true; }};
+        for (const handler of this.listeners[event.type] || []) handler(event);
+      }}
       setAttribute(name, value) {{ this[name] = value; }}
       closest() {{ return this; }}
       querySelector(selector) {{ return elementFor(`${{this.selector}} ${{selector}}`); }}
-      querySelectorAll() {{ return []; }}
+      querySelectorAll(selector) {{
+        return this.selector === "#attemptHistoryModal" && selector.includes("button")
+          ? [elementFor("#attemptHistoryClose")]
+          : [];
+      }}
+      focus() {{ context.document.activeElement = this; }}
     }}
 
     const elements = new Map();
@@ -49,10 +66,21 @@ def run_student_dashboard_js(assertions: str) -> None:
       console,
       URL,
       document: {{
+        body: elementFor("body"),
+        activeElement: null,
+        listeners: {{}},
         querySelector: elementFor,
         querySelectorAll: (selector) => selector === "[data-student-calendar-display]"
           ? [elementFor("[data-student-calendar-display=calendar]"), elementFor("[data-student-calendar-display=list]")]
           : [],
+        addEventListener(type, handler) {{
+          this.listeners[type] = this.listeners[type] || [];
+          this.listeners[type].push(handler);
+        }},
+        dispatchEvent(event) {{
+          event.preventDefault ||= () => {{ event.defaultPrevented = true; }};
+          for (const handler of this.listeners[event.type] || []) handler(event);
+        }},
       }},
       fetchImpl: async () => ({{
         ok: true,
@@ -324,10 +352,15 @@ def test_student_dashboard_opens_readonly_attempt_history() -> None:
           },
         });
 
-        tested.openAttemptHistory(0);
+        const historyButton = elementFor("#attemptHistoryButton");
+        historyButton.dataset.attemptHistoryIndex = "0";
+        historyButton.closest = (selector) => selector === "[data-attempt-history-index]" ? historyButton : null;
+        historyButton.focus();
+        tested.els.studentLab.dispatchEvent({ type: "click", target: historyButton });
 
         assert.equal(tested.els.attemptHistoryModal.hidden, false);
         assert.equal(tested.els.attemptHistoryTitle.textContent, "Somma in Python");
+        assert.equal(context.document.activeElement, tested.els.attemptHistoryClose);
         assert.match(tested.els.attemptHistoryBody.innerHTML, /attemptPassed/);
         assert.match(tested.els.attemptHistoryBody.innerHTML, /attemptFailed/);
         assert.match(tested.els.attemptHistoryBody.innerHTML, /attempt-002/);
@@ -335,8 +368,22 @@ def test_student_dashboard_opens_readonly_attempt_history() -> None:
         assert.equal((tested.els.attemptHistoryBody.innerHTML.match(/Definitivo/g) || []).length, 2);
         assert.doesNotMatch(tested.els.attemptHistoryBody.innerHTML, /<button/);
 
-        tested.closeAttemptHistory();
+        const tabEvent = { type: "keydown", key: "Tab", shiftKey: false };
+        context.document.dispatchEvent(tabEvent);
+        assert.equal(tabEvent.defaultPrevented, true);
+        assert.equal(context.document.activeElement, tested.els.attemptHistoryClose);
+
+        context.document.dispatchEvent({ type: "keydown", key: "Escape" });
         assert.equal(tested.els.attemptHistoryModal.hidden, true);
+        assert.equal(context.document.activeElement, historyButton);
+
+        tested.els.studentLab.dispatchEvent({ type: "click", target: historyButton });
+        tested.els.attemptHistoryModal.dispatchEvent({
+          type: "click",
+          target: tested.els.attemptHistoryModal,
+        });
+        assert.equal(tested.els.attemptHistoryModal.hidden, true);
+        assert.equal(context.document.activeElement, historyButton);
         """
     )
 

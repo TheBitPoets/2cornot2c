@@ -49,6 +49,7 @@ let currentStudentCalendarView = {
 let visibleStudentPathIds = null;
 let currentAssignmentFilesIndex = -1;
 let assignmentFilesRequestToken = 0;
+let attemptHistoryInvoker = null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -461,13 +462,38 @@ function renderAttemptHistory(assignment) {
   `;
 }
 
-function openAttemptHistory(assignmentIndex) {
+function attemptHistoryFocusableElements() {
+  if (!els.attemptHistoryModal?.querySelectorAll) return [];
+  return [...els.attemptHistoryModal.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )].filter((element) => !element.hidden);
+}
+
+function trapAttemptHistoryFocus(event) {
+  const focusable = attemptHistoryFocusableElements();
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && (document.activeElement === first || !focusable.includes(document.activeElement))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (document.activeElement === last || !focusable.includes(document.activeElement))) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function openAttemptHistory(assignmentIndex, invoker = null) {
   const index = Number(assignmentIndex);
   const assignments = Array.isArray(currentDashboardPayload.lab?.assignments)
     ? currentDashboardPayload.lab.assignments
     : [];
   const assignment = assignments[index];
   if (!assignment || !els.attemptHistoryModal || !els.attemptHistoryBody || !els.attemptHistoryTitle) return;
+  attemptHistoryInvoker = invoker || document.activeElement || null;
   els.attemptHistoryTitle.textContent = assignment.title || assignment.activity_id || "Consegna";
   els.attemptHistoryBody.innerHTML = renderAttemptHistory(assignment);
   els.attemptHistoryModal.hidden = false;
@@ -475,10 +501,14 @@ function openAttemptHistory(assignmentIndex) {
   els.attemptHistoryClose?.focus?.();
 }
 
-function closeAttemptHistory() {
+function closeAttemptHistory({ restoreFocus = true } = {}) {
   if (!els.attemptHistoryModal) return;
+  const wasOpen = els.attemptHistoryModal.hidden === false;
+  const invoker = attemptHistoryInvoker;
+  attemptHistoryInvoker = null;
   els.attemptHistoryModal.hidden = true;
   document.body?.classList?.remove("modalOpen");
+  if (restoreFocus && wasOpen) invoker?.focus?.();
 }
 
 function isOpenAssignment(assignment) {
@@ -1602,7 +1632,7 @@ function isNextDeadlineAssignment(assignment, nextAssignment) {
 function renderDashboard(payload) {
   closeAssignmentDetail();
   closeAssignmentFiles();
-  closeAttemptHistory();
+  closeAttemptHistory({ restoreFocus: false });
   const assignments = Array.isArray(payload.assignments) ? payload.assignments : [];
   currentDashboardPayload = { ...payload, assignments };
   const filterValue = els.assignmentFilter?.value || "all";
@@ -1727,7 +1757,7 @@ els.assignments?.addEventListener("click", (event) => {
 els.studentLab?.addEventListener("click", (event) => {
   const historyButton = event.target.closest?.("[data-attempt-history-index]");
   if (!historyButton) return;
-  openAttemptHistory(historyButton.dataset.attemptHistoryIndex);
+  openAttemptHistory(historyButton.dataset.attemptHistoryIndex, historyButton);
 });
 
 els.assignmentDetailClose?.addEventListener("click", closeAssignmentDetail);
@@ -1759,6 +1789,10 @@ els.attemptHistoryModal?.addEventListener("click", (event) => {
 });
 
 document.addEventListener?.("keydown", (event) => {
+  if (event.key === "Tab" && els.attemptHistoryModal?.hidden === false) {
+    trapAttemptHistoryFocus(event);
+    return;
+  }
   if (event.key === "Escape") {
     closeAssignmentDetail();
     closeAssignmentFiles();
