@@ -22,8 +22,8 @@
 |Sintesi: Spiegazioni e indizi senza soluzione completa.     | | |Workspace: cartella locale dove modifichi i file.    |
 |Permesso: errori, concetti                                  | | |Test: controlli automatici sul tuo lavoro.           |
 |Non permesso: soluzione completa                            | | |Report: risultato letto da dashboard e registro.     |
-+------------------------------------------------------------+ | |Flusso: apri, modifica, esegui test, controlla.      |
-+ Richieste aiuto -------------------------------------------+ | |Comandi: e test, a aiuto, o workspace, v editor.     |
++------------------------------------------------------------+ | |                                                     |
++ Richieste aiuto -------------------------------------------+ | |Flusso consigliato                                   |
 |Stato log: -                                                | | +-----------------------------------------------------+
 |Errore log: -                                               | |
 |Eventi: 2                                                   | |

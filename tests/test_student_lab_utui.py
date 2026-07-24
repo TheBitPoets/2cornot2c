@@ -99,6 +99,15 @@ def test_project_assignment_contains_all_stable_sections_without_mutation() -> N
     assert by_id["help"]["row_styles"][-1] == "success"
     assert by_id["grading"]["row_styles"][-1] == "success"
     assert by_id["runner"]["row_styles"][0] == "success"
+    assert by_id["guide"]["rows"][4:9] == (
+        "",
+        "Flusso consigliato",
+        "1. Apri il workspace.",
+        "2. Modifica i file.",
+        "3. Esegui i test e salva il report.",
+    )
+    assert "l  Modifica layout pannelli" in by_id["guide"]["rows"]
+    assert "invio  Torna alla lista" in by_id["guide"]["rows"]
 
 
 def test_project_assignment_keeps_missing_sections_visible() -> None:

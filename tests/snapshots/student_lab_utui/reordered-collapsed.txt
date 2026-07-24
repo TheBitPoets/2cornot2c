@@ -3,8 +3,8 @@
 |Workspace: cartella locale dove modifichi i file.           | | +-----------------------------------------------------+
 |Test: controlli automatici sul tuo lavoro.                  | | + Aiuto consentito -----------------------------------+
 |Report: risultato letto da dashboard e registro.            | | |Modalita: Debug guidato                              |
-|Flusso: apri, modifica, esegui test, controlla.             | | |Sintesi: Spiegazioni e indizi senza soluzione comp...|
-|Comandi: e test, a aiuto, o workspace, v editor.            | | |Permesso: errori, concetti                           |
+|                                                            | | |Sintesi: Spiegazioni e indizi senza soluzione comp...|
+|Flusso consigliato                                          | | |Permesso: errori, concetti                           |
 +------------------------------------------------------------+ | |Non permesso: soluzione completa                     |
 + > Runner --------------------------------------------------+ | +-----------------------------------------------------+
 |Stato: passed                                               | | + Activity -------------------------------------------+

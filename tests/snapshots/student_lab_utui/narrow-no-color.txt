@@ -55,6 +55,6 @@
 |Workspace: cartella locale dove modifichi i file.                     |
 |Test: controlli automatici sul tuo lavoro.                            |
 |Report: risultato letto da dashboard e registro.                      |
-|Flusso: apri, modifica, esegui test, controlla.                       |
-|Comandi: e test, a aiuto, o workspace, v editor.                      |
+|                                                                      |
+|Flusso consigliato                                                    |
 +----------------------------------------------------------------------+

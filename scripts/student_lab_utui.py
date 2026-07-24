@@ -380,9 +380,25 @@ def project_assignment_sections(assignment: Mapping[str, Any]) -> tuple[dict[str
                 "Workspace: cartella locale dove modifichi i file.",
                 "Test: controlli automatici sul tuo lavoro.",
                 "Report: risultato letto da dashboard e registro.",
-                "Flusso: apri, modifica, esegui test, controlla.",
-                "Comandi: e test, a aiuto, o workspace, v editor.",
-                "Altri: h storico, b indietro, q esci.",
+                "",
+                "Flusso consigliato",
+                "1. Apri il workspace.",
+                "2. Modifica i file.",
+                "3. Esegui i test e salva il report.",
+                "4. Controlla l'esito e, se serve, chiedi aiuto.",
+                "",
+                "Azioni principali",
+                "e  Esegui test e salva report",
+                "a  Chiedi aiuto",
+                "o  Apri workspace",
+                "v  Apri editor",
+                "l  Modifica layout pannelli",
+                "",
+                "Altri comandi",
+                "h  Storico aiuti",
+                "b  Torna alla lista",
+                "invio  Torna alla lista",
+                "q  Esci",
             ),
         },
     )
@@ -418,7 +434,7 @@ def _build_panel(
         title = _text(section.get("title"), title)
         rows = _sequence(section.get("rows"))
         row_styles = _sequence(section.get("row_styles"))
-    normalized_rows = tuple(_text(row) for row in rows) or ("non disponibile",)
+    normalized_rows = tuple(_text(row, "") for row in rows) or ("non disponibile",)
     normalized_styles = tuple(
         Style(foreground=SEMANTIC_COLORS[tone])
         if tone in SEMANTIC_COLORS
