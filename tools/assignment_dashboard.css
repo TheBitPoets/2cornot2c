@@ -2110,6 +2110,18 @@ button.matrixCell:disabled:focus-visible {
   font-weight: 800;
 }
 
+.matrixCell .matrixSelectionState {
+  width: 100%;
+  border-top: 1px solid currentColor;
+  padding-top: .22rem;
+  font-size: .58rem;
+  font-weight: 900;
+}
+
+.matrixSelectionok { color: #0f6b3d; }
+.matrixSelectionwarn { color: #6b4700; }
+.matrixSelectionbad { color: #8f1d14; }
+
 .matrixCellOk { background: #eaf7ef; color: #0f6b3d; }
 .matrixCellWarn { background: #fff5df; color: #6b4700; }
 .matrixCellBad { background: #fdecea; color: #8f1d14; }

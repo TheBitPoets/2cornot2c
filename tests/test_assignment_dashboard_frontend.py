@@ -537,14 +537,29 @@ def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> 
         }).label, "Finale");
         assert.equal(tested.reportSelectionState({
           submitted: true,
+          submission: { report_selection: "final", final_selected: true },
+          grading: { provisional: false },
+        }).compactLabel, "FIN");
+        assert.equal(tested.reportSelectionState({
+          submitted: true,
           submission: { report_selection: "latest" },
           grading: { provisional: true },
         }).label, "Provvisorio");
+        assert.equal(tested.reportSelectionState({
+          submitted: true,
+          submission: { report_selection: "latest" },
+          grading: { provisional: true },
+        }).compactLabel, "PROV");
         assert.equal(tested.reportSelectionState({
           submitted: false,
           submission: { report_selection: "invalid_final" },
           grading: { provisional: false },
         }).label, "Finale non valido");
+        assert.equal(tested.reportSelectionState({
+          submitted: false,
+          submission: { report_selection: "invalid_final" },
+          grading: { provisional: false },
+        }).compactLabel, "ERR");
         assert.equal(tested.reportSelectionState({ submitted: false, submission: {}, grading: {} }), null);
         assert.match(tested.reportSelectionBadge({
           submitted: true,

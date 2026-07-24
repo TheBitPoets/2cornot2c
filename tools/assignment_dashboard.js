@@ -2799,6 +2799,7 @@ function renderOverviewMatrix(rows) {
         const row = byStudentActivity.get(`${student}::${activityKey(activity)}`);
         const kind = matrixCellKind(row);
         const score = matrixScore(row);
+        const selection = reportSelectionState(row);
         const hasSubmission = row?.submitted || row?.status?.startsWith("submitted");
         const submissionTitle = hasSubmission
           ? `Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.`
@@ -2809,6 +2810,7 @@ function renderOverviewMatrix(rows) {
               <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
                 <strong>${escapeHtml(matrixCellText(row))}</strong>
                 ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
+                ${selection ? `<small class="matrixSelectionState matrixSelection${selection.kind}" title="${escapeHtml(selection.tooltip)}" aria-label="${escapeHtml(`${selection.label}. ${selection.tooltip}`)}">${escapeHtml(selection.compactLabel)}</small>` : ""}
               </button>
             ` : '<span class="matrixCell matrixCellEmpty">-</span>'}
           </td>
@@ -3909,6 +3911,7 @@ function reportSelectionState(value) {
   if (selection === "invalid_final") {
     return {
       label: "Finale non valido",
+      compactLabel: "ERR",
       kind: "bad",
       tooltip: "La selezione definitiva non e valida: il registro non usa un altro tentativo al suo posto.",
     };
@@ -3916,6 +3919,7 @@ function reportSelectionState(value) {
   if (selection === "final" || finalSelected === true) {
     return {
       label: "Finale",
+      compactLabel: "FIN",
       kind: "ok",
       tooltip: "Il grading deriva dal tentativo scelto esplicitamente come definitivo.",
     };
@@ -3923,6 +3927,7 @@ function reportSelectionState(value) {
   if (selection === "latest" || selection === "legacy" || provisional === true || (submitted && selection == null)) {
     return {
       label: "Provvisorio",
+      compactLabel: "PROV",
       kind: "warn",
       tooltip: "Il grading deriva dall'ultimo report disponibile e puo cambiare quando viene scelto il definitivo.",
     };
