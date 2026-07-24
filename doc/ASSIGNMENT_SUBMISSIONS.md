@@ -239,6 +239,33 @@ Il job di grading non deve committare file nel repository studente, perche per f
 
 La fase feedback puo leggere il report e generare spiegazioni, ma non deve eseguire codice studente.
 
+### Acquisizione degli artifact GitHub Actions
+
+Il primo adapter applicativo vive in:
+
+```text
+scripts/thebitlab_grading_artifacts.py
+```
+
+`GitHubActionsArtifactSource` riceve dal chiamante un riferimento `owner/repository`, il nome esatto
+dell'artifact e un token GitHub mantenuto fuori dal repository. Il servizio:
+
+1. interroga l'API GitHub Actions con paginazione limitata;
+2. considera solo artifact con nome esatto, non scaduti e con metadati validi;
+3. sceglie il piu recente usando un timestamp timezone-aware;
+4. richiede il redirect firmato con autenticazione;
+5. scarica il file firmato senza inoltrare il token;
+6. applica limiti a elenco, archivio e `report.json`;
+7. rifiuta ZIP traversal, link simbolici, report multipli e JSON non valido;
+8. restituisce separatamente report e provenienza GitHub.
+
+La provenienza comprende repository, ID artifact, workflow run, data, URL API e digest dichiarato. Non
+contiene token o URL firmati temporanei.
+
+Questa fase non modifica ancora il registro docente. L'integrazione successiva usera la porta
+`GradingArtifactSource` per alimentare la raccolta dei report senza inserire chiamate GitHub dentro la
+logica di tracking.
+
 ## Report
 
 Il report deterministico minimo e quello prodotto da:
