@@ -626,6 +626,39 @@ def test_read_assignment_report_normalizes_student_booleans(tmp_path) -> None:
     assert student["ai_feedback"]["approved_by_teacher"] is True
 
 
+def test_assignment_report_reload_marks_legacy_grading_as_provisional(tmp_path) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    storage.write_assignment_report(
+        "attempt-selection.json",
+        {
+            "activity_id": "activity",
+            "students": [
+                {
+                    "student": "rossi-mario",
+                    "submitted": True,
+                    "submission": {},
+                    "grading": {"status": "graded_passed"},
+                },
+                {
+                    "student": "bianchi-luca",
+                    "submitted": True,
+                    "submission": {
+                        "attempt_id": "attempt-final",
+                        "report_selection": "final",
+                        "final_selected": True,
+                    },
+                    "grading": {"status": "graded_failed", "provisional": False},
+                },
+            ],
+        },
+    )
+
+    students = storage.read_assignment_report("attempt-selection.json")["students"]
+
+    assert students[0]["grading"]["provisional"] is True
+    assert students[1]["grading"]["provisional"] is False
+
+
 def test_ai_feedback_demo_report_exposes_teacher_review_states() -> None:
     root = Path(__file__).resolve().parents[1]
     storage = JsonAssignmentStorage(root, root / "teacher-reports", [])
