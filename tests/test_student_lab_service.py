@@ -746,6 +746,44 @@ def test_student_lab_uses_existing_report_and_grading_summary(tmp_path) -> None:
     }
 
 
+def test_student_lab_does_not_claim_best_when_attempt_history_is_truncated(tmp_path, monkeypatch) -> None:
+    write_assignment(tmp_path, sample_assignment(tmp_path))
+    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    report_path = repo / "reports" / "python-base-somma-001" / "latest.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "status": "failed",
+                "passed": False,
+                "submitted_at": "2026-10-18T18:00:00+02:00",
+                "summary": {"passed": 1, "total": 2},
+                "tests": [
+                    {"name": "positivo", "status": "passed", "passed": True},
+                    {"name": "negativo", "status": "failed", "passed": False},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        student_lab_attempts,
+        "load_attempt_history",
+        lambda *args, **kwargs: {"attempts": [], "count": 501, "truncated": True},
+    )
+
+    assignment = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-20T12:00:00+02:00",
+    )[0]
+
+    assert assignment["attempts"]["truncated"] is True
+    assert assignment["attempts"]["latest"]["status"] == "failed"
+    assert assignment["attempts"]["best"] is None
+
+
 def test_student_lab_keeps_attempt_history_separate_for_repeated_activity(tmp_path) -> None:
     first = sample_assignment(
         tmp_path,
