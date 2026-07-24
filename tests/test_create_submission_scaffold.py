@@ -88,7 +88,15 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
         "output_atteso": "Differenza: 3",
     }
     payload["support_mode"] = "feedback-tecnico"
-    payload["source_refs"] = [{"path": "doc/dispensa.md", "heading": "Array"}]
+    payload["source_refs"] = [
+        {
+            "path": "doc/dispensa.md",
+            "heading": "Array",
+            "expected_stdout": "SEGRETO_ANNIDATO",
+        }
+    ]
+    payload["correzione"]["expected_stdout"] = "SEGRETO_ANNIDATO"
+    payload["metriche"]["teacher_notes"] = "SEGRETO_ANNIDATO"
     payload["assets"] = [
         {"type": "hidden_test", "path": "tests/hidden.py", "visibility": "teacher"},
     ]
@@ -112,6 +120,7 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
     assert "riservato" not in serialized
     assert "2 3" not in serialized
     assert "Differenza: 3" not in serialized
+    assert "SEGRETO_ANNIDATO" not in serialized
 
 
 def test_create_scaffold_supports_canonical_activity_metadata(tmp_path) -> None:

@@ -53,6 +53,27 @@ LANGUAGE_ALIASES = {
 }
 STUDENT_ASSET_TYPES = {"starter", "example", "fixture", "visible_test"}
 TEACHER_ASSET_TYPES = {"hidden_test", "runner", "teacher_only"}
+PUBLIC_ASSET_FIELDS = {"type", "path", "target_path", "visibility", "description", "role"}
+PUBLIC_CONTEXT_FIELDS = {"classe", "class_id", "team_github", "percorso", "uda"}
+PUBLIC_GRADING_FIELDS = {"compila", "test", "sandbox", "ai_feedback"}
+PUBLIC_METRIC_FIELDS = {
+    "tempo_stimato_minuti",
+    "traccia_tempo_dichiarato",
+    "traccia_sessioni_thebitlab",
+    "traccia_eventi_didattici",
+    "traccia_errori_compilazione",
+}
+PUBLIC_REFERENCE_FIELDS = {
+    "source_id",
+    "href",
+    "url",
+    "path",
+    "heading",
+    "title",
+    "label",
+    "description",
+    "type",
+}
 STUDENT_ACTIVITY_FIELDS = {
     "schema_version",
     "id",
@@ -272,8 +293,46 @@ def student_activity_payload(activity: dict[str, Any]) -> dict[str, Any]:
     """Return public activity metadata without teacher-only grading data."""
 
     payload = {key: value for key, value in activity.items() if key in STUDENT_ACTIVITY_FIELDS}
+    for key in ("contesto",):
+        if key in payload:
+            value = payload[key]
+            payload[key] = (
+                {field: item for field, item in value.items() if field in PUBLIC_CONTEXT_FIELDS}
+                if isinstance(value, dict)
+                else {}
+            )
+    for key in ("correzione", "grading_policy"):
+        if key in payload:
+            value = payload[key]
+            payload[key] = (
+                {field: item for field, item in value.items() if field in PUBLIC_GRADING_FIELDS}
+                if isinstance(value, dict)
+                else {}
+            )
+    if "metriche" in payload:
+        value = payload["metriche"]
+        payload["metriche"] = (
+            {field: item for field, item in value.items() if field in PUBLIC_METRIC_FIELDS}
+            if isinstance(value, dict)
+            else {}
+        )
+    for key in ("materiali", "source_refs"):
+        if key in payload:
+            value = payload[key]
+            payload[key] = [
+                (
+                    {field: item for field, item in entry.items() if field in PUBLIC_REFERENCE_FIELDS}
+                    if isinstance(entry, dict)
+                    else entry
+                )
+                for entry in value
+                if isinstance(entry, (dict, str))
+            ] if isinstance(value, list) else []
     if "assets" in payload:
-        payload["assets"] = student_assets(activity)
+        payload["assets"] = [
+            {key: value for key, value in asset.items() if key in PUBLIC_ASSET_FIELDS}
+            for asset in student_assets(activity)
+        ]
     public_tests = [
         {
             key: value
