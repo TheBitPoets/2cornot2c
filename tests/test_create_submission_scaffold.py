@@ -344,7 +344,7 @@ def test_create_scaffold_force_removes_asset_that_became_teacher_only(tmp_path) 
     assert (destination / "notes.txt").read_text(encoding="utf-8") == "file studente\n"
 
 
-def test_create_scaffold_requires_explicit_regeneration_for_legacy_assets(tmp_path) -> None:
+def test_create_scaffold_requires_clean_regeneration_for_legacy_assets(tmp_path) -> None:
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "test_secret.py").write_text("SECRET = 'old-public'\n", encoding="utf-8")
     payload = {
@@ -373,25 +373,29 @@ def test_create_scaffold_requires_explicit_regeneration_for_legacy_assets(tmp_pa
     payload["assets"][0]["visibility"] = "teacher"
     write_activity(tmp_path, payload)
 
-    try:
-        create_submission_scaffold.create_scaffold(
-            activity_path=activity_path,
-            target_dir=target_dir,
-            overwrite=True,
-        )
-    except ValueError as error:
-        assert "--force --overwrite-source" in str(error)
-    else:
-        raise AssertionError("legacy scaffold should require explicit regeneration")
+    for overwrite_source in (False, True):
+        try:
+            create_submission_scaffold.create_scaffold(
+                activity_path=activity_path,
+                target_dir=target_dir,
+                overwrite=True,
+                overwrite_source=overwrite_source,
+            )
+        except ValueError as error:
+            assert "archivia o rinomina" in str(error)
+        else:
+            raise AssertionError("legacy scaffold should require a clean regeneration")
 
     assert (destination / "tests" / "test_secret.py").exists()
+    backup = destination.with_name(f"{destination.name}-backup")
+    destination.rename(backup)
     create_submission_scaffold.create_scaffold(
         activity_path=activity_path,
         target_dir=target_dir,
         overwrite=True,
-        overwrite_source=True,
     )
     assert not (destination / "tests" / "test_secret.py").exists()
+    assert (backup / "tests" / "test_secret.py").exists()
     assert manifest_path.exists()
 
 

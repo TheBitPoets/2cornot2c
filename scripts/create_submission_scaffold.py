@@ -471,53 +471,6 @@ def load_managed_assets(manifest_path: Path) -> dict[Path, str]:
     return managed
 
 
-def load_legacy_public_asset_targets(destination: Path) -> set[Path]:
-    """Read public asset targets from a pre-manifest scaffold."""
-    activity_path = destination / "activity.json"
-    if not activity_path.is_file():
-        return set()
-    try:
-        activity = json.loads(activity_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        raise ValueError("Activity del vecchio scaffold non valida.") from error
-    if not isinstance(activity, dict):
-        raise ValueError("Activity del vecchio scaffold non valida.")
-    targets: set[Path] = set()
-    for index, asset in enumerate(student_assets(activity)):
-        targets.add(
-            validate_relative_path(
-                asset.get("target_path", asset.get("path")),
-                f"legacy_assets[{index}].target_path",
-            )
-        )
-    return targets
-
-
-def remove_legacy_stale_assets(
-    *,
-    destination: Path,
-    legacy_targets: set[Path],
-    current_targets: set[Path],
-    protected_source: str,
-) -> None:
-    """Remove legacy managed targets during an explicit full regeneration."""
-    destination_root = destination.resolve()
-    for target_rel in legacy_targets - current_targets:
-        if target_rel == Path(protected_source):
-            continue
-        target_path = destination / target_rel
-        if target_path.is_symlink():
-            target_path.unlink()
-        elif target_path.is_file():
-            try:
-                target_path.resolve().relative_to(destination_root)
-            except ValueError as error:
-                raise ValueError(f"Asset legacy fuori dallo scaffold: {target_rel}") from error
-            target_path.unlink()
-        elif target_path.exists():
-            raise ValueError(f"L'asset legacy non e un file: {target_rel}")
-
-
 def remove_stale_managed_assets(
     *,
     destination: Path,
@@ -679,29 +632,18 @@ def create_scaffold(
     asset_plan = student_asset_copy_plan(activity_path, activity)
     current_asset_targets = {target_rel for _, target_rel in asset_plan}
 
-    if destination.exists() and any(destination.iterdir()) and not overwrite:
+    has_existing_scaffold = destination.exists() and any(destination.iterdir())
+    if has_existing_scaffold and not overwrite:
         raise ValueError(f"Consegna gia esistente: {destination}. Usa --force per sovrascrivere.")
 
     manifest_exists = manifest_path.is_file()
-    legacy_targets = (
-        load_legacy_public_asset_targets(destination)
-        if overwrite and destination.exists() and not manifest_exists
-        else set()
-    )
-    if legacy_targets and not overwrite_source:
+    if has_existing_scaffold and overwrite and not manifest_exists:
         raise ValueError(
-            "Scaffold precedente al manifest degli asset: esegui una rigenerazione "
-            "controllata con --force --overwrite-source dopo avere salvato eventuali modifiche."
+            "Scaffold precedente allo stato docente degli asset: archivia o rinomina "
+            "la cartella esistente e rigenera una nuova consegna pulita."
         )
 
     destination.mkdir(parents=True, exist_ok=True)
-    if legacy_targets:
-        remove_legacy_stale_assets(
-            destination=destination,
-            legacy_targets=legacy_targets,
-            current_targets=current_asset_targets,
-            protected_source=source_name,
-        )
     managed_assets = load_managed_assets(manifest_path) if overwrite else {}
     if managed_assets:
         managed_assets = remove_stale_managed_assets(
