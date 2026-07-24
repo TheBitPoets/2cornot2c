@@ -870,6 +870,48 @@ def test_create_scaffold_rejects_unmanaged_structural_asset_collision_before_wri
     assert (destination / "README.md").read_bytes() == original_readme
 
 
+def test_create_scaffold_rejects_modified_legacy_asset_below_new_source(tmp_path) -> None:
+    legacy_teacher_asset = tmp_path / "legacy.txt"
+    legacy_teacher_asset.write_text("asset legacy\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "example",
+                "path": "legacy.txt",
+                "target_path": "main.py/child.txt",
+            }
+        ],
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+        source_name="solution.py",
+    )
+    legacy_asset = destination / "main.py" / "child.txt"
+    legacy_asset.write_text("modifica studente\n", encoding="utf-8")
+    original_activity = (destination / "activity.json").read_bytes()
+    original_readme = (destination / "README.md").read_bytes()
+
+    payload["title"] = "Titolo aggiornato"
+    payload["assets"] = []
+    write_activity(tmp_path, payload)
+
+    with pytest.raises(ValueError, match="conflitto con il sorgente"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+            source_name="main.py",
+            overwrite=True,
+        )
+
+    assert legacy_asset.read_text(encoding="utf-8") == "modifica studente\n"
+    assert (destination / "activity.json").read_bytes() == original_activity
+    assert (destination / "README.md").read_bytes() == original_readme
+
+
 def test_create_scaffold_force_updates_unchanged_managed_asset(tmp_path) -> None:
     (tmp_path / "tests").mkdir()
     teacher_asset = tmp_path / "tests" / "test_public.py"

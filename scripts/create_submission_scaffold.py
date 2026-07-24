@@ -644,6 +644,7 @@ def validate_modified_stale_asset_collisions(
     destination: Path,
     managed: dict[Path, str],
     current_targets: set[Path],
+    protected_source: str,
 ) -> None:
     """Reject new targets overlapping student-modified stale assets."""
     current_keys = {
@@ -669,6 +670,20 @@ def validate_modified_stale_asset_collisions(
                 raise ValueError(
                     "Asset studente modificato in conflitto con un nuovo target: "
                     f"{managed_target} e {current_target}."
+                )
+        source_path = Path(protected_source)
+        source_key = portable_path_key(source_path)
+        if managed_key != source_key and portable_paths_overlap(managed_target, source_path):
+            raise ValueError(
+                "Asset studente modificato in conflitto con il sorgente dello scaffold: "
+                f"{managed_target} e {source_path}."
+            )
+        for reserved_target in RESERVED_SCAFFOLD_TARGETS:
+            reserved_path = Path(reserved_target)
+            if portable_paths_overlap(managed_target, reserved_path):
+                raise ValueError(
+                    "Asset studente modificato in conflitto con un file riservato: "
+                    f"{managed_target} e {reserved_path}."
                 )
 
 
@@ -928,6 +943,7 @@ def create_scaffold(
             destination=destination,
             managed=managed_assets,
             current_targets=current_asset_targets,
+            protected_source=source_name,
         )
     validate_current_asset_destinations(
         destination=destination,
