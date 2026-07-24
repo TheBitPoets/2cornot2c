@@ -553,6 +553,21 @@ def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> 
           grading: { provisional: true },
         }).compactLabel, "PROV");
         assert.equal(tested.reportSelectionState({
+          submitted: true,
+          submission: { report_selection: "github_actions_artifact" },
+          grading: { provisional: true },
+        }).label, "Remoto verificato");
+        assert.equal(tested.reportSelectionState({
+          submitted: true,
+          submission: { report_selection: "github_actions_artifact" },
+          grading: { provisional: false },
+        }).compactLabel, "REM");
+        assert.equal(tested.reportSelectionState({
+          submitted: null,
+          submission: { report_selection: "remote_error" },
+          grading: { provisional: false },
+        }).label, "Grading remoto non disponibile");
+        assert.equal(tested.reportSelectionState({
           submitted: false,
           submission: { report_selection: "invalid_final" },
           grading: { provisional: false },

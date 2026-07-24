@@ -60,6 +60,42 @@ class TrackingReportSource(Protocol):
         """Resolve a report or state that no remote binding is configured."""
 
 
+def canonical_tracking_report_result(result: TrackingReportResult) -> TrackingReportResult:
+    """Normalize untrusted adapter output into a fail-closed tracking state."""
+
+    if not result.configured:
+        return TrackingReportResult(configured=False)
+    if result.report is None:
+        return TrackingReportResult(
+            configured=True,
+            selection="remote_error",
+            authority="remote_configured",
+            provisional=False,
+            error=result.error or "Risultato sorgente remota non valido.",
+        )
+    if (
+        result.selection != "github_actions_artifact"
+        or result.authority != "verified_remote"
+        or not isinstance(result.provenance, dict)
+        or not result.provenance
+    ):
+        return TrackingReportResult(
+            configured=True,
+            selection="remote_error",
+            authority="remote_configured",
+            provisional=False,
+            error=result.error or "Provenienza del report remoto non verificabile.",
+        )
+    return TrackingReportResult(
+        configured=True,
+        report=result.report,
+        selection="github_actions_artifact",
+        authority="verified_remote",
+        provisional=bool(result.provisional),
+        provenance=dict(result.provenance),
+    )
+
+
 class ArtifactTrackingReportSource:
     """Resolve teacher-bound reports through a grading artifact source."""
 

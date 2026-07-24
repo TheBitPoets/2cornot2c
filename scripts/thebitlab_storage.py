@@ -521,7 +521,22 @@ class JsonAssignmentStorage:
             students = payload.get("students", []) if isinstance(payload.get("students"), list) else []
             submitted = sum(1 for student in students if isinstance(student, dict) and student.get("submitted"))
             late = sum(1 for student in students if isinstance(student, dict) and student.get("submitted") and student.get("late"))
-            not_submitted = sum(1 for student in students if isinstance(student, dict) and not student.get("submitted"))
+            unknown = sum(
+                1
+                for student in students
+                if isinstance(student, dict)
+                and (
+                    student.get("submitted") is None
+                    or student.get("status") == "submission_unknown"
+                )
+            )
+            not_submitted = sum(
+                1
+                for student in students
+                if isinstance(student, dict)
+                and student.get("submitted") is False
+                and student.get("status") != "submission_unknown"
+            )
             reports.append(
                 {
                     "name": str(path.relative_to(self.teacher_reports_dir)).replace("\\", "/"),
@@ -536,6 +551,7 @@ class JsonAssignmentStorage:
                     "submitted": submitted,
                     "late": late,
                     "not_submitted": not_submitted,
+                    "unknown": unknown,
                     "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
                 }
             )

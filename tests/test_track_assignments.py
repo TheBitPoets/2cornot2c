@@ -1378,6 +1378,9 @@ def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) 
 
     row = index["students"][0]
     assert row["submitted"] is True
+    assert row["repo"] == "TheBitPoets/rossi-mario"
+    assert row["repo_path"] == "rossi-mario"
+    assert row["repo_github_url"] == "https://github.com/TheBitPoets/rossi-mario"
     assert row["grading"]["status"] == "graded_passed"
     assert row["grading"]["provisional"] is True
     assert row["submission"]["report_selection"] == "github_actions_artifact"
@@ -1438,7 +1441,11 @@ def test_track_assignments_malformed_configured_source_still_fails_closed(tmp_pa
     write_assignment_record(tmp_path, activity_path, student, assignment_id)
     write_report(student.path, "2026-10-20T08:00:00+02:00")
     source = StaticTrackingReportSource(
-        thebitlab_tracking_reports.TrackingReportResult(configured=True)
+        thebitlab_tracking_reports.TrackingReportResult(
+            configured=True,
+            selection="github_actions_artifact",
+            authority="verified_remote",
+        )
     )
 
     index = track_assignments.track_assignments(
@@ -1453,6 +1460,45 @@ def test_track_assignments_malformed_configured_source_still_fails_closed(tmp_pa
     assert row["submitted"] is None
     assert row["status"] == "submission_unknown"
     assert row["submission"]["report_selection"] == "remote_error"
+    assert row["submission"]["report_authority"] == "remote_configured"
+    assert row["submission"]["report_error"] == "Risultato sorgente remota non valido."
+    assert row["submission"]["report_path"] is None
+
+
+def test_track_assignments_rejects_remote_report_without_verified_provenance(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    assignment_id = "assignment-unverified-remote"
+    write_assignment_record(tmp_path, activity_path, student, assignment_id)
+    write_report(student.path, "2026-10-20T08:00:00+02:00")
+    source = StaticTrackingReportSource(
+        thebitlab_tracking_reports.TrackingReportResult(
+            configured=True,
+            report=attempt_report(
+                assignment_id,
+                "attempt-unverified",
+                passed=True,
+                submitted_at="2026-10-20T08:00:00+02:00",
+            ),
+            selection="github_actions_artifact",
+            authority="verified_remote",
+        )
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        report_source=source,
+    )
+
+    row = index["students"][0]
+    assert row["submitted"] is None
+    assert row["status"] == "submission_unknown"
+    assert row["grading"]["status"] == "not_graded"
+    assert row["submission"]["report_selection"] == "remote_error"
+    assert row["submission"]["report_authority"] == "remote_configured"
     assert row["submission"]["report_path"] is None
 
 

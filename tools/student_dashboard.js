@@ -255,6 +255,7 @@ function badge(text, kind = "") {
 }
 
 function statusBadge(assignment) {
+  if (assignment.status === "submission_unknown") return badge("Consegna da verificare", "badgeWarn");
   if (assignment.status === "missing") return badge("Mancante", "badgeBad");
   if (assignment.late) return badge("In ritardo", "badgeWarn");
   if (assignment.submitted) return badge("Consegnata", "badgeOk");
@@ -274,6 +275,7 @@ function gradeValue(grading) {
 }
 
 function labStatusBadge(assignment) {
+  if (assignment.status === "submission_unknown") return badge("Report da verificare", "badgeWarn");
   if (assignment.status === "missing") return badge("Mancante", "badgeBad");
   if (assignment.status === "submitted_late") return badge("Report in ritardo", "badgeWarn");
   if (assignment.submitted || assignment.status === "submitted") return badge("Report presente", "badgeOk");
@@ -515,6 +517,7 @@ function closeAttemptHistory({ restoreFocus = true } = {}) {
 }
 
 function isOpenAssignment(assignment) {
+  if (assignment.status === "submission_unknown" || assignment.submitted == null) return false;
   return !assignment.submitted || assignment.status === "missing";
 }
 
@@ -535,6 +538,7 @@ function renderSummary(studentId, assignments) {
   const nextAssignment = nextOpenAssignment(assignments);
   const submitted = assignments.filter((item) => item.submitted).length;
   const missing = assignments.filter((item) => item.status === "missing").length;
+  const unknown = assignments.filter((item) => item.status === "submission_unknown").length;
   const late = assignments.filter((item) => item.late).length;
   const approvedFeedback = assignments.filter((item) => item.approved_feedback).length;
   const cards = [
@@ -543,6 +547,7 @@ function renderSummary(studentId, assignments) {
     ["Consegne", assignments.length],
     ["Consegnate", submitted],
     ["Mancanti", missing],
+    ["Da verificare", unknown],
     ["In ritardo", late],
     ["Feedback", approvedFeedback],
     ["Prossima attivita", nextAssignment ? assignmentTitle(nextAssignment) : "-"],

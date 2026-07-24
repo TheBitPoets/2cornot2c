@@ -247,6 +247,40 @@ def test_assignment_overview_exposes_canonical_attempt_selection(tmp_path) -> No
     assert rows["non-valido"]["grading_provisional"] is False
 
 
+def test_assignment_views_preserve_unknown_remote_submission_state(tmp_path) -> None:
+    service = assignment_overview_service(tmp_path)
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    (reports_dir / "remote.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "activity-remota",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "status": "submission_unknown",
+                        "submitted": None,
+                        "submission": {
+                            "report_selection": "remote_error",
+                            "report_authority": "remote_configured",
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    overview = service.assignment_overview()[0]
+    dashboard = service.student_dashboard("rossi-mario")["assignments"][0]
+
+    assert overview["submitted"] is None
+    assert overview["status"] == "submission_unknown"
+    assert dashboard["submitted"] is None
+    assert dashboard["status"] == "submission_unknown"
+
+
 def test_assignment_service_accepts_protocol_compatible_storage(tmp_path) -> None:
     class FakeAssignmentStorage:
         def safe_teacher_report_path(self, name: str) -> Path:

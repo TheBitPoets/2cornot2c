@@ -51,6 +51,7 @@ const ASSIGNMENT_WIZARD_STEPS = [
 const OVERVIEW_STATUS_ORDER = [
   "missing",
   "pending",
+  "submission_unknown",
   "submitted_late",
   "submitted_unknown_time",
   "submitted_on_time",
@@ -2728,6 +2729,7 @@ function overviewStudents(rows) {
 function matrixCellKind(row) {
   if (!row) return "Empty";
   if (row.status === "missing") return "Bad";
+  if (row.status === "submission_unknown") return "Warn";
   if (row.status === "pending") return "Pending";
   if (row.late) return "Warn";
   if (row.grading_status === "graded_failed") return "Bad";
@@ -2738,6 +2740,7 @@ function matrixCellKind(row) {
 function matrixCellText(row) {
   if (!row) return "-";
   if (row.status === "missing") return "NP";
+  if (row.status === "submission_unknown") return "?";
   if (row.status === "pending") return "...";
   if (row.grading_status === "graded_failed") return "KO";
   if (row.status?.startsWith("submitted")) return row.late ? "RIT" : "OK";
@@ -3849,6 +3852,7 @@ async function generateReport() {
 
 function statusKind(status, late, grading) {
   if (status === "missing") return "bad";
+  if (status === "submission_unknown") return "warn";
   if (status === "pending") return "warn";
   if (late) return "warn";
   if (grading?.status === "graded_failed") return "bad";
@@ -4020,6 +4024,24 @@ function reportSelectionState(value) {
       compactLabel: "PROV",
       kind: "warn",
       tooltip: "Il grading deriva dall'ultimo report disponibile e puo cambiare quando viene scelto il definitivo.",
+    };
+  }
+  if (selection === "github_actions_artifact") {
+    return {
+      label: "Remoto verificato",
+      compactLabel: "REM",
+      kind: provisional === true ? "warn" : "ok",
+      tooltip: provisional === true
+        ? "Il grading arriva da un artifact GitHub Actions verificato, ma non e ancora stato scelto come definitivo."
+        : "Il grading arriva da un artifact GitHub Actions verificato e autorizzato dal docente.",
+    };
+  }
+  if (selection === "remote_error") {
+    return {
+      label: "Grading remoto non disponibile",
+      compactLabel: "ERR",
+      kind: "bad",
+      tooltip: "Il report remoto configurato non e stato acquisito o validato; lo stato della consegna resta da verificare.",
     };
   }
   if (selection != null) {

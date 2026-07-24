@@ -547,15 +547,17 @@ def track_assignments(
 
     students: list[dict[str, Any]] = []
     for target in targets:
-        repo_url = github_repo_url(target)
         report_path = default_report_path(target, activity_id)
         stable_student_id = student_identity.legacy_display_student_id(target.student)
+        repository_ref = target.repo
         if assignment_id and server_root is not None:
             stable_student_id = assignment_student_id(target, assignment, server_root)
+            repository_ref = assignment_repository_ref(target, assignment, server_root)
             help_log_path = student_help_service.server_help_log_path(server_root, stable_student_id, assignment_id)
         else:
             legacy_help_path = student_help_service.help_log_path(target.path, activity_id)
             help_log_path = student_identity.confined_regular_file(target.path, legacy_help_path)
+        repo_url = github_url_from_remote(repository_ref) or github_repo_url(target)
         safe_report_path = None
         uses_assignment_report = False
         report = None
@@ -576,24 +578,22 @@ def track_assignments(
                 report_selection = "invalid_final"
             else:
                 if report_source is not None:
-                    remote_report_result = report_source.resolve(
-                        thebitlab_tracking_reports.TrackingReportRequest(
-                            activity_id=activity_id,
-                            assignment_id=assignment_id,
-                            student_id=stable_student_id,
-                            repo_ref=assignment_repository_ref(
-                                target,
-                                assignment,
-                                server_root,
-                            ),
+                    remote_report_result = (
+                        thebitlab_tracking_reports.canonical_tracking_report_result(
+                            report_source.resolve(
+                                thebitlab_tracking_reports.TrackingReportRequest(
+                                    activity_id=activity_id,
+                                    assignment_id=assignment_id,
+                                    student_id=stable_student_id,
+                                    repo_ref=repository_ref,
+                                )
+                            )
                         )
                     )
                     if remote_report_result.configured:
                         uses_assignment_report = True
                         report = remote_report_result.report
-                        report_selection = remote_report_result.selection or (
-                            "github_actions_artifact" if report is not None else "remote_error"
-                        )
+                        report_selection = remote_report_result.selection
                 if remote_report_result is None or not remote_report_result.configured:
                     assignment_report_path = (
                         report_path.parent
@@ -678,7 +678,7 @@ def track_assignments(
             {
                 "student": target.student,
                 "student_id": stable_student_id,
-                "repo": target.repo,
+                "repo": repository_ref,
                 "repo_path": local_repo_path(target.path, server_root),
                 "repo_github_url": repo_url,
                 "assigned": True,

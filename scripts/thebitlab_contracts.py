@@ -209,7 +209,8 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
     normalized["student_id"] = first_text(payload, "student_id") or normalized["student"]
     normalized["repo"] = first_text(payload, "repo")
     normalized["repo_path"] = first_text(payload, "repo_path")
-    normalized["submitted"] = bool_value(payload.get("submitted", False))
+    submitted = payload.get("submitted", False)
+    normalized["submitted"] = None if submitted is None else bool_value(submitted)
     normalized["status"] = first_text(payload, "status")
     normalized["late"] = bool_value(payload.get("late", False))
     submission = payload.get("submission") if isinstance(payload.get("submission"), dict) else {}
@@ -228,6 +229,11 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
         normalized_submission["final_selected"] = False
         normalized_grading["provisional"] = True
     elif report_selection == "invalid_final":
+        normalized_submission["final_selected"] = False
+        normalized_grading["provisional"] = False
+    elif report_selection == "github_actions_artifact":
+        normalized_submission["final_selected"] = False
+    elif report_selection == "remote_error":
         normalized_submission["final_selected"] = False
         normalized_grading["provisional"] = False
     elif report_selection is not None:
