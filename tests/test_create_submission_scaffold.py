@@ -87,6 +87,8 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
         "tipo": "programma-c",
         "output_atteso": "Differenza: 3",
     }
+    payload["support_mode"] = "feedback-tecnico"
+    payload["source_refs"] = [{"path": "doc/dispensa.md", "heading": "Array"}]
     payload["assets"] = [
         {"type": "hidden_test", "path": "tests/hidden.py", "visibility": "teacher"},
     ]
@@ -104,6 +106,8 @@ def test_create_scaffold_excludes_teacher_grading_data(tmp_path) -> None:
     assert "rubrica" not in distributed
     assert "soluzione_attesa" not in distributed
     assert distributed["assets"] == []
+    assert distributed["support_mode"] == "feedback-tecnico"
+    assert distributed["source_refs"] == [{"path": "doc/dispensa.md", "heading": "Array"}]
     serialized = json.dumps(distributed)
     assert "riservato" not in serialized
     assert "2 3" not in serialized
