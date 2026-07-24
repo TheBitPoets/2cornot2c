@@ -6,6 +6,10 @@ def test_trusted_grading_workflow_separates_student_and_workflow_commits() -> No
         encoding="utf-8"
     )
 
+    assert "actions/checkout@v4" not in source
+    assert "actions/upload-artifact@v4" not in source
+    assert source.count("actions/checkout@11d5960a326750d5838078e36cf38b85af677262") == 2
+    assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in source
     assert "Checkout trusted TheBitLab source" in source
     assert "Checkout exact student commit" in source
     assert "ref: ${{ inputs.student_head_sha }}" in source
