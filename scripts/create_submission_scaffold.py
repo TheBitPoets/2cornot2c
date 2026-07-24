@@ -402,6 +402,7 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
     """Validate student-visible assets and return source/target relative paths."""
     planned_assets: list[tuple[Path, Path]] = []
     activity_root = activity_path.parent
+    activity_root_resolved = activity_root.resolve()
     for index, asset in enumerate(student_assets(activity)):
         source_rel = validate_relative_path(asset.get("path"), f"assets[{index}].path")
         target_rel = validate_relative_path(
@@ -409,8 +410,17 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
             f"assets[{index}].target_path",
         )
         source_path = activity_root / source_rel
+        current = activity_root
+        for part in source_rel.parts:
+            current = current / part
+            if current.is_symlink():
+                raise ValueError(f"L'asset non puo attraversare link simbolici: {source_rel}")
         if not source_path.is_file():
             raise ValueError(f"Asset non trovato: {source_path}")
+        try:
+            source_path.resolve().relative_to(activity_root_resolved)
+        except ValueError as error:
+            raise ValueError(f"Asset fuori dalla directory della activity: {source_rel}") from error
 
         planned_assets.append((source_path, target_rel))
     return planned_assets

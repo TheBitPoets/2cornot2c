@@ -231,6 +231,40 @@ def test_create_scaffold_rejects_missing_student_asset(tmp_path) -> None:
     assert not (tmp_path / "assignments").exists()
 
 
+def test_create_scaffold_rejects_linked_asset_outside_activity_bundle(tmp_path) -> None:
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "starter").mkdir()
+    external = tmp_path / "external.py"
+    external.write_text("SECRET = 'locale docente'\n", encoding="utf-8")
+    linked_asset = bundle / "starter" / "main.py"
+    try:
+        linked_asset.symlink_to(external)
+    except OSError:
+        pytest.skip("Creazione symlink non consentita su questa piattaforma.")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "starter",
+                "path": "starter/main.py",
+                "target_path": "main.py",
+            }
+        ],
+    }
+    activity_path = bundle / "activity.json"
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+    target_dir = tmp_path / "student"
+
+    with pytest.raises(ValueError, match="link simbolici"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+        )
+
+    assert not (target_dir / "assignments").exists()
+
+
 def test_create_scaffold_rejects_invalid_canonical_kind(tmp_path) -> None:
     activity_path = write_activity(
         tmp_path,
