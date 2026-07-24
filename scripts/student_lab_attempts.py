@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import heapq
 import json
 import os
@@ -142,6 +143,43 @@ def write_json_atomic(path: Path, payload: dict[str, Any], *, base_dir: Path | N
     write_bytes_atomic(path, json_bytes(payload), base_dir=base_dir)
 
 
+def hard_link_is_unsupported(error: OSError) -> bool:
+    """Return whether an exclusive hard-link publish needs the portable fallback."""
+
+    return getattr(error, "winerror", None) in {1, 50} or error.errno in {
+        errno.ENOTSUP,
+        errno.EOPNOTSUPP,
+    }
+
+
+def publish_exclusive(temporary_path: Path, output: Path) -> None:
+    """Publish a complete file without replacing an existing destination."""
+
+    try:
+        os.link(temporary_path, output)
+        return
+    except FileExistsError:
+        raise
+    except OSError as error:
+        if not hard_link_is_unsupported(error):
+            raise
+
+    reserved = False
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        reserved = True
+        os.close(descriptor)
+        descriptor = None
+        os.replace(temporary_path, output)
+    except BaseException:
+        if descriptor is not None:
+            os.close(descriptor)
+        if reserved:
+            output.unlink(missing_ok=True)
+        raise
+
+
 def write_json_exclusive(path: Path, payload: dict[str, Any], *, base_dir: Path) -> None:
     """Publish an immutable JSON file without replacing an existing attempt."""
 
@@ -159,7 +197,7 @@ def write_json_exclusive(path: Path, payload: dict[str, Any], *, base_dir: Path)
             stream.write(json_bytes(payload))
             stream.flush()
             os.fsync(stream.fileno())
-        os.link(temporary_path, output)
+        publish_exclusive(temporary_path, output)
         published = True
         sync_directory(output.parent)
     except BaseException:

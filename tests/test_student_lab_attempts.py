@@ -147,6 +147,43 @@ def test_persist_attempt_never_replaces_an_existing_attempt(tmp_path, monkeypatc
     assert attempt_path.read_bytes() == original_bytes
 
 
+def test_exclusive_write_falls_back_when_hard_links_are_unsupported(tmp_path, monkeypatch) -> None:
+    output = tmp_path / "attempt.json"
+    payload = {"attempt_id": "attempt-exfat", "passed": True}
+
+    def unsupported_link(source, destination):
+        error = OSError("hard links unsupported")
+        error.winerror = 1
+        raise error
+
+    monkeypatch.setattr(student_lab_attempts.os, "link", unsupported_link)
+
+    student_lab_attempts.write_json_exclusive(output, payload, base_dir=tmp_path)
+
+    assert json.loads(output.read_text(encoding="utf-8")) == payload
+    with pytest.raises(FileExistsError):
+        student_lab_attempts.write_json_exclusive(output, {**payload, "passed": False}, base_dir=tmp_path)
+    assert json.loads(output.read_text(encoding="utf-8")) == payload
+
+
+def test_exclusive_write_does_not_mask_unrelated_link_errors(tmp_path, monkeypatch) -> None:
+    output = tmp_path / "attempt.json"
+
+    def denied_link(source, destination):
+        raise PermissionError("link denied")
+
+    monkeypatch.setattr(student_lab_attempts.os, "link", denied_link)
+
+    with pytest.raises(PermissionError, match="link denied"):
+        student_lab_attempts.write_json_exclusive(
+            output,
+            {"attempt_id": "attempt-denied"},
+            base_dir=tmp_path,
+        )
+
+    assert not output.exists()
+
+
 def test_exclusive_attempt_is_removed_when_directory_sync_fails(tmp_path, monkeypatch) -> None:
     report_path = tmp_path / "reports" / ACTIVITY_ID / "latest.json"
     monkeypatch.setattr(student_lab_attempts, "new_attempt_id", lambda: "attempt-sync-failure")
