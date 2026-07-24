@@ -3009,6 +3009,10 @@ def test_report_coverage_counts_unknown_submissions_separately() -> None:
         }));
         assert.equal(tested.reportOutcome(report).label, "1 da verificare");
         assert.match(tested.coverageReportCounts(report), /1 da verificare/);
+        assert.equal(
+          tested.reportOutcome({ ...report, due_at: "2020-01-01T00:00:00Z" }).label,
+          "1 mancanti",
+        );
         """
     )
 

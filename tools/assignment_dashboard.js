@@ -2366,8 +2366,8 @@ function reportOutcome(report) {
   const late = counts.late;
   const submitted = counts.submitted;
   const total = counts.total;
-  if (unknown > 0) return { kind: "warn", label: `${unknown} da verificare` };
   if (expired && notSubmitted > 0) return { kind: "bad", label: `${notSubmitted} mancanti` };
+  if (unknown > 0) return { kind: "warn", label: `${unknown} da verificare` };
   if (late > 0) return { kind: "warn", label: `${late} ritardi` };
   if (total > 0 && submitted === total) return { kind: "ok", label: "tutti in tempo" };
   if (!expired && notSubmitted > 0) return { kind: "muted", label: `${notSubmitted} in corso` };
