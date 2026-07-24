@@ -7,9 +7,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "scripts/student_lab_cli.py"
-      - "scripts/student_lab_layout.py"
-      - "scripts/student_lab_utui.py"
+      - "scripts/**"
       - "tests/test_student_lab_cli.py"
       - "tests/test_student_lab_layout.py"
       - "tests/test_student_lab_utui.py"
@@ -21,9 +19,7 @@ on:
     branches:
       - main
     paths:
-      - "scripts/student_lab_cli.py"
-      - "scripts/student_lab_layout.py"
-      - "scripts/student_lab_utui.py"
+      - "scripts/**"
       - "tests/test_student_lab_cli.py"
       - "tests/test_student_lab_layout.py"
       - "tests/test_student_lab_utui.py"
