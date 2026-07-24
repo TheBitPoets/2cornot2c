@@ -652,14 +652,14 @@ def write_student_report(root: Path, assignment: dict[str, Any], report: dict[st
         repo_path = student_repo_path(root, assignment)
         if repo_path is None:
             raise ValueError("Repository studente non disponibile per lo storico tentativi.")
-        _, assignment_latest = student_lab_attempts.persist_standard_report(
+        attempt_path, _ = student_lab_attempts.persist_standard_report(
             output,
             assignment_id,
             stored,
             base_dir=repo_path,
         )
-        stored = json.loads(assignment_latest.read_text(encoding="utf-8"))
-        report["attempt_id"] = clean_text(stored.get("attempt_id"))
+        persisted_attempt = json.loads(attempt_path.read_text(encoding="utf-8"))
+        report["attempt_id"] = clean_text(persisted_attempt.get("attempt_id"))
     else:
         student_lab_attempts.write_json_atomic(output, stored)
     return output
