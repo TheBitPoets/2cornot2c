@@ -342,6 +342,12 @@ studente viene letto soltanto il sorgente allo SHA esatto. Il workflow riceve `s
 dal binding docente anziche usare l'ora di avvio del grading, e conserva nel report il path
 repository del sorgente.
 
+`verified_remote` attesta oggi identita, provenienza e integrita del report rispetto al binding
+docente. Non attesta ancora un ambiente anti-cheating o una toolchain bit-per-bit riproducibile:
+l'isolamento dei test riservati e tracciato in #515, mentre il pin completo della toolchain e
+tracciato in #516. Fino alla loro chiusura, il risultato automatico resta soggetto alla revisione
+docente e non deve essere pubblicato come voto definitivo senza controllo.
+
 Per repository studenti privati, il secret `THEBITLAB_STUDENT_REPO_TOKEN` deve contenere un
 token GitHub App o PAT di sola lettura limitato ai repository necessari. La credenziale viene
 usata soltanto dal checkout con `persist-credentials: false`; il runner Docker esegue il codice
