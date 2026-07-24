@@ -390,6 +390,8 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         summaryCounts,
         renderStudentsSummaryCards,
         activeStudentFilterLabel,
+        reportSelectionState,
+        reportSelectionBadge,
         aiFeedbackState,
         aiFeedbackDetails,
         aiFeedbackReviewDetails,
@@ -403,6 +405,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         studentByName,
         submissionFiles,
         submissionGithubUrl,
+        renderReview,
         failedTestDetails,
         gradingDetails,
         renderTestDetailsDialogContent,
@@ -521,7 +524,69 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
             f"Node dashboard test failed with exit code {result.returncode}\n"
             f"STDOUT:\n{result.stdout}\n"
             f"STDERR:\n{result.stderr}"
-        )
+    )
+
+
+def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> None:
+    run_dashboard_js(
+        """
+        assert.equal(tested.reportSelectionState({
+          submitted: true,
+          submission: { report_selection: "final", final_selected: true },
+          grading: { provisional: false },
+        }).label, "Finale");
+        assert.equal(tested.reportSelectionState({
+          submitted: true,
+          submission: { report_selection: "latest" },
+          grading: { provisional: true },
+        }).label, "Provvisorio");
+        assert.equal(tested.reportSelectionState({
+          submitted: false,
+          submission: { report_selection: "invalid_final" },
+          grading: { provisional: false },
+        }).label, "Finale non valido");
+        assert.equal(tested.reportSelectionState({ submitted: false, submission: {}, grading: {} }), null);
+        assert.match(tested.reportSelectionBadge({
+          submitted: true,
+          report_selection: "legacy",
+          grading_provisional: true,
+        }), /badgeWarn/);
+        """
+    )
+
+
+def test_students_and_review_modal_show_final_selection_badge() -> None:
+    run_dashboard_js(
+        """
+        const student = {
+          student: "rossi-mario",
+          student_id: "rossi-mario",
+          repo: "demo/rossi-mario",
+          submitted: true,
+          status: "submitted",
+          due_at: "2026-10-20T08:00:00+02:00",
+          submission: {
+            report_selection: "final",
+            final_selected: true,
+            submitted_at: "2026-10-19T08:00:00+02:00",
+            files: [{ path: "assignments/demo/main.py", role: "solution" }],
+          },
+          grading: { status: "graded_passed", provisional: false },
+          ai_feedback: {},
+          help: {},
+        };
+        tested.state.report = { activity_id: "demo", students: [student] };
+        tested.renderStudents([student]);
+        assert.match(tested.els.studentsBody.children[0].innerHTML, /Finale/);
+
+        tested.state.reviewStudent = "rossi-mario";
+        tested.state.reviewFilePath = "assignments/demo/main.py";
+        tested.state.reviewFile = { path: "assignments/demo/main.py", content: "print(3)" };
+        tested.renderReview();
+        assert.match(tested.els.submissionReview.innerHTML, /reviewSelectionState/);
+        assert.match(tested.els.submissionReview.innerHTML, /Finale/);
+        """
+    )
 
 
 def test_reports_for_activity_isolates_explicit_classes() -> None:

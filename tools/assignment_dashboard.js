@@ -2863,6 +2863,7 @@ function renderOverview() {
     const submissionTitle = hasSubmission
       ? `Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.`
       : "Consegna non disponibile: lo studente non ha ancora consegnato.";
+    const selectionBadge = reportSelectionBadge(row);
     const tr = document.createElement("tr");
     tr.className = `overviewRow ${kindRowClass(row.kind)}`;
     tr.innerHTML = `
@@ -2875,7 +2876,10 @@ function renderOverview() {
       <td>${kindLabel(row.kind)}</td>
       <td>${escapeHtml(row.student_support_mode || "-")}</td>
       <td>${escapeHtml(formatDate(row.due_at))}</td>
-      <td>${badge(row.status, statusKind(row.status, row.late, { status: row.grading_status }))}</td>
+      <td>
+        ${badge(row.status, statusKind(row.status, row.late, { status: row.grading_status }))}
+        ${selectionBadge ? `<br><span class="reportSelectionBadge">${selectionBadge}</span>` : ""}
+      </td>
       <td>
         <code>${escapeHtml(testText)}</code>
         ${row.failed_tests?.length || row.failed_test_details?.length
@@ -3884,14 +3888,51 @@ function studentLabel(studentName) {
   return `<span class="studentName studentName${colorIndex}">${escapeHtml(name)}</span>`;
 }
 
-function badge(text, kind = "muted") {
+function badge(text, kind = "muted", title = "") {
   const className = {
     ok: "badgeOk",
     warn: "badgeWarn",
     bad: "badgeBad",
     muted: "badgeMuted",
   }[kind] || "badgeMuted";
-  return `<span class="badge ${className}">${escapeHtml(text || "-")}</span>`;
+  const titleAttribute = title ? ` title="${escapeHtml(title)}"` : "";
+  return `<span class="badge ${className}"${titleAttribute}>${escapeHtml(text || "-")}</span>`;
+}
+
+function reportSelectionState(value) {
+  const submission = value?.submission || value || {};
+  const grading = value?.grading || value || {};
+  const selection = submission.report_selection ?? value?.report_selection;
+  const finalSelected = submission.final_selected ?? value?.final_selected;
+  const provisional = grading.provisional ?? value?.grading_provisional;
+  const submitted = value?.submitted ?? Boolean(submission.submitted_at || submission.report_path);
+  if (selection === "invalid_final") {
+    return {
+      label: "Finale non valido",
+      kind: "bad",
+      tooltip: "La selezione definitiva non e valida: il registro non usa un altro tentativo al suo posto.",
+    };
+  }
+  if (selection === "final" || finalSelected === true) {
+    return {
+      label: "Finale",
+      kind: "ok",
+      tooltip: "Il grading deriva dal tentativo scelto esplicitamente come definitivo.",
+    };
+  }
+  if (selection === "latest" || selection === "legacy" || provisional === true || (submitted && selection == null)) {
+    return {
+      label: "Provvisorio",
+      kind: "warn",
+      tooltip: "Il grading deriva dall'ultimo report disponibile e puo cambiare quando viene scelto il definitivo.",
+    };
+  }
+  return null;
+}
+
+function reportSelectionBadge(value) {
+  const selection = reportSelectionState(value);
+  return selection ? badge(selection.label, selection.kind, selection.tooltip) : "";
 }
 
 const AI_FEEDBACK_STATES = {
@@ -4529,6 +4570,7 @@ function renderStudents(students) {
     const reviewTitle = canReview
       ? `Apri i file consegnati da ${student.student} nella vista Revisione consegna.`
       : `Nessuna consegna apribile per ${student.student}: lo studente non ha consegnato o non ci sono file disponibili.`;
+    const selectionBadge = reportSelectionBadge(student);
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>
@@ -4539,6 +4581,7 @@ function renderStudents(students) {
       <td>${escapeHtml(formatDate(student.due_at))}</td>
       <td>
         ${escapeHtml(formatDate(submission.submitted_at))}<br>
+        ${selectionBadge ? `<span class="reportSelectionBadge">${selectionBadge}</span><br>` : ""}
         <small>${submission.commit ? `commit ${escapeHtml(submission.commit)}` : "commit non disponibile"}</small><br>
         <small>${submission.source_path ? escapeHtml(submission.source_path) : "sorgente non indicato"}</small>
         ${submission.report_path ? `<br><small>report ${escapeHtml(submission.report_path)}</small>` : ""}
@@ -4835,10 +4878,12 @@ function renderReview(isError = false) {
   }
   const files = submissionFiles(student);
   const currentFile = files.find((file) => file.path === state.reviewFilePath) || files[0] || {};
+  const selectionBadge = reportSelectionBadge(student);
   els.submissionReview.className = "reviewGrid";
   els.submissionReview.innerHTML = `
     <aside class="fileList">
       <h3>${escapeHtml(student.student)}</h3>
+      ${selectionBadge ? `<div class="reviewSelectionState">${selectionBadge}</div>` : ""}
       ${files.map((file) => `
         <button type="button" class="${file.path === state.reviewFilePath ? "isActive" : ""}" data-review-file="${escapeHtml(file.path)}" title="Mostra il contenuto del file ${escapeHtml(file.path)}.">
           <span>${escapeHtml(file.path.split("/").pop())}</span>
