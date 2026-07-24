@@ -2806,13 +2806,15 @@ function renderOverviewMatrix(rows) {
           : "Consegna non disponibile: lo studente non ha ancora consegnato.";
         return `
           <td>
-            ${row ? `
-              <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
-                <strong>${escapeHtml(matrixCellText(row))}</strong>
-                ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
-                ${selection ? `<small class="matrixSelectionState matrixSelection${selection.kind}" title="${escapeHtml(selection.tooltip)}" aria-label="${escapeHtml(`${selection.label}. ${selection.tooltip}`)}">${escapeHtml(selection.compactLabel)}</small>` : ""}
-              </button>
-            ` : '<span class="matrixCell matrixCellEmpty">-</span>'}
+            <div class="matrixCellWrap">
+              ${row ? `
+                <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
+                  <strong>${escapeHtml(matrixCellText(row))}</strong>
+                  ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
+                </button>
+                ${selection ? reportSelectionCompactBadge(row) : ""}
+              ` : '<span class="matrixCell matrixCellEmpty">-</span>'}
+            </div>
           </td>
         `;
       }).join("")}
@@ -3890,6 +3892,11 @@ function studentLabel(studentName) {
   return `<span class="studentName studentName${colorIndex}">${escapeHtml(name)}</span>`;
 }
 
+function tooltipAttributes(label, title) {
+  if (!title) return "";
+  return ` title="${escapeHtml(title)}" tabindex="0" aria-label="${escapeHtml(`${label}. ${title}`)}" data-tooltip="${escapeHtml(title)}"`;
+}
+
 function badge(text, kind = "muted", title = "") {
   const className = {
     ok: "badgeOk",
@@ -3898,10 +3905,7 @@ function badge(text, kind = "muted", title = "") {
     muted: "badgeMuted",
   }[kind] || "badgeMuted";
   const label = text || "-";
-  const tooltipAttributes = title
-    ? ` title="${escapeHtml(title)}" tabindex="0" aria-label="${escapeHtml(`${label}. ${title}`)}" data-tooltip="${escapeHtml(title)}"`
-    : "";
-  return `<span class="badge ${className}${title ? " hasTooltip" : ""}"${tooltipAttributes}>${escapeHtml(label)}</span>`;
+  return `<span class="badge ${className}${title ? " hasTooltip" : ""}"${tooltipAttributes(label, title)}>${escapeHtml(label)}</span>`;
 }
 
 function reportSelectionState(value) {
@@ -3965,6 +3969,17 @@ function reportSelectionState(value) {
 function reportSelectionBadge(value) {
   const selection = reportSelectionState(value);
   return selection ? badge(selection.label, selection.kind, selection.tooltip) : "";
+}
+
+function reportSelectionCompactBadge(value) {
+  const selection = reportSelectionState(value);
+  if (!selection) return "";
+  const className = {
+    ok: "badgeOk",
+    warn: "badgeWarn",
+    bad: "badgeBad",
+  }[selection.kind] || "badgeMuted";
+  return `<span class="matrixSelectionState badge ${className} hasTooltip"${tooltipAttributes(selection.label, selection.tooltip)}>${escapeHtml(selection.compactLabel)}</span>`;
 }
 
 const AI_FEEDBACK_STATES = {

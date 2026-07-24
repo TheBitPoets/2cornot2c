@@ -392,6 +392,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         activeStudentFilterLabel,
         reportSelectionState,
         reportSelectionBadge,
+        reportSelectionCompactBadge,
         aiFeedbackState,
         aiFeedbackDetails,
         aiFeedbackReviewDetails,
@@ -585,6 +586,14 @@ def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> 
         assert.match(accessibleBadge, /tabindex="0"/);
         assert.match(accessibleBadge, /aria-label="Provvisorio[.]/);
         assert.match(accessibleBadge, /data-tooltip=/);
+        const compactInvalid = tested.reportSelectionCompactBadge({
+          submitted: false,
+          report_selection: "invalid_final",
+          grading_provisional: false,
+        });
+        assert.match(compactInvalid, />ERR</);
+        assert.match(compactInvalid, /tabindex="0"/);
+        assert.match(compactInvalid, /aria-label="Finale non valido[.]/);
         """
     )
 
