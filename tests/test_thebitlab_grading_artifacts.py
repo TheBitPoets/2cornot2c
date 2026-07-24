@@ -39,6 +39,18 @@ def zip_bytes(files: list[tuple[str, bytes]]) -> bytes:
     return stream.getvalue()
 
 
+def zip_bytes_with_unsupported_compression() -> bytes:
+    data = bytearray(zip_bytes([("report.json", b"{}")]))
+    local_header = data.find(b"PK\x03\x04")
+    central_header = data.find(b"PK\x01\x02")
+    assert local_header >= 0
+    assert central_header >= 0
+    unsupported_method = (99).to_bytes(2, "little")
+    data[local_header + 8 : local_header + 10] = unsupported_method
+    data[central_header + 10 : central_header + 12] = unsupported_method
+    return bytes(data)
+
+
 def artifact_payload(items: list[dict[str, object]]) -> bytes:
     return json.dumps({"artifacts": items}).encode("utf-8")
 
@@ -274,6 +286,11 @@ def test_report_archive_rejects_symbolic_link_and_too_many_members() -> None:
     )
     with pytest.raises(artifacts.GradingArtifactError, match="piu di"):
         artifacts._report_from_archive(crowded)
+
+
+def test_report_archive_normalizes_unsupported_compression_error() -> None:
+    with pytest.raises(artifacts.GradingArtifactError, match="compressione ZIP non supportato"):
+        artifacts._report_from_archive(zip_bytes_with_unsupported_compression())
 
 
 def test_source_validates_token_repository_and_artifact_name() -> None:

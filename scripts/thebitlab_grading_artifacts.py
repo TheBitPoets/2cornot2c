@@ -429,6 +429,10 @@ def _report_from_archive(data: bytes) -> dict[str, Any]:
                 report_bytes = report_stream.read(MAX_GRADING_REPORT_BYTES + 1)
     except BadZipFile as error:
         raise GradingArtifactError("Artifact di grading non e un archivio ZIP valido.") from error
+    except NotImplementedError as error:
+        raise GradingArtifactError(
+            "Artifact di grading usa un metodo di compressione ZIP non supportato."
+        ) from error
     if len(report_bytes) > MAX_GRADING_REPORT_BYTES:
         raise GradingArtifactError(f"Report grading troppo grande: supera {MAX_GRADING_REPORT_BYTES} byte.")
     return _json_object(report_bytes, "report grading")
