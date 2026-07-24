@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import student_lab_layout, student_lab_utui
+from scripts import student_lab_cli, student_lab_layout, student_lab_utui
 
 
 SNAPSHOT_ROOT = Path(__file__).with_name("snapshots") / "student_lab_utui"
@@ -302,6 +302,42 @@ def test_reordered_collapsed_focus_snapshot_without_layout_mutation() -> None:
 
     assert layout == original
     assert_snapshot("reordered-collapsed.txt", "\n".join(frame))
+
+
+@pytest.mark.skipif(not student_lab_utui.is_available(), reason="utui non installato")
+def test_explicit_utui_cli_smoke_uses_the_real_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "schema_version": "student_lab.v1",
+        "student_id": "rossi-mario",
+        "assignments": [ASSIGNMENT],
+    }
+    outputs: list[str] = []
+    inputs = iter(("1", "", "q"))
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: payload,
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda _prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        use_color=False,
+        renderer="utui",
+        interactive=False,
+    )
+
+    assert result == 0
+    rendered = "\n".join(outputs)
+    assert "+ > Dettaglio consegna" in rendered
+    assert "Navigazione: j = scorri giu" in rendered
+    assert "Azioni: e = test/report" in rendered
 
 
 def test_render_falls_back_after_adapter_failure(monkeypatch: pytest.MonkeyPatch) -> None:
