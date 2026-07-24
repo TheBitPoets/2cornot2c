@@ -710,12 +710,14 @@ def test_run_docker_grading_enriches_stdout_report(monkeypatch, tmp_path, capsys
     class Result:
         returncode = 0
         stdout = json.dumps({"passed": True, "status": "passed"})
-        stderr = ""
+        stderr = "warning docker"
 
     monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 0
-    report = json.loads(capsys.readouterr().out)
+    captured = capsys.readouterr()
+    report = json.loads(captured.out)
+    assert captured.err.strip() == "warning docker"
     assert report["assignment_id"] == "assignment-001"
     assert report["student_id"] == "rossi-mario"
     assert report["commit"] == "a" * 40

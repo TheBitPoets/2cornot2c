@@ -756,7 +756,7 @@ def run_docker_grading(args: argparse.Namespace) -> int:
         else:
             print(json.dumps(report, ensure_ascii=False, indent=2))
         if result.stderr:
-            print(result.stderr)
+            print(result.stderr, file=sys.stderr)
         return result.returncode
 
 
