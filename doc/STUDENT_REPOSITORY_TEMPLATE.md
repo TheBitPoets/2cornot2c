@@ -192,3 +192,14 @@ Usa `--source-name` solo quando vuoi forzare un nome diverso da quello predefini
 Lo scaffold non sovrascrive una consegna gia esistente, a meno di usare `--force`.
 
 `--force` aggiorna `activity.json` e `README.md`, ma non sovrascrive il sorgente se esiste gia. Per rigenerare anche il sorgente starter serve `--overwrite-source`.
+
+Gli asset pubblici distribuiti vengono tracciati in una directory docente
+`.thebitlab-scaffold-state`, creata accanto alla root del repository studente.
+Lo stato non fa parte dello scaffold e non deve essere copiato nel repository
+dello studente. Permette di aggiornare i file ancora intatti, preservare quelli
+modificati e rimuovere in sicurezza gli asset che non sono piu pubblici.
+
+Per uno scaffold creato prima dell'introduzione di questo stato, la prima
+rigenerazione con asset gia distribuiti richiede
+`--force --overwrite-source`: salva prima eventuali modifiche dello studente.
+Con `--state-dir` puoi scegliere una directory docente diversa.
