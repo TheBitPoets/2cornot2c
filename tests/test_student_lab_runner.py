@@ -634,7 +634,13 @@ def test_run_docker_assignment_supports_node_and_sql(
         )
         stderr = ""
 
-    monkeypatch.setattr(student_lab_runner.subprocess, "run", lambda *args, **kwargs: Result())
+    captured: dict[str, list[str]] = {}
+
+    def run_docker(command, **kwargs):
+        captured["command"] = command
+        return Result()
+
+    monkeypatch.setattr(student_lab_runner.subprocess, "run", run_docker)
 
     report = student_lab_runner.run_student_assignment(
         root=tmp_path,
@@ -646,6 +652,8 @@ def test_run_docker_assignment_supports_node_and_sql(
     assert report["backend"] == "docker"
     assert report["status"] == "passed"
     assert report["language"] == language
+    language_index = captured["command"].index("--language")
+    assert captured["command"][language_index + 1] == language
 
 
 def test_select_assignment_requires_disambiguation() -> None:
