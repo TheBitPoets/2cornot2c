@@ -163,7 +163,13 @@ def normalize_submission(payload: dict[str, Any]) -> dict[str, Any]:
     normalized["late"] = bool_value(payload.get("late", False))
     normalized.setdefault("files", [])
     normalized.setdefault("attempt_id", None)
-    normalized.setdefault("report_selection", None)
+    report_selection = payload.get("report_selection")
+    if isinstance(report_selection, str):
+        normalized["report_selection"] = report_selection.strip() or None
+    elif report_selection is None:
+        normalized["report_selection"] = None
+    else:
+        normalized["report_selection"] = "invalid_value"
     normalized["final_selected"] = bool_value(payload.get("final_selected", False))
     return normalized
 

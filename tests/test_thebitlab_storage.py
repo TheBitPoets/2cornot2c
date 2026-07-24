@@ -690,6 +690,12 @@ def test_assignment_report_reload_canonicalizes_attempt_selection_state(tmp_path
                     "submission": {"report_selection": "future_state", "final_selected": True},
                     "grading": {"provisional": True},
                 },
+                {
+                    "student": "non-scalare",
+                    "submitted": True,
+                    "submission": {"report_selection": ["final"], "final_selected": True},
+                    "grading": {"provisional": True},
+                },
             ],
         },
     )
@@ -705,6 +711,9 @@ def test_assignment_report_reload_canonicalizes_attempt_selection_state(tmp_path
     assert by_student["finale-non-valido"]["grading"]["provisional"] is False
     assert by_student["sconosciuto"]["submission"]["final_selected"] is False
     assert by_student["sconosciuto"]["grading"]["provisional"] is False
+    assert by_student["non-scalare"]["submission"]["report_selection"] == "invalid_value"
+    assert by_student["non-scalare"]["submission"]["final_selected"] is False
+    assert by_student["non-scalare"]["grading"]["provisional"] is False
 
 
 def test_ai_feedback_demo_report_exposes_teacher_review_states() -> None:
