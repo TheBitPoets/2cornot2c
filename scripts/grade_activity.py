@@ -188,6 +188,16 @@ def run_node_test_case(source: Path, test_case: dict[str, Any], *, timeout_secon
     return run_command_test_case(["node", str(source)], test_case, timeout_seconds=timeout_seconds)
 
 
+def sqlite_output_value(value: Any) -> str:
+    """Serialize one SQLite value like the previous text-mode CLI runner."""
+
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 def run_sql_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
     """Run one SQL script against an isolated in-memory SQLite database."""
 
@@ -227,7 +237,7 @@ def run_sql_test_case(source: Path, test_case: dict[str, Any], *, timeout_second
                 cursor = connection.execute(statement)
                 if cursor.description:
                     output_lines.extend(
-                        "|".join("" if value is None else str(value) for value in row)
+                        "|".join(sqlite_output_value(value) for value in row)
                         for row in cursor.fetchall()
                     )
                 statement_buffer.clear()
@@ -237,7 +247,7 @@ def run_sql_test_case(source: Path, test_case: dict[str, Any], *, timeout_second
                 cursor = connection.execute(trailing_statement)
                 if cursor.description:
                     output_lines.extend(
-                        "|".join("" if value is None else str(value) for value in row)
+                        "|".join(sqlite_output_value(value) for value in row)
                         for row in cursor.fetchall()
                     )
     except (sqlite3.Error, TimeoutError) as error:

@@ -199,6 +199,23 @@ def test_grade_activity_sql_matches_sqlite_cli_rows_and_nulls(tmp_path) -> None:
     assert report["tests"][0]["stdout"] == "Ada|9\nLinus|\n"
 
 
+def test_grade_activity_sql_matches_sqlite_cli_blob_output(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text("SELECT X'4142';\n", encoding="utf-8")
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "sql-blob-001",
+            "linguaggio": "sql",
+            "test_cases": [{"expected_stdout": "AB\n"}],
+        },
+        source,
+    )
+
+    assert report["passed"] is True
+    assert report["tests"][0]["stdout"] == "AB\n"
+
+
 def test_grade_activity_reports_sql_error(tmp_path) -> None:
     source = tmp_path / "main.sql"
     source.write_text("SELECT colonna_inesistente FROM studenti;\n", encoding="utf-8")
