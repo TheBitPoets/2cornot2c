@@ -8,8 +8,12 @@ on:
   pull_request:
     paths:
       - "docker/assignment-runner/**"
+      - "scripts/assignment_records.py"
+      - "scripts/create_activity.py"
       - "scripts/grade_activity.py"
-      - "scripts/student_lab_runner.py"
+      - "scripts/student_*.py"
+      - "scripts/thebitlab_contracts.py"
+      - "scripts/track_assignments.py"
       - "tests/test_student_lab_runner.py"
       - "tests/test_student_lab_runner_docker.py"
       - ".github/workflows/assignment-runner-docker.yml"
@@ -18,8 +22,12 @@ on:
       - main
     paths:
       - "docker/assignment-runner/**"
+      - "scripts/assignment_records.py"
+      - "scripts/create_activity.py"
       - "scripts/grade_activity.py"
-      - "scripts/student_lab_runner.py"
+      - "scripts/student_*.py"
+      - "scripts/thebitlab_contracts.py"
+      - "scripts/track_assignments.py"
       - "tests/test_student_lab_runner.py"
       - "tests/test_student_lab_runner_docker.py"
       - ".github/workflows/assignment-runner-docker.yml"
