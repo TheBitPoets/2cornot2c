@@ -147,6 +147,7 @@ def test_wide_no_color_snapshot() -> None:
         color=False,
     )
 
+    assert any("Scadenza: 25/07/2026 23:59" in line for line in frame)
     assert_snapshot("wide-no-color.txt", "\n".join(frame))
 
 
@@ -160,6 +161,7 @@ def test_narrow_no_color_snapshot() -> None:
         color=False,
     )
 
+    assert any("Scadenza: 25/07/2026 23:59" in line for line in frame)
     assert_snapshot("narrow-no-color.txt", "\n".join(frame))
 
 

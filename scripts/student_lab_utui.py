@@ -443,7 +443,8 @@ def _build_panel(
             tuple(row_styles) + (None,) * max(0, len(normalized_rows) - len(row_styles))
         )[: len(normalized_rows)]
     )
-    body_height = min(PANEL_BODY_ROWS, len(normalized_rows))
+    body_limit = 7 if identifier == "assignment" else PANEL_BODY_ROWS
+    body_height = min(body_limit, len(normalized_rows))
     height = 3 if collapsed else max(3, body_height + 2)
     labels = [
         Label(row, style=style)

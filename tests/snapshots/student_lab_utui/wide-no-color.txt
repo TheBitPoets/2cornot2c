@@ -5,26 +5,27 @@
 |Assegnazione: assignment-demo-001                           | | |Commit: abc1234                                      |
 |Classe: 3A Informatica                                      | | +-----------------------------------------------------+
 |Assegnata: 20/07/2026 08:30                                 | | + Ultimo dettaglio test ------------------------------+
-+------------------------------------------------------------+ | |[ok] test_somma_positivi                             |
-+ Workspace -------------------------------------------------+ | |[ko] test_somma_negativi                             |
-|Path: tmp/demo/rossi-mario/python-demo-somma-001            | | |atteso -3, ottenuto 3                                |
-|Esiste: si                                                  | | +-----------------------------------------------------+
-+------------------------------------------------------------+ | + Grading --------------------------------------------+
-+ Activity --------------------------------------------------+ | |Stato: draft (1/2 test)                              |
-|Path: activities/python-demo-somma-001.json                 | | |Voto: 7                                              |
-|Tipo: laboratorio                                           | | +-----------------------------------------------------+
-|Linguaggio: python                                          | | + Runner ---------------------------------------------+
-|Sorgente: main.py                                           | | |Stato: passed                                        |
-|Argomenti: funzioni, somma, input                           | | |Backend: docker                                      |
-+------------------------------------------------------------+ | +-----------------------------------------------------+
-+ Aiuto consentito ------------------------------------------+ | + Guida rapida ---------------------------------------+
-|Modalita: Debug guidato                                     | | |Consegna: lavoro assegnato dal docente.              |
-|Sintesi: Spiegazioni e indizi senza soluzione completa.     | | |Workspace: cartella locale dove modifichi i file.    |
-|Permesso: errori, concetti                                  | | |Test: controlli automatici sul tuo lavoro.           |
-|Non permesso: soluzione completa                            | | |Report: risultato letto da dashboard e registro.     |
-+------------------------------------------------------------+ | |                                                     |
-+ Richieste aiuto -------------------------------------------+ | |Flusso consigliato                                   |
-|AI budget: 2/5 usate, 3 rimanenti                           | | +-----------------------------------------------------+
+|Scadenza: 25/07/2026 23:59                                  | | |[ok] test_somma_positivi                             |
++------------------------------------------------------------+ | |[ko] test_somma_negativi                             |
++ Workspace -------------------------------------------------+ | |atteso -3, ottenuto 3                                |
+|Path: tmp/demo/rossi-mario/python-demo-somma-001            | | +-----------------------------------------------------+
+|Esiste: si                                                  | | + Grading --------------------------------------------+
++------------------------------------------------------------+ | |Stato: draft (1/2 test)                              |
++ Activity --------------------------------------------------+ | |Voto: 7                                              |
+|Path: activities/python-demo-somma-001.json                 | | +-----------------------------------------------------+
+|Tipo: laboratorio                                           | | + Runner ---------------------------------------------+
+|Linguaggio: python                                          | | |Stato: passed                                        |
+|Sorgente: main.py                                           | | |Backend: docker                                      |
+|Argomenti: funzioni, somma, input                           | | +-----------------------------------------------------+
++------------------------------------------------------------+ | + Guida rapida ---------------------------------------+
++ Aiuto consentito ------------------------------------------+ | |Consegna: lavoro assegnato dal docente.              |
+|Modalita: Debug guidato                                     | | |Workspace: cartella locale dove modifichi i file.    |
+|Sintesi: Spiegazioni e indizi senza soluzione completa.     | | |Test: controlli automatici sul tuo lavoro.           |
+|Permesso: errori, concetti                                  | | |Report: risultato letto da dashboard e registro.     |
+|Non permesso: soluzione completa                            | | |                                                     |
++------------------------------------------------------------+ | |Flusso consigliato                                   |
++ Richieste aiuto -------------------------------------------+ | +-----------------------------------------------------+
+|AI budget: 2/5 usate, 3 rimanenti                           | |
 |Esito ultima: consentita                                    | |
 |Eventi: 2                                                   | |
 |Consentite: 2                                               | |
