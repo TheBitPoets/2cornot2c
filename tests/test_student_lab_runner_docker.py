@@ -242,3 +242,53 @@ def test_docker_worker_cannot_read_teacher_expected_output(
     assert hidden_marker not in report["tests"][0]["stdout"]
     assert hidden_marker not in report["tests"][0]["stderr"]
     assert hidden_marker not in worker_stderr
+
+
+def test_docker_student_report_omits_container_stderr(tmp_path) -> None:
+    hidden_marker = "THEBITLAB_HIDDEN_STDIN_91d5f0"
+    activity_path = tmp_path / "teacher" / "activity.json"
+    source_path = tmp_path / "student" / "main.py"
+    activity_path.parent.mkdir()
+    source_path.parent.mkdir()
+    activity_path.write_text(
+        json.dumps(
+            {
+                "id": "python-stderr-channel",
+                "language": "python",
+                "test_cases": [
+                    {
+                        "name": "input-riservato",
+                        "stdin": hidden_marker,
+                        "expected_stdout": "",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_path.write_text(
+        (
+            "import os, sys\n"
+            "secret = sys.stdin.read()\n"
+            "with open('/proc/1/fd/2', 'w') as stream:\n"
+            "    stream.write(secret)\n"
+        ),
+        encoding="utf-8",
+    )
+    assignment = {
+        "assignment_id": "assignment-stderr-channel",
+        "activity_id": "python-stderr-channel",
+        "student_id": "rossi-mario",
+    }
+
+    report = student_lab_runner.run_docker_runner(
+        assignment,
+        activity_path=activity_path,
+        source=source_path,
+        timeout_seconds=5,
+        language="python",
+    )
+
+    assert report["passed"] is True
+    assert "runner_stderr" not in report
+    assert hidden_marker not in json.dumps(report)

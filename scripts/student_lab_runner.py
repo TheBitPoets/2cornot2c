@@ -345,7 +345,7 @@ def run_docker_runner(
             backend="docker",
         )
     try:
-        report, worker_stderr = grade_activity.grade_activity_in_docker(
+        report, _worker_stderr = grade_activity.grade_activity_in_docker(
             activity_path,
             source,
             timeout_seconds=timeout_seconds,
@@ -381,8 +381,6 @@ def run_docker_runner(
         )
     wrapped = wrap_runner_report(assignment, source, report, language)
     wrapped["backend"] = "docker"
-    if worker_stderr:
-        wrapped["runner_stderr"] = worker_stderr
     return wrapped
 
 
