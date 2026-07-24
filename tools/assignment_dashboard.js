@@ -2185,10 +2185,15 @@ async function deleteSelectedActivity() {
     return;
   }
   const label = activity.title || activity.id || activityPath;
-  const confirmed = window.confirm(
-    `Cancellare l'activity "${label}"?\n\n` +
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Cancella activity",
+    message:
+      `Cancellare l'activity "${label}"?\n\n` +
       "Viene rimosso solo il file della bozza. Se esistono consegne o registri collegati, il server blocca la cancellazione.",
-  );
+    confirmLabel: "Cancella activity",
+    cancelLabel: "Mantieni",
+    danger: true,
+  });
   if (!confirmed) return;
   els.deleteActivityBtn.disabled = true;
   setActivityAuthorStatus("saving", "Cancellazione activity", "Controllo collegamenti e rimozione della bozza in corso...");
@@ -3745,12 +3750,17 @@ async function deleteSelectedAssignment() {
   const assignment = state.dueAssignments.find((candidate) => candidate.id === assignmentId)
     || state.assignments.find((candidate) => candidate.id === assignmentId);
   const label = assignment ? assignmentLabel(assignment) : assignmentId;
-  const confirmed = window.confirm?.(
-    `Cancellare l'assegnazione "${label}"?\n\n` +
-    "Verranno eliminati il record docente in teacher-assignments, le richieste di aiuto autorevoli " +
-    "e il relativo conteggio del budget. Eventuali workspace e file già distribuiti nei repository " +
-    "studenti non verranno rimossi."
-  );
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Cancella assegnazione",
+    message:
+      `Cancellare l'assegnazione "${label}"?\n\n` +
+      "Verranno eliminati il record docente in teacher-assignments, le richieste di aiuto autorevoli " +
+      "e il relativo conteggio del budget. Eventuali workspace e file già distribuiti nei repository " +
+      "studenti non verranno rimossi.",
+    confirmLabel: "Cancella assegnazione",
+    cancelLabel: "Mantieni",
+    danger: true,
+  });
   if (!confirmed) return;
   els.deleteAssignmentBtn.disabled = true;
   setStatus("Cancellazione assegnazione...");

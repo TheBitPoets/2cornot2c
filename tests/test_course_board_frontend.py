@@ -56,8 +56,18 @@ def run_course_board_js(assertions: str) -> None:
       setInterval() {{ return 1; }},
       clearInterval() {{}},
       setTimeout(handler) {{ handler(); return 1; }},
-      confirm() {{ return true; }},
-      prompt() {{ return null; }},
+      DashboardDialogs: {{
+        async confirm() {{ return true; }},
+        async prompt() {{ return null; }},
+        async message() {{}},
+        toast() {{}},
+      }},
+    }};
+    context.window.location = {{ href: "" }};
+    context.window.openCalls = [];
+    context.window.open = (...args) => {{
+      context.window.openCalls.push(args);
+      return {{}};
     }};
 
     let source = fs.readFileSync("tools/course_board.js", "utf8");
@@ -128,27 +138,29 @@ def test_quick_add_does_not_duplicate_a_heading_tree() -> None:
 def test_accessible_add_can_target_the_second_uda() -> None:
     run_course_board_js(
         """
-        renderCourse = () => {};
-        renderHeadings = () => {};
-        prompt = () => "2";
-        const heading = { id: "topic", title: "Argomento", source: "README.md", level: 2 };
-        state.headings = [heading];
-        state.design = {
-          years: [{
-            id: "path",
-            title: "Percorso",
-            udas: [
-              { id: "uda-1", title: "Prima", items: [] },
-              { id: "uda-2", title: "Seconda", items: [] },
-            ],
-          }],
-        };
+        (async () => {
+          renderCourse = () => {};
+          renderHeadings = () => {};
+          DashboardDialogs.prompt = async () => "2";
+          const heading = { id: "topic", title: "Argomento", source: "README.md", level: 2 };
+          state.headings = [heading];
+          state.design = {
+            years: [{
+              id: "path",
+              title: "Percorso",
+              udas: [
+                { id: "uda-1", title: "Prima", items: [] },
+                { id: "uda-2", title: "Seconda", items: [] },
+              ],
+            }],
+          };
 
-        addHeadingWithDestination(heading);
+          await addHeadingWithDestination(heading);
 
-        assert.equal(state.design.years[0].udas[0].items.length, 0);
-        assert.equal(state.design.years[0].udas[1].items[0].id, "topic");
-        assert.match(els.status.textContent, /UDA-2/);
+          assert.equal(state.design.years[0].udas[0].items.length, 0);
+          assert.equal(state.design.years[0].udas[1].items[0].id, "topic");
+          assert.match(els.status.textContent, /UDA-2/);
+        })();
         """
     )
 
@@ -277,6 +289,7 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
     run_course_board_js(
         """
         let requests = 0;
+        let confirmationOptions = null;
         api = async (_path, options) => {
           requests += 1;
           const body = JSON.parse(options.body);
@@ -288,7 +301,10 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
           assert.equal(body.overwrite, true);
           return { saved: { name: body.name }, designs: [{ name: body.name }] };
         };
-        confirm = () => true;
+        DashboardDialogs.confirm = async (options) => {
+          confirmationOptions = options;
+          return true;
+        };
         renderSavedDesigns = () => {};
         renderProjectTitle = () => {};
         renderCourseActions = () => {};
@@ -298,7 +314,83 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
           .then((saved) => {
             assert.equal(saved, true);
             assert.equal(requests, 2);
+            assert.equal(confirmationOptions.title, "Sostituisci progetto esistente");
+            assert.equal(confirmationOptions.confirmLabel, "Sostituisci");
+            assert.equal(confirmationOptions.danger, true);
           });
+        """
+    )
+
+
+def test_remove_course_can_be_cancelled_from_the_custom_dialog() -> None:
+    run_course_board_js(
+        """
+        (async () => {
+          let confirmationOptions = null;
+          DashboardDialogs.confirm = async (options) => {
+            confirmationOptions = options;
+            return false;
+          };
+          const year = { id: "path", title: "Percorso", udas: [] };
+          state.design = { years: [year] };
+
+          await removeYear(year);
+
+          assert.equal(state.design.years.length, 1);
+          assert.equal(confirmationOptions.title, "Elimina percorso");
+          assert.equal(confirmationOptions.confirmLabel, "Elimina percorso");
+          assert.equal(confirmationOptions.danger, true);
+        })();
+        """
+    )
+
+
+def test_project_replacement_dialogs_are_marked_as_dangerous() -> None:
+    run_course_board_js(
+        """
+        (async () => {
+          const confirmations = [];
+          DashboardDialogs.confirm = async (options) => {
+            confirmations.push(options);
+            return false;
+          };
+
+          await loadCurrentDesign();
+          await loadSavedDesignByName("archivio.json");
+          await newCourseDesign();
+
+          assert.equal(confirmations.length, 3);
+          assert.deepEqual(
+            confirmations.map((options) => options.title),
+            ["Carica progetto corrente", "Carica progetto salvato", "Crea un nuovo percorso"],
+          );
+          assert.equal(confirmations.every((options) => options.danger === true), true);
+        })();
+        """
+    )
+
+
+def test_confirmed_navigation_preserves_tab_and_window_intent() -> None:
+    run_course_board_js(
+        """
+        const link = { href: "http://localhost/tools/assignment_dashboard.html" };
+
+        continueTopNavigation(link, { newTab: true });
+        continueTopNavigation(link, { newWindow: true });
+
+        assert.equal(window.openCalls.length, 2);
+        assert.equal(window.openCalls[0][0], link.href);
+        assert.equal(window.openCalls[0][1], "_blank");
+        assert.equal(window.openCalls[0][2], undefined);
+        assert.equal(window.openCalls[1][0], link.href);
+        assert.equal(window.openCalls[1][1], "_blank");
+        assert.equal(window.openCalls[1][2], "popup");
+        assert.equal(window.location.href, "");
+        assert.equal(allowNextUnloadWithoutWarning, false);
+
+        continueTopNavigation(link);
+        assert.equal(window.location.href, link.href);
+        assert.equal(allowNextUnloadWithoutWarning, true);
         """
     )
 
@@ -495,7 +587,7 @@ def test_delete_response_does_not_replace_a_newly_opened_project() -> None:
         state.activeSavedDesign = "first.json";
 
         const deleting = deleteArchiveDesign();
-        Promise.resolve().then(() => {
+        Promise.resolve().then(() => Promise.resolve()).then(() => {
           const secondDesign = { years: [{ id: "second" }] };
           state.design = secondDesign;
           state.activeSavedDesign = "second.json";
@@ -533,7 +625,7 @@ def test_delete_response_detaches_edits_from_the_deleted_archive() -> None:
         markDesignClean();
 
         const deleting = deleteArchiveDesign();
-        Promise.resolve().then(() => {
+        Promise.resolve().then(() => Promise.resolve()).then(() => {
           state.design.years.push({ id: "edited-while-deleting" });
           completeDelete({ designs: [], deleted_calendars: [] });
           return deleting.then(() => {
