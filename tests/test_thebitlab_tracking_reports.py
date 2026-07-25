@@ -389,6 +389,30 @@ def test_artifact_tracking_source_accepts_real_terminal_grader_report(
     assert result.report["passed"] is False
 
 
+def test_artifact_tracking_source_rejects_null_tests_in_terminal_report() -> None:
+    terminal_report = report(
+        passed=False,
+        status="unsupported-language",
+        tests=None,
+    )
+    terminal_report.pop("summary")
+    source = tracking_reports.ArtifactTrackingReportSource(
+        FakeArtifactSource(
+            AcquiredGradingReport(
+                report=terminal_report,
+                provenance=provenance(),
+            )
+        ),
+        [binding()],
+    )
+
+    result = source.resolve(request())
+
+    assert result.selection == "remote_error"
+    assert result.report is None
+    assert "terminale" in result.error
+
+
 def test_artifact_tracking_source_normalizes_expected_acquisition_error() -> None:
     source = tracking_reports.ArtifactTrackingReportSource(
         FakeArtifactSource(error=GradingArtifactError("artifact non disponibile")),

@@ -365,7 +365,7 @@ def _validate_remote_outcome(report: dict[str, Any]) -> list[bool]:
 
     tests = report.get("tests")
     if status in REMOTE_TERMINAL_STATUSES:
-        if passed or (tests is not None and tests != []) or "summary" in report:
+        if passed or ("tests" in report and tests != []) or "summary" in report:
             raise ValueError("Report remoto terminale con risultati di test non coerenti.")
         return []
     if status not in REMOTE_TEST_OUTCOME_STATUSES:
