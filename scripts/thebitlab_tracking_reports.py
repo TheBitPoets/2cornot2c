@@ -18,6 +18,15 @@ from scripts.thebitlab_repository_providers import normalize_github_repo_ref
 
 
 REMOTE_TEST_OUTCOME_STATUSES = frozenset({"passed", "failed"})
+REMOTE_TEST_RESULT_STATUSES = frozenset(
+    {
+        "execution-error",
+        "failed",
+        "passed",
+        "runtime-startup-timeout",
+        "timeout",
+    }
+)
 REMOTE_TERMINAL_STATUSES = frozenset(
     {
         "compile-error",
@@ -365,7 +374,7 @@ def _validate_remote_outcome(report: dict[str, Any]) -> list[bool]:
         if (
             not isinstance(test_passed, bool)
             or not isinstance(test_status, str)
-            or not test_status.strip()
+            or test_status not in REMOTE_TEST_RESULT_STATUSES
             or test_passed != (test_status == "passed")
         ):
             raise ValueError("Report remoto con risultato test non valido.")

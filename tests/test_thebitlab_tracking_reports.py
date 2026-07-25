@@ -240,6 +240,11 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
             "risultato test",
         ),
         (
+            {"tests": [{"name": "somma", "status": "invented", "passed": False}]},
+            {},
+            "risultato test",
+        ),
+        (
             {
                 "passed": True,
                 "status": "passed",
