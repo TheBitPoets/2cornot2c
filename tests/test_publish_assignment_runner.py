@@ -137,6 +137,89 @@ def test_publish_is_idempotent_after_partial_release(
     assert f"digest={MANIFEST_DIGEST}" in output_path.read_text(encoding="utf-8")
 
 
+def test_existing_matching_reference_is_reused_without_push(monkeypatch) -> None:
+    monkeypatch.setattr(publisher, "manifest_exists", lambda reference: True)
+    monkeypatch.setattr(publisher, "remote_image_id", lambda reference: IMAGE_ID)
+    monkeypatch.setattr(
+        publisher, "remote_manifest_digest", lambda reference: MANIFEST_DIGEST
+    )
+
+    def fail_on_write(command: list[str], *, check: bool = True):
+        raise AssertionError(f"Scrittura registry inattesa: {command}")
+
+    monkeypatch.setattr(publisher, "_run", fail_on_write)
+
+    digest = publisher.ensure_reference(
+        reference=f"{builder.IMAGE_REPOSITORY}:2026.07.1",
+        local_tag=builder.DEFAULT_TAG,
+        local_image_id=IMAGE_ID,
+    )
+
+    assert digest == MANIFEST_DIGEST
+
+
+def test_publish_creates_both_tags_on_first_release(
+    tmp_path: Path, monkeypatch
+) -> None:
+    references: set[str] = set()
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(
+        publisher, "manifest_exists", lambda reference: reference in references
+    )
+    monkeypatch.setattr(publisher, "remote_image_id", lambda reference: IMAGE_ID)
+    monkeypatch.setattr(
+        publisher, "remote_manifest_digest", lambda reference: MANIFEST_DIGEST
+    )
+
+    def fake_run(command: list[str], *, check: bool = True):
+        commands.append(command)
+        if command[:2] == ["docker", "push"]:
+            references.add(command[2])
+        return completed(command)
+
+    monkeypatch.setattr(publisher, "_run", fake_run)
+
+    release = publisher.publish(
+        metadata_path=write_metadata(tmp_path),
+        release_path=tmp_path / "release.json",
+        github_output_path=None,
+    )
+
+    version_ref = f"{builder.IMAGE_REPOSITORY}:2026.07.1"
+    commit_ref = f"{builder.IMAGE_REPOSITORY}:sha-{SOURCE_REVISION}"
+    assert ["docker", "push", version_ref] in commands
+    assert ["docker", "push", commit_ref] in commands
+    assert release["immutable_reference"] == (
+        f"{builder.IMAGE_REPOSITORY}@{MANIFEST_DIGEST}"
+    )
+
+
+def test_publish_is_fully_idempotent_when_both_tags_exist(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(publisher, "manifest_exists", lambda reference: True)
+    monkeypatch.setattr(publisher, "remote_image_id", lambda reference: IMAGE_ID)
+    monkeypatch.setattr(
+        publisher, "remote_manifest_digest", lambda reference: MANIFEST_DIGEST
+    )
+
+    def fail_on_write(command: list[str], *, check: bool = True):
+        raise AssertionError(f"Scrittura registry inattesa: {command}")
+
+    monkeypatch.setattr(publisher, "_run", fail_on_write)
+    release_path = tmp_path / "release.json"
+
+    release = publisher.publish(
+        metadata_path=write_metadata(tmp_path),
+        release_path=release_path,
+        github_output_path=None,
+    )
+
+    assert release["published_digest"] == MANIFEST_DIGEST
+    assert json.loads(release_path.read_text(encoding="utf-8")) == release
+
+
 def test_publish_rejects_different_version_and_commit_digests(
     tmp_path: Path, monkeypatch
 ) -> None:
