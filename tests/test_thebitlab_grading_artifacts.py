@@ -407,6 +407,10 @@ def test_github_source_rejects_archive_digest_mismatch() -> None:
         (zip_bytes([("report.json", b'{"status":"passed","status":"failed"}')]), "chiave duplicata"),
         (zip_bytes([("report.json", b'{"score":NaN}')]), "costante non standard"),
         (zip_bytes([("report.json", b'{"score":1e999}')]), "numero non finito"),
+        (
+            zip_bytes([("report.json", b'{"score":' + b"9" * 5000 + b"}")]),
+            "JSON report grading non valido",
+        ),
     ],
 )
 def test_report_archive_rejects_invalid_or_unsafe_content(archive: bytes, message: str) -> None:

@@ -431,7 +431,7 @@ def _json_object(data: bytes, label: str) -> dict[str, Any]:
             parse_float=finite_float,
             parse_constant=reject_constant,
         )
-    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError, ValueError) as error:
         raise GradingArtifactError(f"JSON {label} non valido.") from error
     if not isinstance(payload, dict):
         raise GradingArtifactError(f"JSON {label} non valido: e richiesto un oggetto.")
