@@ -11,6 +11,8 @@ ARG SQLITE3_VERSION
 ARG THEBITLAB_TOOLCHAIN_VERSION
 ARG THEBITLAB_WORKER_SCHEMA_VERSION
 ARG SOURCE_REVISION
+# BuildKit normalizza i timestamp dei layer a SOURCE_DATE_EPOCH: il digest resta riproducibile.
+ARG SOURCE_DATE_EPOCH
 
 LABEL org.opencontainers.image.title="TheBitLab assignment runner" \
       org.opencontainers.image.version="${THEBITLAB_TOOLCHAIN_VERSION}" \

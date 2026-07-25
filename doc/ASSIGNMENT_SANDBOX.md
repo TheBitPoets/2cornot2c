@@ -59,12 +59,15 @@ perche potrebbe omettere i pin.
 Il workflow `.github/workflows/publish-assignment-runner.yml` viene eseguito soltanto su `main` o
 manualmente. Prima della pubblicazione:
 
-1. costruisce l'immagine dal manifest;
+1. costruisce l'immagine dal manifest con timestamp fissati a `SOURCE_DATE_EPOCH` (derivato dallo
+   snapshot Debian), cosi il digest e riproducibile tra runner diversi;
 2. esegue gli smoke test Docker reali;
-3. pubblica su GHCR un tag di versione e un tag legato al commit;
-4. non pubblica mai `latest`;
-5. rifiuta di sovrascrivere una versione gia esistente;
-6. salva `toolchain-release.json` come artifact con il digest OCI da usare nel lock autorevole.
+3. ricostruisce l'immagine nel job di pubblicazione e fallisce in modo chiuso se il digest non
+   riproduce esattamente quello validato;
+4. pubblica su GHCR un tag di versione e un tag legato al commit;
+5. non pubblica mai `latest`;
+6. rifiuta di sovrascrivere una versione gia esistente;
+7. salva `toolchain-release.json` come artifact con il digest OCI da usare nel lock autorevole.
 
 Per un aggiornamento intenzionale:
 

@@ -79,9 +79,17 @@ def test_docker_build_command_uses_only_manifest_pins() -> None:
     assert payload["base_image"] in joined
     assert payload["debian_snapshot"] in joined
     assert f"SOURCE_REVISION={SOURCE_REVISION}" in command
+    assert (
+        f"SOURCE_DATE_EPOCH={builder.snapshot_epoch(payload['debian_snapshot'])}"
+        in command
+    )
     for package_version in payload["packages"].values():
         assert package_version in joined
     assert ":latest" not in joined
+
+
+def test_snapshot_epoch_is_deterministic() -> None:
+    assert builder.snapshot_epoch("20260713T000000Z") == 1783900800
 
 
 def test_image_metadata_requires_labels_matching_manifest() -> None:

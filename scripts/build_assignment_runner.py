@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
+from datetime import timezone
 import json
 from pathlib import Path
 import re
@@ -36,6 +38,13 @@ SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 class ToolchainBuildError(RuntimeError):
     """Raised when the reproducible runner configuration is invalid."""
+
+
+def snapshot_epoch(snapshot: str) -> int:
+    """Return the deterministic SOURCE_DATE_EPOCH for one Debian snapshot."""
+
+    moment = datetime.strptime(snapshot, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+    return int(moment.timestamp())
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -114,6 +123,7 @@ def docker_build_command(
         "THEBITLAB_TOOLCHAIN_VERSION": manifest["version"],
         "THEBITLAB_WORKER_SCHEMA_VERSION": manifest["worker_schema_version"],
         "SOURCE_REVISION": source_revision,
+        "SOURCE_DATE_EPOCH": str(snapshot_epoch(manifest["debian_snapshot"])),
     }
     command = [
         "docker",

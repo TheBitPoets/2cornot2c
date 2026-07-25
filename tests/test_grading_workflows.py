@@ -64,6 +64,8 @@ def test_publish_workflow_only_publishes_reviewed_main_toolchains() -> None:
     assert "THEBITLAB_RUN_DOCKER_TESTS" in source
     assert "tests/test_student_lab_runner_docker.py" in source
     assert "docker login ghcr.io" in source
+    assert "image_id: ${{ steps.image-digest.outputs.image_id }}" in source
+    assert "VALIDATED_IMAGE_ID: ${{ needs.validate.outputs.image_id }}" in source
     assert ":latest" not in source
     assert source.count("tests/test_student_lab_runner_docker.py") == 1
     assert '".github/workflows/publish-assignment-runner.yml"' not in source
