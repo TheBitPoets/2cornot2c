@@ -72,6 +72,7 @@ def report(**overrides) -> dict:
         "passed": True,
         "submitted_at": "2026-10-20T08:00:00+02:00",
         "tests": [{"name": "somma", "status": "passed", "passed": True}],
+        "summary": {"passed": 1, "total": 1},
     }
     values.update(overrides)
     return values
@@ -223,9 +224,58 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
         ({"activity_id": "other"}, {}, "activity diversa"),
         ({"assignment_id": "other"}, {}, "assegnazione diversa"),
         ({"student_id": ""}, {}, "privo dell'identificativo studente"),
+        ({"student_id": 123}, {}, "identificativo studente"),
         ({"student_id": "bianchi-luca"}, {}, "studente diverso"),
+        ({"commit": 123}, {}, "Commit"),
         ({"commit": "b" * 40}, {}, "Commit"),
+        ({"submitted_at": 123}, {}, "Timestamp"),
         ({"submitted_at": "2026-10-21T08:00:00+02:00"}, {}, "Timestamp"),
+        ({"passed": "yes"}, {}, "stato di grading minimo"),
+        ({"status": 1}, {}, "stato di grading minimo"),
+        ({"passed": True, "status": "failed"}, {}, "stato ed esito"),
+        ({"passed": False, "status": "passed"}, {}, "stato ed esito"),
+        ({"passed": False, "status": "invented"}, {}, "stato di grading non riconosciuto"),
+        ({"passed": False, "status": "failed", "tests": []}, {}, "elenco test"),
+        ({"tests": "not-a-list"}, {}, "elenco test"),
+        (
+            {"tests": [{"name": "somma", "status": "failed", "passed": True}]},
+            {},
+            "risultato test",
+        ),
+        (
+            {"tests": [{"name": "somma", "status": "invented", "passed": False}]},
+            {},
+            "risultato test",
+        ),
+        (
+            {
+                "passed": True,
+                "status": "passed",
+                "tests": [{"name": "somma", "status": "failed", "passed": False}],
+            },
+            {},
+            "test ed esito aggregato",
+        ),
+        ({"summary": {"passed": 0, "total": 1}}, {}, "riepilogo test"),
+        ({"summary": {"passed": True, "total": 1}}, {}, "riepilogo test"),
+        ({"summary": {"passed": 1.0, "total": 1}}, {}, "riepilogo test"),
+        ({"summary": {"passed": 1, "total": -1}}, {}, "riepilogo test"),
+        ({"teacher_grade": 8}, {}, "voto definitivo"),
+        ({"score": None}, {}, "punteggio non valido"),
+        ({"score": float("nan")}, {}, "punteggio non valido"),
+        ({"score": 11}, {}, "punteggio non valido"),
+        ({"score": 10**10000}, {}, "punteggio non valido"),
+        (
+            {
+                "passed": False,
+                "status": "failed",
+                "tests": [{"name": "somma", "status": "failed", "passed": False}],
+                "summary": {"passed": 0, "total": 1},
+                "score": 10,
+            },
+            {},
+            "punteggio non coerente",
+        ),
         ({}, {"repository": "TheBitPoets/altro"}, "repository diverso"),
         ({}, {"head_sha": "c" * 40}, "SHA diverso"),
         ({}, {"workflow_run_id": 901}, "workflow run diversa"),
@@ -254,6 +304,113 @@ def test_artifact_tracking_source_fails_closed_on_mismatched_report_or_provenanc
     assert result.authority == "remote_configured"
     assert result.provisional is False
     assert message in result.error
+
+
+def test_artifact_tracking_source_accepts_score_derived_from_tests() -> None:
+    acquired = AcquiredGradingReport(
+        report=report(score=10),
+        provenance=provenance(),
+    )
+    source = tracking_reports.ArtifactTrackingReportSource(
+        FakeArtifactSource(acquired),
+        [binding()],
+    )
+
+    result = source.resolve(request())
+
+    assert result.selection == "github_actions_artifact"
+    assert result.report["score"] == 10
+
+
+def test_artifact_tracking_source_does_not_coerce_numeric_identity_fields() -> None:
+    numeric_sha = "1" * 40
+    numeric_student_id = "123"
+    source = tracking_reports.ArtifactTrackingReportSource(
+        FakeArtifactSource(
+            AcquiredGradingReport(
+                report=report(
+                    student_id=int(numeric_student_id),
+                    commit=int(numeric_sha),
+                ),
+                provenance=provenance(),
+            )
+        ),
+        [
+            binding(
+                student_id=numeric_student_id,
+                expected_student_head_sha=numeric_sha,
+            )
+        ],
+    )
+
+    result = source.resolve(
+        request(student_id=numeric_student_id)
+    )
+
+    assert result.selection == "remote_error"
+    assert result.report is None
+    assert "identificativo studente" in result.error
+
+
+@pytest.mark.parametrize(
+    ("language", "expected_status"),
+    [
+        ("java", "unsupported-language"),
+        ("not-a-language", "unknown-language"),
+    ],
+)
+def test_artifact_tracking_source_accepts_real_terminal_grader_report(
+    tmp_path,
+    language: str,
+    expected_status: str,
+) -> None:
+    produced = grade_activity.grade_activity(
+        {"id": "python-base-somma-001", "linguaggio": language},
+        tmp_path / "main.txt",
+    )
+    produced = grade_activity.with_report_metadata(
+        produced,
+        assignment_id="assignment-001",
+        student_id="rossi-mario",
+        commit=HEAD_SHA,
+        submitted_at="2026-10-20T08:00:00+02:00",
+    )
+    source = tracking_reports.ArtifactTrackingReportSource(
+        FakeArtifactSource(
+            AcquiredGradingReport(report=produced, provenance=provenance())
+        ),
+        [binding()],
+    )
+
+    result = source.resolve(request())
+
+    assert result.selection == "github_actions_artifact"
+    assert result.report["status"] == expected_status
+    assert result.report["passed"] is False
+
+
+def test_artifact_tracking_source_rejects_null_tests_in_terminal_report() -> None:
+    terminal_report = report(
+        passed=False,
+        status="unsupported-language",
+        tests=None,
+    )
+    terminal_report.pop("summary")
+    source = tracking_reports.ArtifactTrackingReportSource(
+        FakeArtifactSource(
+            AcquiredGradingReport(
+                report=terminal_report,
+                provenance=provenance(),
+            )
+        ),
+        [binding()],
+    )
+
+    result = source.resolve(request())
+
+    assert result.selection == "remote_error"
+    assert result.report is None
+    assert "terminale" in result.error
 
 
 def test_artifact_tracking_source_normalizes_expected_acquisition_error() -> None:

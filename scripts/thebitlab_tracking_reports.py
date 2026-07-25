@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime
 import json
+import math
 from pathlib import Path
 import re
 from typing import Any, Iterable, Protocol
@@ -14,6 +15,33 @@ from scripts.thebitlab_grading_artifacts import (
     GradingArtifactSource,
 )
 from scripts.thebitlab_repository_providers import normalize_github_repo_ref
+
+
+REMOTE_TEST_OUTCOME_STATUSES = frozenset({"passed", "failed"})
+REMOTE_TEST_RESULT_STATUSES = frozenset(
+    {
+        "execution-error",
+        "failed",
+        "passed",
+        "runtime-startup-timeout",
+        "timeout",
+    }
+)
+REMOTE_TERMINAL_STATUSES = frozenset(
+    {
+        "compile-error",
+        "compile-timeout",
+        "compiler-not-found",
+        "execution-error",
+        "invalid-activity",
+        "runtime-startup-timeout",
+        "source-not-found",
+        "timeout",
+        "unknown-language",
+        "unsupported-language",
+        "worker-error",
+    }
+)
 
 
 GIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
@@ -274,19 +302,44 @@ def _validate_request(
 
 
 def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding) -> None:  # noqa: ANN001
+    test_outcomes = _validate_remote_outcome(report)
+    if "teacher_grade" in report:
+        raise ValueError(
+            "Il report remoto non puo impostare il voto definitivo del docente."
+        )
+    if "score" in report:
+        score = report["score"]
+        if not isinstance(score, (int, float)) or isinstance(score, bool):
+            raise ValueError("Report remoto con punteggio non valido.")
+        if isinstance(score, float) and not math.isfinite(score):
+            raise ValueError("Report remoto con punteggio non valido.")
+        if not 0 <= score <= 10:
+            raise ValueError("Report remoto con punteggio non valido.")
+        if not test_outcomes:
+            raise ValueError("Report remoto con punteggio senza risultati di test.")
+        expected_score = round((sum(test_outcomes) / len(test_outcomes)) * 10, 2)
+        if score != expected_score:
+            raise ValueError("Report remoto con punteggio non coerente con i test.")
     if report.get("activity_id") != binding.activity_id:
         raise ValueError("Report remoto riferito a una activity diversa.")
     if report.get("assignment_id") != binding.assignment_id:
         raise ValueError("Report remoto riferito a un'assegnazione diversa.")
-    report_student_id = str(report.get("student_id", "") or "").strip()
-    if not report_student_id:
+    raw_student_id = report.get("student_id")
+    if not isinstance(raw_student_id, str) or not raw_student_id.strip():
         raise ValueError("Report remoto privo dell'identificativo studente.")
+    report_student_id = raw_student_id.strip()
     if report_student_id != binding.student_id:
         raise ValueError("Report remoto riferito a uno studente diverso.")
-    commit = str(report.get("commit", "")).strip().lower()
+    raw_commit = report.get("commit")
+    if not isinstance(raw_commit, str):
+        raise ValueError("Commit del report remoto non valido.")
+    commit = raw_commit.strip().lower()
     if commit != binding.expected_student_head_sha:
         raise ValueError("Commit del report remoto diverso dallo SHA autorizzato.")
-    if str(report.get("submitted_at", "") or "").strip() != binding.expected_submitted_at:
+    raw_submitted_at = report.get("submitted_at")
+    if not isinstance(raw_submitted_at, str):
+        raise ValueError("Timestamp di consegna del report remoto non valido.")
+    if raw_submitted_at.strip() != binding.expected_submitted_at:
         raise ValueError("Timestamp di consegna del report remoto diverso da quello autorizzato.")
     if provenance.repository.lower() != binding.workflow_repo_ref.lower():
         raise ValueError("Provenienza remota riferita a un repository diverso.")
@@ -296,6 +349,63 @@ def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding
         raise ValueError("Provenienza remota riferita a una workflow run diversa.")
     if provenance.artifact_name != binding.artifact_name:
         raise ValueError("Provenienza remota riferita a un artifact diverso.")
+
+
+def _validate_remote_outcome(report: dict[str, Any]) -> list[bool]:
+    passed = report.get("passed")
+    status = report.get("status")
+    if (
+        not isinstance(passed, bool)
+        or not isinstance(status, str)
+        or not status.strip()
+    ):
+        raise ValueError("Report remoto privo dello stato di grading minimo.")
+    if passed != (status == "passed"):
+        raise ValueError("Report remoto con stato ed esito non coerenti.")
+
+    tests = report.get("tests")
+    if status in REMOTE_TERMINAL_STATUSES:
+        if passed or ("tests" in report and tests != []) or "summary" in report:
+            raise ValueError("Report remoto terminale con risultati di test non coerenti.")
+        return []
+    if status not in REMOTE_TEST_OUTCOME_STATUSES:
+        raise ValueError("Report remoto con stato di grading non riconosciuto.")
+    if not isinstance(tests, list) or not tests:
+        raise ValueError("Report remoto con elenco test non valido.")
+    test_outcomes: list[bool] = []
+    for test in tests:
+        if not isinstance(test, dict):
+            raise ValueError("Report remoto con risultato test non valido.")
+        test_passed = test.get("passed")
+        test_status = test.get("status")
+        if (
+            not isinstance(test_passed, bool)
+            or not isinstance(test_status, str)
+            or test_status not in REMOTE_TEST_RESULT_STATUSES
+            or test_passed != (test_status == "passed")
+        ):
+            raise ValueError("Report remoto con risultato test non valido.")
+        test_outcomes.append(test_passed)
+
+    if test_outcomes and passed != all(test_outcomes):
+        raise ValueError("Report remoto con test ed esito aggregato non coerenti.")
+    summary = report.get("summary")
+    if not isinstance(summary, dict):
+        raise ValueError("Report remoto con riepilogo test non coerente.")
+    summary_passed = summary.get("passed")
+    summary_total = summary.get("total")
+    if (
+        not isinstance(summary_passed, int)
+        or isinstance(summary_passed, bool)
+        or summary_passed < 0
+        or not isinstance(summary_total, int)
+        or isinstance(summary_total, bool)
+        or summary_total < 0
+        or summary_passed != sum(test_outcomes)
+        or summary_total != len(test_outcomes)
+    ):
+        raise ValueError("Report remoto con riepilogo test non coerente.")
+    return test_outcomes
 
 
 def _tracking_provenance(provenance, binding: TrustedGradingBinding) -> dict[str, Any]:  # noqa: ANN001

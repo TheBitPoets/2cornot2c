@@ -259,12 +259,55 @@ identificato la run del workflow autorizzato. Il servizio:
 3. sceglie il piu recente usando un timestamp timezone-aware;
 4. richiede il redirect firmato con autenticazione;
 5. scarica il file firmato senza inoltrare il token;
-6. applica limiti a elenco, archivio e `report.json`;
-7. rifiuta ZIP traversal, link simbolici, report multipli e JSON non valido;
-8. restituisce separatamente report e provenienza GitHub.
+6. verifica il digest SHA-256 dichiarato da GitHub prima di aprire l'archivio;
+7. applica limiti a elenco, archivio e `report.json`;
+8. accetta uno ZIP composto esclusivamente da `report.json` alla radice;
+9. rifiuta path ambigui, link simbolici, chiavi JSON duplicate e numeri non finiti;
+10. restituisce separatamente report e provenienza GitHub.
 
-La provenienza comprende repository, ID artifact, workflow run, SHA, data, URL API e digest dichiarato. Non
-contiene token o URL firmati temporanei.
+La provenienza comprende repository, ID artifact, workflow run, SHA, data, URL API e digest verificato. Non
+contiene token o URL firmati temporanei. Il report remoto non puo impostare `teacher_grade` e deve rispettare
+uno dei due contratti seguenti:
+
+- esecuzione con test: `status` e `passed` devono essere rispettivamente `passed`/`true` oppure
+  `failed`/`false`; `tests` deve essere una lista non vuota e ogni elemento deve avere un booleano `passed`
+  coerente con uno stato tra `passed`, `failed`, `timeout`, `execution-error` e
+  `runtime-startup-timeout`; `summary.passed` e `summary.total` devono essere interi non negativi coerenti
+  con la lista;
+- errore terminale senza test: `passed` deve essere `false`, `tests` puo mancare o essere una lista vuota e
+  `summary` deve mancare; gli stati ammessi sono `compile-error`, `compile-timeout`, `compiler-not-found`,
+  `execution-error`, `invalid-activity`, `runtime-startup-timeout`, `source-not-found`, `timeout`,
+  `unknown-language`, `unsupported-language` e `worker-error`.
+
+`score` e opzionale. Quando e presente deve essere un numero finito tra 0 e 10, puo comparire soltanto in
+un report con test e deve coincidere con
+`round(test_superati / test_totali * 10, 2)`.
+
+Esempio minimo completo di `report.json` valido:
+
+```json
+{
+  "activity_id": "python-base-somma-001",
+  "assignment_id": "assignment-3a-somma-001",
+  "student_id": "rossi-mario",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "submitted_at": "2026-10-20T08:00:00+02:00",
+  "status": "passed",
+  "passed": true,
+  "tests": [
+    {
+      "name": "somma",
+      "status": "passed",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "passed": 1,
+    "total": 1
+  },
+  "score": 10
+}
+```
 
 SHA e workflow run legano il report alla revisione e all'esecuzione scelte dal docente. Il flusso autorevole
 deve comunque usare un workflow protetto o verificato: affidare al repository dello studente anche la scelta

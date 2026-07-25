@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import hashlib
+import hmac
 from io import BytesIO
 import json
 import lzma
+import math
 from pathlib import PurePosixPath
 import re
 import stat
@@ -25,9 +28,11 @@ MAX_ARTIFACT_ARCHIVE_BYTES = 4 * 1024 * 1024
 MAX_GRADING_REPORT_BYTES = 2 * 1024 * 1024
 MAX_ARCHIVE_MEMBERS = 32
 MAX_ARTIFACT_LIST_PAGES = 10
+MAX_JSON_NESTING_DEPTH = 100
 ARTIFACTS_PER_PAGE = 100
 REQUEST_TIMEOUT_SECONDS = 30
 GIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
+ARTIFACT_DIGEST_RE = re.compile(r"^sha256:[0-9a-fA-F]{64}$")
 
 
 class GradingArtifactError(RuntimeError):
@@ -203,6 +208,12 @@ class GitHubActionsArtifactSource:
         )
         if archive.status != 200:
             raise GradingArtifactError(f"Download artifact fallito: HTTP {archive.status}.")
+        expected_digest = _artifact_digest(artifact.get("digest"))
+        actual_digest = f"sha256:{hashlib.sha256(archive.body).hexdigest()}"
+        if not hmac.compare_digest(actual_digest, expected_digest):
+            raise GradingArtifactError(
+                "Digest artifact non corrispondente al contenuto scaricato."
+            )
         report = _report_from_archive(archive.body)
         workflow_run = artifact.get("workflow_run") if isinstance(artifact.get("workflow_run"), dict) else {}
         return AcquiredGradingReport(
@@ -215,7 +226,7 @@ class GitHubActionsArtifactSource:
                 head_sha=clean_head_sha,
                 created_at=artifact.get("created_at", ""),
                 archive_download_url=archive_url,
-                digest=artifact.get("digest", "") if isinstance(artifact.get("digest"), str) else "",
+                digest=expected_digest,
             ),
         )
 
@@ -390,13 +401,57 @@ def _header_value(headers: Mapping[str, str], name: str) -> str:
 
 
 def _json_object(data: bytes, label: str) -> dict[str, Any]:
+    def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise GradingArtifactError(
+                    f"JSON {label} non valido: chiave duplicata {key!r}."
+                )
+            result[key] = value
+        return result
+
+    def finite_float(value: str) -> float:
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            raise GradingArtifactError(
+                f"JSON {label} non valido: numero non finito."
+            )
+        return parsed
+
+    def reject_constant(value: str) -> Any:
+        raise GradingArtifactError(
+            f"JSON {label} non valido: costante non standard {value}."
+        )
+
     try:
-        payload = json.loads(data.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        payload = json.loads(
+            data.decode("utf-8"),
+            object_pairs_hook=unique_object,
+            parse_float=finite_float,
+            parse_constant=reject_constant,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError, ValueError) as error:
         raise GradingArtifactError(f"JSON {label} non valido.") from error
     if not isinstance(payload, dict):
         raise GradingArtifactError(f"JSON {label} non valido: e richiesto un oggetto.")
+    _validate_json_depth(payload, label)
     return payload
+
+
+def _validate_json_depth(payload: dict[str, Any], label: str) -> None:
+    pending: list[tuple[Any, int]] = [(payload, 0)]
+    while pending:
+        value, depth = pending.pop()
+        if depth > MAX_JSON_NESTING_DEPTH:
+            raise GradingArtifactError(
+                f"JSON {label} non valido: profondita massima "
+                f"{MAX_JSON_NESTING_DEPTH} superata."
+            )
+        if isinstance(value, dict):
+            pending.extend((child, depth + 1) for child in value.values())
+        elif isinstance(value, list):
+            pending.extend((child, depth + 1) for child in value)
 
 
 def _artifact_candidate_for_commit(
@@ -443,6 +498,7 @@ def _artifact_candidate_for_commit(
         )
     if _artifact_created_at(value) is None:
         raise GradingArtifactError("Artifact di grading non valido: created_at non valido.")
+    _artifact_digest(value.get("digest"))
     return value
 
 
@@ -467,10 +523,15 @@ def _report_from_archive(data: bytes) -> dict[str, Any]:
                 )
             if any(not _safe_archive_member(member) for member in members):
                 raise GradingArtifactError("Artifact non valido: contiene path non sicuri o link simbolici.")
-            reports = [member for member in members if not member.is_dir() and member.filename == "report.json"]
-            if len(reports) != 1:
-                raise GradingArtifactError("Artifact non valido: e richiesto un solo report.json alla radice.")
-            report_info = reports[0]
+            if (
+                len(members) != 1
+                or members[0].is_dir()
+                or members[0].filename != "report.json"
+            ):
+                raise GradingArtifactError(
+                    "Artifact non valido: deve contenere esclusivamente report.json alla radice."
+                )
+            report_info = members[0]
             if report_info.flag_bits & 0x1:
                 raise GradingArtifactError("Artifact non valido: report.json e cifrato.")
             if report_info.file_size > MAX_GRADING_REPORT_BYTES:
@@ -513,3 +574,11 @@ def _safe_archive_member(member) -> bool:  # noqa: ANN001
         and all(":" not in part for part in path.parts)
         and not stat.S_ISLNK(mode)
     )
+
+
+def _artifact_digest(value: Any) -> str:
+    if not isinstance(value, str) or not ARTIFACT_DIGEST_RE.fullmatch(value):
+        raise GradingArtifactError(
+            "Artifact di grading non valido: digest SHA-256 mancante o non valido."
+        )
+    return value.lower()
