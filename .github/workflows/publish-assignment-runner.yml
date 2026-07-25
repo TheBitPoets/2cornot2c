@@ -2,7 +2,6 @@ name: Publish assignment runner toolchain
 
 permissions:
   contents: read
-  packages: write
 
 on:
   workflow_dispatch:
@@ -21,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  validate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -43,6 +42,25 @@ jobs:
         env:
           THEBITLAB_RUN_DOCKER_TESTS: "1"
         run: python -m pytest -q tests/test_student_lab_runner_docker.py
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout trusted source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Build pinned runner
+        run: >-
+          python scripts/build_assignment_runner.py
+          --source-revision "$GITHUB_SHA"
+          --metadata "$RUNNER_TEMP/toolchain-build.json"
 
       - name: Authenticate to GHCR
         run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
