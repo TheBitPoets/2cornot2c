@@ -14,6 +14,7 @@ DOCKERFILE = ROOT / "docker" / "assignment-runner" / "Dockerfile"
 DEFAULT_TAG = "thebitlab-assignment-runner"
 SCHEMA_VERSION = "thebitlab.grading-toolchain-build.v1"
 WORKER_SCHEMA_VERSION = "thebitlab.grading-worker.v1"
+IMAGE_REPOSITORY = "ghcr.io/thebitpoets/2cornot2c-assignment-runner"
 EXPECTED_KEYS = {
     "schema_version",
     "version",
@@ -29,7 +30,6 @@ DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 BASE_IMAGE_RE = re.compile(r"^debian:bookworm-slim@(sha256:[0-9a-f]{64})$")
 VERSION_RE = re.compile(r"^[0-9]{4}\.[0-9]{2}\.[1-9][0-9]*$")
 SNAPSHOT_RE = re.compile(r"^[0-9]{8}T[0-9]{6}Z$")
-IMAGE_RE = re.compile(r"^ghcr\.io/[a-z0-9._-]+/[a-z0-9._-]+$")
 PACKAGE_VERSION_RE = re.compile(r"^[A-Za-z0-9.+:~_-]+$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -68,11 +68,8 @@ def load_manifest(path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
         raise ToolchainBuildError("Versione toolchain non valida.")
     if payload["platform"] != "linux/amd64":
         raise ToolchainBuildError("La prima toolchain supporta esclusivamente linux/amd64.")
-    if (
-        not isinstance(payload["image_repository"], str)
-        or not IMAGE_RE.fullmatch(payload["image_repository"])
-    ):
-        raise ToolchainBuildError("Repository immagine toolchain non valido.")
+    if payload["image_repository"] != IMAGE_REPOSITORY:
+        raise ToolchainBuildError("Repository immagine toolchain non autorizzato.")
     if payload["worker_schema_version"] != WORKER_SCHEMA_VERSION:
         raise ToolchainBuildError("Schema worker toolchain non compatibile.")
     if not isinstance(payload["base_image"], str) or not BASE_IMAGE_RE.fullmatch(

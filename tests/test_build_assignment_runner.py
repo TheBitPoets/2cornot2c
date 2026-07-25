@@ -21,6 +21,7 @@ def test_checked_in_toolchain_manifest_is_strict_and_immutable() -> None:
 
     assert payload["version"] == "2026.07.1"
     assert payload["platform"] == "linux/amd64"
+    assert payload["image_repository"] == builder.IMAGE_REPOSITORY
     assert payload["base_image"].startswith("debian:bookworm-slim@sha256:")
     assert set(payload["packages"]) == builder.EXPECTED_PACKAGES
     assert all(payload["packages"].values())
@@ -32,7 +33,10 @@ def test_checked_in_toolchain_manifest_is_strict_and_immutable() -> None:
         ({"schema_version": "other"}, "Schema"),
         ({"version": "latest"}, "Versione"),
         ({"platform": "linux/arm64"}, "linux/amd64"),
-        ({"image_repository": "GHCR.IO/Owner/Image"}, "Repository"),
+        (
+            {"image_repository": "ghcr.io/thebitpoets/other-runner"},
+            "Repository",
+        ),
         ({"worker_schema_version": "other"}, "Schema worker"),
         ({"base_image": "debian:bookworm-slim"}, "digest"),
         ({"debian_snapshot": "latest"}, "Snapshot"),
