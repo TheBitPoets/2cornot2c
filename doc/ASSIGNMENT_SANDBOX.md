@@ -62,8 +62,8 @@ manualmente. Prima della pubblicazione:
 1. costruisce l'immagine dal manifest con timestamp fissati a `SOURCE_DATE_EPOCH` (derivato dallo
    snapshot Debian), cosi il digest e riproducibile tra runner diversi;
 2. esegue gli smoke test Docker reali;
-3. ricostruisce l'immagine nel job di pubblicazione e fallisce in modo chiuso se il digest non
-   riproduce esattamente quello validato;
+3. salva l'immagine validata come artifact e la ricarica nel job di pubblicazione, verificando
+   che il digest caricato corrisponda esattamente a quello validato;
 4. pubblica su GHCR un tag di versione e un tag legato al commit;
 5. non pubblica mai `latest`;
 6. rifiuta di sovrascrivere una versione gia esistente;
