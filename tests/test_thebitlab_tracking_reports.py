@@ -224,8 +224,11 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
         ({"activity_id": "other"}, {}, "activity diversa"),
         ({"assignment_id": "other"}, {}, "assegnazione diversa"),
         ({"student_id": ""}, {}, "privo dell'identificativo studente"),
+        ({"student_id": 123}, {}, "identificativo studente"),
         ({"student_id": "bianchi-luca"}, {}, "studente diverso"),
+        ({"commit": 123}, {}, "Commit"),
         ({"commit": "b" * 40}, {}, "Commit"),
+        ({"submitted_at": 123}, {}, "Timestamp"),
         ({"submitted_at": "2026-10-21T08:00:00+02:00"}, {}, "Timestamp"),
         ({"passed": "yes"}, {}, "stato di grading minimo"),
         ({"status": 1}, {}, "stato di grading minimo"),
@@ -316,6 +319,36 @@ def test_artifact_tracking_source_accepts_score_derived_from_tests() -> None:
 
     assert result.selection == "github_actions_artifact"
     assert result.report["score"] == 10
+
+
+def test_artifact_tracking_source_does_not_coerce_numeric_identity_fields() -> None:
+    numeric_sha = "1" * 40
+    numeric_student_id = "123"
+    source = tracking_reports.ArtifactTrackingReportSource(
+        FakeArtifactSource(
+            AcquiredGradingReport(
+                report=report(
+                    student_id=int(numeric_student_id),
+                    commit=int(numeric_sha),
+                ),
+                provenance=provenance(),
+            )
+        ),
+        [
+            binding(
+                student_id=numeric_student_id,
+                expected_student_head_sha=numeric_sha,
+            )
+        ],
+    )
+
+    result = source.resolve(
+        request(student_id=numeric_student_id)
+    )
+
+    assert result.selection == "remote_error"
+    assert result.report is None
+    assert "identificativo studente" in result.error
 
 
 @pytest.mark.parametrize(

@@ -324,15 +324,22 @@ def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding
         raise ValueError("Report remoto riferito a una activity diversa.")
     if report.get("assignment_id") != binding.assignment_id:
         raise ValueError("Report remoto riferito a un'assegnazione diversa.")
-    report_student_id = str(report.get("student_id", "") or "").strip()
-    if not report_student_id:
+    raw_student_id = report.get("student_id")
+    if not isinstance(raw_student_id, str) or not raw_student_id.strip():
         raise ValueError("Report remoto privo dell'identificativo studente.")
+    report_student_id = raw_student_id.strip()
     if report_student_id != binding.student_id:
         raise ValueError("Report remoto riferito a uno studente diverso.")
-    commit = str(report.get("commit", "")).strip().lower()
+    raw_commit = report.get("commit")
+    if not isinstance(raw_commit, str):
+        raise ValueError("Commit del report remoto non valido.")
+    commit = raw_commit.strip().lower()
     if commit != binding.expected_student_head_sha:
         raise ValueError("Commit del report remoto diverso dallo SHA autorizzato.")
-    if str(report.get("submitted_at", "") or "").strip() != binding.expected_submitted_at:
+    raw_submitted_at = report.get("submitted_at")
+    if not isinstance(raw_submitted_at, str):
+        raise ValueError("Timestamp di consegna del report remoto non valido.")
+    if raw_submitted_at.strip() != binding.expected_submitted_at:
         raise ValueError("Timestamp di consegna del report remoto diverso da quello autorizzato.")
     if provenance.repository.lower() != binding.workflow_repo_ref.lower():
         raise ValueError("Provenienza remota riferita a un repository diverso.")
