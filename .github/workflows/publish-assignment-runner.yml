@@ -1,0 +1,130 @@
+name: Publish assignment runner toolchain
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "docker/assignment-runner/**"
+      - "scripts/build_assignment_runner.py"
+      - "scripts/grade_activity.py"
+
+concurrency:
+  group: assignment-runner-toolchain
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      image_id: ${{ steps.image-digest.outputs.image_id }}
+    steps:
+      - name: Checkout trusted source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Build pinned runner
+        run: >-
+          python scripts/build_assignment_runner.py
+          --source-revision "$GITHUB_SHA"
+          --metadata "$RUNNER_TEMP/toolchain-build.json"
+
+      - name: Export validated image digest
+        id: image-digest
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          from pathlib import Path
+
+          metadata = json.loads(
+              Path(os.environ["RUNNER_TEMP"], "toolchain-build.json").read_text(encoding="utf-8")
+          )
+          print(f"image_id={metadata['local_image_id']}")
+          PY
+
+      - name: Install smoke test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Exercise isolated runner
+        env:
+          THEBITLAB_RUN_DOCKER_TESTS: "1"
+        run: python -m pytest -q tests/test_student_lab_runner_docker.py
+
+  publish:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout trusted source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Build pinned runner
+        run: >-
+          python scripts/build_assignment_runner.py
+          --source-revision "$GITHUB_SHA"
+          --metadata "$RUNNER_TEMP/toolchain-build.json"
+
+      - name: Verify rebuilt image matches the validated digest
+        env:
+          VALIDATED_IMAGE_ID: ${{ needs.validate.outputs.image_id }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          metadata = json.loads(
+              Path(os.environ["RUNNER_TEMP"], "toolchain-build.json").read_text(encoding="utf-8")
+          )
+          rebuilt = metadata["local_image_id"]
+          validated = os.environ["VALIDATED_IMAGE_ID"]
+          if rebuilt != validated:
+              raise SystemExit(
+                  f"L'immagine ricostruita {rebuilt} non corrisponde "
+                  f"all'immagine validata {validated}: build non riproducibile."
+              )
+          print(f"Digest riprodotto dalla build di pubblicazione: {rebuilt}")
+          PY
+
+      - name: Authenticate to GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish immutable version and commit tags
+        id: publish
+        run: >-
+          python scripts/publish_assignment_runner.py
+          --metadata "$RUNNER_TEMP/toolchain-build.json"
+          --release "$RUNNER_TEMP/toolchain-release.json"
+          --github-output "$GITHUB_OUTPUT"
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: assignment-runner-toolchain-${{ steps.publish.outputs.version }}
+          path: ${{ runner.temp }}/toolchain-release.json
+          if-no-files-found: error
+
+      - name: Summarize immutable reference
+        run: |
+          {
+            echo "## Assignment runner toolchain"
+            echo
+            echo "- Version: \`${{ steps.publish.outputs.version }}\`"
+            echo "- Immutable reference: \`${{ steps.publish.outputs.image }}@${{ steps.publish.outputs.digest }}\`"
+            echo "- Source revision: \`${GITHUB_SHA}\`"
+            echo
+            echo "Use this digest in the reviewed toolchain lock PR. Do not use either mutable tag for grading."
+          } >> "$GITHUB_STEP_SUMMARY"

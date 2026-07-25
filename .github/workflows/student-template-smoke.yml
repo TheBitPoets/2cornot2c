@@ -9,6 +9,7 @@ on:
     paths:
       - "templates/student-repository/**"
       - "scripts/grade_activity.py"
+      - "scripts/build_assignment_runner.py"
       - "docker/assignment-runner/**"
       - ".github/workflows/student-template-smoke.yml"
   push:
@@ -17,6 +18,7 @@ on:
     paths:
       - "templates/student-repository/**"
       - "scripts/grade_activity.py"
+      - "scripts/build_assignment_runner.py"
       - "docker/assignment-runner/**"
       - ".github/workflows/student-template-smoke.yml"
 
@@ -25,10 +27,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout TheBitLab source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Build grading Docker image
-        run: docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .
+        run: >-
+          python scripts/build_assignment_runner.py
+          --source-revision "$GITHUB_SHA"
 
       - name: Prepare simulated student repository
         run: |

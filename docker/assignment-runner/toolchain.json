@@ -1,0 +1,16 @@
+{
+  "schema_version": "thebitlab.grading-toolchain-build.v1",
+  "version": "2026.07.1",
+  "platform": "linux/amd64",
+  "image_repository": "ghcr.io/thebitpoets/2cornot2c-assignment-runner",
+  "worker_schema_version": "thebitlab.grading-worker.v1",
+  "base_image": "debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818",
+  "debian_snapshot": "20260713T000000Z",
+  "packages": {
+    "gcc": "4:12.2.0-3",
+    "libc6-dev": "2.36-9+deb12u14",
+    "nodejs": "18.20.4+dfsg-1~deb12u2",
+    "python3": "3.11.2-1+b1",
+    "sqlite3": "3.40.1-2+deb12u2"
+  }
+}
