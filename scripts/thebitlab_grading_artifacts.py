@@ -28,6 +28,7 @@ MAX_ARTIFACT_ARCHIVE_BYTES = 4 * 1024 * 1024
 MAX_GRADING_REPORT_BYTES = 2 * 1024 * 1024
 MAX_ARCHIVE_MEMBERS = 32
 MAX_ARTIFACT_LIST_PAGES = 10
+MAX_JSON_NESTING_DEPTH = 100
 ARTIFACTS_PER_PAGE = 100
 REQUEST_TIMEOUT_SECONDS = 30
 GIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
@@ -434,7 +435,23 @@ def _json_object(data: bytes, label: str) -> dict[str, Any]:
         raise GradingArtifactError(f"JSON {label} non valido.") from error
     if not isinstance(payload, dict):
         raise GradingArtifactError(f"JSON {label} non valido: e richiesto un oggetto.")
+    _validate_json_depth(payload, label)
     return payload
+
+
+def _validate_json_depth(payload: dict[str, Any], label: str) -> None:
+    pending: list[tuple[Any, int]] = [(payload, 0)]
+    while pending:
+        value, depth = pending.pop()
+        if depth > MAX_JSON_NESTING_DEPTH:
+            raise GradingArtifactError(
+                f"JSON {label} non valido: profondita massima "
+                f"{MAX_JSON_NESTING_DEPTH} superata."
+            )
+        if isinstance(value, dict):
+            pending.extend((child, depth + 1) for child in value.values())
+        elif isinstance(value, list):
+            pending.extend((child, depth + 1) for child in value)
 
 
 def _artifact_candidate_for_commit(

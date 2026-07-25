@@ -414,17 +414,29 @@ def test_report_archive_rejects_invalid_or_unsafe_content(archive: bytes, messag
         artifacts._report_from_archive(archive)
 
 
-def test_json_object_normalizes_excessive_nesting() -> None:
+def test_json_object_rejects_excessive_nesting_deterministically() -> None:
     deeply_nested = (
         b'{"nested":'
-        + b"[" * 2000
+        + b"[" * (artifacts.MAX_JSON_NESTING_DEPTH + 1)
         + b"0"
-        + b"]" * 2000
+        + b"]" * (artifacts.MAX_JSON_NESTING_DEPTH + 1)
         + b"}"
     )
 
-    with pytest.raises(artifacts.GradingArtifactError, match="JSON report grading"):
+    with pytest.raises(artifacts.GradingArtifactError, match="profondita massima"):
         artifacts._json_object(deeply_nested, "report grading")
+
+
+def test_json_object_accepts_configured_nesting_limit() -> None:
+    nested_at_limit = (
+        b'{"nested":'
+        + b"[" * (artifacts.MAX_JSON_NESTING_DEPTH - 1)
+        + b"0"
+        + b"]" * (artifacts.MAX_JSON_NESTING_DEPTH - 1)
+        + b"}"
+    )
+
+    assert isinstance(artifacts._json_object(nested_at_limit, "report grading"), dict)
 
 
 def test_report_archive_rejects_symbolic_link_and_too_many_members() -> None:
