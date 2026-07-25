@@ -39,6 +39,17 @@ def test_runner_workflows_use_the_validated_toolchain_builder() -> None:
         assert "docker build -t thebitlab-assignment-runner" not in source
 
 
+def test_runner_build_workflows_pin_checkout_and_drop_credentials() -> None:
+    for path in (
+        ".github/workflows/assignment-runner-docker.yml",
+        ".github/workflows/student-template-smoke.yml",
+    ):
+        source = Path(path).read_text(encoding="utf-8")
+        assert "actions/checkout@v4" not in source
+        assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in source
+        assert "persist-credentials: false" in source
+
+
 def test_publish_workflow_only_publishes_reviewed_main_toolchains() -> None:
     source = Path(
         ".github/workflows/publish-assignment-runner.yml"
