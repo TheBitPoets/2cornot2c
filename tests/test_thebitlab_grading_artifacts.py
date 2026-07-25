@@ -414,6 +414,19 @@ def test_report_archive_rejects_invalid_or_unsafe_content(archive: bytes, messag
         artifacts._report_from_archive(archive)
 
 
+def test_json_object_normalizes_excessive_nesting() -> None:
+    deeply_nested = (
+        b'{"nested":'
+        + b"[" * 2000
+        + b"0"
+        + b"]" * 2000
+        + b"}"
+    )
+
+    with pytest.raises(artifacts.GradingArtifactError, match="JSON report grading"):
+        artifacts._json_object(deeply_nested, "report grading")
+
+
 def test_report_archive_rejects_symbolic_link_and_too_many_members() -> None:
     symlink_stream = BytesIO()
     with ZipFile(symlink_stream, "w") as archive:
