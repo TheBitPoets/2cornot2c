@@ -251,6 +251,17 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
         ({"score": float("nan")}, {}, "punteggio non valido"),
         ({"score": 11}, {}, "punteggio non valido"),
         ({"score": 10**10000}, {}, "punteggio non valido"),
+        (
+            {
+                "passed": False,
+                "status": "failed",
+                "tests": [{"name": "somma", "status": "failed", "passed": False}],
+                "summary": {"passed": 0, "total": 1},
+                "score": 10,
+            },
+            {},
+            "punteggio non coerente",
+        ),
         ({}, {"repository": "TheBitPoets/altro"}, "repository diverso"),
         ({}, {"head_sha": "c" * 40}, "SHA diverso"),
         ({}, {"workflow_run_id": 901}, "workflow run diversa"),
@@ -279,6 +290,22 @@ def test_artifact_tracking_source_fails_closed_on_mismatched_report_or_provenanc
     assert result.authority == "remote_configured"
     assert result.provisional is False
     assert message in result.error
+
+
+def test_artifact_tracking_source_accepts_score_derived_from_tests() -> None:
+    acquired = AcquiredGradingReport(
+        report=report(score=10),
+        provenance=provenance(),
+    )
+    source = tracking_reports.ArtifactTrackingReportSource(
+        FakeArtifactSource(acquired),
+        [binding()],
+    )
+
+    result = source.resolve(request())
+
+    assert result.selection == "github_actions_artifact"
+    assert result.report["score"] == 10
 
 
 def test_artifact_tracking_source_normalizes_expected_acquisition_error() -> None:

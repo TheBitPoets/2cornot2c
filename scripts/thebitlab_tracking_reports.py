@@ -275,7 +275,7 @@ def _validate_request(
 
 
 def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding) -> None:  # noqa: ANN001
-    _validate_remote_outcome(report)
+    test_outcomes = _validate_remote_outcome(report)
     if "teacher_grade" in report:
         raise ValueError(
             "Il report remoto non puo impostare il voto definitivo del docente."
@@ -288,6 +288,11 @@ def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding
             raise ValueError("Report remoto con punteggio non valido.")
         if not 0 <= score <= 10:
             raise ValueError("Report remoto con punteggio non valido.")
+        if not test_outcomes:
+            raise ValueError("Report remoto con punteggio senza risultati di test.")
+        expected_score = round((sum(test_outcomes) / len(test_outcomes)) * 10, 2)
+        if score != expected_score:
+            raise ValueError("Report remoto con punteggio non coerente con i test.")
     if report.get("activity_id") != binding.activity_id:
         raise ValueError("Report remoto riferito a una activity diversa.")
     if report.get("assignment_id") != binding.assignment_id:
@@ -312,7 +317,7 @@ def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding
         raise ValueError("Provenienza remota riferita a un artifact diverso.")
 
 
-def _validate_remote_outcome(report: dict[str, Any]) -> None:
+def _validate_remote_outcome(report: dict[str, Any]) -> list[bool]:
     passed = report.get("passed")
     status = report.get("status")
     if (
@@ -354,6 +359,7 @@ def _validate_remote_outcome(report: dict[str, Any]) -> None:
         or summary.get("total") != len(test_outcomes)
     ):
         raise ValueError("Report remoto con riepilogo test non coerente.")
+    return test_outcomes
 
 
 def _tracking_provenance(provenance, binding: TrustedGradingBinding) -> dict[str, Any]:  # noqa: ANN001
