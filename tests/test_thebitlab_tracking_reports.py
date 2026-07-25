@@ -231,6 +231,8 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
         ({"status": 1}, {}, "stato di grading minimo"),
         ({"passed": True, "status": "failed"}, {}, "stato ed esito"),
         ({"passed": False, "status": "passed"}, {}, "stato ed esito"),
+        ({"passed": False, "status": "invented"}, {}, "stato di grading non riconosciuto"),
+        ({"passed": False, "status": "failed", "tests": []}, {}, "elenco test"),
         ({"tests": "not-a-list"}, {}, "elenco test"),
         (
             {"tests": [{"name": "somma", "status": "failed", "passed": True}]},
@@ -306,6 +308,43 @@ def test_artifact_tracking_source_accepts_score_derived_from_tests() -> None:
 
     assert result.selection == "github_actions_artifact"
     assert result.report["score"] == 10
+
+
+@pytest.mark.parametrize(
+    ("language", "expected_status"),
+    [
+        ("java", "unsupported-language"),
+        ("not-a-language", "unknown-language"),
+    ],
+)
+def test_artifact_tracking_source_accepts_real_terminal_grader_report(
+    tmp_path,
+    language: str,
+    expected_status: str,
+) -> None:
+    produced = grade_activity.grade_activity(
+        {"id": "python-base-somma-001", "linguaggio": language},
+        tmp_path / "main.txt",
+    )
+    produced = grade_activity.with_report_metadata(
+        produced,
+        assignment_id="assignment-001",
+        student_id="rossi-mario",
+        commit=HEAD_SHA,
+        submitted_at="2026-10-20T08:00:00+02:00",
+    )
+    source = tracking_reports.ArtifactTrackingReportSource(
+        FakeArtifactSource(
+            AcquiredGradingReport(report=produced, provenance=provenance())
+        ),
+        [binding()],
+    )
+
+    result = source.resolve(request())
+
+    assert result.selection == "github_actions_artifact"
+    assert result.report["status"] == expected_status
+    assert result.report["passed"] is False
 
 
 def test_artifact_tracking_source_normalizes_expected_acquisition_error() -> None:

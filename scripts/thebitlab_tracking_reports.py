@@ -17,6 +17,24 @@ from scripts.thebitlab_grading_artifacts import (
 from scripts.thebitlab_repository_providers import normalize_github_repo_ref
 
 
+REMOTE_TEST_OUTCOME_STATUSES = frozenset({"passed", "failed"})
+REMOTE_TERMINAL_STATUSES = frozenset(
+    {
+        "compile-error",
+        "compile-timeout",
+        "compiler-not-found",
+        "execution-error",
+        "invalid-activity",
+        "runtime-startup-timeout",
+        "source-not-found",
+        "timeout",
+        "unknown-language",
+        "unsupported-language",
+        "worker-error",
+    }
+)
+
+
 GIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 
 
@@ -330,7 +348,13 @@ def _validate_remote_outcome(report: dict[str, Any]) -> list[bool]:
         raise ValueError("Report remoto con stato ed esito non coerenti.")
 
     tests = report.get("tests")
-    if not isinstance(tests, list):
+    if status in REMOTE_TERMINAL_STATUSES:
+        if passed or (tests is not None and tests != []) or "summary" in report:
+            raise ValueError("Report remoto terminale con risultati di test non coerenti.")
+        return []
+    if status not in REMOTE_TEST_OUTCOME_STATUSES:
+        raise ValueError("Report remoto con stato di grading non riconosciuto.")
+    if not isinstance(tests, list) or not tests:
         raise ValueError("Report remoto con elenco test non valido.")
     test_outcomes: list[bool] = []
     for test in tests:
@@ -349,11 +373,8 @@ def _validate_remote_outcome(report: dict[str, Any]) -> list[bool]:
 
     if test_outcomes and passed != all(test_outcomes):
         raise ValueError("Report remoto con test ed esito aggregato non coerenti.")
-    if not test_outcomes and passed:
-        raise ValueError("Report remoto superato senza risultati di test.")
-
     summary = report.get("summary")
-    if test_outcomes and (
+    if (
         not isinstance(summary, dict)
         or summary.get("passed") != sum(test_outcomes)
         or summary.get("total") != len(test_outcomes)
