@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime
 import json
+import math
 from pathlib import Path
 import re
 from typing import Any, Iterable, Protocol
@@ -274,6 +275,22 @@ def _validate_request(
 
 
 def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding) -> None:  # noqa: ANN001
+    if not isinstance(report.get("passed"), bool) or not isinstance(
+        report.get("status"), str
+    ):
+        raise ValueError("Report remoto privo dello stato di grading minimo.")
+    if "teacher_grade" in report:
+        raise ValueError(
+            "Il report remoto non puo impostare il voto definitivo del docente."
+        )
+    score = report.get("score")
+    if score is not None and (
+        not isinstance(score, (int, float))
+        or isinstance(score, bool)
+        or not math.isfinite(score)
+        or not 0 <= score <= 10
+    ):
+        raise ValueError("Report remoto con punteggio non valido.")
     if report.get("activity_id") != binding.activity_id:
         raise ValueError("Report remoto riferito a una activity diversa.")
     if report.get("assignment_id") != binding.assignment_id:

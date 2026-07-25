@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from io import BytesIO
 import json
 from zipfile import ZIP_BZIP2, ZIP_DEFLATED, ZIP_LZMA, ZipFile, ZipInfo
@@ -38,6 +39,10 @@ def zip_bytes(files: list[tuple[str, bytes]]) -> bytes:
         for name, content in files:
             archive.writestr(name, content)
     return stream.getvalue()
+
+
+def sha256_digest(data: bytes) -> str:
+    return f"sha256:{hashlib.sha256(data).hexdigest()}"
 
 
 def zip_bytes_with_unsupported_compression() -> bytes:
@@ -87,6 +92,7 @@ def candidate(
     created_at: str = "2026-07-24T10:00:00Z",
     workflow_run_id: int = 900,
     head_sha: str = TEST_SHA,
+    digest: str = f"sha256:{'0' * 64}",
 ) -> dict[str, object]:
     return {
         "id": artifact_id,
@@ -94,13 +100,14 @@ def candidate(
         "expired": expired,
         "created_at": created_at,
         "size_in_bytes": 1024,
-        "digest": f"sha256:digest-{artifact_id}",
+        "digest": digest,
         "workflow_run": {"id": workflow_run_id, "head_sha": head_sha},
     }
 
 
 def test_github_source_acquires_latest_exact_non_expired_report() -> None:
     report = {"schema_version": "1.0", "status": "passed", "tests_passed": 2, "tests_total": 2}
+    archive = zip_bytes([("report.json", json.dumps(report).encode())])
     transport = FakeTransport(
         [
             artifacts.HttpResponse(
@@ -111,7 +118,12 @@ def test_github_source_acquires_latest_exact_non_expired_report() -> None:
                         candidate(10, created_at="2026-07-24T10:00:00Z", workflow_run_id=910),
                         candidate(11, expired=True, created_at="2026-07-24T12:00:00Z"),
                         candidate(12, name="other-report", created_at="2026-07-24T13:00:00Z"),
-                        candidate(13, created_at="2026-07-24T11:00:00Z", workflow_run_id=913),
+                        candidate(
+                            13,
+                            created_at="2026-07-24T11:00:00Z",
+                            workflow_run_id=913,
+                            digest=sha256_digest(archive),
+                        ),
                     ]
                 ),
             ),
@@ -120,7 +132,7 @@ def test_github_source_acquires_latest_exact_non_expired_report() -> None:
                 {"Location": "https://signed.example.test/report.zip?signature=secret"},
                 b"",
             ),
-            artifacts.HttpResponse(200, {"Content-Type": "application/zip"}, zip_bytes([("report.json", json.dumps(report).encode())])),
+            artifacts.HttpResponse(200, {"Content-Type": "application/zip"}, archive),
         ]
     )
     source = artifacts.GitHubActionsArtifactSource("github-secret", transport=transport)
@@ -141,7 +153,7 @@ def test_github_source_acquires_latest_exact_non_expired_report() -> None:
         head_sha=TEST_SHA,
         created_at="2026-07-24T11:00:00Z",
         archive_download_url="https://api.github.com/repos/TheBitPoets/rossi-mario/actions/artifacts/13/zip",
-        digest="sha256:digest-13",
+        digest=sha256_digest(archive),
     )
     assert "/actions/runs/913/artifacts?" in transport.calls[0]["url"]
     assert "name=thebitlab-demo-python-report" in transport.calls[0]["url"]
@@ -186,6 +198,8 @@ def test_github_source_rejects_invalid_list_payload_and_candidates() -> None:
         artifact_payload([{**candidate(3), "created_at": "not-a-date"}]),
         artifact_payload([{**candidate(4), "created_at": "2026-07-24T10:00:00"}]),
         artifact_payload([{**candidate(5), "size_in_bytes": artifacts.MAX_ARTIFACT_ARCHIVE_BYTES + 1}]),
+        artifact_payload([{**candidate(6), "digest": None}]),
+        artifact_payload([{**candidate(7), "digest": "sha256:not-a-digest"}]),
     ]
 
     for payload in invalid_payloads:
@@ -203,17 +217,23 @@ def test_github_source_rejects_invalid_list_payload_and_candidates() -> None:
 
 
 def test_github_source_paginates_before_selecting_latest_artifact() -> None:
+    archive = zip_bytes([("report.json", b'{"status":"passed"}')])
     first_page = [
         candidate(index + 1, created_at=f"2026-07-23T{index % 24:02d}:00:00Z")
         for index in range(artifacts.ARTIFACTS_PER_PAGE)
     ]
-    latest = candidate(500, created_at="2026-07-24T14:00:00Z", workflow_run_id=9500)
+    latest = candidate(
+        500,
+        created_at="2026-07-24T14:00:00Z",
+        workflow_run_id=9500,
+        digest=sha256_digest(archive),
+    )
     transport = FakeTransport(
         [
             artifacts.HttpResponse(200, {}, artifact_payload(first_page, total_count=101)),
             artifacts.HttpResponse(200, {}, artifact_payload([latest], total_count=101)),
             artifacts.HttpResponse(302, {"Location": "https://signed.example.test/report.zip"}, b""),
-            artifacts.HttpResponse(200, {}, zip_bytes([("report.json", b'{"status":"passed"}')])),
+            artifacts.HttpResponse(200, {}, archive),
         ]
     )
 
@@ -233,11 +253,15 @@ def test_github_source_paginates_before_selecting_latest_artifact() -> None:
 
 
 def test_github_source_accepts_exact_pagination_safety_limit() -> None:
+    archive = zip_bytes([("report.json", b'{"status":"passed"}')])
     total_count = artifacts.MAX_ARTIFACT_LIST_PAGES * artifacts.ARTIFACTS_PER_PAGE
     pages = [
         artifact_payload(
             [
-                candidate(page * artifacts.ARTIFACTS_PER_PAGE + index + 1)
+                candidate(
+                    page * artifacts.ARTIFACTS_PER_PAGE + index + 1,
+                    digest=sha256_digest(archive),
+                )
                 for index in range(artifacts.ARTIFACTS_PER_PAGE)
             ],
             total_count=total_count,
@@ -248,7 +272,7 @@ def test_github_source_accepts_exact_pagination_safety_limit() -> None:
         [
             *[artifacts.HttpResponse(200, {}, payload) for payload in pages],
             artifacts.HttpResponse(302, {"Location": "https://signed.example.test/report.zip"}, b""),
-            artifacts.HttpResponse(200, {}, zip_bytes([("report.json", b'{"status":"passed"}')])),
+            artifacts.HttpResponse(200, {}, archive),
         ]
     )
 
@@ -339,14 +363,50 @@ def test_github_source_rejects_unsafe_download_redirect(location: str) -> None:
         )
 
 
+def test_github_source_rejects_archive_digest_mismatch() -> None:
+    archive = zip_bytes([("report.json", b'{"status":"passed"}')])
+    source = artifacts.GitHubActionsArtifactSource(
+        "github-secret",
+        transport=FakeTransport(
+            [
+                artifacts.HttpResponse(
+                    200,
+                    {},
+                    artifact_payload([candidate(10)]),
+                ),
+                artifacts.HttpResponse(
+                    302,
+                    {"Location": "https://signed.example.test/report.zip"},
+                    b"",
+                ),
+                artifacts.HttpResponse(200, {}, archive),
+            ]
+        ),
+    )
+
+    with pytest.raises(artifacts.GradingArtifactError, match="Digest artifact"):
+        source.acquire_latest_report(
+            "TheBitPoets/rossi-mario",
+            "thebitlab-demo-python-report",
+            TEST_SHA,
+            TEST_WORKFLOW_RUN_ID,
+        )
+
+
 @pytest.mark.parametrize(
     ("archive", "message"),
     [
         (b"not-a-zip", "ZIP valido"),
-        (zip_bytes([("nested/report.json", b"{}")]), "un solo report.json"),
+        (zip_bytes([("nested/report.json", b"{}")]), "esclusivamente report.json"),
         (zip_bytes([("../report.json", b"{}"), ("report.json", b"{}")]), "path non sicuri"),
+        (zip_bytes([("./report.json", b"{}")]), "esclusivamente report.json"),
+        (zip_bytes([("REPORT.JSON", b"{}"), ("report.json", b"{}")]), "esclusivamente report.json"),
+        (zip_bytes([("notes.txt", b"x"), ("report.json", b"{}")]), "esclusivamente report.json"),
         (zip_bytes([("report.json", b"[]")]), "richiesto un oggetto"),
         (zip_bytes([("report.json", b"{")]), "JSON report grading non valido"),
+        (zip_bytes([("report.json", b'{"status":"passed","status":"failed"}')]), "chiave duplicata"),
+        (zip_bytes([("report.json", b'{"score":NaN}')]), "costante non standard"),
+        (zip_bytes([("report.json", b'{"score":1e999}')]), "numero non finito"),
     ],
 )
 def test_report_archive_rejects_invalid_or_unsafe_content(archive: bytes, message: str) -> None:
@@ -423,7 +483,13 @@ def test_source_validates_token_repository_and_artifact_name() -> None:
 
 
 def test_github_source_ignores_newer_artifacts_from_other_commit_or_run() -> None:
-    expected = candidate(20, created_at="2026-07-24T10:00:00Z", workflow_run_id=920)
+    archive = zip_bytes([("report.json", b'{"status":"passed"}')])
+    expected = candidate(
+        20,
+        created_at="2026-07-24T10:00:00Z",
+        workflow_run_id=920,
+        digest=sha256_digest(archive),
+    )
     unrelated = candidate(
         21,
         created_at="2026-07-24T12:00:00Z",
@@ -443,7 +509,7 @@ def test_github_source_ignores_newer_artifacts_from_other_commit_or_run() -> Non
                 artifact_payload([expected, unrelated, competing_run]),
             ),
             artifacts.HttpResponse(302, {"Location": "https://signed.example.test/report.zip"}, b""),
-            artifacts.HttpResponse(200, {}, zip_bytes([("report.json", b'{"status":"passed"}')])),
+            artifacts.HttpResponse(200, {}, archive),
         ]
     )
 
