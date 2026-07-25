@@ -46,6 +46,9 @@ on:
           - php
           - python
           - sql
+      toolchain_digest:
+        description: "Digest atteso della toolchain (opzionale; se fornito deve corrispondere al lock)"
+        required: false
       artifact_name:
         description: "Nome artifact concordato con il binding docente"
         required: true
@@ -112,11 +115,42 @@ jobs:
           token: ${{ secrets.THEBITLAB_STUDENT_REPO_TOKEN || github.token }}
           persist-credentials: false
 
-      - name: Build grading Docker image
-        run: >-
-          python thebitlab/scripts/build_assignment_runner.py
-          --source-revision "$GITHUB_SHA"
-          --metadata "$RUNNER_TEMP/toolchain-build.json"
+      - name: Load and verify authoritative toolchain lock
+        id: toolchain
+        env:
+          EXPECTED_DIGEST: ${{ inputs.toolchain_digest }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from scripts import toolchain_lock
+
+          lock = toolchain_lock.load_lock(
+              Path("thebitlab/docker/assignment-runner/toolchain.lock.json")
+          )
+          reference = toolchain_lock.immutable_reference(lock)
+          expected = os.environ.get("EXPECTED_DIGEST", "").strip()
+          if expected and expected != lock["digest"]:
+              raise SystemExit(
+                  f"Binding docente {expected} non corrisponde al lock {lock['digest']}."
+              )
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"reference={reference}\n")
+              output.write(f"version={lock['version']}\n")
+              output.write(f"digest={lock['digest']}\n")
+          print(f"Toolchain bloccata: {reference}")
+          PY
+
+      - name: Pull pinned runner image
+        run: |
+          docker pull "${{ steps.toolchain.outputs.reference }}"
+          pulled_id=$(docker image inspect --format '{{.Id}}' "${{ steps.toolchain.outputs.reference }}")
+          if [ "$pulled_id" != "${{ steps.toolchain.outputs.digest }}" ]; then
+            echo "Digest dell'immagine scaricata $pulled_id diverso dal lock ${{ steps.toolchain.outputs.digest }}"
+            exit 1
+          fi
 
       - name: Run deterministic grading
         run: |
@@ -133,6 +167,9 @@ jobs:
             --activity-root "thebitlab" \
             --source-root "student-work" \
             --docker \
+            --docker-image "${{ steps.toolchain.outputs.reference }}" \
+            --toolchain-version "${{ steps.toolchain.outputs.version }}" \
+            --toolchain-reference "${{ steps.toolchain.outputs.reference }}" \
             --report "$RUNNER_TEMP/thebitlab-report/report.json"
 
       - name: Upload authoritative grading report

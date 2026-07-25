@@ -15,6 +15,16 @@ def test_trusted_grading_workflow_separates_student_and_workflow_commits() -> No
     assert "ref: ${{ inputs.student_head_sha }}" in source
     assert "THEBITLAB_STUDENT_REPO_TOKEN || github.token" in source
     assert source.count("persist-credentials: false") == 2
+    assert "scripts/build_assignment_runner.py" not in source
+    assert "docker build" not in source
+    assert "from scripts import toolchain_lock" in source
+    assert "docker pull" in source
+    assert "steps.toolchain.outputs.reference" in source
+    assert "steps.toolchain.outputs.digest" in source
+    assert "toolchain_digest" in source
+    assert "--docker-image" in source
+    assert "--toolchain-version" in source
+    assert "--toolchain-reference" in source
     assert '--activity "thebitlab/$ACTIVITY_PATH"' in source
     assert '--source "student-work/$SOURCE_PATH"' in source
     assert '--commit "$STUDENT_HEAD_SHA"' in source
@@ -32,7 +42,6 @@ def test_runner_workflows_use_the_validated_toolchain_builder() -> None:
     for path in (
         ".github/workflows/assignment-runner-docker.yml",
         ".github/workflows/student-template-smoke.yml",
-        ".github/workflows/grade-student-assignment.yml",
     ):
         source = Path(path).read_text(encoding="utf-8")
         assert "scripts/build_assignment_runner.py" in source

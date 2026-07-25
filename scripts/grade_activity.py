@@ -1228,6 +1228,8 @@ def run_docker_grading(args: argparse.Namespace) -> int:
         commit=getattr(args, "commit", None),
         submitted_at=getattr(args, "submitted_at", None),
         source_repo_path=getattr(args, "source_repo_path", None),
+        toolchain_version=getattr(args, "toolchain_version", None),
+        toolchain_reference=getattr(args, "toolchain_reference", None),
     )
     if args.report:
         write_report(report, args.report)
@@ -1255,6 +1257,8 @@ def with_report_metadata(
     commit: str | None = None,
     submitted_at: str | None = None,
     source_repo_path: str | None = None,
+    toolchain_version: str | None = None,
+    toolchain_reference: str | None = None,
 ) -> dict[str, Any]:
     """Return a report enriched with explicit remote-tracking identities."""
 
@@ -1265,6 +1269,8 @@ def with_report_metadata(
         ("commit", commit),
         ("submitted_at", submitted_at),
         ("source", source_repo_path),
+        ("toolchain_version", toolchain_version),
+        ("toolchain_reference", toolchain_reference),
     ):
         clean = str(value or "").strip()
         if clean:
@@ -1289,6 +1295,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--docker", action="store_true", help="Esegue il grading dentro la sandbox Docker.")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--docker-image", default=DEFAULT_DOCKER_IMAGE, help="Immagine Docker da usare con --docker.")
+    parser.add_argument("--toolchain-version", help="Versione della toolchain usata per il grading.")
+    parser.add_argument("--toolchain-reference", help="Riferimento immutabile della toolchain usata per il grading.")
     return parser.parse_args()
 
 

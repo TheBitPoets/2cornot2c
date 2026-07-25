@@ -438,6 +438,43 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     assert "--language" not in command
     assert "--worker" in command
     assert command[command.index("--source") + 1] == "main.c"
+    assert "thebitlab-assignment-runner" in command
+
+
+def test_docker_command_uses_locked_image_reference(tmp_path) -> None:
+    source_path = tmp_path / "main.c"
+    source_path.write_text("int main(void){return 0;}", encoding="utf-8")
+    reference = (
+        "ghcr.io/thebitpoets/2cornot2c-assignment-runner"
+        "@sha256:62f0f7b7bc1d48d01b7f8e5fa765e0b43be3622e70a614033b1bb4a4e522e159"
+    )
+
+    command = grade_activity.docker_command(
+        source=source_path,
+        timeout_seconds=5,
+        image=reference,
+        workspace=tmp_path,
+        cidfile=tmp_path / "container.cid",
+        container_name="thebitlab-grade-test",
+    )
+
+    assert command[command.index("--name") + 1] == "thebitlab-grade-test"
+    assert reference in command
+
+
+def test_report_metadata_includes_toolchain_fields() -> None:
+    report = grade_activity.with_report_metadata(
+        {"passed": True, "status": "passed"},
+        assignment_id="A1",
+        toolchain_version="2026.07.1",
+        toolchain_reference="ghcr.io/thebitpoets/2cornot2c-assignment-runner@sha256:abc",
+    )
+
+    assert report["assignment_id"] == "A1"
+    assert report["toolchain_version"] == "2026.07.1"
+    assert report["toolchain_reference"] == (
+        "ghcr.io/thebitpoets/2cornot2c-assignment-runner@sha256:abc"
+    )
 
 
 def test_remove_docker_container_validates_id_and_forces_cleanup(
