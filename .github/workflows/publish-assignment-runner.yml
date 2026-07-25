@@ -12,8 +12,6 @@ on:
       - "docker/assignment-runner/**"
       - "scripts/build_assignment_runner.py"
       - "scripts/grade_activity.py"
-      - "tests/test_student_lab_runner_docker.py"
-      - ".github/workflows/publish-assignment-runner.yml"
 
 concurrency:
   group: assignment-runner-toolchain
@@ -68,52 +66,11 @@ jobs:
 
       - name: Publish immutable version and commit tags
         id: publish
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="$(python -c 'import json, os, pathlib; print(json.loads((pathlib.Path(os.environ["RUNNER_TEMP"]) / "toolchain-build.json").read_text())["version"])')"
-          IMAGE="ghcr.io/thebitpoets/2cornot2c-assignment-runner"
-          VERSION_REF="${IMAGE}:${VERSION}"
-          COMMIT_REF="${IMAGE}:sha-${GITHUB_SHA}"
-          if docker manifest inspect "${VERSION_REF}" >/dev/null 2>&1; then
-            echo "La versione ${VERSION} esiste gia: incrementa toolchain.json." >&2
-            exit 1
-          fi
-          docker tag thebitlab-assignment-runner "${VERSION_REF}"
-          docker tag thebitlab-assignment-runner "${COMMIT_REF}"
-          PUSH_OUTPUT="$(docker push "${VERSION_REF}")"
-          printf '%s\n' "${PUSH_OUTPUT}"
-          DIGEST="$(printf '%s\n' "${PUSH_OUTPUT}" | sed -n 's/^.*digest: \(sha256:[0-9a-f]\{64\}\).*$/\1/p' | tail -n 1)"
-          test -n "${DIGEST}"
-          docker push "${COMMIT_REF}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
-          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
-
-      - name: Write release evidence
-        env:
-          TOOLCHAIN_VERSION: ${{ steps.publish.outputs.version }}
-          TOOLCHAIN_IMAGE: ${{ steps.publish.outputs.image }}
-          TOOLCHAIN_DIGEST: ${{ steps.publish.outputs.digest }}
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          metadata_path = Path(os.environ["RUNNER_TEMP"]) / "toolchain-build.json"
-          payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-          payload["published_image"] = os.environ["TOOLCHAIN_IMAGE"]
-          payload["published_digest"] = os.environ["TOOLCHAIN_DIGEST"]
-          payload["immutable_reference"] = (
-              f"{os.environ['TOOLCHAIN_IMAGE']}@{os.environ['TOOLCHAIN_DIGEST']}"
-          )
-          release_path = Path(os.environ["RUNNER_TEMP"]) / "toolchain-release.json"
-          release_path.write_text(
-              json.dumps(payload, indent=2) + "\n",
-              encoding="utf-8",
-          )
-          PY
+        run: >-
+          python scripts/publish_assignment_runner.py
+          --metadata "$RUNNER_TEMP/toolchain-build.json"
+          --release "$RUNNER_TEMP/toolchain-release.json"
+          --github-output "$GITHUB_OUTPUT"
 
       - name: Upload release evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
