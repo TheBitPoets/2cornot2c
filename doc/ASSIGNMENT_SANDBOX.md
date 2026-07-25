@@ -75,11 +75,41 @@ Per un aggiornamento intenzionale:
 2. incrementa sempre `version`;
 3. apri una PR e attendi build e smoke test;
 4. dopo il merge, recupera il digest dall'artifact o dal summary del workflow di pubblicazione;
-5. aggiorna tramite PR il lock del grading autorevole.
+5. aggiorna `docker/assignment-runner/toolchain.lock.json` con il nuovo `immutable_reference`
+   (e la `source_revision` del merge) tramite PR;
+6. il workflow `grade-student-assignment.yml` carichera esattamente quel digest da GHCR e lo
+   registrera nel report di grading.
 
-Per il rollback non si ricostruisce l'immagine: si ripristina nel lock un digest GHCR precedente
-ancora conservato. Le versioni pubblicate non devono essere eliminate finche esistono report o lock
-che le referenziano.
+Per il rollback non si ricostruisce l'immagine: si ripristina nel lock `toolchain.lock.json`
+un digest GHCR precedente ancora conservato e si mergia la PR. Il workflow autorevole iniziera
+immediatamente a usare il vecchio digest. Le versioni pubblicate non devono essere eliminate
+finché esistono report o lock che le referenziano.
+
+## Lock autorevole
+
+Il file `docker/assignment-runner/toolchain.lock.json` contiene l'unico riferimento immutabile
+che il workflow `grade-student-assignment.yml` e autorizzato a eseguire:
+
+```json
+{
+  "schema_version": "thebitlab.grading-toolchain-lock.v1",
+  "version": "2026.07.1",
+  "platform": "linux/amd64",
+  "image_repository": "ghcr.io/thebitpoets/2cornot2c-assignment-runner",
+  "source_revision": "bd102146a684a9b06835204ec1b7f668f7655a03",
+  "immutable_reference": "ghcr.io/thebitpoets/2cornot2c-assignment-runner@sha256:..."
+}
+```
+
+Il workflow autorevole:
+
+- valida il lock con `scripts/toolchain_lock.py`;
+- se il docente fornisce un `toolchain_digest` in input, lo confronta con il lock e fallisce
+  chiuso in caso di disallineamento;
+- esegue `docker pull` solo del riferimento `@sha256:` autorizzato;
+- verifica che l'immagine scaricata abbia esattamente il digest del lock;
+- passa il riferimento a `grade_activity.py`, che lo registra nei campi
+  `toolchain_version` e `toolchain_reference` del report.
 
 ## Uso
 
