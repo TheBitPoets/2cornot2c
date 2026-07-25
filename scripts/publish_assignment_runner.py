@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
 from typing import Any
 
 try:
@@ -61,13 +62,28 @@ def load_build_metadata(path: Path) -> dict[str, Any]:
 
 
 def _run(command: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    result = subprocess.run(
         command,
-        check=check,
+        check=False,
         capture_output=True,
         text=True,
         encoding="utf-8",
     )
+    if check and result.returncode != 0:
+        sys.stderr.write(
+            f"Comando non riuscito ({result.returncode}): {' '.join(command)}\n"
+        )
+        if result.stdout.strip():
+            sys.stderr.write(f"stdout: {result.stdout.strip()}\n")
+        if result.stderr.strip():
+            sys.stderr.write(f"stderr: {result.stderr.strip()}\n")
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            command,
+            output=result.stdout,
+            stderr=result.stderr,
+        )
+    return result
 
 
 def manifest_exists(reference: str) -> bool:

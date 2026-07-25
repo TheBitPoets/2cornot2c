@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 
@@ -45,6 +46,23 @@ def completed(
     stderr: str = "",
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(command, returncode, stdout, stderr)
+
+
+def test_run_reports_command_output_on_failure(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(subprocess.CalledProcessError):
+        publisher._run(
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.stdout.write('out'); sys.stderr.write('err'); sys.exit(3)",
+            ]
+        )
+
+    captured = capsys.readouterr()
+    assert "out" in captured.err
+    assert "err" in captured.err
 
 
 def test_manifest_lookup_fails_closed_on_registry_error(monkeypatch) -> None:
