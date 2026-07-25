@@ -358,15 +358,16 @@ def test_docker_timeout_force_removes_orphaned_container(tmp_path, monkeypatch) 
     removed_ids = []
     original_cleanup = grade_activity.remove_docker_container
 
-    def tracked_cleanup(cidfile):
+    def tracked_cleanup(cidfile, container_name):
         if cidfile.is_file():
             removed_ids.append(cidfile.read_text(encoding="ascii").strip())
-        original_cleanup(cidfile)
+        original_cleanup(cidfile, container_name)
 
     monkeypatch.setattr(grade_activity, "remove_docker_container", tracked_cleanup)
 
     def timed_out_client(command, *, input_text, timeout):
         cidfile = command[command.index("--cidfile") + 1]
+        container_name = command[command.index("--name") + 1]
         subprocess.run(
             [
                 "docker",
@@ -374,6 +375,8 @@ def test_docker_timeout_force_removes_orphaned_container(tmp_path, monkeypatch) 
                 "-d",
                 "--cidfile",
                 cidfile,
+                "--name",
+                container_name,
                 "--entrypoint",
                 "python3",
                 grade_activity.DEFAULT_DOCKER_IMAGE,

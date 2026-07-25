@@ -408,6 +408,7 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
         timeout_seconds=5,
         workspace=tmp_path,
         cidfile=tmp_path / "container.cid",
+        container_name="thebitlab-grade-test",
     )
 
     assert "--network" in command
@@ -431,6 +432,7 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     assert "/thebitlab-output" not in command
     assert "--cidfile" in command
     assert str((tmp_path / "container.cid").resolve()) in command
+    assert command[command.index("--name") + 1] == "thebitlab-grade-test"
     assert "--report" not in command
     assert "--activity" not in command
     assert "--language" not in command
@@ -449,19 +451,24 @@ def test_remove_docker_container_validates_id_and_forces_cleanup(
 
     def tracked_run(command, **kwargs):
         calls.append((command, kwargs))
+        return subprocess.CompletedProcess(
+            command,
+            0 if command[1] == "rm" else 1,
+        )
 
     monkeypatch.setattr(grade_activity.subprocess, "run", tracked_run)
 
-    grade_activity.remove_docker_container(cidfile)
+    grade_activity.remove_docker_container(cidfile, "thebitlab-grade-test")
 
-    assert calls[0][0] == ["docker", "rm", "-f", container_id]
+    assert calls[0][0] == ["docker", "rm", "-f", "thebitlab-grade-test"]
+    assert calls[1][0] == ["docker", "inspect", "thebitlab-grade-test"]
     assert calls[0][1]["timeout"] == 5
     assert calls[0][1]["stdout"] is subprocess.DEVNULL
     assert calls[0][1]["stderr"] is subprocess.DEVNULL
     assert not cidfile.exists()
 
 
-def test_remove_docker_container_rejects_invalid_id(monkeypatch, tmp_path) -> None:
+def test_remove_docker_container_rejects_invalid_name(monkeypatch, tmp_path) -> None:
     cidfile = tmp_path / "container.cid"
     cidfile.write_text("not-a-container; rm -rf .", encoding="ascii")
     calls = []
@@ -471,10 +478,39 @@ def test_remove_docker_container_rejects_invalid_id(monkeypatch, tmp_path) -> No
         lambda *args, **kwargs: calls.append((args, kwargs)),
     )
 
-    grade_activity.remove_docker_container(cidfile)
+    with pytest.raises(grade_activity.DockerCleanupError, match="Nome container"):
+        grade_activity.remove_docker_container(cidfile, "invalid container; rm -rf .")
 
     assert calls == []
-    assert not cidfile.exists()
+    assert cidfile.exists()
+
+
+def test_remove_docker_container_preserves_cid_when_container_persists(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    cidfile = tmp_path / "container.cid"
+    container_id = "b" * 64
+    cidfile.write_text(container_id, encoding="ascii")
+    calls = []
+
+    def persistent_container(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", persistent_container)
+    monkeypatch.setattr(grade_activity.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(grade_activity.DockerCleanupError, match="thebitlab-grade-test"):
+        grade_activity.remove_docker_container(cidfile, "thebitlab-grade-test")
+
+    assert calls == [
+        ["docker", "rm", "-f", "thebitlab-grade-test"],
+        ["docker", "inspect", "thebitlab-grade-test"],
+        ["docker", "rm", "-f", "thebitlab-grade-test"],
+        ["docker", "inspect", "thebitlab-grade-test"],
+    ]
+    assert cidfile.read_text(encoding="ascii") == container_id
 
 
 def test_prepare_docker_workspace_copies_only_runner_inputs(tmp_path) -> None:

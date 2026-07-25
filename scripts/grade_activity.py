@@ -12,6 +12,7 @@ import tempfile
 import threading
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,10 @@ SUPPORTED_LANGUAGES = {
     "cpp": "planned",
     "php": "planned",
 }
+
+
+class DockerCleanupError(ValueError):
+    """Raised when a grading container cannot be confirmed absent."""
 
 
 def load_activity(path: Path) -> dict[str, Any]:
@@ -781,6 +786,7 @@ def docker_command(
     image: str = DEFAULT_DOCKER_IMAGE,
     workspace: Path | None = None,
     cidfile: Path | None = None,
+    container_name: str | None = None,
 ) -> list[str]:
     """Build the docker command used to run grading in a container."""
     workspace = (workspace or Path.cwd()).resolve()
@@ -816,6 +822,8 @@ def docker_command(
     ]
     if cidfile is not None:
         command.extend(["--cidfile", str(cidfile.resolve())])
+    if container_name is not None:
+        command.extend(["--name", container_name])
     command.extend(
         [
         image,
@@ -829,27 +837,55 @@ def docker_command(
     return command
 
 
-def remove_docker_container(cidfile: Path) -> None:
-    """Force-remove a container recorded by Docker and discard cleanup output."""
+def remove_docker_container(cidfile: Path, container_name: str) -> None:
+    """Force-remove a named container and confirm that the daemon released it."""
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", container_name):
+        raise DockerCleanupError("Nome container Docker di cleanup non valido.")
     try:
         container_id = cidfile.read_text(encoding="ascii").strip()
     except OSError:
-        return
-    finally:
-        cidfile.unlink(missing_ok=True)
-    if not re.fullmatch(r"[0-9a-fA-F]{12,64}", container_id):
-        return
-    try:
-        subprocess.run(
-            ["docker", "rm", "-f", container_id],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=5,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        pass
+        container_id = ""
+    if container_id and not re.fullmatch(r"[0-9a-fA-F]{12,64}", container_id):
+        container_id = ""
+    last_error = ""
+    for attempt in range(2):
+        try:
+            remove_result = subprocess.run(
+                ["docker", "rm", "-f", container_name],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+                check=False,
+            )
+            if remove_result.returncode != 0:
+                last_error = f"docker rm ha restituito {remove_result.returncode}"
+        except (OSError, subprocess.TimeoutExpired) as error:
+            last_error = str(error)
+        try:
+            inspect_result = subprocess.run(
+                ["docker", "inspect", container_name],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            last_error = str(error)
+        else:
+            if inspect_result.returncode != 0:
+                cidfile.unlink(missing_ok=True)
+                return
+            last_error = "docker inspect conferma che il container esiste ancora"
+        if attempt == 0:
+            time.sleep(0.1)
+    cid_detail = f" CID: {container_id}." if container_id else ""
+    raise DockerCleanupError(
+        f"Container Docker non rimosso; esegui `docker rm -f {container_name}`."
+        f"{cid_detail} "
+        f"Dettaglio: {last_error or 'cleanup non riuscito'}."
+    )
 
 
 def run_bounded_process(
@@ -1101,22 +1137,34 @@ def grade_activity_in_docker(
         worker_reports: list[dict[str, Any]] = []
         for test_index, test_case in enumerate(activity["test_cases"]):
             cidfile = temp_root / f"container-{test_index}.cid"
+            container_name = f"thebitlab-grade-{uuid.uuid4().hex}"
             command = docker_command(
                 source=source,
                 timeout_seconds=timeout_seconds,
                 image=image,
                 workspace=workspace,
                 cidfile=cidfile,
+                container_name=container_name,
             )
             worker_request = build_worker_request(activity, test_case, language)
             try:
-                result = run_bounded_process(
-                    command,
-                    input_text=json.dumps(worker_request, ensure_ascii=False),
-                    timeout=docker_timeout,
-                )
-            finally:
-                remove_docker_container(cidfile)
+                try:
+                    result = run_bounded_process(
+                        command,
+                        input_text=json.dumps(worker_request, ensure_ascii=False),
+                        timeout=docker_timeout,
+                    )
+                except FileNotFoundError:
+                    cidfile.unlink(missing_ok=True)
+                    raise
+            except BaseException as grading_error:
+                try:
+                    remove_docker_container(cidfile, container_name)
+                except DockerCleanupError as cleanup_error:
+                    raise cleanup_error from grading_error
+                raise
+            else:
+                remove_docker_container(cidfile, container_name)
 
             try:
                 worker_report = json.loads(result.stdout)
