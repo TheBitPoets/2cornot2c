@@ -764,6 +764,59 @@ def validate_current_asset_destinations(
             )
 
 
+def existing_portable_aliases(root: Path, target_rel: Path) -> list[Path]:
+    """Return existing paths matching a target with portable semantics."""
+    candidates = [root]
+    for component in target_rel.parts:
+        component_key = portable_path_key(Path(component))
+        matches: list[Path] = []
+        for parent in candidates:
+            if parent.is_symlink() or not parent.is_dir():
+                continue
+            for child in parent.iterdir():
+                if portable_path_key(Path(child.name)) == component_key:
+                    if child.is_symlink():
+                        raise ValueError(
+                            f"Alias portabile non consentito tramite link simbolico: {target_rel}."
+                        )
+                    matches.append(child)
+        candidates = matches
+    return candidates
+
+
+def validate_unmanaged_portable_aliases(
+    *,
+    destination: Path,
+    current_targets: set[Path],
+    managed: dict[Path, str],
+    source_name: str,
+) -> None:
+    """Reject aliases not backed by trusted teacher-side scaffold state."""
+    managed_paths = {
+        target.as_posix()
+        for target in managed
+    }
+    reconcilable_targets = current_targets | {Path(source_name)}
+    for target_rel in reconcilable_targets:
+        for alias_path in existing_portable_aliases(destination, target_rel):
+            alias_rel = alias_path.relative_to(destination)
+            if alias_rel.as_posix() == target_rel.as_posix():
+                continue
+            if alias_rel.as_posix() not in managed_paths:
+                raise ValueError(
+                    f"Alias portabile studente non gestito per {target_rel}: {alias_rel}."
+                )
+    for reserved_target in RESERVED_SCAFFOLD_TARGETS:
+        target_rel = Path(reserved_target)
+        for alias_path in existing_portable_aliases(destination, target_rel):
+            alias_rel = alias_path.relative_to(destination)
+            if alias_rel.as_posix() != target_rel.as_posix():
+                raise ValueError(
+                    f"Alias portabile non consentito per il file riservato "
+                    f"{target_rel}: {alias_rel}."
+                )
+
+
 def validate_scaffold_owned_destinations(
     *,
     destination: Path,
@@ -1020,6 +1073,12 @@ def create_scaffold(
         )
 
     managed_assets = load_managed_assets(manifest_path) if overwrite else {}
+    validate_unmanaged_portable_aliases(
+        destination=destination,
+        current_targets=current_asset_targets,
+        managed=managed_assets,
+        source_name=source_name,
+    )
     if managed_assets:
         validate_modified_stale_asset_collisions(
             destination=destination,
@@ -1041,7 +1100,7 @@ def create_scaffold(
         managed_assets = reconcile_managed_target_aliases(
             destination=destination,
             managed=managed_assets,
-            current_targets=current_asset_targets,
+            current_targets=current_asset_targets | {Path(source_name)},
         )
         managed_assets = remove_stale_managed_assets(
             destination=destination,

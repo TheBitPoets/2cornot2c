@@ -947,6 +947,83 @@ def test_create_scaffold_preflights_owned_file_collisions(
     assert unaffected_path.read_bytes() == unaffected_content
 
 
+@pytest.mark.parametrize(
+    ("canonical_name", "alias_name"),
+    [
+        ("main.py", "MAIN.PY"),
+        ("README.md", "readme.MD"),
+        ("activity.json", "ACTIVITY.JSON"),
+    ],
+)
+def test_create_scaffold_rejects_unmanaged_portable_owned_alias(
+    tmp_path,
+    canonical_name,
+    alias_name,
+) -> None:
+    if (tmp_path / "case-check").resolve() == (tmp_path / "CASE-CHECK").resolve():
+        pytest.skip("Il filesystem non distingue maiuscole e minuscole.")
+    activity_path = write_activity(tmp_path, canonical_activity())
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    canonical_path = destination / canonical_name
+    alias_path = destination / alias_name
+    canonical_path.rename(alias_path)
+    unaffected_path = (
+        destination / "README.md"
+        if canonical_name != "README.md"
+        else destination / "main.py"
+    )
+    unaffected_content = unaffected_path.read_bytes()
+
+    with pytest.raises(ValueError, match="Alias portabile"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+            overwrite=True,
+        )
+
+    assert alias_path.exists()
+    assert not canonical_path.exists()
+    assert unaffected_path.read_bytes() == unaffected_content
+
+
+def test_create_scaffold_rejects_unmanaged_portable_asset_alias(tmp_path) -> None:
+    if (tmp_path / "case-check").resolve() == (tmp_path / "CASE-CHECK").resolve():
+        pytest.skip("Il filesystem non distingue maiuscole e minuscole.")
+    activity_path = write_activity(tmp_path, canonical_activity())
+    target_dir = tmp_path / "student"
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=target_dir,
+    )
+    (destination / "EXAMPLE.TXT").write_text("file studente\n", encoding="utf-8")
+    (tmp_path / "example.txt").write_text("file docente\n", encoding="utf-8")
+    payload = {
+        **canonical_activity(),
+        "assets": [
+            {
+                "type": "example",
+                "path": "example.txt",
+                "target_path": "example.txt",
+            }
+        ],
+    }
+    write_activity(tmp_path, payload)
+
+    with pytest.raises(ValueError, match="Alias portabile studente non gestito"):
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=target_dir,
+            overwrite=True,
+        )
+
+    assert (destination / "EXAMPLE.TXT").read_text(encoding="utf-8") == "file studente\n"
+    assert not (destination / "example.txt").exists()
+
+
 def test_create_scaffold_rejects_modified_legacy_asset_below_new_source(tmp_path) -> None:
     legacy_teacher_asset = tmp_path / "legacy.txt"
     legacy_teacher_asset.write_text("asset legacy\n", encoding="utf-8")
