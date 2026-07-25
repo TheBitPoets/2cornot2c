@@ -261,6 +261,7 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
         ({"summary": {"passed": 1.0, "total": 1}}, {}, "riepilogo test"),
         ({"summary": {"passed": 1, "total": -1}}, {}, "riepilogo test"),
         ({"teacher_grade": 8}, {}, "voto definitivo"),
+        ({"score": None}, {}, "punteggio non valido"),
         ({"score": float("nan")}, {}, "punteggio non valido"),
         ({"score": 11}, {}, "punteggio non valido"),
         ({"score": 10**10000}, {}, "punteggio non valido"),
