@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import signal
 import shutil
 import sqlite3
@@ -779,6 +780,7 @@ def docker_command(
     timeout_seconds: int,
     image: str = DEFAULT_DOCKER_IMAGE,
     workspace: Path | None = None,
+    cidfile: Path | None = None,
 ) -> list[str]:
     """Build the docker command used to run grading in a container."""
     workspace = (workspace or Path.cwd()).resolve()
@@ -812,6 +814,8 @@ def docker_command(
         "-w",
         "/submission",
     ]
+    if cidfile is not None:
+        command.extend(["--cidfile", str(cidfile.resolve())])
     command.extend(
         [
         image,
@@ -823,6 +827,29 @@ def docker_command(
         ]
     )
     return command
+
+
+def remove_docker_container(cidfile: Path) -> None:
+    """Force-remove a container recorded by Docker and discard cleanup output."""
+    try:
+        container_id = cidfile.read_text(encoding="ascii").strip()
+    except OSError:
+        return
+    finally:
+        cidfile.unlink(missing_ok=True)
+    if not re.fullmatch(r"[0-9a-fA-F]{12,64}", container_id):
+        return
+    try:
+        subprocess.run(
+            ["docker", "rm", "-f", container_id],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        pass
 
 
 def run_bounded_process(
@@ -1071,21 +1098,25 @@ def grade_activity_in_docker(
             timeout_seconds,
             language,
         )
-        command = docker_command(
-            source=source,
-            timeout_seconds=timeout_seconds,
-            image=image,
-            workspace=workspace,
-        )
-
         worker_reports: list[dict[str, Any]] = []
-        for test_case in activity["test_cases"]:
-            worker_request = build_worker_request(activity, test_case, language)
-            result = run_bounded_process(
-                command,
-                input_text=json.dumps(worker_request, ensure_ascii=False),
-                timeout=docker_timeout,
+        for test_index, test_case in enumerate(activity["test_cases"]):
+            cidfile = temp_root / f"container-{test_index}.cid"
+            command = docker_command(
+                source=source,
+                timeout_seconds=timeout_seconds,
+                image=image,
+                workspace=workspace,
+                cidfile=cidfile,
             )
+            worker_request = build_worker_request(activity, test_case, language)
+            try:
+                result = run_bounded_process(
+                    command,
+                    input_text=json.dumps(worker_request, ensure_ascii=False),
+                    timeout=docker_timeout,
+                )
+            finally:
+                remove_docker_container(cidfile)
 
             try:
                 worker_report = json.loads(result.stdout)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 
 import pytest
 
@@ -333,3 +334,53 @@ def test_docker_runner_stops_excessive_container_output(tmp_path) -> None:
     assert report["status"] == "docker-setup-error"
     assert "limite output" in report["error"]
     assert len(json.dumps(report)) < 4096
+
+
+def test_docker_timeout_force_removes_orphaned_container(tmp_path, monkeypatch) -> None:
+    activity_path = tmp_path / "teacher" / "activity.json"
+    source_path = tmp_path / "student" / "main.py"
+    activity_path.parent.mkdir()
+    source_path.parent.mkdir()
+    activity_path.write_text(
+        json.dumps(
+            {
+                "id": "python-orphan-timeout",
+                "language": "python",
+                "test_cases": [{"stdin": "", "expected_stdout": ""}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_path.write_text(
+        (
+            "import subprocess, sys\n"
+            "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])\n"
+        ),
+        encoding="utf-8",
+    )
+    removed_ids = []
+    original_cleanup = grade_activity.remove_docker_container
+
+    def tracked_cleanup(cidfile):
+        if cidfile.is_file():
+            removed_ids.append(cidfile.read_text(encoding="ascii").strip())
+        original_cleanup(cidfile)
+
+    monkeypatch.setattr(grade_activity, "remove_docker_container", tracked_cleanup)
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        grade_activity.grade_activity_in_docker(
+            activity_path,
+            source_path,
+            timeout_seconds=1,
+            language="python",
+        )
+
+    assert len(removed_ids) == 1
+    inspect_result = subprocess.run(
+        ["docker", "inspect", removed_ids[0]],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    assert inspect_result.returncode != 0

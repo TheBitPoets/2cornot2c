@@ -407,6 +407,7 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
         source=source_path,
         timeout_seconds=5,
         workspace=tmp_path,
+        cidfile=tmp_path / "container.cid",
     )
 
     assert "--network" in command
@@ -428,11 +429,52 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     assert "/thebitlab-work:rw,exec,nosuid,nodev,mode=1777,size=64m" in command
     assert "TMPDIR=/thebitlab-work" in command
     assert "/thebitlab-output" not in command
+    assert "--cidfile" in command
+    assert str((tmp_path / "container.cid").resolve()) in command
     assert "--report" not in command
     assert "--activity" not in command
     assert "--language" not in command
     assert "--worker" in command
     assert command[command.index("--source") + 1] == "main.c"
+
+
+def test_remove_docker_container_validates_id_and_forces_cleanup(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    cidfile = tmp_path / "container.cid"
+    container_id = "a" * 64
+    cidfile.write_text(container_id, encoding="ascii")
+    calls = []
+
+    def tracked_run(command, **kwargs):
+        calls.append((command, kwargs))
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", tracked_run)
+
+    grade_activity.remove_docker_container(cidfile)
+
+    assert calls[0][0] == ["docker", "rm", "-f", container_id]
+    assert calls[0][1]["timeout"] == 5
+    assert calls[0][1]["stdout"] is subprocess.DEVNULL
+    assert calls[0][1]["stderr"] is subprocess.DEVNULL
+    assert not cidfile.exists()
+
+
+def test_remove_docker_container_rejects_invalid_id(monkeypatch, tmp_path) -> None:
+    cidfile = tmp_path / "container.cid"
+    cidfile.write_text("not-a-container; rm -rf .", encoding="ascii")
+    calls = []
+    monkeypatch.setattr(
+        grade_activity.subprocess,
+        "run",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    grade_activity.remove_docker_container(cidfile)
+
+    assert calls == []
+    assert not cidfile.exists()
 
 
 def test_prepare_docker_workspace_copies_only_runner_inputs(tmp_path) -> None:
