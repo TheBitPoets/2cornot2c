@@ -40,6 +40,7 @@ def test_checked_in_toolchain_manifest_is_strict_and_immutable() -> None:
         ({"worker_schema_version": "other"}, "Schema worker"),
         ({"base_image": "debian:bookworm-slim"}, "digest"),
         ({"debian_snapshot": "latest"}, "Snapshot"),
+        ({"debian_snapshot": "20261340T000000Z"}, "Snapshot"),
         ({"packages": {"gcc": "12"}}, "Pacchetti"),
     ],
 )

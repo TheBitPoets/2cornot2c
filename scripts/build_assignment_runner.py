@@ -90,6 +90,10 @@ def load_manifest(path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
         or not SNAPSHOT_RE.fullmatch(payload["debian_snapshot"])
     ):
         raise ToolchainBuildError("Snapshot Debian non valido.")
+    try:
+        snapshot_epoch(payload["debian_snapshot"])
+    except ValueError as error:
+        raise ToolchainBuildError("Snapshot Debian non valido.") from error
     packages = payload["packages"]
     if not isinstance(packages, dict) or set(packages) != EXPECTED_PACKAGES:
         raise ToolchainBuildError("Pacchetti toolchain mancanti o inattesi.")
