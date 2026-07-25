@@ -24,15 +24,59 @@ L'immagine contiene:
 - `nodejs`;
 - `sqlite3`;
 - utente non root `runner`;
-- working directory `/workspace`.
+- working directory `/submission`.
+
+La definizione riproducibile della toolchain si trova in:
+
+```text
+docker/assignment-runner/toolchain.json
+```
+
+Il manifest fissa versione logica, piattaforma, repository GHCR, schema worker, immagine Debian
+con digest, snapshot storico Debian e versioni dirette dei pacchetti. Il Dockerfile non contiene
+fallback mobili: gli argomenti validati devono essere passati dal builder.
 
 ## Build
 
-Esempio:
+Usa sempre il builder standard del repository:
 
 ```bash
-docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .
+python scripts/build_assignment_runner.py
 ```
+
+Per validare il manifest senza avviare Docker:
+
+```bash
+python scripts/build_assignment_runner.py --check
+```
+
+Il builder usa `--pull=false`, seleziona `linux/amd64`, passa tutti i pin al Dockerfile e verifica
+le label dell'immagine costruita. Il comando Docker diretto non e parte del processo supportato,
+perche potrebbe omettere i pin.
+
+## Pubblicazione e manutenzione
+
+Il workflow `.github/workflows/publish-assignment-runner.yml` viene eseguito soltanto su `main` o
+manualmente. Prima della pubblicazione:
+
+1. costruisce l'immagine dal manifest;
+2. esegue gli smoke test Docker reali;
+3. pubblica su GHCR un tag di versione e un tag legato al commit;
+4. non pubblica mai `latest`;
+5. rifiuta di sovrascrivere una versione gia esistente;
+6. salva `toolchain-release.json` come artifact con il digest OCI da usare nel lock autorevole.
+
+Per un aggiornamento intenzionale:
+
+1. modifica Dockerfile o pin in `toolchain.json`;
+2. incrementa sempre `version`;
+3. apri una PR e attendi build e smoke test;
+4. dopo il merge, recupera il digest dall'artifact o dal summary del workflow di pubblicazione;
+5. aggiorna tramite PR il lock del grading autorevole.
+
+Per il rollback non si ricostruisce l'immagine: si ripristina nel lock un digest GHCR precedente
+ancora conservato. Le versioni pubblicate non devono essere eliminate finche esistono report o lock
+che le referenziano.
 
 ## Uso
 
@@ -57,7 +101,7 @@ La prima sandbox:
 - conserva activity, rubriche e output attesi esclusivamente nel processo host;
 - avvia un worker Docker distinto per ogni caso di test;
 - prepara un workspace temporaneo minimale con il solo sorgente da correggere;
-- monta quel workspace minimale in sola lettura su `/workspace`;
+- monta quel workspace minimale in sola lettura su `/submission`;
 - monta una `tmpfs` scrivibile ed eseguibile su `/thebitlab-work`, necessaria per compilare ed eseguire binari C temporanei;
 - disabilita la rete del container con `--network none`;
 - usa root filesystem read-only;
@@ -100,8 +144,8 @@ Limiti noti:
 - non gestisce ancora quote su file generati;
 - ricompila i sorgenti C in ogni worker: privilegia l'isolamento rispetto alla velocita;
 - non isola in modo fine tutti i linguaggi futuri;
-- integra un workflow GitHub Actions docente per il grading remoto, ma richiede ancora il collaudo
-  live e gli hardening tracciati in #515 e #516;
+- integra un workflow GitHub Actions docente per il grading remoto; la toolchain riproducibile viene
+  pubblicata da #520 e il passaggio del grading autorevole al digest bloccato e tracciato in #521;
 - non sostituisce una futura policy completa di sicurezza.
 
 ## Regola di sicurezza
