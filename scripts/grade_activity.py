@@ -1148,15 +1148,14 @@ def grade_activity_in_docker(
             )
             worker_request = build_worker_request(activity, test_case, language)
             try:
-                try:
-                    result = run_bounded_process(
-                        command,
-                        input_text=json.dumps(worker_request, ensure_ascii=False),
-                        timeout=docker_timeout,
-                    )
-                except FileNotFoundError:
-                    cidfile.unlink(missing_ok=True)
-                    raise
+                result = run_bounded_process(
+                    command,
+                    input_text=json.dumps(worker_request, ensure_ascii=False),
+                    timeout=docker_timeout,
+                )
+            except FileNotFoundError:
+                cidfile.unlink(missing_ok=True)
+                raise
             except BaseException as grading_error:
                 try:
                     remove_docker_container(cidfile, container_name)

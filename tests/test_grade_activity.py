@@ -645,7 +645,7 @@ def test_prepare_docker_workspace_rejects_symlink_escaping_source_root(tmp_path)
         )
 
 
-def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> None:
+def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path, capsys) -> None:
     class Args:
         activity = tmp_path / "activity.json"
         source = tmp_path / "main.c"
@@ -668,9 +668,17 @@ def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> Non
         return missing_docker(*args, **kwargs)
 
     monkeypatch.setattr(grade_activity, "run_bounded_process", tracked_missing_docker)
+    cleanup_calls = []
+    monkeypatch.setattr(
+        grade_activity,
+        "remove_docker_container",
+        lambda *args, **kwargs: cleanup_calls.append((args, kwargs)),
+    )
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert calls["count"] == 1
+    assert cleanup_calls == []
+    assert "Docker non trovato" in capsys.readouterr().out
 
 
 def test_run_docker_grading_reports_docker_timeout(monkeypatch, tmp_path) -> None:
