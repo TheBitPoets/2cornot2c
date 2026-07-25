@@ -352,10 +352,7 @@ def test_docker_timeout_force_removes_orphaned_container(tmp_path, monkeypatch) 
         encoding="utf-8",
     )
     source_path.write_text(
-        (
-            "import subprocess, sys\n"
-            "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])\n"
-        ),
+        "print('ok')\n",
         encoding="utf-8",
     )
     removed_ids = []
@@ -367,6 +364,29 @@ def test_docker_timeout_force_removes_orphaned_container(tmp_path, monkeypatch) 
         original_cleanup(cidfile)
 
     monkeypatch.setattr(grade_activity, "remove_docker_container", tracked_cleanup)
+
+    def timed_out_client(command, *, input_text, timeout):
+        cidfile = command[command.index("--cidfile") + 1]
+        subprocess.run(
+            [
+                "docker",
+                "run",
+                "-d",
+                "--cidfile",
+                cidfile,
+                "--entrypoint",
+                "python3",
+                grade_activity.DEFAULT_DOCKER_IMAGE,
+                "-c",
+                "import time; time.sleep(30)",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
+        raise subprocess.TimeoutExpired(command, timeout)
+
+    monkeypatch.setattr(grade_activity, "run_bounded_process", timed_out_client)
 
     with pytest.raises(subprocess.TimeoutExpired):
         grade_activity.grade_activity_in_docker(
