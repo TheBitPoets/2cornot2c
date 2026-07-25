@@ -47,6 +47,7 @@ def test_publish_workflow_only_publishes_reviewed_main_toolchains() -> None:
     assert "packages: write" in source
     assert "pull_request:" not in source
     assert "branches:\n      - main" in source
+    assert "if: github.ref == 'refs/heads/main'" in source
     assert "scripts/build_assignment_runner.py" in source
     assert "THEBITLAB_RUN_DOCKER_TESTS" in source
     assert "tests/test_student_lab_runner_docker.py" in source
