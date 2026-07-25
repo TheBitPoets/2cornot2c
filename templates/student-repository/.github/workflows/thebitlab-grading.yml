@@ -62,6 +62,17 @@ jobs:
           STUDENT_ID: ${{ inputs.student_id }}
         run: |
           mkdir -p "$RUNNER_TEMP/thebitlab-report"
+          python - "$ACTIVITY_PATH" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          activity = json.loads((Path("student-work") / sys.argv[1]).read_text(encoding="utf-8"))
+          if not activity.get("test_cases"):
+              raise SystemExit(
+                  "La preview richiede test pubblici espliciti nella copia studente della activity."
+              )
+          PY
           python thebitlab/scripts/grade_activity.py \
             --activity "student-work/$ACTIVITY_PATH" \
             --source "student-work/$SOURCE_PATH" \

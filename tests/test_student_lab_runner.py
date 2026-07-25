@@ -28,6 +28,7 @@ def write_activity(root, activity_id: str = "python-base-somma-001", **overrides
             "sandbox": False,
             "ai_feedback": False,
         },
+        "test_cases": [{"name": "output", "stdin": "", "expected_stdout": "1\n"}],
     }
     payload.update(overrides)
     path = root / "activities" / f"{activity_id}.json"
@@ -144,11 +145,12 @@ def test_run_student_assignment_passes_python_pytest(tmp_path) -> None:
     assert report["summary"] == {"passed": 1, "total": 1}
     assert report["tests"] == [
         {
-            "name": "tests/test_main.py::test_somma",
-            "passed": True,
-            "status": "passed",
-        }
-    ]
+                "name": "tests/test_main.py::test_somma",
+                "passed": True,
+                "status": "passed",
+                "visibility": "student",
+            }
+        ]
 
 
 def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path) -> None:
@@ -197,6 +199,79 @@ def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path
     assert assignment_payload["attempts"]["latest"]["id"] == stored["attempt_id"]
     assert assignment_payload["attempts"]["best"]["id"] == stored["attempt_id"]
     assert assignment_payload["attempts"]["final"] is None
+
+
+def test_write_student_report_redacts_teacher_only_test_details(tmp_path) -> None:
+    write_assignment(tmp_path, write_activity(tmp_path))
+    assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+    )
+    report = {
+        "passed": False,
+        "status": "failed",
+        "activity_id": "python-base-somma-001",
+        "language": "python",
+        "tests": [
+            {
+                "name": "nome-riservato",
+                "passed": False,
+                "status": "runtime-startup-timeout",
+                "returncode": 105,
+                "stdin": "input-riservato",
+                "expected_stdout": "output-riservato",
+                "stdout": "input-riservato",
+                "stderr": "input-riservato",
+                "message": "Atteso output-riservato",
+            }
+        ],
+        "summary": {"passed": 0, "total": 1},
+    }
+
+    report_path = student_lab_runner.write_student_report(tmp_path, assignment, report)
+
+    stored = json.loads(report_path.read_text(encoding="utf-8"))
+    serialized = json.dumps(stored)
+    assert stored["tests"][0]["name"] == "Test 1"
+    assert "nome-riservato" not in serialized
+    assert "input-riservato" not in serialized
+    assert "output-riservato" not in serialized
+    assert "stdout" not in stored["tests"][0]
+    assert "stderr" not in stored["tests"][0]
+    assert "returncode" not in stored["tests"][0]
+    assert stored["tests"][0]["status"] == "failed"
+
+
+def test_write_student_report_keeps_public_pytest_failure_details(tmp_path) -> None:
+    write_assignment(tmp_path, write_activity(tmp_path))
+    assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+    )
+    report = {
+        "passed": False,
+        "status": "failed",
+        "activity_id": "python-base-somma-001",
+        "language": "python",
+        "tests": [
+            {
+                "name": "tests/test_main.py::test_somma",
+                "visibility": "student",
+                "passed": False,
+                "status": "failed",
+                "message": "AssertionError: assert 4 == 5",
+            }
+        ],
+        "summary": {"passed": 0, "total": 1},
+    }
+
+    report_path = student_lab_runner.write_student_report(tmp_path, assignment, report)
+
+    stored = json.loads(report_path.read_text(encoding="utf-8"))
+    assert stored["tests"][0]["name"] == "tests/test_main.py::test_somma"
+    assert stored["tests"][0]["message"] == "AssertionError: assert 4 == 5"
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node non disponibile nell'ambiente di test")
@@ -253,7 +328,8 @@ def test_sql_assignment_flows_from_runner_to_service_grading(tmp_path) -> None:
     assert report["language"] == "sql"
     assert report["status"] == "passed"
     assert report["summary"] == {"passed": 1, "total": 1}
-    assert report["tests"][0]["command"][0] == "python-stdlib"
+    assert report["tests"][0]["name"] == "Test 1"
+    assert "command" not in report["tests"][0]
     assert assignment_payload["report"]["exists"] is True
     assert assignment_payload["grading"]["status"] == "graded_passed"
     assert assignment_payload["grading"]["tests_passed"] == 1
@@ -572,7 +648,8 @@ def test_run_local_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> N
     )
 
     assert report["status"] == "failed"
-    assert report["tests"][0]["message"] == "Output atteso: 5; output ottenuto: 4"
+    assert report["tests"][0]["message"] == "Test non superato: failed"
+    assert "expected_stdout" not in report["tests"][0]
 
 
 def test_run_docker_assignment_wraps_container_report(monkeypatch, tmp_path) -> None:
@@ -583,22 +660,21 @@ def test_run_docker_assignment_wraps_container_report(monkeypatch, tmp_path) -> 
     workspace.mkdir(parents=True)
     (workspace / "main.c").write_text("int main(void){ return 0; }\n", encoding="utf-8")
 
-    class Result:
-        returncode = 0
-        stdout = json.dumps(
+    monkeypatch.setattr(
+        student_lab_runner.grade_activity,
+        "grade_activity_in_docker",
+        lambda *args, **kwargs: (
             {
                 "passed": True,
                 "status": "passed",
                 "activity_id": activity_id,
                 "language": "c",
-                "source": "/workspace/source/main.c",
                 "tests": [{"name": "smoke", "passed": True, "status": "passed"}],
                 "summary": {"passed": 1, "total": 1},
-            }
-        )
-        stderr = ""
-
-    monkeypatch.setattr(student_lab_runner.subprocess, "run", lambda *args, **kwargs: Result())
+            },
+            "",
+        ),
+    )
 
     report = student_lab_runner.run_student_assignment(
         root=tmp_path,
@@ -621,9 +697,10 @@ def test_run_docker_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> 
     workspace.mkdir(parents=True)
     (workspace / "main.c").write_text("int main(void){ return 0; }\n", encoding="utf-8")
 
-    class Result:
-        returncode = 0
-        stdout = json.dumps(
+    monkeypatch.setattr(
+        student_lab_runner.grade_activity,
+        "grade_activity_in_docker",
+        lambda *args, **kwargs: (
             {
                 "passed": False,
                 "status": "failed",
@@ -640,11 +717,10 @@ def test_run_docker_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> 
                     }
                 ],
                 "summary": {"passed": 0, "total": 1},
-            }
-        )
-        stderr = ""
-
-    monkeypatch.setattr(student_lab_runner.subprocess, "run", lambda *args, **kwargs: Result())
+            },
+            "",
+        ),
+    )
 
     report = student_lab_runner.run_student_assignment(
         root=tmp_path,
@@ -655,7 +731,10 @@ def test_run_docker_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> 
 
     assert report["backend"] == "docker"
     assert report["status"] == "failed"
-    assert report["tests"][0]["message"] == "Output atteso: -5; output ottenuto: 5"
+    assert report["tests"][0]["name"] == "Test 1"
+    assert report["tests"][0]["message"] == "Test non superato: failed"
+    assert "expected_stdout" not in report["tests"][0]
+    assert "stdin" not in report["tests"][0]
 
 
 def test_run_docker_assignment_reports_missing_docker(monkeypatch, tmp_path) -> None:
@@ -669,7 +748,7 @@ def test_run_docker_assignment_reports_missing_docker(monkeypatch, tmp_path) -> 
     def missing_docker(*args, **kwargs):
         raise FileNotFoundError
 
-    monkeypatch.setattr(student_lab_runner.subprocess, "run", missing_docker)
+    monkeypatch.setattr(student_lab_runner.grade_activity, "grade_activity_in_docker", missing_docker)
 
     report = student_lab_runner.run_student_assignment(
         root=tmp_path,
@@ -683,7 +762,7 @@ def test_run_docker_assignment_reports_missing_docker(monkeypatch, tmp_path) -> 
     assert "Docker non trovato" in report["error"]
 
 
-def test_run_docker_assignment_rejects_success_report_on_container_error(monkeypatch, tmp_path) -> None:
+def test_run_docker_assignment_rejects_worker_protocol_error(monkeypatch, tmp_path) -> None:
     activity_id = "c-base-somma-001"
     activity_path = write_activity(tmp_path, activity_id=activity_id, language="c", source_name="main.c")
     write_assignment(tmp_path, activity_path, activity_id=activity_id)
@@ -691,12 +770,10 @@ def test_run_docker_assignment_rejects_success_report_on_container_error(monkeyp
     workspace.mkdir(parents=True)
     (workspace / "main.c").write_text("int main(void){ return 0; }\n", encoding="utf-8")
 
-    class Result:
-        returncode = 1
-        stdout = json.dumps({"passed": True, "status": "passed"})
-        stderr = "errore container"
+    def invalid_worker(*args, **kwargs):
+        raise ValueError("report worker incoerente")
 
-    monkeypatch.setattr(student_lab_runner.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(student_lab_runner.grade_activity, "grade_activity_in_docker", invalid_worker)
 
     report = student_lab_runner.run_student_assignment(
         root=tmp_path,
@@ -706,7 +783,7 @@ def test_run_docker_assignment_rejects_success_report_on_container_error(monkeyp
     )
 
     assert report["backend"] == "docker"
-    assert report["status"] == "docker-inconsistent-report"
+    assert report["status"] == "docker-setup-error"
     assert report["passed"] is False
 
 
@@ -717,18 +794,20 @@ def test_run_docker_assignment_supports_python(monkeypatch, tmp_path) -> None:
     workspace.mkdir(parents=True)
     (workspace / "main.py").write_text("print(1)\n", encoding="utf-8")
 
-    class Result:
-        returncode = 0
-        stdout = json.dumps({
-            "passed": True,
-            "status": "passed",
-            "language": "python",
-            "tests": [{"name": "output", "passed": True, "status": "passed"}],
-            "summary": {"passed": 1, "total": 1},
-        })
-        stderr = ""
-
-    monkeypatch.setattr(student_lab_runner.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(
+        student_lab_runner.grade_activity,
+        "grade_activity_in_docker",
+        lambda *args, **kwargs: (
+            {
+                "passed": True,
+                "status": "passed",
+                "language": "python",
+                "tests": [{"name": "output", "passed": True, "status": "passed"}],
+                "summary": {"passed": 1, "total": 1},
+            },
+            "",
+        ),
+    )
     report = student_lab_runner.run_student_assignment(
         root=tmp_path,
         student_id="rossi-mario",
@@ -775,26 +854,22 @@ def test_run_docker_assignment_supports_node_and_sql(
     workspace.mkdir(parents=True)
     (workspace / source_name).write_text("SELECT 1;\n" if language == "sql" else "console.log(1);\n", encoding="utf-8")
 
-    class Result:
-        returncode = 0
-        stdout = json.dumps(
+    captured: dict[str, str] = {}
+
+    def run_docker(*args, **kwargs):
+        captured["language"] = kwargs["language"]
+        return (
             {
                 "passed": True,
                 "status": "passed",
                 "language": language,
                 "tests": [{"name": "output", "passed": True, "status": "passed"}],
                 "summary": {"passed": 1, "total": 1},
-            }
+            },
+            "",
         )
-        stderr = ""
 
-    captured: dict[str, list[str]] = {}
-
-    def run_docker(command, **kwargs):
-        captured["command"] = command
-        return Result()
-
-    monkeypatch.setattr(student_lab_runner.subprocess, "run", run_docker)
+    monkeypatch.setattr(student_lab_runner.grade_activity, "grade_activity_in_docker", run_docker)
 
     report = student_lab_runner.run_student_assignment(
         root=tmp_path,
@@ -806,8 +881,7 @@ def test_run_docker_assignment_supports_node_and_sql(
     assert report["backend"] == "docker"
     assert report["status"] == "passed"
     assert report["language"] == language
-    language_index = captured["command"].index("--language")
-    assert captured["command"][language_index + 1] == language
+    assert captured["language"] == language
 
 
 def test_select_assignment_requires_disambiguation() -> None:

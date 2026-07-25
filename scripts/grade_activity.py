@@ -3,12 +3,16 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import signal
 import shutil
 import sqlite3
 import subprocess
 import tempfile
+import threading
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +21,9 @@ DEFAULT_TIMEOUT_SECONDS = 5
 DEFAULT_NODE_STARTUP_GRACE_SECONDS = 10
 DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS = 10
 DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
+MAX_DOCKER_OUTPUT_BYTES = 1024 * 1024
+WINDOWS_CREATE_SUSPENDED = 0x00000004
+DOCKER_WORKER_SCHEMA = "thebitlab.grading-worker.v1"
 SUPPORTED_LANGUAGES = {
     "c": "implemented",
     "python": "implemented",
@@ -30,6 +37,10 @@ SUPPORTED_LANGUAGES = {
     "cpp": "planned",
     "php": "planned",
 }
+
+
+class DockerCleanupError(ValueError):
+    """Raised when a grading container cannot be confirmed absent."""
 
 
 def load_activity(path: Path) -> dict[str, Any]:
@@ -442,6 +453,8 @@ def grade_c_activity(activity: dict[str, Any], source: Path, *, timeout_seconds:
             }
 
         tests = [run_test_case(binary, test_case, timeout_seconds=timeout_seconds) for test_case in test_cases]
+        for test, test_case in zip(tests, test_cases):
+            test["visibility"] = str(test_case.get("visibility", "teacher"))
         passed = all(test["passed"] for test in tests)
         return {
             "passed": passed,
@@ -493,6 +506,8 @@ def grade_script_activity(
         }
 
     tests = [test_runner(source, test_case, timeout_seconds=timeout_seconds) for test_case in test_cases]
+    for test, test_case in zip(tests, test_cases):
+        test["visibility"] = str(test_case.get("visibility", "teacher"))
     passed = all(test["passed"] for test in tests)
     return {
         "passed": passed,
@@ -561,6 +576,145 @@ def has_minimal_report_shape(value: Any) -> bool:
     return isinstance(value, dict) and isinstance(value.get("passed"), bool) and isinstance(value.get("status"), str)
 
 
+def build_worker_request(
+    activity: dict[str, Any],
+    test_case: dict[str, Any],
+    language: str | None = None,
+) -> dict[str, Any]:
+    """Build one untrusted worker request with only the current test input."""
+    selected_language = activity_language(activity, language)
+    return {
+        "schema_version": DOCKER_WORKER_SCHEMA,
+        "language": selected_language,
+        "stdin": str(test_case.get("stdin", "")),
+    }
+
+
+def load_worker_request(stream: Any) -> dict[str, Any]:
+    """Read and validate the restricted request accepted inside the container."""
+    try:
+        request = json.load(stream)
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("Richiesta worker non valida.") from error
+    if not isinstance(request, dict) or request.get("schema_version") != DOCKER_WORKER_SCHEMA:
+        raise ValueError("Schema richiesta worker non supportato.")
+    allowed_keys = {"schema_version", "language", "stdin"}
+    if set(request) - allowed_keys:
+        raise ValueError("La richiesta worker contiene campi non consentiti.")
+    language = request.get("language")
+    if not isinstance(language, str) or language not in SUPPORTED_LANGUAGES:
+        raise ValueError("Linguaggio worker non valido.")
+    if not isinstance(request.get("stdin"), str):
+        raise ValueError("Lo stdin del test worker deve essere una stringa.")
+    return request
+
+
+def worker_execution_report(request: dict[str, Any], source: Path, *, timeout_seconds: int) -> dict[str, Any]:
+    """Execute tests without receiving or returning their expected output."""
+    activity = {
+        "language": request["language"],
+        "test_cases": [{"name": "test", "stdin": request["stdin"], "expected_stdout": ""}],
+    }
+    report = grade_activity(
+        activity,
+        source,
+        timeout_seconds=timeout_seconds,
+        language=request["language"],
+    )
+    sanitized = dict(report)
+    sanitized["worker_schema_version"] = DOCKER_WORKER_SCHEMA
+    sanitized["tests"] = [
+        {
+            key: value
+            for key, value in test.items()
+            if key not in {"expected_stdout", "stdin", "passed"}
+        }
+        for test in report.get("tests", [])
+        if isinstance(test, dict)
+    ]
+    sanitized.pop("summary", None)
+    return sanitized
+
+
+def finalize_worker_report(
+    activity: dict[str, Any],
+    worker_reports: list[dict[str, Any]],
+    source: Path,
+    *,
+    language: str | None = None,
+) -> dict[str, Any]:
+    """Compare worker output with teacher-only expectations on the trusted host."""
+    selected_language = activity_language(activity, language)
+    expected_tests = activity.get("test_cases", [])
+    if len(worker_reports) > len(expected_tests):
+        raise ValueError("Il numero di report worker supera i test richiesti.")
+    tests: list[dict[str, Any]] = []
+    terminal_report: dict[str, Any] | None = None
+    for index, worker_report in enumerate(worker_reports):
+        if worker_report.get("worker_schema_version") != DOCKER_WORKER_SCHEMA:
+            raise ValueError("Report worker con schema non supportato.")
+        if worker_report.get("language") != selected_language:
+            raise ValueError("Il linguaggio del report worker non corrisponde alla richiesta.")
+        worker_tests = worker_report.get("tests")
+        if not isinstance(worker_tests, list) or len(worker_tests) > 1:
+            raise ValueError("Il report worker non contiene un singolo risultato valido.")
+        if not worker_tests:
+            terminal_report = worker_report
+            break
+        raw_test = worker_tests[0]
+        if not isinstance(raw_test, dict):
+            raise ValueError("Il report worker contiene un test non valido.")
+        expected_test = expected_tests[index]
+        actual_stdout = raw_test.get("stdout")
+        returncode = raw_test.get("returncode")
+        raw_status = raw_test.get("status")
+        if not isinstance(actual_stdout, str) or not isinstance(raw_status, str):
+            raise ValueError("Il report worker contiene campi test non validi.")
+        execution_ok = returncode == 0 and raw_status not in {
+            "timeout",
+            "execution-error",
+            "runtime-startup-timeout",
+        }
+        expected_stdout = str(expected_test["expected_stdout"])
+        passed = execution_ok and normalize_output(actual_stdout) == normalize_output(expected_stdout)
+        test = dict(raw_test)
+        test.update(
+            {
+                "name": str(expected_test.get("name", "test")),
+                "visibility": str(expected_test.get("visibility", "teacher")),
+                "passed": passed,
+                "status": "passed" if passed else ("failed" if execution_ok else raw_status),
+                "stdin": str(expected_test.get("stdin", "")),
+                "expected_stdout": expected_stdout,
+            }
+        )
+        tests.append(test)
+
+    if terminal_report is None and len(worker_reports) != len(expected_tests):
+        raise ValueError("Il numero di report worker non corrisponde ai test richiesti.")
+    template_report = terminal_report or (worker_reports[0] if worker_reports else {})
+    report = {
+        key: value
+        for key, value in template_report.items()
+        if key not in {"worker_schema_version", "tests", "summary", "passed", "status"}
+    }
+    report["activity_id"] = activity.get("id")
+    report["language"] = selected_language
+    report["source"] = str(source)
+    report["tests"] = tests
+    if tests:
+        report["passed"] = all(test["passed"] for test in tests)
+        report["status"] = "passed" if report["passed"] else "failed"
+        report["summary"] = {
+            "passed": sum(1 for test in tests if test["passed"]),
+            "total": len(tests),
+        }
+    else:
+        report["passed"] = False
+        report["status"] = str(template_report.get("status", "worker-error"))
+    return report
+
+
 def docker_timeout_seconds(
     activity: dict[str, Any],
     timeout_seconds: int,
@@ -610,45 +764,37 @@ def prepare_docker_workspace(
     *,
     activity_root: Path | None = None,
     source_root: Path | None = None,
-) -> tuple[Path, Path, Path]:
-    """Create a minimal Docker workspace with only grading inputs."""
-    safe_activity = confined_regular_input(activity, activity_root or activity.parent, "activity")
+) -> tuple[Path, Path]:
+    """Create a Docker workspace that excludes teacher-only grading data."""
+    confined_regular_input(activity, activity_root or activity.parent, "activity")
     safe_source = confined_regular_input(source, source_root or source.parent, "source")
     workspace = root / "workspace"
-    scripts_dir = workspace / "scripts"
-    activity_dir = workspace / "activity"
     source_dir = workspace / "source"
-    scripts_dir.mkdir(parents=True, exist_ok=True)
-    activity_dir.mkdir(parents=True, exist_ok=True)
     source_dir.mkdir(parents=True, exist_ok=True)
 
-    script_copy = scripts_dir / Path(__file__).name
-    activity_copy = activity_dir / activity.name
     source_copy = source_dir / source.name
 
-    shutil.copy2(Path(__file__).resolve(), script_copy)
-    shutil.copy2(safe_activity, activity_copy)
     shutil.copy2(safe_source, source_copy)
 
-    return workspace, activity_copy, source_copy
+    return workspace, source_copy
 
 
 def docker_command(
     *,
-    activity: Path,
     source: Path,
-    language: str | None,
     timeout_seconds: int,
     image: str = DEFAULT_DOCKER_IMAGE,
     workspace: Path | None = None,
+    cidfile: Path | None = None,
+    container_name: str | None = None,
 ) -> list[str]:
     """Build the docker command used to run grading in a container."""
     workspace = (workspace or Path.cwd()).resolve()
-    activity_path = activity.resolve()
     source_path = source.resolve()
     command = [
         "docker",
         "run",
+        "-i",
         "--rm",
         "--network",
         "none",
@@ -666,98 +812,428 @@ def docker_command(
         "--cpus",
         "1",
         "-v",
-        f"{workspace}:/workspace:ro",
+        f"{workspace}:/submission:ro",
         "--tmpfs",
         "/thebitlab-work:rw,exec,nosuid,nodev,mode=1777,size=64m",
         "-e",
         "TMPDIR=/thebitlab-work",
         "-w",
-        "/workspace",
+        "/submission",
     ]
+    if cidfile is not None:
+        command.extend(["--cidfile", str(cidfile.resolve())])
+    if container_name is not None:
+        command.extend(["--name", container_name])
     command.extend(
         [
         image,
-        "--activity",
-        path_inside_workspace(activity_path, workspace, "activity"),
+        "--worker",
         "--source",
         path_inside_workspace(source_path, workspace, "source"),
         "--timeout",
         str(timeout_seconds),
         ]
     )
-    if language:
-        command.extend(["--language", language])
     return command
 
 
-def run_docker_grading(args: argparse.Namespace) -> int:
-    """Run grading through Docker using the same CLI inside the container."""
+def remove_docker_container(cidfile: Path, container_name: str) -> None:
+    """Force-remove a named container and confirm that the daemon released it."""
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", container_name):
+        raise DockerCleanupError("Nome container Docker di cleanup non valido.")
+    try:
+        container_id = cidfile.read_text(encoding="ascii").strip()
+    except OSError:
+        container_id = ""
+    if container_id and not re.fullmatch(r"[0-9a-fA-F]{12,64}", container_id):
+        container_id = ""
+    last_error = ""
+    for attempt in range(2):
+        try:
+            remove_result = subprocess.run(
+                ["docker", "rm", "-f", container_name],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+                check=False,
+            )
+            if remove_result.returncode != 0:
+                last_error = f"docker rm ha restituito {remove_result.returncode}"
+        except (OSError, subprocess.TimeoutExpired) as error:
+            last_error = str(error)
+        try:
+            inspect_result = subprocess.run(
+                ["docker", "inspect", container_name],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                timeout=5,
+                check=False,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            last_error = str(error)
+        else:
+            if inspect_result.returncode != 0:
+                inspect_error = (inspect_result.stderr or "").strip()
+                normalized_error = inspect_error.casefold()
+                if (
+                    "no such object" in normalized_error
+                    or "no such container" in normalized_error
+                ):
+                    cidfile.unlink(missing_ok=True)
+                    return
+                last_error = (
+                    f"docker inspect ha restituito {inspect_result.returncode}: "
+                    f"{inspect_error or 'errore non specificato'}"
+                )
+                continue
+            last_error = "docker inspect conferma che il container esiste ancora"
+        if attempt == 0:
+            time.sleep(0.1)
+    cid_detail = f" CID: {container_id}." if container_id else ""
+    raise DockerCleanupError(
+        f"Container Docker non rimosso; esegui `docker rm -f {container_name}`."
+        f"{cid_detail} "
+        f"Dettaglio: {last_error or 'cleanup non riuscito'}."
+    )
+
+
+def run_bounded_process(
+    command: list[str],
+    *,
+    input_text: str,
+    timeout: float,
+    max_output_bytes: int = MAX_DOCKER_OUTPUT_BYTES,
+) -> subprocess.CompletedProcess[str]:
+    """Run a process while bounding captured stdout and discarding stderr."""
+    deadline = time.monotonic() + timeout
+    popen_options: dict[str, Any] = {}
+    if os.name == "nt":
+        popen_options["creationflags"] = (
+            subprocess.CREATE_NEW_PROCESS_GROUP | WINDOWS_CREATE_SUSPENDED
+        )
+    else:
+        popen_options["start_new_session"] = True
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        **popen_options,
+    )
+    windows_job: Any = None
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        class JobObjectBasicLimitInformation(ctypes.Structure):
+            _fields_ = [
+                ("PerProcessUserTimeLimit", ctypes.c_longlong),
+                ("PerJobUserTimeLimit", ctypes.c_longlong),
+                ("LimitFlags", wintypes.DWORD),
+                ("MinimumWorkingSetSize", ctypes.c_size_t),
+                ("MaximumWorkingSetSize", ctypes.c_size_t),
+                ("ActiveProcessLimit", wintypes.DWORD),
+                ("Affinity", ctypes.c_size_t),
+                ("PriorityClass", wintypes.DWORD),
+                ("SchedulingClass", wintypes.DWORD),
+            ]
+
+        class IoCounters(ctypes.Structure):
+            _fields_ = [
+                ("ReadOperationCount", ctypes.c_ulonglong),
+                ("WriteOperationCount", ctypes.c_ulonglong),
+                ("OtherOperationCount", ctypes.c_ulonglong),
+                ("ReadTransferCount", ctypes.c_ulonglong),
+                ("WriteTransferCount", ctypes.c_ulonglong),
+                ("OtherTransferCount", ctypes.c_ulonglong),
+            ]
+
+        class JobObjectExtendedLimitInformation(ctypes.Structure):
+            _fields_ = [
+                ("BasicLimitInformation", JobObjectBasicLimitInformation),
+                ("IoInfo", IoCounters),
+                ("ProcessMemoryLimit", ctypes.c_size_t),
+                ("JobMemoryLimit", ctypes.c_size_t),
+                ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                ("PeakJobMemoryUsed", ctypes.c_size_t),
+            ]
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+        kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        kernel32.SetInformationJobObject.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_int,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+        ]
+        kernel32.SetInformationJobObject.restype = wintypes.BOOL
+        kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+        ntdll = ctypes.WinDLL("ntdll")
+        ntdll.NtResumeProcess.argtypes = [wintypes.HANDLE]
+        ntdll.NtResumeProcess.restype = ctypes.c_long
+
+        windows_job = kernel32.CreateJobObjectW(None, None)
+        if not windows_job:
+            process.kill()
+            process.wait()
+            raise ctypes.WinError(ctypes.get_last_error())
+        job_limits = JobObjectExtendedLimitInformation()
+        job_limits.BasicLimitInformation.LimitFlags = 0x00002000
+        if not kernel32.SetInformationJobObject(
+            windows_job,
+            9,
+            ctypes.byref(job_limits),
+            ctypes.sizeof(job_limits),
+        ) or not kernel32.AssignProcessToJobObject(
+            windows_job,
+            wintypes.HANDLE(int(process._handle)),
+        ):
+            error_code = ctypes.get_last_error()
+            kernel32.CloseHandle(windows_job)
+            windows_job = None
+            process.kill()
+            process.wait()
+            raise ctypes.WinError(error_code)
+        resume_status = ntdll.NtResumeProcess(wintypes.HANDLE(int(process._handle)))
+        if resume_status != 0:
+            kernel32.CloseHandle(windows_job)
+            windows_job = None
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            raise OSError(
+                f"Impossibile riprendere il processo Windows sospeso: "
+                f"NTSTATUS 0x{resume_status & 0xFFFFFFFF:08X}."
+            )
+    output = bytearray()
+    output_exceeded = threading.Event()
+
+    def write_stdin() -> None:
+        assert process.stdin is not None
+        try:
+            process.stdin.write(input_text.encode("utf-8"))
+        except (BrokenPipeError, OSError, ValueError):
+            pass
+        finally:
+            try:
+                process.stdin.close()
+            except (BrokenPipeError, OSError, ValueError):
+                pass
+
+    def read_stdout() -> None:
+        assert process.stdout is not None
+        read_chunk = getattr(process.stdout, "read1", process.stdout.read)
+        try:
+            while chunk := read_chunk(65536):
+                remaining = max_output_bytes + 1 - len(output)
+                if remaining > 0:
+                    output.extend(chunk[:remaining])
+                if len(output) > max_output_bytes:
+                    output_exceeded.set()
+                    process.kill()
+                    break
+        except (OSError, ValueError):
+            pass
+
+    def terminate_process_group() -> None:
+        nonlocal windows_job
+        if os.name == "nt":
+            if windows_job is not None:
+                kernel32.CloseHandle(windows_job)
+                windows_job = None
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if process.poll() is None:
+            try:
+                process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+
+    def close_pipe(pipe: Any) -> None:
+        try:
+            raw_pipe = getattr(pipe, "raw", None)
+            if raw_pipe is not None:
+                raw_pipe.close()
+            else:
+                pipe.close()
+        except (OSError, ValueError):
+            pass
+
+    writer = threading.Thread(target=write_stdin, daemon=True)
+    reader = threading.Thread(target=read_stdout, daemon=True)
+    writer.start()
+    reader.start()
+    try:
+        try:
+            returncode = process.wait(timeout=max(0, deadline - time.monotonic()))
+        except subprocess.TimeoutExpired as error:
+            terminate_process_group()
+            raise subprocess.TimeoutExpired(
+                command,
+                timeout,
+                output=bytes(output),
+            ) from error
+        writer.join(timeout=max(0, deadline - time.monotonic()))
+        reader.join(timeout=max(0, deadline - time.monotonic()))
+        if writer.is_alive() or reader.is_alive():
+            raise subprocess.TimeoutExpired(
+                command,
+                timeout,
+                output=bytes(output),
+            )
+    finally:
+        terminate_process_group()
+        close_pipe(process.stdin)
+        close_pipe(process.stdout)
+        writer.join(timeout=0.2)
+        reader.join(timeout=0.2)
+
+    if output_exceeded.is_set():
+        raise ValueError(
+            f"Sandbox Docker ha superato il limite output di {max_output_bytes} byte."
+        )
+    return subprocess.CompletedProcess(
+        command,
+        returncode,
+        bytes(output).decode("utf-8", errors="replace"),
+        "",
+    )
+
+
+def grade_activity_in_docker(
+    activity_path: Path,
+    source_path: Path,
+    *,
+    timeout_seconds: int,
+    language: str | None = None,
+    image: str = DEFAULT_DOCKER_IMAGE,
+    activity_root: Path | None = None,
+    source_root: Path | None = None,
+) -> tuple[dict[str, Any], str]:
+    """Run isolated workers and compare their output on the trusted host."""
     with tempfile.TemporaryDirectory(prefix="thebitlab-docker-") as temp_dir:
         temp_root = Path(temp_dir)
-        try:
-            workspace, activity, source = prepare_docker_workspace(
-                args.activity,
-                args.source,
-                temp_root,
-                activity_root=getattr(args, "activity_root", None),
-                source_root=getattr(args, "source_root", None),
+        activity = load_activity(
+            confined_regular_input(
+                activity_path,
+                activity_root or activity_path.parent,
+                "activity",
             )
-            docker_timeout = docker_timeout_seconds(load_activity(activity), args.timeout, args.language)
-            command = docker_command(
-                activity=activity,
-                source=source,
-                language=args.language,
-                timeout_seconds=args.timeout,
-                image=args.docker_image,
-                workspace=workspace,
-            )
-        except (OSError, ValueError) as error:
-            print(f"Sandbox Docker non avviata: {error}")
-            return 1
-
-        try:
-            result = subprocess.run(command, capture_output=True, text=True, timeout=docker_timeout, check=False)
-        except subprocess.TimeoutExpired:
-            print(f"Sandbox Docker interrotta dopo {docker_timeout} secondi.")
-            return 1
-        except FileNotFoundError:
-            print("Docker non trovato. Installa Docker oppure esegui senza --docker.")
-            return 1
-
-        try:
-            report = json.loads(result.stdout)
-        except json.JSONDecodeError:
-            print("Sandbox Docker non ha prodotto un report JSON valido.")
-            if result.stdout:
-                print(result.stdout)
-            if result.stderr:
-                print(result.stderr)
-            return 1
-        if not has_minimal_report_shape(report):
-            print("Sandbox Docker non ha prodotto un report di grading valido.")
-            if result.stderr:
-                print(result.stderr)
-            return 1
-        if result.returncode != 0 and report.get("passed") is True:
-            print("Sandbox Docker ha prodotto un report incoerente con l'esito del container.")
-            if result.stderr:
-                print(result.stderr)
-            return 1
-        report = with_report_metadata(
-            report,
-            assignment_id=getattr(args, "assignment_id", None),
-            student_id=getattr(args, "student_id", None),
-            commit=getattr(args, "commit", None),
-            submitted_at=getattr(args, "submitted_at", None),
-            source_repo_path=getattr(args, "source_repo_path", None),
         )
-        if args.report:
-            write_report(report, args.report)
-        else:
-            print(json.dumps(report, ensure_ascii=False, indent=2))
-        if result.stderr:
-            print(result.stderr, file=sys.stderr)
-        return result.returncode
+        test_case_errors = validate_test_cases(activity.get("test_cases", []))
+        if test_case_errors:
+            raise ValueError("; ".join(test_case_errors))
+        workspace, source = prepare_docker_workspace(
+            activity_path,
+            source_path,
+            temp_root,
+            activity_root=activity_root,
+            source_root=source_root,
+        )
+        docker_timeout = docker_timeout_seconds(
+            {"test_cases": [{}], "language": activity_language(activity, language)},
+            timeout_seconds,
+            language,
+        )
+        worker_reports: list[dict[str, Any]] = []
+        for test_index, test_case in enumerate(activity["test_cases"]):
+            cidfile = temp_root / f"container-{test_index}.cid"
+            container_name = f"thebitlab-grade-{uuid.uuid4().hex}"
+            command = docker_command(
+                source=source,
+                timeout_seconds=timeout_seconds,
+                image=image,
+                workspace=workspace,
+                cidfile=cidfile,
+                container_name=container_name,
+            )
+            worker_request = build_worker_request(activity, test_case, language)
+            try:
+                result = run_bounded_process(
+                    command,
+                    input_text=json.dumps(worker_request, ensure_ascii=False),
+                    timeout=docker_timeout,
+                )
+            except FileNotFoundError:
+                cidfile.unlink(missing_ok=True)
+                raise
+            except BaseException as grading_error:
+                try:
+                    remove_docker_container(cidfile, container_name)
+                except DockerCleanupError as cleanup_error:
+                    raise cleanup_error from grading_error
+                raise
+            else:
+                remove_docker_container(cidfile, container_name)
+
+            try:
+                worker_report = json.loads(result.stdout)
+            except json.JSONDecodeError as error:
+                raise ValueError("Sandbox Docker non ha prodotto un report JSON valido.") from error
+            if not has_minimal_report_shape(worker_report):
+                raise ValueError("Sandbox Docker non ha prodotto un report di grading valido.")
+            if result.returncode != 0:
+                raise ValueError("Sandbox Docker worker terminata con un errore infrastrutturale.")
+            worker_reports.append(worker_report)
+            if not worker_report.get("tests"):
+                break
+        report = finalize_worker_report(
+            activity,
+            worker_reports,
+            source_path,
+            language=language,
+        )
+        return report, ""
+
+
+def run_docker_grading(args: argparse.Namespace) -> int:
+    """Run authoritative grading through isolated Docker workers."""
+    try:
+        report, _worker_stderr = grade_activity_in_docker(
+            args.activity,
+            args.source,
+            timeout_seconds=args.timeout,
+            language=args.language,
+            image=args.docker_image,
+            activity_root=getattr(args, "activity_root", None),
+            source_root=getattr(args, "source_root", None),
+        )
+    except subprocess.TimeoutExpired as error:
+        print(f"Sandbox Docker interrotta dopo {error.timeout} secondi.")
+        return 1
+    except FileNotFoundError:
+        print("Docker non trovato. Installa Docker oppure esegui senza --docker.")
+        return 1
+    except (OSError, ValueError) as error:
+        print(f"Sandbox Docker non avviata: {error}")
+        return 1
+
+    report = with_report_metadata(
+        report,
+        assignment_id=getattr(args, "assignment_id", None),
+        student_id=getattr(args, "student_id", None),
+        commit=getattr(args, "commit", None),
+        submitted_at=getattr(args, "submitted_at", None),
+        source_repo_path=getattr(args, "source_repo_path", None),
+    )
+    if args.report:
+        write_report(report, args.report)
+    else:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if report["passed"] else 1
 
 
 def positive_int(value: str) -> int:
@@ -798,7 +1274,7 @@ def with_report_metadata(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Corregge in modo deterministico una consegna TheBitLab.")
-    parser.add_argument("--activity", type=Path, required=True, help="Scheda attivita JSON con test_cases.")
+    parser.add_argument("--activity", type=Path, help="Scheda attivita JSON con test_cases.")
     parser.add_argument("--source", type=Path, required=True, help="File sorgente da correggere.")
     parser.add_argument("--language", choices=sorted(SUPPORTED_LANGUAGES), help="Linguaggio da usare, se diverso dalla scheda.")
     parser.add_argument("--report", type=Path, help="Percorso report JSON da scrivere.")
@@ -811,12 +1287,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-root", type=Path, help="Root autorizzata per il sorgente.")
     parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout compilazione/esecuzione.")
     parser.add_argument("--docker", action="store_true", help="Esegue il grading dentro la sandbox Docker.")
+    parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--docker-image", default=DEFAULT_DOCKER_IMAGE, help="Immagine Docker da usare con --docker.")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if getattr(args, "worker", False):
+        try:
+            request = load_worker_request(sys.stdin)
+            report = worker_execution_report(request, args.source, timeout_seconds=args.timeout)
+        except (OSError, ValueError) as error:
+            print(json.dumps({"passed": False, "status": "worker-error", "error": str(error)}))
+            return 2
+        print(json.dumps(report, ensure_ascii=False))
+        return 0
+    if args.activity is None:
+        raise SystemExit("--activity e obbligatorio fuori dalla modalita worker.")
     if args.docker:
         return run_docker_grading(args)
 

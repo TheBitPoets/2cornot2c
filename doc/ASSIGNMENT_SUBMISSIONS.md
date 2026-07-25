@@ -515,6 +515,15 @@ assignments/<activity_id>/
   README.md
 ```
 
+La copia studente di `activity.json` contiene soltanto metadati pubblici. Test riservati,
+`expected_stdout`, rubrica e asset docente restano nella sorgente autorevole del docente e non vengono
+distribuiti nel repository dello studente.
+
+Un caso in `test_cases` viene incluso nella copia studente soltanto quando dichiara esplicitamente
+`"visibility": "student"` oppure `"visibility": "public"`. In quel caso input e output atteso sono
+intenzionalmente pubblici e possono alimentare il workflow locale di preview. I casi senza visibilita
+restano riservati e vengono usati solo dal grading autorevole.
+
 Il flusso e pensato in tre livelli:
 
 | Livello | Responsabilita |
@@ -543,6 +552,13 @@ python scripts/assign_activity.py \
 Le righe vuote e le righe che iniziano con `#` vengono ignorate.
 
 Come per lo scaffold singolo, `--force` aggiorna i metadati della consegna, ma non sovrascrive il sorgente dello studente. Per rigenerare anche il sorgente serve `--overwrite-source`.
+
+Il motore conserva fuori dai repository studenti, nella directory docente
+`.thebitlab-scaffold-state`, gli hash degli asset pubblici distribuiti. In
+questo modo aggiorna soltanto le copie non modificate e non usa mai metadati
+controllabili dallo studente per autorizzare cancellazioni. Per aggiornare uno
+scaffold precedente a questo stato, archivia o rinomina la vecchia cartella
+della consegna e rigenerane una pulita.
 
 Nella dashboard il docente seleziona activity, classe/team GitHub e repository studenti; il server locale
 chiama lo stesso core usato dalla CLI.

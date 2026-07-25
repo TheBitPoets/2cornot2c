@@ -7,8 +7,10 @@ RUN apt-get update \
 
 RUN useradd --create-home --shell /usr/sbin/nologin runner
 
-WORKDIR /workspace
+COPY scripts/grade_activity.py /opt/thebitlab/grade_activity.py
+
+WORKDIR /submission
 
 USER runner
 
-ENTRYPOINT ["python3", "/workspace/scripts/grade_activity.py"]
+ENTRYPOINT ["python3", "/opt/thebitlab/grade_activity.py"]

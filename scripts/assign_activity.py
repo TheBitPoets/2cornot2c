@@ -154,7 +154,10 @@ def build_assignment_plan(
     selected_source_name = create_submission_scaffold.validate_source_name(
         source_name
         if source_name is not None
-        else create_submission_scaffold.default_source_name_for(selected_language)
+        else (
+            str(normalized_activity.get("source_name", "")).strip()
+            or create_submission_scaffold.default_source_name_for(selected_language)
+        )
     )
     create_submission_scaffold.validate_thebitlab_ref(thebitlab_ref)
     create_submission_scaffold.student_asset_copy_plan(activity_path, activity)

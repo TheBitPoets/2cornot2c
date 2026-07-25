@@ -2,12 +2,31 @@ from __future__ import annotations
 
 import json
 import argparse
+import os
 import shutil
 import subprocess
+import sys
+import time
 
 import pytest
 
 from scripts import grade_activity
+
+
+def process_is_running(pid: int) -> bool:
+    if os.name == "nt":
+        result = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return f'"{pid}"' in result.stdout
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
 
 
 def activity() -> dict:
@@ -27,6 +46,10 @@ def activity() -> dict:
             },
         ],
     }
+
+
+def write_valid_docker_activity(path) -> None:
+    path.write_text(json.dumps(activity()), encoding="utf-8")
 
 
 @pytest.mark.skipif(shutil.which("gcc") is None, reason="gcc non disponibile nell'ambiente di test")
@@ -377,20 +400,19 @@ def test_report_metadata_enriches_remote_tracking_identity() -> None:
 
 
 def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
-    activity_path = tmp_path / "activity.json"
     source_path = tmp_path / "main.c"
-    activity_path.write_text("{}", encoding="utf-8")
     source_path.write_text("int main(void){return 0;}", encoding="utf-8")
 
     command = grade_activity.docker_command(
-        activity=activity_path,
         source=source_path,
-        language="c",
         timeout_seconds=5,
         workspace=tmp_path,
+        cidfile=tmp_path / "container.cid",
+        container_name="thebitlab-grade-test",
     )
 
     assert "--network" in command
+    assert "-i" in command
     assert "none" in command
     assert "--read-only" in command
     assert "--cap-drop" in command
@@ -403,16 +425,123 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     assert "256m" in command
     assert "--cpus" in command
     assert "1" in command
-    assert f"{tmp_path.resolve()}:/workspace:ro" in command
+    assert f"{tmp_path.resolve()}:/submission:ro" in command
     assert "--tmpfs" in command
     assert "/thebitlab-work:rw,exec,nosuid,nodev,mode=1777,size=64m" in command
     assert "TMPDIR=/thebitlab-work" in command
     assert "/thebitlab-output" not in command
+    assert "--cidfile" in command
+    assert str((tmp_path / "container.cid").resolve()) in command
+    assert command[command.index("--name") + 1] == "thebitlab-grade-test"
     assert "--report" not in command
-    assert "--language" in command
-    assert "c" in command
-    assert command[command.index("--activity") + 1] == "activity.json"
+    assert "--activity" not in command
+    assert "--language" not in command
+    assert "--worker" in command
     assert command[command.index("--source") + 1] == "main.c"
+
+
+def test_remove_docker_container_validates_id_and_forces_cleanup(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    cidfile = tmp_path / "container.cid"
+    container_id = "a" * 64
+    cidfile.write_text(container_id, encoding="ascii")
+    calls = []
+
+    def tracked_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return subprocess.CompletedProcess(
+            command,
+            0 if command[1] == "rm" else 1,
+            stderr=None if command[1] == "rm" else "Error: No such object: thebitlab-grade-test",
+        )
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", tracked_run)
+
+    grade_activity.remove_docker_container(cidfile, "thebitlab-grade-test")
+
+    assert calls[0][0] == ["docker", "rm", "-f", "thebitlab-grade-test"]
+    assert calls[1][0] == ["docker", "inspect", "thebitlab-grade-test"]
+    assert calls[0][1]["timeout"] == 5
+    assert calls[0][1]["stdout"] is subprocess.DEVNULL
+    assert calls[0][1]["stderr"] is subprocess.DEVNULL
+    assert calls[1][1]["stdout"] is subprocess.DEVNULL
+    assert calls[1][1]["stderr"] is subprocess.PIPE
+    assert calls[1][1]["text"] is True
+    assert not cidfile.exists()
+
+
+def test_remove_docker_container_rejects_invalid_name(monkeypatch, tmp_path) -> None:
+    cidfile = tmp_path / "container.cid"
+    cidfile.write_text("not-a-container; rm -rf .", encoding="ascii")
+    calls = []
+    monkeypatch.setattr(
+        grade_activity.subprocess,
+        "run",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    with pytest.raises(grade_activity.DockerCleanupError, match="Nome container"):
+        grade_activity.remove_docker_container(cidfile, "invalid container; rm -rf .")
+
+    assert calls == []
+    assert cidfile.exists()
+
+
+def test_remove_docker_container_preserves_cid_when_container_persists(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    cidfile = tmp_path / "container.cid"
+    container_id = "b" * 64
+    cidfile.write_text(container_id, encoding="ascii")
+    calls = []
+
+    def persistent_container(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", persistent_container)
+    monkeypatch.setattr(grade_activity.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(grade_activity.DockerCleanupError, match="thebitlab-grade-test"):
+        grade_activity.remove_docker_container(cidfile, "thebitlab-grade-test")
+
+    assert calls == [
+        ["docker", "rm", "-f", "thebitlab-grade-test"],
+        ["docker", "inspect", "thebitlab-grade-test"],
+        ["docker", "rm", "-f", "thebitlab-grade-test"],
+        ["docker", "inspect", "thebitlab-grade-test"],
+    ]
+    assert cidfile.read_text(encoding="ascii") == container_id
+
+
+def test_remove_docker_container_rejects_daemon_errors(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    cidfile = tmp_path / "container.cid"
+    container_id = "c" * 64
+    cidfile.write_text(container_id, encoding="ascii")
+
+    def unavailable_daemon(command, **kwargs):
+        return subprocess.CompletedProcess(
+            command,
+            1,
+            stderr="Cannot connect to the Docker daemon",
+        )
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", unavailable_daemon)
+    monkeypatch.setattr(grade_activity.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(
+        grade_activity.DockerCleanupError,
+        match="Cannot connect to the Docker daemon",
+    ):
+        grade_activity.remove_docker_container(cidfile, "thebitlab-grade-test")
+
+    assert cidfile.read_text(encoding="ascii") == container_id
 
 
 def test_prepare_docker_workspace_copies_only_runner_inputs(tmp_path) -> None:
@@ -423,16 +552,81 @@ def test_prepare_docker_workspace_copies_only_runner_inputs(tmp_path) -> None:
     source_path.write_text("int main(void){return 0;}", encoding="utf-8")
     secret_path.write_text("non deve entrare nel container", encoding="utf-8")
 
-    workspace, copied_activity, copied_source = grade_activity.prepare_docker_workspace(
+    workspace, copied_source = grade_activity.prepare_docker_workspace(
         activity_path,
         source_path,
         tmp_path / "docker",
     )
 
-    assert (workspace / "scripts" / "grade_activity.py").exists()
-    assert copied_activity == workspace / "activity" / "activity.json"
     assert copied_source == workspace / "source" / "main.c"
+    assert not (workspace / "activity").exists()
+    assert not (workspace / "scripts").exists()
     assert not (workspace / ".secret").exists()
+
+
+def test_worker_request_contains_only_current_input() -> None:
+    test_case = activity()["test_cases"][0]
+
+    request = grade_activity.build_worker_request(activity(), test_case, "c")
+
+    assert request == {
+        "schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+        "language": "c",
+        "stdin": "2 3\n",
+    }
+    serialized = json.dumps(request)
+    assert "expected_stdout" not in serialized
+    assert "somma positiva" not in serialized
+    assert "somma con negativo" not in serialized
+
+
+def test_worker_rejects_teacher_only_fields() -> None:
+    request = {
+        "schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+        "language": "python",
+        "stdin": "",
+        "expected_stdout": "segreto",
+    }
+
+    with pytest.raises(ValueError, match="campi non consentiti"):
+        grade_activity.load_worker_request(__import__("io").StringIO(json.dumps(request)))
+
+
+def test_finalize_worker_report_compares_expected_output_only_on_host(tmp_path) -> None:
+    teacher_activity = {
+        "id": "python-hidden",
+        "language": "python",
+        "test_cases": [
+            {"name": "caso riservato", "stdin": "4\n", "expected_stdout": "5\n"},
+        ],
+    }
+    worker_report = {
+        "passed": False,
+        "status": "failed",
+        "language": "python",
+        "source": "/submission/source/main.py",
+        "worker_schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+        "tests": [
+            {
+                "name": "test",
+                "status": "failed",
+                "returncode": 0,
+                "stdout": "5\n",
+                "stderr": "",
+            }
+        ],
+    }
+
+    report = grade_activity.finalize_worker_report(
+        teacher_activity,
+        [worker_report],
+        tmp_path / "main.py",
+    )
+
+    assert report["passed"] is True
+    assert report["summary"] == {"passed": 1, "total": 1}
+    assert report["tests"][0]["name"] == "caso riservato"
+    assert report["tests"][0]["expected_stdout"] == "5\n"
 
 
 def test_prepare_docker_workspace_rejects_input_outside_authorized_root(tmp_path) -> None:
@@ -482,7 +676,7 @@ def test_prepare_docker_workspace_rejects_symlink_escaping_source_root(tmp_path)
         )
 
 
-def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> None:
+def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path, capsys) -> None:
     class Args:
         activity = tmp_path / "activity.json"
         source = tmp_path / "main.c"
@@ -491,16 +685,31 @@ def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> Non
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
     def missing_docker(*args, **kwargs):
         raise FileNotFoundError
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", missing_docker)
+    calls = {"count": 0}
+
+    def tracked_missing_docker(*args, **kwargs):
+        calls["count"] += 1
+        return missing_docker(*args, **kwargs)
+
+    monkeypatch.setattr(grade_activity, "run_bounded_process", tracked_missing_docker)
+    cleanup_calls = []
+    monkeypatch.setattr(
+        grade_activity,
+        "remove_docker_container",
+        lambda *args, **kwargs: cleanup_calls.append((args, kwargs)),
+    )
 
     assert grade_activity.run_docker_grading(Args()) == 1
+    assert calls["count"] == 1
+    assert cleanup_calls == []
+    assert "Docker non trovato" in capsys.readouterr().out
 
 
 def test_run_docker_grading_reports_docker_timeout(monkeypatch, tmp_path) -> None:
@@ -512,16 +721,23 @@ def test_run_docker_grading_reports_docker_timeout(monkeypatch, tmp_path) -> Non
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
     def timeout_docker(*args, **kwargs):
         raise subprocess.TimeoutExpired(cmd="docker run", timeout=kwargs["timeout"])
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", timeout_docker)
+    calls = {"count": 0}
+
+    def tracked_timeout(*args, **kwargs):
+        calls["count"] += 1
+        return timeout_docker(*args, **kwargs)
+
+    monkeypatch.setattr(grade_activity, "run_bounded_process", tracked_timeout)
 
     assert grade_activity.run_docker_grading(Args()) == 1
+    assert calls["count"] == 1
 
 
 def test_docker_timeout_scales_with_test_cases() -> None:
@@ -530,6 +746,96 @@ def test_docker_timeout_scales_with_test_cases() -> None:
     assert grade_activity.docker_timeout_seconds(activity, 5) == 30
     assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "javascript"}, 5) == 60
     assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "c"}, 5, "javascript") == 60
+
+
+def test_run_bounded_process_rejects_excessive_output(tmp_path) -> None:
+    child_pid_path = tmp_path / "child.pid"
+    child_code = (
+        "import signal, time; "
+        + ("signal.signal(signal.SIGBREAK, signal.SIG_IGN); " if os.name == "nt" else "")
+        + "time.sleep(30)"
+    )
+    parent_code = (
+        "import pathlib, subprocess, sys; "
+        f"child = subprocess.Popen([sys.executable, '-c', {child_code!r}], "
+        "stdin=sys.stdin, stdout=sys.stdout); "
+        f"pathlib.Path({str(child_pid_path)!r}).write_text(str(child.pid)); "
+        "print('x' * 4096, flush=True)"
+    )
+
+    with pytest.raises(ValueError, match="limite output"):
+        grade_activity.run_bounded_process(
+            [sys.executable, "-c", parent_code],
+            input_text="",
+            timeout=5,
+            max_output_bytes=128,
+        )
+
+    child_pid = int(child_pid_path.read_text())
+    process_deadline = time.monotonic() + 2
+    while time.monotonic() < process_deadline and process_is_running(child_pid):
+        time.sleep(0.05)
+    assert not process_is_running(
+        child_pid
+    ), "Il processo discendente e rimasto attivo dopo il limite output."
+
+
+def test_run_bounded_process_discards_stderr() -> None:
+    result = grade_activity.run_bounded_process(
+        [
+            sys.executable,
+            "-c",
+            "import sys; sys.stderr.write('x' * 4096); print('{}')",
+        ],
+        input_text="",
+        timeout=5,
+        max_output_bytes=128,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == "{}"
+    assert result.stderr == ""
+
+
+def test_run_bounded_process_times_out_while_stdin_is_blocked() -> None:
+    started = time.monotonic()
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        grade_activity.run_bounded_process(
+            [sys.executable, "-c", "import time; time.sleep(10)"],
+            input_text="x" * (8 * 1024 * 1024),
+            timeout=0.1,
+        )
+
+    assert time.monotonic() - started < 2
+
+
+def test_run_bounded_process_times_out_when_descendant_keeps_stdout_open() -> None:
+    started = time.monotonic()
+    child_code = "import time; time.sleep(30)"
+    parent_code = (
+        "import subprocess, sys; "
+        f"child = subprocess.Popen([sys.executable, '-c', {child_code!r}], "
+        "stdin=sys.stdin, stdout=sys.stdout); "
+        "print(child.pid, flush=True)"
+    )
+
+    with pytest.raises(subprocess.TimeoutExpired) as raised:
+        grade_activity.run_bounded_process(
+            [sys.executable, "-c", parent_code],
+            input_text="",
+            timeout=0.5,
+        )
+
+    assert time.monotonic() - started < 2
+    child_pid = int(raised.value.output.decode("ascii").strip())
+
+    process_deadline = time.monotonic() + 2
+    while time.monotonic() < process_deadline and process_is_running(child_pid):
+        time.sleep(0.05)
+    assert not process_is_running(
+        child_pid
+    ), "Il processo discendente e rimasto attivo dopo il timeout."
 
 
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:
@@ -555,7 +861,7 @@ def test_run_docker_grading_rejects_invalid_json_output(monkeypatch, tmp_path) -
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
@@ -564,7 +870,7 @@ def test_run_docker_grading_rejects_invalid_json_output(monkeypatch, tmp_path) -
         stdout = "non-json"
         stderr = "errore container"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -579,7 +885,7 @@ def test_run_docker_grading_rejects_non_report_json_on_container_error(monkeypat
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
@@ -588,7 +894,7 @@ def test_run_docker_grading_rejects_non_report_json_on_container_error(monkeypat
         stdout = json.dumps({"error": "errore infrastrutturale"})
         stderr = "errore container"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -603,7 +909,7 @@ def test_run_docker_grading_rejects_non_report_json_on_success(monkeypatch, tmp_
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
@@ -612,7 +918,7 @@ def test_run_docker_grading_rejects_non_report_json_on_success(monkeypatch, tmp_
         stdout = json.dumps({"ok": True})
         stderr = ""
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -627,7 +933,7 @@ def test_run_docker_grading_rejects_report_with_invalid_field_types(monkeypatch,
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
@@ -636,7 +942,7 @@ def test_run_docker_grading_rejects_report_with_invalid_field_types(monkeypatch,
         stdout = json.dumps({"passed": "false", "status": 500})
         stderr = "errore container"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -651,7 +957,7 @@ def test_run_docker_grading_rejects_success_report_on_container_error(monkeypatc
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    write_valid_docker_activity(Args.activity)
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
@@ -660,7 +966,7 @@ def test_run_docker_grading_rejects_success_report_on_container_error(monkeypatc
         stdout = json.dumps({"passed": True, "status": "passed"})
         stderr = "errore container"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
 
     assert grade_activity.run_docker_grading(Args()) == 1
     assert not Args.report.exists()
@@ -675,22 +981,46 @@ def test_run_docker_grading_writes_report_on_host(monkeypatch, tmp_path) -> None
         timeout = 5
         docker_image = "thebitlab-assignment-runner"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    Args.activity.write_text(
+        json.dumps(
+            {
+                "id": "c-one",
+                "language": "c",
+                "test_cases": [{"name": "uno", "stdin": "", "expected_stdout": "5\n"}],
+            }
+        ),
+        encoding="utf-8",
+    )
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
 
     class Result:
         returncode = 0
-        stdout = json.dumps({"passed": True, "status": "passed"})
+        stdout = json.dumps(
+            {
+                "passed": False,
+                "status": "failed",
+                "language": "c",
+                "worker_schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+                "tests": [{"name": "test", "status": "failed", "returncode": 0, "stdout": "5\n", "stderr": ""}],
+            }
+        )
         stderr = ""
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(
+        grade_activity,
+        "remove_docker_container",
+        lambda *args, **kwargs: None,
+    )
 
     assert grade_activity.run_docker_grading(Args()) == 0
-    assert json.loads(Args.report.read_text(encoding="utf-8")) == {"passed": True, "status": "passed"}
+    report = json.loads(Args.report.read_text(encoding="utf-8"))
+    assert report["passed"] is True
+    assert report["summary"] == {"passed": 1, "total": 1}
 
 
-def test_run_docker_grading_enriches_stdout_report(monkeypatch, tmp_path, capsys) -> None:
+def test_run_docker_grading_omits_worker_stderr_from_cli_output(monkeypatch, tmp_path, capsys) -> None:
     class Args:
         activity = tmp_path / "activity.json"
         source = tmp_path / "main.c"
@@ -704,20 +1034,43 @@ def test_run_docker_grading_enriches_stdout_report(monkeypatch, tmp_path, capsys
         submitted_at = "2026-07-24T18:00:00Z"
         source_repo_path = "assignments/activity-001/main.c"
 
-    Args.activity.write_text("{}", encoding="utf-8")
+    Args.activity.write_text(
+        json.dumps(
+            {
+                "id": "activity-001",
+                "language": "c",
+                "test_cases": [{"name": "uno", "stdin": "", "expected_stdout": "ok\n"}],
+            }
+        ),
+        encoding="utf-8",
+    )
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
 
     class Result:
         returncode = 0
-        stdout = json.dumps({"passed": True, "status": "passed"})
-        stderr = "warning docker"
+        stdout = json.dumps(
+            {
+                "passed": False,
+                "status": "failed",
+                "language": "c",
+                "worker_schema_version": grade_activity.DOCKER_WORKER_SCHEMA,
+                "tests": [{"name": "test", "status": "failed", "returncode": 0, "stdout": "ok\n", "stderr": ""}],
+            }
+        )
+        stderr = "THEBITLAB_HIDDEN_STDIN_91d5f0"
 
-    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(
+        grade_activity,
+        "remove_docker_container",
+        lambda *args, **kwargs: None,
+    )
 
     assert grade_activity.run_docker_grading(Args()) == 0
     captured = capsys.readouterr()
     report = json.loads(captured.out)
-    assert captured.err.strip() == "warning docker"
+    assert captured.err == ""
+    assert "THEBITLAB_HIDDEN_STDIN_91d5f0" not in captured.out
     assert report["assignment_id"] == "assignment-001"
     assert report["student_id"] == "rossi-mario"
     assert report["commit"] == "a" * 40
@@ -772,14 +1125,9 @@ def test_main_applies_authorized_roots_without_docker(monkeypatch, tmp_path) -> 
 def test_docker_command_requires_paths_inside_workspace(tmp_path) -> None:
     outside = tmp_path.parent / "outside.c"
     outside.write_text("int main(void){return 0;}", encoding="utf-8")
-    activity_path = tmp_path / "activity.json"
-    activity_path.write_text("{}", encoding="utf-8")
-
     try:
         grade_activity.docker_command(
-            activity=activity_path,
             source=outside,
-            language="c",
             timeout_seconds=5,
             workspace=tmp_path,
         )

@@ -223,6 +223,28 @@ def test_build_assignment_plan_reports_blocked_targets(tmp_path) -> None:
     assert plan.targets[0]["exists"] is True
 
 
+def test_build_assignment_plan_uses_activity_source_name_with_override_precedence(tmp_path) -> None:
+    payload = {
+        **activity(),
+        "source_name": "solution.py",
+    }
+    activity_path = write_activity(tmp_path, payload)
+    target = tmp_path / "student-a"
+
+    plan = assign_activity.build_assignment_plan(
+        activity_path=activity_path,
+        targets=[target],
+    )
+    overridden_plan = assign_activity.build_assignment_plan(
+        activity_path=activity_path,
+        targets=[target],
+        source_name="custom.py",
+    )
+
+    assert plan.source_name == "solution.py"
+    assert overridden_plan.source_name == "custom.py"
+
+
 def test_build_assignment_plan_normalizes_relative_targets(tmp_path, monkeypatch) -> None:
     activity_path = write_activity(tmp_path)
     workspace = tmp_path / "workspace"
