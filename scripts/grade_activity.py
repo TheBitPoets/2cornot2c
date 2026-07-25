@@ -937,7 +937,12 @@ def run_bounded_process(
                 output=bytes(output),
             )
     finally:
-        if process.poll() is None or writer.is_alive() or reader.is_alive():
+        if (
+            output_exceeded.is_set()
+            or process.poll() is None
+            or writer.is_alive()
+            or reader.is_alive()
+        ):
             terminate_process_group()
         close_pipe(process.stdin)
         close_pipe(process.stdout)

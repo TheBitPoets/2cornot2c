@@ -13,6 +13,22 @@ import pytest
 from scripts import grade_activity
 
 
+def process_is_running(pid: int) -> bool:
+    if os.name == "nt":
+        result = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return f'"{pid}"' in result.stdout
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
 def activity() -> dict:
     return {
         "id": "c-base-somma-001",
@@ -615,14 +631,32 @@ def test_docker_timeout_scales_with_test_cases() -> None:
     assert grade_activity.docker_timeout_seconds({**activity, "linguaggio": "c"}, 5, "javascript") == 60
 
 
-def test_run_bounded_process_rejects_excessive_output() -> None:
+def test_run_bounded_process_rejects_excessive_output(tmp_path) -> None:
+    child_pid_path = tmp_path / "child.pid"
+    child_code = "import time; time.sleep(30)"
+    parent_code = (
+        "import pathlib, subprocess, sys; "
+        f"child = subprocess.Popen([sys.executable, '-c', {child_code!r}], "
+        "stdin=sys.stdin, stdout=sys.stdout); "
+        f"pathlib.Path({str(child_pid_path)!r}).write_text(str(child.pid)); "
+        "print('x' * 4096, flush=True)"
+    )
+
     with pytest.raises(ValueError, match="limite output"):
         grade_activity.run_bounded_process(
-            [sys.executable, "-c", "print('x' * 4096)"],
+            [sys.executable, "-c", parent_code],
             input_text="",
             timeout=5,
             max_output_bytes=128,
         )
+
+    child_pid = int(child_pid_path.read_text())
+    process_deadline = time.monotonic() + 2
+    while time.monotonic() < process_deadline and process_is_running(child_pid):
+        time.sleep(0.05)
+    assert not process_is_running(
+        child_pid
+    ), "Il processo discendente e rimasto attivo dopo il limite output."
 
 
 def test_run_bounded_process_discards_stderr() -> None:
@@ -675,25 +709,12 @@ def test_run_bounded_process_times_out_when_descendant_keeps_stdout_open() -> No
     assert time.monotonic() - started < 2
     child_pid = int(raised.value.output.decode("ascii").strip())
 
-    def child_is_running() -> bool:
-        if os.name == "nt":
-            result = subprocess.run(
-                ["tasklist", "/FI", f"PID eq {child_pid}", "/FO", "CSV", "/NH"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            return f'"{child_pid}"' in result.stdout
-        try:
-            os.kill(child_pid, 0)
-        except OSError:
-            return False
-        return True
-
     process_deadline = time.monotonic() + 2
-    while time.monotonic() < process_deadline and child_is_running():
+    while time.monotonic() < process_deadline and process_is_running(child_pid):
         time.sleep(0.05)
-    assert not child_is_running(), "Il processo discendente e rimasto attivo dopo il timeout."
+    assert not process_is_running(
+        child_pid
+    ), "Il processo discendente e rimasto attivo dopo il timeout."
 
 
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:
