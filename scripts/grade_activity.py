@@ -867,16 +867,30 @@ def remove_docker_container(cidfile: Path, container_name: str) -> None:
                 ["docker", "inspect", container_name],
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
                 timeout=5,
                 check=False,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             last_error = str(error)
         else:
             if inspect_result.returncode != 0:
-                cidfile.unlink(missing_ok=True)
-                return
+                inspect_error = (inspect_result.stderr or "").strip()
+                normalized_error = inspect_error.casefold()
+                if (
+                    "no such object" in normalized_error
+                    or "no such container" in normalized_error
+                ):
+                    cidfile.unlink(missing_ok=True)
+                    return
+                last_error = (
+                    f"docker inspect ha restituito {inspect_result.returncode}: "
+                    f"{inspect_error or 'errore non specificato'}"
+                )
+                continue
             last_error = "docker inspect conferma che il container esiste ancora"
         if attempt == 0:
             time.sleep(0.1)

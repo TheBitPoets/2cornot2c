@@ -454,6 +454,7 @@ def test_remove_docker_container_validates_id_and_forces_cleanup(
         return subprocess.CompletedProcess(
             command,
             0 if command[1] == "rm" else 1,
+            stderr=None if command[1] == "rm" else "Error: No such object: thebitlab-grade-test",
         )
 
     monkeypatch.setattr(grade_activity.subprocess, "run", tracked_run)
@@ -465,6 +466,9 @@ def test_remove_docker_container_validates_id_and_forces_cleanup(
     assert calls[0][1]["timeout"] == 5
     assert calls[0][1]["stdout"] is subprocess.DEVNULL
     assert calls[0][1]["stderr"] is subprocess.DEVNULL
+    assert calls[1][1]["stdout"] is subprocess.DEVNULL
+    assert calls[1][1]["stderr"] is subprocess.PIPE
+    assert calls[1][1]["text"] is True
     assert not cidfile.exists()
 
 
@@ -510,6 +514,33 @@ def test_remove_docker_container_preserves_cid_when_container_persists(
         ["docker", "rm", "-f", "thebitlab-grade-test"],
         ["docker", "inspect", "thebitlab-grade-test"],
     ]
+    assert cidfile.read_text(encoding="ascii") == container_id
+
+
+def test_remove_docker_container_rejects_daemon_errors(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    cidfile = tmp_path / "container.cid"
+    container_id = "c" * 64
+    cidfile.write_text(container_id, encoding="ascii")
+
+    def unavailable_daemon(command, **kwargs):
+        return subprocess.CompletedProcess(
+            command,
+            1,
+            stderr="Cannot connect to the Docker daemon",
+        )
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", unavailable_daemon)
+    monkeypatch.setattr(grade_activity.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(
+        grade_activity.DockerCleanupError,
+        match="Cannot connect to the Docker daemon",
+    ):
+        grade_activity.remove_docker_container(cidfile, "thebitlab-grade-test")
+
     assert cidfile.read_text(encoding="ascii") == container_id
 
 
@@ -977,6 +1008,11 @@ def test_run_docker_grading_writes_report_on_host(monkeypatch, tmp_path) -> None
         stderr = ""
 
     monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(
+        grade_activity,
+        "remove_docker_container",
+        lambda *args, **kwargs: None,
+    )
 
     assert grade_activity.run_docker_grading(Args()) == 0
     report = json.loads(Args.report.read_text(encoding="utf-8"))
@@ -1024,6 +1060,11 @@ def test_run_docker_grading_omits_worker_stderr_from_cli_output(monkeypatch, tmp
         stderr = "THEBITLAB_HIDDEN_STDIN_91d5f0"
 
     monkeypatch.setattr(grade_activity, "run_bounded_process", lambda *args, **kwargs: Result())
+    monkeypatch.setattr(
+        grade_activity,
+        "remove_docker_container",
+        lambda *args, **kwargs: None,
+    )
 
     assert grade_activity.run_docker_grading(Args()) == 0
     captured = capsys.readouterr()
