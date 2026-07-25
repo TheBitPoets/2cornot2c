@@ -20,6 +20,7 @@ DEFAULT_NODE_STARTUP_GRACE_SECONDS = 10
 DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS = 10
 DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
 MAX_DOCKER_OUTPUT_BYTES = 1024 * 1024
+WINDOWS_CREATE_SUSPENDED = 0x00000004
 DOCKER_WORKER_SCHEMA = "thebitlab.grading-worker.v1"
 SUPPORTED_LANGUAGES = {
     "c": "implemented",
@@ -835,7 +836,9 @@ def run_bounded_process(
     deadline = time.monotonic() + timeout
     popen_options: dict[str, Any] = {}
     if os.name == "nt":
-        popen_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        popen_options["creationflags"] = (
+            subprocess.CREATE_NEW_PROCESS_GROUP | WINDOWS_CREATE_SUSPENDED
+        )
     else:
         popen_options["start_new_session"] = True
     process = subprocess.Popen(
@@ -897,6 +900,9 @@ def run_bounded_process(
         kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
         kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
         kernel32.CloseHandle.restype = wintypes.BOOL
+        ntdll = ctypes.WinDLL("ntdll")
+        ntdll.NtResumeProcess.argtypes = [wintypes.HANDLE]
+        ntdll.NtResumeProcess.restype = ctypes.c_long
 
         windows_job = kernel32.CreateJobObjectW(None, None)
         if not windows_job:
@@ -920,6 +926,17 @@ def run_bounded_process(
             process.kill()
             process.wait()
             raise ctypes.WinError(error_code)
+        resume_status = ntdll.NtResumeProcess(wintypes.HANDLE(int(process._handle)))
+        if resume_status != 0:
+            kernel32.CloseHandle(windows_job)
+            windows_job = None
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            raise OSError(
+                f"Impossibile riprendere il processo Windows sospeso: "
+                f"NTSTATUS 0x{resume_status & 0xFFFFFFFF:08X}."
+            )
     output = bytearray()
     output_exceeded = threading.Event()
 
