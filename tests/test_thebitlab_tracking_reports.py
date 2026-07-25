@@ -250,6 +250,7 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
         ({"teacher_grade": 8}, {}, "voto definitivo"),
         ({"score": float("nan")}, {}, "punteggio non valido"),
         ({"score": 11}, {}, "punteggio non valido"),
+        ({"score": 10**10000}, {}, "punteggio non valido"),
         ({}, {"repository": "TheBitPoets/altro"}, "repository diverso"),
         ({}, {"head_sha": "c" * 40}, "SHA diverso"),
         ({}, {"workflow_run_id": 901}, "workflow run diversa"),

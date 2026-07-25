@@ -281,13 +281,13 @@ def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding
             "Il report remoto non puo impostare il voto definitivo del docente."
         )
     score = report.get("score")
-    if score is not None and (
-        not isinstance(score, (int, float))
-        or isinstance(score, bool)
-        or not math.isfinite(score)
-        or not 0 <= score <= 10
-    ):
-        raise ValueError("Report remoto con punteggio non valido.")
+    if score is not None:
+        if not isinstance(score, (int, float)) or isinstance(score, bool):
+            raise ValueError("Report remoto con punteggio non valido.")
+        if isinstance(score, float) and not math.isfinite(score):
+            raise ValueError("Report remoto con punteggio non valido.")
+        if not 0 <= score <= 10:
+            raise ValueError("Report remoto con punteggio non valido.")
     if report.get("activity_id") != binding.activity_id:
         raise ValueError("Report remoto riferito a una activity diversa.")
     if report.get("assignment_id") != binding.assignment_id:
