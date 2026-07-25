@@ -113,7 +113,10 @@ jobs:
           persist-credentials: false
 
       - name: Build grading Docker image
-        run: docker build -t thebitlab-assignment-runner -f thebitlab/docker/assignment-runner/Dockerfile thebitlab
+        run: >-
+          python thebitlab/scripts/build_assignment_runner.py
+          --source-revision "$GITHUB_SHA"
+          --metadata "$RUNNER_TEMP/toolchain-build.json"
 
       - name: Run deterministic grading
         run: |
