@@ -113,8 +113,13 @@ def test_image_metadata_requires_labels_matching_manifest() -> None:
 
 def test_dockerfile_uses_snapshot_and_requires_build_arguments() -> None:
     source = builder.DOCKERFILE.read_text(encoding="utf-8")
+    payload = manifest()
 
-    assert source.startswith("ARG DEBIAN_BASE_IMAGE\nFROM ${DEBIAN_BASE_IMAGE}\n")
+    assert source.startswith(
+        f"ARG DEBIAN_BASE_IMAGE={payload['base_image']}\n"
+        "FROM ${DEBIAN_BASE_IMAGE}\n\n"
+        "ARG DEBIAN_BASE_IMAGE\n"
+    )
     assert "snapshot.debian.org/archive/debian/%s/" in source
     assert '"${DEBIAN_SNAPSHOT}"' in source
     assert '"gcc=${GCC_VERSION}"' in source
