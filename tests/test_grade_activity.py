@@ -633,7 +633,11 @@ def test_docker_timeout_scales_with_test_cases() -> None:
 
 def test_run_bounded_process_rejects_excessive_output(tmp_path) -> None:
     child_pid_path = tmp_path / "child.pid"
-    child_code = "import time; time.sleep(30)"
+    child_code = (
+        "import signal, time; "
+        + ("signal.signal(signal.SIGBREAK, signal.SIG_IGN); " if os.name == "nt" else "")
+        + "time.sleep(30)"
+    )
     parent_code = (
         "import pathlib, subprocess, sys; "
         f"child = subprocess.Popen([sys.executable, '-c', {child_code!r}], "

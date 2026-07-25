@@ -845,6 +845,81 @@ def run_bounded_process(
         stderr=subprocess.DEVNULL,
         **popen_options,
     )
+    windows_job: Any = None
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        class JobObjectBasicLimitInformation(ctypes.Structure):
+            _fields_ = [
+                ("PerProcessUserTimeLimit", ctypes.c_longlong),
+                ("PerJobUserTimeLimit", ctypes.c_longlong),
+                ("LimitFlags", wintypes.DWORD),
+                ("MinimumWorkingSetSize", ctypes.c_size_t),
+                ("MaximumWorkingSetSize", ctypes.c_size_t),
+                ("ActiveProcessLimit", wintypes.DWORD),
+                ("Affinity", ctypes.c_size_t),
+                ("PriorityClass", wintypes.DWORD),
+                ("SchedulingClass", wintypes.DWORD),
+            ]
+
+        class IoCounters(ctypes.Structure):
+            _fields_ = [
+                ("ReadOperationCount", ctypes.c_ulonglong),
+                ("WriteOperationCount", ctypes.c_ulonglong),
+                ("OtherOperationCount", ctypes.c_ulonglong),
+                ("ReadTransferCount", ctypes.c_ulonglong),
+                ("WriteTransferCount", ctypes.c_ulonglong),
+                ("OtherTransferCount", ctypes.c_ulonglong),
+            ]
+
+        class JobObjectExtendedLimitInformation(ctypes.Structure):
+            _fields_ = [
+                ("BasicLimitInformation", JobObjectBasicLimitInformation),
+                ("IoInfo", IoCounters),
+                ("ProcessMemoryLimit", ctypes.c_size_t),
+                ("JobMemoryLimit", ctypes.c_size_t),
+                ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                ("PeakJobMemoryUsed", ctypes.c_size_t),
+            ]
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+        kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        kernel32.SetInformationJobObject.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_int,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+        ]
+        kernel32.SetInformationJobObject.restype = wintypes.BOOL
+        kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
+
+        windows_job = kernel32.CreateJobObjectW(None, None)
+        if not windows_job:
+            process.kill()
+            process.wait()
+            raise ctypes.WinError(ctypes.get_last_error())
+        job_limits = JobObjectExtendedLimitInformation()
+        job_limits.BasicLimitInformation.LimitFlags = 0x00002000
+        if not kernel32.SetInformationJobObject(
+            windows_job,
+            9,
+            ctypes.byref(job_limits),
+            ctypes.sizeof(job_limits),
+        ) or not kernel32.AssignProcessToJobObject(
+            windows_job,
+            wintypes.HANDLE(int(process._handle)),
+        ):
+            error_code = ctypes.get_last_error()
+            kernel32.CloseHandle(windows_job)
+            windows_job = None
+            process.kill()
+            process.wait()
+            raise ctypes.WinError(error_code)
     output = bytearray()
     output_exceeded = threading.Event()
 
@@ -876,22 +951,11 @@ def run_bounded_process(
             pass
 
     def terminate_process_group() -> None:
+        nonlocal windows_job
         if os.name == "nt":
-            try:
-                os.kill(process.pid, signal.CTRL_BREAK_EVENT)
-            except OSError:
-                pass
-            if process.poll() is None:
-                try:
-                    subprocess.run(
-                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        timeout=1,
-                        check=False,
-                    )
-                except (OSError, subprocess.TimeoutExpired):
-                    process.kill()
+            if windows_job is not None:
+                kernel32.CloseHandle(windows_job)
+                windows_job = None
         else:
             try:
                 os.killpg(process.pid, signal.SIGKILL)
@@ -937,13 +1001,7 @@ def run_bounded_process(
                 output=bytes(output),
             )
     finally:
-        if (
-            output_exceeded.is_set()
-            or process.poll() is None
-            or writer.is_alive()
-            or reader.is_alive()
-        ):
-            terminate_process_group()
+        terminate_process_group()
         close_pipe(process.stdin)
         close_pipe(process.stdout)
         writer.join(timeout=0.2)
