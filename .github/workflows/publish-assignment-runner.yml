@@ -49,6 +49,21 @@ jobs:
           print(f"image_id={metadata['local_image_id']}")
           PY
 
+      - name: Stage validated runner toolchain
+        run: |
+          mkdir -p "$RUNNER_TEMP/runner-toolchain"
+          docker save thebitlab-assignment-runner \
+            | gzip > "$RUNNER_TEMP/runner-toolchain/runner-image.tar.gz"
+          cp "$RUNNER_TEMP/toolchain-build.json" \
+            "$RUNNER_TEMP/runner-toolchain/toolchain-build.json"
+
+      - name: Upload validated runner toolchain
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: runner-toolchain
+          path: ${{ runner.temp }}/runner-toolchain
+          if-no-files-found: error
+
       - name: Install smoke test dependencies
         run: python -m pip install -r requirements-dev.txt
 
@@ -71,33 +86,23 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build pinned runner
-        run: >-
-          python scripts/build_assignment_runner.py
-          --source-revision "$GITHUB_SHA"
-          --metadata "$RUNNER_TEMP/toolchain-build.json"
+      - name: Download validated runner toolchain
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: runner-toolchain
+          path: ${{ runner.temp }}/runner-toolchain
 
-      - name: Verify rebuilt image matches the validated digest
+      - name: Load validated runner image and verify digest
         env:
           VALIDATED_IMAGE_ID: ${{ needs.validate.outputs.image_id }}
         run: |
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          metadata = json.loads(
-              Path(os.environ["RUNNER_TEMP"], "toolchain-build.json").read_text(encoding="utf-8")
-          )
-          rebuilt = metadata["local_image_id"]
-          validated = os.environ["VALIDATED_IMAGE_ID"]
-          if rebuilt != validated:
-              raise SystemExit(
-                  f"L'immagine ricostruita {rebuilt} non corrisponde "
-                  f"all'immagine validata {validated}: build non riproducibile."
-              )
-          print(f"Digest riprodotto dalla build di pubblicazione: {rebuilt}")
-          PY
+          gunzip < "$RUNNER_TEMP/runner-toolchain/runner-image.tar.gz" | docker load
+          loaded_id=$(docker image inspect --format '{{.Id}}' thebitlab-assignment-runner)
+          if [ "$loaded_id" != "$VALIDATED_IMAGE_ID" ]; then
+            echo "L'immagine caricata $loaded_id non corrisponde all'immagine validata $VALIDATED_IMAGE_ID"
+            exit 1
+          fi
+          echo "Immagine validata caricata: $loaded_id"
 
       - name: Authenticate to GHCR
         run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -106,7 +111,7 @@ jobs:
         id: publish
         run: >-
           python scripts/publish_assignment_runner.py
-          --metadata "$RUNNER_TEMP/toolchain-build.json"
+          --metadata "$RUNNER_TEMP/runner-toolchain/toolchain-build.json"
           --release "$RUNNER_TEMP/toolchain-release.json"
           --github-output "$GITHUB_OUTPUT"
 

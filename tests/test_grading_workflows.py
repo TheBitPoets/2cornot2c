@@ -66,6 +66,11 @@ def test_publish_workflow_only_publishes_reviewed_main_toolchains() -> None:
     assert "docker login ghcr.io" in source
     assert "image_id: ${{ steps.image-digest.outputs.image_id }}" in source
     assert "VALIDATED_IMAGE_ID: ${{ needs.validate.outputs.image_id }}" in source
+    assert "actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16" in source
+    assert "runner-toolchain" in source
+    assert "docker save" in source
+    assert "docker load" in source
+    assert "gunzip" in source
     assert ":latest" not in source
     assert source.count("tests/test_student_lab_runner_docker.py") == 1
     assert '".github/workflows/publish-assignment-runner.yml"' not in source
