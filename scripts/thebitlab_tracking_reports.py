@@ -275,10 +275,7 @@ def _validate_request(
 
 
 def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding) -> None:  # noqa: ANN001
-    if not isinstance(report.get("passed"), bool) or not isinstance(
-        report.get("status"), str
-    ):
-        raise ValueError("Report remoto privo dello stato di grading minimo.")
+    _validate_remote_outcome(report)
     if "teacher_grade" in report:
         raise ValueError(
             "Il report remoto non puo impostare il voto definitivo del docente."
@@ -313,6 +310,50 @@ def _validate_acquired_report(report, provenance, binding: TrustedGradingBinding
         raise ValueError("Provenienza remota riferita a una workflow run diversa.")
     if provenance.artifact_name != binding.artifact_name:
         raise ValueError("Provenienza remota riferita a un artifact diverso.")
+
+
+def _validate_remote_outcome(report: dict[str, Any]) -> None:
+    passed = report.get("passed")
+    status = report.get("status")
+    if (
+        not isinstance(passed, bool)
+        or not isinstance(status, str)
+        or not status.strip()
+    ):
+        raise ValueError("Report remoto privo dello stato di grading minimo.")
+    if passed != (status == "passed"):
+        raise ValueError("Report remoto con stato ed esito non coerenti.")
+
+    tests = report.get("tests")
+    if not isinstance(tests, list):
+        raise ValueError("Report remoto con elenco test non valido.")
+    test_outcomes: list[bool] = []
+    for test in tests:
+        if not isinstance(test, dict):
+            raise ValueError("Report remoto con risultato test non valido.")
+        test_passed = test.get("passed")
+        test_status = test.get("status")
+        if (
+            not isinstance(test_passed, bool)
+            or not isinstance(test_status, str)
+            or not test_status.strip()
+            or test_passed != (test_status == "passed")
+        ):
+            raise ValueError("Report remoto con risultato test non valido.")
+        test_outcomes.append(test_passed)
+
+    if test_outcomes and passed != all(test_outcomes):
+        raise ValueError("Report remoto con test ed esito aggregato non coerenti.")
+    if not test_outcomes and passed:
+        raise ValueError("Report remoto superato senza risultati di test.")
+
+    summary = report.get("summary")
+    if test_outcomes and (
+        not isinstance(summary, dict)
+        or summary.get("passed") != sum(test_outcomes)
+        or summary.get("total") != len(test_outcomes)
+    ):
+        raise ValueError("Report remoto con riepilogo test non coerente.")
 
 
 def _tracking_provenance(provenance, binding: TrustedGradingBinding) -> dict[str, Any]:  # noqa: ANN001

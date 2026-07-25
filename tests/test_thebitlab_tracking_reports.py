@@ -72,6 +72,7 @@ def report(**overrides) -> dict:
         "passed": True,
         "submitted_at": "2026-10-20T08:00:00+02:00",
         "tests": [{"name": "somma", "status": "passed", "passed": True}],
+        "summary": {"passed": 1, "total": 1},
     }
     values.update(overrides)
     return values
@@ -228,6 +229,24 @@ def test_artifact_tracking_source_skips_students_without_binding() -> None:
         ({"submitted_at": "2026-10-21T08:00:00+02:00"}, {}, "Timestamp"),
         ({"passed": "yes"}, {}, "stato di grading minimo"),
         ({"status": 1}, {}, "stato di grading minimo"),
+        ({"passed": True, "status": "failed"}, {}, "stato ed esito"),
+        ({"passed": False, "status": "passed"}, {}, "stato ed esito"),
+        ({"tests": "not-a-list"}, {}, "elenco test"),
+        (
+            {"tests": [{"name": "somma", "status": "failed", "passed": True}]},
+            {},
+            "risultato test",
+        ),
+        (
+            {
+                "passed": True,
+                "status": "passed",
+                "tests": [{"name": "somma", "status": "failed", "passed": False}],
+            },
+            {},
+            "test ed esito aggregato",
+        ),
+        ({"summary": {"passed": 0, "total": 1}}, {}, "riepilogo test"),
         ({"teacher_grade": 8}, {}, "voto definitivo"),
         ({"score": float("nan")}, {}, "punteggio non valido"),
         ({"score": 11}, {}, "punteggio non valido"),
