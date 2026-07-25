@@ -374,10 +374,19 @@ def _validate_remote_outcome(report: dict[str, Any]) -> list[bool]:
     if test_outcomes and passed != all(test_outcomes):
         raise ValueError("Report remoto con test ed esito aggregato non coerenti.")
     summary = report.get("summary")
+    if not isinstance(summary, dict):
+        raise ValueError("Report remoto con riepilogo test non coerente.")
+    summary_passed = summary.get("passed")
+    summary_total = summary.get("total")
     if (
-        not isinstance(summary, dict)
-        or summary.get("passed") != sum(test_outcomes)
-        or summary.get("total") != len(test_outcomes)
+        not isinstance(summary_passed, int)
+        or isinstance(summary_passed, bool)
+        or summary_passed < 0
+        or not isinstance(summary_total, int)
+        or isinstance(summary_total, bool)
+        or summary_total < 0
+        or summary_passed != sum(test_outcomes)
+        or summary_total != len(test_outcomes)
     ):
         raise ValueError("Report remoto con riepilogo test non coerente.")
     return test_outcomes
