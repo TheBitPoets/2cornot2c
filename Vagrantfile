@@ -85,6 +85,7 @@ Vagrant.configure("2") do |config|
      export DEBIAN_FRONTEND=noninteractive
      apt-get update
      apt-get install -y gcc gdb vim make build-essential git xfce4 lightdm
+     echo "vagrant:vagrant" | chpasswd
      systemctl set-default graphical.target
    SHELL
    config.vm.provision "shell", inline: <<-SHELL
