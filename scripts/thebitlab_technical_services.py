@@ -499,7 +499,7 @@ def _grade_activity_report_validation_error(value: Any) -> str:
         expected_status = "passed" if expected_passed else "failed"
         if value["passed"] != expected_passed or value["status"] != expected_status:
             return "Il report Docker contiene esito e status complessivi incoerenti."
-    elif value["passed"]:
+    elif value["passed"] or value["status"] == "passed":
         return "Il report Docker senza test non puo risultare superato."
     summary = value.get("summary")
     if tests and not isinstance(summary, dict):

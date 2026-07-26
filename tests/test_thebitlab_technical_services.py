@@ -453,6 +453,7 @@ def test_docker_execution_service_rejects_runner_protocol_errors(monkeypatch, tm
     [
         ([], "report JSON valido"),
         ({"passed": "yes", "status": 42, "tests": "bad"}, "campo passed non valido"),
+        ({"passed": False, "status": "passed", "tests": []}, "senza test non puo risultare superato"),
         (
             {
                 "passed": True,

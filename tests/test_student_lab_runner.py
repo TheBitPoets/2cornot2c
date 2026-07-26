@@ -836,7 +836,19 @@ def test_run_docker_assignment_rejects_worker_protocol_error(monkeypatch, tmp_pa
     assert report["passed"] is False
 
 
-def test_run_docker_assignment_rejects_structurally_invalid_report(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize(
+    ("runner_report", "detail"),
+    [
+        ({"passed": "yes", "status": 42, "tests": "bad"}, "campo passed non valido"),
+        ({"passed": False, "status": "passed", "tests": []}, "senza test non puo risultare superato"),
+    ],
+)
+def test_run_docker_assignment_rejects_structurally_invalid_report(
+    monkeypatch,
+    tmp_path,
+    runner_report,
+    detail,
+) -> None:
     activity_id = "c-base-somma-001"
     activity_path = write_activity(tmp_path, activity_id=activity_id, language="c", source_name="main.c")
     write_assignment(tmp_path, activity_path, activity_id=activity_id)
@@ -847,7 +859,7 @@ def test_run_docker_assignment_rejects_structurally_invalid_report(monkeypatch, 
     monkeypatch.setattr(
         student_lab_runner.grade_activity,
         "grade_activity_in_docker",
-        lambda *args, **kwargs: ({"passed": "yes", "status": 42, "tests": "bad"}, ""),
+        lambda *args, **kwargs: (runner_report, ""),
     )
 
     report = student_lab_runner.run_student_assignment(
@@ -861,7 +873,7 @@ def test_run_docker_assignment_rejects_structurally_invalid_report(monkeypatch, 
     assert report["status"] == "docker-setup-error"
     assert report["passed"] is False
     assert isinstance(report["tests"], list)
-    assert "campo passed non valido" in report["error"]
+    assert detail in report["error"]
 
 
 def test_run_docker_assignment_supports_python(monkeypatch, tmp_path) -> None:
