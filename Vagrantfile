@@ -94,6 +94,9 @@ Vagrant.configure("2") do |config|
        "autologin-user-timeout=0" \
        "user-session=xfce" \
        > /etc/lightdm/lightdm.conf.d/50-vagrant-autologin.conf
+     sudo -u vagrant dbus-run-session -- \
+       xfconf-query -c xfwm4 -p /general/use_compositing \
+       -n -t bool -s false
      systemctl set-default graphical.target
    SHELL
    config.vm.provision "shell", inline: <<-SHELL
