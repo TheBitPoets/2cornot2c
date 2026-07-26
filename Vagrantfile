@@ -1,6 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+require "rbconfig"
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -76,6 +78,13 @@ Vagrant.configure("2") do |config|
     vb.gui = true
     vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
     vb.customize ["modifyvm", :id, "--drag-and-drop", "bidirectional"]
+    if RbConfig::CONFIG["host_cpu"].match?(/arm64|aarch64/)
+      # qemuramfb has no reliable dynamic resizing on Apple Silicon. Keep its
+      # stable 1280x800 mode and enlarge it in a scaled host window instead.
+      vb.customize ["setextradata", :id, "GUI/Scale", "true"]
+      vb.customize ["setextradata", :id, "GUI/LastScaleWindowPosition", "80,80,1152,720"]
+      vb.customize ["setextradata", :id, "GUI/RestrictedRuntimeViewMenuActions", "GuestAutoresize"]
+    end
   #  vb.customize ["storageattach", :id, "--storagectl", "IDE Controller", "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "emptydrive"]
   #
   #   # Customize the amount of memory on the VM:
@@ -105,6 +114,12 @@ Vagrant.configure("2") do |config|
      sudo -u vagrant dbus-run-session -- \
        xfconf-query -c xfwm4 -p /general/use_compositing \
        -n -t bool -s false
+     sudo -u vagrant dbus-run-session -- \
+       xfconf-query -c xsettings -p /Xft/DPI \
+       -n -t int -s 120
+     sudo -u vagrant dbus-run-session -- \
+       xfconf-query -c xsettings -p /Gtk/FontName \
+       -n -t string -s "Sans 11"
      systemctl disable lightdm-arm-recovery.service 2>/dev/null || true
      rm -f /etc/systemd/system/lightdm-arm-recovery.service
      systemctl daemon-reload

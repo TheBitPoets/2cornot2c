@@ -436,6 +436,11 @@ Le cartelle `lab` e `lab2` del progetto sono disponibili nella VM come `/lab` e
 `/lab2`: i file salvati lì restano anche sul computer reale. Anche gli appunti
 e il trascinamento dei file sono abilitati in entrambe le direzioni.
 
+Su macOS Apple Silicon la VM usa automaticamente una finestra scalata e una
+risoluzione stabile di 1280×800. Non abilitare il ridimensionamento automatico:
+il framebuffer ARM di VirtualBox non lo supporta in modo affidabile. La
+dimensione della finestra può essere modificata trascinandone i bordi.
+
 ### Guest Additions
 
 <!-- COURSE-FRAME:START README.md#guest-additions -->
