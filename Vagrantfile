@@ -12,7 +12,11 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
-  config.vm.box = "generic/ubuntu2204"
+  # Bento publishes both amd64 and arm64 variants for VirtualBox, so the same
+  # Vagrantfile works on Intel/AMD hosts and on Apple Silicon.
+  config.vm.box = "bento/ubuntu-24.04"
+  config.vm.hostname = "2cornot2c"
+  config.vm.boot_timeout = 900
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -67,7 +71,8 @@ Vagrant.configure("2") do |config|
   #  vb.customize ["storageattach", :id, "--storagectl", "IDE Controller", "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "emptydrive"]
   #
   #   # Customize the amount of memory on the VM:
-  #   vb.memory = "1024"
+    vb.memory = "4096"
+    vb.cpus = 2
    end
   #
   # View the documentation for the provider you are using for more
@@ -77,12 +82,14 @@ Vagrant.configure("2") do |config|
   # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
   # documentation for more information about their specific syntax and use.
    config.vm.provision "shell", inline: <<-SHELL
-     add-apt-repository main
-     add-apt-repository universe
-     add-apt-repository restricted
-     add-apt-repository multiverse      
+     export DEBIAN_FRONTEND=noninteractive
      apt-get update
-     apt-get install -y gcc gdb vim xfce4
+     apt-get install -y gcc gdb vim make build-essential git xfce4 lightdm
+     systemctl set-default graphical.target
    SHELL
-   config.vm.provision "shell", inline: "sudo sed -i 's/allowed_users=.*$/allowed_users=anybody/' /etc/X11/Xwrapper.config"
+   config.vm.provision "shell", inline: <<-SHELL
+     if [ -f /etc/X11/Xwrapper.config ]; then
+       sed -i 's/allowed_users=.*$/allowed_users=anybody/' /etc/X11/Xwrapper.config
+     fi
+   SHELL
 end
