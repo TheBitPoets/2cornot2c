@@ -395,7 +395,7 @@ def test_confirmed_navigation_preserves_tab_and_window_intent() -> None:
     )
 
 
-def test_create_course_rejects_invalid_weeks_and_hours() -> None:
+def test_create_course_rejects_invalid_weeks_and_hours_inline() -> None:
     run_course_board_js(
         """
         state.design = { years: [] };
@@ -407,14 +407,37 @@ def test_create_course_rejects_invalid_weeks_and_hours() -> None:
         createYearFromDialog();
         assert.equal(state.design.years.length, 0);
         assert.equal(els.yearWeeksInput["aria-invalid"], "true");
+        assert.equal(els.yearWeeksInput["aria-describedby"], "yearDialogError");
+        assert.equal(els.yearWeeksInput["aria-errormessage"], "yearDialogError");
+        assert.equal(els.yearDialogError.hidden, false);
+        assert.equal(
+          els.yearDialogError.textContent,
+          "Le settimane devono essere un numero intero maggiore di zero.",
+        );
 
         els.yearWeeksInput.value = "10";
         els.yearWeeklyHoursInput.value = "-1";
         createYearFromDialog();
         assert.equal(state.design.years.length, 0);
+        assert.equal(els.yearWeeksInput["aria-invalid"], undefined);
         assert.equal(els.yearWeeklyHoursInput["aria-invalid"], "true");
+        assert.equal(els.yearDialogError.hidden, false);
+        assert.equal(
+          els.yearDialogError.textContent,
+          "Le ore settimanali devono essere maggiori di zero.",
+        );
         """
     )
+
+
+def test_course_dialog_contains_accessible_inline_validation_message() -> None:
+    html = Path("tools/course_board.html").read_text(encoding="utf-8")
+    css = Path("tools/course_board.css").read_text(encoding="utf-8")
+
+    assert 'id="yearDialogError"' in html
+    assert 'class="dialogInlineError"' in html
+    assert 'role="alert"' in html
+    assert ".dialogInlineError" in css
 
 
 def test_dirty_tracking_detects_changes_and_resets_after_save() -> None:

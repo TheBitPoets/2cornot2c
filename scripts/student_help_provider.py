@@ -28,7 +28,7 @@ class StudentHelpResponse:
     provider_label: str
     message: str
     usage: dict[str, int]
-    detail: str = ""
+    detail: str | dict[str, str] = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Return the stable response payload used at integration boundaries."""
@@ -40,7 +40,7 @@ class StudentHelpResponse:
             "provider_label": self.provider_label,
             "message": self.message,
             "usage": dict(self.usage),
-            "detail": self.detail,
+            "detail": dict(self.detail) if isinstance(self.detail, dict) else self.detail,
         }
 
 

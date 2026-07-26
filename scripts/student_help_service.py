@@ -26,6 +26,9 @@ HELP_EVENT_SCHEMA_VERSION = "student_help_event.v1"
 PENDING_PROVIDER_MAX_AGE = timedelta(minutes=5)
 MAX_HELP_EVENTS_PER_ASSIGNMENT = 40
 MAX_PROVIDER_MESSAGE_CHARS = 8_000
+MAX_PROVIDER_DETAIL_CHARS = 16_000
+MAX_PROVIDER_DETAIL_FIELDS = 16
+MAX_PROVIDER_DETAIL_KEY_CHARS = 64
 PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
 _HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
 _HELP_LOG_LOCKS_GUARD = threading.Lock()
@@ -200,8 +203,7 @@ def provider_response_payload(response: Any) -> dict[str, Any]:
         raise ValueError("Messaggio risposta provider non valido.")
     if len(message) > MAX_PROVIDER_MESSAGE_CHARS:
         raise ValueError("Messaggio risposta provider troppo grande.")
-    if not isinstance(detail, str):
-        raise ValueError("Dettaglio risposta provider non valido.")
+    normalized_detail = normalized_provider_detail(detail)
     usage = payload.get("usage")
     if not isinstance(usage, dict):
         raise ValueError("Contatori uso provider non validi.")
@@ -221,9 +223,36 @@ def provider_response_payload(response: Any) -> dict[str, Any]:
         "provider_label": provider_label.strip(),
         "message": "" if status == "error" else message.strip(),
         "usage": normalized_usage,
-        "detail": PROVIDER_ERROR_DETAIL if status == "error" else detail.strip(),
+        "detail": PROVIDER_ERROR_DETAIL if status == "error" else normalized_detail,
     }
 
+
+def normalized_provider_detail(value: Any) -> str | dict[str, str]:
+    """Return a bounded JSON-safe provider diagnostic detail."""
+
+    if isinstance(value, str):
+        if len(value) > MAX_PROVIDER_DETAIL_CHARS:
+            raise ValueError("Dettaglio risposta provider troppo grande.")
+        return value.strip()
+    if not isinstance(value, dict) or len(value) > MAX_PROVIDER_DETAIL_FIELDS:
+        raise ValueError("Dettaglio risposta provider non valido.")
+    normalized: dict[str, str] = {}
+    total_chars = 0
+    for key, item in value.items():
+        if (
+            not isinstance(key, str)
+            or not key.strip()
+            or len(key.strip()) > MAX_PROVIDER_DETAIL_KEY_CHARS
+            or not isinstance(item, str)
+        ):
+            raise ValueError("Dettaglio risposta provider non valido.")
+        clean_key = key.strip()
+        clean_item = item.strip()
+        total_chars += len(clean_key) + len(clean_item)
+        if total_chars > MAX_PROVIDER_DETAIL_CHARS:
+            raise ValueError("Dettaglio risposta provider troppo grande.")
+        normalized[clean_key] = clean_item
+    return normalized
 
 def ai_events_used(events: list[dict[str, Any]]) -> int:
     return sum(

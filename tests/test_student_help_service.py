@@ -144,6 +144,21 @@ class StructuredErrorHelpProvider:
     )
 
 
+class StructuredReadyHelpProvider:
+    def respond(self, request):
+        return StudentHelpResponse(
+            status="ready",
+            provider="codex-local-fallback",
+            provider_label="Guida locale dopo errore Codex",
+            message="Controlla una sola ipotesi alla volta.",
+            usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            detail={
+                "codex_error": "Codex exec non riuscito.",
+                "codex_error_type": "CodexStudentHelpProcessError",
+            },
+        )
+
+
 def test_provider_response_normalizes_total_tokens() -> None:
     response = StudentHelpResponse(
         status="ready",
@@ -156,6 +171,19 @@ def test_provider_response_normalizes_total_tokens() -> None:
     payload = student_help_service.provider_response_payload(response)
 
     assert payload["usage"] == {"input_tokens": 3, "output_tokens": 7, "total_tokens": 10}
+
+
+def test_provider_response_preserves_bounded_structured_detail() -> None:
+    response = StructuredReadyHelpProvider().respond(None)
+
+    payload = student_help_service.provider_response_payload(response)
+
+    assert payload["provider"] == "codex-local-fallback"
+    assert payload["detail"] == {
+        "codex_error": "Codex exec non riuscito.",
+        "codex_error_type": "CodexStudentHelpProcessError",
+    }
+
 
 
 def test_evaluate_help_request_denies_ai_when_policy_does_not_allow_it() -> None:
@@ -519,6 +547,30 @@ def test_record_help_request_sanitizes_structured_provider_errors(tmp_path) -> N
     assert "Stack trace remoto" not in persisted_text
     assert "segreto-strutturato" not in persisted_text
     assert "Errore remoto" not in persisted_text
+
+
+def test_record_help_request_persists_structured_ready_detail(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+
+    event = student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=student_support_policy.support_policy("ai-assisted"),
+        help_type="ai",
+        prompt="Conserva il dettaglio del fallback.",
+        provider=StructuredReadyHelpProvider(),
+    )
+
+    persisted = json.loads(
+        (repo / "help" / "python-base-somma-001" / "events.json").read_text(encoding="utf-8")
+    )["events"][0]
+
+    assert event["response"]["provider"] == "codex-local-fallback"
+    assert persisted["response"]["detail"]["codex_error"] == "Codex exec non riuscito."
+    assert (
+        persisted["response"]["detail"]["codex_error_type"]
+        == "CodexStudentHelpProcessError"
+    )
 
 
 def test_record_help_request_blocks_ai_when_budget_is_exhausted(tmp_path) -> None:

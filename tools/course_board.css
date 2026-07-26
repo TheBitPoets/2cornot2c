@@ -341,6 +341,16 @@ input[aria-invalid="true"] {
   box-shadow: 0 0 0 2px rgba(180, 35, 24, .16);
 }
 
+.dialogInlineError {
+  margin: 0;
+  border: 1px solid rgba(180, 35, 24, .35);
+  border-radius: 12px;
+  background: rgba(180, 35, 24, .08);
+  color: #8f1d14;
+  padding: .65rem .75rem;
+  font-weight: 700;
+}
+
 .headingCard::before {
   content: "";
   position: absolute;
