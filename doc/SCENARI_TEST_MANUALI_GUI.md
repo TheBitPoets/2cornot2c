@@ -480,13 +480,13 @@ Chiudi il modal e verifica che la vista del registro resti invariata.
 ![Dettaglio errori completo](images/dashboard-guides/scenario-5-docente-errori.png)
 </details>
 
-Prepara un errore intenzionale dopo il setup comune:
+Prepara un errore intenzionale dopo il setup comune. Lo script `student_lab_demo_setup.py` stampa in output l'`assignment_id` da usare nei comandi seguenti (per esempio `assignment-python-demo-somma-001-3a-tpsi-2026-10-12t09-00-00-02-00`):
 
 ```powershell
 $source = "tmp\student-lab-demo\examples\assignment_tracking\student_repos\bianchi-luca\assignments\python-demo-somma-001\main.py"
 Set-Content -Path $source -Encoding utf8 -Value @("def somma(a, b):", "    return a - b")
 python scripts/student_lab_runner.py --root tmp/student-lab-demo --student-id bianchi-luca --activity-id python-demo-somma-001 --write-report
-python -m scripts.track_assignments --activity tmp\student-lab-demo\activities\python-demo-somma-001.json --target tmp\student-lab-demo\examples\assignment_tracking\student_repos\bianchi-luca --assigned-at 2026-10-12T09:00:00+02:00 --due-at 2026-10-19T23:59:00+02:00 --now 2026-10-18T18:30:00+02:00 --class-id 3A-TPSI --class-label "3A TPSI" --github-team team-3a-tpsi --output tmp\student-lab-demo\teacher-reports\demo\python-demo-somma-001.json
+python -m scripts.track_assignments --activity tmp\student-lab-demo\activities\python-demo-somma-001.json --target tmp\student-lab-demo\examples\assignment_tracking\student_repos\bianchi-luca --assigned-at 2026-10-12T09:00:00+02:00 --due-at 2026-10-19T23:59:00+02:00 --now 2026-10-18T18:30:00+02:00 --class-id 3A-TPSI --class-label "3A TPSI" --github-team team-3a-tpsi --assignment-id assignment-python-demo-somma-001-3a-tpsi-2026-10-12t09-00-00-02-00 --server-root tmp\student-lab-demo --output tmp\student-lab-demo\teacher-reports\demo\python-demo-somma-001.json
 ```
 
 Poi:
