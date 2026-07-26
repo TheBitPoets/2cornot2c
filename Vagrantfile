@@ -14,8 +14,8 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
-  # Bento publishes both amd64 and arm64 variants for VirtualBox, so the same
-  # Vagrantfile works on Intel/AMD hosts and on Apple Silicon.
+  # Bento publishes amd64 and arm64 variants for VirtualBox and VMware, so the
+  # same Vagrantfile works on Windows and on Apple Silicon.
   config.vm.box = "bento/ubuntu-24.04"
   config.vm.hostname = "2cornot2c"
   config.vm.boot_timeout = 900
@@ -27,7 +27,7 @@ Vagrant.configure("2") do |config|
   config.trigger.after :up do |trigger|
     trigger.name = "Recover the graphical session on Apple Silicon"
     trigger.run_remote = {
-      inline: "if [ \"$(uname -m)\" = aarch64 ]; then sudo systemctl restart lightdm; fi"
+      inline: "if [ \"$(uname -m)\" = aarch64 ] && command -v VBoxControl >/dev/null; then sudo systemctl restart lightdm; fi"
     }
   end
 
@@ -90,6 +90,13 @@ Vagrant.configure("2") do |config|
   #   # Customize the amount of memory on the VM:
     vb.memory = "4096"
     vb.cpus = 2
+   end
+
+   config.vm.provider "vmware_desktop" do |vmware|
+     vmware.gui = true
+     vmware.allowlist_verified = true
+     vmware.vmx["memsize"] = "4096"
+     vmware.vmx["numvcpus"] = "2"
    end
   #
   # View the documentation for the provider you are using for more

@@ -414,7 +414,8 @@ cd 2cornot2c
 Poi esegui **un solo avvio guidato**:
 
 - su Windows fai doppio clic su `setup-vm.cmd`;
-- su macOS apri il Terminale nella cartella del progetto ed esegui:
+- su macOS apri il Terminale nella cartella del progetto ed esegui il comando
+  seguente, quindi scegli VirtualBox o VMware Fusion:
 
 ```bash
 ./scripts/setup-vm.sh
@@ -440,6 +441,31 @@ Su macOS Apple Silicon la VM usa automaticamente una finestra scalata e una
 risoluzione stabile di 1280×800. Non abilitare il ridimensionamento automatico:
 il framebuffer ARM di VirtualBox non lo supporta in modo affidabile. La
 dimensione della finestra può essere modificata trascinandone i bordi.
+
+#### Spike VMware Fusion su macOS
+
+Il percorso VMware è sperimentale e non modifica la VM VirtualBox esistente.
+Usa una directory di stato separata (`.vagrant-vmware`) e la box ufficiale
+Bento per `vmware_desktop/arm64`.
+
+Prima di selezionare VMware devono essere installati:
+
+- [VMware Fusion](https://support.broadcom.com/) per Apple Silicon;
+- [Vagrant VMware Utility](https://developer.hashicorp.com/vagrant/install/vmware);
+- il provider Vagrant, con `vagrant plugin install vagrant-vmware-desktop`.
+
+Per saltare il menu puoi indicare direttamente il provider:
+
+```bash
+./scripts/setup-vm.sh --virtualbox
+./scripts/setup-vm.sh --vmware
+```
+
+Per collegarti via SSH alla VM VMware:
+
+```bash
+VAGRANT_DOTFILE=.vagrant-vmware vagrant ssh
+```
 
 ### Guest Additions
 
