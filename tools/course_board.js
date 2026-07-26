@@ -49,6 +49,7 @@ const els = {
   yearWeeksInput: document.querySelector("#yearWeeksInput"),
   yearWeeklyHoursInput: document.querySelector("#yearWeeklyHoursInput"),
   yearDescriptionInput: document.querySelector("#yearDescriptionInput"),
+  yearDialogError: document.querySelector("#yearDialogError"),
   paragraphDialog: document.querySelector("#paragraphDialog"),
   paragraphCloseBtn: document.querySelector("#paragraphCloseBtn"),
   paragraphDialogTitle: document.querySelector("#paragraphDialogTitle"),
@@ -1181,7 +1182,7 @@ function createYearFromDialog() {
     return;
   }
   if ((state.design.years || []).some((year) => year.id === id)) {
-    setStatus(`Esiste gia un percorso con ID "${id}".`);
+    showInvalidYearField(els.yearIdInput, `Esiste gia un percorso con ID "${id}".`);
     return;
   }
   state.design.years ||= [];
@@ -1202,11 +1203,19 @@ function clearYearValidation() {
     els.yearWeeklyHoursInput,
   ]) {
     element.removeAttribute("aria-invalid");
+    element.removeAttribute("aria-describedby");
+    element.removeAttribute("aria-errormessage");
   }
+  els.yearDialogError.textContent = "";
+  els.yearDialogError.hidden = true;
 }
 
 function showInvalidYearField(element, message) {
+  els.yearDialogError.textContent = message;
+  els.yearDialogError.hidden = false;
   element.setAttribute("aria-invalid", "true");
+  element.setAttribute("aria-describedby", "yearDialogError");
+  element.setAttribute("aria-errormessage", "yearDialogError");
   element.focus();
   setStatus(message);
 }
