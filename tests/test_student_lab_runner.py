@@ -7,6 +7,7 @@ import subprocess
 import pytest
 
 from scripts import assignment_records, student_lab_attempts, student_lab_runner, student_lab_service
+from scripts.thebitlab_technical_services import ExecutionResult
 
 
 def write_activity(root, activity_id: str = "python-base-somma-001", **overrides) -> str:
@@ -689,6 +690,54 @@ def test_run_docker_assignment_wraps_container_report(monkeypatch, tmp_path) -> 
     assert report["summary"] == {"passed": 1, "total": 1}
 
 
+def test_run_docker_runner_uses_execution_service_and_preserves_returned_report(tmp_path) -> None:
+    activity_path = tmp_path / "activity.json"
+    source_path = tmp_path / "main.c"
+    activity_path.write_text("{}", encoding="utf-8")
+    source_path.write_text("int main(void){return 0;}", encoding="utf-8")
+    captured = {}
+
+    class FakeExecutionService:
+        def run(self, request):
+            captured["request"] = request
+            return ExecutionResult(
+                status="timeout",
+                detail="timeout interno",
+                metadata={
+                    "runner_report": {
+                        "passed": False,
+                        "status": "timeout",
+                        "summary": {"passed": 0, "total": 0},
+                        "tests": [],
+                        "toolchain_version": "2026.07.1",
+                    }
+                },
+            )
+
+    report = student_lab_runner.run_docker_runner(
+        {
+            "assignment_id": "assignment-1",
+            "activity_id": "activity-1",
+            "student_id": "rossi-mario",
+        },
+        activity_path=activity_path,
+        source=source_path,
+        timeout_seconds=11,
+        language="c",
+        docker_image="runner@sha256:test",
+        execution_service=FakeExecutionService(),
+    )
+
+    request = captured["request"]
+    assert request.activity_id == "activity-1"
+    assert request.student_id == "rossi-mario"
+    assert request.timeout_seconds == 11
+    assert request.metadata["docker_image"] == "runner@sha256:test"
+    assert report["backend"] == "docker"
+    assert report["status"] == "timeout"
+    assert report["toolchain_version"] == "2026.07.1"
+
+
 def test_run_docker_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> None:
     activity_id = "c-base-somma-001"
     activity_path = write_activity(tmp_path, activity_id=activity_id, language="c", source_name="main.c")
@@ -785,6 +834,46 @@ def test_run_docker_assignment_rejects_worker_protocol_error(monkeypatch, tmp_pa
     assert report["backend"] == "docker"
     assert report["status"] == "docker-setup-error"
     assert report["passed"] is False
+
+
+@pytest.mark.parametrize(
+    ("runner_report", "detail"),
+    [
+        ({"passed": "yes", "status": 42, "tests": "bad"}, "campo passed non valido"),
+        ({"passed": False, "status": "passed", "tests": []}, "senza test non puo risultare superato"),
+    ],
+)
+def test_run_docker_assignment_rejects_structurally_invalid_report(
+    monkeypatch,
+    tmp_path,
+    runner_report,
+    detail,
+) -> None:
+    activity_id = "c-base-somma-001"
+    activity_path = write_activity(tmp_path, activity_id=activity_id, language="c", source_name="main.c")
+    write_assignment(tmp_path, activity_path, activity_id=activity_id)
+    workspace = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "assignments" / activity_id
+    workspace.mkdir(parents=True)
+    (workspace / "main.c").write_text("int main(void){ return 0; }\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        student_lab_runner.grade_activity,
+        "grade_activity_in_docker",
+        lambda *args, **kwargs: (runner_report, ""),
+    )
+
+    report = student_lab_runner.run_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id=activity_id,
+        backend="docker",
+    )
+
+    assert report["backend"] == "docker"
+    assert report["status"] == "docker-setup-error"
+    assert report["passed"] is False
+    assert isinstance(report["tests"], list)
+    assert detail in report["error"]
 
 
 def test_run_docker_assignment_supports_python(monkeypatch, tmp_path) -> None:

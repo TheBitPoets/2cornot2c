@@ -15,6 +15,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from scripts import grade_activity, student_lab_attempts, student_lab_service
 from scripts.thebitlab_contracts import normalize_activity
+from scripts.thebitlab_technical_services import (
+    DockerGradeActivityExecutionService,
+    ExecutionRequest,
+    ExecutionService,
+)
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
@@ -332,8 +337,9 @@ def run_docker_runner(
     timeout_seconds: int,
     language: str = "c",
     docker_image: str = DEFAULT_DOCKER_IMAGE,
+    execution_service: ExecutionService | None = None,
 ) -> dict[str, Any]:
-    """Run a supported assignment through the authoritative Docker harness."""
+    """Run a supported assignment through the Docker ExecutionService port."""
 
     if not source.is_file():
         return error_report(
@@ -344,44 +350,45 @@ def run_docker_runner(
             error=f"Sorgente non trovato: {source}",
             backend="docker",
         )
-    try:
-        report, _worker_stderr = grade_activity.grade_activity_in_docker(
-            activity_path,
-            source,
+    service = execution_service or DockerGradeActivityExecutionService()
+    execution = service.run(
+        ExecutionRequest(
+            activity_id=clean_text(assignment.get("activity_id")),
+            student_id=clean_text(assignment.get("student_id")),
+            files={source.name: str(source)},
+            language=language,
             timeout_seconds=timeout_seconds,
-            language=language,
-            image=docker_image,
+            metadata={
+                "activity_path": activity_path,
+                "source_path": source,
+                "docker_image": docker_image,
+            },
         )
-    except subprocess.TimeoutExpired as error:
-        return error_report(
-            assignment,
-            language=language,
-            source=source,
-            status="docker-timeout",
-            error=f"Timeout Docker dopo {error.timeout} secondi.",
-            backend="docker",
-        )
-    except FileNotFoundError:
-        return error_report(
-            assignment,
-            language=language,
-            source=source,
-            status="docker-not-found",
-            error="Docker non trovato. Installa Docker oppure usa --backend local.",
-            backend="docker",
-        )
-    except (OSError, ValueError) as error:
-        return error_report(
-            assignment,
-            language=language,
-            source=source,
-            status="docker-setup-error",
-            error=str(error),
-            backend="docker",
-        )
-    wrapped = wrap_runner_report(assignment, source, report, language)
-    wrapped["backend"] = "docker"
-    return wrapped
+    )
+    runner_report = execution.metadata.get("runner_report")
+    if isinstance(runner_report, dict):
+        wrapped = wrap_runner_report(assignment, source, runner_report, language)
+        wrapped["backend"] = "docker"
+        return wrapped
+
+    detail = execution.detail
+    if execution.status == "timeout":
+        status = "docker-timeout"
+    elif execution.status == "runner_unavailable":
+        status = "docker-not-found"
+    elif execution.status == "invalid_payload":
+        status = "docker-setup-error"
+    else:
+        status = "docker-setup-error"
+        detail = "ExecutionService Docker senza report compatibile."
+    return error_report(
+        assignment,
+        language=language,
+        source=source,
+        status=status,
+        error=detail or "ExecutionService Docker non disponibile.",
+        backend="docker",
+    )
 
 
 def run_local_assignment(

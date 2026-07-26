@@ -1,11 +1,14 @@
 ﻿from __future__ import annotations
 
+import subprocess
+
 import pytest
 
 from scripts.thebitlab_technical_services import (
     AiFeedbackRequest,
     DeterministicGradingService,
     DeterministicAiFeedbackService,
+    DockerGradeActivityExecutionService,
     ExecutionResult,
     ExecutionRequest,
     GradeActivityExecutionService,
@@ -322,6 +325,172 @@ def test_grade_activity_execution_service_returns_invalid_payload_for_bad_activi
 
     assert result.status == "invalid_payload"
     assert "Activity non caricata" in result.detail
+
+
+def test_docker_execution_service_runs_authoritative_runner(monkeypatch, tmp_path) -> None:
+    activity_path = tmp_path / "activity.json"
+    source_path = tmp_path / "main.c"
+    source_path.write_text("int main(void){return 0;}", encoding="utf-8")
+    runner_report = {
+        "activity_id": "c-base-somma-001",
+        "passed": True,
+        "status": "passed",
+        "tests": [{"name": "base", "passed": True, "status": "passed"}],
+        "summary": {"passed": 1, "total": 1},
+        "toolchain_version": "2026.07.1",
+    }
+
+    from scripts import grade_activity
+
+    def fake_docker_runner(activity, source, *, timeout_seconds, language, image):
+        assert activity == activity_path
+        assert source == source_path
+        assert timeout_seconds == 7
+        assert language == "c"
+        assert image == "runner@sha256:test"
+        return runner_report, "worker note"
+
+    monkeypatch.setattr(grade_activity, "grade_activity_in_docker", fake_docker_runner)
+    result = DockerGradeActivityExecutionService().run(
+        ExecutionRequest(
+            activity_id="c-base-somma-001",
+            student_id="rossi-mario",
+            files={"main.c": str(source_path)},
+            language="c",
+            timeout_seconds=7,
+            metadata={
+                "activity_path": activity_path,
+                "source_path": source_path,
+                "docker_image": "runner@sha256:test",
+            },
+        )
+    )
+
+    assert result.status == "passed"
+    assert result.tests == [RunnerTestResult("base", True)]
+    assert result.metadata["backend"] == "docker"
+    assert result.metadata["docker_image"] == "runner@sha256:test"
+    assert result.metadata["worker_stderr"] == "worker note"
+    assert result.metadata["runner_report"] == runner_report
+    assert result.metadata["runner_report"] is not runner_report
+
+
+def test_docker_execution_service_reports_missing_runner(monkeypatch, tmp_path) -> None:
+    from scripts import grade_activity
+
+    monkeypatch.setattr(
+        grade_activity,
+        "grade_activity_in_docker",
+        lambda *args, **kwargs: (_ for _ in ()).throw(FileNotFoundError()),
+    )
+    result = DockerGradeActivityExecutionService().run(
+        ExecutionRequest(
+            activity_id="activity",
+            student_id="student",
+            files={},
+            language="c",
+            metadata={"activity_path": tmp_path / "activity.json", "source_path": tmp_path / "main.c"},
+        )
+    )
+
+    assert result.status == "runner_unavailable"
+    assert "Docker non trovato" in result.detail
+
+
+def test_docker_execution_service_reports_timeout(monkeypatch, tmp_path) -> None:
+    from scripts import grade_activity
+
+    monkeypatch.setattr(
+        grade_activity,
+        "grade_activity_in_docker",
+        lambda *args, **kwargs: (_ for _ in ()).throw(subprocess.TimeoutExpired("docker", 9)),
+    )
+    result = DockerGradeActivityExecutionService().run(
+        ExecutionRequest(
+            activity_id="activity",
+            student_id="student",
+            files={},
+            language="c",
+            metadata={"activity_path": tmp_path / "activity.json", "source_path": tmp_path / "main.c"},
+        )
+    )
+
+    assert result.status == "timeout"
+    assert result.detail == "Timeout Docker dopo 9 secondi."
+
+
+@pytest.mark.parametrize(
+    ("failure", "detail"),
+    [
+        (ValueError("report worker incoerente"), "report worker incoerente"),
+        (OSError("errore setup Docker"), "errore setup Docker"),
+    ],
+)
+def test_docker_execution_service_rejects_runner_protocol_errors(monkeypatch, tmp_path, failure, detail) -> None:
+    from scripts import grade_activity
+
+    monkeypatch.setattr(
+        grade_activity,
+        "grade_activity_in_docker",
+        lambda *args, **kwargs: (_ for _ in ()).throw(failure),
+    )
+    result = DockerGradeActivityExecutionService().run(
+        ExecutionRequest(
+            activity_id="activity",
+            student_id="student",
+            files={},
+            language="c",
+            metadata={"activity_path": tmp_path / "activity.json", "source_path": tmp_path / "main.c"},
+        )
+    )
+
+    assert result.status == "invalid_payload"
+    assert result.detail == detail
+
+
+@pytest.mark.parametrize(
+    ("runner_report", "detail"),
+    [
+        ([], "report JSON valido"),
+        ({"passed": "yes", "status": 42, "tests": "bad"}, "campo passed non valido"),
+        ({"passed": False, "status": "passed", "tests": []}, "senza test non puo risultare superato"),
+        (
+            {
+                "passed": True,
+                "status": "passed",
+                "tests": [{"name": "base", "passed": True, "status": "passed"}],
+                "summary": {"passed": 0, "total": 1},
+            },
+            "conteggi riepilogo incoerenti",
+        ),
+    ],
+)
+def test_docker_execution_service_rejects_malformed_reports(
+    monkeypatch,
+    tmp_path,
+    runner_report,
+    detail,
+) -> None:
+    from scripts import grade_activity
+
+    monkeypatch.setattr(
+        grade_activity,
+        "grade_activity_in_docker",
+        lambda *args, **kwargs: (runner_report, ""),
+    )
+    result = DockerGradeActivityExecutionService().run(
+        ExecutionRequest(
+            activity_id="activity",
+            student_id="student",
+            files={},
+            language="c",
+            metadata={"activity_path": tmp_path / "activity.json", "source_path": tmp_path / "main.c"},
+        )
+    )
+
+    assert result.status == "invalid_payload"
+    assert detail in result.detail
+    assert "runner_report" not in result.metadata
 
 
 def test_deterministic_ai_feedback_summarizes_passed_grading() -> None:
