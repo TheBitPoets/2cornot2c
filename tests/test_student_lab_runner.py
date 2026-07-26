@@ -836,6 +836,34 @@ def test_run_docker_assignment_rejects_worker_protocol_error(monkeypatch, tmp_pa
     assert report["passed"] is False
 
 
+def test_run_docker_assignment_rejects_structurally_invalid_report(monkeypatch, tmp_path) -> None:
+    activity_id = "c-base-somma-001"
+    activity_path = write_activity(tmp_path, activity_id=activity_id, language="c", source_name="main.c")
+    write_assignment(tmp_path, activity_path, activity_id=activity_id)
+    workspace = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "assignments" / activity_id
+    workspace.mkdir(parents=True)
+    (workspace / "main.c").write_text("int main(void){ return 0; }\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        student_lab_runner.grade_activity,
+        "grade_activity_in_docker",
+        lambda *args, **kwargs: ({"passed": "yes", "status": 42, "tests": "bad"}, ""),
+    )
+
+    report = student_lab_runner.run_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id=activity_id,
+        backend="docker",
+    )
+
+    assert report["backend"] == "docker"
+    assert report["status"] == "docker-setup-error"
+    assert report["passed"] is False
+    assert isinstance(report["tests"], list)
+    assert "campo passed non valido" in report["error"]
+
+
 def test_run_docker_assignment_supports_python(monkeypatch, tmp_path) -> None:
     activity_path = write_activity(tmp_path, language="python", source_name="main.py")
     write_assignment(tmp_path, activity_path)

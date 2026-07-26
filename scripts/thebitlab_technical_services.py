@@ -271,11 +271,9 @@ class DockerGradeActivityExecutionService:
         except (OSError, ValueError) as error:
             return ExecutionResult(status="invalid_payload", detail=str(error))
 
-        if not isinstance(report, dict):
-            return ExecutionResult(
-                status="invalid_payload",
-                detail="Il runner Docker non ha restituito un report JSON valido.",
-            )
+        report_error = _grade_activity_report_validation_error(report)
+        if report_error:
+            return ExecutionResult(status="invalid_payload", detail=report_error)
         result = execution_result_from_grade_activity_report(report)
         return ExecutionResult(
             status=result.status,
@@ -467,6 +465,63 @@ def ai_feedback_result_from_payload(payload: str | dict[str, Any]) -> AiFeedback
         approved_by_teacher=False,
         detail=detail,
     )
+
+
+def _grade_activity_report_validation_error(value: Any) -> str:
+    """Return an error for a malformed trusted-host grading report."""
+
+    if not isinstance(value, dict):
+        return "Il runner Docker non ha restituito un report JSON valido."
+    try:
+        json.dumps(value, allow_nan=False)
+    except (TypeError, ValueError):
+        return "Il runner Docker ha restituito un report non serializzabile in JSON."
+    if not isinstance(value.get("passed"), bool):
+        return "Il report Docker contiene un campo passed non valido."
+    if not isinstance(value.get("status"), str) or not value["status"].strip():
+        return "Il report Docker contiene un campo status non valido."
+    tests = value.get("tests")
+    if not isinstance(tests, list):
+        return "Il report Docker contiene un campo tests non valido."
+    for test in tests:
+        if not isinstance(test, dict):
+            return "Il report Docker contiene un test non valido."
+        if not isinstance(test.get("name"), str) or not test["name"].strip():
+            return "Il report Docker contiene un test senza nome valido."
+        if not isinstance(test.get("passed"), bool):
+            return "Il report Docker contiene un esito test non valido."
+        if not isinstance(test.get("status"), str) or not test["status"].strip():
+            return "Il report Docker contiene uno status test non valido."
+        if test["passed"] != (test["status"] == "passed"):
+            return "Il report Docker contiene esito e status test incoerenti."
+    if tests:
+        expected_passed = all(test["passed"] for test in tests)
+        expected_status = "passed" if expected_passed else "failed"
+        if value["passed"] != expected_passed or value["status"] != expected_status:
+            return "Il report Docker contiene esito e status complessivi incoerenti."
+    elif value["passed"]:
+        return "Il report Docker senza test non puo risultare superato."
+    summary = value.get("summary")
+    if tests and not isinstance(summary, dict):
+        return "Il report Docker con test non contiene un riepilogo valido."
+    if summary is not None:
+        if not isinstance(summary, dict):
+            return "Il report Docker contiene un riepilogo non valido."
+        passed = summary.get("passed")
+        total = summary.get("total")
+        valid_counts = (
+            isinstance(passed, int)
+            and not isinstance(passed, bool)
+            and isinstance(total, int)
+            and not isinstance(total, bool)
+            and 0 <= passed <= total
+        )
+        if not valid_counts or total != len(tests) or passed != sum(test["passed"] for test in tests):
+            return "Il report Docker contiene conteggi riepilogo incoerenti."
+    for key in ("activity_id", "language", "source", "toolchain_version", "toolchain_reference"):
+        if key in value and value[key] is not None and not isinstance(value[key], str):
+            return f"Il report Docker contiene un campo {key} non valido."
+    return ""
 
 
 def execution_result_from_payload(payload: str | dict[str, Any]) -> ExecutionResult:

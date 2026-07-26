@@ -336,6 +336,7 @@ def test_docker_execution_service_runs_authoritative_runner(monkeypatch, tmp_pat
         "passed": True,
         "status": "passed",
         "tests": [{"name": "base", "passed": True, "status": "passed"}],
+        "summary": {"passed": 1, "total": 1},
         "toolchain_version": "2026.07.1",
     }
 
@@ -447,13 +448,34 @@ def test_docker_execution_service_rejects_runner_protocol_errors(monkeypatch, tm
     assert result.detail == detail
 
 
-def test_docker_execution_service_rejects_non_object_report(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize(
+    ("runner_report", "detail"),
+    [
+        ([], "report JSON valido"),
+        ({"passed": "yes", "status": 42, "tests": "bad"}, "campo passed non valido"),
+        (
+            {
+                "passed": True,
+                "status": "passed",
+                "tests": [{"name": "base", "passed": True, "status": "passed"}],
+                "summary": {"passed": 0, "total": 1},
+            },
+            "conteggi riepilogo incoerenti",
+        ),
+    ],
+)
+def test_docker_execution_service_rejects_malformed_reports(
+    monkeypatch,
+    tmp_path,
+    runner_report,
+    detail,
+) -> None:
     from scripts import grade_activity
 
     monkeypatch.setattr(
         grade_activity,
         "grade_activity_in_docker",
-        lambda *args, **kwargs: ([], ""),
+        lambda *args, **kwargs: (runner_report, ""),
     )
     result = DockerGradeActivityExecutionService().run(
         ExecutionRequest(
@@ -466,7 +488,8 @@ def test_docker_execution_service_rejects_non_object_report(monkeypatch, tmp_pat
     )
 
     assert result.status == "invalid_payload"
-    assert "report JSON valido" in result.detail
+    assert detail in result.detail
+    assert "runner_report" not in result.metadata
 
 
 def test_deterministic_ai_feedback_summarizes_passed_grading() -> None:
