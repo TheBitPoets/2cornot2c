@@ -433,7 +433,8 @@ vagrant ssh
 ```
 
 Le cartelle `lab` e `lab2` del progetto sono disponibili nella VM come `/lab` e
-`/lab2`: i file salvati lì restano anche sul computer reale.
+`/lab2`: i file salvati lì restano anche sul computer reale. Anche gli appunti
+e il trascinamento dei file sono abilitati in entrambe le direzioni.
 
 ### Guest Additions
 

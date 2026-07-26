@@ -18,6 +18,17 @@ Vagrant.configure("2") do |config|
   config.vm.hostname = "2cornot2c"
   config.vm.boot_timeout = 900
 
+  # VirtualBox on Apple Silicon can start the ARM framebuffer before it is
+  # ready, leaving an otherwise healthy XFCE session black. Restarting only
+  # the display manager after Vagrant has completed boot and mounts fixes it
+  # without affecting Windows/amd64 guests.
+  config.trigger.after :up do |trigger|
+    trigger.name = "Recover the graphical session on Apple Silicon"
+    trigger.run_remote = {
+      inline: "if [ \"$(uname -m)\" = aarch64 ]; then sudo systemctl restart lightdm; fi"
+    }
+  end
+
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
   # `vagrant box outdated`. This is not recommended.
@@ -63,6 +74,8 @@ Vagrant.configure("2") do |config|
    config.vm.provider "virtualbox" do |vb|
   #   # Display the VirtualBox GUI when booting the machine
     vb.gui = true
+    vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
+    vb.customize ["modifyvm", :id, "--drag-and-drop", "bidirectional"]
   #  vb.customize ["storageattach", :id, "--storagectl", "IDE Controller", "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "emptydrive"]
   #
   #   # Customize the amount of memory on the VM:
@@ -92,6 +105,9 @@ Vagrant.configure("2") do |config|
      sudo -u vagrant dbus-run-session -- \
        xfconf-query -c xfwm4 -p /general/use_compositing \
        -n -t bool -s false
+     systemctl disable lightdm-arm-recovery.service 2>/dev/null || true
+     rm -f /etc/systemd/system/lightdm-arm-recovery.service
+     systemctl daemon-reload
      systemctl set-default graphical.target
    SHELL
    config.vm.provision "shell", inline: <<-SHELL

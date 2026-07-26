@@ -26,6 +26,7 @@ test "$(uname -m)" = "aarch64" -o "$(uname -m)" = "x86_64"
 command -v gcc >/dev/null
 command -v gdb >/dev/null
 systemctl is-active --quiet vboxadd-service
+systemctl is-active --quiet lightdm
 findmnt -rn /lab >/dev/null
 findmnt -rn /lab2 >/dev/null
 '
