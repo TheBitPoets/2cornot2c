@@ -7,6 +7,7 @@ import subprocess
 import pytest
 
 from scripts import assignment_records, student_lab_attempts, student_lab_runner, student_lab_service
+from scripts.thebitlab_technical_services import ExecutionResult
 
 
 def write_activity(root, activity_id: str = "python-base-somma-001", **overrides) -> str:
@@ -687,6 +688,54 @@ def test_run_docker_assignment_wraps_container_report(monkeypatch, tmp_path) -> 
     assert report["status"] == "passed"
     assert report["passed"] is True
     assert report["summary"] == {"passed": 1, "total": 1}
+
+
+def test_run_docker_runner_uses_execution_service_and_preserves_returned_report(tmp_path) -> None:
+    activity_path = tmp_path / "activity.json"
+    source_path = tmp_path / "main.c"
+    activity_path.write_text("{}", encoding="utf-8")
+    source_path.write_text("int main(void){return 0;}", encoding="utf-8")
+    captured = {}
+
+    class FakeExecutionService:
+        def run(self, request):
+            captured["request"] = request
+            return ExecutionResult(
+                status="timeout",
+                detail="timeout interno",
+                metadata={
+                    "runner_report": {
+                        "passed": False,
+                        "status": "timeout",
+                        "summary": {"passed": 0, "total": 0},
+                        "tests": [],
+                        "toolchain_version": "2026.07.1",
+                    }
+                },
+            )
+
+    report = student_lab_runner.run_docker_runner(
+        {
+            "assignment_id": "assignment-1",
+            "activity_id": "activity-1",
+            "student_id": "rossi-mario",
+        },
+        activity_path=activity_path,
+        source=source_path,
+        timeout_seconds=11,
+        language="c",
+        docker_image="runner@sha256:test",
+        execution_service=FakeExecutionService(),
+    )
+
+    request = captured["request"]
+    assert request.activity_id == "activity-1"
+    assert request.student_id == "rossi-mario"
+    assert request.timeout_seconds == 11
+    assert request.metadata["docker_image"] == "runner@sha256:test"
+    assert report["backend"] == "docker"
+    assert report["status"] == "timeout"
+    assert report["toolchain_version"] == "2026.07.1"
 
 
 def test_run_docker_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> None:

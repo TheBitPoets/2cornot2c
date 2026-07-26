@@ -1,6 +1,8 @@
 ﻿from __future__ import annotations
 
+import copy
 import json
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Protocol
@@ -60,6 +62,7 @@ class ExecutionResult:
     stderr: str = ""
     duration_ms: int | None = None
     detail: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -228,6 +231,66 @@ class GradeActivityExecutionService:
             language=request.language,
         )
         return execution_result_from_grade_activity_report(report)
+
+
+class DockerGradeActivityExecutionService:
+    """ExecutionService adapter backed by the authoritative Docker runner."""
+
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        """Run grade_activity in Docker and normalize infrastructure failures."""
+
+        from scripts import grade_activity
+
+        activity_path = request.metadata.get("activity_path")
+        source_path = request.metadata.get("source_path")
+        docker_image = str(request.metadata.get("docker_image") or grade_activity.DEFAULT_DOCKER_IMAGE)
+        if not activity_path or not source_path:
+            return ExecutionResult(
+                status="invalid_payload",
+                detail="ExecutionRequest.metadata deve includere activity_path e source_path.",
+            )
+
+        try:
+            report, worker_stderr = grade_activity.grade_activity_in_docker(
+                Path(str(activity_path)),
+                Path(str(source_path)),
+                timeout_seconds=request.timeout_seconds,
+                language=request.language,
+                image=docker_image,
+            )
+        except subprocess.TimeoutExpired as error:
+            return ExecutionResult(
+                status="timeout",
+                detail=f"Timeout Docker dopo {error.timeout} secondi.",
+            )
+        except FileNotFoundError:
+            return ExecutionResult(
+                status="runner_unavailable",
+                detail="Docker non trovato. Installa Docker oppure usa --backend local.",
+            )
+        except (OSError, ValueError) as error:
+            return ExecutionResult(status="invalid_payload", detail=str(error))
+
+        if not isinstance(report, dict):
+            return ExecutionResult(
+                status="invalid_payload",
+                detail="Il runner Docker non ha restituito un report JSON valido.",
+            )
+        result = execution_result_from_grade_activity_report(report)
+        return ExecutionResult(
+            status=result.status,
+            tests=result.tests,
+            stdout=result.stdout,
+            stderr=result.stderr,
+            duration_ms=result.duration_ms,
+            detail=result.detail,
+            metadata={
+                "backend": "docker",
+                "docker_image": docker_image,
+                "runner_report": copy.deepcopy(report),
+                "worker_stderr": str(worker_stderr or ""),
+            },
+        )
 
 
 class DeterministicAiFeedbackService:
