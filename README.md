@@ -442,11 +442,12 @@ risoluzione stabile di 1280×800. Non abilitare il ridimensionamento automatico:
 il framebuffer ARM di VirtualBox non lo supporta in modo affidabile. La
 dimensione della finestra può essere modificata trascinandone i bordi.
 
-#### Spike VMware Fusion su macOS
+#### VMware Fusion su macOS
 
-Il percorso VMware è sperimentale e non modifica la VM VirtualBox esistente.
-Usa una directory di stato separata (`.vagrant-vmware`) e la box ufficiale
-Bento per `vmware_desktop/arm64`.
+Il percorso VMware non modifica la VM VirtualBox esistente. Usa una directory
+di stato separata (`.vagrant-vmware`) e la box ufficiale Bento per
+`vmware_desktop/arm64`. VMware Tools adatta dinamicamente la risoluzione quando
+la finestra viene ridimensionata.
 
 Prima di selezionare VMware devono essere installati:
 
@@ -466,6 +467,16 @@ Per collegarti via SSH alla VM VMware:
 ```bash
 VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant ssh
 ```
+
+Per scegliere manualmente una risoluzione, apri il terminale della VM ed
+esegui:
+
+```bash
+~/cambia-risoluzione.sh
+```
+
+Il menu applica la risoluzione selezionata e chiede conferma entro 15 secondi.
+Se non viene confermata, ripristina automaticamente quella precedente.
 
 ### Guest Additions
 

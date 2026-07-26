@@ -127,6 +127,12 @@ Vagrant.configure("2") do |config|
      sudo -u vagrant dbus-run-session -- \
        xfconf-query -c xsettings -p /Gtk/FontName \
        -n -t string -s "Sans 11"
+     if command -v vmtoolsd >/dev/null && [ -f /vagrant/scripts/change-resolution.sh ]; then
+       sed 's/\r$//' /vagrant/scripts/change-resolution.sh \
+         > /home/vagrant/cambia-risoluzione.sh
+       chown vagrant:vagrant /home/vagrant/cambia-risoluzione.sh
+       chmod 0755 /home/vagrant/cambia-risoluzione.sh
+     fi
      systemctl disable lightdm-arm-recovery.service 2>/dev/null || true
      rm -f /etc/systemd/system/lightdm-arm-recovery.service
      systemctl daemon-reload

@@ -34,7 +34,7 @@ if [ -z "$provider" ]; then
   if [ "$(uname -s)" = "Darwin" ] && [ -t 0 ]; then
     printf 'Scegli il motore della macchina virtuale:\n'
     printf '  1) VirtualBox (soluzione stabile con finestra scalata)\n'
-    printf '  2) VMware Fusion (spike sperimentale)\n'
+    printf '  2) VMware Fusion (ridimensionamento dinamico)\n'
     printf 'Scelta [1]: '
     read -r provider_choice
     case "$provider_choice" in
@@ -55,7 +55,7 @@ if [ "$provider" = "virtualbox" ]; then
     fail "VirtualBox non è installato o non è disponibile nel PATH."
 else
   [ "$(uname -s)" = "Darwin" ] ||
-    fail "La spike VMware è abilitata soltanto su macOS."
+    fail "VMware Fusion è abilitato soltanto su macOS."
   [ -d "/Applications/VMware Fusion.app" ] ||
     fail "VMware Fusion non è installato in /Applications."
   vagrant plugin list | grep -q '^vagrant-vmware-desktop ' ||
