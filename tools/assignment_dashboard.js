@@ -153,6 +153,7 @@ const state = {
   studentHelpRows: new Map(),
   studentHelpDialogKey: "",
   studentHelpDialogReportName: "",
+  studentsDialogSuspended: false,
   reviewStudent: null,
   reviewSource: "",
   reviewFilePath: "",
@@ -4447,6 +4448,7 @@ function openTestDetailsDialog(detailsKey) {
   if (!entry || !els.testDetailsDialog) return;
   els.testDetailsDialogStatus.textContent = `${entry.title || "Activity"} - ${entry.subtitle || "dettaglio test"}.`;
   els.testDetailsDialogBody.innerHTML = renderTestDetailsDialogContent(entry);
+  suspendStudentsDialogForModal();
   if (!els.testDetailsDialog.open) {
     els.testDetailsDialog.showModal();
   }
@@ -4456,6 +4458,7 @@ function closeTestDetailsDialog() {
   if (els.testDetailsDialog?.open) {
     els.testDetailsDialog.close();
   }
+  resumeStudentsDialogAfterModal();
 }
 
 function clearTestDetailsRows(prefix) {
@@ -4473,6 +4476,7 @@ function openStudentHelpDialog(detailsKey) {
   state.studentHelpDialogReportName = state.reportName;
   els.studentHelpDialogStatus.textContent = `${entry.student || "Studente"} - ${entry.activity || "activity non indicata"}.`;
   els.studentHelpDialogBody.innerHTML = renderStudentHelpDialogContent(entry);
+  suspendStudentsDialogForModal();
   if (!els.studentHelpDialog.open) {
     els.studentHelpDialog.showModal();
   }
@@ -4493,6 +4497,7 @@ function closeStudentHelpDialog({ restoreFocus = true } = {}) {
   if (restoreFocus && detailsKey) {
     requestAnimationFrame(() => studentHelpButtonForKey(detailsKey)?.focus());
   }
+  resumeStudentsDialogAfterModal();
 }
 
 function clearStudentHelpRows() {
@@ -4962,6 +4967,21 @@ function closeReviewDialog() {
   if (els.reviewDialog?.open) {
     els.reviewDialog.close();
   }
+  resumeStudentsDialogAfterModal();
+}
+
+function suspendStudentsDialogForModal() {
+  if (els.studentsDialog?.open && !state.studentsDialogSuspended) {
+    state.studentsDialogSuspended = true;
+    els.studentsDialog.close();
+  }
+}
+
+function resumeStudentsDialogAfterModal() {
+  if (state.studentsDialogSuspended && els.studentsDialog && !els.studentsDialog.open) {
+    state.studentsDialogSuspended = false;
+    els.studentsDialog.showModal();
+  }
 }
 
 function reviewableStudents() {
@@ -5002,6 +5022,7 @@ async function openSubmission(studentName, preferredPath = "", source = "student
   state.reviewStudent = studentName;
   state.reviewSource = source;
   const selectedPath = preferredPath || files[0].path;
+  suspendStudentsDialogForModal();
   openReviewDialog();
   updateReviewNavigation();
   await loadSubmissionFile(studentName, selectedPath);
@@ -5191,6 +5212,7 @@ function closeStudentsDialog() {
   if (els.studentsDialog?.open) {
     els.studentsDialog.close();
   }
+  state.studentsDialogSuspended = false;
 }
 
 els.loadReportBtn.addEventListener("click", () => loadSelectedReport());
@@ -5261,7 +5283,15 @@ els.legendTabButtons.forEach((button) => {
 els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
 els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
+els.reviewDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeReviewDialog();
+});
 els.testDetailsCloseBtn.addEventListener("click", closeTestDetailsDialog);
+els.testDetailsDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeTestDetailsDialog();
+});
 els.studentHelpCloseBtn?.addEventListener("click", closeStudentHelpDialog);
 els.studentHelpDialog?.addEventListener("cancel", (event) => {
   event.preventDefault();
