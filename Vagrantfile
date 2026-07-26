@@ -86,6 +86,14 @@ Vagrant.configure("2") do |config|
      apt-get update
      apt-get install -y gcc gdb vim make build-essential git xfce4 lightdm
      echo "vagrant:vagrant" | chpasswd
+     usermod -aG nopasswdlogin vagrant
+     install -d -m 0755 /etc/lightdm/lightdm.conf.d
+     printf "%s\n" \
+       "[Seat:*]" \
+       "autologin-user=vagrant" \
+       "autologin-user-timeout=0" \
+       "user-session=xfce" \
+       > /etc/lightdm/lightdm.conf.d/50-vagrant-autologin.conf
      systemctl set-default graphical.target
    SHELL
    config.vm.provision "shell", inline: <<-SHELL
