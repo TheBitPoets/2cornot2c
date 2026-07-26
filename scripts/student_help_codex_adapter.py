@@ -508,11 +508,14 @@ class CodexStudentHelpProvider:
                 if self.model:
                     command.extend(["--model", self.model])
                 command.append(codex_help_prompt())
+                codex_env = codex_subprocess_environment()
+                if "CODEX_HOME" not in codex_env:
+                    codex_env["CODEX_HOME"] = str(workdir)
                 try:
                     completed = _run_codex_process(
                         command,
                         cwd=workdir,
-                        env=codex_subprocess_environment(),
+                        env=codex_env,
                         input=json.dumps(package, ensure_ascii=False, indent=2).encode("utf-8"),
                         capture_output=True,
                         timeout=self.timeout_seconds,
@@ -596,13 +599,27 @@ class FallbackStudentHelpProvider:
             if getattr(self.primary, "provider", "") != CODEX_PROVIDER:
                 return response
             usage = getattr(error, "usage", _zero_usage())
+            primary_error = str(error).strip() if str(error) else type(error).__name__
+            detail = response.detail if response.detail else {}
+            if isinstance(detail, dict):
+                detail = {
+                    **detail,
+                    "codex_error": primary_error,
+                    "codex_error_type": type(error).__name__,
+                }
+            else:
+                detail = {
+                    "fallback_detail": detail,
+                    "codex_error": primary_error,
+                    "codex_error_type": type(error).__name__,
+                }
             return StudentHelpResponse(
                 status=response.status,
                 provider=f"{CODEX_PROVIDER}-fallback",
                 provider_label=f"{response.provider_label} dopo errore Codex",
                 message=response.message,
                 usage=dict(usage),
-                detail=response.detail,
+                detail=detail,
             )
 
 

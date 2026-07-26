@@ -177,6 +177,29 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     assert captured["schema"]["additionalProperties"] is False
 
 
+def test_codex_provider_uses_temp_dir_as_codex_home_when_unset(monkeypatch) -> None:
+    captured = {}
+    monkeypatch.delenv("CODEX_HOME", raising=False)
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: f"/bin/{command}")
+
+    def fake_run(command, **kwargs):
+        captured["env"] = kwargs["env"]
+        captured["cwd"] = kwargs["cwd"]
+        return completed_codex_run(
+            command,
+            {
+                "guidance": ["Passo uno."],
+                "check_question": "Domanda?",
+            },
+        )
+
+    monkeypatch.setattr(student_help_codex_adapter, "_run_codex_process", fake_run)
+
+    student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+
+    assert captured["env"]["CODEX_HOME"] == str(captured["cwd"])
+
+
 def test_codex_provider_reads_sidecar_and_jsonl_from_real_subprocess(monkeypatch, tmp_path) -> None:
     codex_path = fake_codex_executable(tmp_path)
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: str(codex_path))
@@ -464,6 +487,26 @@ def test_codex_fallback_preserves_usage_from_timed_out_process(monkeypatch, part
 
     assert response.provider == "codex-local-fallback"
     assert response.usage == {"input_tokens": 21, "output_tokens": 8, "total_tokens": 29}
+
+
+def test_codex_fallback_preserves_original_error_detail(monkeypatch) -> None:
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("Accesso negato durante l'inizializzazione interna")
+
+    monkeypatch.setattr(student_help_codex_adapter, "_run_codex_process", fail)
+    provider = student_help_codex_adapter.FallbackStudentHelpProvider(
+        student_help_codex_adapter.CodexStudentHelpProvider(),
+        DeterministicStudentHelpProvider(),
+    )
+
+    response = provider.respond(sample_request())
+
+    assert response.provider == "codex-local-fallback"
+    assert isinstance(response.detail, dict)
+    assert response.detail["codex_error"] == "Accesso negato durante l'inizializzazione interna"
+    assert response.detail["codex_error_type"] == "RuntimeError"
 
 
 def test_real_timeout_keeps_complete_jsonl_before_truncated_utf8_tail() -> None:

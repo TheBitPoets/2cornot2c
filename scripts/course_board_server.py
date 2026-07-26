@@ -21,6 +21,7 @@ import base64
 import hashlib
 import ipaddress
 import json
+import logging
 import mimetypes
 import os
 import re
@@ -67,6 +68,8 @@ from scripts import (
 )
 from scripts.thebitlab_contracts import normalize_activity
 from scripts.student_help_provider import DeterministicStudentHelpProvider, StudentHelpProvider
+
+LOGGER = logging.getLogger("thebitlab.course_board_server")
 
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -367,6 +370,17 @@ def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str
             )
         except student_help_service.StudentHelpRequestNotFoundError:
             raise StudentHelpBusyError("Richiesta di aiuto gia in elaborazione per questa consegna.") from None
+    response = event.get("response") if isinstance(event, dict) else None
+    provider = response.get("provider") if isinstance(response, dict) else None
+    if isinstance(provider, str) and provider.endswith("-fallback"):
+        detail = response.get("detail") if isinstance(response, dict) else None
+        LOGGER.warning(
+            "Provider aiuto studente ricaduto su fallback: provider=%s assignment_id=%s student_id=%s detail=%s",
+            provider,
+            assignment_id,
+            student_id,
+            detail,
+        )
     return {"ok": True, "event": event}
 
 
@@ -3875,6 +3889,10 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
