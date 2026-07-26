@@ -67,7 +67,7 @@ else
 fi
 
 run_vagrant() {
-  VAGRANT_DOTFILE="$state_dir" vagrant "$@"
+  VAGRANT_DOTFILE_PATH="$state_dir" vagrant "$@"
 }
 
 printf 'Controllo della configurazione...\n'
@@ -98,7 +98,7 @@ fi
 printf '\nAMBIENTE PRONTO.\n'
 printf 'La finestra grafica si apre automaticamente.\n'
 if [ "$provider" = "vmware_desktop" ]; then
-  printf 'Per il terminale usa: VAGRANT_DOTFILE=.vagrant-vmware vagrant ssh\n'
+  printf 'Per il terminale usa: VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant ssh\n'
 else
   printf 'Per il terminale usa: vagrant ssh\n'
 fi

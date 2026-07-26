@@ -464,7 +464,7 @@ Per saltare il menu puoi indicare direttamente il provider:
 Per collegarti via SSH alla VM VMware:
 
 ```bash
-VAGRANT_DOTFILE=.vagrant-vmware vagrant ssh
+VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant ssh
 ```
 
 ### Guest Additions
