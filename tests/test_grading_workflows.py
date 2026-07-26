@@ -82,7 +82,7 @@ def test_publish_workflow_only_publishes_reviewed_main_toolchains() -> None:
     assert "gunzip" in source
     assert ":latest" not in source
     assert source.count("tests/test_student_lab_runner_docker.py") == 1
-    assert '".github/workflows/publish-assignment-runner.yml"' not in source
+    assert '".github/workflows/publish-assignment-runner.yml"' in source
     assert "actions/checkout@v4" not in source
     assert "actions/upload-artifact@v4" not in source
     assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in source
