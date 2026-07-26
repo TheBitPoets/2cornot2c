@@ -49,11 +49,6 @@ Vagrant.configure("2") do |config|
   # argument is a set of non-required options.
    config.vm.synced_folder "./lab", "/lab"
    config.vm.synced_folder "./lab2", "/lab2"
-
-
-   if Vagrant.has_plugin?("vagrant-vbguest")
-      config.vbguest.auto_update = false
-   end
   # Disable the default share of the current code directory. Doing this
   # provides improved isolation between the vagrant box and your host
   # by making sure your Vagrantfile isn't accessible to the vagrant box.
