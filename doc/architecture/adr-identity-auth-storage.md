@@ -1,0 +1,134 @@
+# ADR: identita interne, provider federati e storage autenticazione
+
+## Stato
+
+Proposto.
+
+## Contesto
+
+TheBitLab deve autenticare studenti e docenti nell'MVP senza legare gli utenti a una singola scuola o a un singolo provider. Il primo flusso previsto usa Google OpenID Connect per autenticare la persona e GitHub per collegare account, team e repository. In seguito il sistema dovra supportare GitLab e una directory gestita direttamente da TheBitLab.
+
+Email, username e slug dei team possono cambiare. Non sono quindi chiavi adatte per utenti e classi. Sessioni, linking di identita e codici TUI richiedono inoltre unicita, transazioni, scadenze e revoche che non devono dipendere dai JSON didattici versionati in Git.
+
+L'ADR generale [`adr-sqlite-storage-schema.md`](adr-sqlite-storage-schema.md) usa SQLite inizialmente come indice ricostruibile per dati didattici. Identita e sessioni hanno requisiti diversi: non esiste un JSON didattico autorevole dal quale ricostruirle senza perdere stato di sicurezza.
+
+## Decisione
+
+### Identita interna
+
+Ogni persona riceve un `user_id` TheBitLab stabile. Ruolo, stato attivo e membership nelle classi appartengono al dominio interno.
+
+Le identita esterne sono collegamenti separati identificati dalla coppia:
+
+```text
+(provider, subject)
+```
+
+`subject` e l'identificatore stabile dichiarato dal provider. Email Google, username GitHub/GitLab e nomi leggibili restano attributi aggiornabili e non diventano chiavi primarie.
+
+La stessa identita esterna non puo essere collegata a utenti interni diversi.
+
+### Classi interne e gruppi esterni
+
+Una classe ha un `class_id` TheBitLab e un anno scolastico. Team GitHub, gruppi GitLab e provider futuri vengono rappresentati dallo stesso mapping:
+
+```text
+(provider, organization_subject, group_subject) -> class_id
+```
+
+La membership interna puo provenire da un mapping esterno oppure essere gestita direttamente da TheBitLab. Il provider non diventa quindi la sorgente esclusiva della classe.
+
+### Ruoli e onboarding
+
+I ruoli iniziali sono:
+
+- `pending`: identita autenticata ma non autorizzata ai dati;
+- `student`;
+- `teacher`;
+- `admin`.
+
+Qualunque account Google verificato potra iniziare l'onboarding, ma non ricevera accesso applicativo finche ruolo e classe non saranno determinati. Docenti e amministratori richiedono approvazione o bootstrap esplicito.
+
+### Storage
+
+SQLite sara la sorgente primaria transazionale per:
+
+- utenti e ruoli;
+- identita esterne collegate;
+- classi e membership gestite dall'applicazione;
+- mapping dei gruppi provider;
+- sessioni web;
+- pairing TUI;
+- migrazioni dello schema e audit essenziale.
+
+I JSON restano formato di export, backup leggibile e scambio, ma non sono una seconda sorgente di verita concorrente per sessioni o linking.
+
+Lo schema concreto e le migrazioni saranno introdotti in una issue successiva dietro le porte definite in `scripts/thebitlab_identity_ports.py`.
+
+### Segreti e token
+
+Il database non conserva password Google/GitHub/GitLab ne bearer token grezzi di sessione o pairing. I token di sessione, generati con alta entropia, vengono persistiti soltanto come digest `sha256` o `sha512`. I codici di pairing TUI, piu brevi e quindi enumerabili, richiedono invece un HMAC con chiave server non conservata nel database:
+
+```text
+sha256:<hex>            # sessione ad alta entropia
+hmac-sha256:<hex>       # codice pairing con pepper server-side
+```
+
+OAuth client secret, chiavi di cifratura ed eventuali token provider strettamente necessari devono provenire da ambiente o secret store. Se in futuro sara indispensabile conservare un refresh token provider, servira una decisione separata con cifratura applicativa, rotazione e revoca.
+
+### Provider e deployment
+
+Google, GitHub e GitLab saranno adapter dietro porte applicative. Il dominio non importera SDK provider.
+
+L'autenticazione OAuth/OIDC di produzione richiede un URL HTTPS stabile. Una modalita LAN potra usare hostname/certificato, tunnel o broker configurato; non si assume che un IP HTTP arbitrario sia una callback OAuth valida.
+
+## Contratti iniziali
+
+I record provider-agnostici sono definiti in `scripts/thebitlab_identity.py`:
+
+- `UserAccount`;
+- `ExternalIdentity`;
+- `ClassGroup`;
+- `ClassMembership`;
+- `ExternalGroupMapping`;
+- `UserSession`;
+- `TuiPairing`.
+
+Le porte di persistenza sono definite in `scripts/thebitlab_identity_ports.py`:
+
+- `UserDirectoryStorage`;
+- `ClassDirectoryStorage`;
+- `SessionStorage`;
+- `TuiPairingStorage`.
+
+## Conseguenze
+
+### Positive
+
+- Google e GitHub possono essere sostituiti o affiancati senza migrare gli ID interni.
+- GitHub team e GitLab group condividono lo stesso modello di mapping.
+- TheBitLab potra gestire direttamente utenti e classi in futuro.
+- Sessioni e linking dispongono di transazioni e vincoli di unicita.
+- I token grezzi non entrano nei contratti persistibili.
+
+### Costi
+
+- SQLite diventa storage primario per una nuova area del prodotto e richiede backup e migrazioni affidabili.
+- La sincronizzazione con provider esterni deve gestire revoche, team multipli e provider indisponibili.
+- Hosting pubblico e LAN richiedono strategie di callback differenti ma compatibili con lo stesso dominio.
+
+## Fuori scope di questa decisione
+
+- Scelta del framework OAuth/OIDC.
+- Schema SQL definitivo.
+- Password locali e recupero account.
+- Politica completa di audit e retention.
+- UI amministrativa.
+- Adapter Google, GitHub o GitLab concreti.
+
+## Relazioni
+
+- Epic MVP: #535.
+- Contratti iniziali: #537.
+- Roadmap MVP: #292.
+- Roadmap architetturale: #282.
