@@ -392,141 +392,237 @@ Riferimento principale: README.md, sezione "Introduzione" (../README.md#introduz
 Il corso è fondamentalmente pratico, non è richiesto alcun prerequisito e nulla è dato per scontato.
 </p>
 
-<p align=justify>
-Prima di iniziare è giusto ricordare che per svolgere i laboratori richiesti è necessaria la conoscenza di alcuni strumenti, in particolare:
-</p>
+Per preparare l'ambiente servono sempre:
 
-<ul>
-  <li>
-    <p align="justify">
-    <a href="https://git-scm.com/download/win">Git</a>
-    </p>
-  </li>
-  <li>
-    <p align="justify">
-    <a href="https://www.virtualbox.org/wiki/Downloads">VirtualBox</a> Installa la versione 7.0, che è la più recente compatibile con Vagrant. Leggi <a href="https://developer.hashicorp.com/vagrant/docs/providers/virtualbox">qui</a> per maggiori informazioni
-    </p>
-  </li>
-  <li>
-    <p align="justify">
-    <a href="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170">Microsoft Visual C++</a> solo in caso ti venga richiesto durante l'installazione di VBox (dovrebbe andare in errore)
-    </p>
-  </li>
-  <li>
-    <p align="justify">
-    <a href="https://developer.hashicorp.com/vagrant/install?ajs_aid=e022a39f-7694-4bed-a4cd-f721f515b885&product_intent=vagrant#windows">Vagrant</a>
-    </p>
-  </li>
-</ul>
+- [Git](https://git-scm.com/downloads);
+- [Vagrant](https://developer.hashicorp.com/vagrant/install) 2.4 o successivo.
 
-<p align=justify>
-I link forniti sopra portano alle versioni dei software per architettura `amd64` in ambiente `Windows`; questo a causa dell'assenza di macchine Linux nei lab scolastici.
-</p>
+Serve inoltre un provider:
 
-<p align="justify">
- <b>Git</b> e <b>Vagrant</b> ci serviranno per ottenere un ambiente di sviluppo identico per tutti e per un provisioning automatico; in altre parole, Git ci permetterà di condividere il codice dei laboratori e Vagrant di condividere la stessa macchina virtuale (ubuntu-22.04) con l'ambiente di sviluppo preinstallato.
-</p>
+- su Windows: [VirtualBox](https://www.virtualbox.org/wiki/Downloads) 7.1 o
+  successivo;
+- su macOS Apple Silicon: VirtualBox 7.1 o successivo oppure VMware Fusion,
+  come descritto più avanti.
 
-<p align="justify">
-A questo <a href="https://drive.google.com/file/d/14UWaWALUwGvrCgxXmXmGykfPFDSZhM0K/view?usp=sharing">link</a> trovi un video con tutti i passaggi per installare i software sopra elencati.
-</p>
+La stessa configurazione supporta Windows su processori Intel/AMD e macOS su
+Apple Silicon. La macchina virtuale usa Ubuntu 24.04 e contiene già compilatore,
+debugger e interfaccia grafica.
 
- ## Installare l'ambiente di sviluppo
+## Installare l'ambiente di sviluppo
 
-<p align="justify">
-Guarda il <a href="https://drive.google.com/file/d/1WkLleojruhYkJ31kiY00jUknGVAGrHiR/view?usp=sharing">video</a> se i passaggi elencati di seguito non ti sono chiari. Il video è senza tagli in modo da mostrare l'intero processo di installazione.
-</p>
+### Preparazione automatica del Mac
 
-<p align="justify">
-I passi seguenti permettono di duplicare sulla tua macchina locale l'ambiente di sviluppo (codice e VM).
-Nella directory radice del progetto (2cornot2c che otterrai clonando il repository nei passi seguenti) troverai una directory lab con il codice C per tutti i laboratori. 
-Questa cartella 2cornot2c\lab è montata automaticamente sul file system della macchina virtuale nella cartella /lab. 
-Tutto quello che verrà modificato sulla macchina Linux in /lab (VM o macchina guest) verrà visto sulla macchina Windows (host) in 2cornot2c\lab. 
-</p>
+Su un Mac Apple Silicon nuovo, oppure per riparare un'installazione incompleta,
+scarica l'installer senza bisogno di Git:
 
-<ol>
-  <li>
-    <p align="justify">
-    Clona il repository con il codice e il Vagrantfile
-    </p>
-  </li>
-</ol>
-
- ```bash
-git clone https://github.com/kinderp/2cornot2c.git
+```bash
+curl --fail --location \
+  https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/install-macos-host.sh \
+  --output install-macos-host.sh
+chmod +x install-macos-host.sh
+./install-macos-host.sh
 ```
 
-<ol>
-  <li>
-    <p align="justify">
-    Entra nella directory root del repository (2cornot2c)
-    </p>
-  </li>
-</ol>
-   
+Se il progetto è già presente, puoi invece eseguirlo direttamente:
+
 ```bash
+./scripts/install-macos-host.sh
+```
+
+Lo script installa Homebrew, Git, Vagrant, VirtualBox, VMware Fusion, Vagrant
+VMware Utility e il plugin `vagrant-vmware-desktop`, quindi verifica ogni
+componente.
+
+Il download di VMware Fusion richiede l'accesso al portale Broadcom: lo script
+apre la pagina ufficiale, aspetta che venga scaricato il DMG e poi continua
+l'installazione. macOS può chiedere la password amministratore e
+l'autorizzazione delle estensioni di sistema.
+
+Per reinstallare i programmi conservando VM, box e dati Vagrant:
+
+```bash
+./scripts/install-macos-host.sh --reinstall
+```
+
+La procedura non esegue `vagrant destroy` e non elimina `.vagrant`,
+`.vagrant-vmware` o `~/.vagrant.d`.
+
+Clona il progetto e apri la sua cartella:
+
+```bash
+git clone https://github.com/TheBitPoets/2cornot2c.git
 cd 2cornot2c
 ```
 
-<ol>
-  <li>
-    <p align="justify">
-    Avvia la macchina virtuale (devi essere nella cartella 2cornot2c altrimenti il comando seguente non funziona)
-    </p>
-  </li>
-</ol>
+### Primo avvio
+
+Esegui **un solo avvio guidato**:
+
+- su Windows fai doppio clic su `setup-vm.cmd`;
+- su macOS apri il Terminale nella cartella del progetto ed esegui il comando
+  seguente, quindi scegli VirtualBox o VMware Fusion:
 
 ```bash
-vagrant up
+./scripts/setup-vm.sh
 ```
 
-<ol>
-  <li>
-    <p align="justify">
-    Aspetta che il comando al punto 3 termini e successivamente, sempre nella cartella 2cornot2c, installa il plugin vagrant-vbguest:
-    </p>
-  </li>
-</ol>
+Al primo avvio il download della macchina può richiedere alcuni minuti. Lo
+script controlla i prerequisiti, avvia la VM, verifica gli strumenti didattici,
+le Guest Additions e le cartelle condivise. Se il primo controllo fallisce,
+prova automaticamente un riavvio.
 
-```
-     vagrant plugin install vagrant-vbguest
+La sessione grafica accede automaticamente con l'utente `vagrant`; la password,
+se richiesta, è `vagrant`.
+
+### Cartelle condivise
+
+Le cartelle `lab` e `lab2` del progetto sono disponibili nella VM come `/lab` e
+`/lab2`: i file salvati lì restano anche sul computer reale. La directory del
+progetto è inoltre disponibile come `/vagrant`.
+
+Gli appunti e il trascinamento dei file sono abilitati in entrambe le
+direzioni. Con VMware le cartelle condivise usano VMware Tools; con VirtualBox
+usano le Guest Additions incluse nella box.
+
+### VirtualBox
+
+VirtualBox è il provider usato automaticamente su Windows. Su macOS può essere
+scelto dal menu oppure avviato direttamente:
+
+```bash
+./scripts/setup-vm.sh --virtualbox
 ```
 
-<ol>
-  <li>
-    <p align="justify">
-    Installa le Guest Additions
-    </p>
-  </li>
-</ol>
+I comandi di gestione vanno eseguiti dalla directory del progetto:
 
-```
-vagrant vbguest
+| Operazione | Comando |
+| --- | --- |
+| Avvia | `vagrant up --provider=virtualbox` |
+| Stato | `vagrant status` |
+| Terminale SSH | `vagrant ssh` |
+| Riavvia | `vagrant reload` |
+| Ripeti la configurazione | `vagrant provision` |
+| Spegni | `vagrant halt` |
+
+Su macOS Apple Silicon VirtualBox usa una finestra scalata e una risoluzione
+guest stabile di 1280×800. Non abilitare il ridimensionamento automatico: il
+framebuffer ARM di VirtualBox non lo supporta in modo affidabile. Puoi
+ingrandire o ridurre la finestra trascinandone i bordi.
+
+### VMware Fusion su macOS
+
+Il percorso VMware non modifica la VM VirtualBox esistente. Usa una directory
+di stato separata (`.vagrant-vmware`) e la box ufficiale Bento per
+`vmware_desktop/arm64`. VMware Tools adatta dinamicamente la risoluzione quando
+la finestra viene ridimensionata.
+
+Prima di selezionare VMware devono essere installati:
+
+- [VMware Fusion](https://support.broadcom.com/) per Apple Silicon;
+- [Vagrant VMware Utility](https://developer.hashicorp.com/vagrant/install/vmware);
+- il provider Vagrant:
+
+```bash
+vagrant plugin install vagrant-vmware-desktop
 ```
 
-<ol>
-  <li>
-    <p align="justify">
-    Ricarica le impostazioni della macchina
-    </p>
-  </li>
-</ol>
+Avvia VMware Fusion almeno una volta per accettare la licenza e le
+autorizzazioni di macOS. Poi esegui il primo avvio guidato:
 
+```bash
+./scripts/setup-vm.sh --vmware
 ```
+
+Senza alias, tutti i comandi VMware devono usare la directory di stato
+dedicata:
+
+| Operazione | Comando |
+| --- | --- |
+| Avvia | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant up --provider=vmware_desktop` |
+| Stato | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant status` |
+| Terminale SSH | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant ssh` |
+| Riavvia | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant reload` |
+| Ripeti la configurazione | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant provision` |
+| Spegni | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant halt` |
+
+#### Alias VMware
+
+Per evitare i comandi lunghi, installa una volta sola gli alias:
+
+```bash
+./scripts/install-vmware-aliases.sh
+source ~/.zshrc
+```
+
+L'installer supporta `zsh` e `bash`, può essere eseguito più volte senza creare
+duplicati e registra il percorso corrente del progetto. Se sposti il progetto,
+eseguilo nuovamente.
+
+Gli alias funzionano da qualsiasi cartella:
+
+| Operazione | Alias |
+| --- | --- |
+| Avvia | `vm-up` |
+| Stato | `vm-status` |
+| Terminale SSH | `vm-ssh` |
+| Riavvia | `vm-reload` |
+| Ripeti la configurazione | `vm-provision` |
+| Spegni | `vm-halt` |
+
+#### Risoluzione VMware
+
+Normalmente VMware Tools adatta la risoluzione alla dimensione della finestra.
+Per scegliere manualmente una modalità, apri il terminale dentro Ubuntu ed
+esegui:
+
+```bash
+~/cambia-risoluzione.sh
+```
+
+Durante il provisioning VMware, Vagrant copia automaticamente
+`scripts/change-resolution.sh` dal progetto in
+`/home/vagrant/cambia-risoluzione.sh` e lo rende eseguibile. Se lo script manca
+da una VM già esistente, puoi reinstallarlo con `vm-provision`.
+
+Il menu applica la risoluzione selezionata e chiede conferma entro 15 secondi.
+Se non viene confermata, ripristina automaticamente quella precedente.
+
+### Passare da un provider all'altro su macOS
+
+VirtualBox e VMware mantengono due VM indipendenti. Le cartelle `lab` e `lab2`
+sono però condivise con entrambe: salva lì il lavoro che vuoi ritrovare
+passando da un provider all'altro.
+
+Prima di avviare un provider, spegni l'altro:
+
+```bash
+# da VirtualBox a VMware
+vagrant halt
+vm-up
+
+# da VMware a VirtualBox
+vm-halt
+./scripts/setup-vm.sh --virtualbox
+```
+
+Non usare `vagrant destroy` se vuoi conservare la VM già configurata.
+
+### Diagnosi rapida
+
+Se la finestra non compare o la macchina non risponde:
+
+```bash
+# VirtualBox
+vagrant status
 vagrant reload
+
+# VMware
+vm-status
+vm-reload
 ```
 
-<ol>
-  <li>
-    <p align="justify">
-    Apri una sessione SSH sulla macchina appena avviata
-    </p>
-  </li>
-</ol>
-
-```bash
-vagrant ssh
-```
+Se il problema resta, ripeti il controllo e il provisioning con
+`./scripts/setup-vm.sh --virtualbox` oppure `./scripts/setup-vm.sh --vmware`.
 
 ### Guest Additions
 
@@ -578,107 +674,18 @@ Riferimento principale: README.md, sezione "Guest Additions" (../README.md#guest
 </table>
 <!-- COURSE-FRAME:END README.md#guest-additions -->
 
-<p align="justify">
-Questo paragrafo ti fornisce informazioni aggiuntive sul plugin per installare le Guest Additions in caso ne avessi necessità.
-</p>
+Le Guest Additions sono già incluse nella box Bento usata dal progetto. Non
+installare il plugin `vagrant-vbguest` e non montare manualmente alcuna ISO:
+queste operazioni possono rendere la VM meno stabile. Lo script di avvio
+controlla sia il servizio delle Guest Additions sia le cartelle condivise.
 
-<ol>
-  <li>
-    <p align="justify">
-    Installa il plugin vagrant-vbguest:
-    </p>
-  </li>
-</ol>
+Se la macchina era già stata creata, rilancia semplicemente lo stesso script.
+Il docente può ottenere una prima diagnosi con:
 
-<p align="justify">	
-Apri il terminale o il prompt dei comandi, vai alla directory del progetto Vagrant ed esegui il seguente comando.
-</p>
-
+```bash
+vagrant status
+vagrant reload
 ```
-     vagrant plugin install vagrant-vbguest
-```
-
-<ol>
-  <li>
-    <p align="justify">
-    Configura le Guest Additions nel tuo Vagrantfile:
-    </p>
-  </li>
-</ol>
-
-<p align="justify">	
-Apri il tuo Vagrantfile.<br>
-Aggiungi le seguenti righe all'interno del blocco `config.vm.provision` (o in cima se vuoi applicarle a tutte le VM)
-</p>
-
-```
-     config.vbguest.auto_update = false
-```
-
-<p align="justify">	
-La riga precedente disabilita gli aggiornamenti automatici delle Guest Additions, il che può essere utile se preferisci gestirli manualmente o se riscontri problemi con il processo di aggiornamento automatico. In alternativa, puoi abilitarli in base alla presenza o meno del plugin:
-</p>
-
-```
-     if Vagrant.has_plugin?("vagrant-vbguest")
-       config.vbguest.auto_update = false
-     end
-```
-
-<p align="justify">	
-Questo assicura che l'impostazione sia applicata solamente se il plugin è installato.
-</p>
-
-<ol>
-  <li>
-    <p align="justify">
-    Gestisci le Guest Additions (opzionale):
-    </p>
-  </li>
-</ol>
-
-<p align=justify>
-Se vuoi un maggiore controllo sull'installazione delle Guest Additions, puoi usare i seguenti comandi:
-</p>
-
-<ul>
-  <li>
-    <p align="justify">
-    vagrant vbguest: Questo comando controlla lo stato delle Guest Additions e tenta di installarle o aggiornarle se necessario.
-    </p>
-  </li>
-  <li>
-    <p align="justify">
-    vagrant vbguest --do install: Questo forza l'installazione delle Guest Additions.
-    </p>
-  </li>
-  <li>
-    <p align="justify">
-    vagrant vbguest --do rebuild: Questo ricostruisce i moduli del kernel delle Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
-    </p>
-  </li>
-  <li>
-    <p align="justify">
-    vagrant vbguest --status: Questo mostra lo stato attuale delle aggiunte degli ospiti.
-    </p>
-  </li>
-</ul>
-
-<p align=justify>
-Puoi anche scaricare il file ISO delle Guest Additions e montarlo manualmente all'interno della VM se necessario.
-</p>
-
-<ol>
-  <li>
-    <p align="justify">
-    Avvia o ricarica la tua macchina:
-    </p>
-  </li>
-</ol>
-
-<p align="justify">	
-Dopo aver apportato modifiche al tuo Vagrantfile, esegui vagrant up per avviare la macchina o vagrant reload per applicare le modifiche. Il plugin vagrant-vbguest gestirà l'installazione o l'aggiornamento delle Guest Additions in base alla tua configurazione. Seguendo questi passaggi, puoi gestire efficacemente l'installazione e l'aggiornamento delle Guest Additions di VirtualBox all'interno del tuo ambiente Vagrant.
-</p>
 
 ## Laboratori
 

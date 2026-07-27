@@ -3,6 +3,7 @@
 *.o
 *~
 .vagrant
+.vagrant-vmware/
 *.log
 __pycache__/
 *.py[cod]
