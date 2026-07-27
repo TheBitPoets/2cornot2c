@@ -48,6 +48,10 @@ def traceback_locals(error, function_name):
     return values
 
 
+def traceback_locals_repr(error, function_name):
+    return repr(traceback_locals(error, function_name))
+
+
 class MutableClock:
     def __init__(self, value=NOW):
         self.value = value
@@ -131,6 +135,14 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
                 "github", "subject", "Name", email=credential
             )
 
+    class ClaimEchoProvider:
+        provider_name = "google"
+
+        def authenticate(self, credential):
+            return FederatedIdentityAssertion(
+                "google", "subject", credential, email="student@example.test"
+            )
+
     class InvalidProvider:
         provider_name = "google"
 
@@ -184,6 +196,11 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
         if traceback.tb_frame.f_code.co_name == "authenticate":
             assert "raw-provider-secret" not in traceback.tb_frame.f_locals.values()
         traceback = traceback.tb_next
+    with pytest.raises(ProviderProtocolError) as echoed_claim:
+        service.authenticate(ClaimEchoProvider(), "raw-claim-provider-secret")
+    assert "raw-claim-provider-secret" not in traceback_locals_repr(
+        echoed_claim.value, "authenticate"
+    )
     with pytest.raises(ProviderProtocolError) as wrong_issuer:
         service.authenticate(WrongIssuerProvider(), "raw-wrong-issuer-secret")
     assert "raw-wrong-issuer-secret" not in traceback_locals(

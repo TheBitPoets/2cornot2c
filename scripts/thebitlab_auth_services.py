@@ -304,11 +304,25 @@ class FederatedIdentityService:
         credential: str,
     ) -> UserAccount:
         provider_failed = False
+        assertion_echoed_credential = False
         try:
             expected_provider = _required_text(
                 provider.provider_name, "provider_name", lowercase=True
             )
             assertion = provider.authenticate(credential)
+            if type(assertion) is FederatedIdentityAssertion and type(credential) is str:
+                claims = (
+                    assertion.provider,
+                    assertion.subject,
+                    assertion.display_name,
+                    assertion.email,
+                    assertion.username,
+                )
+                assertion_echoed_credential = any(
+                    type(claim) is str and hmac.compare_digest(claim, credential)
+                    for claim in claims
+                )
+                claims = None
         except Exception:
             # Raise only after leaving except, so __context__ cannot retain credentials.
             provider_failed = True
@@ -319,6 +333,11 @@ class FederatedIdentityService:
         provider = None
         if provider_failed:
             raise ProviderAuthenticationError("Autenticazione provider non riuscita.")
+        if assertion_echoed_credential:
+            assertion = None
+            raise ProviderProtocolError(
+                "Il provider ha restituito una credenziale dentro l'assertion."
+            )
         try:
             normalized_assertion = self._normalize_assertion(assertion)
         finally:
