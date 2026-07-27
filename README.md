@@ -468,6 +468,16 @@ Per collegarti via SSH alla VM VMware:
 VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant ssh
 ```
 
+Su macOS puoi installare una volta sola i comandi brevi:
+
+```bash
+./scripts/install-vmware-aliases.sh
+source ~/.zshrc
+```
+
+Da quel momento puoi usare `vm-up`, `vm-halt`, `vm-ssh`, `vm-status`,
+`vm-reload` e `vm-provision` da qualsiasi cartella.
+
 Per scegliere manualmente una risoluzione, apri il terminale della VM ed
 esegui:
 
