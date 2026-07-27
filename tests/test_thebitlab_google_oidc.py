@@ -912,14 +912,20 @@ def test_urllib_transport_rejects_duplicate_json_and_bounds_response() -> None:
             max_response_bytes=1024,
         )
 
-    transport._opener = ErrorOpener("invalid_client")
-    with pytest.raises(GoogleOidcConfigurationError):
-        transport.exchange_code(
-            endpoint="https://oauth2.googleapis.com/token",
-            form={"client_secret": CLIENT_SECRET},
-            timeout_seconds=1,
-            max_response_bytes=1024,
-        )
+    for configuration_error in (
+        "invalid_client",
+        "unauthorized_client",
+        "unsupported_grant_type",
+        "invalid_scope",
+    ):
+        transport._opener = ErrorOpener(configuration_error)
+        with pytest.raises(GoogleOidcConfigurationError):
+            transport.exchange_code(
+                endpoint="https://oauth2.googleapis.com/token",
+                form={"client_secret": CLIENT_SECRET},
+                timeout_seconds=1,
+                max_response_bytes=1024,
+            )
 
     transport._opener = Opener(b"x" * 1025)
     with pytest.raises(GoogleOidcProviderUnavailableError) as oversized:

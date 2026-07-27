@@ -478,7 +478,12 @@ class UrllibGoogleTokenTransport:
                         if type(decoded_error) is dict
                         else None
                     )
-                    if oauth_error == "invalid_client":
+                    if oauth_error in {
+                        "invalid_client",
+                        "unauthorized_client",
+                        "unsupported_grant_type",
+                        "invalid_scope",
+                    }:
                         configuration_failed = True
                     elif type(oauth_error) is str:
                         rejected = True
