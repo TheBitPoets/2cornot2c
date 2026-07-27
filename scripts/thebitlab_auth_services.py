@@ -235,7 +235,9 @@ class SessionApplicationStorage(Protocol):
 
     def read_user(self, user_id: str) -> UserAccount | None: ...
 
-    def create_session_for_active_user(self, session: UserSession) -> None: ...
+    def create_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None: ...
 
     def read_session_by_token_digest(self, token_digest: str) -> UserSession | None: ...
 
@@ -261,7 +263,9 @@ class PairingApplicationStorage(Protocol):
 
     def save_pairing(self, pairing: TuiPairing) -> None: ...
 
-    def save_pairing_for_active_user(self, pairing: TuiPairing) -> None: ...
+    def save_pairing_for_active_user(
+        self, pairing: TuiPairing, *, expected_user_updated_at: datetime
+    ) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -518,12 +522,18 @@ class SessionService:
                     last_seen_at=now,
                 )
                 try:
-                    self.storage.create_session_for_active_user(session)
-                except IdentityStorageConflictError:
+                    self.storage.create_session_for_active_user(
+                        session, expected_user_updated_at=account.updated_at
+                    )
+                except IdentityStorageConflictError as error:
                     current_account = self.storage.read_user(account.user_id)
                     if current_account is None:
                         raise InvalidCredentialError("Utente non disponibile.")
                     require_active_account(current_account)
+                    if current_account.updated_at != account.updated_at:
+                        raise ConcurrentStateChangeError(
+                            "Utente modificato durante l'emissione della sessione."
+                        ) from error
                     continue
                 return IssuedSession(session, raw_token)
             finally:
@@ -690,7 +700,11 @@ class PairingService:
             raise InvalidCredentialError("Utente non disponibile.")
         require_active_account(account)
         authorized = authorize_pairing(pairing, account.user_id, now)
-        self._save_transition(authorized, require_active_user=True)
+        self._save_transition(
+            authorized,
+            require_active_user=True,
+            expected_user_updated_at=account.updated_at,
+        )
         return authorized
 
     def consume(self, pairing_id: str, code: str) -> TuiPairing:
@@ -709,7 +723,11 @@ class PairingService:
             raise InvalidCredentialError("Utente pairing non disponibile.")
         require_active_account(account)
         consumed = consume_pairing(pairing, now)
-        self._save_transition(consumed, require_active_user=True)
+        self._save_transition(
+            consumed,
+            require_active_user=True,
+            expected_user_updated_at=account.updated_at,
+        )
         return consumed
 
     def revoke(self, pairing_id: str) -> TuiPairing:
@@ -745,11 +763,19 @@ class PairingService:
             raise PairingExpiredError("Pairing scaduto.")
 
     def _save_transition(
-        self, pairing: TuiPairing, *, require_active_user: bool = False
+        self,
+        pairing: TuiPairing,
+        *,
+        require_active_user: bool = False,
+        expected_user_updated_at: datetime | None = None,
     ) -> None:
         try:
             if require_active_user:
-                self.storage.save_pairing_for_active_user(pairing)
+                if expected_user_updated_at is None:
+                    raise AuthApplicationError("Revisione utente pairing mancante.")
+                self.storage.save_pairing_for_active_user(
+                    pairing, expected_user_updated_at=expected_user_updated_at
+                )
             else:
                 self.storage.save_pairing(pairing)
         except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:

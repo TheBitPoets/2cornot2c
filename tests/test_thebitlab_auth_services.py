@@ -501,15 +501,49 @@ def test_session_issue_checks_active_account_inside_storage_transaction(
     )
     create_for_active = storage.create_session_for_active_user
 
-    def disable_then_create(session):
+    def disable_then_create(session, *, expected_user_updated_at):
         storage.save_user(
             replace(account(), active=False, updated_at=NOW + timedelta(seconds=1)),
             expected_updated_at=NOW,
         )
-        create_for_active(session)
+        create_for_active(
+            session, expected_user_updated_at=expected_user_updated_at
+        )
 
     monkeypatch.setattr(storage, "create_session_for_active_user", disable_then_create)
     with pytest.raises(AccountDisabledError):
+        service.issue("user-01")
+    assert storage.list_user_sessions("user-01") == []
+
+
+def test_session_issue_rejects_disable_reenable_aba(storage, monkeypatch) -> None:
+    original = account()
+    storage.create_user(original)
+    service = SessionService(
+        storage,
+        clock=MutableClock(),
+        token_factory=lambda: "E" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    create_for_active = storage.create_session_for_active_user
+
+    def disable_reenable_then_create(session, *, expected_user_updated_at):
+        disabled = replace(
+            original, active=False, updated_at=NOW + timedelta(seconds=1)
+        )
+        storage.save_user(disabled, expected_updated_at=original.updated_at)
+        storage.save_user(
+            replace(original, updated_at=NOW + timedelta(seconds=2)),
+            expected_updated_at=disabled.updated_at,
+        )
+        create_for_active(
+            session, expected_user_updated_at=expected_user_updated_at
+        )
+
+    monkeypatch.setattr(
+        storage, "create_session_for_active_user", disable_reenable_then_create
+    )
+    with pytest.raises(ConcurrentStateChangeError, match="emissione"):
         service.issue("user-01")
     assert storage.list_user_sessions("user-01") == []
 
@@ -789,15 +823,51 @@ def test_pairing_authorization_checks_active_account_inside_storage_transaction(
     issued = service.issue()
     save_for_active = storage.save_pairing_for_active_user
 
-    def disable_then_save(pairing):
+    def disable_then_save(pairing, *, expected_user_updated_at):
         storage.save_user(
             replace(account(), active=False, updated_at=NOW + timedelta(seconds=1)),
             expected_updated_at=NOW,
         )
-        save_for_active(pairing)
+        save_for_active(
+            pairing, expected_user_updated_at=expected_user_updated_at
+        )
 
     monkeypatch.setattr(storage, "save_pairing_for_active_user", disable_then_save)
     with pytest.raises(AccountDisabledError):
+        service.authorize(issued.code, "user-01")
+    assert storage.read_pairing("pairing-01").status == "pending"
+
+
+def test_pairing_authorization_rejects_disable_reenable_aba(storage, monkeypatch) -> None:
+    original = account()
+    storage.create_user(original)
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=MutableClock(),
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    save_for_active = storage.save_pairing_for_active_user
+
+    def disable_reenable_then_save(pairing, *, expected_user_updated_at):
+        disabled = replace(
+            original, active=False, updated_at=NOW + timedelta(seconds=1)
+        )
+        storage.save_user(disabled, expected_updated_at=original.updated_at)
+        storage.save_user(
+            replace(original, updated_at=NOW + timedelta(seconds=2)),
+            expected_updated_at=disabled.updated_at,
+        )
+        save_for_active(
+            pairing, expected_user_updated_at=expected_user_updated_at
+        )
+
+    monkeypatch.setattr(
+        storage, "save_pairing_for_active_user", disable_reenable_then_save
+    )
+    with pytest.raises(ConcurrentStateChangeError, match="Pairing modificato"):
         service.authorize(issued.code, "user-01")
     assert storage.read_pairing("pairing-01").status == "pending"
 
@@ -816,17 +886,55 @@ def test_pairing_consume_translates_concurrent_disable_deletion(storage, monkeyp
     service.authorize(issued.code, "user-01")
     save_for_active = storage.save_pairing_for_active_user
 
-    def disable_then_save(pairing):
+    def disable_then_save(pairing, *, expected_user_updated_at):
         storage.save_user(
             replace(account(), active=False, updated_at=NOW + timedelta(minutes=2)),
             expected_updated_at=NOW,
         )
-        save_for_active(pairing)
+        save_for_active(
+            pairing, expected_user_updated_at=expected_user_updated_at
+        )
 
     monkeypatch.setattr(storage, "save_pairing_for_active_user", disable_then_save)
     with pytest.raises(AccountDisabledError):
         service.consume("pairing-01", issued.code)
     assert storage.read_pairing("pairing-01") is None
+
+
+def test_pairing_consumption_rejects_user_revision_aba(storage, monkeypatch) -> None:
+    original = account()
+    storage.create_user(original)
+    clock = MutableClock(NOW + timedelta(minutes=1))
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    service.authorize(issued.code, "user-01")
+    save_for_active = storage.save_pairing_for_active_user
+
+    def change_restore_then_save(pairing, *, expected_user_updated_at):
+        changed = replace(
+            original, role="teacher", updated_at=NOW + timedelta(minutes=2)
+        )
+        storage.save_user(changed, expected_updated_at=original.updated_at)
+        storage.save_user(
+            replace(original, updated_at=NOW + timedelta(minutes=3)),
+            expected_updated_at=changed.updated_at,
+        )
+        save_for_active(
+            pairing, expected_user_updated_at=expected_user_updated_at
+        )
+
+    monkeypatch.setattr(
+        storage, "save_pairing_for_active_user", change_restore_then_save
+    )
+    with pytest.raises(ConcurrentStateChangeError, match="Pairing modificato"):
+        service.consume("pairing-01", issued.code)
+    assert storage.read_pairing("pairing-01").status == "authorized"
 
 
 def test_pairing_revoke_is_terminal_and_disabled_user_cannot_authorize(storage) -> None:

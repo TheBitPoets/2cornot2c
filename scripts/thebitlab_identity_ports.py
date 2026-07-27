@@ -111,8 +111,10 @@ class SessionStorage(Protocol):
 
     def create_session(self, session: UserSession) -> None: ...
 
-    def create_session_for_active_user(self, session: UserSession) -> None:
-        """Atomically create a session only while its owner is active."""
+    def create_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None:
+        """Create a session only while its active owner revision remains unchanged."""
         ...
 
     def read_session(self, session_id: str) -> UserSession | None: ...
@@ -149,8 +151,10 @@ class TuiPairingStorage(Protocol):
 
     def save_pairing(self, pairing: TuiPairing) -> None: ...
 
-    def save_pairing_for_active_user(self, pairing: TuiPairing) -> None:
-        """Atomically transition a pairing only while its linked user is active."""
+    def save_pairing_for_active_user(
+        self, pairing: TuiPairing, *, expected_user_updated_at: datetime
+    ) -> None:
+        """Transition a pairing only while its active user revision remains unchanged."""
         ...
 
     def delete_expired_pairings(self, expired_before: datetime) -> int:

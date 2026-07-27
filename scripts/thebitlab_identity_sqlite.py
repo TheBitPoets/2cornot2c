@@ -775,13 +775,19 @@ class SqliteIdentityStorage:
                 ),
             )
 
-    def create_session_for_active_user(self, session: UserSession) -> None:
+    def create_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None:
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
         with self._transaction("create_session_for_active_user") as connection:
             cursor = connection.execute(
                 """
                 INSERT INTO sessions
                 SELECT ?, ?, ?, ?, ?, ?, ?
-                FROM users WHERE user_id = ? AND active = 1
+                FROM users
+                WHERE user_id = ? AND active = 1 AND updated_at = ?
                 """,
                 (
                     session.session_id,
@@ -794,6 +800,7 @@ class SqliteIdentityStorage:
                     if session.revoked_at is None
                     else _encode_datetime(session.revoked_at, "revoked_at"),
                     session.user_id,
+                    expected_user_revision,
                 ),
             )
             if cursor.rowcount != 1:
@@ -983,15 +990,25 @@ class SqliteIdentityStorage:
     def save_pairing(self, pairing: TuiPairing) -> None:
         self._save_pairing_transition(pairing, require_active_user=False)
 
-    def save_pairing_for_active_user(self, pairing: TuiPairing) -> None:
+    def save_pairing_for_active_user(
+        self, pairing: TuiPairing, *, expected_user_updated_at: datetime
+    ) -> None:
         if pairing.user_id is None:
             raise IdentityStorageConflictError(
                 "La transizione pairing richiede un utente attivo."
             )
-        self._save_pairing_transition(pairing, require_active_user=True)
+        self._save_pairing_transition(
+            pairing,
+            require_active_user=True,
+            expected_user_updated_at=expected_user_updated_at,
+        )
 
     def _save_pairing_transition(
-        self, pairing: TuiPairing, *, require_active_user: bool
+        self,
+        pairing: TuiPairing,
+        *,
+        require_active_user: bool,
+        expected_user_updated_at: datetime | None = None,
     ) -> None:
         values = self._pairing_values(pairing)
         if pairing.status in {"consumed", "expired", "revoked"} and pairing.user_id is not None:
@@ -1011,11 +1028,15 @@ class SqliteIdentityStorage:
             prior_identity_sql = ""
             prior_identity_values = ()
         if require_active_user:
+            expected_user_revision = _encode_datetime(
+                expected_user_updated_at, "expected_user_updated_at"
+            )
             active_user_sql = (
                 " AND EXISTS (SELECT 1 FROM users"
-                " WHERE users.user_id = ? AND users.active = 1)"
+                " WHERE users.user_id = ? AND users.active = 1"
+                " AND users.updated_at = ?)"
             )
-            active_user_values = (pairing.user_id,)
+            active_user_values = (pairing.user_id, expected_user_revision)
         else:
             active_user_sql = ""
             active_user_values = ()

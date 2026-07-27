@@ -391,6 +391,21 @@ def test_session_last_seen_update_rejects_stale_snapshot(storage) -> None:
     assert storage.read_session("session-01") == newer
 
 
+def test_active_session_creation_requires_matching_user_revision(storage) -> None:
+    original = account()
+    storage.create_user(original)
+    storage.save_user(
+        replace(original, updated_at=NOW + timedelta(seconds=1)),
+        expected_updated_at=original.updated_at,
+    )
+
+    with pytest.raises(IdentityStorageConflictError, match="utente non attivo"):
+        storage.create_session_for_active_user(
+            session(), expected_user_updated_at=original.updated_at
+        )
+    assert storage.list_user_sessions("user-01") == []
+
+
 def test_session_digest_is_unique_under_concurrent_writes(storage) -> None:
     storage.create_user(account())
     contenders = [session(f"session-{index}") for index in range(2)]
@@ -433,6 +448,24 @@ def test_pairing_digest_lookup_lifecycle_and_cleanup(storage) -> None:
 
     with pytest.raises(IdentityStorageConflictError):
         storage.create_pairing(pairing("pairing-duplicate"))
+
+
+def test_active_pairing_transition_requires_matching_user_revision(storage) -> None:
+    original = account()
+    storage.create_user(original)
+    pending = pairing()
+    storage.create_pairing(pending)
+    storage.save_user(
+        replace(original, updated_at=NOW + timedelta(seconds=1)),
+        expected_updated_at=original.updated_at,
+    )
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=1))
+
+    with pytest.raises(IdentityStorageConflictError, match="non attivo"):
+        storage.save_pairing_for_active_user(
+            authorized, expected_user_updated_at=original.updated_at
+        )
+    assert storage.read_pairing("pairing-01") == pending
 
 
 def test_pairing_consumption_is_atomic_and_terminal(storage) -> None:
