@@ -50,16 +50,16 @@ build {
   ]
 
   provisioner "file" {
-    source      = "../scripts/change-resolution.sh"
+    source      = "${path.root}/../scripts/change-resolution.sh"
     destination = "/tmp/change-resolution.sh"
   }
 
   provisioner "shell" {
     scripts = [
-      "provision/toolchain.sh",
-      "provision/desktop-xfce-minimal.sh",
-      "provision/classroom.sh",
-      "provision/cleanup.sh",
+      "${path.root}/provision/toolchain.sh",
+      "${path.root}/provision/desktop-xfce-minimal.sh",
+      "${path.root}/provision/classroom.sh",
+      "${path.root}/provision/cleanup.sh",
     ]
     execute_command = "chmod +x '{{ .Path }}'; echo 'vagrant' | sudo -S -E '{{ .Path }}'"
   }
