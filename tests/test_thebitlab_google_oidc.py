@@ -282,9 +282,6 @@ def test_unexpected_flow_store_failure_discards_and_scrubs_credentials(
         def discard_created_flow(self, state, creation_marker):
             return real_store.discard_created_flow(state, creation_marker)
 
-        def discard(self, state):
-            return real_store.discard(state)
-
     service.flows = InsertThenFailStore()
     with pytest.raises(GoogleOidcProviderUnavailableError) as captured:
         service.begin_login()
@@ -293,6 +290,25 @@ def test_unexpected_flow_store_failure_discards_and_scrubs_credentials(
     assert STATE not in retained
     assert NONCE not in retained
     assert VERIFIER not in retained
+
+
+def test_preinsert_store_failure_never_discards_existing_flow(database_path, clock) -> None:
+    service, _storage, real_store, _transport, _verifier = make_service(
+        database_path, clock
+    )
+    begin_state(service)
+
+    class FailBeforeInsertStore:
+        def create(self, *_args):
+            raise RuntimeError("pre-insert failure")
+
+        def discard_created_flow(self, state, creation_marker):
+            return real_store.discard_created_flow(state, creation_marker)
+
+    service.flows = FailBeforeInsertStore()
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        service.begin_login()
+    assert real_store.pending_count() == 1
 
 
 def test_valid_callback_onboards_pending_user_and_issues_session_cookie(

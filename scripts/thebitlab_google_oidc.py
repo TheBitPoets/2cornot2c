@@ -318,20 +318,6 @@ class InMemoryGoogleOidcFlowStore:
         creation_marker = None
         return matches
 
-    def discard(self, state: str) -> bool:
-        digest_failed = False
-        try:
-            digest = self.state_digest(state)
-        except Exception:
-            digest_failed = True
-            digest = ""
-        finally:
-            state = None
-        if digest_failed:
-            return False
-        with self._lock:
-            return self._flows.pop(digest, None) is not None
-
     def delete_expired(self, cutoff: datetime) -> int:
         with self._lock:
             expired = [key for key, flow in self._flows.items() if flow.expires_at <= cutoff]
@@ -647,7 +633,7 @@ class GoogleOidcLoginService:
                     continue
             if store_failed:
                 try:
-                    self.flows.discard(state)
+                    self.flows.discard_created_flow(state, creation_marker)
                 except Exception:
                     pass
                 state = None
@@ -682,7 +668,7 @@ class GoogleOidcLoginService:
                 build_failed = True
             if build_failed or authorization_url is None:
                 try:
-                    self.flows.discard(state)
+                    self.flows.discard_created_flow(state, creation_marker)
                 except Exception:
                     pass
                 state = None
