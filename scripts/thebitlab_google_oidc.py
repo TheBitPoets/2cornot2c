@@ -653,6 +653,16 @@ class _X509OnlyGoogleCertRequest:
                 for key, value in decoded.items()
             )
         )
+        if valid:
+            try:
+                from cryptography import x509
+
+                for certificate_pem in decoded.values():
+                    x509.load_pem_x509_certificate(certificate_pem.encode("ascii"))
+            except Exception:
+                valid = False
+            finally:
+                certificate_pem = None
         decoded = None
         data = None
         if not valid:
@@ -1405,7 +1415,7 @@ class GoogleOidcLoginService:
                     not math.isfinite(expires_value)
                     or not math.isfinite(issued_value)
                     or expires_value <= issued_value
-                    or now_timestamp >= expires_value
+                    or now_timestamp >= expires_value + skew
                     or issued_value > now_timestamp + skew
                     or now_timestamp - issued_value
                     > self.config.id_token_max_age.total_seconds() + skew

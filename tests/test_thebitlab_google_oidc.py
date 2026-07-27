@@ -799,7 +799,7 @@ def test_login_result_construction_failure_revokes_issued_session(
         {"email_verified": 1},
         {"sub": ""},
         {"sub": "subject\nlog"},
-        {"exp": int(NOW.timestamp())},
+        {"exp": int((NOW - timedelta(seconds=31)).timestamp())},
         {"exp": ID_TOKEN},
         {"iat": ID_TOKEN},
         {"iat": int((NOW + timedelta(minutes=2)).timestamp())},
@@ -826,6 +826,22 @@ def test_wrong_or_unverified_claims_never_create_user(database_path, clock, over
     )
     assert storage.list_users() == []
     assert storage.list_user_sessions("internal-user-01") == []
+
+
+def test_expiration_within_configured_clock_skew_is_accepted(database_path, clock) -> None:
+    verifier = FakeIdTokenVerifier(
+        claims(
+            iat=int((NOW - timedelta(minutes=1)).timestamp()),
+            exp=int((NOW - timedelta(seconds=10)).timestamp()),
+        )
+    )
+    service, _storage, _flows, _transport, _verifier = make_service(
+        database_path, clock, verifier=verifier
+    )
+    state = begin_state(service)
+
+    result = finish_callback(service, valid_callback(state))
+    assert result.user_id == "internal-user-01"
 
 
 def test_disabled_existing_google_identity_is_rejected_without_session(
@@ -1120,6 +1136,22 @@ def test_official_google_verifier_validates_rs256_signature_and_sanitizes_failur
             token, audience=CLIENT_ID
         )
     assert jwks_request.calls == 1
+
+    class MalformedCertificateRequest:
+        def __call__(self, *_args, **_kwargs):
+            response = CertResponse()
+            response.data = json.dumps(
+                {
+                    "key-1": "-----BEGIN CERTIFICATE-----\n"
+                    "garbage\n-----END CERTIFICATE-----"
+                }
+            ).encode()
+            return response
+
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        GoogleOfficialIdTokenVerifier(MalformedCertificateRequest()).verify(
+            token, audience=CLIENT_ID
+        )
 
     token_parts = token.split(".")
     token_parts[2] = ("A" if token_parts[2][0] != "A" else "B") + token_parts[2][1:]

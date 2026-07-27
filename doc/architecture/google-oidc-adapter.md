@@ -73,7 +73,7 @@ Non vengono persistiti:
 - ID/access/refresh token;
 - cookie sessione raw.
 
-URL/result dataclass escludono i valori sensibili dal `repr`. Transport, verifier e callback eliminano riferimenti locali prima di propagare errori sanitizzati. Access e refresh token eventualmente presenti nella risposta Google vengono ignorati: una futura necessità di refresh token richiederà una decisione separata su cifratura, retention e revoca.
+URL/result dataclass escludono i valori sensibili dal `repr`. Transport, verifier e callback eliminano riferimenti locali raw prima di propagare errori sanitizzati. Il threat model dei log/traceback copre messaggi, `repr` e serializzazione dei locals; non promette segretezza contro codice con introspezione arbitraria ricorsiva dell'object graph o accesso alla memoria del processo, che può necessariamente raggiungere le credenziali necessarie al token exchange. Access e refresh token eventualmente presenti nella risposta Google vengono ignorati: una futura necessità di refresh token richiederà una decisione separata su cifratura, retention e revoca.
 
 ## Errori
 
