@@ -70,3 +70,7 @@ Nel menu premi `a`, controlla il provider mostrato e premi `s` per confermare.
 Questa fase non scarica ancora il repository o la box Packer e non avvia la
 VM. Il bootstrap monocomando aggiungerà questi passi dopo aver fissato URL,
 versione e checksum degli artefatti pubblicati.
+
+Il contratto e il downloader verificato sono implementati in
+`installer/artifacts.py`; manca intenzionalmente il manifest reale finché la
+box VirtualBox AMD64 non supera il collaudo Windows.

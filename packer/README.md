@@ -52,6 +52,25 @@ packer build -only=classroom.vagrant.virtualbox-amd64 classroom.pkr.hcl
 
 Gli artefatti vengono scritti sotto `packer/output/` e sono ignorati da Git.
 
+## Manifest di rilascio
+
+`release-manifest.example.json` descrive il contratto che una release deve
+pubblicare insieme alle box. Per ciascun host contiene:
+
+- provider e architettura;
+- nome Vagrant immutabile che include la versione;
+- URL esclusivamente HTTPS;
+- dimensione esatta;
+- checksum SHA-256.
+
+L'esempio usa deliberatamente `example.invalid` e checksum fittizi: non è un
+manifest installabile. Il manifest reale verrà aggiunto soltanto dopo aver
+costruito e collaudato entrambe le box.
+
+L'installer scarica a blocchi in un file `.part`, controlla dimensione e
+checksum e rinomina atomicamente il file solo dopo la verifica. Una box
+parziale o alterata non viene mai importata in Vagrant.
+
 ## Test minimo
 
 Dopo la build VMware:
