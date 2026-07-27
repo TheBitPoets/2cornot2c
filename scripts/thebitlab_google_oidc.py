@@ -255,27 +255,38 @@ class InMemoryGoogleOidcFlowStore:
         now: datetime,
         ttl: timedelta,
     ) -> None:
-        flow = PendingGoogleOidcFlow(
-            state_digest=self.state_digest(state),
-            nonce_digest=self.nonce_digest(nonce),
-            code_verifier=code_verifier,
-            creation_marker=creation_marker,
-            created_at=now,
-            expires_at=now + ttl,
-        )
-        with self._lock:
-            expired = [
-                key for key, current in self._flows.items()
-                if current.expires_at <= now
-            ]
-            for key in expired:
-                del self._flows[key]
-            if len(self._flows) >= self.max_pending_flows:
-                flow = None
-                raise GoogleOidcStateConflictError("Capacita flow OIDC esaurita.")
-            if flow.state_digest in self._flows:
-                raise GoogleOidcStateConflictError("Collisione state OIDC.")
-            self._flows[flow.state_digest] = flow
+        flow = None
+        conflict_message = None
+        try:
+            flow = PendingGoogleOidcFlow(
+                state_digest=self.state_digest(state),
+                nonce_digest=self.nonce_digest(nonce),
+                code_verifier=code_verifier,
+                creation_marker=creation_marker,
+                created_at=now,
+                expires_at=now + ttl,
+            )
+            with self._lock:
+                expired = [
+                    key for key, current in self._flows.items()
+                    if current.expires_at <= now
+                ]
+                for key in expired:
+                    del self._flows[key]
+                if len(self._flows) >= self.max_pending_flows:
+                    conflict_message = "Capacita flow OIDC esaurita."
+                elif flow.state_digest in self._flows:
+                    conflict_message = "Collisione state OIDC."
+                else:
+                    self._flows[flow.state_digest] = flow
+        finally:
+            state = None
+            nonce = None
+            code_verifier = None
+            creation_marker = None
+            flow = None
+        if conflict_message is not None:
+            raise GoogleOidcStateConflictError(conflict_message)
 
     def consume(self, state: str, now: datetime) -> PendingGoogleOidcFlow:
         digest_failed = False

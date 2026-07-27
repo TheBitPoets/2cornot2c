@@ -415,6 +415,23 @@ def test_flow_creation_auto_cleans_expired_records_and_store_is_bounded(
         service.begin_login()
     assert bounded.pending_count() == 1
 
+    raw_state = "raw-direct-state"
+    raw_nonce = "raw-direct-nonce"
+    raw_verifier = "raw-direct-pkce-verifier"
+    with pytest.raises(GoogleOidcStateConflictError) as captured:
+        bounded.create(
+            raw_state,
+            raw_nonce,
+            raw_verifier,
+            object(),
+            clock.value,
+            timedelta(minutes=1),
+        )
+    retained = traceback_function_locals(captured.value, "create")
+    assert raw_state not in retained
+    assert raw_nonce not in retained
+    assert raw_verifier not in retained
+
 
 def test_expired_state_is_consumed_and_cleanup_is_explicit(database_path, clock) -> None:
     service, _storage, flows, transport, _verifier = make_service(
