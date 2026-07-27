@@ -2,7 +2,7 @@
 
 ## Scopo
 
-Questo documento descrive il livello applicativo tra provider federati, dominio identity e storage SQLite. Gli endpoint HTTP, i cookie e gli SDK Google/GitHub restano adapter successivi.
+Questo documento descrive il livello applicativo tra provider federati, dominio identity e storage SQLite. Il boundary provider-independent per cookie, CSRF e ruoli è descritto in `http-session-authorization.md`; route concrete e SDK Google/GitHub restano adapter successivi.
 
 ## Dipendenze
 
@@ -48,7 +48,7 @@ Una sessione revocata o appartenente a un account disabilitato fallisce chiusa. 
 
 La disabilitazione di un account revoca atomicamente le sue sessioni e rimuove pairing ancora autorizzati, impedendo che una successiva riabilitazione faccia rivivere credenziali precedenti. Gli aggiornamenti utente richiedono `created_at` immutabile, un nuovo `updated_at` strettamente successivo e l'`expected_updated_at` della revisione letta. Il compare-and-swap impedisce a uno snapshot stale di riattivare l'account anche se prova a presentare un timestamp futuro.
 
-Il ruolo `pending` puo possedere una sessione per completare onboarding, ma l'autorizzazione HTTP futura deve impedirgli l'accesso ai dati applicativi.
+Il ruolo `pending` puo possedere una sessione per completare onboarding, ma `HttpSessionAuthBoundary.authorize_application` lo esclude dalle policy sui dati applicativi.
 
 ## Pairing TUI
 
@@ -79,7 +79,7 @@ I messaggi non includono credenziali raw. Gli errori storage condivisi sono defi
 ## Fuori scope
 
 - Google OIDC e GitHub OAuth reali;
-- cookie, CSRF, middleware e autorizzazione route;
+- integrazione del boundary HTTP nelle route e nelle dashboard concrete;
 - rate limiting distribuito;
 - emissione atomica di una sessione TUI dopo il consumo;
 - UI e browser E2E.
