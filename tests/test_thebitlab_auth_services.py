@@ -1,0 +1,418 @@
+from __future__ import annotations
+
+import sqlite3
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from scripts.thebitlab_auth_services import (
+    AuthApplicationError,
+    ConcurrentStateChangeError,
+    CredentialGenerationError,
+    FakeFederatedIdentityProvider,
+    FederatedIdentityAssertion,
+    FederatedIdentityService,
+    InvalidCredentialError,
+    IssuedPairing,
+    IssuedSession,
+    OnboardingNotAllowedError,
+    PairingExpiredError,
+    PairingService,
+    PairingStateError,
+    ProviderAuthenticationError,
+    SessionService,
+)
+from scripts.thebitlab_identity import AccountDisabledError, ExternalIdentity, UserAccount
+from scripts.thebitlab_identity_sqlite import IdentityStorageConflictError, SqliteIdentityStorage
+
+
+NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
+PEPPER = b"p" * 32
+
+
+class MutableClock:
+    def __init__(self, value=NOW):
+        self.value = value
+
+    def __call__(self):
+        return self.value
+
+
+def account(user_id="user-01", **overrides):
+    values = {
+        "user_id": user_id,
+        "display_name": "Mario Rossi",
+        "role": "student",
+        "active": True,
+        "created_at": NOW,
+        "updated_at": NOW,
+        "primary_email": "mario@example.test",
+    }
+    values.update(overrides)
+    return UserAccount(**values)
+
+
+@pytest.fixture
+def database_path(tmp_path):
+    return tmp_path / "identity.sqlite3"
+
+
+@pytest.fixture
+def storage(database_path):
+    return SqliteIdentityStorage(database_path)
+
+
+def google_assertion(subject="google-42"):
+    return FederatedIdentityAssertion(
+        "google",
+        subject,
+        "Mario Rossi",
+        email="Mario@Example.Test",
+        email_verified=True,
+        username="mario",
+    )
+
+
+def test_fake_google_onboards_unknown_user_as_pending_atomically(storage) -> None:
+    assertion = google_assertion()
+    provider = FakeFederatedIdentityProvider("google", {"valid": assertion})
+    service = FederatedIdentityService(
+        storage,
+        clock=MutableClock(),
+        user_id_factory=lambda: "internal-01",
+    )
+
+    user = service.authenticate(provider, "valid")
+
+    assert user.role == "pending"
+    assert user.primary_email == "mario@example.test"
+    assert storage.read_user("internal-01") == user
+    identity = storage.read_external_identity("google", "google-42")
+    assert identity is not None
+    assert identity.user_id == "internal-01"
+    with pytest.raises(ProviderAuthenticationError, match="non valida") as captured:
+        service.authenticate(provider, "raw-secret-not-in-error")
+    assert "raw-secret" not in str(captured.value)
+    assert captured.value.__cause__ is None
+
+
+def test_existing_identity_refreshes_attributes_without_changing_owner_or_link_time(storage) -> None:
+    user = account()
+    original = ExternalIdentity("user-01", "google", "google-42", NOW, email="old@example.test")
+    storage.provision_user_with_identity(user, original)
+    clock = MutableClock(NOW + timedelta(days=1))
+    assertion = replace(google_assertion(), email="new@example.test", username="new-name")
+    service = FederatedIdentityService(storage, clock=clock)
+
+    assert service.resolve(assertion) == user
+    refreshed = storage.read_external_identity("google", "google-42")
+    assert refreshed == replace(original, email="new@example.test", username="new-name")
+
+
+def test_unknown_github_or_unverified_google_cannot_self_onboard(storage) -> None:
+    service = FederatedIdentityService(storage, clock=MutableClock())
+    github = FederatedIdentityAssertion("github", "42", "Mario", username="mario")
+    unverified = replace(google_assertion(), email_verified=False)
+
+    with pytest.raises(OnboardingNotAllowedError):
+        service.resolve(github)
+    with pytest.raises(OnboardingNotAllowedError):
+        service.resolve(unverified)
+    assert storage.list_users() == []
+
+
+def test_disabled_linked_account_is_rejected(storage) -> None:
+    user = account(active=False)
+    identity = ExternalIdentity("user-01", "google", "google-42", NOW)
+    storage.provision_user_with_identity(user, identity)
+
+    with pytest.raises(AccountDisabledError):
+        FederatedIdentityService(storage, clock=MutableClock()).resolve(google_assertion())
+
+
+def test_concurrent_onboarding_returns_one_stable_internal_user(storage) -> None:
+    assertion = google_assertion()
+    counter = iter(f"internal-{index}" for index in range(20))
+    counter_lock = threading.Lock()
+
+    def next_id():
+        with counter_lock:
+            return next(counter)
+
+    service = FederatedIdentityService(
+        storage,
+        clock=MutableClock(),
+        user_id_factory=next_id,
+    )
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        users = list(executor.map(lambda _index: service.resolve(assertion), range(8)))
+
+    assert len({user.user_id for user in users}) == 1
+    assert len(storage.list_users()) == 1
+    assert len(storage.list_external_identities(users[0].user_id)) == 1
+
+
+def test_atomic_provisioning_rejects_mismatched_owner_without_writes(storage) -> None:
+    with pytest.raises(IdentityStorageConflictError, match="proprietari diversi"):
+        storage.provision_user_with_identity(
+            account("user-01"), ExternalIdentity("user-02", "google", "subject", NOW)
+        )
+    assert storage.list_users() == []
+
+
+def test_atomic_provisioning_rolls_back_user_when_identity_conflicts(storage) -> None:
+    owner = account("owner")
+    storage.provision_user_with_identity(
+        owner, ExternalIdentity("owner", "google", "subject", NOW)
+    )
+    candidate = account("candidate")
+
+    with pytest.raises(IdentityStorageConflictError):
+        storage.provision_user_with_identity(
+            candidate, ExternalIdentity("candidate", "google", "subject", NOW)
+        )
+
+    assert storage.read_user("candidate") is None
+    assert storage.read_external_identity("google", "subject").user_id == "owner"
+
+
+def test_session_issue_authenticate_touch_revoke_and_raw_token_hygiene(storage, database_path) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = SessionService(
+        storage,
+        clock=clock,
+        ttl=timedelta(hours=1),
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+
+    issued = service.issue("user-01")
+    assert isinstance(issued, IssuedSession)
+    assert issued.bearer_token not in repr(issued)
+    with sqlite3.connect(database_path) as connection:
+        stored = connection.execute(
+            "SELECT token_digest FROM sessions WHERE session_id = 'session-01'"
+        ).fetchone()[0]
+    assert stored != issued.bearer_token
+    assert issued.bearer_token not in stored
+    with pytest.raises(InvalidCredentialError, match="non valida"):
+        service.authenticate("short")
+
+    clock.value = NOW + timedelta(minutes=5)
+    authenticated = service.authenticate(issued.bearer_token)
+    assert authenticated.user.user_id == "user-01"
+    assert authenticated.session.last_seen_at == clock.value
+    assert service.revoke(issued.bearer_token) is True
+    assert service.revoke(issued.bearer_token) is False
+    with pytest.raises(InvalidCredentialError):
+        service.authenticate(issued.bearer_token)
+
+
+def test_session_expiration_is_exclusive_and_disabled_users_fail_closed(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = SessionService(
+        storage,
+        clock=clock,
+        ttl=timedelta(minutes=10),
+        token_factory=lambda: "A" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+
+    clock.value = NOW + timedelta(minutes=10)
+    with pytest.raises(InvalidCredentialError):
+        service.authenticate(issued.bearer_token)
+    assert service.revoke(issued.bearer_token) is False
+
+    storage.save_user(replace(account(), active=False, updated_at=NOW + timedelta(minutes=10)))
+    clock.value = NOW + timedelta(minutes=5)
+    with pytest.raises(AccountDisabledError):
+        service.authenticate(issued.bearer_token)
+    with pytest.raises(AccountDisabledError):
+        service.issue("user-01")
+
+
+def test_session_revoke_reports_concurrent_active_change(storage, monkeypatch) -> None:
+    storage.create_user(account())
+    service = SessionService(
+        storage,
+        clock=MutableClock(),
+        token_factory=lambda: "R" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+
+    def conflict(_session):
+        raise IdentityStorageConflictError("simulated")
+
+    monkeypatch.setattr(storage, "save_session", conflict)
+    with pytest.raises(ConcurrentStateChangeError, match="durante la revoca"):
+        service.revoke(issued.bearer_token)
+
+
+def test_invalid_session_generators_fail_before_persistence(storage) -> None:
+    storage.create_user(account())
+    service = SessionService(
+        storage,
+        clock=MutableClock(),
+        token_factory=lambda: "short",
+        session_id_factory=lambda: "session-01",
+    )
+
+    with pytest.raises(CredentialGenerationError, match="Token di sessione"):
+        service.issue("user-01")
+    assert storage.list_user_sessions("user-01") == []
+
+
+def test_session_generation_collision_fails_without_exposing_raw_token(storage) -> None:
+    storage.create_user(account())
+    first = SessionService(
+        storage,
+        clock=MutableClock(),
+        token_factory=lambda: "C" * 40,
+        session_id_factory=lambda: "same-session",
+    )
+    first.issue("user-01")
+
+    with pytest.raises(CredentialGenerationError, match="sessione univoca") as captured:
+        first.issue("user-01")
+    assert "C" * 40 not in str(captured.value)
+    assert len(storage.list_user_sessions("user-01")) == 1
+
+
+def test_pairing_issue_authorize_consume_and_replay_protection(storage, database_path) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+
+    issued = service.issue()
+    assert isinstance(issued, IssuedPairing)
+    assert issued.code not in repr(issued)
+    with sqlite3.connect(database_path) as connection:
+        digest = connection.execute(
+            "SELECT code_digest FROM tui_pairings WHERE pairing_id = 'pairing-01'"
+        ).fetchone()[0]
+    assert issued.code not in digest
+
+    clock.value = NOW + timedelta(minutes=1)
+    authorized = service.authorize(issued.code, "user-01")
+    assert authorized.status == "authorized"
+    consumed = service.consume(issued.pairing.pairing_id, issued.code)
+    assert consumed.status == "consumed"
+    with pytest.raises(PairingStateError):
+        service.consume(issued.pairing.pairing_id, issued.code)
+    with pytest.raises(PairingStateError):
+        service.authorize(issued.code, "user-01")
+
+
+def test_pairing_revoke_is_terminal_and_disabled_user_cannot_authorize(storage) -> None:
+    storage.create_user(account(active=False))
+    clock = MutableClock()
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    with pytest.raises(AccountDisabledError):
+        service.authorize(issued.code, "user-01")
+
+    revoked = service.revoke("pairing-01")
+    assert revoked.status == "revoked"
+    with pytest.raises(PairingStateError):
+        service.revoke("pairing-01")
+    with pytest.raises(PairingStateError):
+        service.authorize(issued.code, "user-01")
+
+
+def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        ttl=timedelta(minutes=2),
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+
+    with pytest.raises(InvalidCredentialError, match="non valido"):
+        service.authorize("WRONGCODE9", "user-01")
+    with pytest.raises(InvalidCredentialError, match="non valido"):
+        service.authorize("", "user-01")
+    clock.value = NOW + timedelta(minutes=2)
+    with pytest.raises(PairingExpiredError):
+        service.authorize(issued.code, "user-01")
+    assert storage.read_pairing("pairing-01").status == "expired"
+
+
+def test_pairing_concurrent_consumption_has_one_winner(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    clock.value = NOW + timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+
+    def consume_once():
+        try:
+            service.consume("pairing-01", issued.code)
+            return "consumed"
+        except (PairingStateError, ConcurrentStateChangeError):
+            return "rejected"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(lambda _index: consume_once(), range(2)))
+
+    assert sorted(outcomes) == ["consumed", "rejected"]
+    assert storage.read_pairing("pairing-01").status == "consumed"
+
+
+def test_invalid_pairing_generator_fails_before_persistence(storage) -> None:
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=MutableClock(),
+        code_factory=lambda: "short",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    with pytest.raises(CredentialGenerationError, match="pairing code"):
+        service.issue()
+    assert storage.read_pairing("pairing-01") is None
+
+
+def test_pairing_collision_and_short_pepper_fail_closed(storage) -> None:
+    with pytest.raises(AuthApplicationError, match="pepper"):
+        PairingService(storage, pepper=b"short")
+
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=MutableClock(),
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service.issue()
+    with pytest.raises(CredentialGenerationError, match="pairing univoco"):
+        service.issue()

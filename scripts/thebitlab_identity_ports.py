@@ -14,10 +14,32 @@ from scripts.thebitlab_identity import (
 )
 
 
+class IdentityStorageError(RuntimeError):
+    """Base error shared by identity persistence adapters."""
+
+
+class IdentityStorageConflictError(IdentityStorageError):
+    """Raised when a persistence invariant or compare-and-swap fails."""
+
+
+class IdentityStorageNotFoundError(IdentityStorageError):
+    """Raised when an update targets a missing identity record."""
+
+
+class IdentityStorageCorruptionError(IdentityStorageError):
+    """Raised when persisted data cannot satisfy the domain contracts."""
+
+
 class UserDirectoryStorage(Protocol):
     """Persistence port for internal users and linked external identities."""
 
     def create_user(self, user: UserAccount) -> None: ...
+
+    def provision_user_with_identity(
+        self, user: UserAccount, identity: ExternalIdentity
+    ) -> None:
+        """Atomically create one user and its first provider identity."""
+        ...
 
     def read_user(self, user_id: str) -> UserAccount | None: ...
 

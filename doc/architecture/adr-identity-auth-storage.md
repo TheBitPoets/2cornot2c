@@ -161,5 +161,6 @@ Le porte di persistenza sono definite in `scripts/thebitlab_identity_ports.py`:
 
 - Epic MVP: #535.
 - Contratti iniziali: #537.
+- Servizi applicativi: [`auth-application-services.md`](auth-application-services.md).
 - Roadmap MVP: #292.
 - Roadmap architetturale: #282.

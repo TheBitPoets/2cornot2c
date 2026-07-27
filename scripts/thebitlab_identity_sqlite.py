@@ -16,26 +16,16 @@ from scripts.thebitlab_identity import (
     UserAccount,
     UserSession,
 )
+from scripts.thebitlab_identity_ports import (
+    IdentityStorageConflictError,
+    IdentityStorageCorruptionError,
+    IdentityStorageError,
+    IdentityStorageNotFoundError,
+)
 
 
 SCHEMA_VERSION = 1
 _T = TypeVar("_T")
-
-
-class IdentityStorageError(RuntimeError):
-    """Base error for identity persistence failures."""
-
-
-class IdentityStorageConflictError(IdentityStorageError):
-    """Raised when a database uniqueness or foreign-key invariant fails."""
-
-
-class IdentityStorageNotFoundError(IdentityStorageError):
-    """Raised when an update targets a record that does not exist."""
-
-
-class IdentityStorageCorruptionError(IdentityStorageError):
-    """Raised when persisted data cannot satisfy the domain contracts."""
 
 
 _MIGRATION_1 = (
@@ -402,6 +392,38 @@ class SqliteIdentityStorage:
                     _encode_datetime(user.created_at, "created_at"),
                     _encode_datetime(user.updated_at, "updated_at"),
                     user.primary_email,
+                ),
+            )
+
+    def provision_user_with_identity(
+        self, user: UserAccount, identity: ExternalIdentity
+    ) -> None:
+        if identity.user_id != user.user_id:
+            raise IdentityStorageConflictError(
+                "Utente e identita del provisioning hanno proprietari diversi."
+            )
+        with self._transaction("provision_user_with_identity") as connection:
+            connection.execute(
+                "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    user.user_id,
+                    user.display_name,
+                    user.role,
+                    int(user.active),
+                    _encode_datetime(user.created_at, "created_at"),
+                    _encode_datetime(user.updated_at, "updated_at"),
+                    user.primary_email,
+                ),
+            )
+            connection.execute(
+                "INSERT INTO external_identities VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    identity.provider,
+                    identity.subject,
+                    identity.user_id,
+                    _encode_datetime(identity.linked_at, "linked_at"),
+                    identity.email,
+                    identity.username,
                 ),
             )
 

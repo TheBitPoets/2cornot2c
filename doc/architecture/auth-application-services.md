@@ -1,0 +1,82 @@
+# Servizi applicativi di autenticazione
+
+## Scopo
+
+Questo documento descrive il livello applicativo tra provider federati, dominio identity e storage SQLite. Gli endpoint HTTP, i cookie e gli SDK Google/GitHub restano adapter successivi.
+
+## Dipendenze
+
+I servizi dipendono soltanto da:
+
+- contratti immutabili in `scripts/thebitlab_identity.py`;
+- porte ed errori storage in `scripts/thebitlab_identity_ports.py`;
+- porta `FederatedIdentityProvider`;
+- clock e generatori iniettati.
+
+Non importano l'adapter SQLite concreto né SDK OAuth/OIDC.
+
+## Assertion federata
+
+Un adapter provider autentica la credenziale opaca e restituisce `FederatedIdentityAssertion`, contenente provider e subject stabili oltre ad attributi aggiornabili. Validazione di firma, issuer, audience, nonce e protocollo appartengono all'adapter reale.
+
+Il fake provider usa chiavi deterministiche solo nei test. Non simula crittografia e non deve essere abilitato come provider di produzione.
+
+`FederatedIdentityService` applica queste regole:
+
+1. `(provider, subject)` gia collegato risolve lo stesso `user_id` interno;
+2. email e username possono essere aggiornati senza cambiare proprietario o `linked_at`;
+3. account disabilitati vengono rifiutati;
+4. una identita sconosciuta puo creare un utente soltanto se il provider e autorizzato all'onboarding e l'email e verificata;
+5. il nuovo utente ha sempre ruolo `pending`;
+6. creazione utente e primo linking sono una singola transazione SQLite;
+7. una race di onboarding restituisce il vincitore gia persistito, senza utenti orfani.
+
+La policy iniziale autorizza all'onboarding soltanto `google`. GitHub verra collegato in un flusso autenticato successivo.
+
+## Sessioni
+
+`SessionService` genera un bearer ad alta entropia e persiste soltanto `sha256:<hex>`. Il valore raw compare esclusivamente in `IssuedSession`, con `repr` oscurato, e deve essere consegnato una volta al chiamante.
+
+La validita usa l'intervallo esclusivo:
+
+```text
+created_at <= now < expires_at
+```
+
+Una sessione revocata o appartenente a un account disabilitato fallisce chiusa. `last_seen_at` e revoca usano il compare-and-swap dello storage: una race con revoca viene riletta e non puo riattivare il bearer. Una modifica concorrente ancora attiva durante la revoca produce un errore esplicito, non un falso successo.
+
+Il ruolo `pending` puo possedere una sessione per completare onboarding, ma l'autorizzazione HTTP futura deve impedirgli l'accesso ai dati applicativi.
+
+## Pairing TUI
+
+`PairingService` genera un codice one-time e persiste soltanto un HMAC SHA-256. Il pepper:
+
+- e obbligatorio;
+- contiene almeno 32 byte;
+- proviene da configurazione/secret store;
+- non entra nel database.
+
+Il codice raw compare soltanto in `IssuedPairing`, con `repr` oscurato. Autorizzazione e consumo richiedono il codice; il consumo richiede inoltre il `pairing_id`. Le transizioni vengono salvate tramite CAS, quindi una sola operazione concorrente puo autorizzare, consumare, scadere o revocare il record.
+
+La limitazione dei tentativi sul codice appartiene al futuro adapter HTTP e rimane obbligatoria prima dell'esposizione in rete.
+
+## Errori
+
+Gli errori distinguono:
+
+- autenticazione provider fallita;
+- onboarding non consentito;
+- credenziale applicativa non valida;
+- stato pairing non valido o scaduto;
+- modifica concorrente;
+- collisione ripetuta dei generatori.
+
+I messaggi non includono credenziali raw. Gli errori storage condivisi sono definiti accanto alle porte, così il livello applicativo non dipende da SQLite.
+
+## Fuori scope
+
+- Google OIDC e GitHub OAuth reali;
+- cookie, CSRF, middleware e autorizzazione route;
+- rate limiting distribuito;
+- emissione atomica di una sessione TUI dopo il consumo;
+- UI e browser E2E.
