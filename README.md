@@ -413,7 +413,17 @@ debugger e interfaccia grafica.
 ### Preparazione automatica del Mac
 
 Su un Mac Apple Silicon nuovo, oppure per riparare un'installazione incompleta,
-puoi installare in sequenza tutti i componenti host con:
+scarica l'installer senza bisogno di Git:
+
+```bash
+curl --fail --location \
+  https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/install-macos-host.sh \
+  --output install-macos-host.sh
+chmod +x install-macos-host.sh
+./install-macos-host.sh
+```
+
+Se il progetto è già presente, puoi invece eseguirlo direttamente:
 
 ```bash
 ./scripts/install-macos-host.sh

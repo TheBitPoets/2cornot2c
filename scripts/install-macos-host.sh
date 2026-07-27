@@ -3,10 +3,33 @@ set -euo pipefail
 
 fusion_download_url="https://support.broadcom.com/group/ecx/productdownloads?subfamily=VMware%20Fusion"
 reinstall=false
+homebrew_installer=""
+fusion_mount=""
+
+cleanup() {
+  if [ -n "$homebrew_installer" ]; then
+    rm -f "$homebrew_installer"
+  fi
+  if [ -n "$fusion_mount" ] && [ -d "$fusion_mount" ]; then
+    hdiutil detach "$fusion_mount" >/dev/null 2>&1 || true
+    rmdir "$fusion_mount" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
 
 fail() {
   printf '\nERRORE: %s\n' "$1" >&2
   exit 1
+}
+
+ensure_homebrew_path() {
+  brew_shellenv='eval "$(/opt/homebrew/bin/brew shellenv)"'
+  profile_file="$HOME/.zprofile"
+  touch "$profile_file"
+  if ! grep -Fqx "$brew_shellenv" "$profile_file"; then
+    printf '\n%s\n' "$brew_shellenv" >> "$profile_file"
+  fi
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 }
 
 usage() {
@@ -64,12 +87,16 @@ if ! command -v brew >/dev/null 2>&1; then
     --output "$homebrew_installer"
   /bin/bash "$homebrew_installer"
   rm -f "$homebrew_installer"
+  homebrew_installer=""
 
   if [ -x /opt/homebrew/bin/brew ]; then
-    eval "$(/opt/homebrew/bin/brew shellenv)"
+    ensure_homebrew_path
   fi
 else
   printf '\n[1/7] Homebrew già installato.\n'
+  if [ -x /opt/homebrew/bin/brew ]; then
+    ensure_homebrew_path
+  fi
 fi
 
 command -v brew >/dev/null 2>&1 ||
@@ -143,6 +170,7 @@ if $install_fusion; then
   sudo ditto "$fusion_app" "/Applications/VMware Fusion.app"
   hdiutil detach "$fusion_mount" >/dev/null
   rmdir "$fusion_mount"
+  fusion_mount=""
 else
   printf 'VMware Fusion è già installato.\n'
 fi
@@ -174,4 +202,5 @@ printf '\nPassaggi manuali finali:\n'
 printf '1. Apri VirtualBox e autorizza le estensioni richieste da macOS.\n'
 printf '2. Apri VMware Fusion e accetta licenza e autorizzazioni.\n'
 printf '3. Riavvia il Mac se macOS lo richiede.\n'
-printf '4. Avvia la VM con ./scripts/setup-vm.sh\n'
+printf '4. Clona o apri il progetto 2cornot2c.\n'
+printf '5. Avvia la VM dalla sua directory con ./scripts/setup-vm.sh\n'
