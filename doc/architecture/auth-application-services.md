@@ -78,7 +78,7 @@ I messaggi non includono credenziali raw. Gli errori storage condivisi sono defi
 
 ## Fuori scope
 
-- Google OIDC e GitHub OAuth reali;
+- route/browser E2E Google OIDC e GitHub OAuth (l'adapter Google è descritto in `google-oidc-adapter.md`);
 - integrazione del boundary HTTP nelle route e nelle dashboard concrete;
 - rate limiting distribuito;
 - emissione atomica di una sessione TUI dopo il consumo;

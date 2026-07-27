@@ -2,7 +2,7 @@
 
 ## Scopo
 
-`thebitlab_http_auth.py` traduce richieste HTTP in operazioni di `SessionService`. Rimane indipendente da `course_board_server.py`, Google OIDC e GitHub. Il callback OIDC futuro sarà l'unico adapter pubblico autorizzato a chiamare `establish_session(user_id)` dopo che `FederatedIdentityService` avrà risolto l'identità.
+`thebitlab_http_auth.py` traduce richieste HTTP in operazioni di `SessionService`. Rimane indipendente da `course_board_server.py`, Google OIDC e GitHub. `GoogleOidcLoginService`, descritto in `google-oidc-adapter.md`, è il primo adapter autorizzato a chiamare `establish_session(user_id)` dopo che `FederatedIdentityService` ha risolto l'identità; la route HTTP concreta resta successiva.
 
 Non deve esistere un endpoint di produzione che accetti direttamente un `user_id` scelto dal client. Provider fake ed eventuali route di test restano esclusivamente nei test.
 
@@ -71,7 +71,7 @@ Il logout è esclusivamente `POST`. Per una sessione valida richiede CSRF, revoc
 ## Fuori scope
 
 - route concrete nel Course Board e protezione dashboard;
-- callback Google OIDC e verifica `state`/`nonce`/PKCE;
+- route e browser E2E Google OIDC (il protocol adapter `state`/`nonce`/PKCE è implementato);
 - account linking GitHub;
 - pairing TUI via browser;
 - TLS termination e rate limiting distribuito.
