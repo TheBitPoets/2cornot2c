@@ -1,0 +1,22 @@
+Vagrant.configure("2") do |config|
+  memory_mb = Integer(ENV.fetch("CLASSROOM_MEMORY_MB", "2048"))
+
+  config.vm.box = ENV.fetch("CLASSROOM_BOX_NAME", "2cornot2c/acceptance")
+  config.vm.boot_timeout = 300
+  config.vm.synced_folder ENV.fetch("CLASSROOM_REPO_ROOT"), "/home/vagrant/2cornot2c",
+    disabled: false
+
+  config.vm.provider "vmware_desktop" do |provider|
+    provider.gui = true
+    provider.vmx["memsize"] = memory_mb.to_s
+    provider.vmx["numvcpus"] = "2"
+  end
+
+  config.vm.provider "virtualbox" do |provider|
+    provider.gui = true
+    provider.memory = memory_mb
+    provider.cpus = 2
+    provider.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
+    provider.customize ["modifyvm", :id, "--drag-and-drop", "bidirectional"]
+  end
+end
