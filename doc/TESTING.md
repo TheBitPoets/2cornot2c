@@ -16,7 +16,10 @@ Installa prima la dipendenza di test:
 
 ```bash
 python -m pip install -r requirements-dev.txt
+python -m pip install -r requirements-auth.txt
 ```
+
+`requirements-auth.txt` installa `google-auth` e le dipendenze crittografiche necessarie ai test del verifier Google OIDC; non ometterlo quando si valida l'intera suite.
 
 I test del renderer opzionale `utui` richiedono Python 3.11 o successivo e la dipendenza fissata:
 

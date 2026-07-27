@@ -14,6 +14,7 @@ from scripts.thebitlab_auth_services import (
     session_token_digest,
 )
 from scripts.thebitlab_http_auth import (
+    EstablishedHttpSession,
     HttpAuthRequest,
     HttpAuthenticationRequiredError,
     HttpAuthorizationDeniedError,
@@ -687,6 +688,24 @@ def test_expiry_disable_and_role_change_are_fail_closed_or_refreshed(storage, cl
         replace(disabled, active=True, updated_at=NOW + timedelta(minutes=4)),
         expected_updated_at=disabled.updated_at,
     )
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.authenticate(request("GET", established))
+
+
+def test_discard_established_session_revokes_only_correlated_session(storage, clock) -> None:
+    storage.create_user(account())
+    boundary = make_boundary(storage, clock)
+    established = boundary.establish_session("user-01")
+
+    malformed = EstablishedHttpSession(
+        established.context,
+        "__Host-thebitlab_session=" + "Z" * 40 + "; Path=/; Secure",
+    )
+    assert boundary.discard_established_session(malformed) is False
+    assert boundary.authenticate(request("GET", established)).user.user_id == "user-01"
+
+    assert boundary.discard_established_session(established) is True
+    assert boundary.discard_established_session(established) is False
     with pytest.raises(HttpAuthenticationRequiredError):
         boundary.authenticate(request("GET", established))
 
