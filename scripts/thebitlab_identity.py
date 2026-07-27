@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Literal
 
@@ -45,6 +45,10 @@ class IdentityLinkConflictError(IdentityDomainError):
 
 class AccountDisabledError(IdentityDomainError):
     """Raised when a disabled account attempts an authorized operation."""
+
+
+class InvalidPairingTransitionError(IdentityDomainError):
+    """Raised when a one-time pairing attempts an invalid state transition."""
 
 
 def _required_text(value: str, field_name: str, *, lowercase: bool = False) -> str:
@@ -275,8 +279,12 @@ class UserSession:
         object.__setattr__(self, "last_seen_at", last_seen_at)
         if self.revoked_at is not None:
             revoked_at = _aware_datetime(self.revoked_at, "revoked_at")
-            if revoked_at < self.created_at:
-                raise InvalidIdentityDataError("revoked_at non puo precedere created_at.")
+            if not self.created_at <= revoked_at <= expires_at:
+                raise InvalidIdentityDataError(
+                    "revoked_at deve essere compreso nella durata della sessione."
+                )
+            if last_seen_at > revoked_at:
+                raise InvalidIdentityDataError("last_seen_at non puo essere successivo a revoked_at.")
             object.__setattr__(self, "revoked_at", revoked_at)
 
 
@@ -292,6 +300,8 @@ class TuiPairing:
     user_id: str | None = None
     authorized_at: datetime | None = None
     consumed_at: datetime | None = None
+    expired_at: datetime | None = None
+    revoked_at: datetime | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "pairing_id", _required_text(self.pairing_id, "pairing_id"))
@@ -314,38 +324,131 @@ class TuiPairing:
             raise InvalidIdentityDataError("expires_at deve essere successivo a created_at.")
         object.__setattr__(self, "expires_at", expires_at)
         object.__setattr__(self, "user_id", _optional_text(self.user_id, "user_id"))
-        for field_name in ("authorized_at", "consumed_at"):
+
+        for field_name in ("authorized_at", "consumed_at", "revoked_at"):
             value = getattr(self, field_name)
-            if value is not None:
-                normalized = _aware_datetime(value, field_name)
-                if not self.created_at <= normalized <= expires_at:
-                    raise InvalidIdentityDataError(
-                        f"{field_name} deve essere compreso nella durata del pairing."
-                    )
-                object.__setattr__(self, field_name, normalized)
+            if value is None:
+                continue
+            normalized = _aware_datetime(value, field_name)
+            if not self.created_at <= normalized <= expires_at:
+                raise InvalidIdentityDataError(
+                    f"{field_name} deve essere compreso nella durata del pairing."
+                )
+            if normalized == expires_at:
+                raise InvalidIdentityDataError(
+                    f"{field_name} deve precedere expires_at; alla scadenza usare expired."
+                )
+            object.__setattr__(self, field_name, normalized)
+        if self.expired_at is not None:
+            expired_at = _aware_datetime(self.expired_at, "expired_at")
+            if expired_at < expires_at:
+                raise InvalidIdentityDataError("expired_at non puo precedere expires_at.")
+            object.__setattr__(self, "expired_at", expired_at)
+
         if status == "pending" and any(
-            value is not None for value in (self.user_id, self.authorized_at, self.consumed_at)
+            value is not None
+            for value in (
+                self.user_id,
+                self.authorized_at,
+                self.consumed_at,
+                self.expired_at,
+                self.revoked_at,
+            )
         ):
-            raise InvalidIdentityDataError("Un pairing pending non puo essere gia associato o consumato.")
+            raise InvalidIdentityDataError(
+                "Un pairing pending non puo essere associato o terminale."
+            )
         if (self.user_id is None) != (self.authorized_at is None):
             raise InvalidIdentityDataError(
                 "user_id e authorized_at devono essere entrambi presenti o assenti."
             )
-        if self.consumed_at is not None and self.authorized_at is None:
-            raise InvalidIdentityDataError("consumed_at richiede authorized_at.")
-        if status in {"authorized", "consumed"} and self.user_id is None:
-            raise InvalidIdentityDataError("Un pairing autorizzato o consumato richiede user_id.")
-        if status == "authorized" and (self.authorized_at is None or self.consumed_at is not None):
-            raise InvalidIdentityDataError(
-                "Un pairing autorizzato richiede authorized_at e non puo essere consumato."
-            )
-        if status == "consumed" and (self.authorized_at is None or self.consumed_at is None):
-            raise InvalidIdentityDataError(
-                "Un pairing consumato richiede authorized_at e consumed_at."
-            )
         if self.authorized_at is not None and self.consumed_at is not None:
             if self.consumed_at < self.authorized_at:
                 raise InvalidIdentityDataError("consumed_at non puo precedere authorized_at.")
+
+        if status == "authorized":
+            if (
+                self.user_id is None
+                or self.consumed_at is not None
+                or self.expired_at is not None
+                or self.revoked_at is not None
+            ):
+                raise InvalidIdentityDataError(
+                    "Un pairing authorized richiede user_id/authorized_at e nessuno stato terminale."
+                )
+        elif status == "consumed":
+            if (
+                self.user_id is None
+                or self.consumed_at is None
+                or self.expired_at is not None
+                or self.revoked_at is not None
+            ):
+                raise InvalidIdentityDataError(
+                    "Un pairing consumed richiede autorizzazione e consumed_at soltanto."
+                )
+        elif status == "expired":
+            if self.expired_at is None or self.consumed_at is not None or self.revoked_at is not None:
+                raise InvalidIdentityDataError(
+                    "Un pairing expired richiede expired_at e non puo essere consumato o revocato."
+                )
+        elif status == "revoked":
+            if self.revoked_at is None or self.consumed_at is not None or self.expired_at is not None:
+                raise InvalidIdentityDataError(
+                    "Un pairing revoked richiede revoked_at e non puo essere consumato o scaduto."
+                )
+
+
+def authorize_pairing(pairing: TuiPairing, user_id: str, authorized_at: datetime) -> TuiPairing:
+    """Move a pending pairing to authorized before its expiration."""
+
+    if pairing.status != "pending":
+        raise InvalidPairingTransitionError("Solo un pairing pending puo essere autorizzato.")
+    return replace(
+        pairing,
+        status="authorized",
+        user_id=_required_text(user_id, "user_id"),
+        authorized_at=_aware_datetime(authorized_at, "authorized_at"),
+    )
+
+
+def consume_pairing(pairing: TuiPairing, consumed_at: datetime) -> TuiPairing:
+    """Consume an authorized pairing exactly once."""
+
+    if pairing.status != "authorized":
+        raise InvalidPairingTransitionError("Solo un pairing authorized puo essere consumato.")
+    return replace(
+        pairing,
+        status="consumed",
+        consumed_at=_aware_datetime(consumed_at, "consumed_at"),
+    )
+
+
+def expire_pairing(pairing: TuiPairing, expired_at: datetime) -> TuiPairing:
+    """Expire a pending or authorized pairing after its deadline."""
+
+    if pairing.status not in {"pending", "authorized"}:
+        raise InvalidPairingTransitionError(
+            "Solo un pairing pending o authorized puo diventare expired."
+        )
+    return replace(
+        pairing,
+        status="expired",
+        expired_at=_aware_datetime(expired_at, "expired_at"),
+    )
+
+
+def revoke_pairing(pairing: TuiPairing, revoked_at: datetime) -> TuiPairing:
+    """Revoke a pending or authorized pairing before its deadline."""
+
+    if pairing.status not in {"pending", "authorized"}:
+        raise InvalidPairingTransitionError(
+            "Solo un pairing pending o authorized puo diventare revoked."
+        )
+    return replace(
+        pairing,
+        status="revoked",
+        revoked_at=_aware_datetime(revoked_at, "revoked_at"),
+    )
 
 
 def require_active_account(account: UserAccount) -> None:

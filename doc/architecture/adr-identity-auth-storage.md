@@ -63,6 +63,8 @@ SQLite sara la sorgente primaria transazionale per:
 
 I JSON restano formato di export, backup leggibile e scambio, ma non sono una seconda sorgente di verita concorrente per sessioni o linking.
 
+`token_digest` e `code_digest` devono avere vincoli univoci e indici dedicati. Le porte espongono lookup espliciti per digest: il service calcola il digest dal valore ricevuto, risolve direttamente il record e confronta in tempo costante senza scansioni. Il formato del bearer o del codice non deve quindi incorporare necessariamente l'ID interno del record.
+
 Lo schema concreto e le migrazioni saranno introdotti in una issue successiva dietro le porte definite in `scripts/thebitlab_identity_ports.py`.
 
 ### Segreti e token
@@ -75,6 +77,8 @@ hmac-sha256:<hex>       # codice pairing con pepper server-side
 ```
 
 OAuth client secret, chiavi di cifratura ed eventuali token provider strettamente necessari devono provenire da ambiente o secret store. Se in futuro sara indispensabile conservare un refresh token provider, servira una decisione separata con cifratura applicativa, rotazione e revoca.
+
+Il lifecycle del pairing e persistito esplicitamente: `pending`, `authorized`, `consumed`, `expired` e `revoked` hanno combinazioni non sovrapponibili. `expired` richiede `expired_at >= expires_at`; `revoked` richiede `revoked_at` entro la durata originaria; un pairing consumato non puo diventare scaduto o revocato. Un pairing scaduto o revocato puo conservare identita e istante di autorizzazione solo se era stato autorizzato prima dello stato terminale.
 
 ### Provider e deployment
 

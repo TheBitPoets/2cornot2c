@@ -15,14 +15,20 @@ from scripts.thebitlab_identity import (
     IdentityDomainError,
     IdentityLinkConflictError,
     InvalidIdentityDataError,
+    InvalidPairingTransitionError,
     InvalidRoleError,
     TuiPairing,
     UserAccount,
     UserSession,
+    authorize_pairing,
+    consume_pairing,
+    expire_pairing,
     require_active_account,
+    revoke_pairing,
     validate_external_group_mapping,
     validate_external_identity_link,
 )
+from scripts.thebitlab_identity_ports import SessionStorage, TuiPairingStorage
 
 
 NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
@@ -182,7 +188,15 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
         ({"token_digest": "md5:" + ("a" * 32)}, "algoritmo sha256, sha512"),
         ({"expires_at": NOW}, "successivo"),
         ({"last_seen_at": LATER + timedelta(seconds=1)}, "compreso"),
-        ({"revoked_at": NOW - timedelta(seconds=1)}, "non puo precedere"),
+        ({"revoked_at": NOW - timedelta(seconds=1)}, "durata della sessione"),
+        (
+            {
+                "last_seen_at": NOW + timedelta(minutes=40),
+                "revoked_at": NOW + timedelta(minutes=20),
+            },
+            "successivo a revoked_at",
+        ),
+        ({"revoked_at": LATER + timedelta(seconds=1)}, "durata della sessione"),
     ],
 )
 def test_session_rejects_unsafe_digest_and_invalid_times(overrides, match) -> None:
@@ -271,6 +285,67 @@ def test_pairing_rejects_inconsistent_states(overrides, match) -> None:
         TuiPairing(**values)
 
 
+def test_pairing_lifecycle_records_expiration_and_revocation() -> None:
+    pending = TuiPairing("pairing-01", PAIRING_DIGEST, "pending", NOW, LATER)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))
+
+    expired_pending = expire_pairing(pending, LATER)
+    expired_authorized = expire_pairing(authorized, LATER + timedelta(seconds=1))
+    revoked_pending = revoke_pairing(pending, NOW + timedelta(minutes=10))
+    revoked_authorized = revoke_pairing(authorized, NOW + timedelta(minutes=10))
+
+    assert expired_pending.status == "expired"
+    assert expired_pending.expired_at == LATER
+    assert expired_authorized.user_id == "user-01"
+    assert expired_authorized.authorized_at == authorized.authorized_at
+    assert revoked_pending.status == "revoked"
+    assert revoked_pending.revoked_at == NOW + timedelta(minutes=10)
+    assert revoked_authorized.user_id == "user-01"
+
+
+def test_pairing_state_machine_prevents_terminal_transitions() -> None:
+    pending = TuiPairing("pairing-01", PAIRING_DIGEST, "pending", NOW, LATER)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=6))
+    expired = expire_pairing(pending, LATER)
+    revoked = revoke_pairing(pending, NOW + timedelta(minutes=5))
+
+    for terminal in (consumed, expired, revoked):
+        with pytest.raises(InvalidPairingTransitionError):
+            authorize_pairing(terminal, "user-01", NOW + timedelta(minutes=10))
+        with pytest.raises(InvalidPairingTransitionError):
+            consume_pairing(terminal, NOW + timedelta(minutes=10))
+        with pytest.raises(InvalidPairingTransitionError):
+            expire_pairing(terminal, LATER + timedelta(minutes=1))
+        with pytest.raises(InvalidPairingTransitionError):
+            revoke_pairing(terminal, NOW + timedelta(minutes=10))
+
+
+def test_pairing_terminal_timestamps_must_match_status_and_deadline() -> None:
+    with pytest.raises(InvalidIdentityDataError, match="expired_at"):
+        TuiPairing("pairing-01", PAIRING_DIGEST, "expired", NOW, LATER)
+    with pytest.raises(InvalidIdentityDataError, match="non puo precedere expires_at"):
+        TuiPairing(
+            "pairing-01",
+            PAIRING_DIGEST,
+            "expired",
+            NOW,
+            LATER,
+            expired_at=LATER - timedelta(seconds=1),
+        )
+    with pytest.raises(InvalidIdentityDataError, match="revoked_at"):
+        TuiPairing("pairing-01", PAIRING_DIGEST, "revoked", NOW, LATER)
+    with pytest.raises(InvalidIdentityDataError, match="deve precedere expires_at"):
+        TuiPairing(
+            "pairing-01",
+            PAIRING_DIGEST,
+            "revoked",
+            NOW,
+            LATER,
+            revoked_at=LATER,
+        )
+
+
 def test_external_identity_link_rejects_ownership_conflicts() -> None:
     existing = ExternalIdentity("user-01", "github", "github-user-42", NOW)
     same_owner = ExternalIdentity("user-01", "github", "github-user-42", LATER, username="new-login")
@@ -302,7 +377,73 @@ def test_disabled_accounts_are_rejected_by_authorization_guard() -> None:
         require_active_account(user(active=False))
 
 
+def test_digest_lookup_ports_do_not_require_raw_credentials() -> None:
+    session = UserSession("session-01", "user-01", DIGEST, NOW, LATER, NOW)
+    pairing = TuiPairing("pairing-01", PAIRING_DIGEST, "pending", NOW, LATER)
+
+    class FakeSessionStorage:
+        def __init__(self):
+            self.records = {}
+
+        def create_session(self, value):
+            self.records[value.session_id] = value
+
+        def read_session(self, session_id):
+            return self.records.get(session_id)
+
+        def read_session_by_token_digest(self, token_digest):
+            return next(
+                (item for item in self.records.values() if item.token_digest == token_digest),
+                None,
+            )
+
+        def save_session(self, value):
+            self.records[value.session_id] = value
+
+        def list_user_sessions(self, user_id):
+            return [item for item in self.records.values() if item.user_id == user_id]
+
+        def revoke_user_sessions(self, user_id, revoked_at):
+            return 0
+
+        def delete_expired_sessions(self):
+            return 0
+
+    class FakePairingStorage:
+        def __init__(self):
+            self.records = {}
+
+        def create_pairing(self, value):
+            self.records[value.pairing_id] = value
+
+        def read_pairing(self, pairing_id):
+            return self.records.get(pairing_id)
+
+        def read_pairing_by_code_digest(self, code_digest):
+            return next(
+                (item for item in self.records.values() if item.code_digest == code_digest),
+                None,
+            )
+
+        def save_pairing(self, value):
+            self.records[value.pairing_id] = value
+
+        def delete_expired_pairings(self):
+            return 0
+
+    session_storage: SessionStorage = FakeSessionStorage()
+    pairing_storage: TuiPairingStorage = FakePairingStorage()
+    session_storage.create_session(session)
+    pairing_storage.create_pairing(pairing)
+
+    assert session_storage.read_session_by_token_digest(DIGEST) == session
+    assert pairing_storage.read_pairing_by_code_digest(PAIRING_DIGEST) == pairing
+    assert not hasattr(session_storage, "raw_token")
+    assert not hasattr(pairing_storage, "raw_code")
+
+
 def test_identity_specific_conflict_errors_are_available_to_services() -> None:
     assert issubclass(DuplicateExternalIdentityError, IdentityDomainError)
     assert issubclass(IdentityLinkConflictError, IdentityDomainError)
     assert issubclass(AccountDisabledError, IdentityDomainError)
+    assert issubclass(InvalidPairingTransitionError, IdentityDomainError)
