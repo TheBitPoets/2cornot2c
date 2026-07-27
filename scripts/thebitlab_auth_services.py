@@ -301,6 +301,8 @@ class FederatedIdentityService:
             provider_failed = True
             expected_provider = ""
             assertion = None
+        # Traceback collectors may capture frame locals even without cause/context.
+        credential = None
         if provider_failed:
             raise ProviderAuthenticationError("Autenticazione provider non riuscita.")
         normalized_assertion = self._normalize_assertion(assertion)

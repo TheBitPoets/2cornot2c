@@ -154,6 +154,11 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
     assert "raw-provider-secret" not in str(captured.value)
     assert captured.value.__cause__ is None
     assert captured.value.__context__ is None
+    traceback = captured.value.__traceback__
+    while traceback is not None:
+        if traceback.tb_frame.f_code.co_name == "authenticate":
+            assert "raw-provider-secret" not in traceback.tb_frame.f_locals.values()
+        traceback = traceback.tb_next
     with pytest.raises(ProviderProtocolError, match="assertion valida"):
         service.authenticate(InvalidProvider(), "opaque")
     with pytest.raises(ProviderProtocolError) as hostile:
