@@ -1330,6 +1330,7 @@ class GoogleOidcLoginService:
         id_token: str,
     ) -> FederatedIdentityAssertion:
         invalid = False
+        unavailable = False
         assertion = None
         try:
             if not isinstance(claims, Mapping):
@@ -1343,7 +1344,11 @@ class GoogleOidcLoginService:
                         "name", "nonce", "exp", "iat",
                     )
                 }
-            now = _utc(self.clock())
+            try:
+                now = _utc(self.clock())
+            except Exception:
+                unavailable = True
+                now = None
             issuer = known.get("iss")
             audience = known.get("aud")
             authorized_party = known.get("azp")
@@ -1385,7 +1390,11 @@ class GoogleOidcLoginService:
                 )
             ):
                 invalid = True
-            if type(expires_at) not in {int, float} or type(issued_at) not in {int, float}:
+            if (
+                unavailable
+                or type(expires_at) not in {int, float}
+                or type(issued_at) not in {int, float}
+            ):
                 invalid = True
             else:
                 expires_value = float(expires_at)
@@ -1462,6 +1471,11 @@ class GoogleOidcLoginService:
             skew = None
             normalized_name = None
             secret_echoes = None
+        if unavailable:
+            assertion = None
+            raise GoogleOidcProviderUnavailableError(
+                "Clock verifica claim non disponibile."
+            )
         if invalid or assertion is None:
             assertion = None
             raise GoogleOidcTokenRejectedError("Claim ID token Google non validi.")

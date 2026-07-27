@@ -301,6 +301,33 @@ def test_begin_login_clock_failure_is_sanitized(database_path, clock) -> None:
     assert flows.pending_count() == 0
 
 
+def test_claim_validation_clock_failure_is_unavailable_and_sanitized(
+    database_path, clock
+) -> None:
+    service, _storage, _flows, _transport, _verifier = make_service(
+        database_path, clock
+    )
+    calls = 0
+
+    def failing_third_clock():
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            raise RuntimeError("RAW_CLOCK_BACKEND_SECRET")
+        return NOW
+
+    service.clock = failing_third_clock
+    state = begin_state(service)
+    with pytest.raises(GoogleOidcProviderUnavailableError) as captured:
+        finish_callback(service, valid_callback(state))
+    assert captured.value.clear_transaction_cookie is not None
+    assert "RAW_CLOCK_BACKEND_SECRET" not in str(captured.value)
+    assert "RAW_CLOCK_BACKEND_SECRET" not in traceback_function_locals(
+        captured.value, "complete_callback", "_assertion_from_claims"
+    )
+    assert captured.value.__context__ is None
+
+
 def test_generator_collision_and_invalid_secret_are_sanitized(database_path, clock) -> None:
     service, _storage, flows, _transport, _verifier = make_service(database_path, clock)
     begin_state(service)
