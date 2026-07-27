@@ -78,7 +78,7 @@ hmac-sha256:<hex>       # codice pairing con pepper server-side
 
 OAuth client secret, chiavi di cifratura ed eventuali token provider strettamente necessari devono provenire da ambiente o secret store. Se in futuro sara indispensabile conservare un refresh token provider, servira una decisione separata con cifratura applicativa, rotazione e revoca.
 
-Il lifecycle del pairing e persistito esplicitamente: `pending`, `authorized`, `consumed`, `expired` e `revoked` hanno combinazioni non sovrapponibili. `expired` richiede `expired_at >= expires_at`; `revoked` richiede `revoked_at` entro la durata originaria; un pairing consumato non puo diventare scaduto o revocato. Un pairing scaduto o revocato puo conservare identita e istante di autorizzazione solo se era stato autorizzato prima dello stato terminale.
+Il lifecycle del pairing e persistito esplicitamente: `pending`, `authorized`, `consumed`, `expired` e `revoked` hanno combinazioni non sovrapponibili. `expired` richiede `expired_at >= expires_at`; `revoked` richiede `revoked_at` entro la durata originaria e non anteriore a `authorized_at`, se presente; un pairing consumato non puo diventare scaduto o revocato. Un pairing scaduto o revocato puo conservare identita e istante di autorizzazione solo se era stato autorizzato prima dello stato terminale.
 
 ### Provider e deployment
 

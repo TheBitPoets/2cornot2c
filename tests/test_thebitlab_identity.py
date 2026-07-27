@@ -303,6 +303,38 @@ def test_pairing_lifecycle_records_expiration_and_revocation() -> None:
     assert revoked_authorized.user_id == "user-01"
 
 
+def test_pairing_rejects_revocation_before_authorization() -> None:
+    authorized_at = NOW + timedelta(minutes=30)
+    with pytest.raises(InvalidIdentityDataError, match="revoked_at non puo precedere"):
+        TuiPairing(
+            "pairing-01",
+            PAIRING_DIGEST,
+            "revoked",
+            NOW,
+            LATER,
+            user_id="user-01",
+            authorized_at=authorized_at,
+            revoked_at=NOW + timedelta(minutes=10),
+        )
+
+    pending = TuiPairing("pairing-01", PAIRING_DIGEST, "pending", NOW, LATER)
+    authorized = authorize_pairing(pending, "user-01", authorized_at)
+    with pytest.raises(InvalidIdentityDataError, match="revoked_at non puo precedere"):
+        revoke_pairing(authorized, NOW + timedelta(minutes=10))
+
+
+def test_pairing_allows_revocation_at_authorization_in_equivalent_timezone() -> None:
+    authorized_at = NOW + timedelta(minutes=30)
+    pending = TuiPairing("pairing-01", PAIRING_DIGEST, "pending", NOW, LATER)
+    authorized = authorize_pairing(pending, "user-01", authorized_at)
+    same_instant = authorized_at.astimezone(timezone(timedelta(hours=1)))
+
+    revoked = revoke_pairing(authorized, same_instant)
+
+    assert revoked.status == "revoked"
+    assert revoked.revoked_at == authorized_at
+
+
 def test_pairing_state_machine_prevents_terminal_transitions() -> None:
     pending = TuiPairing("pairing-01", PAIRING_DIGEST, "pending", NOW, LATER)
     authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))

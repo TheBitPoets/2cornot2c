@@ -365,6 +365,9 @@ class TuiPairing:
         if self.authorized_at is not None and self.consumed_at is not None:
             if self.consumed_at < self.authorized_at:
                 raise InvalidIdentityDataError("consumed_at non puo precedere authorized_at.")
+        if self.authorized_at is not None and self.revoked_at is not None:
+            if self.revoked_at < self.authorized_at:
+                raise InvalidIdentityDataError("revoked_at non puo precedere authorized_at.")
 
         if status == "authorized":
             if (
