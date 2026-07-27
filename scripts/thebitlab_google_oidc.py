@@ -195,6 +195,7 @@ class PendingGoogleOidcFlow:
     state_digest: str
     nonce_digest: str
     code_verifier: str = field(repr=False, compare=False)
+    creation_marker: object = field(repr=False, compare=False)
     created_at: datetime
     expires_at: datetime
 
@@ -245,11 +246,20 @@ class InMemoryGoogleOidcFlowStore:
     def nonce_digest(nonce: str) -> str:
         return "sha256:" + hashlib.sha256(nonce.encode("ascii")).hexdigest()
 
-    def create(self, state: str, nonce: str, code_verifier: str, now: datetime, ttl: timedelta) -> None:
+    def create(
+        self,
+        state: str,
+        nonce: str,
+        code_verifier: str,
+        creation_marker: object,
+        now: datetime,
+        ttl: timedelta,
+    ) -> None:
         flow = PendingGoogleOidcFlow(
             state_digest=self.state_digest(state),
             nonce_digest=self.nonce_digest(nonce),
             code_verifier=code_verifier,
+            creation_marker=creation_marker,
             created_at=now,
             expires_at=now + ttl,
         )
@@ -286,6 +296,27 @@ class InMemoryGoogleOidcFlowStore:
             flow = None
             raise GoogleOidcStateError("State OIDC scaduto.")
         return flow
+
+    def discard_created_flow(self, state: str, creation_marker: object) -> bool:
+        digest_failed = False
+        try:
+            state_digest = self.state_digest(state)
+        except Exception:
+            digest_failed = True
+            state_digest = ""
+        finally:
+            state = None
+        if digest_failed:
+            creation_marker = None
+            return False
+        with self._lock:
+            flow = self._flows.get(state_digest)
+            matches = flow is not None and flow.creation_marker is creation_marker
+            if matches:
+                del self._flows[state_digest]
+        flow = None
+        creation_marker = None
+        return matches
 
     def discard(self, state: str) -> bool:
         digest_failed = False
@@ -583,17 +614,37 @@ class GoogleOidcLoginService:
                 )
             collision = False
             store_failed = False
+            creation_marker = object()
             try:
-                self.flows.create(state, nonce, verifier, now, self.config.flow_ttl)
+                self.flows.create(
+                    state,
+                    nonce,
+                    verifier,
+                    creation_marker,
+                    now,
+                    self.config.flow_ttl,
+                )
             except GoogleOidcStateConflictError:
                 collision = True
             except Exception:
                 store_failed = True
             if collision:
-                state = None
-                nonce = None
-                verifier = None
-                continue
+                inserted_then_failed = False
+                try:
+                    inserted_then_failed = self.flows.discard_created_flow(
+                        state, creation_marker
+                    )
+                except Exception:
+                    pass
+                if inserted_then_failed:
+                    collision = False
+                    store_failed = True
+                else:
+                    state = None
+                    nonce = None
+                    verifier = None
+                    creation_marker = None
+                    continue
             if store_failed:
                 try:
                     self.flows.discard(state)
@@ -602,6 +653,7 @@ class GoogleOidcLoginService:
                 state = None
                 nonce = None
                 verifier = None
+                creation_marker = None
                 raise GoogleOidcProviderUnavailableError(
                     "Store flow OIDC non disponibile."
                 )
@@ -636,6 +688,7 @@ class GoogleOidcLoginService:
                 state = None
                 nonce = None
                 verifier = None
+                creation_marker = None
                 challenge = None
                 query = None
                 raise GoogleOidcProviderUnavailableError(
@@ -644,6 +697,7 @@ class GoogleOidcLoginService:
             state = None
             nonce = None
             verifier = None
+            creation_marker = None
             challenge = None
             query = None
             return GoogleAuthorizationRequest(authorization_url)
@@ -684,9 +738,27 @@ class GoogleOidcLoginService:
             token_response = None
             if type(id_token) is not str or not 32 <= len(id_token) <= 32768:
                 raise GoogleOidcTokenRejectedError("ID token Google mancante.")
-            claims = self.token_verifier.verify(
-                id_token, audience=self.config.client_id
-            )
+            verification_failed = False
+            verification_unavailable = False
+            try:
+                claims = self.token_verifier.verify(
+                    id_token, audience=self.config.client_id
+                )
+            except GoogleOidcProviderUnavailableError:
+                verification_unavailable = True
+            except Exception:
+                verification_failed = True
+            if verification_failed or verification_unavailable:
+                id_token = None
+                claims = None
+                flow = None
+                if verification_unavailable:
+                    raise GoogleOidcProviderUnavailableError(
+                        "Verifica ID token Google non disponibile."
+                    )
+                raise GoogleOidcTokenRejectedError(
+                    "ID token Google rifiutato."
+                )
             assertion = self._assertion_from_claims(claims, flow, id_token)
             claims = None
             id_token = None
@@ -722,6 +794,8 @@ class GoogleOidcLoginService:
             code = None
             state = None
             provider_error = False
+            verification_failed = False
+            verification_unavailable = False
             assertion = None
             user = None
             session = None

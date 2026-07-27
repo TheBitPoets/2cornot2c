@@ -21,6 +21,7 @@ from scripts.thebitlab_google_oidc import (
     GoogleOidcIdentityRejectedError,
     GoogleOidcLoginService,
     GoogleOidcProviderUnavailableError,
+    GoogleOidcStateConflictError,
     GoogleOidcStateError,
     GoogleOidcTokenRejectedError,
     InMemoryGoogleOidcFlowStore,
@@ -259,7 +260,11 @@ def test_generator_collision_and_invalid_secret_are_sanitized(database_path, clo
 
 @pytest.mark.parametrize(
     "failure",
-    [RuntimeError("store unavailable"), GoogleOidcStateError("post-insert failure")],
+    [
+        RuntimeError("store unavailable"),
+        GoogleOidcStateError("post-insert failure"),
+        GoogleOidcStateConflictError("post-insert conflict"),
+    ],
 )
 def test_unexpected_flow_store_failure_discards_and_scrubs_credentials(
     database_path, clock, failure
@@ -268,9 +273,14 @@ def test_unexpected_flow_store_failure_discards_and_scrubs_credentials(
     real_store = InMemoryGoogleOidcFlowStore()
 
     class InsertThenFailStore:
-        def create(self, state, nonce, verifier, now, ttl):
-            real_store.create(state, nonce, verifier, now, ttl)
+        def create(self, state, nonce, verifier, creation_marker, now, ttl):
+            real_store.create(
+                state, nonce, verifier, creation_marker, now, ttl
+            )
             raise failure
+
+        def discard_created_flow(self, state, creation_marker):
+            return real_store.discard_created_flow(state, creation_marker)
 
         def discard(self, state):
             return real_store.discard(state)
@@ -431,12 +441,13 @@ def test_token_exchange_and_verification_failures_are_sanitized_and_consume_stat
         database_path.parent / "verify.sqlite3", clock, verifier=verifier
     )
     state = begin_state(service)
-    with pytest.raises(GoogleOidcProviderUnavailableError) as verify_error:
+    with pytest.raises(GoogleOidcTokenRejectedError) as verify_error:
         service.complete_callback(valid_callback(state))
     assert ID_TOKEN not in str(verify_error.value)
     assert ID_TOKEN not in traceback_function_locals(
-        verify_error.value, "complete_callback"
+        verify_error.value, "complete_callback", "verify"
     )
+    assert verify_error.value.__context__ is None
 
 
 @pytest.mark.parametrize(
