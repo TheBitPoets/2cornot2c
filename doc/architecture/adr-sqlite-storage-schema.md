@@ -12,6 +12,8 @@ La dashboard consegne e le future viste docente/studente hanno pero bisogno di q
 
 La decisione precedente e documentata in [`storage-sqlite-evaluation.md`](storage-sqlite-evaluation.md): introdurre porte di storage prima di SQLite e usare SQLite prima come indice/prototipo isolato.
 
+Questo ADR riguarda i dati didattici indicizzabili. Utenti, identita federate, classi di autorizzazione, sessioni e pairing sono invece sorgente primaria transazionale nello schema separato definito da [`adr-identity-auth-storage.md`](adr-identity-auth-storage.md); non devono essere ricostruiti dai JSON didattici.
+
 ## Decisione
 
 Lo schema SQLite minimo deve modellare entita applicative e indici interrogabili, senza sostituire subito i JSON didattici.

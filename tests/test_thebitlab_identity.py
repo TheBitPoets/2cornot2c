@@ -479,7 +479,7 @@ def test_digest_lookup_ports_do_not_require_raw_credentials() -> None:
         def revoke_user_sessions(self, user_id, revoked_at):
             return 0
 
-        def delete_expired_sessions(self):
+        def delete_expired_sessions(self, expired_before):
             return 0
 
     class FakePairingStorage:
@@ -501,7 +501,7 @@ def test_digest_lookup_ports_do_not_require_raw_credentials() -> None:
         def save_pairing(self, value):
             self.records[value.pairing_id] = value
 
-        def delete_expired_pairings(self):
+        def delete_expired_pairings(self, expired_before):
             return 0
 
     session_storage: SessionStorage = FakeSessionStorage()
