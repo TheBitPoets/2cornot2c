@@ -290,7 +290,9 @@ def test_session_issue_checks_active_account_inside_storage_transaction(
     create_for_active = storage.create_session_for_active_user
 
     def disable_then_create(session):
-        storage.save_user(replace(account(), active=False, updated_at=NOW))
+        storage.save_user(
+            replace(account(), active=False, updated_at=NOW + timedelta(seconds=1))
+        )
         create_for_active(session)
 
     monkeypatch.setattr(storage, "create_session_for_active_user", disable_then_create)
@@ -419,7 +421,9 @@ def test_disabling_account_invalidates_sessions_and_authorized_pairings(storage)
     issued_pairing = pairings.issue()
     pairings.authorize(issued_pairing.code, "user-01")
 
-    storage.save_user(replace(account(), active=False, updated_at=NOW))
+    storage.save_user(
+        replace(account(), active=False, updated_at=NOW + timedelta(seconds=1))
+    )
     storage.save_user(replace(account(), active=True, updated_at=NOW + timedelta(minutes=1)))
 
     with pytest.raises(InvalidCredentialError):
@@ -489,13 +493,41 @@ def test_pairing_authorization_checks_active_account_inside_storage_transaction(
     save_for_active = storage.save_pairing_for_active_user
 
     def disable_then_save(pairing):
-        storage.save_user(replace(account(), active=False, updated_at=NOW))
+        storage.save_user(
+            replace(account(), active=False, updated_at=NOW + timedelta(seconds=1))
+        )
         save_for_active(pairing)
 
     monkeypatch.setattr(storage, "save_pairing_for_active_user", disable_then_save)
     with pytest.raises(AccountDisabledError):
         service.authorize(issued.code, "user-01")
     assert storage.read_pairing("pairing-01").status == "pending"
+
+
+def test_pairing_consume_translates_concurrent_disable_deletion(storage, monkeypatch) -> None:
+    storage.create_user(account())
+    clock = MutableClock(NOW + timedelta(minutes=1))
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    service.authorize(issued.code, "user-01")
+    save_for_active = storage.save_pairing_for_active_user
+
+    def disable_then_save(pairing):
+        storage.save_user(
+            replace(account(), active=False, updated_at=NOW + timedelta(minutes=2))
+        )
+        save_for_active(pairing)
+
+    monkeypatch.setattr(storage, "save_pairing_for_active_user", disable_then_save)
+    with pytest.raises(AccountDisabledError):
+        service.consume("pairing-01", issued.code)
+    assert storage.read_pairing("pairing-01") is None
 
 
 def test_pairing_revoke_is_terminal_and_disabled_user_cannot_authorize(storage) -> None:

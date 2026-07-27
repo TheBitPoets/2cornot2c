@@ -432,26 +432,37 @@ class SqliteIdentityStorage:
         return None if row is None else self._user(row)
 
     def save_user(self, user: UserAccount) -> None:
+        created_at = _encode_datetime(user.created_at, "created_at")
+        updated_at = _encode_datetime(user.updated_at, "updated_at")
         with self._transaction("save_user") as connection:
             cursor = connection.execute(
                 """
-                UPDATE users SET display_name = ?, role = ?, active = ?, created_at = ?,
-                    updated_at = ?, primary_email = ? WHERE user_id = ?
+                UPDATE users SET display_name = ?, role = ?, active = ?,
+                    updated_at = ?, primary_email = ?
+                WHERE user_id = ? AND created_at = ? AND updated_at < ?
                 """,
                 (
                     user.display_name,
                     user.role,
                     int(user.active),
-                    _encode_datetime(user.created_at, "created_at"),
-                    _encode_datetime(user.updated_at, "updated_at"),
+                    updated_at,
                     user.primary_email,
                     user.user_id,
+                    created_at,
+                    updated_at,
                 ),
             )
             if cursor.rowcount != 1:
-                raise IdentityStorageNotFoundError("Utente da aggiornare non trovato.")
+                exists = connection.execute(
+                    "SELECT 1 FROM users WHERE user_id = ?", (user.user_id,)
+                ).fetchone()
+                if exists is None:
+                    raise IdentityStorageNotFoundError("Utente da aggiornare non trovato.")
+                raise IdentityStorageConflictError(
+                    "Utente modificato da un'altra operazione o timestamp non monotono."
+                )
             if not user.active:
-                disabled_at = _encode_datetime(user.updated_at, "updated_at")
+                disabled_at = updated_at
                 connection.execute(
                     """
                     UPDATE sessions SET revoked_at = CASE

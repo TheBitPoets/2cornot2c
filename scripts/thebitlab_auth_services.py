@@ -20,7 +20,10 @@ from scripts.thebitlab_identity import (
     require_active_account,
     revoke_pairing,
 )
-from scripts.thebitlab_identity_ports import IdentityStorageConflictError
+from scripts.thebitlab_identity_ports import (
+    IdentityStorageConflictError,
+    IdentityStorageNotFoundError,
+)
 
 
 _MAX_ATTEMPTS = 5
@@ -596,7 +599,7 @@ class PairingService:
             expired = expire_pairing(pairing, now)
             try:
                 self.storage.save_pairing(expired)
-            except IdentityStorageConflictError:
+            except (IdentityStorageConflictError, IdentityStorageNotFoundError):
                 pass
             raise PairingExpiredError("Pairing scaduto.")
 
@@ -608,7 +611,7 @@ class PairingService:
                 self.storage.save_pairing_for_active_user(pairing)
             else:
                 self.storage.save_pairing(pairing)
-        except IdentityStorageConflictError as error:
+        except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
             if require_active_user and pairing.user_id is not None:
                 account = self.storage.read_user(pairing.user_id)
                 if account is None:

@@ -170,6 +170,21 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
+def test_user_updates_are_monotonic_and_stale_snapshot_cannot_reactivate(storage) -> None:
+    original = account()
+    storage.create_user(original)
+    stale_active = replace(original, updated_at=NOW + timedelta(minutes=5))
+    disabled = replace(original, active=False, updated_at=NOW + timedelta(minutes=10))
+    storage.save_user(disabled)
+
+    with pytest.raises(IdentityStorageConflictError, match="timestamp non monotono"):
+        storage.save_user(stale_active)
+    with pytest.raises(IdentityStorageConflictError, match="timestamp non monotono"):
+        storage.save_user(replace(disabled, created_at=NOW - timedelta(days=1), updated_at=LATER))
+
+    assert storage.read_user("user-01") == disabled
+
+
 def test_missing_foreign_key_rolls_back_without_partial_state(storage) -> None:
     identity = ExternalIdentity("missing-user", "google", "subject-01", NOW)
 
