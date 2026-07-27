@@ -203,7 +203,9 @@ class FederatedIdentityApplicationStorage(Protocol):
         self, provider: str, subject: str
     ) -> ExternalIdentity | None: ...
 
-    def link_external_identity(self, identity: ExternalIdentity) -> None: ...
+    def refresh_external_identity(
+        self, identity: ExternalIdentity, *, expected_linked_at: datetime
+    ) -> None: ...
 
     def provision_user_with_identity(
         self, user: UserAccount, identity: ExternalIdentity
@@ -322,7 +324,7 @@ class FederatedIdentityService:
                 raise ConcurrentStateChangeError("Identita collegata a un utente inesistente.")
             require_active_account(account)
             try:
-                self.storage.link_external_identity(
+                self.storage.refresh_external_identity(
                     ExternalIdentity(
                         user_id=account.user_id,
                         provider=assertion.provider,
@@ -330,9 +332,10 @@ class FederatedIdentityService:
                         linked_at=existing.linked_at,
                         email=assertion.email,
                         username=assertion.username,
-                    )
+                    ),
+                    expected_linked_at=existing.linked_at,
                 )
-            except IdentityStorageConflictError as error:
+            except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
                 current = self.storage.read_external_identity(
                     assertion.provider, assertion.subject
                 )

@@ -159,7 +159,7 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.list_external_identities("user-01") == [identity]
 
     refreshed = replace(identity, linked_at=LATER, email="new@example.test", username="new-name")
-    storage.link_external_identity(refreshed)
+    storage.refresh_external_identity(refreshed, expected_linked_at=identity.linked_at)
     expected_refresh = replace(refreshed, linked_at=identity.linked_at)
     assert storage.read_external_identity("github", "4242") == expected_refresh
 

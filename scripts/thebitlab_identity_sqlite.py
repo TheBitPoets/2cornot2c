@@ -510,6 +510,41 @@ class SqliteIdentityStorage:
                     "L'identita provider e gia collegata a un utente diverso."
                 )
 
+    def refresh_external_identity(
+        self, identity: ExternalIdentity, *, expected_linked_at: datetime
+    ) -> None:
+        expected_revision = _encode_datetime(expected_linked_at, "expected_linked_at")
+        with self._transaction("refresh_external_identity") as connection:
+            cursor = connection.execute(
+                """
+                UPDATE external_identities SET email = ?, username = ?
+                WHERE provider = ? AND subject = ? AND user_id = ? AND linked_at = ?
+                """,
+                (
+                    identity.email,
+                    identity.username,
+                    identity.provider,
+                    identity.subject,
+                    identity.user_id,
+                    expected_revision,
+                ),
+            )
+            if cursor.rowcount != 1:
+                exists = connection.execute(
+                    """
+                    SELECT 1 FROM external_identities
+                    WHERE provider = ? AND subject = ?
+                    """,
+                    (identity.provider, identity.subject),
+                ).fetchone()
+                if exists is None:
+                    raise IdentityStorageNotFoundError(
+                        "Identita provider da aggiornare non trovata."
+                    )
+                raise IdentityStorageConflictError(
+                    "Identita provider ricollegata da un'altra operazione."
+                )
+
     def read_external_identity(self, provider: str, subject: str) -> ExternalIdentity | None:
         row = self._query_one(
             "SELECT * FROM external_identities WHERE provider = ? AND subject = ?",

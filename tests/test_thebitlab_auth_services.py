@@ -183,15 +183,32 @@ def test_existing_identity_relink_race_is_translated(storage, monkeypatch) -> No
     )
     storage.create_user(account("user-02"))
     link_identity = storage.link_external_identity
+    refresh_identity = storage.refresh_external_identity
 
-    def relink_then_conflict(_identity):
+    def relink_then_conflict(identity, *, expected_linked_at):
         storage.unlink_external_identity("google", "google-42")
         link_identity(ExternalIdentity("user-02", "google", "google-42", NOW))
-        raise IdentityStorageConflictError("simulated")
+        refresh_identity(identity, expected_linked_at=expected_linked_at)
 
-    monkeypatch.setattr(storage, "link_external_identity", relink_then_conflict)
+    monkeypatch.setattr(storage, "refresh_external_identity", relink_then_conflict)
     with pytest.raises(ConcurrentStateChangeError, match="ricollegata"):
         FederatedIdentityService(storage, clock=MutableClock()).resolve(google_assertion())
+
+
+def test_existing_identity_unlink_race_does_not_restore_link(storage, monkeypatch) -> None:
+    storage.provision_user_with_identity(
+        account("user-01"), ExternalIdentity("user-01", "google", "google-42", NOW)
+    )
+    refresh_identity = storage.refresh_external_identity
+
+    def unlink_then_refresh(identity, *, expected_linked_at):
+        storage.unlink_external_identity("google", "google-42")
+        refresh_identity(identity, expected_linked_at=expected_linked_at)
+
+    monkeypatch.setattr(storage, "refresh_external_identity", unlink_then_refresh)
+    with pytest.raises(ConcurrentStateChangeError, match="ricollegata"):
+        FederatedIdentityService(storage, clock=MutableClock()).resolve(google_assertion())
+    assert storage.read_external_identity("google", "google-42") is None
 
 
 def test_unknown_github_or_unverified_google_cannot_self_onboard(storage) -> None:

@@ -24,7 +24,7 @@ Il fake provider usa chiavi deterministiche solo nei test. Non simula crittograf
 `FederatedIdentityService` applica queste regole:
 
 1. `(provider, subject)` gia collegato risolve lo stesso `user_id` interno;
-2. email e username possono essere aggiornati senza cambiare proprietario o `linked_at`;
+2. email e username vengono aggiornati con un UPDATE-only CAS su proprietario e `linked_at`, senza ricreare un link rimosso o ricollegato;
 3. account disabilitati vengono rifiutati;
 4. una identita sconosciuta puo creare un utente soltanto se il provider e autorizzato all'onboarding e l'email e verificata;
 5. il nuovo utente ha sempre ruolo `pending`;
