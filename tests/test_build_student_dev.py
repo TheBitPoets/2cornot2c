@@ -65,3 +65,24 @@ def test_build_rejects_unlisted_platform() -> None:
             tag="test",
             source_revision="b" * 40,
         )
+
+
+def test_publish_command_uses_versioned_and_latest_multiarch_tags() -> None:
+    manifest = build_student_dev.load_manifest()
+
+    command = build_student_dev.publish_command(
+        manifest,
+        source_revision="c" * 40,
+    )
+
+    assert command[:6] == [
+        "docker",
+        "buildx",
+        "build",
+        "--pull=false",
+        "--platform",
+        "linux/amd64,linux/arm64",
+    ]
+    assert f"{manifest['image_repository']}:{manifest['version']}" in command
+    assert f"{manifest['image_repository']}:latest" in command
+    assert command[-2:] == ["--push", str(build_student_dev.ROOT)]

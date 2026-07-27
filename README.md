@@ -481,6 +481,33 @@ prova automaticamente un riavvio.
 La sessione grafica accede automaticamente con l'utente `vagrant`; la password,
 se richiesta, è `vagrant`.
 
+### Alternativa Docker per PC con poca RAM
+
+`student-dev` offre la stessa base Ubuntu 24.04 senza interfaccia grafica e
+senza avviare una VM completa. Richiede Docker Desktop e usa per impostazione
+predefinita al massimo 512 MB di RAM e una CPU.
+
+Dalla cartella in cui vuoi conservare gli esercizi esegui:
+
+```bash
+python3 /percorso/di/2cornot2c/scripts/student_dev_shell.py
+```
+
+Al primo avvio Docker scarica automaticamente da GHCR l'immagine adatta al
+processore del computer. La cartella corrente diventa `/workspace` e resta
+salvata sul computer; il resto del container viene eliminato all'uscita. Per
+lasciare la shell usa `exit`.
+
+Per scegliere un'altra cartella o aumentare il limite di memoria:
+
+```bash
+python3 scripts/student_dev_shell.py --workspace ./lab --memory 768m
+```
+
+L'immagine pubblica è versionata: lo script non usa implicitamente `latest`,
+quindi una nuova pubblicazione non cambia l'ambiente degli studenti finché non
+aggiorniamo esplicitamente il manifest del progetto.
+
 ### Cartelle condivise
 
 Le cartelle `lab` e `lab2` del progetto sono disponibili nella VM come `/lab` e

@@ -134,12 +134,61 @@ def build_command(
     return command
 
 
+def publish_command(
+    manifest: dict[str, Any],
+    *,
+    source_revision: str,
+) -> list[str]:
+    """Costruisce e pubblica un unico manifest nativo multiarch."""
+
+    packages = manifest["packages"]
+    arguments = {
+        "UBUNTU_BASE_IMAGE": manifest["base_image"],
+        "UBUNTU_SNAPSHOT": manifest["ubuntu_snapshot"],
+        "BUILD_ESSENTIAL_VERSION": packages["build-essential"],
+        "CA_CERTIFICATES_VERSION": packages["ca-certificates"],
+        "GCC_VERSION": packages["gcc"],
+        "GDB_VERSION": packages["gdb"],
+        "GIT_VERSION": packages["git"],
+        "MAKE_VERSION": packages["make"],
+        "NODEJS_VERSION": packages["nodejs"],
+        "PYTHON3_VERSION": packages["python3"],
+        "SQLITE3_VERSION": packages["sqlite3"],
+        "VIM_TINY_VERSION": packages["vim-tiny"],
+        "STUDENT_DEV_VERSION": manifest["version"],
+        "SOURCE_REVISION": source_revision,
+    }
+    if not SHA_RE.fullmatch(source_revision):
+        raise StudentDevBuildError("Revisione sorgente non valida.")
+    repository = manifest["image_repository"]
+    command = [
+        "docker",
+        "buildx",
+        "build",
+        "--pull=false",
+        "--platform",
+        ",".join(manifest["platforms"]),
+        "--tag",
+        f"{repository}:{manifest['version']}",
+        "--tag",
+        f"{repository}:latest",
+        "--file",
+        str(DOCKERFILE),
+    ]
+    for name, value in arguments.items():
+        command.extend(["--build-arg", f"{name}={value}"])
+    command.extend(["--push", str(ROOT)])
+    return command
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Costruisce student-dev Ubuntu.")
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--platform", choices=EXPECTED_PLATFORMS)
     parser.add_argument("--tag", default=DEFAULT_TAG)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--publish", action="store_true")
+    parser.add_argument("--source-revision")
     args = parser.parse_args()
     try:
         manifest = load_manifest(args.manifest)
@@ -149,30 +198,47 @@ def main() -> int:
                 f"{', '.join(manifest['platforms'])}."
             )
             return 0
+        if args.publish and args.platform is not None:
+            raise StudentDevBuildError("--publish e --platform sono alternativi.")
         platform = args.platform
-        if platform is None:
+        if not args.publish and platform is None:
             raise StudentDevBuildError("--platform è richiesto per una build locale.")
-        revision = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-        subprocess.run(
-            build_command(
-                manifest,
-                platform=platform,
-                tag=args.tag,
-                source_revision=revision,
-            ),
-            cwd=ROOT,
-            check=True,
-        )
+        revision = args.source_revision
+        if revision is None:
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+        if args.publish:
+            subprocess.run(
+                publish_command(manifest, source_revision=revision),
+                cwd=ROOT,
+                check=True,
+            )
+        else:
+            subprocess.run(
+                build_command(
+                    manifest,
+                    platform=platform,
+                    tag=args.tag,
+                    source_revision=revision,
+                ),
+                cwd=ROOT,
+                check=True,
+            )
     except (OSError, subprocess.CalledProcessError, StudentDevBuildError) as error:
         print(f"Build student-dev non riuscita: {error}")
         return 1
-    print(f"student-dev costruito come {args.tag} per {platform}.")
+    if args.publish:
+        print(
+            f"student-dev {manifest['version']} pubblicato per "
+            f"{', '.join(manifest['platforms'])}."
+        )
+    else:
+        print(f"student-dev costruito come {args.tag} per {platform}.")
     return 0
 
 

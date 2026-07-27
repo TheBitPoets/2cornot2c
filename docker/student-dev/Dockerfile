@@ -17,6 +17,8 @@ ARG STUDENT_DEV_VERSION
 ARG SOURCE_REVISION
 
 LABEL org.opencontainers.image.title="2cornot2c student development environment" \
+      org.opencontainers.image.description="Ambiente Ubuntu leggero per i laboratori 2cornot2c" \
+      org.opencontainers.image.source="https://github.com/TheBitPoets/2cornot2c" \
       org.opencontainers.image.version="${STUDENT_DEV_VERSION}" \
       org.opencontainers.image.revision="${SOURCE_REVISION}" \
       io.2cornot2c.student-dev.base-image="${UBUNTU_BASE_IMAGE}" \
