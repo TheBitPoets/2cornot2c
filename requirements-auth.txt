@@ -1,0 +1,2 @@
+# Official Google OpenID Connect ID-token verification and HTTPS transport.
+google-auth[requests]>=2.40,<3
