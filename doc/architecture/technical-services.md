@@ -99,16 +99,18 @@ Le prossime implementazioni concrete devono preservare questi casi:
 
 ## Evoluzione prevista
 
-1. Collegare il runner Docker reale a `ExecutionService`.
-2. Spostare la logica di `grade_activity.py` dietro `GradingService`.
-3. Aggiungere un `AiFeedbackService` mockabile per feedback docente/studente.
-4. Salvare i risultati nei registri e, in futuro, nell'indice SQLite senza cambiare la GUI.
+1. [x] Collegare il runner Docker reale a `ExecutionService`.
+2. [ ] Spostare la logica di `grade_activity.py` dietro `GradingService`.
+3. [x] Aggiungere un `AiFeedbackService` mockabile per feedback docente/studente.
+4. [ ] Salvare i risultati nei registri e, in futuro, nell'indice SQLite senza cambiare la GUI.
 
 ## Bridge con i report esistenti
 
 Durante la transizione, i report prodotti da `scripts/grade_activity.py` vengono convertiti nel contratto tecnico con `grading_dict_from_grade_activity_report()`. Questo permette al tracking delle consegne di usare `GradingService` senza cambiare subito il formato dei report gia prodotti.
 
 `GradeActivityExecutionService` espone inoltre `grade_activity.py` dietro la porta `ExecutionService`: i chiamanti passano `activity_path` e `source_path` nei metadati della richiesta e ricevono un `ExecutionResult`, senza dipendere dal formato legacy del report.
+
+`DockerGradeActivityExecutionService` implementa la stessa porta sopra il runner Docker autorevole. Normalizza runner assente, timeout e errori di protocollo, mentre `student_lab_runner.py` si limita a costruire la richiesta tecnica e serializzare il risultato nel contratto pubblico `student_lab_run.v1`. Durante la transizione, `ExecutionResult.metadata.runner_report` conserva una copia difensiva del report del runner per non perdere campi di toolchain o dettagli gia consumati dalle dashboard.
 
 `DeterministicAiFeedbackService` fornisce una prima implementazione mockabile di `AiFeedbackService`: genera bozze di feedback a partire dal `GradingResult` senza chiamare provider esterni. Serve per stabilizzare flussi, test e dashboard prima di collegare un adapter AI reale.
 
