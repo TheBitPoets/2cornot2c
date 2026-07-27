@@ -85,6 +85,7 @@ jobs:
           tests/test_student_lab_demo_setup.py
           tests/test_track_assignments.py
           tests/test_course_board_server.py
+          tests/test_thebitlab_google_oidc.py
 
       - name: Test portable Node.js and SQL runners
         run: >-

@@ -15,7 +15,7 @@
 - path post-login locale e fisso, mai ricevuto dal callback;
 - TTL flow, età massima ID token, clock skew, timeout e limite risposta.
 
-La dipendenza di produzione è dichiarata in `requirements-auth.txt` come `google-auth[requests]`. `GoogleOfficialIdTokenVerifier` usa la libreria ufficiale per firma RS256, certificati Google, issuer, audience e scadenze. Il livello applicativo ripete fail-closed i controlli essenziali su issuer, audience/azp, exp/iat, nonce, subject ed email verificata.
+La dipendenza di produzione è dichiarata in `requirements-auth.txt` come `google-auth`. `GoogleOfficialIdTokenVerifier` usa la libreria ufficiale per firma RS256, issuer, audience e scadenze. Il recupero certificati passa da `BoundedGoogleCertRequest`, limitato agli endpoint Google noti, senza redirect, con timeout e dimensione derivati dalla config. Il livello applicativo ripete fail-closed i controlli essenziali su issuer, audience/azp, exp/iat, nonce, subject ed email verificata.
 
 ## Avvio authorization flow
 
@@ -37,7 +37,7 @@ State e nonce raw esistono soltanto nella URL consegnata al browser. Lo store co
 
 ## Store one-time
 
-`InMemoryGoogleOidcFlowStore` è protetto da lock e consuma lo state con una singola `pop`: un solo callback concorrente può vincere. La scadenza è esclusiva (`now >= expires_at`). Errori provider con state valido consumano comunque il flow. Il cleanup riceve un cutoff esplicito.
+`InMemoryGoogleOidcFlowStore` è protetto da lock e consuma lo state con una singola `pop`: un solo callback concorrente può vincere. La scadenza è esclusiva (`now >= expires_at`). Errori provider con state valido consumano comunque il flow. Il cleanup riceve un cutoff esplicito; ogni creazione elimina inoltre i flow già scaduti e lo store impone un cap configurabile, evitando crescita non limitata dei verifier raw.
 
 Lo store è adatto al server MVP a processo singolo. Deployment multi-process richiederà uno store transazionale condiviso; non è ammesso usare sticky session come unica garanzia di replay protection.
 

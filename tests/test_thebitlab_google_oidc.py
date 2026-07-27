@@ -12,6 +12,7 @@ import pytest
 
 from scripts.thebitlab_auth_services import FederatedIdentityService, SessionService
 from scripts.thebitlab_google_oidc import (
+    BoundedGoogleCertRequest,
     GoogleAuthorizationRequest,
     GoogleOfficialIdTokenVerifier,
     GoogleOidcCallbackError,
@@ -306,6 +307,27 @@ def test_callback_replay_and_concurrent_consume_have_one_winner(database_path, c
         service.complete_callback(valid_callback(state))
 
 
+def test_flow_creation_auto_cleans_expired_records_and_store_is_bounded(
+    database_path, clock
+) -> None:
+    service, _storage, flows, _transport, _verifier = make_service(
+        database_path, clock, flow_ttl=timedelta(seconds=1)
+    )
+    begin_state(service)
+    clock.value += timedelta(seconds=1)
+    begin_state(service)
+    assert flows.pending_count() == 1
+
+    bounded = InMemoryGoogleOidcFlowStore(max_pending_flows=1)
+    service.flows = bounded
+    service.state_factory = lambda: "a" * 43
+    begin_state(service)
+    service.state_factory = lambda: "b" * 43
+    with pytest.raises(GoogleOidcConfigurationError):
+        service.begin_login()
+    assert bounded.pending_count() == 1
+
+
 def test_expired_state_is_consumed_and_cleanup_is_explicit(database_path, clock) -> None:
     service, _storage, flows, transport, _verifier = make_service(
         database_path, clock, flow_ttl=timedelta(seconds=1)
@@ -512,6 +534,59 @@ def test_urllib_transport_rejects_duplicate_json_and_bounds_response() -> None:
     assert CLIENT_SECRET not in traceback_function_locals(
         oversized.value, "exchange_code"
     )
+
+
+def test_bounded_cert_request_restricts_endpoint_timeout_redirect_and_size() -> None:
+    class Headers:
+        def items(self):
+            return [("Content-Type", "application/json")]
+
+    class Response:
+        status = 200
+        headers = Headers()
+
+        def __init__(self, body):
+            self.body = body
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, limit):
+            return self.body[:limit]
+
+    class Opener:
+        def __init__(self, body):
+            self.body = body
+            self.timeout = None
+
+        def open(self, _request, timeout):
+            self.timeout = timeout
+            return Response(self.body)
+
+    request = BoundedGoogleCertRequest(timeout_seconds=1.5, max_response_bytes=1024)
+    opener = Opener(b"{}")
+    request._opener = opener
+    response = request("https://www.googleapis.com/oauth2/v1/certs")
+    assert response.status == 200
+    assert response.data == b"{}"
+    assert opener.timeout == 1.5
+
+    request._opener = Opener(b"x" * 1025)
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        request("https://www.googleapis.com/oauth2/v1/certs")
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        request("https://evil.test/certs")
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        request("https://www.googleapis.com/oauth2/v1/certs", method="POST")
+
+    production = GoogleOfficialIdTokenVerifier.from_config(
+        config(timeout_seconds=2, max_cert_response_bytes=4096)
+    )
+    assert production._request_adapter.timeout_seconds == 2
+    assert production._request_adapter.max_response_bytes == 4096
 
 
 def test_official_google_verifier_validates_rs256_signature_and_sanitizes_failure() -> None:

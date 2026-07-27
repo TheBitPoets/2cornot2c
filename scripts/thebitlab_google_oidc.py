@@ -29,6 +29,12 @@ _GOOGLE_ISSUERS = frozenset({"accounts.google.com", "https://accounts.google.com
 _UNRESERVED_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{10,512}$")
 _MAX_CALLBACK_VALUE_CHARS = 8192
+_GOOGLE_CERT_ENDPOINTS = frozenset(
+    {
+        "https://www.googleapis.com/oauth2/v1/certs",
+        "https://www.googleapis.com/oauth2/v3/certs",
+    }
+)
 
 
 class GoogleOidcError(RuntimeError):
@@ -72,6 +78,7 @@ class GoogleOidcConfig:
     clock_skew: timedelta = timedelta(seconds=30)
     timeout_seconds: float = 10.0
     max_token_response_bytes: int = 64 * 1024
+    max_cert_response_bytes: int = 256 * 1024
 
     def __post_init__(self) -> None:
         if type(self.client_id) is not str or not _CLIENT_ID_RE.fullmatch(self.client_id):
@@ -124,11 +131,14 @@ class GoogleOidcConfig:
             or not 0 < self.timeout_seconds <= 60
         ):
             raise GoogleOidcConfigurationError("Timeout OIDC non valido.")
-        if (
-            type(self.max_token_response_bytes) is not int
-            or not 1024 <= self.max_token_response_bytes <= 1024 * 1024
+        for value, name in (
+            (self.max_token_response_bytes, "token"),
+            (self.max_cert_response_bytes, "certificati"),
         ):
-            raise GoogleOidcConfigurationError("Limite risposta token non valido.")
+            if type(value) is not int or not 1024 <= value <= 1024 * 1024:
+                raise GoogleOidcConfigurationError(
+                    f"Limite risposta {name} non valido."
+                )
 
 
 @dataclass(frozen=True)
@@ -171,7 +181,10 @@ class GoogleIdTokenVerifier(Protocol):
 class InMemoryGoogleOidcFlowStore:
     """Thread-safe one-time flow store; raw verifier exists only in memory."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, max_pending_flows: int = 4096) -> None:
+        if type(max_pending_flows) is not int or not 1 <= max_pending_flows <= 100000:
+            raise GoogleOidcConfigurationError("Limite flow OIDC non valido.")
+        self.max_pending_flows = max_pending_flows
         self._flows: dict[str, PendingGoogleOidcFlow] = {}
         self._lock = threading.Lock()
 
@@ -192,6 +205,15 @@ class InMemoryGoogleOidcFlowStore:
             expires_at=now + ttl,
         )
         with self._lock:
+            expired = [
+                key for key, current in self._flows.items()
+                if current.expires_at <= now
+            ]
+            for key in expired:
+                del self._flows[key]
+            if len(self._flows) >= self.max_pending_flows:
+                flow = None
+                raise GoogleOidcStateError("Capacita flow OIDC esaurita.")
             if flow.state_digest in self._flows:
                 raise GoogleOidcStateError("Collisione state OIDC.")
             self._flows[flow.state_digest] = flow
@@ -295,8 +317,72 @@ class UrllibGoogleTokenTransport:
         return decoded
 
 
+class _GoogleAuthCertResponse:
+    def __init__(self, status: int, data: bytes, headers: Mapping[str, str]) -> None:
+        self.status = status
+        self.data = data
+        self.headers = headers
+
+
+class BoundedGoogleCertRequest:
+    """google-auth request adapter with fixed endpoints, bounds, and no redirects."""
+
+    def __init__(
+        self,
+        *,
+        timeout_seconds: float = 10.0,
+        max_response_bytes: int = 256 * 1024,
+    ) -> None:
+        self.timeout_seconds = timeout_seconds
+        self.max_response_bytes = max_response_bytes
+        self._opener = urllib.request.build_opener(UrllibGoogleTokenTransport._NoRedirect())
+
+    def __call__(
+        self,
+        url: str,
+        method: str = "GET",
+        body: bytes | None = None,
+        headers: Mapping[str, str] | None = None,
+        **_kwargs,
+    ) -> _GoogleAuthCertResponse:
+        failed = False
+        request = None
+        response = None
+        data = None
+        status = 0
+        response_headers: Mapping[str, str] = {}
+        try:
+            if url not in _GOOGLE_CERT_ENDPOINTS or method != "GET" or body is not None:
+                failed = True
+            else:
+                request = urllib.request.Request(
+                    url,
+                    headers={"Accept": "application/json", **dict(headers or {})},
+                    method="GET",
+                )
+                with self._opener.open(request, timeout=self.timeout_seconds) as response:
+                    status = response.status
+                    data = response.read(self.max_response_bytes + 1)
+                    response_headers = dict(response.headers.items())
+                    if status != 200 or len(data) > self.max_response_bytes:
+                        failed = True
+        except Exception:
+            failed = True
+        finally:
+            request = None
+            response = None
+            body = None
+            headers = None
+        if failed or data is None:
+            data = None
+            raise GoogleOidcProviderUnavailableError(
+                "Certificati Google non disponibili."
+            )
+        return _GoogleAuthCertResponse(status, data, response_headers)
+
+
 class GoogleOfficialIdTokenVerifier:
-    """Production verifier backed by the official google-auth package."""
+    """Production verifier backed by google-auth and a bounded cert transport."""
 
     def __init__(self, request_adapter=None, *, clock_skew_seconds: int = 30) -> None:
         if (
@@ -304,29 +390,46 @@ class GoogleOfficialIdTokenVerifier:
             or not 0 <= clock_skew_seconds <= 300
         ):
             raise GoogleOidcConfigurationError("Clock skew verifier non valido.")
-        self._request_adapter = request_adapter
+        self._request_adapter = request_adapter or BoundedGoogleCertRequest()
         self.clock_skew_seconds = clock_skew_seconds
+
+    @classmethod
+    def from_config(cls, config: GoogleOidcConfig) -> "GoogleOfficialIdTokenVerifier":
+        return cls(
+            BoundedGoogleCertRequest(
+                timeout_seconds=float(config.timeout_seconds),
+                max_response_bytes=config.max_cert_response_bytes,
+            ),
+            clock_skew_seconds=int(config.clock_skew.total_seconds()),
+        )
 
     def verify(self, id_token: str, *, audience: str) -> Mapping[str, object]:
         failed = False
+        unavailable = False
         claims = None
         try:
-            from google.auth.transport.requests import Request
             from google.oauth2 import id_token as google_id_token
 
-            request_adapter = self._request_adapter or Request()
+            request_adapter = self._request_adapter
             claims = google_id_token.verify_oauth2_token(
                 id_token,
                 request_adapter,
                 audience,
                 clock_skew_in_seconds=self.clock_skew_seconds,
             )
+        except GoogleOidcProviderUnavailableError:
+            unavailable = True
         except Exception:
             failed = True
         finally:
             id_token = None
             audience = None
             request_adapter = None
+        if unavailable:
+            claims = None
+            raise GoogleOidcProviderUnavailableError(
+                "Verifica certificati Google non disponibile."
+            )
         if failed or type(claims) is not dict:
             claims = None
             raise GoogleOidcTokenRejectedError("ID token Google rifiutato.")
