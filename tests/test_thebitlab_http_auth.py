@@ -200,6 +200,24 @@ def test_cookie_incompatible_generated_bearer_is_revoked_without_header_injectio
     assert captured.value.status_code == 503
 
 
+def test_generated_cookie_pair_must_fit_request_header_limit(storage, clock) -> None:
+    storage.create_user(account())
+    boundary = make_boundary(
+        storage,
+        clock,
+        tokens=("A" * 300,),
+        session_ids=("session-oversized",),
+        policy=SessionCookiePolicy(max_cookie_header_bytes=256),
+    )
+
+    with pytest.raises(HttpAuthUnavailableError):
+        boundary.establish_session("user-01")
+
+    persisted = storage.read_session("session-oversized")
+    assert persisted is not None
+    assert persisted.revoked_at == NOW
+
+
 def test_storage_and_unexpected_failures_are_sanitized_at_http_boundary() -> None:
     class BrokenSessions:
         def authenticate(self, _bearer):

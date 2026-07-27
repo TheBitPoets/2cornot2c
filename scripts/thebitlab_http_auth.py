@@ -90,7 +90,11 @@ class SessionCookiePolicy:
     max_session_age_seconds: int = 86400
 
     def __post_init__(self) -> None:
-        if type(self.name) is not str or not _COOKIE_NAME_RE.fullmatch(self.name):
+        if (
+            type(self.name) is not str
+            or len(self.name) > 128
+            or not _COOKIE_NAME_RE.fullmatch(self.name)
+        ):
             raise ValueError("Nome cookie sessione non valido.")
         if type(self.secure) is not bool or type(self.allow_insecure_loopback) is not bool:
             raise ValueError("Flag sicurezza cookie non validi.")
@@ -419,8 +423,12 @@ class HttpSessionAuthBoundary:
             return False
         session = issued.session
         duration = session.expires_at - session.created_at
+        cookie_pair_bytes = len(
+            f"{self.cookie_policy.name}={bearer}".encode("utf-8")
+        )
         return (
-            session.revoked_at is None
+            cookie_pair_bytes <= self.cookie_policy.max_cookie_header_bytes
+            and session.revoked_at is None
             and duration.total_seconds() > 0
             and duration <= timedelta(seconds=self.cookie_policy.max_session_age_seconds)
             and hmac.compare_digest(session.token_digest, session_token_digest(bearer))

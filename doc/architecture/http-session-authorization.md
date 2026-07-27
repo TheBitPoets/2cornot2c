@@ -20,7 +20,8 @@ Per HTTP locale esiste soltanto `SessionCookiePolicy.loopback_development()`, co
 
 Il parser:
 
-- impone un limite in byte all'header;
+- limita il nome cookie e impone un limite in byte all'header;
+- rifiuta e revoca prima dell'emissione bearer il cui `name=value` non potrebbe rientrare nello stesso limite;
 - rifiuta controlli, sintassi invalida, token vuoti o sovradimensionati;
 - richiede esattamente un cookie sessione;
 - rifiuta cookie sessione duplicati invece di scegliere first/last wins;
