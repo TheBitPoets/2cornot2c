@@ -472,16 +472,78 @@ class BoundedGoogleCertRequest:
         return _GoogleAuthCertResponse(status, data, response_headers)
 
 
+class _X509OnlyGoogleCertRequest:
+    """Reject JWKS so google-auth cannot start an independent PyJWT fetch."""
+
+    def __init__(self, delegate, *, max_response_bytes: int) -> None:
+        self.delegate = delegate
+        self.max_response_bytes = max_response_bytes
+
+    def __call__(self, url: str, **kwargs):
+        response = self.delegate(url, **kwargs)
+        data = getattr(response, "data", None)
+        valid = (
+            url == "https://www.googleapis.com/oauth2/v1/certs"
+            and type(data) is bytes
+            and len(data) <= self.max_response_bytes
+        )
+        decoded = None
+        if valid:
+            try:
+                decoded = json.loads(
+                    data.decode("utf-8"),
+                    object_pairs_hook=_reject_duplicate_json_keys,
+                )
+            except (UnicodeError, ValueError, TypeError):
+                valid = False
+        valid = (
+            valid
+            and type(decoded) is dict
+            and 1 <= len(decoded) <= 32
+            and all(
+                type(key) is str
+                and 1 <= len(key) <= 512
+                and type(value) is str
+                and 1 <= len(value) <= 16384
+                and value.startswith("-----BEGIN CERTIFICATE-----")
+                and value.rstrip().endswith("-----END CERTIFICATE-----")
+                for key, value in decoded.items()
+            )
+        )
+        decoded = None
+        data = None
+        if not valid:
+            response = None
+            raise GoogleOidcProviderUnavailableError(
+                "Formato certificati Google non valido."
+            )
+        return response
+
+
 class GoogleOfficialIdTokenVerifier:
     """Production verifier backed by google-auth and a bounded cert transport."""
 
-    def __init__(self, request_adapter=None, *, clock_skew_seconds: int = 30) -> None:
+    def __init__(
+        self,
+        request_adapter=None,
+        *,
+        clock_skew_seconds: int = 30,
+        max_cert_response_bytes: int = 256 * 1024,
+    ) -> None:
         if (
             type(clock_skew_seconds) is not int
             or not 0 <= clock_skew_seconds <= 300
         ):
             raise GoogleOidcConfigurationError("Clock skew verifier non valido.")
-        self._request_adapter = request_adapter or BoundedGoogleCertRequest()
+        if (
+            type(max_cert_response_bytes) is not int
+            or not 4096 <= max_cert_response_bytes <= 1048576
+        ):
+            raise GoogleOidcConfigurationError("Limite certificati non valido.")
+        self._request_adapter = request_adapter or BoundedGoogleCertRequest(
+            max_response_bytes=max_cert_response_bytes
+        )
+        self.max_cert_response_bytes = max_cert_response_bytes
         self.clock_skew_seconds = clock_skew_seconds
 
     @classmethod
@@ -492,6 +554,7 @@ class GoogleOfficialIdTokenVerifier:
                 max_response_bytes=config.max_cert_response_bytes,
             ),
             clock_skew_seconds=int(config.clock_skew.total_seconds()),
+            max_cert_response_bytes=config.max_cert_response_bytes,
         )
 
     def verify(self, id_token: str, *, audience: str) -> Mapping[str, object]:
@@ -501,7 +564,10 @@ class GoogleOfficialIdTokenVerifier:
         try:
             from google.oauth2 import id_token as google_id_token
 
-            request_adapter = self._request_adapter
+            request_adapter = _X509OnlyGoogleCertRequest(
+                self._request_adapter,
+                max_response_bytes=self.max_cert_response_bytes,
+            )
             claims = google_id_token.verify_oauth2_token(
                 id_token,
                 request_adapter,

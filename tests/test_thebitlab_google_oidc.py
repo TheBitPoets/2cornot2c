@@ -812,6 +812,23 @@ def test_official_google_verifier_validates_rs256_signature_and_sanitizes_failur
     verified = verifier.verify(token, audience=CLIENT_ID)
     assert verified["sub"] == "subject"
 
+    class JwksRequest:
+        def __init__(self):
+            self.calls = 0
+
+        def __call__(self, *_args, **_kwargs):
+            self.calls += 1
+            response = CertResponse()
+            response.data = json.dumps({"keys": []}).encode()
+            return response
+
+    jwks_request = JwksRequest()
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        GoogleOfficialIdTokenVerifier(jwks_request).verify(
+            token, audience=CLIENT_ID
+        )
+    assert jwks_request.calls == 1
+
     token_parts = token.split(".")
     token_parts[2] = ("A" if token_parts[2][0] != "A" else "B") + token_parts[2][1:]
     tampered = ".".join(token_parts)

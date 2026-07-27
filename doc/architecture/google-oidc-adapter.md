@@ -15,7 +15,7 @@
 - path post-login locale e fisso, mai ricevuto dal callback;
 - TTL flow, età massima ID token, clock skew, timeout e limite risposta.
 
-La dipendenza di produzione è dichiarata in `requirements-auth.txt` come `google-auth`. `GoogleOfficialIdTokenVerifier` usa la libreria ufficiale per firma RS256, issuer, audience e scadenze. Il recupero certificati passa da `BoundedGoogleCertRequest`, limitato agli endpoint Google noti, senza redirect, con timeout e dimensione derivati dalla config. Il livello applicativo ripete fail-closed i controlli essenziali su issuer, audience/azp, exp/iat, nonce, subject ed email verificata.
+La dipendenza di produzione è dichiarata in `requirements-auth.txt` come `google-auth`. `GoogleOfficialIdTokenVerifier` usa la libreria ufficiale per firma RS256, issuer, audience e scadenze. Il recupero certificati passa da `BoundedGoogleCertRequest`, limitato agli endpoint Google noti, senza redirect, con timeout e dimensione derivati dalla config. Un ulteriore adapter accetta solo la risposta X.509 `kid -> PEM` dell'endpoint v1 e rifiuta JWKS, impedendo a `google-auth`/PyJWT di avviare fetch secondarie fuori dal trasporto bounded. Il livello applicativo ripete fail-closed i controlli essenziali su issuer, audience/azp, exp/iat, nonce, subject ed email verificata.
 
 ## Avvio authorization flow
 
