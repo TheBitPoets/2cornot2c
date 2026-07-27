@@ -1002,10 +1002,30 @@ class GoogleOidcLoginService:
                     > self.config.id_token_max_age.total_seconds() + skew
                 ):
                     invalid = True
-            secret_echoes = (subject, email, display_name, nonce)
-            if any(
-                type(value) is str and id_token in value
-                for value in secret_echoes
+            secret_echoes = (
+                issuer,
+                authorized_party,
+                subject,
+                email,
+                email_verified,
+                display_name,
+                nonce,
+                expires_at,
+                issued_at,
+            )
+            if (
+                any(
+                    type(value) is str and id_token in value
+                    for value in secret_echoes
+                )
+                or (
+                    type(audience) is list
+                    and any(
+                        type(value) is str and id_token in value
+                        for value in audience
+                    )
+                )
+                or (type(audience) is str and id_token in audience)
             ):
                 invalid = True
             if not invalid:
@@ -1024,10 +1044,23 @@ class GoogleOidcLoginService:
             flow = None
             id_token = None
             known = None
+            now = None
+            issuer = None
+            audience = None
+            audience_valid = None
+            authorized_party = None
             nonce = None
             subject = None
             email = None
+            email_verified = None
             display_name = None
+            expires_at = None
+            issued_at = None
+            expires_value = None
+            issued_value = None
+            now_timestamp = None
+            skew = None
+            normalized_name = None
             secret_echoes = None
         if invalid or assertion is None:
             assertion = None

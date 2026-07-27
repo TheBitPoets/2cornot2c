@@ -546,15 +546,22 @@ def test_login_result_construction_failure_revokes_issued_session(
     "overrides",
     [
         {"iss": "https://evil.test"},
+        {"iss": ID_TOKEN},
         {"aud": "other-client"},
+        {"aud": ID_TOKEN},
+        {"aud": [CLIENT_ID, ID_TOKEN], "azp": CLIENT_ID},
         {"aud": [CLIENT_ID, "other"], "azp": "other"},
         {"aud": CLIENT_ID, "azp": "other"},
+        {"azp": ID_TOKEN},
         {"nonce": "wrong-nonce"},
         {"email_verified": False},
+        {"email_verified": ID_TOKEN},
         {"email_verified": 1},
         {"sub": ""},
         {"sub": "subject\nlog"},
         {"exp": int(NOW.timestamp())},
+        {"exp": ID_TOKEN},
+        {"iat": ID_TOKEN},
         {"iat": int((NOW + timedelta(minutes=2)).timestamp())},
         {"iat": int((NOW - timedelta(hours=1)).timestamp())},
         {"name": ID_TOKEN},
@@ -572,8 +579,11 @@ def test_wrong_or_unverified_claims_never_create_user(database_path, clock, over
     )
     state = begin_state(service)
 
-    with pytest.raises(GoogleOidcTokenRejectedError):
+    with pytest.raises(GoogleOidcTokenRejectedError) as captured:
         service.complete_callback(valid_callback(state))
+    assert ID_TOKEN not in traceback_function_locals(
+        captured.value, "_assertion_from_claims"
+    )
     assert storage.list_users() == []
     assert storage.list_user_sessions("internal-user-01") == []
 
