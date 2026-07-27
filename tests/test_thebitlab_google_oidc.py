@@ -194,6 +194,8 @@ def test_config_requires_https_fixed_redirect_and_safe_post_login() -> None:
         {"redirect_uri": "https://lab.example.test:0/callback"},
         {"redirect_uri": "https://lab.example.test/callback\n"},
         {"redirect_uri": "https://lab.example.test/\x00callback"},
+        {"redirect_uri": r"https://lab.example.test\evil/callback"},
+        {"redirect_uri": "https://lab.example.test/%ZZ/callback"},
         {"token_endpoint": "https://user:pass@example.test/token"},
         {"authorization_endpoint": "https://example.test/auth#fragment"},
         {"token_endpoint": "https://example.test/collect"},
@@ -574,6 +576,33 @@ def test_identity_collaborator_error_is_normalized(database_path, clock) -> None
         captured.value, "complete_callback", "resolve"
     )
     assert captured.value.__context__ is None
+
+
+def test_disable_race_before_session_is_identity_rejection(database_path, clock) -> None:
+    service, storage, _flows, _transport, _verifier = make_service(
+        database_path, clock
+    )
+    identities = service.identities
+
+    class DisableAfterResolve:
+        def resolve(self, assertion):
+            user = identities.resolve(assertion)
+            storage.save_user(
+                replace(
+                    user,
+                    active=False,
+                    updated_at=user.updated_at + timedelta(microseconds=1),
+                ),
+                expected_updated_at=user.updated_at,
+            )
+            return user
+
+    service.identities = DisableAfterResolve()
+    state = begin_state(service)
+    with pytest.raises(GoogleOidcIdentityRejectedError):
+        service.complete_callback(valid_callback(state))
+    sessions = storage.list_user_sessions("internal-user-01")
+    assert sessions == []
 
 
 def test_login_result_uses_current_session_role(database_path, clock) -> None:

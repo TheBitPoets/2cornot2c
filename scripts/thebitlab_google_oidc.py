@@ -23,7 +23,11 @@ from scripts.thebitlab_auth_services import (
     FederatedIdentityService,
     OnboardingNotAllowedError,
 )
-from scripts.thebitlab_http_auth import EstablishedHttpSession, HttpSessionAuthBoundary
+from scripts.thebitlab_http_auth import (
+    EstablishedHttpSession,
+    HttpAuthenticationRequiredError,
+    HttpSessionAuthBoundary,
+)
 from scripts.thebitlab_identity import AccountDisabledError, IdentityDomainError
 
 _GOOGLE_ISSUERS = frozenset({"accounts.google.com", "https://accounts.google.com"})
@@ -31,6 +35,7 @@ _GOOGLE_AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 _UNRESERVED_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{10,512}$")
+_INVALID_PERCENT_ESCAPE_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
 _MAX_CALLBACK_VALUE_CHARS = 8192
 _GOOGLE_CERT_ENDPOINTS = frozenset(
     {
@@ -156,6 +161,8 @@ class GoogleOidcConfig:
                 or invalid_port
                 or (port is not None and port < 1)
                 or any(ord(character) <= 0x20 or ord(character) == 0x7F for character in value)
+                or "\\" in value
+                or _INVALID_PERCENT_ESCAPE_RE.search(value) is not None
                 or parsed.scheme != "https"
                 or not parsed.hostname
                 or parsed.username is not None
@@ -893,11 +900,26 @@ class GoogleOidcLoginService:
                 raise GoogleOidcProviderUnavailableError(
                     "Servizio identita non disponibile."
                 )
-            session = self.http_sessions.establish_session(
-                user.user_id,
-                existing_cookie_header=existing_cookie_header,
-            )
+            session_rejected = False
+            session_unavailable = False
+            try:
+                session = self.http_sessions.establish_session(
+                    user.user_id,
+                    existing_cookie_header=existing_cookie_header,
+                )
+            except HttpAuthenticationRequiredError:
+                session_rejected = True
+            except Exception:
+                session_unavailable = True
             existing_cookie_header = None
+            if session_rejected:
+                raise GoogleOidcIdentityRejectedError(
+                    "Identita Google non autorizzata."
+                )
+            if session_unavailable or session is None:
+                raise GoogleOidcProviderUnavailableError(
+                    "Servizio sessioni non disponibile."
+                )
             result_failed = False
             try:
                 result = GoogleOidcLoginResult(
@@ -934,6 +956,8 @@ class GoogleOidcLoginService:
             state_unavailable = False
             identity_rejected = False
             identity_unavailable = False
+            session_rejected = False
+            session_unavailable = False
             verification_failed = False
             verification_unavailable = False
             result_failed = False
