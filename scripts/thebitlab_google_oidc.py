@@ -806,8 +806,21 @@ class GoogleOidcLoginService:
                 code, state, provider_error = self._callback_values(parameters)
             finally:
                 parameters = None
-            flow = self.flows.consume(state, _utc(self.clock()))
+            state_failed = False
+            state_unavailable = False
+            try:
+                flow = self.flows.consume(state, _utc(self.clock()))
+            except GoogleOidcStateError:
+                state_failed = True
+            except Exception:
+                state_unavailable = True
             state = None
+            if state_failed:
+                raise GoogleOidcStateError("State OIDC non valido o gia usato.")
+            if state_unavailable or flow is None:
+                raise GoogleOidcProviderUnavailableError(
+                    "Store flow OIDC non disponibile."
+                )
             if provider_error:
                 provider_error = False
                 raise GoogleOidcCallbackError("Login Google annullato o rifiutato.")
@@ -886,6 +899,8 @@ class GoogleOidcLoginService:
             code = None
             state = None
             provider_error = False
+            state_failed = False
+            state_unavailable = False
             verification_failed = False
             verification_unavailable = False
             result_failed = False

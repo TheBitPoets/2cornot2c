@@ -414,6 +414,26 @@ def test_callback_replay_and_concurrent_consume_have_one_winner(database_path, c
         service.complete_callback(valid_callback(state))
 
 
+def test_flow_store_state_error_is_normalized(database_path, clock) -> None:
+    service, _storage, _flows, _transport, _verifier = make_service(
+        database_path, clock
+    )
+    state = begin_state(service)
+
+    class RawErrorStore:
+        def consume(self, *_args):
+            raise GoogleOidcStateError("RAW_BACKEND_SECRET")
+
+    service.flows = RawErrorStore()
+    with pytest.raises(GoogleOidcStateError) as captured:
+        service.complete_callback(valid_callback(state))
+    assert "RAW_BACKEND_SECRET" not in str(captured.value)
+    assert "RAW_BACKEND_SECRET" not in traceback_function_locals(
+        captured.value, "complete_callback", "consume"
+    )
+    assert captured.value.__context__ is None
+
+
 def test_flow_creation_auto_cleans_expired_records_and_store_is_bounded(
     database_path, clock
 ) -> None:
