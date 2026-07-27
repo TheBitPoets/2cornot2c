@@ -1,0 +1,73 @@
+name: Build student development Docker image
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "docker/student-dev/**"
+      - "scripts/build_student_dev.py"
+      - "tests/test_build_student_dev.py"
+      - ".github/workflows/student-dev-docker.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "docker/student-dev/**"
+      - "scripts/build_student_dev.py"
+      - "tests/test_build_student_dev.py"
+      - ".github/workflows/student-dev-docker.yml"
+
+jobs:
+  docker-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            tag: test-amd64
+            machine: x86_64
+          - platform: linux/arm64
+            tag: test-arm64
+            machine: aarch64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Enable multiarch emulation
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - name: Validate student-dev configuration
+        run: python scripts/build_student_dev.py --check
+
+      - name: Build student-dev image
+        run: >-
+          python scripts/build_student_dev.py
+          --platform "${{ matrix.platform }}"
+          --tag "2cornot2c-student-dev:${{ matrix.tag }}"
+
+      - name: Smoke test toolchain
+        run: |
+          docker run --rm \
+            --platform "${{ matrix.platform }}" \
+            "2cornot2c-student-dev:${{ matrix.tag }}" \
+            sh -eu -c '
+              test "$(id -u)" = 1000
+              test "$(id -un)" = student
+              test "$(uname -m)" = "${{ matrix.machine }}"
+              printf "int main(void){return 0;}\n" > /tmp/hello.c
+              gcc -Wall -Wextra -Werror /tmp/hello.c -o /tmp/hello
+              /tmp/hello
+              gdb --version
+              git --version
+              make --version
+              python3 --version
+              node --version
+              sqlite3 --version
+              vim --version
+            '

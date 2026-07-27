@@ -408,6 +408,13 @@ La stessa configurazione supporta Windows su processori Intel/AMD e macOS su
 Apple Silicon. La macchina virtuale usa Ubuntu 24.04 e contiene già compilatore,
 debugger e interfaccia grafica.
 
+È inoltre in preparazione `student-dev`, l'alternativa Docker leggera per i
+computer con poca RAM. Usa la stessa Ubuntu 24.04 delle VM ed è costruita
+nativamente per `linux/amd64` (Windows e Mac Intel) e `linux/arm64` (Mac Apple
+Silicon). Il runner di grading resta per ora separato e basato su Debian: verrà
+allineato solo dopo i test di compatibilità, così gli esiti delle consegne non
+cambiano durante la sperimentazione.
+
 ## Installare l'ambiente di sviluppo
 
 ### Preparazione automatica del Mac
