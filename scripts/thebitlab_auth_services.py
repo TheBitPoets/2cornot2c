@@ -184,11 +184,12 @@ class FakeFederatedIdentityProvider:
         self._assertions = dict(assertions)
 
     def authenticate(self, credential: str) -> FederatedIdentityAssertion:
-        try:
-            assertion = self._assertions[credential]
-        except (KeyError, TypeError):
-            # Do not retain the opaque credential in a chained KeyError.
-            raise ProviderAuthenticationError("Credenziale provider non valida.") from None
+        if type(credential) is not str:
+            raise ProviderAuthenticationError("Credenziale provider non valida.")
+        missing = object()
+        assertion = self._assertions.get(credential, missing)
+        if assertion is missing:
+            raise ProviderAuthenticationError("Credenziale provider non valida.")
         if assertion.provider != self.provider_name:
             raise ProviderProtocolError("Il provider ha restituito un'assertion con issuer diverso.")
         return assertion
@@ -226,6 +227,10 @@ class SessionApplicationStorage(Protocol):
     def read_session_by_token_digest(self, token_digest: str) -> UserSession | None: ...
 
     def save_session(self, session: UserSession) -> None: ...
+
+    def save_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None: ...
 
     def revoke_user_sessions(self, user_id: str, revoked_at: datetime) -> int: ...
 
@@ -285,14 +290,19 @@ class FederatedIdentityService:
         provider: FederatedIdentityProvider,
         credential: str,
     ) -> UserAccount:
+        provider_failed = False
         try:
             expected_provider = _required_text(
                 provider.provider_name, "provider_name", lowercase=True
             )
             assertion = provider.authenticate(credential)
         except Exception:
-            # Provider exceptions and their causes may contain the opaque credential.
-            raise ProviderAuthenticationError("Autenticazione provider non riuscita.") from None
+            # Raise only after leaving except, so __context__ cannot retain credentials.
+            provider_failed = True
+            expected_provider = ""
+            assertion = None
+        if provider_failed:
+            raise ProviderAuthenticationError("Autenticazione provider non riuscita.")
         normalized_assertion = self._normalize_assertion(assertion)
         if normalized_assertion.provider != expected_provider:
             raise ProviderProtocolError("Assertion e provider adapter non coincidono.")
@@ -305,8 +315,9 @@ class FederatedIdentityService:
     def _normalize_assertion(assertion: object) -> FederatedIdentityAssertion:
         if type(assertion) is not FederatedIdentityAssertion:
             raise ProviderProtocolError("Il provider non ha restituito un'assertion valida.")
+        assertion_failed = False
         try:
-            return FederatedIdentityAssertion(
+            normalized = FederatedIdentityAssertion(
                 provider=assertion.provider,
                 subject=assertion.subject,
                 display_name=assertion.display_name,
@@ -315,9 +326,13 @@ class FederatedIdentityService:
                 username=assertion.username,
             )
         except Exception:
+            assertion_failed = True
+            normalized = None
+        if assertion_failed or normalized is None:
             raise ProviderProtocolError(
                 "Il provider non ha restituito un'assertion valida."
-            ) from None
+            )
+        return normalized
 
     def _resolve_normalized(self, assertion: FederatedIdentityAssertion) -> UserAccount:
         now = _utc(self.clock())
@@ -462,20 +477,20 @@ class SessionService:
         digest = _session_digest_for_verification(bearer_token)
         session = self.storage.read_session_by_token_digest(digest)
         now = _utc(self.clock())
-        session, account = self._require_valid(session, digest, now)
-        if now > session.last_seen_at:
+        for _attempt in range(_MAX_ATTEMPTS):
+            session, account = self._require_valid(session, digest, now)
+            touched = replace(session, last_seen_at=max(session.last_seen_at, now))
             try:
-                self.storage.save_session(replace(session, last_seen_at=now))
+                self.storage.save_session_for_active_user(
+                    touched, expected_user_updated_at=account.updated_at
+                )
             except (IdentityStorageConflictError, IdentityStorageNotFoundError):
-                current = self.storage.read_session_by_token_digest(digest)
-                session, account = self._require_valid(current, digest, now)
-                if session.last_seen_at < now:
-                    raise ConcurrentStateChangeError(
-                        "Sessione modificata durante l'autenticazione."
-                    )
-            else:
-                session = replace(session, last_seen_at=now)
-        return AuthenticatedSession(session, account)
+                session = self.storage.read_session_by_token_digest(digest)
+                continue
+            return AuthenticatedSession(touched, account)
+        raise ConcurrentStateChangeError(
+            "Sessione o utente modificati ripetutamente durante l'autenticazione."
+        )
 
     def _require_valid(
         self,

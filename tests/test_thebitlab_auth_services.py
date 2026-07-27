@@ -102,6 +102,7 @@ def test_fake_google_onboards_unknown_user_as_pending_atomically(storage) -> Non
         service.authenticate(provider, "raw-secret-not-in-error")
     assert "raw-secret" not in str(captured.value)
     assert captured.value.__cause__ is None
+    assert captured.value.__context__ is None
 
 
 def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertions(storage) -> None:
@@ -152,16 +153,19 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
         service.authenticate(LeakyProvider(), "raw-provider-secret")
     assert "raw-provider-secret" not in str(captured.value)
     assert captured.value.__cause__ is None
+    assert captured.value.__context__ is None
     with pytest.raises(ProviderProtocolError, match="assertion valida"):
         service.authenticate(InvalidProvider(), "opaque")
     with pytest.raises(ProviderProtocolError) as hostile:
         service.authenticate(HostileProvider(), "opaque")
     assert "raw-provider-secret" not in str(hostile.value)
     assert hostile.value.__cause__ is None
+    assert hostile.value.__context__ is None
     with pytest.raises(ProviderProtocolError) as tampered:
         service.authenticate(TamperedProvider(), "opaque")
     assert "raw-provider-secret" not in str(tampered.value)
     assert tampered.value.__cause__ is None
+    assert tampered.value.__context__ is None
 
 
 def test_existing_identity_refreshes_attributes_without_changing_owner_or_link_time(storage) -> None:
@@ -442,18 +446,56 @@ def test_session_deletion_races_are_translated(storage, database_path, monkeypat
     )
     issued = service.issue("user-01")
 
-    def delete_then_missing(_session):
+    def delete_then_missing(_session, **_kwargs):
         with sqlite3.connect(database_path) as connection:
             connection.execute("DELETE FROM sessions WHERE session_id = 'session-01'")
         raise IdentityStorageNotFoundError("simulated")
 
-    monkeypatch.setattr(storage, "save_session", delete_then_missing)
+    monkeypatch.setattr(
+        storage, "save_session_for_active_user", delete_then_missing
+    )
     clock.value = NOW + timedelta(minutes=1)
     with pytest.raises(InvalidCredentialError):
         service.authenticate(issued.bearer_token)
 
     issued = service.issue("user-01")
+    monkeypatch.setattr(storage, "save_session", delete_then_missing)
     assert service.revoke(issued.bearer_token) is False
+
+
+def test_session_authentication_retries_user_revision_race(storage, monkeypatch) -> None:
+    teacher = account(role="teacher")
+    storage.create_user(teacher)
+    clock = MutableClock(NOW + timedelta(minutes=1))
+    service = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "U" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+    save_for_active = storage.save_session_for_active_user
+    changed = False
+
+    def change_role_then_save(session, *, expected_user_updated_at):
+        nonlocal changed
+        if not changed:
+            changed = True
+            storage.save_user(
+                replace(teacher, role="student", updated_at=NOW + timedelta(seconds=1)),
+                expected_updated_at=NOW,
+            )
+        save_for_active(
+            session, expected_user_updated_at=expected_user_updated_at
+        )
+
+    monkeypatch.setattr(
+        storage, "save_session_for_active_user", change_role_then_save
+    )
+    authenticated = service.authenticate(issued.bearer_token)
+
+    assert authenticated.user.role == "student"
+    assert storage.read_user("user-01").role == "student"
 
 
 def test_session_authentication_rejects_clock_rollback(storage) -> None:

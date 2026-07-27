@@ -121,6 +121,12 @@ class SessionStorage(Protocol):
 
     def save_session(self, session: UserSession) -> None: ...
 
+    def save_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None:
+        """Touch an active session only while its owner revision remains unchanged."""
+        ...
+
     def list_user_sessions(self, user_id: str) -> list[UserSession]: ...
 
     def revoke_user_sessions(self, user_id: str, revoked_at: datetime) -> int:

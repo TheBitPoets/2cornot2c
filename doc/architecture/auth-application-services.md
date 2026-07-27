@@ -19,7 +19,7 @@ Non importano l'adapter SQLite concreto né SDK OAuth/OIDC.
 
 Un adapter provider autentica la credenziale opaca e restituisce `FederatedIdentityAssertion`, contenente provider e subject stabili oltre ad attributi aggiornabili. Validazione di firma, issuer, audience, nonce e protocollo appartengono all'adapter reale. Il confine applicativo converte qualsiasi eccezione dell'adapter in un errore generico senza concatenare cause potenzialmente contenenti la credenziale, e rifiuta risultati che non siano assertion tipizzate.
 
-Il fake provider usa chiavi deterministiche solo nei test. Non simula crittografia e non deve essere abilitato come provider di produzione.
+Il fake provider usa chiavi deterministiche solo nei test. Non genera `KeyError` contenenti la chiave e il boundary rilancia gli errori sanitizzati solo dopo essere uscito dal blocco `except`, evitando che `__context__` conservi credenziali raw. Non simula crittografia e non deve essere abilitato come provider di produzione.
 
 `FederatedIdentityService` applica queste regole:
 
@@ -44,7 +44,7 @@ La validita usa l'intervallo esclusivo:
 created_at <= now < expires_at
 ```
 
-Una sessione revocata o appartenente a un account disabilitato fallisce chiusa. Creazione sessione e verifica `active` avvengono nella stessa transazione. `last_seen_at` e revoca usano il compare-and-swap dello storage: una race con revoca viene riletta e non puo riattivare il bearer. Una modifica concorrente ancora attiva durante la revoca produce un errore esplicito, non un falso successo. Un rollback dell'orologio sotto `last_seen_at` viene rifiutato.
+Una sessione revocata o appartenente a un account disabilitato fallisce chiusa. Creazione sessione e verifica `active` avvengono nella stessa transazione. Ogni autenticazione, anche senza avanzamento di `last_seen_at`, esegue un CAS atomico su sessione, account attivo e revisione `users.updated_at`; un cambio ruolo concorrente viene riletto prima di restituire l'account. `last_seen_at` e revoca usano il compare-and-swap dello storage: una race con revoca viene riletta e non puo riattivare il bearer. Una modifica concorrente ancora attiva durante la revoca produce un errore esplicito, non un falso successo. Un rollback dell'orologio sotto `last_seen_at` viene rifiutato.
 
 La disabilitazione di un account revoca atomicamente le sue sessioni e rimuove pairing ancora autorizzati, impedendo che una successiva riabilitazione faccia rivivere credenziali precedenti. Gli aggiornamenti utente richiedono `created_at` immutabile, un nuovo `updated_at` strettamente successivo e l'`expected_updated_at` della revisione letta. Il compare-and-swap impedisce a uno snapshot stale di riattivare l'account anche se prova a presentare un timestamp futuro.
 

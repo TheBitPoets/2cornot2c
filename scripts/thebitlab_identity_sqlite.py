@@ -858,6 +858,55 @@ class SqliteIdentityStorage:
                     "Sessione modificata o revocata da un'altra operazione."
                 )
 
+    def save_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None:
+        if session.revoked_at is not None:
+            raise IdentityStorageConflictError(
+                "Una sessione revocata non puo essere usata come touch attivo."
+            )
+        created_at = _encode_datetime(session.created_at, "created_at")
+        expires_at = _encode_datetime(session.expires_at, "expires_at")
+        last_seen_at = _encode_datetime(session.last_seen_at, "last_seen_at")
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        with self._transaction("save_session_for_active_user") as connection:
+            cursor = connection.execute(
+                """
+                UPDATE sessions SET last_seen_at = ?
+                WHERE session_id = ? AND user_id = ? AND token_digest = ?
+                    AND created_at = ? AND expires_at = ?
+                    AND revoked_at IS NULL AND last_seen_at <= ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE users.user_id = sessions.user_id
+                            AND users.active = 1 AND users.updated_at = ?
+                    )
+                """,
+                (
+                    last_seen_at,
+                    session.session_id,
+                    session.user_id,
+                    session.token_digest,
+                    created_at,
+                    expires_at,
+                    last_seen_at,
+                    expected_user_revision,
+                ),
+            )
+            if cursor.rowcount != 1:
+                exists = connection.execute(
+                    "SELECT 1 FROM sessions WHERE session_id = ?", (session.session_id,)
+                ).fetchone()
+                if exists is None:
+                    raise IdentityStorageNotFoundError(
+                        "Sessione da aggiornare non trovata."
+                    )
+                raise IdentityStorageConflictError(
+                    "Sessione o utente modificati durante l'autenticazione."
+                )
+
     def list_user_sessions(self, user_id: str) -> list[UserSession]:
         rows = self._query_all(
             "SELECT * FROM sessions WHERE user_id = ? ORDER BY created_at, session_id",
