@@ -14,18 +14,56 @@ from scripts.thebitlab_identity import (
 )
 
 
+class IdentityStorageError(RuntimeError):
+    """Base error shared by identity persistence adapters."""
+
+
+class IdentityStorageConflictError(IdentityStorageError):
+    """Raised when a persistence invariant or compare-and-swap fails."""
+
+
+class IdentityStorageGenerationConflictError(IdentityStorageConflictError):
+    """Raised when an immutable external-identity generation was already used."""
+
+
+class IdentityStorageNotFoundError(IdentityStorageError):
+    """Raised when an update targets a missing identity record."""
+
+
+class IdentityStorageCorruptionError(IdentityStorageError):
+    """Raised when persisted data cannot satisfy the domain contracts."""
+
+
 class UserDirectoryStorage(Protocol):
     """Persistence port for internal users and linked external identities."""
 
     def create_user(self, user: UserAccount) -> None: ...
 
+    def provision_user_with_identity(
+        self, user: UserAccount, identity: ExternalIdentity
+    ) -> None:
+        """Atomically create one user and its first provider identity."""
+        ...
+
     def read_user(self, user_id: str) -> UserAccount | None: ...
 
-    def save_user(self, user: UserAccount) -> None: ...
+    def save_user(self, user: UserAccount, *, expected_updated_at: datetime) -> None:
+        """Update a user only when the persisted revision matches the expected instant."""
+        ...
 
     def list_users(self) -> list[UserAccount]: ...
 
     def link_external_identity(self, identity: ExternalIdentity) -> None: ...
+
+    def refresh_external_identity(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+    ) -> None:
+        """Refresh a link only while its active owner revision remains unchanged."""
+        ...
 
     def read_external_identity(self, provider: str, subject: str) -> ExternalIdentity | None: ...
 
@@ -77,11 +115,23 @@ class SessionStorage(Protocol):
 
     def create_session(self, session: UserSession) -> None: ...
 
+    def create_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None:
+        """Create a session only while its active owner revision remains unchanged."""
+        ...
+
     def read_session(self, session_id: str) -> UserSession | None: ...
 
     def read_session_by_token_digest(self, token_digest: str) -> UserSession | None: ...
 
     def save_session(self, session: UserSession) -> None: ...
+
+    def save_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None:
+        """Touch an active session only while its owner revision remains unchanged."""
+        ...
 
     def list_user_sessions(self, user_id: str) -> list[UserSession]: ...
 
@@ -104,6 +154,12 @@ class TuiPairingStorage(Protocol):
     def read_pairing_by_code_digest(self, code_digest: str) -> TuiPairing | None: ...
 
     def save_pairing(self, pairing: TuiPairing) -> None: ...
+
+    def save_pairing_for_active_user(
+        self, pairing: TuiPairing, *, expected_user_updated_at: datetime
+    ) -> None:
+        """Transition a pairing only while its active user revision remains unchanged."""
+        ...
 
     def delete_expired_pairings(self, expired_before: datetime) -> int:
         """Delete pairings expiring at or before an explicit retention cutoff."""

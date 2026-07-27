@@ -16,26 +16,17 @@ from scripts.thebitlab_identity import (
     UserAccount,
     UserSession,
 )
+from scripts.thebitlab_identity_ports import (
+    IdentityStorageConflictError,
+    IdentityStorageCorruptionError,
+    IdentityStorageError,
+    IdentityStorageGenerationConflictError,
+    IdentityStorageNotFoundError,
+)
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 _T = TypeVar("_T")
-
-
-class IdentityStorageError(RuntimeError):
-    """Base error for identity persistence failures."""
-
-
-class IdentityStorageConflictError(IdentityStorageError):
-    """Raised when a database uniqueness or foreign-key invariant fails."""
-
-
-class IdentityStorageNotFoundError(IdentityStorageError):
-    """Raised when an update targets a record that does not exist."""
-
-
-class IdentityStorageCorruptionError(IdentityStorageError):
-    """Raised when persisted data cannot satisfy the domain contracts."""
 
 
 _MIGRATION_1 = (
@@ -157,6 +148,21 @@ _MIGRATION_1 = (
     "CREATE INDEX idx_tui_pairings_expires ON tui_pairings(expires_at)",
 )
 
+_MIGRATION_2 = (
+    """
+    CREATE TABLE external_identity_generations (
+        provider TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        linked_at TEXT NOT NULL,
+        PRIMARY KEY (provider, subject, linked_at)
+    )
+    """,
+    """
+    INSERT INTO external_identity_generations(provider, subject, linked_at)
+    SELECT provider, subject, linked_at FROM external_identities
+    """,
+)
+
 
 def _encode_datetime(value: datetime, field_name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
@@ -225,12 +231,20 @@ class SqliteIdentityStorage:
                 raise IdentityStorageError(
                     f"Schema identity piu recente del codice: versione {max(unsupported)}."
                 )
-            if 1 not in versions:
-                for statement in _MIGRATION_1:
+            if versions and versions != set(range(1, max(versions) + 1)):
+                raise IdentityStorageError("Sequenza migrazioni identity non valida.")
+            migrations = ((1, _MIGRATION_1), (2, _MIGRATION_2))
+            for version, statements in migrations:
+                if version in versions:
+                    continue
+                for statement in statements:
                     connection.execute(statement)
                 connection.execute(
                     "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
-                    (1, _encode_datetime(datetime.now(timezone.utc), "applied_at")),
+                    (
+                        version,
+                        _encode_datetime(datetime.now(timezone.utc), "applied_at"),
+                    ),
                 )
             connection.commit()
         except IdentityStorageError:
@@ -405,55 +419,188 @@ class SqliteIdentityStorage:
                 ),
             )
 
-    def read_user(self, user_id: str) -> UserAccount | None:
-        row = self._query_one("SELECT * FROM users WHERE user_id = ?", (user_id,))
-        return None if row is None else self._user(row)
-
-    def save_user(self, user: UserAccount) -> None:
-        with self._transaction("save_user") as connection:
-            cursor = connection.execute(
-                """
-                UPDATE users SET display_name = ?, role = ?, active = ?, created_at = ?,
-                    updated_at = ?, primary_email = ? WHERE user_id = ?
-                """,
+    def provision_user_with_identity(
+        self, user: UserAccount, identity: ExternalIdentity
+    ) -> None:
+        if identity.user_id != user.user_id:
+            raise IdentityStorageConflictError(
+                "Utente e identita del provisioning hanno proprietari diversi."
+            )
+        with self._transaction("provision_user_with_identity") as connection:
+            connection.execute(
+                "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
+                    user.user_id,
                     user.display_name,
                     user.role,
                     int(user.active),
                     _encode_datetime(user.created_at, "created_at"),
                     _encode_datetime(user.updated_at, "updated_at"),
                     user.primary_email,
-                    user.user_id,
                 ),
             )
-            if cursor.rowcount != 1:
-                raise IdentityStorageNotFoundError("Utente da aggiornare non trovato.")
-
-    def list_users(self) -> list[UserAccount]:
-        return [self._user(row) for row in self._query_all("SELECT * FROM users ORDER BY user_id")]
-
-    def link_external_identity(self, identity: ExternalIdentity) -> None:
-        with self._transaction("link_external_identity") as connection:
-            cursor = connection.execute(
-                """
-                INSERT INTO external_identities VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(provider, subject) DO UPDATE SET
-                    email = excluded.email,
-                    username = excluded.username
-                WHERE external_identities.user_id = excluded.user_id
-                """,
+            linked_at = _encode_datetime(identity.linked_at, "linked_at")
+            self._reserve_external_identity_generation(
+                connection, identity.provider, identity.subject, linked_at
+            )
+            connection.execute(
+                "INSERT INTO external_identities VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     identity.provider,
                     identity.subject,
                     identity.user_id,
-                    _encode_datetime(identity.linked_at, "linked_at"),
+                    linked_at,
                     identity.email,
                     identity.username,
                 ),
             )
+
+    def read_user(self, user_id: str) -> UserAccount | None:
+        row = self._query_one("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        return None if row is None else self._user(row)
+
+    def save_user(self, user: UserAccount, *, expected_updated_at: datetime) -> None:
+        created_at = _encode_datetime(user.created_at, "created_at")
+        updated_at = _encode_datetime(user.updated_at, "updated_at")
+        expected_revision = _encode_datetime(expected_updated_at, "expected_updated_at")
+        if updated_at <= expected_revision:
+            raise IdentityStorageConflictError(
+                "Il nuovo updated_at deve essere successivo alla revisione attesa."
+            )
+        with self._transaction("save_user") as connection:
+            cursor = connection.execute(
+                """
+                UPDATE users SET display_name = ?, role = ?, active = ?,
+                    updated_at = ?, primary_email = ?
+                WHERE user_id = ? AND created_at = ? AND updated_at = ?
+                """,
+                (
+                    user.display_name,
+                    user.role,
+                    int(user.active),
+                    updated_at,
+                    user.primary_email,
+                    user.user_id,
+                    created_at,
+                    expected_revision,
+                ),
+            )
             if cursor.rowcount != 1:
+                exists = connection.execute(
+                    "SELECT 1 FROM users WHERE user_id = ?", (user.user_id,)
+                ).fetchone()
+                if exists is None:
+                    raise IdentityStorageNotFoundError("Utente da aggiornare non trovato.")
                 raise IdentityStorageConflictError(
-                    "L'identita provider e gia collegata a un utente diverso."
+                    "Utente modificato da un'altra operazione o timestamp non monotono."
+                )
+            if not user.active:
+                disabled_at = updated_at
+                connection.execute(
+                    """
+                    UPDATE sessions SET revoked_at = CASE
+                        WHEN ? >= last_seen_at AND ? < expires_at THEN ?
+                        ELSE last_seen_at
+                    END
+                    WHERE user_id = ? AND revoked_at IS NULL
+                    """,
+                    (disabled_at, disabled_at, disabled_at, user.user_id),
+                )
+                connection.execute(
+                    "DELETE FROM tui_pairings WHERE user_id = ? AND status = 'authorized'",
+                    (user.user_id,),
+                )
+
+    def list_users(self) -> list[UserAccount]:
+        return [self._user(row) for row in self._query_all("SELECT * FROM users ORDER BY user_id")]
+
+    @staticmethod
+    def _reserve_external_identity_generation(
+        connection: sqlite3.Connection,
+        provider: str,
+        subject: str,
+        linked_at: str,
+    ) -> None:
+        exists = connection.execute(
+            """
+            SELECT 1 FROM external_identity_generations
+            WHERE provider = ? AND subject = ? AND linked_at = ?
+            """,
+            (provider, subject, linked_at),
+        ).fetchone()
+        if exists is not None:
+            raise IdentityStorageGenerationConflictError(
+                "Generazione identita esterna gia utilizzata."
+            )
+        connection.execute(
+            "INSERT INTO external_identity_generations VALUES (?, ?, ?)",
+            (provider, subject, linked_at),
+        )
+
+    def link_external_identity(self, identity: ExternalIdentity) -> None:
+        linked_at = _encode_datetime(identity.linked_at, "linked_at")
+        with self._transaction("link_external_identity") as connection:
+            self._reserve_external_identity_generation(
+                connection, identity.provider, identity.subject, linked_at
+            )
+            connection.execute(
+                "INSERT INTO external_identities VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    identity.provider,
+                    identity.subject,
+                    identity.user_id,
+                    linked_at,
+                    identity.email,
+                    identity.username,
+                ),
+            )
+
+    def refresh_external_identity(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+    ) -> None:
+        expected_revision = _encode_datetime(expected_linked_at, "expected_linked_at")
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        with self._transaction("refresh_external_identity") as connection:
+            cursor = connection.execute(
+                """
+                UPDATE external_identities SET email = ?, username = ?
+                WHERE provider = ? AND subject = ? AND user_id = ? AND linked_at = ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE users.user_id = external_identities.user_id
+                            AND users.active = 1 AND users.updated_at = ?
+                    )
+                """,
+                (
+                    identity.email,
+                    identity.username,
+                    identity.provider,
+                    identity.subject,
+                    identity.user_id,
+                    expected_revision,
+                    expected_user_revision,
+                ),
+            )
+            if cursor.rowcount != 1:
+                exists = connection.execute(
+                    """
+                    SELECT 1 FROM external_identities
+                    WHERE provider = ? AND subject = ?
+                    """,
+                    (identity.provider, identity.subject),
+                ).fetchone()
+                if exists is None:
+                    raise IdentityStorageNotFoundError(
+                        "Identita provider da aggiornare non trovata."
+                    )
+                raise IdentityStorageConflictError(
+                    "Identita provider ricollegata da un'altra operazione."
                 )
 
     def read_external_identity(self, provider: str, subject: str) -> ExternalIdentity | None:
@@ -650,6 +797,39 @@ class SqliteIdentityStorage:
                 ),
             )
 
+    def create_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None:
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        with self._transaction("create_session_for_active_user") as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO sessions
+                SELECT ?, ?, ?, ?, ?, ?, ?
+                FROM users
+                WHERE user_id = ? AND active = 1 AND updated_at = ?
+                """,
+                (
+                    session.session_id,
+                    session.user_id,
+                    session.token_digest,
+                    _encode_datetime(session.created_at, "created_at"),
+                    _encode_datetime(session.expires_at, "expires_at"),
+                    _encode_datetime(session.last_seen_at, "last_seen_at"),
+                    None
+                    if session.revoked_at is None
+                    else _encode_datetime(session.revoked_at, "revoked_at"),
+                    session.user_id,
+                    expected_user_revision,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise IdentityStorageConflictError(
+                    "Impossibile creare la sessione per un utente non attivo."
+                )
+
     def read_session(self, session_id: str) -> UserSession | None:
         row = self._query_one("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
         return None if row is None else self._session(row)
@@ -691,11 +871,11 @@ class SqliteIdentityStorage:
                         revoked_at = ?
                     WHERE session_id = ? AND user_id = ? AND token_digest = ?
                         AND created_at = ? AND expires_at = ?
-                        AND ((revoked_at IS NULL AND last_seen_at <= ?) OR revoked_at = ?)
+                        AND revoked_at IS NULL AND last_seen_at <= ?
                     """,
                     (last_seen_at, last_seen_at, revoked_at)
                     + immutable
-                    + (revoked_at, revoked_at),
+                    + (revoked_at,),
                 )
             if cursor.rowcount != 1:
                 exists = connection.execute(
@@ -705,6 +885,55 @@ class SqliteIdentityStorage:
                     raise IdentityStorageNotFoundError("Sessione da aggiornare non trovata.")
                 raise IdentityStorageConflictError(
                     "Sessione modificata o revocata da un'altra operazione."
+                )
+
+    def save_session_for_active_user(
+        self, session: UserSession, *, expected_user_updated_at: datetime
+    ) -> None:
+        if session.revoked_at is not None:
+            raise IdentityStorageConflictError(
+                "Una sessione revocata non puo essere usata come touch attivo."
+            )
+        created_at = _encode_datetime(session.created_at, "created_at")
+        expires_at = _encode_datetime(session.expires_at, "expires_at")
+        last_seen_at = _encode_datetime(session.last_seen_at, "last_seen_at")
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        with self._transaction("save_session_for_active_user") as connection:
+            cursor = connection.execute(
+                """
+                UPDATE sessions SET last_seen_at = ?
+                WHERE session_id = ? AND user_id = ? AND token_digest = ?
+                    AND created_at = ? AND expires_at = ?
+                    AND revoked_at IS NULL AND last_seen_at <= ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE users.user_id = sessions.user_id
+                            AND users.active = 1 AND users.updated_at = ?
+                    )
+                """,
+                (
+                    last_seen_at,
+                    session.session_id,
+                    session.user_id,
+                    session.token_digest,
+                    created_at,
+                    expires_at,
+                    last_seen_at,
+                    expected_user_revision,
+                ),
+            )
+            if cursor.rowcount != 1:
+                exists = connection.execute(
+                    "SELECT 1 FROM sessions WHERE session_id = ?", (session.session_id,)
+                ).fetchone()
+                if exists is None:
+                    raise IdentityStorageNotFoundError(
+                        "Sessione da aggiornare non trovata."
+                    )
+                raise IdentityStorageConflictError(
+                    "Sessione o utente modificati durante l'autenticazione."
                 )
 
     def list_user_sessions(self, user_id: str) -> list[UserSession]:
@@ -781,6 +1010,28 @@ class SqliteIdentityStorage:
         )
 
     def save_pairing(self, pairing: TuiPairing) -> None:
+        self._save_pairing_transition(pairing, require_active_user=False)
+
+    def save_pairing_for_active_user(
+        self, pairing: TuiPairing, *, expected_user_updated_at: datetime
+    ) -> None:
+        if pairing.user_id is None:
+            raise IdentityStorageConflictError(
+                "La transizione pairing richiede un utente attivo."
+            )
+        self._save_pairing_transition(
+            pairing,
+            require_active_user=True,
+            expected_user_updated_at=expected_user_updated_at,
+        )
+
+    def _save_pairing_transition(
+        self,
+        pairing: TuiPairing,
+        *,
+        require_active_user: bool,
+        expected_user_updated_at: datetime | None = None,
+    ) -> None:
         values = self._pairing_values(pairing)
         if pairing.status in {"consumed", "expired", "revoked"} and pairing.user_id is not None:
             predecessors = ("authorized",)
@@ -798,6 +1049,19 @@ class SqliteIdentityStorage:
             }[pairing.status]
             prior_identity_sql = ""
             prior_identity_values = ()
+        if require_active_user:
+            expected_user_revision = _encode_datetime(
+                expected_user_updated_at, "expected_user_updated_at"
+            )
+            active_user_sql = (
+                " AND EXISTS (SELECT 1 FROM users"
+                " WHERE users.user_id = ? AND users.active = 1"
+                " AND users.updated_at = ?)"
+            )
+            active_user_values = (pairing.user_id, expected_user_revision)
+        else:
+            active_user_sql = ""
+            active_user_values = ()
         placeholders = ", ".join("?" for _ in predecessors)
         with self._transaction("save_pairing") as connection:
             cursor = connection.execute(
@@ -805,7 +1069,7 @@ class SqliteIdentityStorage:
                 UPDATE tui_pairings SET status = ?, user_id = ?, authorized_at = ?,
                     consumed_at = ?, expired_at = ?, revoked_at = ?
                 WHERE pairing_id = ? AND code_digest = ? AND created_at = ? AND expires_at = ?
-                    AND status IN ({placeholders}){prior_identity_sql}
+                    AND status IN ({placeholders}){prior_identity_sql}{active_user_sql}
                 """,
                 (
                     values[2],
@@ -820,7 +1084,8 @@ class SqliteIdentityStorage:
                     values[4],
                 )
                 + predecessors
-                + prior_identity_values,
+                + prior_identity_values
+                + active_user_values,
             )
             if cursor.rowcount != 1:
                 exists = connection.execute(
@@ -829,7 +1094,7 @@ class SqliteIdentityStorage:
                 if exists is None:
                     raise IdentityStorageNotFoundError("Pairing da aggiornare non trovato.")
                 raise IdentityStorageConflictError(
-                    "Pairing modificato o transitato da un'altra operazione."
+                    "Pairing modificato, transitato o associato a un utente non attivo."
                 )
 
     def delete_expired_pairings(self, expired_before: datetime) -> int:

@@ -22,6 +22,7 @@ from scripts.thebitlab_identity_sqlite import (
     IdentityStorageConflictError,
     IdentityStorageCorruptionError,
     IdentityStorageError,
+    IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
     SCHEMA_VERSION,
     SqliteIdentityStorage,
@@ -123,8 +124,8 @@ def test_migration_is_idempotent_and_rejects_newer_schema(database_path) -> None
     SqliteIdentityStorage(database_path)
 
     with sqlite3.connect(database_path) as connection:
-        assert connection.execute("SELECT version FROM schema_migrations").fetchall() == [
-            (SCHEMA_VERSION,)
+        assert connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall() == [
+            (version,) for version in range(1, SCHEMA_VERSION + 1)
         ]
         connection.execute(
             "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
@@ -135,6 +136,32 @@ def test_migration_is_idempotent_and_rejects_newer_schema(database_path) -> None
         SqliteIdentityStorage(database_path)
 
 
+def test_migration_v2_upgrades_and_backfills_existing_v1_identity(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    user = account()
+    identity = ExternalIdentity("user-01", "google", "subject-01", NOW)
+    storage.provision_user_with_identity(user, identity)
+
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP TABLE external_identity_generations")
+        connection.execute("DELETE FROM schema_migrations WHERE version = 2")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute(
+            "SELECT provider, subject, linked_at FROM external_identity_generations"
+        ).fetchall() == [
+            ("google", "subject-01", "2026-09-01T08:00:00.000000Z")
+        ]
+        assert connection.execute(
+            "SELECT version FROM schema_migrations ORDER BY version"
+        ).fetchall() == [(1,), (2,)]
+
+    assert upgraded.unlink_external_identity("google", "subject-01") is True
+    with pytest.raises(IdentityStorageConflictError):
+        upgraded.link_external_identity(identity)
+
+
 def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     first = account()
     second = account("user-02")
@@ -142,7 +169,7 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     storage.create_user(second)
 
     updated = replace(first, display_name="Mario Rossi", role="teacher", updated_at=NOW + timedelta(minutes=1))
-    storage.save_user(updated)
+    storage.save_user(updated, expected_updated_at=first.updated_at)
     assert storage.read_user("user-01") == updated
     assert storage.list_users() == [updated, second]
 
@@ -159,7 +186,11 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.list_external_identities("user-01") == [identity]
 
     refreshed = replace(identity, linked_at=LATER, email="new@example.test", username="new-name")
-    storage.link_external_identity(refreshed)
+    storage.refresh_external_identity(
+        refreshed,
+        expected_linked_at=identity.linked_at,
+        expected_user_updated_at=updated.updated_at,
+    )
     expected_refresh = replace(refreshed, linked_at=identity.linked_at)
     assert storage.read_external_identity("github", "4242") == expected_refresh
 
@@ -168,6 +199,48 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.read_external_identity("github", "4242") == expected_refresh
     assert storage.unlink_external_identity("github", "4242") is True
     assert storage.unlink_external_identity("github", "4242") is False
+
+
+def test_external_identity_generation_tombstone_prevents_aba_refresh(storage) -> None:
+    storage.create_user(account())
+    original = ExternalIdentity("user-01", "google", "subject-01", NOW, email="old@test")
+    storage.link_external_identity(original)
+    assert storage.unlink_external_identity("google", "subject-01") is True
+
+    with pytest.raises(IdentityStorageGenerationConflictError):
+        storage.link_external_identity(replace(original, email="recreated@test"))
+
+    replacement = replace(
+        original,
+        linked_at=NOW + timedelta(microseconds=1),
+        email="replacement@test",
+    )
+    storage.link_external_identity(replacement)
+    with pytest.raises(IdentityStorageConflictError, match="ricollegata"):
+        storage.refresh_external_identity(
+            replace(original, email="stale@test"),
+            expected_linked_at=original.linked_at,
+            expected_user_updated_at=NOW,
+        )
+    assert storage.read_external_identity("google", "subject-01") == replacement
+
+
+def test_user_updates_are_monotonic_and_stale_snapshot_cannot_reactivate(storage) -> None:
+    original = account()
+    storage.create_user(original)
+    stale_active = replace(original, updated_at=NOW + timedelta(minutes=20))
+    disabled = replace(original, active=False, updated_at=NOW + timedelta(minutes=10))
+    storage.save_user(disabled, expected_updated_at=original.updated_at)
+
+    with pytest.raises(IdentityStorageConflictError, match="timestamp non monotono"):
+        storage.save_user(stale_active, expected_updated_at=original.updated_at)
+    with pytest.raises(IdentityStorageConflictError, match="timestamp non monotono"):
+        storage.save_user(
+            replace(disabled, created_at=NOW - timedelta(days=1), updated_at=LATER),
+            expected_updated_at=disabled.updated_at,
+        )
+
+    assert storage.read_user("user-01") == disabled
 
 
 def test_missing_foreign_key_rolls_back_without_partial_state(storage) -> None:
@@ -319,6 +392,21 @@ def test_session_last_seen_update_rejects_stale_snapshot(storage) -> None:
     assert storage.read_session("session-01") == newer
 
 
+def test_active_session_creation_requires_matching_user_revision(storage) -> None:
+    original = account()
+    storage.create_user(original)
+    storage.save_user(
+        replace(original, updated_at=NOW + timedelta(seconds=1)),
+        expected_updated_at=original.updated_at,
+    )
+
+    with pytest.raises(IdentityStorageConflictError, match="utente non attivo"):
+        storage.create_session_for_active_user(
+            session(), expected_user_updated_at=original.updated_at
+        )
+    assert storage.list_user_sessions("user-01") == []
+
+
 def test_session_digest_is_unique_under_concurrent_writes(storage) -> None:
     storage.create_user(account())
     contenders = [session(f"session-{index}") for index in range(2)]
@@ -361,6 +449,24 @@ def test_pairing_digest_lookup_lifecycle_and_cleanup(storage) -> None:
 
     with pytest.raises(IdentityStorageConflictError):
         storage.create_pairing(pairing("pairing-duplicate"))
+
+
+def test_active_pairing_transition_requires_matching_user_revision(storage) -> None:
+    original = account()
+    storage.create_user(original)
+    pending = pairing()
+    storage.create_pairing(pending)
+    storage.save_user(
+        replace(original, updated_at=NOW + timedelta(seconds=1)),
+        expected_updated_at=original.updated_at,
+    )
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=1))
+
+    with pytest.raises(IdentityStorageConflictError, match="non attivo"):
+        storage.save_pairing_for_active_user(
+            authorized, expected_user_updated_at=original.updated_at
+        )
+    assert storage.read_pairing("pairing-01") == pending
 
 
 def test_pairing_consumption_is_atomic_and_terminal(storage) -> None:
@@ -448,7 +554,7 @@ def test_corrupt_timestamp_is_reported_as_stable_storage_error(storage, database
 
 def test_save_requires_existing_primary_record(storage) -> None:
     with pytest.raises(IdentityStorageNotFoundError):
-        storage.save_user(account())
+        storage.save_user(account(), expected_updated_at=NOW - timedelta(seconds=1))
     with pytest.raises(IdentityStorageNotFoundError):
         storage.save_class(class_group())
     with pytest.raises(IdentityStorageNotFoundError):
