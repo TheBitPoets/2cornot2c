@@ -244,6 +244,25 @@ def test_begin_login_builds_state_nonce_and_pkce_without_persisting_raw_values(
     assert VERIFIER not in repr(pending)
 
 
+def test_begin_login_clock_failure_is_sanitized(database_path, clock) -> None:
+    service, _storage, flows, _transport, _verifier = make_service(
+        database_path, clock
+    )
+
+    def failing_clock():
+        raise RuntimeError("RAW_BACKEND_SECRET")
+
+    service.clock = failing_clock
+    with pytest.raises(GoogleOidcProviderUnavailableError) as captured:
+        service.begin_login()
+    assert "RAW_BACKEND_SECRET" not in str(captured.value)
+    assert "RAW_BACKEND_SECRET" not in traceback_function_locals(
+        captured.value, "begin_login", "failing_clock"
+    )
+    assert captured.value.__context__ is None
+    assert flows.pending_count() == 0
+
+
 def test_generator_collision_and_invalid_secret_are_sanitized(database_path, clock) -> None:
     service, _storage, flows, _transport, _verifier = make_service(database_path, clock)
     begin_state(service)
@@ -819,7 +838,7 @@ def test_official_google_verifier_validates_rs256_signature_and_sanitizes_failur
         def __call__(self, *_args, **_kwargs):
             self.calls += 1
             response = CertResponse()
-            response.data = json.dumps({"keys": []}).encode()
+            response.data = json.dumps({"keys": public_pem}).encode()
             return response
 
     jwks_request = JwksRequest()

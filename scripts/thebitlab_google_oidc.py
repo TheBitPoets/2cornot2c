@@ -499,6 +499,7 @@ class _X509OnlyGoogleCertRequest:
         valid = (
             valid
             and type(decoded) is dict
+            and "keys" not in decoded
             and 1 <= len(decoded) <= 32
             and all(
                 type(key) is str
@@ -649,7 +650,17 @@ class GoogleOidcLoginService:
         self.verifier_factory = verifier_factory
 
     def begin_login(self) -> GoogleAuthorizationRequest:
-        now = _utc(self.clock())
+        now = None
+        clock_failed = False
+        try:
+            now = _utc(self.clock())
+        except Exception:
+            clock_failed = True
+        if clock_failed or now is None:
+            now = None
+            raise GoogleOidcProviderUnavailableError(
+                "Clock flow OIDC non disponibile."
+            )
         for _attempt in range(5):
             state = None
             nonce = None
