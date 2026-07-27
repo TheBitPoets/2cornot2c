@@ -392,11 +392,17 @@ Riferimento principale: README.md, sezione "Introduzione" (../README.md#introduz
 Il corso è fondamentalmente pratico, non è richiesto alcun prerequisito e nulla è dato per scontato.
 </p>
 
-Per preparare l'ambiente servono soltanto:
+Per preparare l'ambiente servono sempre:
 
 - [Git](https://git-scm.com/downloads);
-- [VirtualBox](https://www.virtualbox.org/wiki/Downloads) 7.1 o successivo;
 - [Vagrant](https://developer.hashicorp.com/vagrant/install) 2.4 o successivo.
+
+Serve inoltre un provider:
+
+- su Windows: [VirtualBox](https://www.virtualbox.org/wiki/Downloads) 7.1 o
+  successivo;
+- su macOS Apple Silicon: VirtualBox 7.1 o successivo oppure VMware Fusion,
+  come descritto più avanti.
 
 La stessa configurazione supporta Windows su processori Intel/AMD e macOS su
 Apple Silicon. La macchina virtuale usa Ubuntu 24.04 e contiene già compilatore,
@@ -411,7 +417,9 @@ git clone https://github.com/TheBitPoets/2cornot2c.git
 cd 2cornot2c
 ```
 
-Poi esegui **un solo avvio guidato**:
+### Primo avvio
+
+Esegui **un solo avvio guidato**:
 
 - su Windows fai doppio clic su `setup-vm.cmd`;
 - su macOS apri il Terminale nella cartella del progetto ed esegui il comando
@@ -426,23 +434,45 @@ script controlla i prerequisiti, avvia la VM, verifica gli strumenti didattici,
 le Guest Additions e le cartelle condivise. Se il primo controllo fallisce,
 prova automaticamente un riavvio.
 
-La sessione grafica accede automaticamente con l'utente `vagrant`. Per entrare
-dal terminale puoi usare:
+La sessione grafica accede automaticamente con l'utente `vagrant`; la password,
+se richiesta, è `vagrant`.
 
-```bash
-vagrant ssh
-```
+### Cartelle condivise
 
 Le cartelle `lab` e `lab2` del progetto sono disponibili nella VM come `/lab` e
-`/lab2`: i file salvati lì restano anche sul computer reale. Anche gli appunti
-e il trascinamento dei file sono abilitati in entrambe le direzioni.
+`/lab2`: i file salvati lì restano anche sul computer reale. La directory del
+progetto è inoltre disponibile come `/vagrant`.
 
-Su macOS Apple Silicon la VM usa automaticamente una finestra scalata e una
-risoluzione stabile di 1280×800. Non abilitare il ridimensionamento automatico:
-il framebuffer ARM di VirtualBox non lo supporta in modo affidabile. La
-dimensione della finestra può essere modificata trascinandone i bordi.
+Gli appunti e il trascinamento dei file sono abilitati in entrambe le
+direzioni. Con VMware le cartelle condivise usano VMware Tools; con VirtualBox
+usano le Guest Additions incluse nella box.
 
-#### VMware Fusion su macOS
+### VirtualBox
+
+VirtualBox è il provider usato automaticamente su Windows. Su macOS può essere
+scelto dal menu oppure avviato direttamente:
+
+```bash
+./scripts/setup-vm.sh --virtualbox
+```
+
+I comandi di gestione vanno eseguiti dalla directory del progetto:
+
+| Operazione | Comando |
+| --- | --- |
+| Avvia | `vagrant up --provider=virtualbox` |
+| Stato | `vagrant status` |
+| Terminale SSH | `vagrant ssh` |
+| Riavvia | `vagrant reload` |
+| Ripeti la configurazione | `vagrant provision` |
+| Spegni | `vagrant halt` |
+
+Su macOS Apple Silicon VirtualBox usa una finestra scalata e una risoluzione
+guest stabile di 1280×800. Non abilitare il ridimensionamento automatico: il
+framebuffer ARM di VirtualBox non lo supporta in modo affidabile. Puoi
+ingrandire o ridurre la finestra trascinandone i bordi.
+
+### VMware Fusion su macOS
 
 Il percorso VMware non modifica la VM VirtualBox esistente. Usa una directory
 di stato separata (`.vagrant-vmware`) e la box ufficiale Bento per
@@ -453,32 +483,59 @@ Prima di selezionare VMware devono essere installati:
 
 - [VMware Fusion](https://support.broadcom.com/) per Apple Silicon;
 - [Vagrant VMware Utility](https://developer.hashicorp.com/vagrant/install/vmware);
-- il provider Vagrant, con `vagrant plugin install vagrant-vmware-desktop`.
-
-Per saltare il menu puoi indicare direttamente il provider:
+- il provider Vagrant:
 
 ```bash
-./scripts/setup-vm.sh --virtualbox
+vagrant plugin install vagrant-vmware-desktop
+```
+
+Avvia VMware Fusion almeno una volta per accettare la licenza e le
+autorizzazioni di macOS. Poi esegui il primo avvio guidato:
+
+```bash
 ./scripts/setup-vm.sh --vmware
 ```
 
-Per collegarti via SSH alla VM VMware:
+Senza alias, tutti i comandi VMware devono usare la directory di stato
+dedicata:
 
-```bash
-VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant ssh
-```
+| Operazione | Comando |
+| --- | --- |
+| Avvia | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant up --provider=vmware_desktop` |
+| Stato | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant status` |
+| Terminale SSH | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant ssh` |
+| Riavvia | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant reload` |
+| Ripeti la configurazione | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant provision` |
+| Spegni | `VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant halt` |
 
-Su macOS puoi installare una volta sola i comandi brevi:
+#### Alias VMware
+
+Per evitare i comandi lunghi, installa una volta sola gli alias:
 
 ```bash
 ./scripts/install-vmware-aliases.sh
 source ~/.zshrc
 ```
 
-Da quel momento puoi usare `vm-up`, `vm-halt`, `vm-ssh`, `vm-status`,
-`vm-reload` e `vm-provision` da qualsiasi cartella.
+L'installer supporta `zsh` e `bash`, può essere eseguito più volte senza creare
+duplicati e registra il percorso corrente del progetto. Se sposti il progetto,
+eseguilo nuovamente.
 
-Per scegliere manualmente una risoluzione, apri il terminale della VM ed
+Gli alias funzionano da qualsiasi cartella:
+
+| Operazione | Alias |
+| --- | --- |
+| Avvia | `vm-up` |
+| Stato | `vm-status` |
+| Terminale SSH | `vm-ssh` |
+| Riavvia | `vm-reload` |
+| Ripeti la configurazione | `vm-provision` |
+| Spegni | `vm-halt` |
+
+#### Risoluzione VMware
+
+Normalmente VMware Tools adatta la risoluzione alla dimensione della finestra.
+Per scegliere manualmente una modalità, apri il terminale dentro Ubuntu ed
 esegui:
 
 ```bash
@@ -487,6 +544,43 @@ esegui:
 
 Il menu applica la risoluzione selezionata e chiede conferma entro 15 secondi.
 Se non viene confermata, ripristina automaticamente quella precedente.
+
+### Passare da un provider all'altro su macOS
+
+VirtualBox e VMware mantengono due VM indipendenti. Le cartelle `lab` e `lab2`
+sono però condivise con entrambe: salva lì il lavoro che vuoi ritrovare
+passando da un provider all'altro.
+
+Prima di avviare un provider, spegni l'altro:
+
+```bash
+# da VirtualBox a VMware
+vagrant halt
+vm-up
+
+# da VMware a VirtualBox
+vm-halt
+./scripts/setup-vm.sh --virtualbox
+```
+
+Non usare `vagrant destroy` se vuoi conservare la VM già configurata.
+
+### Diagnosi rapida
+
+Se la finestra non compare o la macchina non risponde:
+
+```bash
+# VirtualBox
+vagrant status
+vagrant reload
+
+# VMware
+vm-status
+vm-reload
+```
+
+Se il problema resta, ripeti il controllo e il provisioning con
+`./scripts/setup-vm.sh --virtualbox` oppure `./scripts/setup-vm.sh --vmware`.
 
 ### Guest Additions
 
