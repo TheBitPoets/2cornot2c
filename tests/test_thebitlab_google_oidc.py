@@ -887,11 +887,12 @@ def test_urllib_transport_rejects_duplicate_json_and_bounds_response() -> None:
         )
 
     class ErrorOpener:
-        def __init__(self, oauth_error):
+        def __init__(self, oauth_error, suffix=b""):
             self.oauth_error = oauth_error
+            self.suffix = suffix
 
         def open(self, request, timeout):
-            body = json.dumps({"error": self.oauth_error}).encode()
+            body = json.dumps({"error": self.oauth_error}).encode() + self.suffix
             raise HTTPError(request.full_url, 400, "bad request", {}, io.BytesIO(body))
 
     transport._opener = ErrorOpener("invalid_grant")
@@ -902,6 +903,15 @@ def test_urllib_transport_rejects_duplicate_json_and_bounds_response() -> None:
             timeout_seconds=1,
             max_response_bytes=1024,
         )
+    transport._opener = ErrorOpener("invalid_grant", b" " * 1024)
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        transport.exchange_code(
+            endpoint="https://oauth2.googleapis.com/token",
+            form={"code": "expired-code"},
+            timeout_seconds=1,
+            max_response_bytes=1024,
+        )
+
     transport._opener = ErrorOpener("invalid_client")
     with pytest.raises(GoogleOidcConfigurationError):
         transport.exchange_code(

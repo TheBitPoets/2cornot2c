@@ -467,6 +467,8 @@ class UrllibGoogleTokenTransport:
             if 400 <= status < 500:
                 try:
                     error_bytes = error.read(max_response_bytes + 1)
+                    if len(error_bytes) > max_response_bytes:
+                        raise ValueError("Risposta OAuth 4xx oltre il limite.")
                     decoded_error = json.loads(
                         error_bytes.decode("utf-8"),
                         object_pairs_hook=_reject_duplicate_json_keys,
