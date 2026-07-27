@@ -93,6 +93,7 @@ def make_boundary(
         sessions,
         csrf_secret=csrf_secret,
         cookie_policy=policy or SessionCookiePolicy(),
+        clock=clock,
     )
 
 
@@ -285,6 +286,20 @@ def test_malformed_session_service_results_fail_closed(storage, clock) -> None:
     with pytest.raises(HttpAuthUnavailableError):
         real.authenticate(request("GET", established))
 
+    expired_session = UserSession(
+        valid_session.session_id,
+        valid_session.user_id,
+        valid_session.token_digest,
+        NOW - timedelta(hours=2),
+        NOW - timedelta(hours=1),
+        NOW - timedelta(hours=2),
+    )
+    real.sessions.authenticate = lambda _bearer: AuthenticatedSession(
+        expired_session, account()
+    )
+    with pytest.raises(HttpAuthUnavailableError):
+        real.authenticate(request("GET", established))
+
     real.sessions.authenticate = lambda _bearer: AuthenticatedSession(
         valid_session, account()
     )
@@ -318,7 +333,9 @@ def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock)
         def revoke(self, _bearer):
             return True
 
-    boundary = HttpSessionAuthBoundary(LongSessionService(), csrf_secret=CSRF_SECRET)
+    boundary = HttpSessionAuthBoundary(
+        LongSessionService(), csrf_secret=CSRF_SECRET, clock=clock
+    )
     with pytest.raises(HttpAuthUnavailableError):
         boundary.establish_session("user-01")
 
@@ -337,7 +354,7 @@ def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock)
             return AuthenticatedSession(other_session, user)
 
     mismatch = HttpSessionAuthBoundary(
-        MismatchedSessionService(), csrf_secret=CSRF_SECRET
+        MismatchedSessionService(), csrf_secret=CSRF_SECRET, clock=clock
     )
     with pytest.raises(HttpAuthUnavailableError):
         mismatch.establish_session("user-01")
@@ -353,10 +370,44 @@ def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock)
             return AuthenticatedSession(other_session, other_user)
 
     wrong_owner = HttpSessionAuthBoundary(
-        WrongOwnerSessionService(), csrf_secret=CSRF_SECRET
+        WrongOwnerSessionService(), csrf_secret=CSRF_SECRET, clock=clock
     )
     with pytest.raises(HttpAuthUnavailableError):
         wrong_owner.establish_session("requested-user")
+
+
+def test_set_cookie_max_age_uses_response_time(clock) -> None:
+    bearer = "A" * 40
+    user = account()
+    session = UserSession(
+        "delayed-session",
+        user.user_id,
+        session_token_digest(bearer),
+        NOW,
+        NOW + timedelta(hours=8),
+        NOW,
+    )
+
+    class DelayedSessionService:
+        def issue(self, _user_id):
+            return IssuedSession(session, bearer)
+
+        def authenticate(self, _bearer):
+            clock.value = NOW + timedelta(hours=1)
+            return AuthenticatedSession(
+                replace(session, last_seen_at=clock.value), user
+            )
+
+        def revoke(self, _bearer):
+            return True
+
+    boundary = HttpSessionAuthBoundary(
+        DelayedSessionService(), csrf_secret=CSRF_SECRET, clock=clock
+    )
+    established = boundary.establish_session("user-01")
+
+    assert "; Max-Age=25200;" in established.set_cookie
+    assert "Tue, 01 Sep 2026 16:00:00 GMT" in established.set_cookie
 
 
 def test_safe_authentication_refreshes_context_and_role_authorization(storage, clock) -> None:
@@ -516,6 +567,7 @@ def test_malformed_duplicate_missing_and_oversized_cookies_fail_closed(storage, 
         valid + "\r\nInjected: yes",
         valid + "; padding=" + "x" * 256,
         "__Host-thebitlab_session=quoted value",
+        "__Host-thebitlab_session=" + "S" * 25,
     ]
 
     assert boundary.authenticate(
@@ -586,7 +638,9 @@ def test_expired_cookie_cannot_authenticate_and_invalid_logout_still_clears(stor
         token_factory=lambda: "A" * 40,
         session_id_factory=lambda: "session-01",
     )
-    boundary = HttpSessionAuthBoundary(sessions, csrf_secret=CSRF_SECRET)
+    boundary = HttpSessionAuthBoundary(
+        sessions, csrf_secret=CSRF_SECRET, clock=clock
+    )
     established = boundary.establish_session("user-01")
     clock.value += timedelta(minutes=5)
 

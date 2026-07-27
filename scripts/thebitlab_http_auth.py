@@ -6,9 +6,9 @@ import base64
 import hmac
 import re
 from dataclasses import dataclass, field
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
-from typing import Collection
+from typing import Callable, Collection
 
 from scripts.thebitlab_auth_services import (
     AuthenticatedSession,
@@ -164,6 +164,7 @@ class HttpSessionAuthBoundary:
         *,
         csrf_secret: bytes,
         cookie_policy: SessionCookiePolicy = SessionCookiePolicy(),
+        clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
     ) -> None:
         candidate_secret = csrf_secret
         csrf_secret = None
@@ -173,6 +174,7 @@ class HttpSessionAuthBoundary:
             raise ValueError("Il secret CSRF deve contenere almeno 32 byte.")
         self.sessions = sessions
         self.cookie_policy = cookie_policy
+        self.clock = clock
         self._csrf_secret = candidate_secret
         candidate_secret = None
 
@@ -238,10 +240,14 @@ class HttpSessionAuthBoundary:
                 auth_failed = True
             except Exception:
                 unavailable = True
+            now = self._current_time()
             if (
                 not auth_failed
                 and not unavailable
-                and not self._authenticated_is_valid(authenticated, bearer)
+                and (
+                    now is None
+                    or not self._authenticated_is_valid(authenticated, bearer, now)
+                )
             ):
                 unavailable = True
             if not auth_failed and not unavailable:
@@ -298,19 +304,24 @@ class HttpSessionAuthBoundary:
                 unavailable = True
             if auth_failed:
                 result = LogoutHttpResult(False, self._clear_cookie())
-            elif not unavailable and not self._authenticated_is_valid(authenticated, bearer):
-                unavailable = True
-            elif not unavailable:
-                self._validate_csrf(bearer, supplied_csrf)
-                try:
-                    revoked = self.sessions.revoke(bearer)
-                except Exception:
-                    unavailable = True
-                else:
-                    if type(revoked) is not bool:
+            else:
+                if not unavailable:
+                    now = self._current_time()
+                    if now is None or not self._authenticated_is_valid(
+                        authenticated, bearer, now
+                    ):
+                        unavailable = True
+                if not unavailable:
+                    self._validate_csrf(bearer, supplied_csrf)
+                    try:
+                        revoked = self.sessions.revoke(bearer)
+                    except Exception:
                         unavailable = True
                     else:
-                        result = LogoutHttpResult(revoked, self._clear_cookie())
+                        if type(revoked) is not bool:
+                            unavailable = True
+                        else:
+                            result = LogoutHttpResult(revoked, self._clear_cookie())
         finally:
             bearer = None
             authenticated = None
@@ -328,6 +339,7 @@ class HttpSessionAuthBoundary:
         failed = False
         unavailable = False
         result = None
+        response_time = None
         try:
             if type(issued) is not IssuedSession:
                 unavailable = True
@@ -342,6 +354,8 @@ class HttpSessionAuthBoundary:
                     failed = True
                 except Exception:
                     unavailable = True
+            if not failed and not unavailable:
+                response_time = self._current_time()
             if (
                 not failed
                 and not unavailable
@@ -349,13 +363,16 @@ class HttpSessionAuthBoundary:
                     authenticated,
                     issued,
                     bearer,
+                    now=response_time,
                     expected_user_id=expected_user_id,
                 )
             ):
                 unavailable = True
             if not failed and not unavailable:
                 csrf_token = self._csrf_token(bearer)
-                set_cookie = self._session_cookie(bearer, issued)
+                set_cookie = self._session_cookie(
+                    bearer, issued, response_time=response_time
+                )
                 result = EstablishedHttpSession(
                     HttpAuthContext(authenticated, csrf_token),
                     set_cookie,
@@ -370,6 +387,7 @@ class HttpSessionAuthBoundary:
             issued = None
             csrf_token = None
             set_cookie = None
+            response_time = None
         if unavailable:
             raise HttpAuthUnavailableError()
         if failed or result is None:
@@ -388,7 +406,7 @@ class HttpSessionAuthBoundary:
     def _cookie_bearer_is_valid(bearer: object) -> bool:
         return (
             type(bearer) is str
-            and 1 <= len(bearer) <= _MAX_SESSION_TOKEN_CHARS
+            and 32 <= len(bearer) <= _MAX_SESSION_TOKEN_CHARS
             and _COOKIE_VALUE_RE.fullmatch(bearer) is not None
         )
 
@@ -409,7 +427,9 @@ class HttpSessionAuthBoundary:
         )
 
     @staticmethod
-    def _authenticated_is_valid(authenticated: object, bearer: str) -> bool:
+    def _authenticated_is_valid(
+        authenticated: object, bearer: str, now: datetime
+    ) -> bool:
         if (
             type(authenticated) is not AuthenticatedSession
             or type(authenticated.session) is not UserSession
@@ -417,10 +437,17 @@ class HttpSessionAuthBoundary:
             or authenticated.session.user_id != authenticated.user.user_id
             or not authenticated.user.active
             or authenticated.session.revoked_at is not None
+            or now < authenticated.session.created_at
+            or now < authenticated.session.last_seen_at
+            or now >= authenticated.session.expires_at
         ):
             return False
+        try:
+            expected_digest = session_token_digest(bearer)
+        except Exception:
+            return False
         return hmac.compare_digest(
-            authenticated.session.token_digest, session_token_digest(bearer)
+            authenticated.session.token_digest, expected_digest
         )
 
     def _authenticated_matches_issued(
@@ -429,9 +456,10 @@ class HttpSessionAuthBoundary:
         issued: IssuedSession,
         bearer: str,
         *,
+        now: datetime | None,
         expected_user_id: str,
     ) -> bool:
-        if not self._authenticated_is_valid(authenticated, bearer):
+        if now is None or not self._authenticated_is_valid(authenticated, bearer, now):
             return False
         current = authenticated.session
         original = issued.session
@@ -464,6 +492,19 @@ class HttpSessionAuthBoundary:
             csrf_token = None
             raise HttpMethodNotAllowedError()
         return method, cookie_header, csrf_token
+
+    def _current_time(self) -> datetime | None:
+        try:
+            value = self.clock()
+            if (
+                not isinstance(value, datetime)
+                or value.tzinfo is None
+                or value.utcoffset() is None
+            ):
+                return None
+            return value.astimezone(timezone.utc)
+        except Exception:
+            return None
 
     def _extract_bearer(
         self, cookie_header: str | None, *, required: bool = True
@@ -504,7 +545,7 @@ class HttpSessionAuthBoundary:
                 elif len(matches) == 1:
                     bearer = matches[0]
                     if (
-                        not bearer
+                        len(bearer) < 32
                         or len(bearer) > _MAX_SESSION_TOKEN_CHARS
                         or not _COOKIE_VALUE_RE.fullmatch(bearer)
                     ):
@@ -542,11 +583,19 @@ class HttpSessionAuthBoundary:
         digest = hmac.digest(self._csrf_secret, b"thebitlab-csrf-v1\0" + bearer.encode(), "sha256")
         return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
 
-    def _session_cookie(self, bearer: str, issued: IssuedSession) -> str:
+    def _session_cookie(
+        self,
+        bearer: str,
+        issued: IssuedSession,
+        *,
+        response_time: datetime | None,
+    ) -> str:
+        if response_time is None:
+            raise ValueError("Clock HTTP non valido.")
         expires = format_datetime(issued.session.expires_at.astimezone(timezone.utc), usegmt=True)
         max_age = max(
             0,
-            int((issued.session.expires_at - issued.session.created_at).total_seconds()),
+            int((issued.session.expires_at - response_time).total_seconds()),
         )
         attributes = [
             f"{self.cookie_policy.name}={bearer}",
