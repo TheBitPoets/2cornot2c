@@ -204,7 +204,11 @@ class FederatedIdentityApplicationStorage(Protocol):
     ) -> ExternalIdentity | None: ...
 
     def refresh_external_identity(
-        self, identity: ExternalIdentity, *, expected_linked_at: datetime
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
     ) -> None: ...
 
     def provision_user_with_identity(
@@ -334,8 +338,19 @@ class FederatedIdentityService:
                         username=assertion.username,
                     ),
                     expected_linked_at=existing.linked_at,
+                    expected_user_updated_at=account.updated_at,
                 )
             except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
+                current_account = self.storage.read_user(account.user_id)
+                if current_account is None:
+                    raise ConcurrentStateChangeError(
+                        "Utente rimosso durante l'autenticazione."
+                    ) from error
+                require_active_account(current_account)
+                if current_account.updated_at != account.updated_at:
+                    raise ConcurrentStateChangeError(
+                        "Utente modificato durante l'autenticazione."
+                    ) from error
                 current = self.storage.read_external_identity(
                     assertion.provider, assertion.subject
                 )

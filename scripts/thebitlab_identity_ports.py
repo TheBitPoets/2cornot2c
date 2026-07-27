@@ -52,9 +52,13 @@ class UserDirectoryStorage(Protocol):
     def link_external_identity(self, identity: ExternalIdentity) -> None: ...
 
     def refresh_external_identity(
-        self, identity: ExternalIdentity, *, expected_linked_at: datetime
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
     ) -> None:
-        """Update provider attributes only if the original link still exists unchanged."""
+        """Refresh a link only while its active owner revision remains unchanged."""
         ...
 
     def read_external_identity(self, provider: str, subject: str) -> ExternalIdentity | None: ...

@@ -177,6 +177,53 @@ def test_existing_identity_refreshes_attributes_without_changing_owner_or_link_t
     assert refreshed == replace(original, email="new@example.test", username="new-name")
 
 
+def test_existing_identity_user_revision_race_is_translated(storage, monkeypatch) -> None:
+    storage.provision_user_with_identity(
+        account("user-01"), ExternalIdentity("user-01", "google", "google-42", NOW)
+    )
+    refresh_identity = storage.refresh_external_identity
+
+    def change_role_then_refresh(
+        identity, *, expected_linked_at, expected_user_updated_at
+    ):
+        storage.save_user(
+            replace(account(), role="teacher", updated_at=NOW + timedelta(seconds=1)),
+            expected_updated_at=NOW,
+        )
+        refresh_identity(
+            identity,
+            expected_linked_at=expected_linked_at,
+            expected_user_updated_at=expected_user_updated_at,
+        )
+
+    monkeypatch.setattr(storage, "refresh_external_identity", change_role_then_refresh)
+    with pytest.raises(ConcurrentStateChangeError, match="Utente modificato"):
+        FederatedIdentityService(storage, clock=MutableClock()).resolve(google_assertion())
+    assert storage.read_user("user-01").role == "teacher"
+
+
+def test_existing_identity_disable_race_is_fail_closed(storage, monkeypatch) -> None:
+    storage.provision_user_with_identity(
+        account("user-01"), ExternalIdentity("user-01", "google", "google-42", NOW)
+    )
+    refresh_identity = storage.refresh_external_identity
+
+    def disable_then_refresh(identity, *, expected_linked_at, expected_user_updated_at):
+        storage.save_user(
+            replace(account(), active=False, updated_at=NOW + timedelta(seconds=1)),
+            expected_updated_at=NOW,
+        )
+        refresh_identity(
+            identity,
+            expected_linked_at=expected_linked_at,
+            expected_user_updated_at=expected_user_updated_at,
+        )
+
+    monkeypatch.setattr(storage, "refresh_external_identity", disable_then_refresh)
+    with pytest.raises(AccountDisabledError):
+        FederatedIdentityService(storage, clock=MutableClock()).resolve(google_assertion())
+
+
 def test_existing_identity_relink_race_is_translated(storage, monkeypatch) -> None:
     storage.provision_user_with_identity(
         account("user-01"), ExternalIdentity("user-01", "google", "google-42", NOW)
@@ -185,14 +232,20 @@ def test_existing_identity_relink_race_is_translated(storage, monkeypatch) -> No
     link_identity = storage.link_external_identity
     refresh_identity = storage.refresh_external_identity
 
-    def relink_then_conflict(identity, *, expected_linked_at):
+    def relink_then_conflict(
+        identity, *, expected_linked_at, expected_user_updated_at
+    ):
         storage.unlink_external_identity("google", "google-42")
         link_identity(
             ExternalIdentity(
                 "user-02", "google", "google-42", NOW + timedelta(seconds=1)
             )
         )
-        refresh_identity(identity, expected_linked_at=expected_linked_at)
+        refresh_identity(
+            identity,
+            expected_linked_at=expected_linked_at,
+            expected_user_updated_at=expected_user_updated_at,
+        )
 
     monkeypatch.setattr(storage, "refresh_external_identity", relink_then_conflict)
     with pytest.raises(ConcurrentStateChangeError, match="ricollegata"):
@@ -205,9 +258,15 @@ def test_existing_identity_unlink_race_does_not_restore_link(storage, monkeypatc
     )
     refresh_identity = storage.refresh_external_identity
 
-    def unlink_then_refresh(identity, *, expected_linked_at):
+    def unlink_then_refresh(
+        identity, *, expected_linked_at, expected_user_updated_at
+    ):
         storage.unlink_external_identity("google", "google-42")
-        refresh_identity(identity, expected_linked_at=expected_linked_at)
+        refresh_identity(
+            identity,
+            expected_linked_at=expected_linked_at,
+            expected_user_updated_at=expected_user_updated_at,
+        )
 
     monkeypatch.setattr(storage, "refresh_external_identity", unlink_then_refresh)
     with pytest.raises(ConcurrentStateChangeError, match="ricollegata"):

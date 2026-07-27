@@ -534,14 +534,26 @@ class SqliteIdentityStorage:
             )
 
     def refresh_external_identity(
-        self, identity: ExternalIdentity, *, expected_linked_at: datetime
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
     ) -> None:
         expected_revision = _encode_datetime(expected_linked_at, "expected_linked_at")
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
         with self._transaction("refresh_external_identity") as connection:
             cursor = connection.execute(
                 """
                 UPDATE external_identities SET email = ?, username = ?
                 WHERE provider = ? AND subject = ? AND user_id = ? AND linked_at = ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE users.user_id = external_identities.user_id
+                            AND users.active = 1 AND users.updated_at = ?
+                    )
                 """,
                 (
                     identity.email,
@@ -550,6 +562,7 @@ class SqliteIdentityStorage:
                     identity.subject,
                     identity.user_id,
                     expected_revision,
+                    expected_user_revision,
                 ),
             )
             if cursor.rowcount != 1:
