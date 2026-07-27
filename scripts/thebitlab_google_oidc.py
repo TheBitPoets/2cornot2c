@@ -65,7 +65,7 @@ class GoogleOidcIdentityRejectedError(GoogleOidcError):
     """Raised when the authenticated Google identity cannot use an account."""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class GoogleOidcConfig:
     client_id: str
     client_secret: str = field(repr=False, compare=False)
@@ -80,7 +80,52 @@ class GoogleOidcConfig:
     max_token_response_bytes: int = 64 * 1024
     max_cert_response_bytes: int = 256 * 1024
 
-    def __post_init__(self) -> None:
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        redirect_uri: str,
+        authorization_endpoint: str = "https://accounts.google.com/o/oauth2/v2/auth",
+        token_endpoint: str = "https://oauth2.googleapis.com/token",
+        post_login_path: str = "/",
+        flow_ttl: timedelta = timedelta(minutes=10),
+        id_token_max_age: timedelta = timedelta(minutes=15),
+        clock_skew: timedelta = timedelta(seconds=30),
+        timeout_seconds: float = 10.0,
+        max_token_response_bytes: int = 64 * 1024,
+        max_cert_response_bytes: int = 256 * 1024,
+    ) -> None:
+        candidate_secret = client_secret
+        client_secret = None
+        object.__setattr__(self, "client_id", client_id)
+        object.__setattr__(self, "client_secret", candidate_secret)
+        object.__setattr__(self, "redirect_uri", redirect_uri)
+        object.__setattr__(self, "authorization_endpoint", authorization_endpoint)
+        object.__setattr__(self, "token_endpoint", token_endpoint)
+        object.__setattr__(self, "post_login_path", post_login_path)
+        object.__setattr__(self, "flow_ttl", flow_ttl)
+        object.__setattr__(self, "id_token_max_age", id_token_max_age)
+        object.__setattr__(self, "clock_skew", clock_skew)
+        object.__setattr__(self, "timeout_seconds", timeout_seconds)
+        object.__setattr__(self, "max_token_response_bytes", max_token_response_bytes)
+        object.__setattr__(self, "max_cert_response_bytes", max_cert_response_bytes)
+        validation_error = None
+        unexpected = False
+        try:
+            self._validate()
+        except GoogleOidcConfigurationError as error:
+            validation_error = error
+        except Exception:
+            unexpected = True
+        if validation_error is not None or unexpected:
+            object.__setattr__(self, "client_secret", "")
+            candidate_secret = None
+            if validation_error is not None:
+                raise validation_error
+            raise GoogleOidcConfigurationError("Configurazione Google OIDC non valida.")
+        candidate_secret = None
+
+    def _validate(self) -> None:
         if type(self.client_id) is not str or not _CLIENT_ID_RE.fullmatch(self.client_id):
             raise GoogleOidcConfigurationError("Google client ID non valido.")
         if (
@@ -237,6 +282,20 @@ class InMemoryGoogleOidcFlowStore:
             flow = None
             raise GoogleOidcStateError("State OIDC scaduto.")
         return flow
+
+    def discard(self, state: str) -> bool:
+        digest_failed = False
+        try:
+            digest = self.state_digest(state)
+        except Exception:
+            digest_failed = True
+            digest = ""
+        finally:
+            state = None
+        if digest_failed:
+            return False
+        with self._lock:
+            return self._flows.pop(digest, None) is not None
 
     def delete_expired(self, cutoff: datetime) -> int:
         with self._lock:
@@ -494,34 +553,90 @@ class GoogleOidcLoginService:
     def begin_login(self) -> GoogleAuthorizationRequest:
         now = _utc(self.clock())
         for _attempt in range(5):
-            state = _generated_credential(self.state_factory(), "state", 32, 256)
-            nonce = _generated_credential(self.nonce_factory(), "nonce", 32, 256)
-            verifier = _generated_credential(
-                self.verifier_factory(), "PKCE verifier", 43, 128
-            )
+            state = None
+            nonce = None
+            verifier = None
+            generation_error = None
+            generation_unavailable = False
+            try:
+                state = _generated_credential(self.state_factory(), "state", 32, 256)
+                nonce = _generated_credential(self.nonce_factory(), "nonce", 32, 256)
+                verifier = _generated_credential(
+                    self.verifier_factory(), "PKCE verifier", 43, 128
+                )
+            except GoogleOidcConfigurationError as error:
+                generation_error = error
+            except Exception:
+                generation_unavailable = True
+            if generation_error is not None or generation_unavailable:
+                state = None
+                nonce = None
+                verifier = None
+                if generation_error is not None:
+                    raise generation_error
+                raise GoogleOidcProviderUnavailableError(
+                    "Generatori flow OIDC non disponibili."
+                )
+            collision = False
+            store_failed = False
             try:
                 self.flows.create(state, nonce, verifier, now, self.config.flow_ttl)
             except GoogleOidcStateError:
+                collision = True
+            except Exception:
+                store_failed = True
+            if collision:
                 state = None
                 nonce = None
                 verifier = None
                 continue
-            challenge = base64.urlsafe_b64encode(
-                hashlib.sha256(verifier.encode("ascii")).digest()
-            ).rstrip(b"=").decode("ascii")
-            query = urllib.parse.urlencode(
-                {
-                    "client_id": self.config.client_id,
-                    "redirect_uri": self.config.redirect_uri,
-                    "response_type": "code",
-                    "scope": "openid email profile",
-                    "state": state,
-                    "nonce": nonce,
-                    "code_challenge": challenge,
-                    "code_challenge_method": "S256",
-                }
-            )
-            authorization_url = f"{self.config.authorization_endpoint}?{query}"
+            if store_failed:
+                try:
+                    self.flows.discard(state)
+                except Exception:
+                    pass
+                state = None
+                nonce = None
+                verifier = None
+                raise GoogleOidcProviderUnavailableError(
+                    "Store flow OIDC non disponibile."
+                )
+            build_failed = False
+            authorization_url = None
+            challenge = None
+            query = None
+            try:
+                challenge = base64.urlsafe_b64encode(
+                    hashlib.sha256(verifier.encode("ascii")).digest()
+                ).rstrip(b"=").decode("ascii")
+                query = urllib.parse.urlencode(
+                    {
+                        "client_id": self.config.client_id,
+                        "redirect_uri": self.config.redirect_uri,
+                        "response_type": "code",
+                        "scope": "openid email profile",
+                        "state": state,
+                        "nonce": nonce,
+                        "code_challenge": challenge,
+                        "code_challenge_method": "S256",
+                    }
+                )
+                authorization_url = f"{self.config.authorization_endpoint}?{query}"
+            except Exception:
+                build_failed = True
+            if build_failed or authorization_url is None:
+                try:
+                    self.flows.discard(state)
+                except Exception:
+                    pass
+                state = None
+                nonce = None
+                verifier = None
+                challenge = None
+                query = None
+                raise GoogleOidcProviderUnavailableError(
+                    "Authorization request Google non disponibile."
+                )
             state = None
             nonce = None
             verifier = None

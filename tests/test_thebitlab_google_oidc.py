@@ -195,6 +195,16 @@ def test_config_requires_https_fixed_redirect_and_safe_post_login() -> None:
         with pytest.raises(GoogleOidcConfigurationError):
             config(**override)
 
+    with pytest.raises(GoogleOidcConfigurationError) as invalid_secret:
+        GoogleOidcConfig(
+            client_id=CLIENT_ID,
+            client_secret="TOP_SECRET_CONFIG\n",
+            redirect_uri="https://lab.example.test/callback",
+        )
+    assert "TOP_SECRET_CONFIG" not in traceback_function_locals(
+        invalid_secret.value, "__init__", "_validate"
+    )
+
 
 def test_begin_login_builds_state_nonce_and_pkce_without_persisting_raw_values(
     database_path, clock
@@ -245,6 +255,30 @@ def test_generator_collision_and_invalid_secret_are_sanitized(database_path, clo
     assert "raw invalid generated state" not in traceback_function_locals(
         invalid.value, "begin_login", "_generated_credential"
     )
+
+
+def test_unexpected_flow_store_failure_discards_and_scrubs_credentials(
+    database_path, clock
+) -> None:
+    service, _storage, _flows, _transport, _verifier = make_service(database_path, clock)
+    real_store = InMemoryGoogleOidcFlowStore()
+
+    class InsertThenFailStore:
+        def create(self, state, nonce, verifier, now, ttl):
+            real_store.create(state, nonce, verifier, now, ttl)
+            raise RuntimeError("store unavailable")
+
+        def discard(self, state):
+            return real_store.discard(state)
+
+    service.flows = InsertThenFailStore()
+    with pytest.raises(GoogleOidcProviderUnavailableError) as captured:
+        service.begin_login()
+    assert real_store.pending_count() == 0
+    retained = traceback_function_locals(captured.value, "begin_login")
+    assert STATE not in retained
+    assert NONCE not in retained
+    assert VERIFIER not in retained
 
 
 def test_valid_callback_onboards_pending_user_and_issues_session_cookie(
