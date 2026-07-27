@@ -12,7 +12,11 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 
 import scripts.thebitlab_google_oidc as google_oidc
-from scripts.thebitlab_auth_services import FederatedIdentityService, SessionService
+from scripts.thebitlab_auth_services import (
+    AuthApplicationError,
+    FederatedIdentityService,
+    SessionService,
+)
 from scripts.thebitlab_google_oidc import (
     BoundedGoogleCertRequest,
     GoogleAuthorizationRequest,
@@ -186,6 +190,7 @@ def test_config_requires_https_fixed_redirect_and_safe_post_login() -> None:
 
     for override in (
         {"redirect_uri": "http://lab.example.test/callback"},
+        {"redirect_uri": "https://lab.example.test:bad/callback"},
         {"token_endpoint": "https://user:pass@example.test/token"},
         {"authorization_endpoint": "https://example.test/auth#fragment"},
         {"token_endpoint": "https://example.test/collect"},
@@ -546,6 +551,26 @@ def test_token_exchange_and_verification_failures_are_sanitized_and_consume_stat
         verify_error.value, "complete_callback", "verify"
     )
     assert verify_error.value.__context__ is None
+
+
+def test_identity_collaborator_error_is_normalized(database_path, clock) -> None:
+    service, _storage, _flows, _transport, _verifier = make_service(
+        database_path, clock
+    )
+    state = begin_state(service)
+
+    class RawIdentityService:
+        def resolve(self, _assertion):
+            raise AuthApplicationError("RAW_IDENTITY_DB_PASSWORD")
+
+    service.identities = RawIdentityService()
+    with pytest.raises(GoogleOidcIdentityRejectedError) as captured:
+        service.complete_callback(valid_callback(state))
+    assert "RAW_IDENTITY_DB_PASSWORD" not in str(captured.value)
+    assert "RAW_IDENTITY_DB_PASSWORD" not in traceback_function_locals(
+        captured.value, "complete_callback", "resolve"
+    )
+    assert captured.value.__context__ is None
 
 
 def test_login_result_uses_current_session_role(database_path, clock) -> None:

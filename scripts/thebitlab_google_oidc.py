@@ -144,8 +144,15 @@ class GoogleOidcConfig:
         for field_name in ("redirect_uri", "authorization_endpoint", "token_endpoint"):
             value = getattr(self, field_name)
             parsed = urllib.parse.urlsplit(value) if type(value) is str else None
+            invalid_port = False
+            try:
+                port = parsed.port if parsed is not None else None
+            except ValueError:
+                invalid_port = True
+                port = None
             if (
                 parsed is None
+                or invalid_port
                 or parsed.scheme != "https"
                 or not parsed.hostname
                 or parsed.username is not None
@@ -864,13 +871,23 @@ class GoogleOidcLoginService:
             claims = None
             id_token = None
             flow = None
+            identity_rejected = False
+            identity_unavailable = False
             try:
                 user = self.identities.resolve(assertion)
             except (AuthApplicationError, IdentityDomainError):
+                identity_rejected = True
+            except Exception:
+                identity_unavailable = True
+            assertion = None
+            if identity_rejected:
                 raise GoogleOidcIdentityRejectedError(
                     "Identita Google non autorizzata."
-                ) from None
-            assertion = None
+                )
+            if identity_unavailable or user is None:
+                raise GoogleOidcProviderUnavailableError(
+                    "Servizio identita non disponibile."
+                )
             session = self.http_sessions.establish_session(
                 user.user_id,
                 existing_cookie_header=existing_cookie_header,
@@ -910,6 +927,8 @@ class GoogleOidcLoginService:
             provider_error = False
             state_failed = False
             state_unavailable = False
+            identity_rejected = False
+            identity_unavailable = False
             verification_failed = False
             verification_unavailable = False
             result_failed = False
