@@ -230,11 +230,11 @@ class GoogleOidcConfig:
             or not 0 < self.timeout_seconds <= 60
         ):
             raise GoogleOidcConfigurationError("Timeout OIDC non valido.")
-        for value, name in (
-            (self.max_token_response_bytes, "token"),
-            (self.max_cert_response_bytes, "certificati"),
+        for value, name, minimum in (
+            (self.max_token_response_bytes, "token", 1024),
+            (self.max_cert_response_bytes, "certificati", 4096),
         ):
-            if type(value) is not int or not 1024 <= value <= 1024 * 1024:
+            if type(value) is not int or not minimum <= value <= 1024 * 1024:
                 raise GoogleOidcConfigurationError(
                     f"Limite risposta {name} non valido."
                 )
@@ -480,6 +480,7 @@ class UrllibGoogleTokenTransport:
                     )
                     if oauth_error in {
                         "invalid_client",
+                        "invalid_request",
                         "unauthorized_client",
                         "unsupported_grant_type",
                         "invalid_scope",

@@ -224,6 +224,7 @@ def test_config_requires_https_fixed_redirect_and_safe_post_login() -> None:
         {"post_login_path": "/%0d%0aLocation:%20https://evil.test/"},
         {"flow_ttl": timedelta(0)},
         {"clock_skew": timedelta(minutes=6)},
+        {"max_cert_response_bytes": 1024},
     ):
         with pytest.raises(GoogleOidcConfigurationError):
             config(**override)
@@ -914,6 +915,7 @@ def test_urllib_transport_rejects_duplicate_json_and_bounds_response() -> None:
 
     for configuration_error in (
         "invalid_client",
+        "invalid_request",
         "unauthorized_client",
         "unsupported_grant_type",
         "invalid_scope",
