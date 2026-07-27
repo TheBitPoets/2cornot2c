@@ -110,9 +110,9 @@ _MIGRATION_1 = (
         last_seen_at TEXT NOT NULL,
         revoked_at TEXT,
         CHECK (expires_at > created_at),
-        CHECK (last_seen_at >= created_at AND last_seen_at <= expires_at),
+        CHECK (last_seen_at >= created_at AND last_seen_at < expires_at),
         CHECK (revoked_at IS NULL OR (
-            revoked_at >= created_at AND revoked_at <= expires_at AND last_seen_at <= revoked_at
+            revoked_at >= created_at AND revoked_at < expires_at AND last_seen_at <= revoked_at
         ))
     )
     """,

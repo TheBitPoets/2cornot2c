@@ -269,6 +269,43 @@ def test_session_expiring_at_revocation_cutoff_is_not_counted_active(storage) ->
     assert storage.delete_expired_sessions(NOW) == 1
 
 
+def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
+    storage, database_path
+) -> None:
+    storage.create_user(account())
+    created_at = "2026-09-01T08:00:00.000000Z"
+    expires_at = "2026-09-01T09:00:00.000000Z"
+    before_expiration = "2026-09-01T08:59:59.000000Z"
+
+    with sqlite3.connect(database_path) as connection:
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    "session-last-seen-boundary",
+                    "user-01",
+                    "sha256:" + "e" * 64,
+                    created_at,
+                    expires_at,
+                    expires_at,
+                    None,
+                ),
+            )
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    "session-revocation-boundary",
+                    "user-01",
+                    "sha256:" + "f" * 64,
+                    created_at,
+                    expires_at,
+                    before_expiration,
+                    expires_at,
+                ),
+            )
+
+
 def test_session_last_seen_update_rejects_stale_snapshot(storage) -> None:
     storage.create_user(account())
     original = session()

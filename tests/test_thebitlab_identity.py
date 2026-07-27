@@ -200,6 +200,7 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
         ({"token_digest": "raw-bearer-token"}, "algoritmo sha256, sha512"),
         ({"token_digest": "md5:" + ("a" * 32)}, "algoritmo sha256, sha512"),
         ({"expires_at": NOW}, "successivo"),
+        ({"last_seen_at": LATER}, "compreso"),
         ({"last_seen_at": LATER + timedelta(seconds=1)}, "compreso"),
         ({"revoked_at": NOW - timedelta(seconds=1)}, "durata della sessione"),
         (
@@ -209,6 +210,7 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
             },
             "successivo a revoked_at",
         ),
+        ({"revoked_at": LATER}, "durata della sessione"),
         ({"revoked_at": LATER + timedelta(seconds=1)}, "durata della sessione"),
     ],
 )
