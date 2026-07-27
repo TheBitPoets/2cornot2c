@@ -257,8 +257,12 @@ def test_generator_collision_and_invalid_secret_are_sanitized(database_path, clo
     )
 
 
+@pytest.mark.parametrize(
+    "failure",
+    [RuntimeError("store unavailable"), GoogleOidcStateError("post-insert failure")],
+)
 def test_unexpected_flow_store_failure_discards_and_scrubs_credentials(
-    database_path, clock
+    database_path, clock, failure
 ) -> None:
     service, _storage, _flows, _transport, _verifier = make_service(database_path, clock)
     real_store = InMemoryGoogleOidcFlowStore()
@@ -266,7 +270,7 @@ def test_unexpected_flow_store_failure_discards_and_scrubs_credentials(
     class InsertThenFailStore:
         def create(self, state, nonce, verifier, now, ttl):
             real_store.create(state, nonce, verifier, now, ttl)
-            raise RuntimeError("store unavailable")
+            raise failure
 
         def discard(self, state):
             return real_store.discard(state)

@@ -53,6 +53,10 @@ class GoogleOidcStateError(GoogleOidcError):
     """Raised for unknown, expired, duplicate, or replayed state."""
 
 
+class GoogleOidcStateConflictError(GoogleOidcStateError):
+    """Raised before insert when a state collides or the flow store is full."""
+
+
 class GoogleOidcProviderUnavailableError(GoogleOidcError):
     """Raised when Google token or verification infrastructure is unavailable."""
 
@@ -258,9 +262,9 @@ class InMemoryGoogleOidcFlowStore:
                 del self._flows[key]
             if len(self._flows) >= self.max_pending_flows:
                 flow = None
-                raise GoogleOidcStateError("Capacita flow OIDC esaurita.")
+                raise GoogleOidcStateConflictError("Capacita flow OIDC esaurita.")
             if flow.state_digest in self._flows:
-                raise GoogleOidcStateError("Collisione state OIDC.")
+                raise GoogleOidcStateConflictError("Collisione state OIDC.")
             self._flows[flow.state_digest] = flow
 
     def consume(self, state: str, now: datetime) -> PendingGoogleOidcFlow:
@@ -581,7 +585,7 @@ class GoogleOidcLoginService:
             store_failed = False
             try:
                 self.flows.create(state, nonce, verifier, now, self.config.flow_ttl)
-            except GoogleOidcStateError:
+            except GoogleOidcStateConflictError:
                 collision = True
             except Exception:
                 store_failed = True
