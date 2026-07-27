@@ -26,6 +26,8 @@ from scripts.thebitlab_http_auth import EstablishedHttpSession, HttpSessionAuthB
 from scripts.thebitlab_identity import IdentityDomainError
 
 _GOOGLE_ISSUERS = frozenset({"accounts.google.com", "https://accounts.google.com"})
+_GOOGLE_AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 _UNRESERVED_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{10,512}$")
 _MAX_CALLBACK_VALUE_CHARS = 8192
@@ -74,8 +76,8 @@ class GoogleOidcConfig:
     client_id: str
     client_secret: str = field(repr=False, compare=False)
     redirect_uri: str
-    authorization_endpoint: str = "https://accounts.google.com/o/oauth2/v2/auth"
-    token_endpoint: str = "https://oauth2.googleapis.com/token"
+    authorization_endpoint: str = _GOOGLE_AUTHORIZATION_ENDPOINT
+    token_endpoint: str = _GOOGLE_TOKEN_ENDPOINT
     post_login_path: str = "/"
     flow_ttl: timedelta = timedelta(minutes=10)
     id_token_max_age: timedelta = timedelta(minutes=15)
@@ -89,8 +91,8 @@ class GoogleOidcConfig:
         client_id: str,
         client_secret: str,
         redirect_uri: str,
-        authorization_endpoint: str = "https://accounts.google.com/o/oauth2/v2/auth",
-        token_endpoint: str = "https://oauth2.googleapis.com/token",
+        authorization_endpoint: str = _GOOGLE_AUTHORIZATION_ENDPOINT,
+        token_endpoint: str = _GOOGLE_TOKEN_ENDPOINT,
         post_login_path: str = "/",
         flow_ttl: timedelta = timedelta(minutes=10),
         id_token_max_age: timedelta = timedelta(minutes=15),
@@ -154,6 +156,13 @@ class GoogleOidcConfig:
                 raise GoogleOidcConfigurationError(
                     f"{field_name} deve essere un URL HTTPS assoluto."
                 )
+        if (
+            self.authorization_endpoint != _GOOGLE_AUTHORIZATION_ENDPOINT
+            or self.token_endpoint != _GOOGLE_TOKEN_ENDPOINT
+        ):
+            raise GoogleOidcConfigurationError(
+                "Endpoint Google OIDC non consentito."
+            )
         if (
             type(self.post_login_path) is not str
             or not self.post_login_path.startswith("/")

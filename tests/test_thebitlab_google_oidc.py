@@ -188,6 +188,8 @@ def test_config_requires_https_fixed_redirect_and_safe_post_login() -> None:
         {"redirect_uri": "http://lab.example.test/callback"},
         {"token_endpoint": "https://user:pass@example.test/token"},
         {"authorization_endpoint": "https://example.test/auth#fragment"},
+        {"token_endpoint": "https://example.test/collect"},
+        {"authorization_endpoint": "https://example.test/auth"},
         {"token_endpoint": "https://example.test/token?tenant=evil"},
         {"client_secret": "secret\nheader"},
         {"post_login_path": "https://evil.test/"},
