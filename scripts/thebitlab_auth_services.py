@@ -620,13 +620,28 @@ class PairingService:
         ),
         pairing_id_factory: Callable[[], str] = lambda: str(uuid.uuid4()),
     ) -> None:
-        pairing_code_digest("VALIDATION", pepper)
+        pepper_box = [pepper]
+        pepper = None
+        configuration_failed = False
+        try:
+            validated_ttl = _positive_ttl(ttl, "ttl pairing")
+        except AuthApplicationError:
+            configuration_failed = True
+            validated_ttl = timedelta(0)
+        candidate_pepper = pepper_box[0]
+        pepper_invalid = type(candidate_pepper) is not bytes or len(candidate_pepper) < 32
+        if configuration_failed or pepper_invalid:
+            pepper_box[0] = None
+            candidate_pepper = None
+            raise AuthApplicationError("Configurazione pairing non valida.")
         self.storage = storage
-        self.pepper = pepper
         self.clock = clock
-        self.ttl = _positive_ttl(ttl, "ttl pairing")
+        self.ttl = validated_ttl
         self.code_factory = code_factory
         self.pairing_id_factory = pairing_id_factory
+        self.pepper = candidate_pepper
+        candidate_pepper = None
+        pepper_box[0] = None
 
     def issue(self) -> IssuedPairing:
         now = _utc(self.clock())

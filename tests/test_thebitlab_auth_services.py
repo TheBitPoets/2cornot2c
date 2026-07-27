@@ -951,8 +951,13 @@ def test_invalid_pairing_id_does_not_remain_in_frame_with_generated_code(storage
 
 
 def test_pairing_collision_and_short_pepper_fail_closed(storage) -> None:
-    with pytest.raises(AuthApplicationError, match="pepper"):
+    with pytest.raises(AuthApplicationError, match="Configurazione") as short_pepper:
         PairingService(storage, pepper=b"short")
+    assert b"short" not in traceback_locals(short_pepper.value, "__init__")
+
+    with pytest.raises(AuthApplicationError, match="Configurazione") as invalid_ttl:
+        PairingService(storage, pepper=PEPPER, ttl=timedelta(0))
+    assert PEPPER not in traceback_locals(invalid_ttl.value, "__init__")
 
     service = PairingService(
         storage,

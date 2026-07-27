@@ -59,7 +59,7 @@ Il ruolo `pending` puo possedere una sessione per completare onboarding, ma l'au
 - proviene da configurazione/secret store;
 - non entra nel database.
 
-Il codice raw compare soltanto in `IssuedPairing`, con `repr` oscurato; codice e pepper vengono rimossi dai frame locali prima di propagare errori. Autorizzazione e consumo richiedono il codice; il consumo richiede inoltre il `pairing_id`. Controllo account attivo e transizione di autorizzazione/consumo sono atomici. Le transizioni vengono salvate tramite CAS, quindi una sola operazione concorrente puo autorizzare, consumare, scadere o revocare il record. Un clock anteriore all'autorizzazione viene rifiutato prima della transizione.
+Il codice raw compare soltanto in `IssuedPairing`, con `repr` oscurato; codice e pepper vengono rimossi dai frame locali prima di propagare errori. Il costruttore conserva temporaneamente il pepper in un contenitore che viene svuotato prima di rilanciare errori di configurazione. Autorizzazione e consumo richiedono il codice; il consumo richiede inoltre il `pairing_id`. Controllo account attivo e transizione di autorizzazione/consumo sono atomici. Le transizioni vengono salvate tramite CAS, quindi una sola operazione concorrente puo autorizzare, consumare, scadere o revocare il record. Un clock anteriore all'autorizzazione viene rifiutato prima della transizione.
 
 La limitazione dei tentativi sul codice appartiene al futuro adapter HTTP e rimane obbligatoria prima dell'esposizione in rete.
 
