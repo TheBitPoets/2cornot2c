@@ -450,6 +450,22 @@ class SqliteIdentityStorage:
             )
             if cursor.rowcount != 1:
                 raise IdentityStorageNotFoundError("Utente da aggiornare non trovato.")
+            if not user.active:
+                disabled_at = _encode_datetime(user.updated_at, "updated_at")
+                connection.execute(
+                    """
+                    UPDATE sessions SET revoked_at = CASE
+                        WHEN ? >= last_seen_at AND ? < expires_at THEN ?
+                        ELSE last_seen_at
+                    END
+                    WHERE user_id = ? AND revoked_at IS NULL
+                    """,
+                    (disabled_at, disabled_at, disabled_at, user.user_id),
+                )
+                connection.execute(
+                    "DELETE FROM tui_pairings WHERE user_id = ? AND status = 'authorized'",
+                    (user.user_id,),
+                )
 
     def list_users(self) -> list[UserAccount]:
         return [self._user(row) for row in self._query_all("SELECT * FROM users ORDER BY user_id")]
@@ -672,6 +688,32 @@ class SqliteIdentityStorage:
                 ),
             )
 
+    def create_session_for_active_user(self, session: UserSession) -> None:
+        with self._transaction("create_session_for_active_user") as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO sessions
+                SELECT ?, ?, ?, ?, ?, ?, ?
+                FROM users WHERE user_id = ? AND active = 1
+                """,
+                (
+                    session.session_id,
+                    session.user_id,
+                    session.token_digest,
+                    _encode_datetime(session.created_at, "created_at"),
+                    _encode_datetime(session.expires_at, "expires_at"),
+                    _encode_datetime(session.last_seen_at, "last_seen_at"),
+                    None
+                    if session.revoked_at is None
+                    else _encode_datetime(session.revoked_at, "revoked_at"),
+                    session.user_id,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise IdentityStorageConflictError(
+                    "Impossibile creare la sessione per un utente non attivo."
+                )
+
     def read_session(self, session_id: str) -> UserSession | None:
         row = self._query_one("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
         return None if row is None else self._session(row)
@@ -803,6 +845,18 @@ class SqliteIdentityStorage:
         )
 
     def save_pairing(self, pairing: TuiPairing) -> None:
+        self._save_pairing_transition(pairing, require_active_user=False)
+
+    def save_pairing_for_active_user(self, pairing: TuiPairing) -> None:
+        if pairing.user_id is None:
+            raise IdentityStorageConflictError(
+                "La transizione pairing richiede un utente attivo."
+            )
+        self._save_pairing_transition(pairing, require_active_user=True)
+
+    def _save_pairing_transition(
+        self, pairing: TuiPairing, *, require_active_user: bool
+    ) -> None:
         values = self._pairing_values(pairing)
         if pairing.status in {"consumed", "expired", "revoked"} and pairing.user_id is not None:
             predecessors = ("authorized",)
@@ -820,6 +874,15 @@ class SqliteIdentityStorage:
             }[pairing.status]
             prior_identity_sql = ""
             prior_identity_values = ()
+        if require_active_user:
+            active_user_sql = (
+                " AND EXISTS (SELECT 1 FROM users"
+                " WHERE users.user_id = ? AND users.active = 1)"
+            )
+            active_user_values = (pairing.user_id,)
+        else:
+            active_user_sql = ""
+            active_user_values = ()
         placeholders = ", ".join("?" for _ in predecessors)
         with self._transaction("save_pairing") as connection:
             cursor = connection.execute(
@@ -827,7 +890,7 @@ class SqliteIdentityStorage:
                 UPDATE tui_pairings SET status = ?, user_id = ?, authorized_at = ?,
                     consumed_at = ?, expired_at = ?, revoked_at = ?
                 WHERE pairing_id = ? AND code_digest = ? AND created_at = ? AND expires_at = ?
-                    AND status IN ({placeholders}){prior_identity_sql}
+                    AND status IN ({placeholders}){prior_identity_sql}{active_user_sql}
                 """,
                 (
                     values[2],
@@ -842,7 +905,8 @@ class SqliteIdentityStorage:
                     values[4],
                 )
                 + predecessors
-                + prior_identity_values,
+                + prior_identity_values
+                + active_user_values,
             )
             if cursor.rowcount != 1:
                 exists = connection.execute(
@@ -851,7 +915,7 @@ class SqliteIdentityStorage:
                 if exists is None:
                     raise IdentityStorageNotFoundError("Pairing da aggiornare non trovato.")
                 raise IdentityStorageConflictError(
-                    "Pairing modificato o transitato da un'altra operazione."
+                    "Pairing modificato, transitato o associato a un utente non attivo."
                 )
 
     def delete_expired_pairings(self, expired_before: datetime) -> int:

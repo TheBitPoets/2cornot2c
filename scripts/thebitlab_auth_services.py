@@ -20,12 +20,7 @@ from scripts.thebitlab_identity import (
     require_active_account,
     revoke_pairing,
 )
-from scripts.thebitlab_identity_ports import (
-    IdentityStorageConflictError,
-    SessionStorage,
-    TuiPairingStorage,
-    UserDirectoryStorage,
-)
+from scripts.thebitlab_identity_ports import IdentityStorageConflictError
 
 
 _MAX_ATTEMPTS = 5
@@ -196,12 +191,50 @@ class FakeFederatedIdentityProvider:
         return assertion
 
 
-class SessionApplicationStorage(UserDirectoryStorage, SessionStorage, Protocol):
+class FederatedIdentityApplicationStorage(Protocol):
+    """Minimum persistence capabilities required by FederatedIdentityService."""
+
+    def read_user(self, user_id: str) -> UserAccount | None: ...
+
+    def read_external_identity(
+        self, provider: str, subject: str
+    ) -> ExternalIdentity | None: ...
+
+    def link_external_identity(self, identity: ExternalIdentity) -> None: ...
+
+    def provision_user_with_identity(
+        self, user: UserAccount, identity: ExternalIdentity
+    ) -> None: ...
+
+
+class SessionApplicationStorage(Protocol):
     """Minimum persistence capabilities required by SessionService."""
 
+    def read_user(self, user_id: str) -> UserAccount | None: ...
 
-class PairingApplicationStorage(UserDirectoryStorage, TuiPairingStorage, Protocol):
+    def create_session_for_active_user(self, session: UserSession) -> None: ...
+
+    def read_session_by_token_digest(self, token_digest: str) -> UserSession | None: ...
+
+    def save_session(self, session: UserSession) -> None: ...
+
+    def revoke_user_sessions(self, user_id: str, revoked_at: datetime) -> int: ...
+
+
+class PairingApplicationStorage(Protocol):
     """Minimum persistence capabilities required by PairingService."""
+
+    def read_user(self, user_id: str) -> UserAccount | None: ...
+
+    def create_pairing(self, pairing: TuiPairing) -> None: ...
+
+    def read_pairing(self, pairing_id: str) -> TuiPairing | None: ...
+
+    def read_pairing_by_code_digest(self, code_digest: str) -> TuiPairing | None: ...
+
+    def save_pairing(self, pairing: TuiPairing) -> None: ...
+
+    def save_pairing_for_active_user(self, pairing: TuiPairing) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -227,7 +260,7 @@ class FederatedIdentityService:
 
     def __init__(
         self,
-        storage: UserDirectoryStorage,
+        storage: FederatedIdentityApplicationStorage,
         *,
         clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
         user_id_factory: Callable[[], str] = lambda: str(uuid.uuid4()),
@@ -243,8 +276,16 @@ class FederatedIdentityService:
         provider: FederatedIdentityProvider,
         credential: str,
     ) -> UserAccount:
-        assertion = provider.authenticate(credential)
-        expected_provider = _required_text(provider.provider_name, "provider_name", lowercase=True)
+        try:
+            expected_provider = _required_text(
+                provider.provider_name, "provider_name", lowercase=True
+            )
+            assertion = provider.authenticate(credential)
+        except Exception:
+            # Provider exceptions and their causes may contain the opaque credential.
+            raise ProviderAuthenticationError("Autenticazione provider non riuscita.") from None
+        if not isinstance(assertion, FederatedIdentityAssertion):
+            raise ProviderProtocolError("Il provider non ha restituito un'assertion valida.")
         if assertion.provider != expected_provider:
             raise ProviderProtocolError("Assertion e provider adapter non coincidono.")
         return self.resolve(assertion)
@@ -354,9 +395,13 @@ class SessionService:
                 last_seen_at=now,
             )
             try:
-                self.storage.create_session(session)
+                self.storage.create_session_for_active_user(session)
                 return IssuedSession(session, raw_token)
             except IdentityStorageConflictError:
+                current_account = self.storage.read_user(account.user_id)
+                if current_account is None:
+                    raise InvalidCredentialError("Utente non disponibile.")
+                require_active_account(current_account)
                 continue
         raise CredentialGenerationError("Impossibile generare una sessione univoca.")
 
@@ -387,6 +432,8 @@ class SessionService:
     ) -> tuple[UserSession, UserAccount]:
         if session is None or not hmac.compare_digest(session.token_digest, digest):
             raise InvalidCredentialError("Sessione non valida.")
+        if now < session.last_seen_at:
+            raise ConcurrentStateChangeError("Clock anteriore all'ultimo utilizzo della sessione.")
         if now < session.created_at or now >= session.expires_at or session.revoked_at is not None:
             raise InvalidCredentialError("Sessione non valida.")
         account = self.storage.read_user(session.user_id)
@@ -482,7 +529,7 @@ class PairingService:
             raise InvalidCredentialError("Utente non disponibile.")
         require_active_account(account)
         authorized = authorize_pairing(pairing, account.user_id, now)
-        self._save_transition(authorized)
+        self._save_transition(authorized, require_active_user=True)
         return authorized
 
     def consume(self, pairing_id: str, code: str) -> TuiPairing:
@@ -498,7 +545,7 @@ class PairingService:
             raise InvalidCredentialError("Utente pairing non disponibile.")
         require_active_account(account)
         consumed = consume_pairing(pairing, now)
-        self._save_transition(consumed)
+        self._save_transition(consumed, require_active_user=True)
         return consumed
 
     def revoke(self, pairing_id: str) -> TuiPairing:
@@ -521,6 +568,10 @@ class PairingService:
     def _require_current(self, pairing: TuiPairing, now: datetime) -> None:
         if now < pairing.created_at:
             raise PairingStateError("Pairing non ancora valido.")
+        if pairing.authorized_at is not None and now < pairing.authorized_at:
+            raise ConcurrentStateChangeError(
+                "Clock anteriore all'autorizzazione del pairing."
+            )
         if now >= pairing.expires_at:
             expired = expire_pairing(pairing, now)
             try:
@@ -529,10 +580,20 @@ class PairingService:
                 pass
             raise PairingExpiredError("Pairing scaduto.")
 
-    def _save_transition(self, pairing: TuiPairing) -> None:
+    def _save_transition(
+        self, pairing: TuiPairing, *, require_active_user: bool = False
+    ) -> None:
         try:
-            self.storage.save_pairing(pairing)
+            if require_active_user:
+                self.storage.save_pairing_for_active_user(pairing)
+            else:
+                self.storage.save_pairing(pairing)
         except IdentityStorageConflictError as error:
+            if require_active_user and pairing.user_id is not None:
+                account = self.storage.read_user(pairing.user_id)
+                if account is None:
+                    raise InvalidCredentialError("Utente pairing non disponibile.")
+                require_active_account(account)
             raise ConcurrentStateChangeError(
                 "Pairing modificato da un'altra operazione."
             ) from error

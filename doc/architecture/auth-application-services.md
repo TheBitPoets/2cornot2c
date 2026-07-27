@@ -9,7 +9,7 @@ Questo documento descrive il livello applicativo tra provider federati, dominio 
 I servizi dipendono soltanto da:
 
 - contratti immutabili in `scripts/thebitlab_identity.py`;
-- porte ed errori storage in `scripts/thebitlab_identity_ports.py`;
+- porte applicative minime ed errori storage in `scripts/thebitlab_identity_ports.py`;
 - porta `FederatedIdentityProvider`;
 - clock e generatori iniettati.
 
@@ -17,7 +17,7 @@ Non importano l'adapter SQLite concreto né SDK OAuth/OIDC.
 
 ## Assertion federata
 
-Un adapter provider autentica la credenziale opaca e restituisce `FederatedIdentityAssertion`, contenente provider e subject stabili oltre ad attributi aggiornabili. Validazione di firma, issuer, audience, nonce e protocollo appartengono all'adapter reale.
+Un adapter provider autentica la credenziale opaca e restituisce `FederatedIdentityAssertion`, contenente provider e subject stabili oltre ad attributi aggiornabili. Validazione di firma, issuer, audience, nonce e protocollo appartengono all'adapter reale. Il confine applicativo converte qualsiasi eccezione dell'adapter in un errore generico senza concatenare cause potenzialmente contenenti la credenziale, e rifiuta risultati che non siano assertion tipizzate.
 
 Il fake provider usa chiavi deterministiche solo nei test. Non simula crittografia e non deve essere abilitato come provider di produzione.
 
@@ -43,7 +43,9 @@ La validita usa l'intervallo esclusivo:
 created_at <= now < expires_at
 ```
 
-Una sessione revocata o appartenente a un account disabilitato fallisce chiusa. `last_seen_at` e revoca usano il compare-and-swap dello storage: una race con revoca viene riletta e non puo riattivare il bearer. Una modifica concorrente ancora attiva durante la revoca produce un errore esplicito, non un falso successo.
+Una sessione revocata o appartenente a un account disabilitato fallisce chiusa. Creazione sessione e verifica `active` avvengono nella stessa transazione. `last_seen_at` e revoca usano il compare-and-swap dello storage: una race con revoca viene riletta e non puo riattivare il bearer. Una modifica concorrente ancora attiva durante la revoca produce un errore esplicito, non un falso successo. Un rollback dell'orologio sotto `last_seen_at` viene rifiutato.
+
+La disabilitazione di un account revoca atomicamente le sue sessioni e rimuove pairing ancora autorizzati, impedendo che una successiva riabilitazione faccia rivivere credenziali precedenti.
 
 Il ruolo `pending` puo possedere una sessione per completare onboarding, ma l'autorizzazione HTTP futura deve impedirgli l'accesso ai dati applicativi.
 
@@ -56,7 +58,7 @@ Il ruolo `pending` puo possedere una sessione per completare onboarding, ma l'au
 - proviene da configurazione/secret store;
 - non entra nel database.
 
-Il codice raw compare soltanto in `IssuedPairing`, con `repr` oscurato. Autorizzazione e consumo richiedono il codice; il consumo richiede inoltre il `pairing_id`. Le transizioni vengono salvate tramite CAS, quindi una sola operazione concorrente puo autorizzare, consumare, scadere o revocare il record.
+Il codice raw compare soltanto in `IssuedPairing`, con `repr` oscurato. Autorizzazione e consumo richiedono il codice; il consumo richiede inoltre il `pairing_id`. Controllo account attivo e transizione di autorizzazione/consumo sono atomici. Le transizioni vengono salvate tramite CAS, quindi una sola operazione concorrente puo autorizzare, consumare, scadere o revocare il record. Un clock anteriore all'autorizzazione viene rifiutato prima della transizione.
 
 La limitazione dei tentativi sul codice appartiene al futuro adapter HTTP e rimane obbligatoria prima dell'esposizione in rete.
 

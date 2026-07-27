@@ -23,6 +23,7 @@ from scripts.thebitlab_auth_services import (
     PairingService,
     PairingStateError,
     ProviderAuthenticationError,
+    ProviderProtocolError,
     SessionService,
 )
 from scripts.thebitlab_identity import AccountDisabledError, ExternalIdentity, UserAccount
@@ -93,10 +94,32 @@ def test_fake_google_onboards_unknown_user_as_pending_atomically(storage) -> Non
     identity = storage.read_external_identity("google", "google-42")
     assert identity is not None
     assert identity.user_id == "internal-01"
-    with pytest.raises(ProviderAuthenticationError, match="non valida") as captured:
+    with pytest.raises(ProviderAuthenticationError, match="non riuscita") as captured:
         service.authenticate(provider, "raw-secret-not-in-error")
     assert "raw-secret" not in str(captured.value)
     assert captured.value.__cause__ is None
+
+
+def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertions(storage) -> None:
+    class LeakyProvider:
+        provider_name = "google"
+
+        def authenticate(self, credential):
+            raise RuntimeError(credential)
+
+    class InvalidProvider:
+        provider_name = "google"
+
+        def authenticate(self, credential):
+            return None
+
+    service = FederatedIdentityService(storage, clock=MutableClock())
+    with pytest.raises(ProviderAuthenticationError) as captured:
+        service.authenticate(LeakyProvider(), "raw-provider-secret")
+    assert "raw-provider-secret" not in str(captured.value)
+    assert captured.value.__cause__ is None
+    with pytest.raises(ProviderProtocolError, match="assertion valida"):
+        service.authenticate(InvalidProvider(), "opaque")
 
 
 def test_existing_identity_refreshes_attributes_without_changing_owner_or_link_time(storage) -> None:
@@ -212,6 +235,28 @@ def test_session_issue_authenticate_touch_revoke_and_raw_token_hygiene(storage, 
         service.authenticate(issued.bearer_token)
 
 
+def test_session_issue_checks_active_account_inside_storage_transaction(
+    storage, monkeypatch
+) -> None:
+    storage.create_user(account())
+    service = SessionService(
+        storage,
+        clock=MutableClock(),
+        token_factory=lambda: "D" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    create_for_active = storage.create_session_for_active_user
+
+    def disable_then_create(session):
+        storage.save_user(replace(account(), active=False, updated_at=NOW))
+        create_for_active(session)
+
+    monkeypatch.setattr(storage, "create_session_for_active_user", disable_then_create)
+    with pytest.raises(AccountDisabledError):
+        service.issue("user-01")
+    assert storage.list_user_sessions("user-01") == []
+
+
 def test_session_expiration_is_exclusive_and_disabled_users_fail_closed(storage) -> None:
     storage.create_user(account())
     clock = MutableClock()
@@ -231,10 +276,28 @@ def test_session_expiration_is_exclusive_and_disabled_users_fail_closed(storage)
 
     storage.save_user(replace(account(), active=False, updated_at=NOW + timedelta(minutes=10)))
     clock.value = NOW + timedelta(minutes=5)
-    with pytest.raises(AccountDisabledError):
+    with pytest.raises(InvalidCredentialError):
         service.authenticate(issued.bearer_token)
     with pytest.raises(AccountDisabledError):
         service.issue("user-01")
+
+
+def test_session_authentication_rejects_clock_rollback(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "K" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+    clock.value = NOW + timedelta(minutes=5)
+    service.authenticate(issued.bearer_token)
+    clock.value = NOW + timedelta(minutes=3)
+
+    with pytest.raises(ConcurrentStateChangeError, match="Clock"):
+        service.authenticate(issued.bearer_token)
 
 
 def test_session_revoke_reports_concurrent_active_change(storage, monkeypatch) -> None:
@@ -267,6 +330,34 @@ def test_invalid_session_generators_fail_before_persistence(storage) -> None:
     with pytest.raises(CredentialGenerationError, match="Token di sessione"):
         service.issue("user-01")
     assert storage.list_user_sessions("user-01") == []
+
+
+def test_disabling_account_invalidates_sessions_and_authorized_pairings(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    sessions = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "Z" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued_session = sessions.issue("user-01")
+    issued_pairing = pairings.issue()
+    pairings.authorize(issued_pairing.code, "user-01")
+
+    storage.save_user(replace(account(), active=False, updated_at=NOW))
+    storage.save_user(replace(account(), active=True, updated_at=NOW + timedelta(minutes=1)))
+
+    with pytest.raises(InvalidCredentialError):
+        sessions.authenticate(issued_session.bearer_token)
+    assert storage.read_pairing("pairing-01") is None
 
 
 def test_session_generation_collision_fails_without_exposing_raw_token(storage) -> None:
@@ -316,6 +407,30 @@ def test_pairing_issue_authorize_consume_and_replay_protection(storage, database
         service.authorize(issued.code, "user-01")
 
 
+def test_pairing_authorization_checks_active_account_inside_storage_transaction(
+    storage, monkeypatch
+) -> None:
+    storage.create_user(account())
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=MutableClock(),
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    save_for_active = storage.save_pairing_for_active_user
+
+    def disable_then_save(pairing):
+        storage.save_user(replace(account(), active=False, updated_at=NOW))
+        save_for_active(pairing)
+
+    monkeypatch.setattr(storage, "save_pairing_for_active_user", disable_then_save)
+    with pytest.raises(AccountDisabledError):
+        service.authorize(issued.code, "user-01")
+    assert storage.read_pairing("pairing-01").status == "pending"
+
+
 def test_pairing_revoke_is_terminal_and_disabled_user_cannot_authorize(storage) -> None:
     storage.create_user(account(active=False))
     clock = MutableClock()
@@ -336,6 +451,27 @@ def test_pairing_revoke_is_terminal_and_disabled_user_cannot_authorize(storage) 
         service.revoke("pairing-01")
     with pytest.raises(PairingStateError):
         service.authorize(issued.code, "user-01")
+
+
+def test_pairing_consume_and_revoke_reject_clock_rollback(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    clock.value = NOW + timedelta(minutes=5)
+    service.authorize(issued.code, "user-01")
+    clock.value = NOW + timedelta(minutes=3)
+
+    with pytest.raises(ConcurrentStateChangeError, match="Clock"):
+        service.consume("pairing-01", issued.code)
+    with pytest.raises(ConcurrentStateChangeError, match="Clock"):
+        service.revoke("pairing-01")
 
 
 def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> None:
