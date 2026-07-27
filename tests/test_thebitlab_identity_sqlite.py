@@ -170,6 +170,28 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
+def test_external_identity_generation_tombstone_prevents_aba_refresh(storage) -> None:
+    storage.create_user(account())
+    original = ExternalIdentity("user-01", "google", "subject-01", NOW, email="old@test")
+    storage.link_external_identity(original)
+    assert storage.unlink_external_identity("google", "subject-01") is True
+
+    with pytest.raises(IdentityStorageConflictError):
+        storage.link_external_identity(replace(original, email="recreated@test"))
+
+    replacement = replace(
+        original,
+        linked_at=NOW + timedelta(microseconds=1),
+        email="replacement@test",
+    )
+    storage.link_external_identity(replacement)
+    with pytest.raises(IdentityStorageConflictError, match="ricollegata"):
+        storage.refresh_external_identity(
+            replace(original, email="stale@test"), expected_linked_at=original.linked_at
+        )
+    assert storage.read_external_identity("google", "subject-01") == replacement
+
+
 def test_user_updates_are_monotonic_and_stale_snapshot_cannot_reactivate(storage) -> None:
     original = account()
     storage.create_user(original)

@@ -187,7 +187,11 @@ def test_existing_identity_relink_race_is_translated(storage, monkeypatch) -> No
 
     def relink_then_conflict(identity, *, expected_linked_at):
         storage.unlink_external_identity("google", "google-42")
-        link_identity(ExternalIdentity("user-02", "google", "google-42", NOW))
+        link_identity(
+            ExternalIdentity(
+                "user-02", "google", "google-42", NOW + timedelta(seconds=1)
+            )
+        )
         refresh_identity(identity, expected_linked_at=expected_linked_at)
 
     monkeypatch.setattr(storage, "refresh_external_identity", relink_then_conflict)

@@ -42,6 +42,14 @@ _MIGRATION_1 = (
     )
     """,
     """
+    CREATE TABLE external_identity_generations (
+        provider TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        linked_at TEXT NOT NULL,
+        PRIMARY KEY (provider, subject, linked_at)
+    )
+    """,
+    """
     CREATE TABLE external_identities (
         provider TEXT NOT NULL,
         subject TEXT NOT NULL,
@@ -415,13 +423,18 @@ class SqliteIdentityStorage:
                     user.primary_email,
                 ),
             )
+            linked_at = _encode_datetime(identity.linked_at, "linked_at")
+            connection.execute(
+                "INSERT INTO external_identity_generations VALUES (?, ?, ?)",
+                (identity.provider, identity.subject, linked_at),
+            )
             connection.execute(
                 "INSERT INTO external_identities VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     identity.provider,
                     identity.subject,
                     identity.user_id,
-                    _encode_datetime(identity.linked_at, "linked_at"),
+                    linked_at,
                     identity.email,
                     identity.username,
                 ),
@@ -487,28 +500,23 @@ class SqliteIdentityStorage:
         return [self._user(row) for row in self._query_all("SELECT * FROM users ORDER BY user_id")]
 
     def link_external_identity(self, identity: ExternalIdentity) -> None:
+        linked_at = _encode_datetime(identity.linked_at, "linked_at")
         with self._transaction("link_external_identity") as connection:
-            cursor = connection.execute(
-                """
-                INSERT INTO external_identities VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(provider, subject) DO UPDATE SET
-                    email = excluded.email,
-                    username = excluded.username
-                WHERE external_identities.user_id = excluded.user_id
-                """,
+            connection.execute(
+                "INSERT INTO external_identity_generations VALUES (?, ?, ?)",
+                (identity.provider, identity.subject, linked_at),
+            )
+            connection.execute(
+                "INSERT INTO external_identities VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     identity.provider,
                     identity.subject,
                     identity.user_id,
-                    _encode_datetime(identity.linked_at, "linked_at"),
+                    linked_at,
                     identity.email,
                     identity.username,
                 ),
             )
-            if cursor.rowcount != 1:
-                raise IdentityStorageConflictError(
-                    "L'identita provider e gia collegata a un utente diverso."
-                )
 
     def refresh_external_identity(
         self, identity: ExternalIdentity, *, expected_linked_at: datetime

@@ -72,7 +72,7 @@ Lo schema concreto e le migrazioni sono implementati da `SqliteIdentityStorage` 
 La prima migrazione crea:
 
 - `users`;
-- `external_identities`;
+- `external_identities` e tombstone `external_identity_generations` ABA-safe;
 - `classes`;
 - `class_memberships`;
 - `external_group_mappings`;

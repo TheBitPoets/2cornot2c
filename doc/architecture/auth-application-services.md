@@ -25,11 +25,12 @@ Il fake provider usa chiavi deterministiche solo nei test. Non simula crittograf
 
 1. `(provider, subject)` gia collegato risolve lo stesso `user_id` interno;
 2. email e username vengono aggiornati con un UPDATE-only CAS su proprietario e `linked_at`, senza ricreare un link rimosso o ricollegato;
-3. account disabilitati vengono rifiutati;
-4. una identita sconosciuta puo creare un utente soltanto se il provider e autorizzato all'onboarding e l'email e verificata;
-5. il nuovo utente ha sempre ruolo `pending`;
-6. creazione utente e primo linking sono una singola transazione SQLite;
-7. una race di onboarding restituisce il vincitore gia persistito, senza utenti orfani.
+3. ogni generazione `(provider, subject, linked_at)` resta in una tombstone SQLite e non puo essere riutilizzata, rendendo il CAS resistente a unlink/relink ABA;
+4. account disabilitati vengono rifiutati;
+5. una identita sconosciuta puo creare un utente soltanto se il provider e autorizzato all'onboarding e l'email e verificata;
+6. il nuovo utente ha sempre ruolo `pending`;
+7. creazione utente e primo linking sono una singola transazione SQLite;
+8. una race di onboarding restituisce il vincitore gia persistito, senza utenti orfani.
 
 La policy iniziale autorizza all'onboarding soltanto `google`. GitHub verra collegato in un flusso autenticato successivo.
 
