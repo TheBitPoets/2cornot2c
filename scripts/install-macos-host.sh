@@ -24,7 +24,10 @@ fail() {
 
 ensure_homebrew_path() {
   brew_shellenv='eval "$(/opt/homebrew/bin/brew shellenv)"'
-  profile_file="$HOME/.zprofile"
+  case "$(basename "${SHELL:-}")" in
+    bash) profile_file="$HOME/.bash_profile" ;;
+    *) profile_file="$HOME/.zprofile" ;;
+  esac
   touch "$profile_file"
   if ! grep -Fqx "$brew_shellenv" "$profile_file"; then
     printf '\n%s\n' "$brew_shellenv" >> "$profile_file"
