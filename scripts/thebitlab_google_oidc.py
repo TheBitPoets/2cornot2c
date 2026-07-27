@@ -486,7 +486,7 @@ class UrllibGoogleTokenTransport:
                         "invalid_scope",
                     }:
                         configuration_failed = True
-                    elif type(oauth_error) is str:
+                    elif oauth_error == "invalid_grant":
                         rejected = True
                     else:
                         failed = True
@@ -550,6 +550,22 @@ class BoundedGoogleCertRequest:
         timeout_seconds: float = 10.0,
         max_response_bytes: int = 256 * 1024,
     ) -> None:
+        if (
+            isinstance(timeout_seconds, bool)
+            or not isinstance(timeout_seconds, (int, float))
+            or not math.isfinite(float(timeout_seconds))
+            or not 0 < timeout_seconds <= 60
+        ):
+            raise GoogleOidcConfigurationError(
+                "Timeout certificati non valido."
+            )
+        if (
+            type(max_response_bytes) is not int
+            or not 4096 <= max_response_bytes <= 1024 * 1024
+        ):
+            raise GoogleOidcConfigurationError(
+                "Limite certificati non valido."
+            )
         self.timeout_seconds = timeout_seconds
         self.max_response_bytes = max_response_bytes
         self._opener = urllib.request.build_opener(UrllibGoogleTokenTransport._NoRedirect())

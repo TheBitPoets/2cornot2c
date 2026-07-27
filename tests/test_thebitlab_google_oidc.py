@@ -904,6 +904,24 @@ def test_urllib_transport_rejects_duplicate_json_and_bounds_response() -> None:
             timeout_seconds=1,
             max_response_bytes=1024,
         )
+    transport._opener = ErrorOpener("temporarily_unavailable")
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        transport.exchange_code(
+            endpoint="https://oauth2.googleapis.com/token",
+            form={"code": "retry-later"},
+            timeout_seconds=1,
+            max_response_bytes=1024,
+        )
+
+    transport._opener = ErrorOpener("unknown_provider_error")
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        transport.exchange_code(
+            endpoint="https://oauth2.googleapis.com/token",
+            form={"code": "unknown"},
+            timeout_seconds=1,
+            max_response_bytes=1024,
+        )
+
     transport._opener = ErrorOpener("invalid_grant", b" " * 1024)
     with pytest.raises(GoogleOidcProviderUnavailableError):
         transport.exchange_code(
@@ -975,7 +993,16 @@ def test_bounded_cert_request_restricts_endpoint_timeout_redirect_and_size() -> 
             self.timeout = timeout
             return Response(self.body)
 
-    request = BoundedGoogleCertRequest(timeout_seconds=1.5, max_response_bytes=1024)
+    for invalid_kwargs in (
+        {"timeout_seconds": 0},
+        {"timeout_seconds": float("nan")},
+        {"max_response_bytes": -1},
+        {"max_response_bytes": 4095},
+    ):
+        with pytest.raises(GoogleOidcConfigurationError):
+            BoundedGoogleCertRequest(**invalid_kwargs)
+
+    request = BoundedGoogleCertRequest(timeout_seconds=1.5, max_response_bytes=4096)
     opener = Opener(b"{}")
     request._opener = opener
     response = request("https://www.googleapis.com/oauth2/v1/certs")
@@ -983,7 +1010,7 @@ def test_bounded_cert_request_restricts_endpoint_timeout_redirect_and_size() -> 
     assert response.data == b"{}"
     assert opener.timeout == 1.5
 
-    request._opener = Opener(b"x" * 1025)
+    request._opener = Opener(b"x" * 4097)
     with pytest.raises(GoogleOidcProviderUnavailableError):
         request("https://www.googleapis.com/oauth2/v1/certs")
     with pytest.raises(GoogleOidcProviderUnavailableError):
