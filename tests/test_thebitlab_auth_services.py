@@ -124,6 +124,25 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
         def authenticate(self, credential):
             return HostileResult()
 
+    class HostileString(str):
+        def strip(self, chars=None):
+            return self
+
+        def lower(self):
+            return self
+
+        def __hash__(self):
+            raise RuntimeError("raw-provider-secret")
+
+    tampered_assertion = google_assertion()
+    object.__setattr__(tampered_assertion, "provider", HostileString("google"))
+
+    class TamperedProvider:
+        provider_name = "google"
+
+        def authenticate(self, credential):
+            return tampered_assertion
+
     service = FederatedIdentityService(storage, clock=MutableClock())
     with pytest.raises(ProviderAuthenticationError) as captured:
         service.authenticate(LeakyProvider(), "raw-provider-secret")
@@ -135,6 +154,10 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
         service.authenticate(HostileProvider(), "opaque")
     assert "raw-provider-secret" not in str(hostile.value)
     assert hostile.value.__cause__ is None
+    with pytest.raises(ProviderProtocolError) as tampered:
+        service.authenticate(TamperedProvider(), "opaque")
+    assert "raw-provider-secret" not in str(tampered.value)
+    assert tampered.value.__cause__ is None
 
 
 def test_existing_identity_refreshes_attributes_without_changing_owner_or_link_time(storage) -> None:

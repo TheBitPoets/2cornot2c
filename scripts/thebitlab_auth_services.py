@@ -64,8 +64,8 @@ class PairingExpiredError(PairingStateError):
 
 
 def _required_text(value: str, field_name: str, *, lowercase: bool = False) -> str:
-    if not isinstance(value, str):
-        raise ProviderProtocolError(f"{field_name} deve essere una stringa.")
+    if type(value) is not str:
+        raise ProviderProtocolError(f"{field_name} deve essere una stringa primitiva.")
     normalized = value.strip()
     if lowercase:
         normalized = normalized.lower()
@@ -119,7 +119,7 @@ def pairing_code_digest(raw_code: str, pepper: bytes) -> str:
     code = _required_text(raw_code, "raw_code")
     if code != raw_code:
         raise CredentialGenerationError("Il codice pairing generato non e valido.")
-    if not isinstance(pepper, bytes) or len(pepper) < 32:
+    if type(pepper) is not bytes or len(pepper) < 32:
         raise AuthApplicationError("Il pepper pairing deve contenere almeno 32 byte.")
     return "hmac-sha256:" + hmac.new(pepper, code.encode("utf-8"), hashlib.sha256).hexdigest()
 
