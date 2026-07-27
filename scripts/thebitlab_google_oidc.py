@@ -436,6 +436,8 @@ class UrllibGoogleTokenTransport:
         max_response_bytes: int,
     ) -> Mapping[str, object]:
         failed = False
+        rejected = False
+        configuration_failed = False
         payload = None
         request = None
         response = None
@@ -459,6 +461,36 @@ class UrllibGoogleTokenTransport:
                     response_bytes = response.read(max_response_bytes + 1)
                     if len(response_bytes) > max_response_bytes:
                         failed = True
+        except urllib.error.HTTPError as error:
+            status = error.code
+            error_bytes = None
+            if 400 <= status < 500:
+                try:
+                    error_bytes = error.read(max_response_bytes + 1)
+                    decoded_error = json.loads(
+                        error_bytes.decode("utf-8"),
+                        object_pairs_hook=_reject_duplicate_json_keys,
+                    )
+                    oauth_error = (
+                        decoded_error.get("error")
+                        if type(decoded_error) is dict
+                        else None
+                    )
+                    if oauth_error == "invalid_client":
+                        configuration_failed = True
+                    elif type(oauth_error) is str:
+                        rejected = True
+                    else:
+                        failed = True
+                except Exception:
+                    failed = True
+                finally:
+                    error_bytes = None
+                    decoded_error = None
+                    oauth_error = None
+            else:
+                failed = True
+            error = None
         except Exception:
             failed = True
         finally:
@@ -466,6 +498,16 @@ class UrllibGoogleTokenTransport:
             request = None
             response = None
             form = None
+        if configuration_failed:
+            response_bytes = None
+            raise GoogleOidcConfigurationError(
+                "Credenziali client Google rifiutate."
+            )
+        if rejected:
+            response_bytes = None
+            raise GoogleOidcTokenRejectedError(
+                "Authorization code Google rifiutato."
+            )
         if failed or response_bytes is None:
             response_bytes = None
             raise GoogleOidcProviderUnavailableError("Token endpoint Google non disponibile.")
@@ -1214,6 +1256,8 @@ class GoogleOidcLoginService:
 
     def _exchange(self, code: str, verifier: str) -> Mapping[str, object]:
         failed = False
+        rejected = False
+        configuration_failed = False
         response = None
         form = {
             "grant_type": "authorization_code",
@@ -1230,12 +1274,26 @@ class GoogleOidcLoginService:
                 timeout_seconds=float(self.config.timeout_seconds),
                 max_response_bytes=self.config.max_token_response_bytes,
             )
+        except GoogleOidcTokenRejectedError:
+            rejected = True
+        except GoogleOidcConfigurationError:
+            configuration_failed = True
         except Exception:
             failed = True
         finally:
             code = None
             verifier = None
             form = None
+        if configuration_failed:
+            response = None
+            raise GoogleOidcConfigurationError(
+                "Configurazione token Google rifiutata."
+            )
+        if rejected:
+            response = None
+            raise GoogleOidcTokenRejectedError(
+                "Authorization code Google rifiutato."
+            )
         if failed or not isinstance(response, Mapping):
             response = None
             raise GoogleOidcProviderUnavailableError("Token exchange Google fallito.")

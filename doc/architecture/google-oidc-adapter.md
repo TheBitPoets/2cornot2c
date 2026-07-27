@@ -42,7 +42,7 @@ State e nonce raw esistono soltanto nella URL consegnata al browser. Lo store co
 
 `InMemoryGoogleOidcFlowStore` è protetto da lock e consuma lo state con una singola `pop`: un solo callback concorrente può vincere. La scadenza è esclusiva (`now >= expires_at`). Errori provider con state valido consumano comunque il flow. Il cleanup riceve un cutoff esplicito; ogni creazione elimina inoltre i flow già scaduti e lo store impone un cap configurabile, evitando crescita non limitata dei verifier raw.
 
-Lo store è adatto al server MVP a processo singolo. Deployment multi-process richiederà uno store transazionale condiviso; non è ammesso usare sticky session come unica garanzia di replay protection.
+Lo store è adatto al server MVP a processo singolo. Deployment multi-process richiederà uno store transazionale condiviso; non è ammesso usare sticky session come unica garanzia di replay protection. Il cap limita la memoria ma non sostituisce il controllo abuso: la futura route pubblica deve applicare rate limit per-client e globale, trusted-proxy-aware, prima di `begin_login()`; il requisito è tracciato in #549.
 
 ## Callback
 
@@ -51,7 +51,7 @@ Il callback:
 1. rifiuta parametri sconosciuti, duplicati, mancanti, sovradimensionati o con controlli;
 2. consuma atomicamente state prima del token exchange;
 3. invia code, redirect URI e PKCE verifier al token endpoint tramite POST form;
-4. non segue redirect, impone HTTPS, timeout e limite risposta;
+4. non segue redirect, impone HTTPS, timeout e limite risposta; classifica OAuth 4xx bounded come rejection/configurazione e 5xx/rete come indisponibilità;
 5. accetta JSON object senza chiavi duplicate ed estrae soltanto `id_token`;
 6. verifica firma e claim tramite la porta `GoogleIdTokenVerifier`;
 7. confronta il digest del nonce in constant time;
