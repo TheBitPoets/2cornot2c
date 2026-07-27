@@ -5,6 +5,7 @@ import json
 import sqlite3
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlsplit
 
@@ -487,6 +488,58 @@ def test_token_exchange_and_verification_failures_are_sanitized_and_consume_stat
         verify_error.value, "complete_callback", "verify"
     )
     assert verify_error.value.__context__ is None
+
+
+def test_login_result_uses_current_session_role(database_path, clock) -> None:
+    service, storage, _flows, _transport, _verifier = make_service(
+        database_path, clock
+    )
+    boundary = service.http_sessions
+
+    class PromoteBeforeSession:
+        def establish_session(self, user_id, **kwargs):
+            current = storage.read_user(user_id)
+            storage.save_user(
+                replace(
+                    current,
+                    role="teacher",
+                    updated_at=current.updated_at + timedelta(microseconds=1),
+                ),
+                expected_updated_at=current.updated_at,
+            )
+            return boundary.establish_session(user_id, **kwargs)
+
+        def discard_established_session(self, established):
+            return boundary.discard_established_session(established)
+
+    service.http_sessions = PromoteBeforeSession()
+    state = begin_state(service)
+    result = service.complete_callback(valid_callback(state))
+
+    assert result.role == "teacher"
+    assert result.user_id == result.session.context.user.user_id
+    assert result.role == result.session.context.user.role
+
+
+def test_login_result_construction_failure_revokes_issued_session(
+    database_path, clock, monkeypatch
+) -> None:
+    service, storage, _flows, _transport, _verifier = make_service(
+        database_path, clock
+    )
+    state = begin_state(service)
+
+    class FailingLoginResult:
+        def __init__(self, **_kwargs):
+            raise RuntimeError("result unavailable")
+
+    monkeypatch.setattr(google_oidc, "GoogleOidcLoginResult", FailingLoginResult)
+    with pytest.raises(GoogleOidcProviderUnavailableError):
+        service.complete_callback(valid_callback(state))
+
+    sessions = storage.list_user_sessions("internal-user-01")
+    assert len(sessions) == 1
+    assert sessions[0].revoked_at is not None
 
 
 @pytest.mark.parametrize(

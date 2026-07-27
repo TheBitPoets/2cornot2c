@@ -224,6 +224,32 @@ class HttpSessionAuthBoundary:
         finally:
             issued = None
 
+    def discard_established_session(self, established: EstablishedHttpSession) -> bool:
+        """Best-effort cleanup for a session whose HTTP response was not delivered."""
+        bearer = None
+        revoked = False
+        try:
+            if type(established) is not EstablishedHttpSession:
+                return False
+            cookie_pair = established.set_cookie.partition(";")[0]
+            bearer = self._extract_bearer(cookie_pair)
+            session = established.context.session
+            if (
+                type(session) is not UserSession
+                or not hmac.compare_digest(
+                    session.token_digest, session_token_digest(bearer)
+                )
+            ):
+                return False
+            result = self.sessions.revoke(bearer)
+            revoked = result is True
+        except Exception:
+            revoked = False
+        finally:
+            bearer = None
+            established = None
+        return revoked
+
     def authenticate(self, request: HttpAuthRequest) -> HttpAuthContext:
         try:
             method, cookie_header, supplied_csrf = self._request_values(request)

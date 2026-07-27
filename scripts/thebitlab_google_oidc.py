@@ -766,12 +766,25 @@ class GoogleOidcLoginService:
                 existing_cookie_header=existing_cookie_header,
             )
             existing_cookie_header = None
-            result = GoogleOidcLoginResult(
-                user_id=user.user_id,
-                role=user.role,
-                session=session,
-                redirect_path=self.config.post_login_path,
-            )
+            result_failed = False
+            try:
+                result = GoogleOidcLoginResult(
+                    user_id=session.context.user.user_id,
+                    role=session.context.user.role,
+                    session=session,
+                    redirect_path=self.config.post_login_path,
+                )
+            except Exception:
+                result_failed = True
+            if result_failed or result is None:
+                try:
+                    self.http_sessions.discard_established_session(session)
+                except Exception:
+                    pass
+                session = None
+                raise GoogleOidcProviderUnavailableError(
+                    "Completamento login Google non disponibile."
+                )
         except GoogleOidcError as error:
             expected_error = error
         except Exception:
@@ -787,6 +800,7 @@ class GoogleOidcLoginService:
             provider_error = False
             verification_failed = False
             verification_unavailable = False
+            result_failed = False
             assertion = None
             user = None
             session = None
