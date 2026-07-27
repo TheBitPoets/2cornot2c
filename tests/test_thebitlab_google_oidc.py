@@ -49,6 +49,7 @@ CSRF_SECRET = b"c" * 32
 STATE = "s" * 43
 NONCE = "n" * 43
 VERIFIER = "v" * 64
+BROWSER_BINDING = "b" * 43
 
 
 class MutableClock:
@@ -161,13 +162,25 @@ def make_service(database_path, clock, *, transport=None, verifier=None, flow_tt
         state_factory=lambda: STATE,
         nonce_factory=lambda: NONCE,
         verifier_factory=lambda: VERIFIER,
+        browser_binding_factory=lambda: BROWSER_BINDING,
     )
     return service, storage, flows, transport, verifier
 
 
 def begin_state(service):
     started = service.begin_login()
+    service._test_transaction_cookie = started.set_cookie.split(";", 1)[0]
     return parse_qs(urlsplit(started.authorization_url).query)["state"][0]
+
+
+def finish_callback(service, parameters, *, existing_cookie_header=None):
+    transaction_cookie = service._test_transaction_cookie
+    cookie_header = transaction_cookie
+    if existing_cookie_header:
+        cookie_header = f"{existing_cookie_header}; {transaction_cookie}"
+    return service.complete_callback(
+        parameters, existing_cookie_header=cookie_header
+    )
 
 
 def valid_callback(state=STATE):
@@ -248,12 +261,20 @@ def test_begin_login_builds_state_nonce_and_pkce_without_persisting_raw_values(
     ).rstrip(b"=").decode()
     assert query["code_challenge"] == [expected_challenge]
     assert CLIENT_SECRET not in started.authorization_url
+    assert started.set_cookie.startswith(
+        f"__Host-thebitlab_oidc_txn={BROWSER_BINDING};"
+    )
+    assert "Secure" in started.set_cookie
+    assert "HttpOnly" in started.set_cookie
+    assert "SameSite=Lax" in started.set_cookie
+    assert BROWSER_BINDING not in repr(started)
 
     assert flows.pending_count() == 1
     with flows._lock:
         pending = next(iter(flows._flows.values()))
     assert pending.state_digest != STATE
     assert pending.nonce_digest != NONCE
+    assert pending.browser_digest != BROWSER_BINDING
     assert STATE not in repr(pending)
     assert NONCE not in repr(pending)
     assert VERIFIER not in repr(pending)
@@ -309,9 +330,17 @@ def test_unexpected_flow_store_failure_discards_and_scrubs_credentials(
     real_store = InMemoryGoogleOidcFlowStore()
 
     class InsertThenFailStore:
-        def create(self, state, nonce, verifier, creation_marker, now, ttl):
+        def create(
+            self, state, nonce, verifier, browser_binding, creation_marker, now, ttl
+        ):
             real_store.create(
-                state, nonce, verifier, creation_marker, now, ttl
+                state,
+                nonce,
+                verifier,
+                browser_binding,
+                creation_marker,
+                now,
+                ttl,
             )
             raise failure
 
@@ -336,7 +365,7 @@ def test_authorization_result_failure_discards_flow_and_scrubs_url(
     )
 
     class FailingAuthorizationRequest:
-        def __init__(self, authorization_url):
+        def __init__(self, authorization_url, set_cookie):
             raise RuntimeError("result unavailable")
 
     monkeypatch.setattr(
@@ -375,9 +404,13 @@ def test_valid_callback_onboards_pending_user_and_issues_session_cookie(
     service, storage, flows, transport, verifier = make_service(database_path, clock)
     state = begin_state(service)
 
-    result = service.complete_callback(valid_callback(state))
+    result = finish_callback(service, valid_callback(state))
 
     assert result.user_id == "internal-user-01"
+    assert result.clear_transaction_cookie.startswith(
+        "__Host-thebitlab_oidc_txn=;"
+    )
+    assert "Max-Age=0" in result.clear_transaction_cookie
     assert result.role == "pending"
     assert result.redirect_path == "/dashboard"
     assert result.session.set_cookie.startswith("__Host-thebitlab_session=")
@@ -414,7 +447,7 @@ def test_callback_replay_and_concurrent_consume_have_one_winner(database_path, c
     state = begin_state(service)
 
     with ThreadPoolExecutor(max_workers=2) as executor:
-        futures = [executor.submit(service.complete_callback, valid_callback(state)) for _ in range(2)]
+        futures = [executor.submit(finish_callback, service, valid_callback(state)) for _ in range(2)]
     outcomes = []
     for future in futures:
         try:
@@ -426,7 +459,32 @@ def test_callback_replay_and_concurrent_consume_have_one_winner(database_path, c
     assert len(transport.calls) == 1
     assert len(storage.list_users()) == 1
     with pytest.raises(GoogleOidcStateError):
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
+
+
+def test_callback_requires_originating_browser_cookie_without_consuming_flow(
+    database_path, clock
+) -> None:
+    service, _storage, flows, transport, _verifier = make_service(
+        database_path, clock
+    )
+    state = begin_state(service)
+
+    for cookie_header in (
+        None,
+        "__Host-thebitlab_oidc_txn=" + "x" * 43,
+        service._test_transaction_cookie + "; " + service._test_transaction_cookie,
+    ):
+        with pytest.raises(GoogleOidcStateError):
+            service.complete_callback(
+                valid_callback(state), existing_cookie_header=cookie_header
+            )
+        assert flows.pending_count() == 1
+        assert transport.calls == []
+
+    result = finish_callback(service, valid_callback(state))
+    assert result.user_id == "internal-user-01"
+    assert flows.pending_count() == 0
 
 
 def test_flow_store_state_error_is_normalized(database_path, clock) -> None:
@@ -441,7 +499,7 @@ def test_flow_store_state_error_is_normalized(database_path, clock) -> None:
 
     service.flows = RawErrorStore()
     with pytest.raises(GoogleOidcStateError) as captured:
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
     assert "RAW_BACKEND_SECRET" not in str(captured.value)
     assert "RAW_BACKEND_SECRET" not in traceback_function_locals(
         captured.value, "complete_callback", "consume"
@@ -477,6 +535,7 @@ def test_flow_creation_auto_cleans_expired_records_and_store_is_bounded(
             raw_state,
             raw_nonce,
             raw_verifier,
+            BROWSER_BINDING,
             object(),
             clock.value,
             timedelta(minutes=1),
@@ -495,7 +554,7 @@ def test_expired_state_is_consumed_and_cleanup_is_explicit(database_path, clock)
     clock.value += timedelta(seconds=1)
 
     with pytest.raises(GoogleOidcStateError):
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
     assert transport.calls == []
     assert flows.pending_count() == 0
 
@@ -510,9 +569,9 @@ def test_provider_error_consumes_state_and_duplicate_or_unknown_params_fail_clos
     service, _storage, _flows, transport, _verifier = make_service(database_path, clock)
     state = begin_state(service)
     with pytest.raises(GoogleOidcCallbackError):
-        service.complete_callback({"error": ["access_denied"], "state": [state]})
+        finish_callback(service, {"error": ["access_denied"], "state": [state]})
     with pytest.raises(GoogleOidcStateError):
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
     assert transport.calls == []
 
     malformed = (
@@ -526,7 +585,7 @@ def test_provider_error_consumes_state_and_duplicate_or_unknown_params_fail_clos
     )
     for parameters in malformed:
         with pytest.raises(GoogleOidcCallbackError):
-            service.complete_callback(parameters)
+            finish_callback(service, parameters)
 
 
 def test_token_exchange_and_verification_failures_are_sanitized_and_consume_state(
@@ -539,13 +598,13 @@ def test_token_exchange_and_verification_failures_are_sanitized_and_consume_stat
     )
     state = begin_state(service)
     with pytest.raises(GoogleOidcProviderUnavailableError) as exchange_error:
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
     assert "raw-google" not in str(exchange_error.value)
     assert "raw-google" not in traceback_function_locals(
         exchange_error.value, "complete_callback", "_exchange"
     )
     with pytest.raises(GoogleOidcStateError):
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
 
     verifier = FakeIdTokenVerifier(claims(), error=RuntimeError(ID_TOKEN))
     service, _storage, _flows, _transport, _verifier = make_service(
@@ -553,7 +612,7 @@ def test_token_exchange_and_verification_failures_are_sanitized_and_consume_stat
     )
     state = begin_state(service)
     with pytest.raises(GoogleOidcTokenRejectedError) as verify_error:
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
     assert ID_TOKEN not in str(verify_error.value)
     assert ID_TOKEN not in traceback_function_locals(
         verify_error.value, "complete_callback", "verify"
@@ -573,7 +632,7 @@ def test_identity_collaborator_error_is_normalized(database_path, clock) -> None
 
     service.identities = RawIdentityService()
     with pytest.raises(GoogleOidcProviderUnavailableError) as captured:
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
     assert "RAW_IDENTITY_DB_PASSWORD" not in str(captured.value)
     assert "RAW_IDENTITY_DB_PASSWORD" not in traceback_function_locals(
         captured.value, "complete_callback", "resolve"
@@ -603,7 +662,7 @@ def test_disable_race_before_session_is_identity_rejection(database_path, clock)
     service.identities = DisableAfterResolve()
     state = begin_state(service)
     with pytest.raises(GoogleOidcIdentityRejectedError):
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
     sessions = storage.list_user_sessions("internal-user-01")
     assert sessions == []
 
@@ -632,7 +691,7 @@ def test_login_result_uses_current_session_role(database_path, clock) -> None:
 
     service.http_sessions = PromoteBeforeSession()
     state = begin_state(service)
-    result = service.complete_callback(valid_callback(state))
+    result = finish_callback(service, valid_callback(state))
 
     assert result.role == "teacher"
     assert result.user_id == result.session.context.user.user_id
@@ -653,7 +712,7 @@ def test_login_result_construction_failure_revokes_issued_session(
 
     monkeypatch.setattr(google_oidc, "GoogleOidcLoginResult", FailingLoginResult)
     with pytest.raises(GoogleOidcProviderUnavailableError):
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
 
     sessions = storage.list_user_sessions("internal-user-01")
     assert len(sessions) == 1
@@ -698,7 +757,7 @@ def test_wrong_or_unverified_claims_never_create_user(database_path, clock, over
     state = begin_state(service)
 
     with pytest.raises(GoogleOidcTokenRejectedError) as captured:
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
     assert ID_TOKEN not in traceback_function_locals(
         captured.value, "_assertion_from_claims"
     )
@@ -732,20 +791,20 @@ def test_disabled_existing_google_identity_is_rejected_without_session(
     state = begin_state(service)
 
     with pytest.raises(GoogleOidcIdentityRejectedError):
-        service.complete_callback(valid_callback(state))
+        finish_callback(service, valid_callback(state))
     assert storage.list_user_sessions(disabled.user_id) == []
 
 
 def test_existing_google_identity_reuses_internal_user(database_path, clock) -> None:
     service, storage, _flows, _transport, _verifier = make_service(database_path, clock)
     first_state = begin_state(service)
-    first = service.complete_callback(valid_callback(first_state))
+    first = finish_callback(service, valid_callback(first_state))
 
     service.http_sessions.sessions.token_factory = lambda: "B" * 40
     service.http_sessions.sessions.session_id_factory = lambda: "session-02"
     second_state = begin_state(service)
     first_cookie = first.session.set_cookie.split(";", 1)[0]
-    second = service.complete_callback(
+    second = finish_callback(service,
         valid_callback(second_state), existing_cookie_header=first_cookie
     )
 

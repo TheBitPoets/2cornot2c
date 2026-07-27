@@ -23,7 +23,8 @@ Gli endpoint authorization e token sono fissati ai valori Google canonici; una c
 
 - `state` di almeno 256 bit;
 - `nonce` di almeno 256 bit;
-- PKCE verifier tra 43 e 128 caratteri.
+- PKCE verifier tra 43 e 128 caratteri;
+- binding browser transazionale di almeno 256 bit.
 
 La authorization request usa:
 
@@ -32,6 +33,8 @@ response_type=code
 scope=openid email profile
 code_challenge_method=S256
 ```
+
+Il binding è inviato soltanto nel cookie one-time `__Host-thebitlab_oidc_txn` con `Secure`, `HttpOnly`, `SameSite=Lax` e `Path=/`; nel flow resta solo il digest. Il callback consuma lo state esclusivamente con il cookie del browser originario e restituisce un cookie di cancellazione, impedendo login CSRF/session swapping.
 
 State e nonce raw esistono soltanto nella URL consegnata al browser. Lo store conserva digest SHA-256; il verifier PKCE raw rimane unicamente nella memoria del processo e ha `repr` oscurato.
 

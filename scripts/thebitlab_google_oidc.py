@@ -37,6 +37,8 @@ _UNRESERVED_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{10,512}$")
 _INVALID_PERCENT_ESCAPE_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
 _MAX_CALLBACK_VALUE_CHARS = 8192
+_TRANSACTION_COOKIE_NAME = "__Host-thebitlab_oidc_txn"
+_MAX_COOKIE_HEADER_BYTES = 4096
 _GOOGLE_CERT_ENDPOINTS = frozenset(
     {
         "https://www.googleapis.com/oauth2/v1/certs",
@@ -234,6 +236,7 @@ class GoogleOidcConfig:
 class PendingGoogleOidcFlow:
     state_digest: str
     nonce_digest: str
+    browser_digest: str
     code_verifier: str = field(repr=False, compare=False)
     creation_marker: object = field(repr=False, compare=False)
     created_at: datetime
@@ -243,6 +246,7 @@ class PendingGoogleOidcFlow:
 @dataclass(frozen=True)
 class GoogleAuthorizationRequest:
     authorization_url: str = field(repr=False, compare=False)
+    set_cookie: str = field(repr=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -251,6 +255,7 @@ class GoogleOidcLoginResult:
     role: str
     session: EstablishedHttpSession
     redirect_path: str
+    clear_transaction_cookie: str = field(repr=False, compare=False)
 
 
 class GoogleTokenTransport(Protocol):
@@ -286,11 +291,16 @@ class InMemoryGoogleOidcFlowStore:
     def nonce_digest(nonce: str) -> str:
         return "sha256:" + hashlib.sha256(nonce.encode("ascii")).hexdigest()
 
+    @staticmethod
+    def browser_digest(browser_binding: str) -> str:
+        return "sha256:" + hashlib.sha256(browser_binding.encode("ascii")).hexdigest()
+
     def create(
         self,
         state: str,
         nonce: str,
         code_verifier: str,
+        browser_binding: str,
         creation_marker: object,
         now: datetime,
         ttl: timedelta,
@@ -302,6 +312,7 @@ class InMemoryGoogleOidcFlowStore:
             flow = PendingGoogleOidcFlow(
                 state_digest=self.state_digest(state),
                 nonce_digest=self.nonce_digest(nonce),
+                browser_digest=self.browser_digest(browser_binding),
                 code_verifier=code_verifier,
                 creation_marker=creation_marker,
                 created_at=now,
@@ -325,6 +336,7 @@ class InMemoryGoogleOidcFlowStore:
             state = None
             nonce = None
             code_verifier = None
+            browser_binding = None
             creation_marker = None
             flow = None
         if conflict_message is not None:
@@ -332,20 +344,32 @@ class InMemoryGoogleOidcFlowStore:
                 raise GoogleOidcFlowCapacityError(conflict_message)
             raise GoogleOidcStateConflictError(conflict_message)
 
-    def consume(self, state: str, now: datetime) -> PendingGoogleOidcFlow:
+    def consume(
+        self, state: str, browser_binding: str, now: datetime
+    ) -> PendingGoogleOidcFlow:
         digest_failed = False
         try:
             digest = self.state_digest(state)
+            supplied_browser_digest = self.browser_digest(browser_binding)
         except Exception:
             digest_failed = True
             digest = ""
+            supplied_browser_digest = ""
         finally:
             state = None
+            browser_binding = None
         if digest_failed:
             raise GoogleOidcStateError("State OIDC non valido.")
         with self._lock:
-            flow = self._flows.pop(digest, None)
-        if flow is None:
+            flow = self._flows.get(digest)
+            binding_matches = flow is not None and hmac.compare_digest(
+                flow.browser_digest, supplied_browser_digest
+            )
+            if binding_matches:
+                del self._flows[digest]
+        supplied_browser_digest = None
+        if flow is None or not binding_matches:
+            flow = None
             raise GoogleOidcStateError("State OIDC sconosciuto o gia usato.")
         if now < flow.created_at or now >= flow.expires_at:
             flow = None
@@ -681,6 +705,7 @@ class GoogleOidcLoginService:
         state_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32),
         nonce_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32),
         verifier_factory: Callable[[], str] = lambda: secrets.token_urlsafe(64),
+        browser_binding_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32),
     ) -> None:
         self.config = config
         self.flows = flows
@@ -692,6 +717,7 @@ class GoogleOidcLoginService:
         self.state_factory = state_factory
         self.nonce_factory = nonce_factory
         self.verifier_factory = verifier_factory
+        self.browser_binding_factory = browser_binding_factory
 
     def begin_login(self) -> GoogleAuthorizationRequest:
         now = None
@@ -709,6 +735,7 @@ class GoogleOidcLoginService:
             state = None
             nonce = None
             verifier = None
+            browser_binding = None
             generation_error = None
             generation_unavailable = False
             try:
@@ -716,6 +743,9 @@ class GoogleOidcLoginService:
                 nonce = _generated_credential(self.nonce_factory(), "nonce", 32, 256)
                 verifier = _generated_credential(
                     self.verifier_factory(), "PKCE verifier", 43, 128
+                )
+                browser_binding = _generated_credential(
+                    self.browser_binding_factory(), "browser binding", 32, 256
                 )
             except GoogleOidcConfigurationError as error:
                 generation_error = error
@@ -725,6 +755,7 @@ class GoogleOidcLoginService:
                 state = None
                 nonce = None
                 verifier = None
+                browser_binding = None
                 if generation_error is not None:
                     raise generation_error
                 raise GoogleOidcProviderUnavailableError(
@@ -738,6 +769,7 @@ class GoogleOidcLoginService:
                     state,
                     nonce,
                     verifier,
+                    browser_binding,
                     creation_marker,
                     now,
                     self.config.flow_ttl,
@@ -763,6 +795,7 @@ class GoogleOidcLoginService:
                     state = None
                     nonce = None
                     verifier = None
+                    browser_binding = None
                     creation_marker = None
                     continue
             if store_failed:
@@ -773,6 +806,7 @@ class GoogleOidcLoginService:
                 state = None
                 nonce = None
                 verifier = None
+                browser_binding = None
                 creation_marker = None
                 raise GoogleOidcProviderUnavailableError(
                     "Store flow OIDC non disponibile."
@@ -782,6 +816,7 @@ class GoogleOidcLoginService:
             authorization_request = None
             challenge = None
             query = None
+            transaction_cookie = None
             try:
                 challenge = base64.urlsafe_b64encode(
                     hashlib.sha256(verifier.encode("ascii")).digest()
@@ -799,7 +834,10 @@ class GoogleOidcLoginService:
                     }
                 )
                 authorization_url = f"{self.config.authorization_endpoint}?{query}"
-                authorization_request = GoogleAuthorizationRequest(authorization_url)
+                transaction_cookie = self._transaction_cookie(browser_binding)
+                authorization_request = GoogleAuthorizationRequest(
+                    authorization_url, transaction_cookie
+                )
             except Exception:
                 build_failed = True
             if build_failed or authorization_request is None:
@@ -810,23 +848,72 @@ class GoogleOidcLoginService:
                 state = None
                 nonce = None
                 verifier = None
+                browser_binding = None
                 creation_marker = None
                 authorization_url = None
                 authorization_request = None
                 challenge = None
                 query = None
+                transaction_cookie = None
                 raise GoogleOidcProviderUnavailableError(
                     "Authorization request Google non disponibile."
                 )
             state = None
             nonce = None
             verifier = None
+            browser_binding = None
             creation_marker = None
             authorization_url = None
             challenge = None
             query = None
+            transaction_cookie = None
             return authorization_request
         raise GoogleOidcConfigurationError("Impossibile generare state OIDC univoco.")
+
+    def _transaction_cookie(self, browser_binding: str) -> str:
+        max_age = math.ceil(self.config.flow_ttl.total_seconds())
+        return (
+            f"{_TRANSACTION_COOKIE_NAME}={browser_binding}; Path=/; "
+            f"Max-Age={max_age}; Secure; HttpOnly; SameSite=Lax"
+        )
+
+    @staticmethod
+    def _clear_transaction_cookie() -> str:
+        return (
+            f"{_TRANSACTION_COOKIE_NAME}=; Path=/; Max-Age=0; "
+            "Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Lax"
+        )
+
+    @staticmethod
+    def _transaction_binding(cookie_header: str | None) -> str:
+        invalid = (
+            type(cookie_header) is not str
+            or not cookie_header
+            or len(cookie_header.encode("utf-8")) > _MAX_COOKIE_HEADER_BYTES
+            or any(
+                ord(character) < 0x20 or ord(character) == 0x7F
+                for character in cookie_header
+            )
+        )
+        matches: list[str] = []
+        if not invalid:
+            for part in cookie_header.split(";"):
+                name, separator, value = part.strip().partition("=")
+                if separator and name == _TRANSACTION_COOKIE_NAME:
+                    matches.append(value)
+        if (
+            invalid
+            or len(matches) != 1
+            or not 32 <= len(matches[0]) <= 256
+            or _UNRESERVED_RE.fullmatch(matches[0]) is None
+        ):
+            matches = []
+            cookie_header = None
+            raise GoogleOidcStateError("Cookie transazione OIDC non valido.")
+        binding = matches[0]
+        matches = []
+        cookie_header = None
+        return binding
 
     def complete_callback(
         self,
@@ -840,6 +927,7 @@ class GoogleOidcLoginService:
         claims = None
         code = None
         state = None
+        browser_binding = None
         provider_error = False
         assertion = None
         user = None
@@ -855,12 +943,16 @@ class GoogleOidcLoginService:
             state_failed = False
             state_unavailable = False
             try:
-                flow = self.flows.consume(state, _utc(self.clock()))
+                browser_binding = self._transaction_binding(existing_cookie_header)
+                flow = self.flows.consume(
+                    state, browser_binding, _utc(self.clock())
+                )
             except GoogleOidcStateError:
                 state_failed = True
             except Exception:
                 state_unavailable = True
             state = None
+            browser_binding = None
             if state_failed:
                 raise GoogleOidcStateError("State OIDC non valido o gia usato.")
             if state_unavailable or flow is None:
@@ -947,6 +1039,7 @@ class GoogleOidcLoginService:
                     role=session.context.user.role,
                     session=session,
                     redirect_path=self.config.post_login_path,
+                    clear_transaction_cookie=self._clear_transaction_cookie(),
                 )
             except Exception:
                 result_failed = True
@@ -971,6 +1064,7 @@ class GoogleOidcLoginService:
             claims = None
             code = None
             state = None
+            browser_binding = None
             provider_error = False
             state_failed = False
             state_unavailable = False
