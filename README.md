@@ -410,6 +410,33 @@ debugger e interfaccia grafica.
 
 ## Installare l'ambiente di sviluppo
 
+### Preparazione automatica del Mac
+
+Su un Mac Apple Silicon nuovo, oppure per riparare un'installazione incompleta,
+puoi installare in sequenza tutti i componenti host con:
+
+```bash
+./scripts/install-macos-host.sh
+```
+
+Lo script installa Homebrew, Git, Vagrant, VirtualBox, VMware Fusion, Vagrant
+VMware Utility e il plugin `vagrant-vmware-desktop`, quindi verifica ogni
+componente.
+
+Il download di VMware Fusion richiede l'accesso al portale Broadcom: lo script
+apre la pagina ufficiale, aspetta che venga scaricato il DMG e poi continua
+l'installazione. macOS può chiedere la password amministratore e
+l'autorizzazione delle estensioni di sistema.
+
+Per reinstallare i programmi conservando VM, box e dati Vagrant:
+
+```bash
+./scripts/install-macos-host.sh --reinstall
+```
+
+La procedura non esegue `vagrant destroy` e non elimina `.vagrant`,
+`.vagrant-vmware` o `~/.vagrant.d`.
+
 Clona il progetto e apri la sua cartella:
 
 ```bash
