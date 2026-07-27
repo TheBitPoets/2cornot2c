@@ -426,9 +426,8 @@ class HttpSessionAuthBoundary:
             and hmac.compare_digest(session.token_digest, session_token_digest(bearer))
         )
 
-    @staticmethod
     def _authenticated_is_valid(
-        authenticated: object, bearer: str, now: datetime
+        self, authenticated: object, bearer: str, now: datetime
     ) -> bool:
         if (
             type(authenticated) is not AuthenticatedSession
@@ -440,6 +439,8 @@ class HttpSessionAuthBoundary:
             or now < authenticated.session.created_at
             or now < authenticated.session.last_seen_at
             or now >= authenticated.session.expires_at
+            or authenticated.session.expires_at - authenticated.session.created_at
+            > timedelta(seconds=self.cookie_policy.max_session_age_seconds)
         ):
             return False
         try:

@@ -300,6 +300,16 @@ def test_malformed_session_service_results_fail_closed(storage, clock) -> None:
     with pytest.raises(HttpAuthUnavailableError):
         real.authenticate(request("GET", established))
 
+    extended_session = replace(
+        valid_session,
+        expires_at=valid_session.created_at + timedelta(days=4),
+    )
+    real.sessions.authenticate = lambda _bearer: AuthenticatedSession(
+        extended_session, account()
+    )
+    with pytest.raises(HttpAuthUnavailableError):
+        real.authenticate(request("GET", established))
+
     real.sessions.authenticate = lambda _bearer: AuthenticatedSession(
         valid_session, account()
     )
