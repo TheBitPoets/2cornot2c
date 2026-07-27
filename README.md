@@ -579,6 +579,11 @@ esegui:
 ~/cambia-risoluzione.sh
 ```
 
+Durante il provisioning VMware, Vagrant copia automaticamente
+`scripts/change-resolution.sh` dal progetto in
+`/home/vagrant/cambia-risoluzione.sh` e lo rende eseguibile. Se lo script manca
+da una VM già esistente, puoi reinstallarlo con `vm-provision`.
+
 Il menu applica la risoluzione selezionata e chiede conferma entro 15 secondi.
 Se non viene confermata, ripristina automaticamente quella precedente.
 
