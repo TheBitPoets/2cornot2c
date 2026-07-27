@@ -14,7 +14,7 @@ La policy di produzione predefinita emette:
 __Host-thebitlab_session=<bearer>; Path=/; HttpOnly; Secure; SameSite=Lax; ...
 ```
 
-Il cookie non usa `Domain`. Il prefisso `__Host-`, `Secure` e `Path=/` impediscono shadowing da sottodomini o path. `Max-Age` ed `Expires` seguono la scadenza assoluta della sessione, entro il limite HTTP configurato (24 ore per default, massimo 31 giorni). Risultati service malformati, sessioni non correlate o durate oltre policy falliscono con 503.
+Il cookie non usa `Domain`. Il prefisso `__Host-`, `Secure` e `Path=/` impediscono shadowing da sottodomini o path. `Max-Age` ed `Expires` seguono la scadenza assoluta della sessione, entro il limite HTTP configurato (24 ore per default, massimo 31 giorni). Risultati service malformati, account non attivi, sessioni revocate/non correlate o durate anche minimamente oltre policy falliscono con 503.
 
 Per HTTP locale esiste soltanto `SessionCookiePolicy.loopback_development()`, con nome senza prefisso `__Host-` e opt-in esplicito. L'adapter di rete deve consentirla esclusivamente quando il bind host è loopback. LAN e produzione richiedono HTTPS.
 
@@ -30,7 +30,7 @@ L'adapter concreto deve concatenare in modo deterministico eventuali header `Coo
 
 ## Login completion e fixation
 
-`establish_session` riceve soltanto un ID interno già autenticato. Se il browser presenta una sessione esistente, questa viene revocata prima di emettere il nuovo bearer. Il bearer nuovo proviene dal generatore di `SessionService`, non da input client.
+`establish_session` riceve soltanto un ID interno già autenticato. Se il browser presenta una sessione esistente, questa viene revocata prima di emettere il nuovo bearer; cookie estranei vengono ignorati. Il risultato di revoca deve essere un booleano e la sessione emessa/autenticata deve appartenere esattamente al `user_id` trusted richiesto. Il bearer nuovo proviene dal generatore di `SessionService`, non da input client.
 
 La risposta `EstablishedHttpSession` espone il valore soltanto attraverso `set_cookie`, escluso dal `repr`. Prima di costruire l'header, il boundary accetta soltanto bearer nella grammatica cookie base64url; un generatore incompatibile viene revocato e non può iniettare attributi. Database ed errori contengono esclusivamente digest.
 

@@ -6,7 +6,7 @@ import base64
 import hmac
 import re
 from dataclasses import dataclass, field
-from datetime import timezone
+from datetime import timedelta, timezone
 from email.utils import format_datetime
 from typing import Collection
 
@@ -182,16 +182,22 @@ class HttpSessionAuthBoundary:
         """Rotate any browser session, then issue one for an already-resolved user."""
         if existing_cookie_header:
             try:
-                existing = self._extract_bearer(existing_cookie_header)
+                existing = self._extract_bearer(
+                    existing_cookie_header, required=False
+                )
             finally:
                 existing_cookie_header = None
             rotation_failed = False
-            try:
-                self.sessions.revoke(existing)
-            except Exception:
-                rotation_failed = True
-            finally:
-                existing = None
+            if existing is not None:
+                try:
+                    revoked = self.sessions.revoke(existing)
+                except Exception:
+                    rotation_failed = True
+                else:
+                    if type(revoked) is not bool:
+                        rotation_failed = True
+                finally:
+                    existing = None
             if rotation_failed:
                 raise HttpAuthUnavailableError()
         issue_failed = False
@@ -208,7 +214,7 @@ class HttpSessionAuthBoundary:
         if issue_failed or issued is None:
             raise HttpAuthenticationRequiredError()
         try:
-            return self._established_result(issued)
+            return self._established_result(issued, expected_user_id=user_id)
         finally:
             issued = None
 
@@ -314,7 +320,9 @@ class HttpSessionAuthBoundary:
             raise HttpAuthUnavailableError()
         return result
 
-    def _established_result(self, issued: IssuedSession) -> EstablishedHttpSession:
+    def _established_result(
+        self, issued: IssuedSession, *, expected_user_id: str
+    ) -> EstablishedHttpSession:
         bearer = None
         authenticated = None
         failed = False
@@ -337,7 +345,12 @@ class HttpSessionAuthBoundary:
             if (
                 not failed
                 and not unavailable
-                and not self._authenticated_matches_issued(authenticated, issued, bearer)
+                and not self._authenticated_matches_issued(
+                    authenticated,
+                    issued,
+                    bearer,
+                    expected_user_id=expected_user_id,
+                )
             ):
                 unavailable = True
             if not failed and not unavailable:
@@ -387,10 +400,11 @@ class HttpSessionAuthBoundary:
         ):
             return False
         session = issued.session
-        duration = int((session.expires_at - session.created_at).total_seconds())
+        duration = session.expires_at - session.created_at
         return (
             session.revoked_at is None
-            and 1 <= duration <= self.cookie_policy.max_session_age_seconds
+            and duration.total_seconds() > 0
+            and duration <= timedelta(seconds=self.cookie_policy.max_session_age_seconds)
             and hmac.compare_digest(session.token_digest, session_token_digest(bearer))
         )
 
@@ -401,6 +415,8 @@ class HttpSessionAuthBoundary:
             or type(authenticated.session) is not UserSession
             or type(authenticated.user) is not UserAccount
             or authenticated.session.user_id != authenticated.user.user_id
+            or not authenticated.user.active
+            or authenticated.session.revoked_at is not None
         ):
             return False
         return hmac.compare_digest(
@@ -408,14 +424,21 @@ class HttpSessionAuthBoundary:
         )
 
     def _authenticated_matches_issued(
-        self, authenticated: object, issued: IssuedSession, bearer: str
+        self,
+        authenticated: object,
+        issued: IssuedSession,
+        bearer: str,
+        *,
+        expected_user_id: str,
     ) -> bool:
         if not self._authenticated_is_valid(authenticated, bearer):
             return False
         current = authenticated.session
         original = issued.session
         return (
-            current.session_id == original.session_id
+            original.user_id == expected_user_id
+            and authenticated.user.user_id == expected_user_id
+            and current.session_id == original.session_id
             and current.user_id == original.user_id
             and hmac.compare_digest(current.token_digest, original.token_digest)
             and current.created_at == original.created_at
@@ -442,7 +465,9 @@ class HttpSessionAuthBoundary:
             raise HttpMethodNotAllowedError()
         return method, cookie_header, csrf_token
 
-    def _extract_bearer(self, cookie_header: str | None) -> str:
+    def _extract_bearer(
+        self, cookie_header: str | None, *, required: bool = True
+    ) -> str | None:
         parse_failed = False
         bearer = None
         matches = None
@@ -474,9 +499,9 @@ class HttpSessionAuthBoundary:
                     elif not _OTHER_COOKIE_VALUE_RE.fullmatch(value):
                         parse_failed = True
                         break
-                if len(matches) != 1:
+                if len(matches) > 1 or (required and len(matches) != 1):
                     parse_failed = True
-                else:
+                elif len(matches) == 1:
                     bearer = matches[0]
                     if (
                         not bearer
@@ -492,7 +517,7 @@ class HttpSessionAuthBoundary:
             segment = None
             name = None
             value = None
-        if parse_failed or bearer is None:
+        if parse_failed or (required and bearer is None):
             bearer = None
             raise HttpAuthenticationRequiredError()
         return bearer

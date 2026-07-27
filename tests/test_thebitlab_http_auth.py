@@ -262,6 +262,8 @@ def test_malformed_session_service_results_fail_closed(storage, clock) -> None:
     storage.create_user(account())
     real = make_boundary(storage, clock)
     established = real.establish_session("user-01")
+    valid_session = storage.read_session("session-01")
+    assert valid_session is not None
 
     real.sessions.authenticate = lambda _bearer: object()
     with pytest.raises(HttpAuthUnavailableError):
@@ -271,8 +273,18 @@ def test_malformed_session_service_results_fail_closed(storage, clock) -> None:
     with pytest.raises(HttpAuthUnavailableError):
         real.authenticate(request("GET", established))
 
-    valid_session = storage.read_session("session-01")
-    assert valid_session is not None
+    real.sessions.authenticate = lambda _bearer: AuthenticatedSession(
+        valid_session, account(active=False)
+    )
+    with pytest.raises(HttpAuthUnavailableError):
+        real.authenticate(request("GET", established))
+
+    real.sessions.authenticate = lambda _bearer: AuthenticatedSession(
+        replace(valid_session, revoked_at=NOW), account()
+    )
+    with pytest.raises(HttpAuthUnavailableError):
+        real.authenticate(request("GET", established))
+
     real.sessions.authenticate = lambda _bearer: AuthenticatedSession(
         valid_session, account()
     )
@@ -292,7 +304,7 @@ def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock)
         user.user_id,
         digest,
         NOW,
-        NOW + timedelta(days=36500),
+        NOW + timedelta(days=1, microseconds=1),
         NOW,
     )
 
@@ -329,6 +341,22 @@ def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock)
     )
     with pytest.raises(HttpAuthUnavailableError):
         mismatch.establish_session("user-01")
+
+    other_user = replace(user, user_id="other-user")
+    other_session = replace(normal_session, user_id="other-user")
+
+    class WrongOwnerSessionService(LongSessionService):
+        def issue(self, _user_id):
+            return IssuedSession(other_session, bearer)
+
+        def authenticate(self, _bearer):
+            return AuthenticatedSession(other_session, other_user)
+
+    wrong_owner = HttpSessionAuthBoundary(
+        WrongOwnerSessionService(), csrf_secret=CSRF_SECRET
+    )
+    with pytest.raises(HttpAuthUnavailableError):
+        wrong_owner.establish_session("requested-user")
 
 
 def test_safe_authentication_refreshes_context_and_role_authorization(storage, clock) -> None:
@@ -448,6 +476,29 @@ def test_login_completion_rotates_existing_session(storage, clock) -> None:
     with pytest.raises(HttpAuthenticationRequiredError):
         boundary.authenticate(request("GET", first))
     assert boundary.authenticate(request("GET", second)).user.user_id == "user-01"
+
+
+def test_login_completion_ignores_unrelated_cookies_and_validates_rotation_result(
+    storage, clock
+) -> None:
+    storage.create_user(account())
+    boundary = make_boundary(
+        storage,
+        clock,
+        tokens=("A" * 40, "B" * 40),
+        session_ids=("session-01", "session-02"),
+    )
+
+    established = boundary.establish_session(
+        "user-01", existing_cookie_header="analytics=abc"
+    )
+    assert boundary.authenticate(request("GET", established)).user.user_id == "user-01"
+
+    boundary.sessions.revoke = lambda _bearer: "not-a-bool"
+    with pytest.raises(HttpAuthUnavailableError):
+        boundary.establish_session(
+            "user-01", existing_cookie_header=cookie_header(established.set_cookie)
+        )
 
 
 def test_malformed_duplicate_missing_and_oversized_cookies_fail_closed(storage, clock) -> None:
