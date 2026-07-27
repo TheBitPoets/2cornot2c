@@ -22,6 +22,7 @@ from scripts.thebitlab_identity import (
 )
 from scripts.thebitlab_identity_ports import (
     IdentityStorageConflictError,
+    IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
 )
 
@@ -400,7 +401,8 @@ class FederatedIdentityService:
                 "L'identita sconosciuta non soddisfa la policy di onboarding."
             )
 
-        for _attempt in range(_MAX_ATTEMPTS):
+        linked_at = now
+        for _user_attempt in range(_MAX_ATTEMPTS):
             user_id = _generated_text(self.user_id_factory(), "user_id")
             account = UserAccount(
                 user_id=user_id,
@@ -411,23 +413,41 @@ class FederatedIdentityService:
                 updated_at=now,
                 primary_email=assertion.email,
             )
-            identity = ExternalIdentity(
-                user_id=user_id,
-                provider=assertion.provider,
-                subject=assertion.subject,
-                linked_at=now,
-                email=assertion.email,
-                username=assertion.username,
-            )
-            try:
-                self.storage.provision_user_with_identity(account, identity)
-                return account
-            except IdentityStorageConflictError:
-                winner = self.storage.read_external_identity(
-                    assertion.provider, assertion.subject
+            for _generation_attempt in range(_MAX_ATTEMPTS):
+                identity = ExternalIdentity(
+                    user_id=user_id,
+                    provider=assertion.provider,
+                    subject=assertion.subject,
+                    linked_at=linked_at,
+                    email=assertion.email,
+                    username=assertion.username,
                 )
-                if winner is not None:
-                    return self._resolve_existing(assertion, winner)
+                try:
+                    self.storage.provision_user_with_identity(account, identity)
+                    return account
+                except IdentityStorageGenerationConflictError as error:
+                    winner = self.storage.read_external_identity(
+                        assertion.provider, assertion.subject
+                    )
+                    if winner is not None:
+                        return self._resolve_existing(assertion, winner)
+                    try:
+                        linked_at += timedelta(microseconds=1)
+                    except OverflowError:
+                        raise ConcurrentStateChangeError(
+                            "Generazione identita esterna esaurita."
+                        ) from error
+                except IdentityStorageConflictError:
+                    winner = self.storage.read_external_identity(
+                        assertion.provider, assertion.subject
+                    )
+                    if winner is not None:
+                        return self._resolve_existing(assertion, winner)
+                    break
+            else:
+                raise ConcurrentStateChangeError(
+                    "Generazione identita esterna modificata ripetutamente."
+                )
         raise CredentialGenerationError("Impossibile generare un user_id interno univoco.")
 
     def _resolve_existing(

@@ -25,7 +25,7 @@ Il fake provider usa chiavi deterministiche solo nei test. Non genera `KeyError`
 
 1. `(provider, subject)` gia collegato risolve lo stesso `user_id` interno;
 2. email e username vengono aggiornati con un UPDATE-only CAS su proprietario, `linked_at`, account attivo e revisione `users.updated_at`, senza restituire ruoli stale né ricreare un link rimosso o ricollegato;
-3. ogni generazione `(provider, subject, linked_at)` resta in una tombstone SQLite e non puo essere riutilizzata, rendendo il CAS resistente a unlink/relink ABA;
+3. ogni generazione `(provider, subject, linked_at)` resta in una tombstone SQLite e non puo essere riutilizzata, rendendo il CAS resistente a unlink/relink ABA; se un clock fermo ripropone una generazione tombstonata, lo storage la distingue dalle collisioni `user_id` e il servizio avanza `linked_at` di un microsecondo;
 4. account disabilitati vengono rifiutati;
 5. una identita sconosciuta puo creare un utente soltanto se il provider e autorizzato all'onboarding e l'email e verificata;
 6. il nuovo utente ha sempre ruolo `pending`;

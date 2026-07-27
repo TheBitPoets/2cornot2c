@@ -20,6 +20,7 @@ from scripts.thebitlab_identity_ports import (
     IdentityStorageConflictError,
     IdentityStorageCorruptionError,
     IdentityStorageError,
+    IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
 )
 
@@ -439,9 +440,8 @@ class SqliteIdentityStorage:
                 ),
             )
             linked_at = _encode_datetime(identity.linked_at, "linked_at")
-            connection.execute(
-                "INSERT INTO external_identity_generations VALUES (?, ?, ?)",
-                (identity.provider, identity.subject, linked_at),
+            self._reserve_external_identity_generation(
+                connection, identity.provider, identity.subject, linked_at
             )
             connection.execute(
                 "INSERT INTO external_identities VALUES (?, ?, ?, ?, ?, ?)",
@@ -514,12 +514,34 @@ class SqliteIdentityStorage:
     def list_users(self) -> list[UserAccount]:
         return [self._user(row) for row in self._query_all("SELECT * FROM users ORDER BY user_id")]
 
+    @staticmethod
+    def _reserve_external_identity_generation(
+        connection: sqlite3.Connection,
+        provider: str,
+        subject: str,
+        linked_at: str,
+    ) -> None:
+        exists = connection.execute(
+            """
+            SELECT 1 FROM external_identity_generations
+            WHERE provider = ? AND subject = ? AND linked_at = ?
+            """,
+            (provider, subject, linked_at),
+        ).fetchone()
+        if exists is not None:
+            raise IdentityStorageGenerationConflictError(
+                "Generazione identita esterna gia utilizzata."
+            )
+        connection.execute(
+            "INSERT INTO external_identity_generations VALUES (?, ?, ?)",
+            (provider, subject, linked_at),
+        )
+
     def link_external_identity(self, identity: ExternalIdentity) -> None:
         linked_at = _encode_datetime(identity.linked_at, "linked_at")
         with self._transaction("link_external_identity") as connection:
-            connection.execute(
-                "INSERT INTO external_identity_generations VALUES (?, ?, ?)",
-                (identity.provider, identity.subject, linked_at),
+            self._reserve_external_identity_generation(
+                connection, identity.provider, identity.subject, linked_at
             )
             connection.execute(
                 "INSERT INTO external_identities VALUES (?, ?, ?, ?, ?, ?)",

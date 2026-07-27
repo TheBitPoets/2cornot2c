@@ -22,6 +22,7 @@ from scripts.thebitlab_identity_sqlite import (
     IdentityStorageConflictError,
     IdentityStorageCorruptionError,
     IdentityStorageError,
+    IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
     SCHEMA_VERSION,
     SqliteIdentityStorage,
@@ -206,7 +207,7 @@ def test_external_identity_generation_tombstone_prevents_aba_refresh(storage) ->
     storage.link_external_identity(original)
     assert storage.unlink_external_identity("google", "subject-01") is True
 
-    with pytest.raises(IdentityStorageConflictError):
+    with pytest.raises(IdentityStorageGenerationConflictError):
         storage.link_external_identity(replace(original, email="recreated@test"))
 
     replacement = replace(

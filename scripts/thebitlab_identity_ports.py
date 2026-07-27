@@ -22,6 +22,10 @@ class IdentityStorageConflictError(IdentityStorageError):
     """Raised when a persistence invariant or compare-and-swap fails."""
 
 
+class IdentityStorageGenerationConflictError(IdentityStorageConflictError):
+    """Raised when an immutable external-identity generation was already used."""
+
+
 class IdentityStorageNotFoundError(IdentityStorageError):
     """Raised when an update targets a missing identity record."""
 

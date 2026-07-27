@@ -237,6 +237,32 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
     assert tampered.value.__context__ is None
 
 
+def test_onboarding_advances_tombstoned_generation_with_frozen_clock(storage) -> None:
+    old_user = account("old-user", role="pending")
+    old_identity = ExternalIdentity(
+        old_user.user_id,
+        "google",
+        "google-42",
+        NOW,
+        email="mario@example.test",
+        username="mario",
+    )
+    storage.provision_user_with_identity(old_user, old_identity)
+    assert storage.unlink_external_identity("google", "google-42") is True
+    service = FederatedIdentityService(
+        storage,
+        clock=MutableClock(),
+        user_id_factory=lambda: "new-user",
+    )
+
+    onboarded = service.resolve(google_assertion())
+
+    assert onboarded.user_id == "new-user"
+    linked = storage.read_external_identity("google", "google-42")
+    assert linked is not None
+    assert linked.linked_at == NOW + timedelta(microseconds=1)
+
+
 def test_existing_identity_refreshes_attributes_without_changing_owner_or_link_time(storage) -> None:
     user = account()
     original = ExternalIdentity("user-01", "google", "google-42", NOW, email="old@example.test")
