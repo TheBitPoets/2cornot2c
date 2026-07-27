@@ -67,12 +67,12 @@ I JSON restano formato di export, backup leggibile e scambio, ma non sono una se
 
 Lo schema concreto e le migrazioni sono implementati da `SqliteIdentityStorage` dietro le porte definite in `scripts/thebitlab_identity_ports.py`.
 
-### Schema SQLite v1
+### Schema SQLite v1-v2
 
 La prima migrazione crea:
 
 - `users`;
-- `external_identities` e tombstone `external_identity_generations` ABA-safe;
+- `external_identities`;
 - `classes`;
 - `class_memberships`;
 - `external_group_mappings`;
@@ -90,7 +90,9 @@ Le transizioni pairing vengono applicate con compare-and-swap sullo stato persis
 
 `expires_at` e un limite esclusivo: `last_seen_at` e `revoked_at` devono precederlo, e una sessione con `expires_at` uguale all'istante di revoca non e piu attiva. I cleanup ricevono un cutoff esplicito e cancellano record con `expires_at` minore o uguale al cutoff; la politica di retention resta responsabilita del service chiamante.
 
-Le migrazioni sono numerate, eseguite dentro `BEGIN IMMEDIATE` e registrate solo al commit. Il codice rifiuta database con una versione schema piu recente, evitando downgrade impliciti.
+La migrazione v2 crea la tombstone ABA-safe `external_identity_generations` e la popola dalle identita v1 esistenti prima di accettare nuovi link.
+
+Le migrazioni sono numerate, sequenziali, eseguite dentro `BEGIN IMMEDIATE` e registrate solo al commit. Il codice rifiuta sequenze mancanti e database con una versione schema piu recente, evitando downgrade impliciti.
 
 ### Segreti e token
 

@@ -24,7 +24,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 _T = TypeVar("_T")
 
 
@@ -39,14 +39,6 @@ _MIGRATION_1 = (
         updated_at TEXT NOT NULL,
         primary_email TEXT,
         CHECK (updated_at >= created_at)
-    )
-    """,
-    """
-    CREATE TABLE external_identity_generations (
-        provider TEXT NOT NULL,
-        subject TEXT NOT NULL,
-        linked_at TEXT NOT NULL,
-        PRIMARY KEY (provider, subject, linked_at)
     )
     """,
     """
@@ -155,6 +147,21 @@ _MIGRATION_1 = (
     "CREATE INDEX idx_tui_pairings_expires ON tui_pairings(expires_at)",
 )
 
+_MIGRATION_2 = (
+    """
+    CREATE TABLE external_identity_generations (
+        provider TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        linked_at TEXT NOT NULL,
+        PRIMARY KEY (provider, subject, linked_at)
+    )
+    """,
+    """
+    INSERT INTO external_identity_generations(provider, subject, linked_at)
+    SELECT provider, subject, linked_at FROM external_identities
+    """,
+)
+
 
 def _encode_datetime(value: datetime, field_name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
@@ -223,12 +230,20 @@ class SqliteIdentityStorage:
                 raise IdentityStorageError(
                     f"Schema identity piu recente del codice: versione {max(unsupported)}."
                 )
-            if 1 not in versions:
-                for statement in _MIGRATION_1:
+            if versions and versions != set(range(1, max(versions) + 1)):
+                raise IdentityStorageError("Sequenza migrazioni identity non valida.")
+            migrations = ((1, _MIGRATION_1), (2, _MIGRATION_2))
+            for version, statements in migrations:
+                if version in versions:
+                    continue
+                for statement in statements:
                     connection.execute(statement)
                 connection.execute(
                     "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
-                    (1, _encode_datetime(datetime.now(timezone.utc), "applied_at")),
+                    (
+                        version,
+                        _encode_datetime(datetime.now(timezone.utc), "applied_at"),
+                    ),
                 )
             connection.commit()
         except IdentityStorageError:

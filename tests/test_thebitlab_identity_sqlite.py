@@ -123,8 +123,8 @@ def test_migration_is_idempotent_and_rejects_newer_schema(database_path) -> None
     SqliteIdentityStorage(database_path)
 
     with sqlite3.connect(database_path) as connection:
-        assert connection.execute("SELECT version FROM schema_migrations").fetchall() == [
-            (SCHEMA_VERSION,)
+        assert connection.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall() == [
+            (version,) for version in range(1, SCHEMA_VERSION + 1)
         ]
         connection.execute(
             "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
@@ -133,6 +133,32 @@ def test_migration_is_idempotent_and_rejects_newer_schema(database_path) -> None
 
     with pytest.raises(IdentityStorageError, match="piu recente"):
         SqliteIdentityStorage(database_path)
+
+
+def test_migration_v2_upgrades_and_backfills_existing_v1_identity(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    user = account()
+    identity = ExternalIdentity("user-01", "google", "subject-01", NOW)
+    storage.provision_user_with_identity(user, identity)
+
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP TABLE external_identity_generations")
+        connection.execute("DELETE FROM schema_migrations WHERE version = 2")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute(
+            "SELECT provider, subject, linked_at FROM external_identity_generations"
+        ).fetchall() == [
+            ("google", "subject-01", "2026-09-01T08:00:00.000000Z")
+        ]
+        assert connection.execute(
+            "SELECT version FROM schema_migrations ORDER BY version"
+        ).fetchall() == [(1,), (2,)]
+
+    assert upgraded.unlink_external_identity("google", "subject-01") is True
+    with pytest.raises(IdentityStorageConflictError):
+        upgraded.link_external_identity(identity)
 
 
 def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
