@@ -226,11 +226,25 @@ def test_storage_and_unexpected_failures_are_sanitized_at_http_boundary() -> Non
             existing_cookie_header="__Host-thebitlab_session=" + "A" * 40,
         )
 
+    class MalformedIssueSessions(BrokenSessions):
+        def issue(self, _user_id):
+            return object()
+
+        def revoke(self, _bearer):
+            return False
+
+    malformed_boundary = HttpSessionAuthBoundary(
+        MalformedIssueSessions(), csrf_secret=CSRF_SECRET
+    )
+    with pytest.raises(HttpAuthUnavailableError) as malformed_issue:
+        malformed_boundary.establish_session("user-01")
+
     for error in (
         authenticate_error.value,
         logout_error.value,
         issue_error.value,
         rotation_error.value,
+        malformed_issue.value,
     ):
         assert error.status_code == 503
         assert error.error_code == "authentication_unavailable"
@@ -376,7 +390,7 @@ def test_malformed_duplicate_missing_and_oversized_cookies_fail_closed(storage, 
     ]
 
     assert boundary.authenticate(
-        HttpAuthRequest("GET", valid + "; padded=a=b==")
+        HttpAuthRequest("GET", valid + "; padded=a=b==; analytics=\"abc\"")
     ).user.user_id == "user-01"
 
     for header in bad_headers:

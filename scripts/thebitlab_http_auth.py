@@ -20,7 +20,10 @@ from scripts.thebitlab_identity import AccountDisabledError
 
 _COOKIE_NAME_RE = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")
 _COOKIE_VALUE_RE = re.compile(r"^[A-Za-z0-9_-]+$")
-_OTHER_COOKIE_VALUE_RE = re.compile(r'^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$')
+_OTHER_COOKIE_VALUE_RE = re.compile(
+    r'^(?:[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*|'
+    r'"[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*")$'
+)
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 _UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 _APPLICATION_ROLES = frozenset({"admin", "teacher", "student"})
@@ -294,12 +297,13 @@ class HttpSessionAuthBoundary:
         return result
 
     def _established_result(self, issued: IssuedSession) -> EstablishedHttpSession:
-        bearer = issued.bearer_token
+        bearer = None
         authenticated = None
         failed = False
         unavailable = False
         result = None
         try:
+            bearer = issued.bearer_token
             if not self._cookie_bearer_is_valid(bearer):
                 unavailable = True
             else:
