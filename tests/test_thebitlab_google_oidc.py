@@ -204,6 +204,9 @@ def test_config_requires_https_fixed_redirect_and_safe_post_login() -> None:
         {"client_secret": "secret\nheader"},
         {"post_login_path": "https://evil.test/"},
         {"post_login_path": "//evil.test/"},
+        {"post_login_path": "/%ZZ"},
+        {"post_login_path": "/ok\x7fSet-Cookie: evil=1"},
+        {"post_login_path": "/%0d%0aLocation:%20https://evil.test/"},
         {"flow_ttl": timedelta(0)},
         {"clock_skew": timedelta(minutes=6)},
     ):
@@ -462,7 +465,7 @@ def test_flow_creation_auto_cleans_expired_records_and_store_is_bounded(
     service.state_factory = lambda: "a" * 43
     begin_state(service)
     service.state_factory = lambda: "b" * 43
-    with pytest.raises(GoogleOidcConfigurationError):
+    with pytest.raises(GoogleOidcProviderUnavailableError):
         service.begin_login()
     assert bounded.pending_count() == 1
 

@@ -62,7 +62,11 @@ class GoogleOidcStateError(GoogleOidcError):
 
 
 class GoogleOidcStateConflictError(GoogleOidcStateError):
-    """Raised before insert when a state collides or the flow store is full."""
+    """Raised before insert when a generated state collides."""
+
+
+class GoogleOidcFlowCapacityError(GoogleOidcStateConflictError):
+    """Raised before insert when the bounded flow store is full."""
 
 
 class GoogleOidcProviderUnavailableError(GoogleOidcError):
@@ -180,12 +184,22 @@ class GoogleOidcConfig:
             raise GoogleOidcConfigurationError(
                 "Endpoint Google OIDC non consentito."
             )
+        encoded_post_login = (
+            urllib.parse.unquote_to_bytes(self.post_login_path)
+            if type(self.post_login_path) is str
+            else b""
+        )
         if (
             type(self.post_login_path) is not str
             or not self.post_login_path.startswith("/")
             or self.post_login_path.startswith("//")
             or "\\" in self.post_login_path
-            or any(ord(character) < 0x20 for character in self.post_login_path)
+            or _INVALID_PERCENT_ESCAPE_RE.search(self.post_login_path) is not None
+            or any(
+                ord(character) <= 0x20 or ord(character) == 0x7F
+                for character in self.post_login_path
+            )
+            or any(byte < 0x20 or byte == 0x7F for byte in encoded_post_login)
         ):
             raise GoogleOidcConfigurationError("Path post-login non valido.")
         for value, name, maximum in (
@@ -283,6 +297,7 @@ class InMemoryGoogleOidcFlowStore:
     ) -> None:
         flow = None
         conflict_message = None
+        capacity_exhausted = False
         try:
             flow = PendingGoogleOidcFlow(
                 state_digest=self.state_digest(state),
@@ -301,6 +316,7 @@ class InMemoryGoogleOidcFlowStore:
                     del self._flows[key]
                 if len(self._flows) >= self.max_pending_flows:
                     conflict_message = "Capacita flow OIDC esaurita."
+                    capacity_exhausted = True
                 elif flow.state_digest in self._flows:
                     conflict_message = "Collisione state OIDC."
                 else:
@@ -312,6 +328,8 @@ class InMemoryGoogleOidcFlowStore:
             creation_marker = None
             flow = None
         if conflict_message is not None:
+            if capacity_exhausted:
+                raise GoogleOidcFlowCapacityError(conflict_message)
             raise GoogleOidcStateConflictError(conflict_message)
 
     def consume(self, state: str, now: datetime) -> PendingGoogleOidcFlow:
@@ -724,6 +742,8 @@ class GoogleOidcLoginService:
                     now,
                     self.config.flow_ttl,
                 )
+            except GoogleOidcFlowCapacityError:
+                store_failed = True
             except GoogleOidcStateConflictError:
                 collision = True
             except Exception:
