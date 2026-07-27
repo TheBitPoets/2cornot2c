@@ -648,26 +648,53 @@ class SqliteIdentityStorage:
         return None if row is None else self._session(row)
 
     def save_session(self, session: UserSession) -> None:
+        created_at = _encode_datetime(session.created_at, "created_at")
+        expires_at = _encode_datetime(session.expires_at, "expires_at")
+        last_seen_at = _encode_datetime(session.last_seen_at, "last_seen_at")
+        immutable = (
+            session.session_id,
+            session.user_id,
+            session.token_digest,
+            created_at,
+            expires_at,
+        )
         with self._transaction("save_session") as connection:
-            cursor = connection.execute(
-                """
-                UPDATE sessions SET user_id = ?, token_digest = ?, created_at = ?, expires_at = ?,
-                    last_seen_at = ?, revoked_at = ? WHERE session_id = ?
-                """,
-                (
-                    session.user_id,
-                    session.token_digest,
-                    _encode_datetime(session.created_at, "created_at"),
-                    _encode_datetime(session.expires_at, "expires_at"),
-                    _encode_datetime(session.last_seen_at, "last_seen_at"),
-                    None
-                    if session.revoked_at is None
-                    else _encode_datetime(session.revoked_at, "revoked_at"),
-                    session.session_id,
-                ),
-            )
+            if session.revoked_at is None:
+                cursor = connection.execute(
+                    """
+                    UPDATE sessions SET last_seen_at = ?
+                    WHERE session_id = ? AND user_id = ? AND token_digest = ?
+                        AND created_at = ? AND expires_at = ?
+                        AND revoked_at IS NULL AND last_seen_at <= ?
+                    """,
+                    (last_seen_at,) + immutable + (last_seen_at,),
+                )
+            else:
+                revoked_at = _encode_datetime(session.revoked_at, "revoked_at")
+                cursor = connection.execute(
+                    """
+                    UPDATE sessions SET
+                        last_seen_at = CASE
+                            WHEN last_seen_at > ? THEN last_seen_at ELSE ?
+                        END,
+                        revoked_at = ?
+                    WHERE session_id = ? AND user_id = ? AND token_digest = ?
+                        AND created_at = ? AND expires_at = ?
+                        AND ((revoked_at IS NULL AND last_seen_at <= ?) OR revoked_at = ?)
+                    """,
+                    (last_seen_at, last_seen_at, revoked_at)
+                    + immutable
+                    + (revoked_at, revoked_at),
+                )
             if cursor.rowcount != 1:
-                raise IdentityStorageNotFoundError("Sessione da aggiornare non trovata.")
+                exists = connection.execute(
+                    "SELECT 1 FROM sessions WHERE session_id = ?", (session.session_id,)
+                ).fetchone()
+                if exists is None:
+                    raise IdentityStorageNotFoundError("Sessione da aggiornare non trovata.")
+                raise IdentityStorageConflictError(
+                    "Sessione modificata o revocata da un'altra operazione."
+                )
 
     def list_user_sessions(self, user_id: str) -> list[UserSession]:
         rows = self._query_all(
@@ -744,17 +771,55 @@ class SqliteIdentityStorage:
 
     def save_pairing(self, pairing: TuiPairing) -> None:
         values = self._pairing_values(pairing)
+        if pairing.status in {"consumed", "expired", "revoked"} and pairing.user_id is not None:
+            predecessors = ("authorized",)
+            prior_identity_sql = " AND user_id = ? AND authorized_at = ?"
+            prior_identity_values = (values[5], values[6])
+        elif pairing.status in {"expired", "revoked"}:
+            predecessors = ("pending",)
+            prior_identity_sql = ""
+            prior_identity_values = ()
+        else:
+            predecessors = {
+                "pending": ("pending",),
+                "authorized": ("pending",),
+                "consumed": ("authorized",),
+            }[pairing.status]
+            prior_identity_sql = ""
+            prior_identity_values = ()
+        placeholders = ", ".join("?" for _ in predecessors)
         with self._transaction("save_pairing") as connection:
             cursor = connection.execute(
-                """
-                UPDATE tui_pairings SET code_digest = ?, status = ?, created_at = ?, expires_at = ?,
-                    user_id = ?, authorized_at = ?, consumed_at = ?, expired_at = ?, revoked_at = ?
-                WHERE pairing_id = ?
+                f"""
+                UPDATE tui_pairings SET status = ?, user_id = ?, authorized_at = ?,
+                    consumed_at = ?, expired_at = ?, revoked_at = ?
+                WHERE pairing_id = ? AND code_digest = ? AND created_at = ? AND expires_at = ?
+                    AND status IN ({placeholders}){prior_identity_sql}
                 """,
-                values[1:] + values[:1],
+                (
+                    values[2],
+                    values[5],
+                    values[6],
+                    values[7],
+                    values[8],
+                    values[9],
+                    values[0],
+                    values[1],
+                    values[3],
+                    values[4],
+                )
+                + predecessors
+                + prior_identity_values,
             )
             if cursor.rowcount != 1:
-                raise IdentityStorageNotFoundError("Pairing da aggiornare non trovato.")
+                exists = connection.execute(
+                    "SELECT 1 FROM tui_pairings WHERE pairing_id = ?", (pairing.pairing_id,)
+                ).fetchone()
+                if exists is None:
+                    raise IdentityStorageNotFoundError("Pairing da aggiornare non trovato.")
+                raise IdentityStorageConflictError(
+                    "Pairing modificato o transitato da un'altra operazione."
+                )
 
     def delete_expired_pairings(self, expired_before: datetime) -> int:
         encoded = _encode_datetime(expired_before, "expired_before")

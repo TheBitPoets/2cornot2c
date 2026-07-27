@@ -84,7 +84,11 @@ Foreign key, ruoli, booleani e stati pairing sono vincolati anche nel database. 
 
 `linked_at` e `created_at` dei mapping descrivono la creazione originale e non cambiano quando vengono aggiornati attributi leggibili come email, username o display name. Il linking verso un proprietario interno differente fallisce senza modifiche parziali.
 
-Le operazioni di revoca multipla sono atomiche: un istante anteriore alla creazione o all'ultimo utilizzo di una sessione attiva viene rifiutato, invece di lasciare sessioni parzialmente revocate. I cleanup ricevono un cutoff esplicito e cancellano record con `expires_at` minore o uguale al cutoff; la politica di retention resta responsabilita del service chiamante.
+Le operazioni di revoca multipla sono atomiche: un istante anteriore alla creazione o all'ultimo utilizzo di una sessione attiva viene rifiutato, invece di lasciare sessioni parzialmente revocate. Revoca e `last_seen_at` sono monotoni: `save_session` usa un compare-and-swap e non puo riattivare una sessione tramite uno snapshot stale.
+
+Le transizioni pairing vengono applicate con compare-and-swap sullo stato persistito. Solo una delle richieste concorrenti puo autorizzare, consumare, scadere o revocare il record; gli stati terminali non possono essere riaperti da snapshot precedenti.
+
+I cleanup ricevono un cutoff esplicito e cancellano record con `expires_at` minore o uguale al cutoff; la politica di retention resta responsabilita del service chiamante.
 
 Le migrazioni sono numerate, eseguite dentro `BEGIN IMMEDIATE` e registrate solo al commit. Il codice rifiuta database con una versione schema piu recente, evitando downgrade impliciti.
 

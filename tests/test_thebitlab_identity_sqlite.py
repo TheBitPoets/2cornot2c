@@ -237,10 +237,26 @@ def test_session_digest_lookup_revocation_and_cleanup(storage) -> None:
     assert storage.read_session("session-future-activity") == replace(
         future_activity, revoked_at=revoked_at
     )
+    with pytest.raises(IdentityStorageConflictError, match="revocata"):
+        storage.save_session(active)
+    assert storage.read_session("session-01") == replace(active, revoked_at=revoked_at)
 
     assert storage.delete_expired_sessions(NOW) == 1
     assert storage.read_session("session-expired") is None
     assert len(storage.list_user_sessions("user-01")) == 2
+
+
+def test_session_last_seen_update_rejects_stale_snapshot(storage) -> None:
+    storage.create_user(account())
+    original = session()
+    storage.create_session(original)
+    newer = replace(original, last_seen_at=NOW + timedelta(minutes=10))
+    storage.save_session(newer)
+
+    with pytest.raises(IdentityStorageConflictError, match="modificata"):
+        storage.save_session(original)
+
+    assert storage.read_session("session-01") == newer
 
 
 def test_session_digest_is_unique_under_concurrent_writes(storage) -> None:
@@ -285,6 +301,34 @@ def test_pairing_digest_lookup_lifecycle_and_cleanup(storage) -> None:
 
     with pytest.raises(IdentityStorageConflictError):
         storage.create_pairing(pairing("pairing-duplicate"))
+
+
+def test_pairing_consumption_is_atomic_and_terminal(storage) -> None:
+    storage.create_user(account())
+    storage.create_user(account("user-02"))
+    pending = pairing()
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=6))
+    with pytest.raises(IdentityStorageConflictError, match="transitato"):
+        storage.save_pairing(replace(consumed, user_id="user-02"))
+    assert storage.read_pairing("pairing-01") == authorized
+
+    def save_consumed():
+        try:
+            storage.save_pairing(consumed)
+            return "consumed"
+        except IdentityStorageConflictError:
+            return "conflict"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(lambda _index: save_consumed(), range(2)))
+
+    assert sorted(outcomes) == ["conflict", "consumed"]
+    with pytest.raises(IdentityStorageConflictError, match="transitato"):
+        storage.save_pairing(authorized)
+    assert storage.read_pairing("pairing-01") == consumed
 
 
 def test_reopen_preserves_utc_records_and_schema_contains_no_raw_secrets(database_path) -> None:
