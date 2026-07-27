@@ -755,11 +755,11 @@ class SqliteIdentityStorage:
                         revoked_at = ?
                     WHERE session_id = ? AND user_id = ? AND token_digest = ?
                         AND created_at = ? AND expires_at = ?
-                        AND ((revoked_at IS NULL AND last_seen_at <= ?) OR revoked_at = ?)
+                        AND revoked_at IS NULL AND last_seen_at <= ?
                     """,
                     (last_seen_at, last_seen_at, revoked_at)
                     + immutable
-                    + (revoked_at, revoked_at),
+                    + (revoked_at,),
                 )
             if cursor.rowcount != 1:
                 exists = connection.execute(

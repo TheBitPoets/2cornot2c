@@ -284,10 +284,20 @@ class FederatedIdentityService:
         except Exception:
             # Provider exceptions and their causes may contain the opaque credential.
             raise ProviderAuthenticationError("Autenticazione provider non riuscita.") from None
+        normalized_assertion = self._normalize_assertion(assertion)
+        if normalized_assertion.provider != expected_provider:
+            raise ProviderProtocolError("Assertion e provider adapter non coincidono.")
+        return self._resolve_normalized(normalized_assertion)
+
+    def resolve(self, assertion: FederatedIdentityAssertion) -> UserAccount:
+        return self._resolve_normalized(self._normalize_assertion(assertion))
+
+    @staticmethod
+    def _normalize_assertion(assertion: object) -> FederatedIdentityAssertion:
         if type(assertion) is not FederatedIdentityAssertion:
             raise ProviderProtocolError("Il provider non ha restituito un'assertion valida.")
         try:
-            normalized_assertion = FederatedIdentityAssertion(
+            return FederatedIdentityAssertion(
                 provider=assertion.provider,
                 subject=assertion.subject,
                 display_name=assertion.display_name,
@@ -295,16 +305,12 @@ class FederatedIdentityService:
                 email_verified=assertion.email_verified,
                 username=assertion.username,
             )
-            provider_matches = normalized_assertion.provider == expected_provider
         except Exception:
             raise ProviderProtocolError(
                 "Il provider non ha restituito un'assertion valida."
             ) from None
-        if not provider_matches:
-            raise ProviderProtocolError("Assertion e provider adapter non coincidono.")
-        return self.resolve(normalized_assertion)
 
-    def resolve(self, assertion: FederatedIdentityAssertion) -> UserAccount:
+    def _resolve_normalized(self, assertion: FederatedIdentityAssertion) -> UserAccount:
         now = _utc(self.clock())
         existing = self.storage.read_external_identity(assertion.provider, assertion.subject)
         if existing is not None:

@@ -177,11 +177,15 @@ def test_unknown_github_or_unverified_google_cannot_self_onboard(storage) -> Non
     service = FederatedIdentityService(storage, clock=MutableClock())
     github = FederatedIdentityAssertion("github", "42", "Mario", username="mario")
     unverified = replace(google_assertion(), email_verified=False)
+    tampered = google_assertion("tampered")
+    object.__setattr__(tampered, "email_verified", 1)
 
     with pytest.raises(OnboardingNotAllowedError):
         service.resolve(github)
     with pytest.raises(OnboardingNotAllowedError):
         service.resolve(unverified)
+    with pytest.raises(ProviderProtocolError):
+        service.resolve(tampered)
     assert storage.list_users() == []
 
 
@@ -354,6 +358,31 @@ def test_session_revoke_reports_concurrent_active_change(storage, monkeypatch) -
     monkeypatch.setattr(storage, "save_session", conflict)
     with pytest.raises(ConcurrentStateChangeError, match="durante la revoca"):
         service.revoke(issued.bearer_token)
+
+
+def test_concurrent_session_revocation_has_one_winner(storage, monkeypatch) -> None:
+    storage.create_user(account())
+    service = SessionService(
+        storage,
+        clock=MutableClock(),
+        token_factory=lambda: "V" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+    save_session = storage.save_session
+    barrier = threading.Barrier(2)
+
+    def synchronized_save(session):
+        barrier.wait(timeout=5)
+        save_session(session)
+
+    monkeypatch.setattr(storage, "save_session", synchronized_save)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(
+            executor.map(lambda _index: service.revoke(issued.bearer_token), range(2))
+        )
+
+    assert sorted(outcomes) == [False, True]
 
 
 def test_invalid_session_generators_fail_before_persistence(storage) -> None:
