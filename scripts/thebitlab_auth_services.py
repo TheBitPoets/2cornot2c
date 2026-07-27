@@ -335,6 +335,7 @@ class FederatedIdentityService:
             raise ProviderAuthenticationError("Autenticazione provider non riuscita.")
         if assertion_echoed_credential:
             assertion = None
+            expected_provider = None
             raise ProviderProtocolError(
                 "Il provider ha restituito una credenziale dentro l'assertion."
             )

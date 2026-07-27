@@ -201,6 +201,15 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
     assert "raw-claim-provider-secret" not in traceback_locals_repr(
         echoed_claim.value, "authenticate"
     )
+    with pytest.raises(ProviderProtocolError) as provider_alias:
+        service.authenticate(ClaimEchoProvider(), "google")
+    traceback = provider_alias.value.__traceback__
+    while traceback is not None:
+        if traceback.tb_frame.f_code.co_name == "authenticate":
+            assert traceback.tb_frame.f_locals["credential"] is None
+            assert traceback.tb_frame.f_locals["assertion"] is None
+            assert traceback.tb_frame.f_locals["expected_provider"] is None
+        traceback = traceback.tb_next
     with pytest.raises(ProviderProtocolError) as wrong_issuer:
         service.authenticate(WrongIssuerProvider(), "raw-wrong-issuer-secret")
     assert "raw-wrong-issuer-secret" not in traceback_locals(
