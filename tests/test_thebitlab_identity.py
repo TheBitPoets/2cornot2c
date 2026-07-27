@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError, fields
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 
 import pytest
 
@@ -35,6 +35,19 @@ NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
 LATER = NOW + timedelta(hours=1)
 DIGEST = "sha256:" + ("a" * 64)
 PAIRING_DIGEST = "hmac-sha256:" + ("b" * 64)
+
+
+class FoldAwareTimezone(tzinfo):
+    """Minimal repeated-hour timezone without requiring an installed tzdata package."""
+
+    def utcoffset(self, value):
+        return timedelta(hours=1 if value is not None and value.fold else 2)
+
+    def dst(self, value):
+        return timedelta(0)
+
+    def tzname(self, value):
+        return "TEST-DST"
 
 
 def user(**overrides) -> UserAccount:
@@ -333,6 +346,34 @@ def test_pairing_allows_revocation_at_authorization_in_equivalent_timezone() -> 
 
     assert revoked.status == "revoked"
     assert revoked.revoked_at == authorized_at
+
+
+def test_pairing_rejects_real_revocation_before_authorization_during_dst_fold() -> None:
+    repeated_hour = FoldAwareTimezone()
+    authorized_at = datetime(2026, 10, 25, 2, 15, tzinfo=repeated_hour, fold=1)
+    revoked_at = datetime(2026, 10, 25, 2, 30, tzinfo=repeated_hour, fold=0)
+    created_at = datetime(2026, 10, 25, 0, 0, tzinfo=timezone.utc)
+    expires_at = datetime(2026, 10, 25, 2, 0, tzinfo=timezone.utc)
+
+    with pytest.raises(InvalidIdentityDataError, match="revoked_at non puo precedere"):
+        TuiPairing(
+            "pairing-01",
+            PAIRING_DIGEST,
+            "revoked",
+            created_at,
+            expires_at,
+            user_id="user-01",
+            authorized_at=authorized_at,
+            revoked_at=revoked_at,
+        )
+
+    pending = TuiPairing(
+        "pairing-01", PAIRING_DIGEST, "pending", created_at, expires_at
+    )
+    authorized = authorize_pairing(pending, "user-01", authorized_at)
+    assert authorized.authorized_at == datetime(2026, 10, 25, 1, 15, tzinfo=timezone.utc)
+    with pytest.raises(InvalidIdentityDataError, match="revoked_at non puo precedere"):
+        revoke_pairing(authorized, revoked_at)
 
 
 def test_pairing_state_machine_prevents_terminal_transitions() -> None:

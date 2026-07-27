@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 
@@ -75,7 +75,10 @@ def _optional_text(value: str | None, field_name: str, *, lowercase: bool = Fals
 def _aware_datetime(value: datetime, field_name: str) -> datetime:
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         raise InvalidIdentityDataError(f"{field_name} deve includere il timezone.")
-    return value
+    # Python compares datetimes sharing one tzinfo by wall time, which can ignore
+    # fold during a repeated DST hour. Canonical UTC values keep every domain
+    # invariant based on absolute instants instead.
+    return value.astimezone(timezone.utc)
 
 
 def _digest(
