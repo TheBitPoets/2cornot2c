@@ -50,6 +50,10 @@ _GOOGLE_CERT_ENDPOINTS = frozenset(
 class GoogleOidcError(RuntimeError):
     """Base credential-free Google OIDC adapter error."""
 
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.clear_transaction_cookie: str | None = None
+
 
 class GoogleOidcConfigurationError(GoogleOidcError):
     """Raised for invalid server-side OIDC configuration."""
@@ -935,6 +939,7 @@ class GoogleOidcLoginService:
         result = None
         expected_error = None
         unexpected_failed = False
+        flow_consumed = False
         try:
             try:
                 code, state, provider_error = self._callback_values(parameters)
@@ -959,6 +964,7 @@ class GoogleOidcLoginService:
                 raise GoogleOidcProviderUnavailableError(
                     "Store flow OIDC non disponibile."
                 )
+            flow_consumed = True
             if provider_error:
                 provider_error = False
                 raise GoogleOidcCallbackError("Login Google annullato o rifiutato.")
@@ -1080,11 +1086,20 @@ class GoogleOidcLoginService:
             session = None
             existing_cookie_header = None
         if expected_error is not None:
+            if flow_consumed:
+                expected_error.clear_transaction_cookie = (
+                    self._clear_transaction_cookie()
+                )
             raise expected_error
         if unexpected_failed or result is None:
-            raise GoogleOidcProviderUnavailableError(
+            unavailable_error = GoogleOidcProviderUnavailableError(
                 "Completamento login Google non disponibile."
             )
+            if flow_consumed:
+                unavailable_error.clear_transaction_cookie = (
+                    self._clear_transaction_cookie()
+                )
+            raise unavailable_error
         return result
 
     @staticmethod

@@ -475,10 +475,11 @@ def test_callback_requires_originating_browser_cookie_without_consuming_flow(
         "__Host-thebitlab_oidc_txn=" + "x" * 43,
         service._test_transaction_cookie + "; " + service._test_transaction_cookie,
     ):
-        with pytest.raises(GoogleOidcStateError):
+        with pytest.raises(GoogleOidcStateError) as rejected:
             service.complete_callback(
                 valid_callback(state), existing_cookie_header=cookie_header
             )
+        assert rejected.value.clear_transaction_cookie is None
         assert flows.pending_count() == 1
         assert transport.calls == []
 
@@ -568,10 +569,14 @@ def test_provider_error_consumes_state_and_duplicate_or_unknown_params_fail_clos
 ) -> None:
     service, _storage, _flows, transport, _verifier = make_service(database_path, clock)
     state = begin_state(service)
-    with pytest.raises(GoogleOidcCallbackError):
+    with pytest.raises(GoogleOidcCallbackError) as cancelled:
         finish_callback(service, {"error": ["access_denied"], "state": [state]})
-    with pytest.raises(GoogleOidcStateError):
+    assert cancelled.value.clear_transaction_cookie.startswith(
+        "__Host-thebitlab_oidc_txn=;"
+    )
+    with pytest.raises(GoogleOidcStateError) as replayed:
         finish_callback(service, valid_callback(state))
+    assert replayed.value.clear_transaction_cookie is None
     assert transport.calls == []
 
     malformed = (

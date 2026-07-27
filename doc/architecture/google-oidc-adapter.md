@@ -34,7 +34,7 @@ scope=openid email profile
 code_challenge_method=S256
 ```
 
-Il binding è inviato soltanto nel cookie one-time `__Host-thebitlab_oidc_txn` con `Secure`, `HttpOnly`, `SameSite=Lax` e `Path=/`; nel flow resta solo il digest. Il callback consuma lo state esclusivamente con il cookie del browser originario e restituisce un cookie di cancellazione, impedendo login CSRF/session swapping.
+Il binding è inviato soltanto nel cookie one-time `__Host-thebitlab_oidc_txn` con `Secure`, `HttpOnly`, `SameSite=Lax` e `Path=/`; nel flow resta solo il digest. Il callback consuma lo state esclusivamente con il cookie del browser originario e restituisce un cookie di cancellazione, impedendo login CSRF/session swapping. Dopo un consumo terminale fallito, anche l'errore pubblico espone `clear_transaction_cookie`; un binding errato che non consuma il flow non lo espone.
 
 State e nonce raw esistono soltanto nella URL consegnata al browser. Lo store conserva digest SHA-256; il verifier PKCE raw rimane unicamente nella memoria del processo e ha `repr` oscurato.
 
