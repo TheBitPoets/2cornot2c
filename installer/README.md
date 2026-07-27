@@ -19,12 +19,11 @@ python -m installer.main
 python -m installer.main --provider virtualbox
 ```
 
-L'interfaccia usa la revisione uTUI fissata in `installer/plans.py`. In un
-ambiente di sviluppo:
+L'interfaccia usa la revisione uTUI fissata nell'unica fonte autorevole
+`requirements-utui.txt`. In un ambiente di sviluppo:
 
 ```bash
-python -m pip install \
-  "git+https://github.com/TheBitPoets/utui.git@c38ec96c865f9ee4d2f20abaf63482d7930050fa"
+python -m pip install -r requirements-utui.txt
 python -m installer.tui
 ```
 

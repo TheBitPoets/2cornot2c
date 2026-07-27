@@ -5,9 +5,6 @@ from __future__ import annotations
 from installer.model import Check, Host, InstallPlan, Provider, Step
 
 
-UTUI_REVISION = "c38ec96c865f9ee4d2f20abaf63482d7930050fa"
-
-
 def supported_providers(host: Host) -> tuple[Provider, ...]:
     """Restituisce solo i provider ufficialmente supportati per l'host."""
 
