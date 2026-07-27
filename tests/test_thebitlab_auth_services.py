@@ -128,6 +128,12 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
         def authenticate(self, credential):
             return None
 
+    class EchoProvider:
+        provider_name = "google"
+
+        def authenticate(self, credential):
+            return credential
+
     class HostileResult:
         @property
         def __class__(self):
@@ -171,6 +177,14 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
         traceback = traceback.tb_next
     with pytest.raises(ProviderProtocolError, match="assertion valida"):
         service.authenticate(InvalidProvider(), "opaque")
+    with pytest.raises(ProviderProtocolError) as echoed:
+        service.authenticate(EchoProvider(), "raw-echoed-provider-secret")
+    assert "raw-echoed-provider-secret" not in traceback_locals(
+        echoed.value, "authenticate"
+    )
+    assert "raw-echoed-provider-secret" not in traceback_locals(
+        echoed.value, "_normalize_assertion"
+    )
     with pytest.raises(ProviderProtocolError) as hostile:
         service.authenticate(HostileProvider(), "opaque")
     assert "raw-provider-secret" not in str(hostile.value)
@@ -623,6 +637,19 @@ def test_disabling_account_invalidates_sessions_and_authorized_pairings(storage)
     assert storage.read_pairing("pairing-01") is None
 
 
+def test_invalid_session_id_does_not_remain_in_frame_with_generated_token(storage) -> None:
+    storage.create_user(account())
+    service = SessionService(
+        storage,
+        clock=MutableClock(),
+        token_factory=lambda: "W" * 40,
+        session_id_factory=lambda: "",
+    )
+    with pytest.raises(CredentialGenerationError) as captured:
+        service.issue("user-01")
+    assert "W" * 40 not in traceback_locals(captured.value, "issue")
+
+
 def test_session_generation_collision_fails_without_exposing_raw_token(storage) -> None:
     storage.create_user(account())
     first = SessionService(
@@ -831,6 +858,19 @@ def test_invalid_pairing_generator_fails_before_persistence(storage) -> None:
     with pytest.raises(CredentialGenerationError, match="Codice pairing"):
         service.issue()
     assert storage.read_pairing("pairing-01") is None
+
+
+def test_invalid_pairing_id_does_not_remain_in_frame_with_generated_code(storage) -> None:
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=MutableClock(),
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "",
+    )
+    with pytest.raises(CredentialGenerationError) as captured:
+        service.issue()
+    assert "PAIRCODE42" not in traceback_locals(captured.value, "issue")
 
 
 def test_pairing_collision_and_short_pepper_fail_closed(storage) -> None:
