@@ -601,11 +601,11 @@ class HttpSessionAuthBoundary:
     ) -> str:
         if response_time is None:
             raise ValueError("Clock HTTP non valido.")
+        remaining = issued.session.expires_at - response_time
+        if remaining < timedelta(seconds=1):
+            raise ValueError("Durata residua sessione HTTP non rappresentabile.")
         expires = format_datetime(issued.session.expires_at.astimezone(timezone.utc), usegmt=True)
-        max_age = max(
-            0,
-            int((issued.session.expires_at - response_time).total_seconds()),
-        )
+        max_age = int(remaining.total_seconds())
         attributes = [
             f"{self.cookie_policy.name}={bearer}",
             "Path=/",

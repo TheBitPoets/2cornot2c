@@ -438,6 +438,40 @@ def test_set_cookie_max_age_uses_response_time(clock) -> None:
     assert "Tue, 01 Sep 2026 16:00:00 GMT" in established.set_cookie
 
 
+def test_subsecond_remaining_session_is_revoked_instead_of_emitting_deleted_cookie(
+    clock,
+) -> None:
+    bearer = "A" * 40
+    user = account()
+    session = UserSession(
+        "short-session",
+        user.user_id,
+        session_token_digest(bearer),
+        NOW,
+        NOW + timedelta(milliseconds=500),
+        NOW,
+    )
+    revoked = []
+
+    class ShortSessionService:
+        def issue(self, _user_id):
+            return IssuedSession(session, bearer)
+
+        def authenticate(self, _bearer):
+            return AuthenticatedSession(session, user)
+
+        def revoke(self, _bearer):
+            revoked.append(True)
+            return True
+
+    boundary = HttpSessionAuthBoundary(
+        ShortSessionService(), csrf_secret=CSRF_SECRET, clock=clock
+    )
+    with pytest.raises(HttpAuthUnavailableError):
+        boundary.establish_session("user-01")
+    assert revoked == [True]
+
+
 def test_safe_authentication_refreshes_context_and_role_authorization(storage, clock) -> None:
     storage.create_user(account(role="teacher"))
     boundary = make_boundary(storage, clock)
