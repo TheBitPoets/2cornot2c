@@ -321,16 +321,28 @@ class FederatedIdentityService:
             if account is None:
                 raise ConcurrentStateChangeError("Identita collegata a un utente inesistente.")
             require_active_account(account)
-            self.storage.link_external_identity(
-                ExternalIdentity(
-                    user_id=account.user_id,
-                    provider=assertion.provider,
-                    subject=assertion.subject,
-                    linked_at=existing.linked_at,
-                    email=assertion.email,
-                    username=assertion.username,
+            try:
+                self.storage.link_external_identity(
+                    ExternalIdentity(
+                        user_id=account.user_id,
+                        provider=assertion.provider,
+                        subject=assertion.subject,
+                        linked_at=existing.linked_at,
+                        email=assertion.email,
+                        username=assertion.username,
+                    )
                 )
-            )
+            except IdentityStorageConflictError as error:
+                current = self.storage.read_external_identity(
+                    assertion.provider, assertion.subject
+                )
+                if current is None or current.user_id != account.user_id:
+                    raise ConcurrentStateChangeError(
+                        "Identita ricollegata durante l'autenticazione."
+                    ) from error
+                raise ConcurrentStateChangeError(
+                    "Identita modificata durante l'autenticazione."
+                ) from error
             return account
 
         if (
@@ -436,7 +448,7 @@ class SessionService:
         if now > session.last_seen_at:
             try:
                 self.storage.save_session(replace(session, last_seen_at=now))
-            except IdentityStorageConflictError:
+            except (IdentityStorageConflictError, IdentityStorageNotFoundError):
                 current = self.storage.read_session_by_token_digest(digest)
                 session, account = self._require_valid(current, digest, now)
                 if session.last_seen_at < now:
@@ -479,7 +491,7 @@ class SessionService:
             raise ConcurrentStateChangeError("Clock anteriore all'ultimo utilizzo della sessione.")
         try:
             self.storage.save_session(replace(session, revoked_at=now))
-        except IdentityStorageConflictError as error:
+        except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
             current = self.storage.read_session_by_token_digest(digest)
             if current is None or current.revoked_at is not None:
                 return False

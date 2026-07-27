@@ -27,7 +27,11 @@ from scripts.thebitlab_auth_services import (
     SessionService,
 )
 from scripts.thebitlab_identity import AccountDisabledError, ExternalIdentity, UserAccount
-from scripts.thebitlab_identity_sqlite import IdentityStorageConflictError, SqliteIdentityStorage
+from scripts.thebitlab_identity_sqlite import (
+    IdentityStorageConflictError,
+    IdentityStorageNotFoundError,
+    SqliteIdentityStorage,
+)
 
 
 NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
@@ -173,6 +177,23 @@ def test_existing_identity_refreshes_attributes_without_changing_owner_or_link_t
     assert refreshed == replace(original, email="new@example.test", username="new-name")
 
 
+def test_existing_identity_relink_race_is_translated(storage, monkeypatch) -> None:
+    storage.provision_user_with_identity(
+        account("user-01"), ExternalIdentity("user-01", "google", "google-42", NOW)
+    )
+    storage.create_user(account("user-02"))
+    link_identity = storage.link_external_identity
+
+    def relink_then_conflict(_identity):
+        storage.unlink_external_identity("google", "google-42")
+        link_identity(ExternalIdentity("user-02", "google", "google-42", NOW))
+        raise IdentityStorageConflictError("simulated")
+
+    monkeypatch.setattr(storage, "link_external_identity", relink_then_conflict)
+    with pytest.raises(ConcurrentStateChangeError, match="ricollegata"):
+        FederatedIdentityService(storage, clock=MutableClock()).resolve(google_assertion())
+
+
 def test_unknown_github_or_unverified_google_cannot_self_onboard(storage) -> None:
     service = FederatedIdentityService(storage, clock=MutableClock())
     github = FederatedIdentityAssertion("github", "42", "Mario", username="mario")
@@ -291,7 +312,8 @@ def test_session_issue_checks_active_account_inside_storage_transaction(
 
     def disable_then_create(session):
         storage.save_user(
-            replace(account(), active=False, updated_at=NOW + timedelta(seconds=1))
+            replace(account(), active=False, updated_at=NOW + timedelta(seconds=1)),
+            expected_updated_at=NOW,
         )
         create_for_active(session)
 
@@ -318,12 +340,40 @@ def test_session_expiration_is_exclusive_and_disabled_users_fail_closed(storage)
         service.authenticate(issued.bearer_token)
     assert service.revoke(issued.bearer_token) is False
 
-    storage.save_user(replace(account(), active=False, updated_at=NOW + timedelta(minutes=10)))
+    storage.save_user(
+        replace(account(), active=False, updated_at=NOW + timedelta(minutes=10)),
+        expected_updated_at=NOW,
+    )
     clock.value = NOW + timedelta(minutes=5)
     with pytest.raises(InvalidCredentialError):
         service.authenticate(issued.bearer_token)
     with pytest.raises(AccountDisabledError):
         service.issue("user-01")
+
+
+def test_session_deletion_races_are_translated(storage, database_path, monkeypatch) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "Q" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+
+    def delete_then_missing(_session):
+        with sqlite3.connect(database_path) as connection:
+            connection.execute("DELETE FROM sessions WHERE session_id = 'session-01'")
+        raise IdentityStorageNotFoundError("simulated")
+
+    monkeypatch.setattr(storage, "save_session", delete_then_missing)
+    clock.value = NOW + timedelta(minutes=1)
+    with pytest.raises(InvalidCredentialError):
+        service.authenticate(issued.bearer_token)
+
+    issued = service.issue("user-01")
+    assert service.revoke(issued.bearer_token) is False
 
 
 def test_session_authentication_rejects_clock_rollback(storage) -> None:
@@ -422,9 +472,13 @@ def test_disabling_account_invalidates_sessions_and_authorized_pairings(storage)
     pairings.authorize(issued_pairing.code, "user-01")
 
     storage.save_user(
-        replace(account(), active=False, updated_at=NOW + timedelta(seconds=1))
+        replace(account(), active=False, updated_at=NOW + timedelta(seconds=1)),
+        expected_updated_at=NOW,
     )
-    storage.save_user(replace(account(), active=True, updated_at=NOW + timedelta(minutes=1)))
+    storage.save_user(
+        replace(account(), active=True, updated_at=NOW + timedelta(minutes=1)),
+        expected_updated_at=NOW + timedelta(seconds=1),
+    )
 
     with pytest.raises(InvalidCredentialError):
         sessions.authenticate(issued_session.bearer_token)
@@ -494,7 +548,8 @@ def test_pairing_authorization_checks_active_account_inside_storage_transaction(
 
     def disable_then_save(pairing):
         storage.save_user(
-            replace(account(), active=False, updated_at=NOW + timedelta(seconds=1))
+            replace(account(), active=False, updated_at=NOW + timedelta(seconds=1)),
+            expected_updated_at=NOW,
         )
         save_for_active(pairing)
 
@@ -520,7 +575,8 @@ def test_pairing_consume_translates_concurrent_disable_deletion(storage, monkeyp
 
     def disable_then_save(pairing):
         storage.save_user(
-            replace(account(), active=False, updated_at=NOW + timedelta(minutes=2))
+            replace(account(), active=False, updated_at=NOW + timedelta(minutes=2)),
+            expected_updated_at=NOW,
         )
         save_for_active(pairing)
 

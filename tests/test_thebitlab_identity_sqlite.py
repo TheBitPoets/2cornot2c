@@ -142,7 +142,7 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     storage.create_user(second)
 
     updated = replace(first, display_name="Mario Rossi", role="teacher", updated_at=NOW + timedelta(minutes=1))
-    storage.save_user(updated)
+    storage.save_user(updated, expected_updated_at=first.updated_at)
     assert storage.read_user("user-01") == updated
     assert storage.list_users() == [updated, second]
 
@@ -173,14 +173,17 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
 def test_user_updates_are_monotonic_and_stale_snapshot_cannot_reactivate(storage) -> None:
     original = account()
     storage.create_user(original)
-    stale_active = replace(original, updated_at=NOW + timedelta(minutes=5))
+    stale_active = replace(original, updated_at=NOW + timedelta(minutes=20))
     disabled = replace(original, active=False, updated_at=NOW + timedelta(minutes=10))
-    storage.save_user(disabled)
+    storage.save_user(disabled, expected_updated_at=original.updated_at)
 
     with pytest.raises(IdentityStorageConflictError, match="timestamp non monotono"):
-        storage.save_user(stale_active)
+        storage.save_user(stale_active, expected_updated_at=original.updated_at)
     with pytest.raises(IdentityStorageConflictError, match="timestamp non monotono"):
-        storage.save_user(replace(disabled, created_at=NOW - timedelta(days=1), updated_at=LATER))
+        storage.save_user(
+            replace(disabled, created_at=NOW - timedelta(days=1), updated_at=LATER),
+            expected_updated_at=disabled.updated_at,
+        )
 
     assert storage.read_user("user-01") == disabled
 
@@ -463,7 +466,7 @@ def test_corrupt_timestamp_is_reported_as_stable_storage_error(storage, database
 
 def test_save_requires_existing_primary_record(storage) -> None:
     with pytest.raises(IdentityStorageNotFoundError):
-        storage.save_user(account())
+        storage.save_user(account(), expected_updated_at=NOW - timedelta(seconds=1))
     with pytest.raises(IdentityStorageNotFoundError):
         storage.save_class(class_group())
     with pytest.raises(IdentityStorageNotFoundError):

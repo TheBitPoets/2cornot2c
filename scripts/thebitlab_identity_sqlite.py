@@ -431,15 +431,20 @@ class SqliteIdentityStorage:
         row = self._query_one("SELECT * FROM users WHERE user_id = ?", (user_id,))
         return None if row is None else self._user(row)
 
-    def save_user(self, user: UserAccount) -> None:
+    def save_user(self, user: UserAccount, *, expected_updated_at: datetime) -> None:
         created_at = _encode_datetime(user.created_at, "created_at")
         updated_at = _encode_datetime(user.updated_at, "updated_at")
+        expected_revision = _encode_datetime(expected_updated_at, "expected_updated_at")
+        if updated_at <= expected_revision:
+            raise IdentityStorageConflictError(
+                "Il nuovo updated_at deve essere successivo alla revisione attesa."
+            )
         with self._transaction("save_user") as connection:
             cursor = connection.execute(
                 """
                 UPDATE users SET display_name = ?, role = ?, active = ?,
                     updated_at = ?, primary_email = ?
-                WHERE user_id = ? AND created_at = ? AND updated_at < ?
+                WHERE user_id = ? AND created_at = ? AND updated_at = ?
                 """,
                 (
                     user.display_name,
@@ -449,7 +454,7 @@ class SqliteIdentityStorage:
                     user.primary_email,
                     user.user_id,
                     created_at,
-                    updated_at,
+                    expected_revision,
                 ),
             )
             if cursor.rowcount != 1:
