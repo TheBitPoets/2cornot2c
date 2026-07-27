@@ -19,7 +19,7 @@ Non importano l'adapter SQLite concreto né SDK OAuth/OIDC.
 
 Un adapter provider autentica la credenziale opaca e restituisce `FederatedIdentityAssertion`, contenente provider e subject stabili oltre ad attributi aggiornabili. Validazione di firma, issuer, audience, nonce e protocollo appartengono all'adapter reale. Il confine applicativo converte qualsiasi eccezione dell'adapter in un errore generico senza concatenare cause potenzialmente contenenti la credenziale, e rifiuta risultati che non siano assertion tipizzate.
 
-Il fake provider usa chiavi deterministiche solo nei test. Non genera `KeyError` contenenti la chiave; il boundary azzera inoltre il parametro credenziale subito dopo l'adapter e rilancia gli errori sanitizzati solo dopo essere uscito dal blocco `except`, evitando che traceback locals, `__context__` o `__cause__` conservino credenziali raw. Non simula crittografia e non deve essere abilitato come provider di produzione.
+Il fake provider usa chiavi deterministiche solo nei test. Non genera `KeyError` contenenti la chiave; il boundary azzera inoltre credenziale, riferimento adapter e risultati invalidi subito dopo l'adapter e rilancia gli errori sanitizzati solo dopo essere uscito dal blocco `except`, evitando che traceback locals, `__context__` o `__cause__` conservino credenziali raw. Non simula crittografia e non deve essere abilitato come provider di produzione.
 
 `FederatedIdentityService` applica queste regole:
 
@@ -30,7 +30,7 @@ Il fake provider usa chiavi deterministiche solo nei test. Non genera `KeyError`
 5. una identita sconosciuta puo creare un utente soltanto se il provider e autorizzato all'onboarding e l'email e verificata;
 6. il nuovo utente ha sempre ruolo `pending`;
 7. creazione utente e primo linking sono una singola transazione SQLite;
-8. una race di onboarding restituisce il vincitore gia persistito, senza utenti orfani.
+8. una race di onboarding invia il vincitore gia persistito attraverso lo stesso CAS link+account del percorso ordinario, senza utenti orfani né letture separate stale.
 
 La policy iniziale autorizza all'onboarding soltanto `google`. GitHub verra collegato in un flusso autenticato successivo.
 

@@ -316,6 +316,7 @@ class FederatedIdentityService:
             assertion = None
         # Traceback collectors may capture frame locals even without cause/context.
         credential = None
+        provider = None
         if provider_failed:
             raise ProviderAuthenticationError("Autenticazione provider non riuscita.")
         try:
@@ -323,6 +324,8 @@ class FederatedIdentityService:
         finally:
             assertion = None
         if normalized_assertion.provider != expected_provider:
+            normalized_assertion = None
+            expected_provider = None
             raise ProviderProtocolError("Assertion e provider adapter non coincidono.")
         return self._resolve_normalized(normalized_assertion)
 
@@ -362,45 +365,7 @@ class FederatedIdentityService:
         now = _utc(self.clock())
         existing = self.storage.read_external_identity(assertion.provider, assertion.subject)
         if existing is not None:
-            account = self.storage.read_user(existing.user_id)
-            if account is None:
-                raise ConcurrentStateChangeError("Identita collegata a un utente inesistente.")
-            require_active_account(account)
-            try:
-                self.storage.refresh_external_identity(
-                    ExternalIdentity(
-                        user_id=account.user_id,
-                        provider=assertion.provider,
-                        subject=assertion.subject,
-                        linked_at=existing.linked_at,
-                        email=assertion.email,
-                        username=assertion.username,
-                    ),
-                    expected_linked_at=existing.linked_at,
-                    expected_user_updated_at=account.updated_at,
-                )
-            except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
-                current_account = self.storage.read_user(account.user_id)
-                if current_account is None:
-                    raise ConcurrentStateChangeError(
-                        "Utente rimosso durante l'autenticazione."
-                    ) from error
-                require_active_account(current_account)
-                if current_account.updated_at != account.updated_at:
-                    raise ConcurrentStateChangeError(
-                        "Utente modificato durante l'autenticazione."
-                    ) from error
-                current = self.storage.read_external_identity(
-                    assertion.provider, assertion.subject
-                )
-                if current is None or current.user_id != account.user_id:
-                    raise ConcurrentStateChangeError(
-                        "Identita ricollegata durante l'autenticazione."
-                    ) from error
-                raise ConcurrentStateChangeError(
-                    "Identita modificata durante l'autenticazione."
-                ) from error
-            return account
+            return self._resolve_existing(assertion, existing)
 
         if (
             assertion.provider not in self.onboarding_providers
@@ -438,14 +403,53 @@ class FederatedIdentityService:
                     assertion.provider, assertion.subject
                 )
                 if winner is not None:
-                    winner_account = self.storage.read_user(winner.user_id)
-                    if winner_account is None:
-                        raise ConcurrentStateChangeError(
-                            "Provisioning concorrente incompleto."
-                        )
-                    require_active_account(winner_account)
-                    return winner_account
+                    return self._resolve_existing(assertion, winner)
         raise CredentialGenerationError("Impossibile generare un user_id interno univoco.")
+
+    def _resolve_existing(
+        self,
+        assertion: FederatedIdentityAssertion,
+        existing: ExternalIdentity,
+    ) -> UserAccount:
+        account = self.storage.read_user(existing.user_id)
+        if account is None:
+            raise ConcurrentStateChangeError("Identita collegata a un utente inesistente.")
+        require_active_account(account)
+        try:
+            self.storage.refresh_external_identity(
+                ExternalIdentity(
+                    user_id=account.user_id,
+                    provider=assertion.provider,
+                    subject=assertion.subject,
+                    linked_at=existing.linked_at,
+                    email=assertion.email,
+                    username=assertion.username,
+                ),
+                expected_linked_at=existing.linked_at,
+                expected_user_updated_at=account.updated_at,
+            )
+        except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
+            current_account = self.storage.read_user(account.user_id)
+            if current_account is None:
+                raise ConcurrentStateChangeError(
+                    "Utente rimosso durante l'autenticazione."
+                ) from error
+            require_active_account(current_account)
+            if current_account.updated_at != account.updated_at:
+                raise ConcurrentStateChangeError(
+                    "Utente modificato durante l'autenticazione."
+                ) from error
+            current = self.storage.read_external_identity(
+                assertion.provider, assertion.subject
+            )
+            if current is None or current.user_id != account.user_id:
+                raise ConcurrentStateChangeError(
+                    "Identita ricollegata durante l'autenticazione."
+                ) from error
+            raise ConcurrentStateChangeError(
+                "Identita modificata durante l'autenticazione."
+            ) from error
+        return account
 
 
 class SessionService:

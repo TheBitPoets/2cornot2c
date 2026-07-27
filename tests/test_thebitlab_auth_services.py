@@ -120,7 +120,16 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
         provider_name = "google"
 
         def authenticate(self, credential):
+            self.retained_credential = credential
             raise RuntimeError(credential)
+
+    class WrongIssuerProvider:
+        provider_name = "google"
+
+        def authenticate(self, credential):
+            return FederatedIdentityAssertion(
+                "github", "subject", "Name", email=credential
+            )
 
     class InvalidProvider:
         provider_name = "google"
@@ -175,6 +184,11 @@ def test_provider_boundary_masks_adapter_exceptions_and_rejects_invalid_assertio
         if traceback.tb_frame.f_code.co_name == "authenticate":
             assert "raw-provider-secret" not in traceback.tb_frame.f_locals.values()
         traceback = traceback.tb_next
+    with pytest.raises(ProviderProtocolError) as wrong_issuer:
+        service.authenticate(WrongIssuerProvider(), "raw-wrong-issuer-secret")
+    assert "raw-wrong-issuer-secret" not in traceback_locals(
+        wrong_issuer.value, "authenticate"
+    )
     with pytest.raises(ProviderProtocolError, match="assertion valida"):
         service.authenticate(InvalidProvider(), "opaque")
     with pytest.raises(ProviderProtocolError) as echoed:
@@ -352,6 +366,43 @@ def test_concurrent_onboarding_returns_one_stable_internal_user(storage) -> None
     assert len({user.user_id for user in users}) == 1
     assert len(storage.list_users()) == 1
     assert len(storage.list_external_identities(users[0].user_id)) == 1
+
+
+def test_onboarding_winner_path_uses_existing_identity_cas(storage, monkeypatch) -> None:
+    storage.create_user(account("user-b"))
+    provision = storage.provision_user_with_identity
+    read_identity = storage.read_external_identity
+    link_identity = storage.link_external_identity
+    raced = False
+
+    def provision_then_conflict(user, identity):
+        provision(user, identity)
+        raise IdentityStorageConflictError("simulated winner")
+
+    def read_then_relink(provider, subject):
+        nonlocal raced
+        winner = read_identity(provider, subject)
+        if winner is not None and not raced:
+            raced = True
+            storage.unlink_external_identity(provider, subject)
+            link_identity(
+                ExternalIdentity(
+                    "user-b", provider, subject, NOW + timedelta(microseconds=1)
+                )
+            )
+        return winner
+
+    monkeypatch.setattr(storage, "provision_user_with_identity", provision_then_conflict)
+    monkeypatch.setattr(storage, "read_external_identity", read_then_relink)
+    service = FederatedIdentityService(
+        storage,
+        clock=MutableClock(),
+        user_id_factory=lambda: "user-a",
+    )
+
+    with pytest.raises(ConcurrentStateChangeError, match="ricollegata"):
+        service.resolve(google_assertion())
+    assert read_identity("google", "google-42").user_id == "user-b"
 
 
 def test_atomic_provisioning_rejects_mismatched_owner_without_writes(storage) -> None:
