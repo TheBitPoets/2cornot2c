@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
+import scripts.thebitlab_google_oidc as google_oidc
 from scripts.thebitlab_auth_services import FederatedIdentityService, SessionService
 from scripts.thebitlab_google_oidc import (
     BoundedGoogleCertRequest,
@@ -292,6 +293,28 @@ def test_unexpected_flow_store_failure_discards_and_scrubs_credentials(
     assert VERIFIER not in retained
 
 
+def test_authorization_result_failure_discards_flow_and_scrubs_url(
+    database_path, clock, monkeypatch
+) -> None:
+    service, _storage, flows, _transport, _verifier = make_service(
+        database_path, clock
+    )
+
+    class FailingAuthorizationRequest:
+        def __init__(self, authorization_url):
+            raise RuntimeError("result unavailable")
+
+    monkeypatch.setattr(
+        google_oidc, "GoogleAuthorizationRequest", FailingAuthorizationRequest
+    )
+    with pytest.raises(GoogleOidcProviderUnavailableError) as captured:
+        service.begin_login()
+    assert flows.pending_count() == 0
+    retained = traceback_function_locals(captured.value, "begin_login", "__init__")
+    assert STATE not in retained
+    assert NONCE not in retained
+
+
 def test_preinsert_store_failure_never_discards_existing_flow(database_path, clock) -> None:
     service, _storage, real_store, _transport, _verifier = make_service(
         database_path, clock
@@ -482,6 +505,9 @@ def test_token_exchange_and_verification_failures_are_sanitized_and_consume_stat
         {"iat": int((NOW + timedelta(minutes=2)).timestamp())},
         {"iat": int((NOW - timedelta(hours=1)).timestamp())},
         {"name": ID_TOKEN},
+        {"name": f"prefix-{ID_TOKEN}-suffix"},
+        {"email": f"prefix-{ID_TOKEN}@example.test"},
+        {"sub": f"prefix-{ID_TOKEN}-suffix"},
         {"exp": float("nan")},
         {"iat": float("inf")},
     ],

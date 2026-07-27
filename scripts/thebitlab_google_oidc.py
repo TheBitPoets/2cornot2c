@@ -645,6 +645,7 @@ class GoogleOidcLoginService:
                 )
             build_failed = False
             authorization_url = None
+            authorization_request = None
             challenge = None
             query = None
             try:
@@ -664,9 +665,10 @@ class GoogleOidcLoginService:
                     }
                 )
                 authorization_url = f"{self.config.authorization_endpoint}?{query}"
+                authorization_request = GoogleAuthorizationRequest(authorization_url)
             except Exception:
                 build_failed = True
-            if build_failed or authorization_url is None:
+            if build_failed or authorization_request is None:
                 try:
                     self.flows.discard_created_flow(state, creation_marker)
                 except Exception:
@@ -675,6 +677,8 @@ class GoogleOidcLoginService:
                 nonce = None
                 verifier = None
                 creation_marker = None
+                authorization_url = None
+                authorization_request = None
                 challenge = None
                 query = None
                 raise GoogleOidcProviderUnavailableError(
@@ -684,9 +688,10 @@ class GoogleOidcLoginService:
             nonce = None
             verifier = None
             creation_marker = None
+            authorization_url = None
             challenge = None
             query = None
-            return GoogleAuthorizationRequest(authorization_url)
+            return authorization_request
         raise GoogleOidcConfigurationError("Impossibile generare state OIDC univoco.")
 
     def complete_callback(
@@ -985,7 +990,7 @@ class GoogleOidcLoginService:
                     invalid = True
             secret_echoes = (subject, email, display_name, nonce)
             if any(
-                type(value) is str and hmac.compare_digest(value, id_token)
+                type(value) is str and id_token in value
                 for value in secret_echoes
             ):
                 invalid = True
