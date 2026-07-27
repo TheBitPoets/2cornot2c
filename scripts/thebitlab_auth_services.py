@@ -284,11 +284,25 @@ class FederatedIdentityService:
         except Exception:
             # Provider exceptions and their causes may contain the opaque credential.
             raise ProviderAuthenticationError("Autenticazione provider non riuscita.") from None
-        if not isinstance(assertion, FederatedIdentityAssertion):
+        if type(assertion) is not FederatedIdentityAssertion:
             raise ProviderProtocolError("Il provider non ha restituito un'assertion valida.")
-        if assertion.provider != expected_provider:
+        try:
+            normalized_assertion = FederatedIdentityAssertion(
+                provider=assertion.provider,
+                subject=assertion.subject,
+                display_name=assertion.display_name,
+                email=assertion.email,
+                email_verified=assertion.email_verified,
+                username=assertion.username,
+            )
+            provider_matches = normalized_assertion.provider == expected_provider
+        except Exception:
+            raise ProviderProtocolError(
+                "Il provider non ha restituito un'assertion valida."
+            ) from None
+        if not provider_matches:
             raise ProviderProtocolError("Assertion e provider adapter non coincidono.")
-        return self.resolve(assertion)
+        return self.resolve(normalized_assertion)
 
     def resolve(self, assertion: FederatedIdentityAssertion) -> UserAccount:
         now = _utc(self.clock())
