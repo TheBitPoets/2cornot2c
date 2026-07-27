@@ -10,6 +10,26 @@ l'ambiente didattico:
 La logica di rilevamento, i controlli e i piani non dipendono dalla UI.
 `utui` si occupa esclusivamente di rendering e input da terminale.
 
+## Bootstrap monocomando
+
+Su macOS Apple Silicon:
+
+```bash
+curl --fail --location \
+  https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/bootstrap-classroom-macos.sh \
+  | bash
+```
+
+Su Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/bootstrap-classroom-windows.ps1 | iex
+```
+
+Il bootstrap installa soltanto Git e Python 3.12, prepara il repository in
+`~/2cornot2c`, crea `.installer-venv` e avvia uTUI. La procedura guidata
+diagnostica e installa poi Vagrant e il provider selezionato.
+
 ## Diagnosi
 
 La prima fetta implementa rilevamento, scelta provider e diagnosi read-only:
@@ -43,6 +63,9 @@ L'interfaccia usa la revisione uTUI fissata nell'unica fonte autorevole
 python -m pip install -r requirements-utui.txt
 python -m installer.tui
 ```
+
+Nel menu premi `a`, controlla il provider mostrato e premi `s` per confermare.
+`n` o `Esc` annullano senza modifiche.
 
 Questa fase non scarica ancora il repository o la box Packer e non avvia la
 VM. Il bootstrap monocomando aggiungerà questi passi dopo aver fissato URL,

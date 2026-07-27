@@ -72,6 +72,19 @@ def test_tui_frame_lists_supported_provider() -> None:
     assert "VMware Fusion" not in rendered
 
 
+def test_tui_confirmation_is_explicit_and_cancellable() -> None:
+    pytest.importorskip("utui")
+    from installer.tui import State, frame, request_confirmation
+
+    state = State(Host.WINDOWS_AMD64, (Provider.VIRTUALBOX,))
+    request_confirmation(state)
+    rendered = "\n".join(frame(state, 100, 12, color=False))
+
+    assert state.confirmation_pending is True
+    assert "s: conferma installazione" in rendered
+    assert "Saranno installati solo i componenti mancanti." in state.report
+
+
 def check_results(plan, *, missing: set[str] = set()):
     return tuple(
         CheckResult(check, check.key not in missing, "manca")
