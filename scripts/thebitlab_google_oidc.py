@@ -37,7 +37,7 @@ _UNRESERVED_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{10,512}$")
 _INVALID_PERCENT_ESCAPE_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
 _MAX_CALLBACK_VALUE_CHARS = 8192
-_TRANSACTION_COOKIE_NAME = "__Host-thebitlab_oidc_txn"
+_TRANSACTION_COOKIE_PREFIX = "__Host-thebitlab_oidc_txn-"
 _MAX_COOKIE_HEADER_BYTES = 4096
 _GOOGLE_CERT_ENDPOINTS = frozenset(
     {
@@ -65,6 +65,10 @@ class GoogleOidcCallbackError(GoogleOidcError):
 
 class GoogleOidcStateError(GoogleOidcError):
     """Raised for unknown, expired, duplicate, or replayed state."""
+
+
+class GoogleOidcConsumedStateError(GoogleOidcStateError):
+    """Raised after a terminal state was removed from the flow store."""
 
 
 class GoogleOidcStateConflictError(GoogleOidcStateError):
@@ -377,7 +381,7 @@ class InMemoryGoogleOidcFlowStore:
             raise GoogleOidcStateError("State OIDC sconosciuto o gia usato.")
         if now < flow.created_at or now >= flow.expires_at:
             flow = None
-            raise GoogleOidcStateError("State OIDC scaduto.")
+            raise GoogleOidcConsumedStateError("State OIDC scaduto.")
         return flow
 
     def discard_created_flow(self, state: str, creation_marker: object) -> bool:
@@ -838,7 +842,9 @@ class GoogleOidcLoginService:
                     }
                 )
                 authorization_url = f"{self.config.authorization_endpoint}?{query}"
-                transaction_cookie = self._transaction_cookie(browser_binding)
+                transaction_cookie = self._transaction_cookie(
+                    state, browser_binding
+                )
                 authorization_request = GoogleAuthorizationRequest(
                     authorization_url, transaction_cookie
                 )
@@ -874,22 +880,31 @@ class GoogleOidcLoginService:
             return authorization_request
         raise GoogleOidcConfigurationError("Impossibile generare state OIDC univoco.")
 
-    def _transaction_cookie(self, browser_binding: str) -> str:
+    @staticmethod
+    def _transaction_cookie_name(state: str) -> str:
+        suffix = hashlib.sha256(state.encode("utf-8")).hexdigest()[:24]
+        return _TRANSACTION_COOKIE_PREFIX + suffix
+
+    def _transaction_cookie(self, state: str, browser_binding: str) -> str:
         max_age = math.ceil(self.config.flow_ttl.total_seconds())
+        cookie_name = self._transaction_cookie_name(state)
         return (
-            f"{_TRANSACTION_COOKIE_NAME}={browser_binding}; Path=/; "
+            f"{cookie_name}={browser_binding}; Path=/; "
             f"Max-Age={max_age}; Secure; HttpOnly; SameSite=Lax"
         )
 
     @staticmethod
-    def _clear_transaction_cookie() -> str:
+    def _clear_transaction_cookie(cookie_name: str) -> str:
         return (
-            f"{_TRANSACTION_COOKIE_NAME}=; Path=/; Max-Age=0; "
+            f"{cookie_name}=; Path=/; Max-Age=0; "
             "Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Lax"
         )
 
-    @staticmethod
-    def _transaction_binding(cookie_header: str | None) -> str:
+    @classmethod
+    def _transaction_binding(
+        cls, cookie_header: str | None, state: str
+    ) -> tuple[str, str]:
+        cookie_name = cls._transaction_cookie_name(state)
         invalid = (
             type(cookie_header) is not str
             or not cookie_header
@@ -903,7 +918,7 @@ class GoogleOidcLoginService:
         if not invalid:
             for part in cookie_header.split(";"):
                 name, separator, value = part.strip().partition("=")
-                if separator and name == _TRANSACTION_COOKIE_NAME:
+                if separator and name == cookie_name:
                     matches.append(value)
         if (
             invalid
@@ -913,11 +928,14 @@ class GoogleOidcLoginService:
         ):
             matches = []
             cookie_header = None
+            part = None
+            name = None
+            value = None
             raise GoogleOidcStateError("Cookie transazione OIDC non valido.")
         binding = matches[0]
         matches = []
         cookie_header = None
-        return binding
+        return binding, cookie_name
 
     def complete_callback(
         self,
@@ -932,6 +950,7 @@ class GoogleOidcLoginService:
         code = None
         state = None
         browser_binding = None
+        transaction_cookie_name = None
         provider_error = False
         assertion = None
         user = None
@@ -940,6 +959,7 @@ class GoogleOidcLoginService:
         expected_error = None
         unexpected_failed = False
         flow_consumed = False
+        clear_cookie_name = None
         try:
             try:
                 code, state, provider_error = self._callback_values(parameters)
@@ -948,10 +968,16 @@ class GoogleOidcLoginService:
             state_failed = False
             state_unavailable = False
             try:
-                browser_binding = self._transaction_binding(existing_cookie_header)
+                browser_binding, transaction_cookie_name = (
+                    self._transaction_binding(existing_cookie_header, state)
+                )
+                clear_cookie_name = transaction_cookie_name
                 flow = self.flows.consume(
                     state, browser_binding, _utc(self.clock())
                 )
+            except GoogleOidcConsumedStateError:
+                flow_consumed = True
+                state_failed = True
             except GoogleOidcStateError:
                 state_failed = True
             except Exception:
@@ -1045,7 +1071,9 @@ class GoogleOidcLoginService:
                     role=session.context.user.role,
                     session=session,
                     redirect_path=self.config.post_login_path,
-                    clear_transaction_cookie=self._clear_transaction_cookie(),
+                    clear_transaction_cookie=self._clear_transaction_cookie(
+                        transaction_cookie_name
+                    ),
                 )
             except Exception:
                 result_failed = True
@@ -1071,6 +1099,7 @@ class GoogleOidcLoginService:
             code = None
             state = None
             browser_binding = None
+            transaction_cookie_name = None
             provider_error = False
             state_failed = False
             state_unavailable = False
@@ -1088,7 +1117,7 @@ class GoogleOidcLoginService:
         if expected_error is not None:
             if flow_consumed:
                 expected_error.clear_transaction_cookie = (
-                    self._clear_transaction_cookie()
+                    self._clear_transaction_cookie(clear_cookie_name)
                 )
             raise expected_error
         if unexpected_failed or result is None:
@@ -1097,7 +1126,7 @@ class GoogleOidcLoginService:
             )
             if flow_consumed:
                 unavailable_error.clear_transaction_cookie = (
-                    self._clear_transaction_cookie()
+                    self._clear_transaction_cookie(clear_cookie_name)
                 )
             raise unavailable_error
         return result

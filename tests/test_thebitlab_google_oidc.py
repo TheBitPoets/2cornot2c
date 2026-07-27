@@ -261,9 +261,8 @@ def test_begin_login_builds_state_nonce_and_pkce_without_persisting_raw_values(
     ).rstrip(b"=").decode()
     assert query["code_challenge"] == [expected_challenge]
     assert CLIENT_SECRET not in started.authorization_url
-    assert started.set_cookie.startswith(
-        f"__Host-thebitlab_oidc_txn={BROWSER_BINDING};"
-    )
+    assert started.set_cookie.startswith("__Host-thebitlab_oidc_txn-")
+    assert f"={BROWSER_BINDING};" in started.set_cookie
     assert "Secure" in started.set_cookie
     assert "HttpOnly" in started.set_cookie
     assert "SameSite=Lax" in started.set_cookie
@@ -408,8 +407,9 @@ def test_valid_callback_onboards_pending_user_and_issues_session_cookie(
 
     assert result.user_id == "internal-user-01"
     assert result.clear_transaction_cookie.startswith(
-        "__Host-thebitlab_oidc_txn=;"
+        "__Host-thebitlab_oidc_txn-"
     )
+    assert "=;" in result.clear_transaction_cookie
     assert "Max-Age=0" in result.clear_transaction_cookie
     assert result.role == "pending"
     assert result.redirect_path == "/dashboard"
@@ -472,7 +472,7 @@ def test_callback_requires_originating_browser_cookie_without_consuming_flow(
 
     for cookie_header in (
         None,
-        "__Host-thebitlab_oidc_txn=" + "x" * 43,
+        service._test_transaction_cookie.split("=", 1)[0] + "=" + "x" * 43,
         service._test_transaction_cookie + "; " + service._test_transaction_cookie,
     ):
         with pytest.raises(GoogleOidcStateError) as rejected:
@@ -486,6 +486,29 @@ def test_callback_requires_originating_browser_cookie_without_consuming_flow(
     result = finish_callback(service, valid_callback(state))
     assert result.user_id == "internal-user-01"
     assert flows.pending_count() == 0
+
+
+def test_concurrent_login_tabs_use_distinct_transaction_cookies(
+    database_path, clock
+) -> None:
+    service, _storage, flows, _transport, _verifier = make_service(
+        database_path, clock
+    )
+    first = service.begin_login()
+    first_state = parse_qs(urlsplit(first.authorization_url).query)["state"][0]
+    service.state_factory = lambda: "z" * 43
+    second = service.begin_login()
+
+    first_pair = first.set_cookie.split(";", 1)[0]
+    second_pair = second.set_cookie.split(";", 1)[0]
+    assert first_pair.split("=", 1)[0] != second_pair.split("=", 1)[0]
+    both_cookies = f"{first_pair}; {second_pair}"
+
+    result = service.complete_callback(
+        valid_callback(first_state), existing_cookie_header=both_cookies
+    )
+    assert result.user_id == "internal-user-01"
+    assert flows.pending_count() == 1
 
 
 def test_flow_store_state_error_is_normalized(database_path, clock) -> None:
@@ -554,8 +577,12 @@ def test_expired_state_is_consumed_and_cleanup_is_explicit(database_path, clock)
     state = begin_state(service)
     clock.value += timedelta(seconds=1)
 
-    with pytest.raises(GoogleOidcStateError):
+    with pytest.raises(GoogleOidcStateError) as expired:
         finish_callback(service, valid_callback(state))
+    assert expired.value.clear_transaction_cookie.startswith(
+        "__Host-thebitlab_oidc_txn-"
+    )
+    assert "=;" in expired.value.clear_transaction_cookie
     assert transport.calls == []
     assert flows.pending_count() == 0
 
@@ -572,8 +599,9 @@ def test_provider_error_consumes_state_and_duplicate_or_unknown_params_fail_clos
     with pytest.raises(GoogleOidcCallbackError) as cancelled:
         finish_callback(service, {"error": ["access_denied"], "state": [state]})
     assert cancelled.value.clear_transaction_cookie.startswith(
-        "__Host-thebitlab_oidc_txn=;"
+        "__Host-thebitlab_oidc_txn-"
     )
+    assert "=;" in cancelled.value.clear_transaction_cookie
     with pytest.raises(GoogleOidcStateError) as replayed:
         finish_callback(service, valid_callback(state))
     assert replayed.value.clear_transaction_cookie is None
