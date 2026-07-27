@@ -110,3 +110,8 @@ La selezione locale viene salvata in file ignorati da Git:
 Il fallback senza questi file resta `bento/ubuntu-24.04`. La presenza di una
 box Packer disabilita il provisioning legacy, evitando reinstallazioni lente
 e dipendenti dalla rete a ogni ricreazione.
+
+La sostituzione di una VM già presente è un'operazione distinta
+dall'importazione della box. Richiede una conferma testuale non abbreviabile,
+verifica `lab` e `lab2`, arresta prima una macchina attiva e applica
+`vagrant destroy --force` soltanto allo state directory del provider scelto.

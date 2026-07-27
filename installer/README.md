@@ -86,3 +86,23 @@ box VirtualBox AMD64 non supera il collaudo Windows.
 Quando `.classroom-box` è presente, il `Vagrantfile` salta il provisioning
 legacy perché desktop, toolchain e Guest Tools sono già nella box Packer.
 Senza quel file continua a usare Bento e il provisioning attuale.
+
+## VM già esistente
+
+Prima di attivare una nuova box, lo stato del provider può essere controllato
+e migrato esplicitamente:
+
+```bash
+python -m installer.migration --provider vmware_desktop
+```
+
+Su Windows usa `--provider virtualbox`. La procedura:
+
+- non esegue nulla senza la frase esatta `RICREA VM`;
+- controlla che `lab` e `lab2` siano directory interne al progetto;
+- arresta ordinatamente una VM accesa;
+- distrugge soltanto la VM del provider selezionato;
+- non elimina o sposta le cartelle condivise sull'host.
+
+I file salvati esclusivamente dentro la VM non possono essere garantiti e
+vengono segnalati prima della conferma.
