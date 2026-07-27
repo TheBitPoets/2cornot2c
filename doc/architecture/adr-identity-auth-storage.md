@@ -2,7 +2,7 @@
 
 ## Stato
 
-Proposto.
+Accettato.
 
 ## Contesto
 
@@ -65,7 +65,32 @@ I JSON restano formato di export, backup leggibile e scambio, ma non sono una se
 
 `token_digest` e `code_digest` devono avere vincoli univoci e indici dedicati. Le porte espongono lookup espliciti per digest: il service calcola il digest dal valore ricevuto, risolve direttamente il record e confronta in tempo costante senza scansioni. Il formato del bearer o del codice non deve quindi incorporare necessariamente l'ID interno del record.
 
-Lo schema concreto e le migrazioni saranno introdotti in una issue successiva dietro le porte definite in `scripts/thebitlab_identity_ports.py`.
+Lo schema concreto e le migrazioni sono implementati da `SqliteIdentityStorage` dietro le porte definite in `scripts/thebitlab_identity_ports.py`.
+
+### Schema SQLite v1
+
+La prima migrazione crea:
+
+- `users`;
+- `external_identities`;
+- `classes`;
+- `class_memberships`;
+- `external_group_mappings`;
+- `sessions`;
+- `tui_pairings`;
+- `schema_migrations`.
+
+Foreign key, ruoli, booleani e stati pairing sono vincolati anche nel database. La cancellazione di un utente elimina identita, membership, sessioni e pairing gia associati; la cancellazione di una classe elimina membership e mapping collegati. Le chiavi provider e i digest hanno vincoli univoci indicizzati.
+
+`linked_at` e `created_at` dei mapping descrivono la creazione originale e non cambiano quando vengono aggiornati attributi leggibili come email, username o display name. Il linking verso un proprietario interno differente fallisce senza modifiche parziali.
+
+Le operazioni di revoca multipla sono atomiche: un istante anteriore alla creazione o all'ultimo utilizzo di una sessione attiva viene rifiutato, invece di lasciare sessioni parzialmente revocate. Revoca e `last_seen_at` sono monotoni: `save_session` usa un compare-and-swap e non puo riattivare una sessione tramite uno snapshot stale.
+
+Le transizioni pairing vengono applicate con compare-and-swap sullo stato persistito. Solo una delle richieste concorrenti puo autorizzare, consumare, scadere o revocare il record; gli stati terminali non possono essere riaperti da snapshot precedenti.
+
+`expires_at` e un limite esclusivo: `last_seen_at` e `revoked_at` devono precederlo, e una sessione con `expires_at` uguale all'istante di revoca non e piu attiva. I cleanup ricevono un cutoff esplicito e cancellano record con `expires_at` minore o uguale al cutoff; la politica di retention resta responsabilita del service chiamante.
+
+Le migrazioni sono numerate, eseguite dentro `BEGIN IMMEDIATE` e registrate solo al commit. Il codice rifiuta database con una versione schema piu recente, evitando downgrade impliciti.
 
 ### Segreti e token
 

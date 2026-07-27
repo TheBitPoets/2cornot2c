@@ -200,6 +200,7 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
         ({"token_digest": "raw-bearer-token"}, "algoritmo sha256, sha512"),
         ({"token_digest": "md5:" + ("a" * 32)}, "algoritmo sha256, sha512"),
         ({"expires_at": NOW}, "successivo"),
+        ({"last_seen_at": LATER}, "compreso"),
         ({"last_seen_at": LATER + timedelta(seconds=1)}, "compreso"),
         ({"revoked_at": NOW - timedelta(seconds=1)}, "durata della sessione"),
         (
@@ -209,6 +210,7 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
             },
             "successivo a revoked_at",
         ),
+        ({"revoked_at": LATER}, "durata della sessione"),
         ({"revoked_at": LATER + timedelta(seconds=1)}, "durata della sessione"),
     ],
 )
@@ -479,7 +481,7 @@ def test_digest_lookup_ports_do_not_require_raw_credentials() -> None:
         def revoke_user_sessions(self, user_id, revoked_at):
             return 0
 
-        def delete_expired_sessions(self):
+        def delete_expired_sessions(self, expired_before):
             return 0
 
     class FakePairingStorage:
@@ -501,7 +503,7 @@ def test_digest_lookup_ports_do_not_require_raw_credentials() -> None:
         def save_pairing(self, value):
             self.records[value.pairing_id] = value
 
-        def delete_expired_pairings(self):
+        def delete_expired_pairings(self, expired_before):
             return 0
 
     session_storage: SessionStorage = FakeSessionStorage()

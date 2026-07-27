@@ -276,13 +276,13 @@ class UserSession:
         last_seen_at = _aware_datetime(self.last_seen_at, "last_seen_at")
         if expires_at <= self.created_at:
             raise InvalidIdentityDataError("expires_at deve essere successivo a created_at.")
-        if not self.created_at <= last_seen_at <= expires_at:
+        if not self.created_at <= last_seen_at < expires_at:
             raise InvalidIdentityDataError("last_seen_at deve essere compreso nella durata della sessione.")
         object.__setattr__(self, "expires_at", expires_at)
         object.__setattr__(self, "last_seen_at", last_seen_at)
         if self.revoked_at is not None:
             revoked_at = _aware_datetime(self.revoked_at, "revoked_at")
-            if not self.created_at <= revoked_at <= expires_at:
+            if not self.created_at <= revoked_at < expires_at:
                 raise InvalidIdentityDataError(
                     "revoked_at deve essere compreso nella durata della sessione."
                 )
