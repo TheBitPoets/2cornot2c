@@ -21,9 +21,10 @@ from scripts.thebitlab_auth_services import (
     AuthApplicationError,
     FederatedIdentityAssertion,
     FederatedIdentityService,
+    OnboardingNotAllowedError,
 )
 from scripts.thebitlab_http_auth import EstablishedHttpSession, HttpSessionAuthBoundary
-from scripts.thebitlab_identity import IdentityDomainError
+from scripts.thebitlab_identity import AccountDisabledError, IdentityDomainError
 
 _GOOGLE_ISSUERS = frozenset({"accounts.google.com", "https://accounts.google.com"})
 _GOOGLE_AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -153,6 +154,8 @@ class GoogleOidcConfig:
             if (
                 parsed is None
                 or invalid_port
+                or (port is not None and port < 1)
+                or any(ord(character) <= 0x20 or ord(character) == 0x7F for character in value)
                 or parsed.scheme != "https"
                 or not parsed.hostname
                 or parsed.username is not None
@@ -875,8 +878,10 @@ class GoogleOidcLoginService:
             identity_unavailable = False
             try:
                 user = self.identities.resolve(assertion)
-            except (AuthApplicationError, IdentityDomainError):
+            except (OnboardingNotAllowedError, AccountDisabledError):
                 identity_rejected = True
+            except (AuthApplicationError, IdentityDomainError):
+                identity_unavailable = True
             except Exception:
                 identity_unavailable = True
             assertion = None

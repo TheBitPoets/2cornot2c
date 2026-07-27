@@ -13,7 +13,7 @@ import pytest
 
 import scripts.thebitlab_google_oidc as google_oidc
 from scripts.thebitlab_auth_services import (
-    AuthApplicationError,
+    ConcurrentStateChangeError,
     FederatedIdentityService,
     SessionService,
 )
@@ -191,6 +191,9 @@ def test_config_requires_https_fixed_redirect_and_safe_post_login() -> None:
     for override in (
         {"redirect_uri": "http://lab.example.test/callback"},
         {"redirect_uri": "https://lab.example.test:bad/callback"},
+        {"redirect_uri": "https://lab.example.test:0/callback"},
+        {"redirect_uri": "https://lab.example.test/callback\n"},
+        {"redirect_uri": "https://lab.example.test/\x00callback"},
         {"token_endpoint": "https://user:pass@example.test/token"},
         {"authorization_endpoint": "https://example.test/auth#fragment"},
         {"token_endpoint": "https://example.test/collect"},
@@ -561,10 +564,10 @@ def test_identity_collaborator_error_is_normalized(database_path, clock) -> None
 
     class RawIdentityService:
         def resolve(self, _assertion):
-            raise AuthApplicationError("RAW_IDENTITY_DB_PASSWORD")
+            raise ConcurrentStateChangeError("RAW_IDENTITY_DB_PASSWORD")
 
     service.identities = RawIdentityService()
-    with pytest.raises(GoogleOidcIdentityRejectedError) as captured:
+    with pytest.raises(GoogleOidcProviderUnavailableError) as captured:
         service.complete_callback(valid_callback(state))
     assert "RAW_IDENTITY_DB_PASSWORD" not in str(captured.value)
     assert "RAW_IDENTITY_DB_PASSWORD" not in traceback_function_locals(
