@@ -109,6 +109,15 @@ def test_in_memory_database_is_rejected_instead_of_losing_schema_between_connect
         SqliteIdentityStorage(":memory:")
 
 
+def test_connection_open_error_is_translated(database_path) -> None:
+    database_path.mkdir()
+
+    with pytest.raises(IdentityStorageError, match="aprire o configurare") as captured:
+        SqliteIdentityStorage(database_path)
+
+    assert isinstance(captured.value.__cause__, sqlite3.OperationalError)
+
+
 def test_migration_is_idempotent_and_rejects_newer_schema(database_path) -> None:
     SqliteIdentityStorage(database_path)
     SqliteIdentityStorage(database_path)

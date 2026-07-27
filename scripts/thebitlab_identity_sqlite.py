@@ -183,15 +183,26 @@ class SqliteIdentityStorage:
                 "Usare un file temporaneo: connessioni isolate non supportano SQLite :memory:."
             )
         self.database_path = Path(database_path)
-        self.database_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self.database_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            raise IdentityStorageError("Impossibile preparare la directory del database identity.") from error
         self._migrate()
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.database_path, timeout=30, isolation_level=None)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA busy_timeout = 30000")
-        return connection
+        connection: sqlite3.Connection | None = None
+        try:
+            connection = sqlite3.connect(self.database_path, timeout=30, isolation_level=None)
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA busy_timeout = 30000")
+            return connection
+        except sqlite3.DatabaseError as error:
+            if connection is not None:
+                connection.close()
+            raise IdentityStorageError(
+                "Impossibile aprire o configurare il database identity."
+            ) from error
 
     def _migrate(self) -> None:
         connection = self._connect()
