@@ -31,7 +31,13 @@ case "${1:-}" in
 esac
 
 if [ -z "$provider" ]; then
-  if [ "$(uname -s)" = "Darwin" ] && [ -t 0 ]; then
+  if [ -f ".classroom-provider" ]; then
+    provider="$(tr -d '\r\n' < .classroom-provider)"
+    case "$provider" in
+      virtualbox|vmware_desktop) ;;
+      *) fail "Provider non valido in .classroom-provider." ;;
+    esac
+  elif [ "$(uname -s)" = "Darwin" ] && [ -t 0 ]; then
     printf 'Scegli il motore della macchina virtuale:\n'
     printf '  1) VirtualBox (soluzione stabile con finestra scalata)\n'
     printf '  2) VMware Fusion (ridimensionamento dinamico)\n'

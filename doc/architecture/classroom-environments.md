@@ -101,3 +101,12 @@ configurazione e provisioning incrementano la patch.
 Il Vagrantfile degli studenti deve fissare una versione approvata. Una nuova
 box non modifica automaticamente VM già create: l'installer dovrà proporre
 backup delle cartelle condivise e ricreazione controllata.
+
+La selezione locale viene salvata in file ignorati da Git:
+
+- `.classroom-box`: nome immutabile della box verificata;
+- `.classroom-provider`: provider collaudato per l'host.
+
+Il fallback senza questi file resta `bento/ubuntu-24.04`. La presenza di una
+box Packer disabilita il provisioning legacy, evitando reinstallazioni lente
+e dipendenti dalla rete a ogni ricreazione.

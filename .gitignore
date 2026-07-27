@@ -6,6 +6,8 @@
 .vagrant-vmware/
 packer/acceptance/.vagrant-*/
 .installer-venv/
+.classroom-box
+.classroom-provider
 packer/output/
 packer/packer_cache/
 packer/*.box

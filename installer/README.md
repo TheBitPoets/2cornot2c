@@ -74,3 +74,15 @@ versione e checksum degli artefatti pubblicati.
 Il contratto e il downloader verificato sono implementati in
 `installer/artifacts.py`; manca intenzionalmente il manifest reale finché la
 box VirtualBox AMD64 non supera il collaudo Windows.
+
+`installer/vagrant_box.py` completa il flusso locale:
+
+1. verifica nuovamente dimensione e SHA-256;
+2. controlla le box installate tramite output machine-readable;
+3. importa soltanto se nome e provider non sono già presenti, senza `--force`;
+4. salva box e provider in `.classroom-box` e `.classroom-provider`;
+5. usa gli script `setup-vm` esistenti per primo avvio e health check.
+
+Quando `.classroom-box` è presente, il `Vagrantfile` salta il provisioning
+legacy perché desktop, toolchain e Guest Tools sono già nella box Packer.
+Senza quel file continua a usare Bento e il provisioning attuale.
