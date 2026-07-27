@@ -38,6 +38,16 @@ NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
 PEPPER = b"p" * 32
 
 
+def traceback_locals(error, function_name):
+    values = []
+    traceback = error.__traceback__
+    while traceback is not None:
+        if traceback.tb_frame.f_code.co_name == function_name:
+            values.extend(traceback.tb_frame.f_locals.values())
+        traceback = traceback.tb_next
+    return values
+
+
 class MutableClock:
     def __init__(self, value=NOW):
         self.value = value
@@ -374,8 +384,9 @@ def test_session_issue_authenticate_touch_revoke_and_raw_token_hygiene(storage, 
         ).fetchone()[0]
     assert stored != issued.bearer_token
     assert issued.bearer_token not in stored
-    with pytest.raises(InvalidCredentialError, match="non valida"):
+    with pytest.raises(InvalidCredentialError, match="non valida") as malformed:
         service.authenticate("short")
+    assert "short" not in traceback_locals(malformed.value, "authenticate")
 
     clock.value = NOW + timedelta(minutes=5)
     authenticated = service.authenticate(issued.bearer_token)
@@ -625,6 +636,7 @@ def test_session_generation_collision_fails_without_exposing_raw_token(storage) 
     with pytest.raises(CredentialGenerationError, match="sessione univoca") as captured:
         first.issue("user-01")
     assert "C" * 40 not in str(captured.value)
+    assert "C" * 40 not in traceback_locals(captured.value, "issue")
     assert len(storage.list_user_sessions("user-01")) == 1
 
 
@@ -769,8 +781,9 @@ def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> N
     )
     issued = service.issue()
 
-    with pytest.raises(InvalidCredentialError, match="non valido"):
+    with pytest.raises(InvalidCredentialError, match="non valido") as wrong:
         service.authorize("WRONGCODE9", "user-01")
+    assert "WRONGCODE9" not in traceback_locals(wrong.value, "authorize")
     with pytest.raises(InvalidCredentialError, match="non valido"):
         service.authorize("", "user-01")
     clock.value = NOW + timedelta(minutes=2)
@@ -815,7 +828,7 @@ def test_invalid_pairing_generator_fails_before_persistence(storage) -> None:
         code_factory=lambda: "short",
         pairing_id_factory=lambda: "pairing-01",
     )
-    with pytest.raises(CredentialGenerationError, match="pairing code"):
+    with pytest.raises(CredentialGenerationError, match="Codice pairing"):
         service.issue()
     assert storage.read_pairing("pairing-01") is None
 
@@ -832,5 +845,6 @@ def test_pairing_collision_and_short_pepper_fail_closed(storage) -> None:
         pairing_id_factory=lambda: "pairing-01",
     )
     service.issue()
-    with pytest.raises(CredentialGenerationError, match="pairing univoco"):
+    with pytest.raises(CredentialGenerationError, match="pairing univoco") as collision:
         service.issue()
+    assert "PAIRCODE42" not in traceback_locals(collision.value, "issue")

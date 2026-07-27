@@ -128,17 +128,30 @@ def pairing_code_digest(raw_code: str, pepper: bytes) -> str:
 
 
 def _session_digest_for_verification(raw_token: str) -> str:
+    failed = False
     try:
-        return session_token_digest(raw_token)
-    except AuthApplicationError as error:
-        raise InvalidCredentialError("Sessione non valida.") from error
+        digest = session_token_digest(raw_token)
+    except AuthApplicationError:
+        failed = True
+        digest = ""
+    raw_token = None
+    if failed:
+        raise InvalidCredentialError("Sessione non valida.")
+    return digest
 
 
 def _pairing_digest_for_verification(raw_code: str, pepper: bytes) -> str:
+    failed = False
     try:
-        return pairing_code_digest(raw_code, pepper)
-    except AuthApplicationError as error:
-        raise InvalidCredentialError("Pairing non valido.") from error
+        digest = pairing_code_digest(raw_code, pepper)
+    except AuthApplicationError:
+        failed = True
+        digest = ""
+    raw_code = None
+    pepper = None
+    if failed:
+        raise InvalidCredentialError("Pairing non valido.")
+    return digest
 
 
 @dataclass(frozen=True)
@@ -452,10 +465,15 @@ class SessionService:
         now = _utc(self.clock())
         for _attempt in range(_MAX_ATTEMPTS):
             raw_token = self.token_factory()
+            digest_failed = False
             try:
                 digest = session_token_digest(raw_token)
-            except AuthApplicationError as error:
-                raise CredentialGenerationError("Token di sessione generato non valido.") from error
+            except AuthApplicationError:
+                digest_failed = True
+                digest = ""
+            if digest_failed:
+                raw_token = None
+                raise CredentialGenerationError("Token di sessione generato non valido.")
             session = UserSession(
                 session_id=_generated_text(self.session_id_factory(), "session_id"),
                 user_id=account.user_id,
@@ -466,17 +484,23 @@ class SessionService:
             )
             try:
                 self.storage.create_session_for_active_user(session)
-                return IssuedSession(session, raw_token)
             except IdentityStorageConflictError:
+                raw_token = None
                 current_account = self.storage.read_user(account.user_id)
                 if current_account is None:
                     raise InvalidCredentialError("Utente non disponibile.")
                 require_active_account(current_account)
                 continue
+            issued = IssuedSession(session, raw_token)
+            raw_token = None
+            return issued
         raise CredentialGenerationError("Impossibile generare una sessione univoca.")
 
     def authenticate(self, bearer_token: str) -> AuthenticatedSession:
-        digest = _session_digest_for_verification(bearer_token)
+        try:
+            digest = _session_digest_for_verification(bearer_token)
+        finally:
+            bearer_token = None
         session = self.storage.read_session_by_token_digest(digest)
         now = _utc(self.clock())
         for _attempt in range(_MAX_ATTEMPTS):
@@ -513,7 +537,10 @@ class SessionService:
         return session, account
 
     def revoke(self, bearer_token: str) -> bool:
-        digest = _session_digest_for_verification(bearer_token)
+        try:
+            digest = _session_digest_for_verification(bearer_token)
+        finally:
+            bearer_token = None
         session = self.storage.read_session_by_token_digest(digest)
         now = _utc(self.clock())
         if session is None or session.revoked_at is not None or not hmac.compare_digest(
@@ -571,7 +598,15 @@ class PairingService:
         now = _utc(self.clock())
         for _attempt in range(_MAX_ATTEMPTS):
             raw_code = self.code_factory()
-            code = _generated_text(raw_code, "pairing code", minimum_length=8)
+            code_failed = False
+            try:
+                code = _generated_text(raw_code, "pairing code", minimum_length=8)
+            except AuthApplicationError:
+                code_failed = True
+                code = ""
+            if code_failed:
+                raw_code = None
+                raise CredentialGenerationError("Codice pairing generato non valido.")
             pairing = TuiPairing(
                 pairing_id=_generated_text(self.pairing_id_factory(), "pairing_id"),
                 code_digest=pairing_code_digest(code, self.pepper),
@@ -581,13 +616,21 @@ class PairingService:
             )
             try:
                 self.storage.create_pairing(pairing)
-                return IssuedPairing(pairing, code)
             except IdentityStorageConflictError:
+                raw_code = None
+                code = None
                 continue
+            issued = IssuedPairing(pairing, code)
+            raw_code = None
+            code = None
+            return issued
         raise CredentialGenerationError("Impossibile generare un pairing univoco.")
 
     def authorize(self, code: str, user_id: str) -> TuiPairing:
-        digest = _pairing_digest_for_verification(code, self.pepper)
+        try:
+            digest = _pairing_digest_for_verification(code, self.pepper)
+        finally:
+            code = None
         pairing = self.storage.read_pairing_by_code_digest(digest)
         now = _utc(self.clock())
         pairing = self._require_secret(pairing, digest)
@@ -603,7 +646,10 @@ class PairingService:
         return authorized
 
     def consume(self, pairing_id: str, code: str) -> TuiPairing:
-        digest = _pairing_digest_for_verification(code, self.pepper)
+        try:
+            digest = _pairing_digest_for_verification(code, self.pepper)
+        finally:
+            code = None
         pairing = self.storage.read_pairing(pairing_id)
         now = _utc(self.clock())
         pairing = self._require_secret(pairing, digest)
