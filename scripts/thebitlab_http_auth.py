@@ -11,11 +11,12 @@ from email.utils import format_datetime
 from typing import Collection
 
 from scripts.thebitlab_auth_services import (
-    AuthApplicationError,
     AuthenticatedSession,
+    InvalidCredentialError,
     IssuedSession,
     SessionService,
 )
+from scripts.thebitlab_identity import AccountDisabledError
 
 _COOKIE_NAME_RE = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")
 _COOKIE_VALUE_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -65,6 +66,12 @@ class HttpMethodNotAllowedError(HttpAuthError):
     status_code = 405
     error_code = "auth_method_not_allowed"
     public_message = "Metodo HTTP non supportato."
+
+
+class HttpAuthUnavailableError(HttpAuthError):
+    status_code = 503
+    error_code = "authentication_unavailable"
+    public_message = "Servizio di autenticazione temporaneamente non disponibile."
 
 
 @dataclass(frozen=True)
@@ -168,13 +175,28 @@ class HttpSessionAuthBoundary:
                 existing = self._extract_bearer(existing_cookie_header)
             finally:
                 existing_cookie_header = None
+            rotation_failed = False
             try:
                 self.sessions.revoke(existing)
-            except AuthApplicationError:
-                pass
+            except Exception:
+                rotation_failed = True
             finally:
                 existing = None
-        issued = self.sessions.issue(user_id)
+            if rotation_failed:
+                raise HttpAuthUnavailableError()
+        issue_failed = False
+        unavailable = False
+        issued = None
+        try:
+            issued = self.sessions.issue(user_id)
+        except (InvalidCredentialError, AccountDisabledError):
+            issue_failed = True
+        except Exception:
+            unavailable = True
+        if unavailable:
+            raise HttpAuthUnavailableError()
+        if issue_failed or issued is None:
+            raise HttpAuthenticationRequiredError()
         try:
             return self._established_result(issued)
         finally:
@@ -187,6 +209,7 @@ class HttpSessionAuthBoundary:
             request = None
         bearer = None
         auth_failed = False
+        unavailable = False
         authenticated = None
         csrf_token = None
         context = None
@@ -195,9 +218,11 @@ class HttpSessionAuthBoundary:
             cookie_header = None
             try:
                 authenticated = self.sessions.authenticate(bearer)
-            except AuthApplicationError:
+            except (InvalidCredentialError, AccountDisabledError):
                 auth_failed = True
-            if not auth_failed and authenticated is not None:
+            except Exception:
+                unavailable = True
+            if not auth_failed and not unavailable and authenticated is not None:
                 csrf_token = self._csrf_token(bearer)
                 if method in _UNSAFE_METHODS:
                     self._validate_csrf(bearer, supplied_csrf)
@@ -207,6 +232,8 @@ class HttpSessionAuthBoundary:
             cookie_header = None
             supplied_csrf = None
             csrf_token = None
+        if unavailable:
+            raise HttpAuthUnavailableError()
         if auth_failed or context is None:
             raise HttpAuthenticationRequiredError()
         return context
@@ -236,47 +263,90 @@ class HttpSessionAuthBoundary:
         bearer = None
         authenticated = None
         auth_failed = False
+        unavailable = False
+        result = None
         try:
             bearer = self._extract_bearer(cookie_header)
             cookie_header = None
             try:
                 authenticated = self.sessions.authenticate(bearer)
-            except AuthApplicationError:
+            except (InvalidCredentialError, AccountDisabledError):
                 auth_failed = True
+            except Exception:
+                unavailable = True
             if auth_failed:
-                return LogoutHttpResult(False, self._clear_cookie())
-            self._validate_csrf(bearer, supplied_csrf)
-            return LogoutHttpResult(self.sessions.revoke(bearer), self._clear_cookie())
+                result = LogoutHttpResult(False, self._clear_cookie())
+            elif not unavailable:
+                self._validate_csrf(bearer, supplied_csrf)
+                try:
+                    revoked = self.sessions.revoke(bearer)
+                except Exception:
+                    unavailable = True
+                else:
+                    result = LogoutHttpResult(revoked, self._clear_cookie())
         finally:
             bearer = None
             authenticated = None
             cookie_header = None
             supplied_csrf = None
+        if unavailable or result is None:
+            raise HttpAuthUnavailableError()
+        return result
 
     def _established_result(self, issued: IssuedSession) -> EstablishedHttpSession:
         bearer = issued.bearer_token
         authenticated = None
         failed = False
+        unavailable = False
+        result = None
         try:
-            try:
-                authenticated = self.sessions.authenticate(bearer)
-            except AuthApplicationError:
-                failed = True
-            if failed or authenticated is None:
+            if not self._cookie_bearer_is_valid(bearer):
+                unavailable = True
+            else:
                 try:
-                    self.sessions.revoke(bearer)
-                except AuthApplicationError:
-                    pass
-                raise HttpAuthenticationRequiredError()
-            csrf_token = self._csrf_token(bearer)
-            set_cookie = self._session_cookie(bearer, issued)
-            return EstablishedHttpSession(
-                HttpAuthContext(authenticated, csrf_token),
-                set_cookie,
-            )
+                    authenticated = self.sessions.authenticate(bearer)
+                except (InvalidCredentialError, AccountDisabledError):
+                    failed = True
+                except Exception:
+                    unavailable = True
+            if not failed and not unavailable and authenticated is not None:
+                csrf_token = self._csrf_token(bearer)
+                set_cookie = self._session_cookie(bearer, issued)
+                result = EstablishedHttpSession(
+                    HttpAuthContext(authenticated, csrf_token),
+                    set_cookie,
+                )
+            else:
+                self._best_effort_revoke(bearer)
+        except Exception:
+            self._best_effort_revoke(bearer)
+            unavailable = True
         finally:
             bearer = None
             issued = None
+            csrf_token = None
+            set_cookie = None
+        if unavailable:
+            raise HttpAuthUnavailableError()
+        if failed or result is None:
+            raise HttpAuthenticationRequiredError()
+        return result
+
+    def _best_effort_revoke(self, bearer: str) -> None:
+        try:
+            self.sessions.revoke(bearer)
+        except Exception:
+            pass
+        finally:
+            bearer = None
+
+    @staticmethod
+    def _cookie_bearer_is_valid(bearer: object) -> bool:
+        return (
+            type(bearer) is str
+            and 1 <= len(bearer) <= _MAX_SESSION_TOKEN_CHARS
+            and _COOKIE_VALUE_RE.fullmatch(bearer) is not None
+        )
 
     @staticmethod
     def _request_values(request: HttpAuthRequest) -> tuple[str, str | None, str | None]:

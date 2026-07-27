@@ -12,6 +12,7 @@ from scripts.thebitlab_http_auth import (
     HttpAuthRequest,
     HttpAuthenticationRequiredError,
     HttpAuthorizationDeniedError,
+    HttpAuthUnavailableError,
     HttpBadRequestError,
     HttpCsrfRejectedError,
     HttpMethodNotAllowedError,
@@ -169,6 +170,73 @@ def test_establishes_secure_cookie_and_never_persists_or_reprs_raw_values(
         ).fetchone()[0]
     assert "A" * 40 not in persisted
     assert established.context.csrf_token not in persisted
+
+
+def test_cookie_incompatible_generated_bearer_is_revoked_without_header_injection(
+    storage, clock
+) -> None:
+    storage.create_user(account())
+    injected = "A" * 32 + "; Domain=attacker.test"
+    boundary = make_boundary(
+        storage,
+        clock,
+        tokens=(injected,),
+        session_ids=("session-injected",),
+    )
+
+    with pytest.raises(HttpAuthUnavailableError) as captured:
+        boundary.establish_session("user-01")
+
+    persisted = storage.read_session("session-injected")
+    assert persisted is not None
+    assert persisted.revoked_at == NOW
+    assert injected not in str(captured.value)
+    assert captured.value.status_code == 503
+
+
+def test_storage_and_unexpected_failures_are_sanitized_at_http_boundary() -> None:
+    class BrokenSessions:
+        def authenticate(self, _bearer):
+            raise RuntimeError("raw storage backend details")
+
+        def issue(self, _user_id):
+            raise RuntimeError("raw storage backend details")
+
+        def revoke(self, _bearer):
+            raise RuntimeError("raw storage backend details")
+
+    boundary = HttpSessionAuthBoundary(BrokenSessions(), csrf_secret=CSRF_SECRET)
+    auth_request = HttpAuthRequest("GET", "__Host-thebitlab_session=" + "A" * 40)
+
+    with pytest.raises(HttpAuthUnavailableError) as authenticate_error:
+        boundary.authenticate(auth_request)
+    with pytest.raises(HttpAuthUnavailableError) as logout_error:
+        boundary.logout(
+            HttpAuthRequest(
+                "POST",
+                "__Host-thebitlab_session=" + "A" * 40,
+                "csrf",
+            )
+        )
+    with pytest.raises(HttpAuthUnavailableError) as issue_error:
+        boundary.establish_session("user-01")
+    with pytest.raises(HttpAuthUnavailableError) as rotation_error:
+        boundary.establish_session(
+            "user-01",
+            existing_cookie_header="__Host-thebitlab_session=" + "A" * 40,
+        )
+
+    for error in (
+        authenticate_error.value,
+        logout_error.value,
+        issue_error.value,
+        rotation_error.value,
+    ):
+        assert error.status_code == 503
+        assert error.error_code == "authentication_unavailable"
+        assert "storage" not in str(error)
+        assert error.__cause__ is None
+        assert error.__context__ is None
 
 
 def test_safe_authentication_refreshes_context_and_role_authorization(storage, clock) -> None:

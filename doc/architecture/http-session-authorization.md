@@ -31,7 +31,7 @@ L'adapter concreto deve concatenare in modo deterministico eventuali header `Coo
 
 `establish_session` riceve soltanto un ID interno già autenticato. Se il browser presenta una sessione esistente, questa viene revocata prima di emettere il nuovo bearer. Il bearer nuovo proviene dal generatore di `SessionService`, non da input client.
 
-La risposta `EstablishedHttpSession` espone il valore soltanto attraverso `set_cookie`, escluso dal `repr`. Database ed errori contengono esclusivamente digest.
+La risposta `EstablishedHttpSession` espone il valore soltanto attraverso `set_cookie`, escluso dal `repr`. Prima di costruire l'header, il boundary accetta soltanto bearer nella grammatica cookie base64url; un generatore incompatibile viene revocato e non può iniettare attributi. Database ed errori contengono esclusivamente digest.
 
 ## Autenticazione e CSRF
 
@@ -57,9 +57,10 @@ Errori pubblici stabili:
 - `401 authentication_required`;
 - `403 authorization_denied`;
 - `403 csrf_rejected`;
-- `405 auth_method_not_allowed`.
+- `405 auth_method_not_allowed`;
+- `503 authentication_unavailable` per errori concorrenti, storage o inattesi sanitizzati.
 
-I messaggi non includono cookie, bearer o token CSRF.
+I messaggi non includono cookie, bearer, token CSRF o dettagli dell'adapter storage.
 
 ## Logout
 
