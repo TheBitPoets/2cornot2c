@@ -255,6 +255,20 @@ def test_session_digest_lookup_revocation_and_cleanup(storage) -> None:
     assert len(storage.list_user_sessions("user-01")) == 2
 
 
+def test_session_expiring_at_revocation_cutoff_is_not_counted_active(storage) -> None:
+    storage.create_user(account())
+    boundary = session(
+        created_at=NOW - timedelta(hours=1),
+        expires_at=NOW,
+        last_seen_at=NOW - timedelta(minutes=1),
+    )
+    storage.create_session(boundary)
+
+    assert storage.revoke_user_sessions("user-01", NOW) == 0
+    assert storage.read_session("session-01") == boundary
+    assert storage.delete_expired_sessions(NOW) == 1
+
+
 def test_session_last_seen_update_rejects_stale_snapshot(storage) -> None:
     storage.create_user(account())
     original = session()

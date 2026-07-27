@@ -88,7 +88,7 @@ Le operazioni di revoca multipla sono atomiche: un istante anteriore alla creazi
 
 Le transizioni pairing vengono applicate con compare-and-swap sullo stato persistito. Solo una delle richieste concorrenti puo autorizzare, consumare, scadere o revocare il record; gli stati terminali non possono essere riaperti da snapshot precedenti.
 
-I cleanup ricevono un cutoff esplicito e cancellano record con `expires_at` minore o uguale al cutoff; la politica di retention resta responsabilita del service chiamante.
+`expires_at` e un limite esclusivo: una sessione con `expires_at` uguale all'istante di revoca non e piu attiva. I cleanup ricevono un cutoff esplicito e cancellano record con `expires_at` minore o uguale al cutoff; la politica di retention resta responsabilita del service chiamante.
 
 Le migrazioni sono numerate, eseguite dentro `BEGIN IMMEDIATE` e registrate solo al commit. Il codice rifiuta database con una versione schema piu recente, evitando downgrade impliciti.
 

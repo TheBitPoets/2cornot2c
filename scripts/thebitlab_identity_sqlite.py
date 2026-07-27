@@ -720,7 +720,7 @@ class SqliteIdentityStorage:
             stale = connection.execute(
                 """
                 SELECT COUNT(*) FROM sessions
-                WHERE user_id = ? AND revoked_at IS NULL AND expires_at >= ?
+                WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
                     AND (created_at > ? OR last_seen_at > ?)
                 """,
                 (user_id, encoded, encoded, encoded),
@@ -733,7 +733,7 @@ class SqliteIdentityStorage:
                 """
                 UPDATE sessions SET revoked_at = ?
                 WHERE user_id = ? AND revoked_at IS NULL
-                    AND created_at <= ? AND expires_at >= ?
+                    AND created_at <= ? AND expires_at > ?
                 """,
                 (encoded, user_id, encoded, encoded),
             )
