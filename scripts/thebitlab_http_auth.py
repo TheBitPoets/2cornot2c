@@ -15,8 +15,9 @@ from scripts.thebitlab_auth_services import (
     InvalidCredentialError,
     IssuedSession,
     SessionService,
+    session_token_digest,
 )
-from scripts.thebitlab_identity import AccountDisabledError
+from scripts.thebitlab_identity import AccountDisabledError, UserAccount, UserSession
 
 _COOKIE_NAME_RE = re.compile(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")
 _COOKIE_VALUE_RE = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -86,6 +87,7 @@ class SessionCookiePolicy:
     same_site: str = "Lax"
     allow_insecure_loopback: bool = False
     max_cookie_header_bytes: int = 4096
+    max_session_age_seconds: int = 86400
 
     def __post_init__(self) -> None:
         if type(self.name) is not str or not _COOKIE_NAME_RE.fullmatch(self.name):
@@ -105,6 +107,11 @@ class SessionCookiePolicy:
             or not 256 <= self.max_cookie_header_bytes <= 65536
         ):
             raise ValueError("Limite header Cookie non valido.")
+        if (
+            type(self.max_session_age_seconds) is not int
+            or not 60 <= self.max_session_age_seconds <= 2678400
+        ):
+            raise ValueError("Durata massima sessione HTTP non valida.")
 
     @classmethod
     def loopback_development(cls) -> "SessionCookiePolicy":
@@ -225,7 +232,13 @@ class HttpSessionAuthBoundary:
                 auth_failed = True
             except Exception:
                 unavailable = True
-            if not auth_failed and not unavailable and authenticated is not None:
+            if (
+                not auth_failed
+                and not unavailable
+                and not self._authenticated_is_valid(authenticated, bearer)
+            ):
+                unavailable = True
+            if not auth_failed and not unavailable:
                 csrf_token = self._csrf_token(bearer)
                 if method in _UNSAFE_METHODS:
                     self._validate_csrf(bearer, supplied_csrf)
@@ -279,6 +292,8 @@ class HttpSessionAuthBoundary:
                 unavailable = True
             if auth_failed:
                 result = LogoutHttpResult(False, self._clear_cookie())
+            elif not unavailable and not self._authenticated_is_valid(authenticated, bearer):
+                unavailable = True
             elif not unavailable:
                 self._validate_csrf(bearer, supplied_csrf)
                 try:
@@ -286,7 +301,10 @@ class HttpSessionAuthBoundary:
                 except Exception:
                     unavailable = True
                 else:
-                    result = LogoutHttpResult(revoked, self._clear_cookie())
+                    if type(revoked) is not bool:
+                        unavailable = True
+                    else:
+                        result = LogoutHttpResult(revoked, self._clear_cookie())
         finally:
             bearer = None
             authenticated = None
@@ -303,17 +321,26 @@ class HttpSessionAuthBoundary:
         unavailable = False
         result = None
         try:
-            bearer = issued.bearer_token
-            if not self._cookie_bearer_is_valid(bearer):
+            if type(issued) is not IssuedSession:
                 unavailable = True
             else:
+                bearer = issued.bearer_token
+            if not unavailable and not self._issued_is_valid(issued, bearer):
+                unavailable = True
+            if not unavailable:
                 try:
                     authenticated = self.sessions.authenticate(bearer)
                 except (InvalidCredentialError, AccountDisabledError):
                     failed = True
                 except Exception:
                     unavailable = True
-            if not failed and not unavailable and authenticated is not None:
+            if (
+                not failed
+                and not unavailable
+                and not self._authenticated_matches_issued(authenticated, issued, bearer)
+            ):
+                unavailable = True
+            if not failed and not unavailable:
                 csrf_token = self._csrf_token(bearer)
                 set_cookie = self._session_cookie(bearer, issued)
                 result = EstablishedHttpSession(
@@ -350,6 +377,49 @@ class HttpSessionAuthBoundary:
             type(bearer) is str
             and 1 <= len(bearer) <= _MAX_SESSION_TOKEN_CHARS
             and _COOKIE_VALUE_RE.fullmatch(bearer) is not None
+        )
+
+    def _issued_is_valid(self, issued: object, bearer: object) -> bool:
+        if (
+            type(issued) is not IssuedSession
+            or type(issued.session) is not UserSession
+            or not self._cookie_bearer_is_valid(bearer)
+        ):
+            return False
+        session = issued.session
+        duration = int((session.expires_at - session.created_at).total_seconds())
+        return (
+            session.revoked_at is None
+            and 1 <= duration <= self.cookie_policy.max_session_age_seconds
+            and hmac.compare_digest(session.token_digest, session_token_digest(bearer))
+        )
+
+    @staticmethod
+    def _authenticated_is_valid(authenticated: object, bearer: str) -> bool:
+        if (
+            type(authenticated) is not AuthenticatedSession
+            or type(authenticated.session) is not UserSession
+            or type(authenticated.user) is not UserAccount
+            or authenticated.session.user_id != authenticated.user.user_id
+        ):
+            return False
+        return hmac.compare_digest(
+            authenticated.session.token_digest, session_token_digest(bearer)
+        )
+
+    def _authenticated_matches_issued(
+        self, authenticated: object, issued: IssuedSession, bearer: str
+    ) -> bool:
+        if not self._authenticated_is_valid(authenticated, bearer):
+            return False
+        current = authenticated.session
+        original = issued.session
+        return (
+            current.session_id == original.session_id
+            and current.user_id == original.user_id
+            and hmac.compare_digest(current.token_digest, original.token_digest)
+            and current.created_at == original.created_at
+            and current.expires_at == original.expires_at
         )
 
     @staticmethod
@@ -398,6 +468,8 @@ class HttpSessionAuthBoundary:
                         parse_failed = True
                         break
                     if name == self.cookie_policy.name:
+                        if len(value) >= 2 and value.startswith('"') and value.endswith('"'):
+                            value = value[1:-1]
                         matches.append(value)
                     elif not _OTHER_COOKIE_VALUE_RE.fullmatch(value):
                         parse_failed = True

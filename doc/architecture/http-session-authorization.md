@@ -14,7 +14,7 @@ La policy di produzione predefinita emette:
 __Host-thebitlab_session=<bearer>; Path=/; HttpOnly; Secure; SameSite=Lax; ...
 ```
 
-Il cookie non usa `Domain`. Il prefisso `__Host-`, `Secure` e `Path=/` impediscono shadowing da sottodomini o path. `Max-Age` ed `Expires` seguono la scadenza assoluta della sessione.
+Il cookie non usa `Domain`. Il prefisso `__Host-`, `Secure` e `Path=/` impediscono shadowing da sottodomini o path. `Max-Age` ed `Expires` seguono la scadenza assoluta della sessione, entro il limite HTTP configurato (24 ore per default, massimo 31 giorni). Risultati service malformati, sessioni non correlate o durate oltre policy falliscono con 503.
 
 Per HTTP locale esiste soltanto `SessionCookiePolicy.loopback_development()`, con nome senza prefisso `__Host-` e opt-in esplicito. L'adapter di rete deve consentirla esclusivamente quando il bind host è loopback. LAN e produzione richiedono HTTPS.
 
@@ -23,7 +23,8 @@ Il parser:
 - impone un limite in byte all'header;
 - rifiuta controlli, sintassi invalida, token vuoti o sovradimensionati;
 - richiede esattamente un cookie sessione;
-- rifiuta cookie sessione duplicati invece di scegliere first/last wins.
+- rifiuta cookie sessione duplicati invece di scegliere first/last wins;
+- accetta la forma RFC quoted sia per il bearer base64url sia per cookie estranei.
 
 L'adapter concreto deve concatenare in modo deterministico eventuali header `Cookie` multipli con `; ` prima del boundary, così i duplicati rimangono rilevabili.
 

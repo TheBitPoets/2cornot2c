@@ -7,7 +7,12 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from scripts.thebitlab_auth_services import SessionService
+from scripts.thebitlab_auth_services import (
+    AuthenticatedSession,
+    IssuedSession,
+    SessionService,
+    session_token_digest,
+)
 from scripts.thebitlab_http_auth import (
     HttpAuthRequest,
     HttpAuthenticationRequiredError,
@@ -19,7 +24,7 @@ from scripts.thebitlab_http_auth import (
     HttpSessionAuthBoundary,
     SessionCookiePolicy,
 )
-from scripts.thebitlab_identity import UserAccount
+from scripts.thebitlab_identity import UserAccount, UserSession
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 
 NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
@@ -253,6 +258,79 @@ def test_storage_and_unexpected_failures_are_sanitized_at_http_boundary() -> Non
         assert error.__context__ is None
 
 
+def test_malformed_session_service_results_fail_closed(storage, clock) -> None:
+    storage.create_user(account())
+    real = make_boundary(storage, clock)
+    established = real.establish_session("user-01")
+
+    real.sessions.authenticate = lambda _bearer: object()
+    with pytest.raises(HttpAuthUnavailableError):
+        real.authenticate(request("GET", established))
+
+    real.sessions.authenticate = lambda _bearer: None
+    with pytest.raises(HttpAuthUnavailableError):
+        real.authenticate(request("GET", established))
+
+    valid_session = storage.read_session("session-01")
+    assert valid_session is not None
+    real.sessions.authenticate = lambda _bearer: AuthenticatedSession(
+        valid_session, account()
+    )
+    real.sessions.revoke = lambda _bearer: "not-a-bool"
+    with pytest.raises(HttpAuthUnavailableError):
+        real.logout(
+            request("POST", established, established.context.csrf_token)
+        )
+
+
+def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock) -> None:
+    bearer = "A" * 40
+    digest = session_token_digest(bearer)
+    user = account()
+    long_session = UserSession(
+        "long-session",
+        user.user_id,
+        digest,
+        NOW,
+        NOW + timedelta(days=36500),
+        NOW,
+    )
+
+    class LongSessionService:
+        def issue(self, _user_id):
+            return IssuedSession(long_session, bearer)
+
+        def authenticate(self, _bearer):
+            return AuthenticatedSession(long_session, user)
+
+        def revoke(self, _bearer):
+            return True
+
+    boundary = HttpSessionAuthBoundary(LongSessionService(), csrf_secret=CSRF_SECRET)
+    with pytest.raises(HttpAuthUnavailableError):
+        boundary.establish_session("user-01")
+
+    normal_session = replace(
+        long_session,
+        session_id="normal-session",
+        expires_at=NOW + timedelta(hours=8),
+    )
+    other_session = replace(normal_session, session_id="other-session")
+
+    class MismatchedSessionService(LongSessionService):
+        def issue(self, _user_id):
+            return IssuedSession(normal_session, bearer)
+
+        def authenticate(self, _bearer):
+            return AuthenticatedSession(other_session, user)
+
+    mismatch = HttpSessionAuthBoundary(
+        MismatchedSessionService(), csrf_secret=CSRF_SECRET
+    )
+    with pytest.raises(HttpAuthUnavailableError):
+        mismatch.establish_session("user-01")
+
+
 def test_safe_authentication_refreshes_context_and_role_authorization(storage, clock) -> None:
     storage.create_user(account(role="teacher"))
     boundary = make_boundary(storage, clock)
@@ -391,6 +469,10 @@ def test_malformed_duplicate_missing_and_oversized_cookies_fail_closed(storage, 
 
     assert boundary.authenticate(
         HttpAuthRequest("GET", valid + "; padded=a=b==; analytics=\"abc\"")
+    ).user.user_id == "user-01"
+    quoted_session = valid.split("=", 1)[0] + '=\"' + "A" * 40 + '\"'
+    assert boundary.authenticate(
+        HttpAuthRequest("GET", quoted_session)
     ).user.user_id == "user-01"
 
     for header in bad_headers:
