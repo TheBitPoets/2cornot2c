@@ -43,14 +43,26 @@ Per verificare esplicitamente il nuovo renderer:
 py -3.12 scripts/student_lab_cli.py --student-id rossi-mario --renderer utui
 ```
 
+L'integrazione e tracciata da:
+
+- [issue #488](https://github.com/TheBitPoets/2cornot2c/issues/488),
+  [PR #489](https://github.com/TheBitPoets/2cornot2c/pull/489) e
+  [merge commit `221d937`](https://github.com/TheBitPoets/2cornot2c/commit/221d93780b30276160820a4b13fc4fc38a744d96)
+  per l'adapter;
+- [issue #492](https://github.com/TheBitPoets/2cornot2c/issues/492),
+  [PR #493](https://github.com/TheBitPoets/2cornot2c/pull/493) e
+  [merge commit `852e3a0`](https://github.com/TheBitPoets/2cornot2c/commit/852e3a0834f75f88da68f6ee6688878ff1015796)
+  per il collegamento alla CLI;
+- [issue #494](https://github.com/TheBitPoets/2cornot2c/issues/494),
+  [PR #495](https://github.com/TheBitPoets/2cornot2c/pull/495) e
+  [merge commit `a626417`](https://github.com/TheBitPoets/2cornot2c/commit/a626417ec822eaf7cd1f4b2d6ba4058488968534)
+  per l'evidenza consumer multipiattaforma;
+- workflow [`uTUI consumer evidence`](https://github.com/TheBitPoets/2cornot2c/blob/main/.github/workflows/utui-consumer.yml)
+  ed [esecuzione verde su `main`](https://github.com/TheBitPoets/2cornot2c/actions/runs/30176994325).
+
 La GitHub Action `uTUI consumer evidence` installa obbligatoriamente l'extra ed esegue adapter,
 layout e smoke CLI su Windows e Linux con Python 3.11, 3.12 e 3.13. Per riprodurre localmente
 il nucleo della stessa verifica:
-
-L'integrazione e documentata dalle PR
-[#489](https://github.com/TheBitPoets/2cornot2c/pull/489) per l'adapter,
-[#493](https://github.com/TheBitPoets/2cornot2c/pull/493) per il collegamento alla CLI e
-[#495](https://github.com/TheBitPoets/2cornot2c/pull/495) per l'evidenza consumer multipiattaforma.
 
 ```powershell
 py -3.12 -m pip install -r requirements-dev.txt -r requirements-utui.txt
