@@ -28,7 +28,12 @@ from scripts.thebitlab_http_auth import (
     HttpAuthorizationDeniedError,
     HttpSessionAuthBoundary,
 )
-from scripts.thebitlab_identity import TuiPairing, UserAccount, UserSession
+from scripts.thebitlab_identity import (
+    AccountDisabledError,
+    TuiPairing,
+    UserAccount,
+    UserSession,
+)
 
 class TuiPairingBadRequestError(HttpAuthError):
     status_code = 400
@@ -217,7 +222,7 @@ class TuiBrowserPairingBoundary:
             result = None
             try:
                 result = self.pairings.authorize(code, context.user.user_id)
-            except InvalidCredentialError:
+            except (InvalidCredentialError, AccountDisabledError):
                 invalid = True
             except PairingExpiredError:
                 expired = True
@@ -255,7 +260,7 @@ class TuiBrowserPairingBoundary:
             self._require_shared_registry()
             expected_pairing_id = _identifier(pairing_id, "pairing_id")
             issued = self.pairings.consume(expected_pairing_id, code)
-        except (InvalidCredentialError, ValueError):
+        except (InvalidCredentialError, AccountDisabledError, ValueError):
             invalid = True
         except PairingExpiredError:
             expired = True
@@ -318,7 +323,7 @@ class TuiBrowserPairingBoundary:
             authorization_header = None
             try:
                 authenticated = self.tui_sessions.authenticate(bearer)
-            except InvalidCredentialError:
+            except (InvalidCredentialError, AccountDisabledError):
                 invalid = True
             except Exception:
                 unavailable = True

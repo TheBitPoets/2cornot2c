@@ -22,6 +22,7 @@ from scripts.thebitlab_http_auth import (
     SessionCookiePolicy,
 )
 from scripts.thebitlab_identity import (
+    AccountDisabledError,
     TuiPairing,
     UserAccount,
     UserSession,
@@ -382,6 +383,23 @@ def test_malformed_auth_adapter_cannot_bypass_tui_audience(
     with pytest.raises(TuiPairingUnavailableError):
         boundary.authenticate_bearer("Bearer " + ghost_bearer)
     assert storage.read_session("ghost") is None
+
+
+def test_disabled_account_error_invalidates_tui_bearer(
+    setup, monkeypatch
+) -> None:
+    _storage, _clock, boundary, _http = setup
+    monkeypatch.setattr(
+        boundary.tui_sessions,
+        "authenticate",
+        lambda _bearer: (_ for _ in ()).throw(
+            AccountDisabledError("raw disabled account detail")
+        ),
+    )
+
+    with pytest.raises(HttpAuthenticationRequiredError) as captured:
+        boundary.authenticate_bearer("Bearer " + "T" * 40)
+    assert "disabled" not in str(captured.value).lower()
 
 
 def test_role_change_invalidates_issued_tui_bearer(setup) -> None:
