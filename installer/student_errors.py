@@ -42,7 +42,10 @@ ERRORS = {
         "Docker e le VM ne hanno bisogno. Non hai rotto nulla.",
         (
             "Apri Gestione attività, poi Prestazioni e infine CPU.",
-            "Non cambiare il BIOS da solo: chiedi a un adulto o al docente.",
+            "Con Intel cerca Intel Virtualization Technology oppure Intel VT-x.",
+            "Con AMD cerca SVM Mode, AMD-V oppure Secure Virtual Machine.",
+            "Fatti aiutare da un adulto e attiva soltanto quella voce.",
+            "Non modificare Secure Boot, TPM o altre impostazioni.",
         ),
     ),
     "disk": StudentError(

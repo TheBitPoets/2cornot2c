@@ -51,6 +51,16 @@ def test_docker_errors_are_specific() -> None:
     assert for_step("docker").code == "E18"
 
 
+def test_virtualization_guidance_is_specific_and_conservative() -> None:
+    guidance = "\n".join(ERRORS["virtualization"].lines())
+
+    assert "Intel VT-x" in guidance
+    assert "SVM Mode" in guidance
+    assert "Secure Boot" in guidance
+    assert "TPM" in guidance
+    assert "adulto" in guidance
+
+
 def test_tui_paints_error_red_and_explanation_yellow_after_layout() -> None:
     assert "\x1b[31mERRORE E03" in _paint_guidance(
         "│ ERRORE E03 - Virtualizzazione disabilitata │"
@@ -73,6 +83,14 @@ def test_windows_scripts_render_error_and_explanation_colors() -> None:
         assert "ForegroundColor Red" in source
         assert "ForegroundColor Yellow" in source
         assert "COSA SIGNIFICA" in source
+
+    bootstrap = (
+        root / "scripts" / "bootstrap-classroom-windows.ps1"
+    ).read_text(encoding="utf-8")
+    assert "$Processor.Manufacturer" in bootstrap
+    assert "Intel Virtualization Technology" in bootstrap
+    assert "SVM Mode, AMD-V" in bootstrap
+    assert "Non modificare Secure Boot, TPM" in bootstrap
 
 
 def test_student_facing_messages_use_italian_accents() -> None:

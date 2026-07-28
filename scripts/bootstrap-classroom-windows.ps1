@@ -125,16 +125,32 @@ function Test-HostResources {
     }
 
     try {
-        $Virtualization = Get-CimInstance Win32_Processor |
-            Select-Object -First 1 -ExpandProperty VirtualizationFirmwareEnabled
+        $Processor = Get-CimInstance Win32_Processor | Select-Object -First 1
+        $Virtualization = $Processor.VirtualizationFirmwareEnabled
         if ($Virtualization -eq $false) {
+            $VirtualizationSetting = switch -Regex ($Processor.Manufacturer) {
+                "Intel" {
+                    "Intel Virtualization Technology oppure Intel VT-x"
+                    break
+                }
+                "AMD" {
+                    "SVM Mode, AMD-V oppure Secure Virtual Machine"
+                    break
+                }
+                default {
+                    "Intel Virtualization Technology, Intel VT-x, SVM Mode oppure AMD-V"
+                }
+            }
+            $ComputerModel = "$($Computer.Manufacturer) $($Computer.Model)".Trim()
             Stop-WithMessage "E03" "La virtualizzazione del computer è disabilitata" `
                 "Docker e le macchine virtuali hanno bisogno di questa funzione. Il computer probabilmente la possiede, ma è spenta. Non hai rotto nulla." `
                 @(
                     "Premi Ctrl+Maiusc+Esc, apri Prestazioni e poi CPU."
                     "Controlla se accanto a Virtualizzazione compare Disabilitata."
-                    "Non cambiare il BIOS da solo: chiedi a un adulto o al docente e comunica E03 e il modello del computer."
-                )
+                    "Nel BIOS/UEFI cerca soltanto: $VirtualizationSetting."
+                    "Fatti aiutare da un adulto. Attiva soltanto questa voce, salva e riavvia Windows."
+                    "Non modificare Secure Boot, TPM o altre impostazioni. Se non trovi la voce, fermati e comunica E03 al docente."
+                ) "CPU: $($Processor.Name); computer: $ComputerModel"
         }
     } catch {
         Write-Host "AVVISO W04 - Virtualizzazione non verificabile automaticamente." `

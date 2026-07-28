@@ -450,6 +450,9 @@ istruzioni semplici in giallo. Ogni messaggio spiega cosa è successo, cosa fare
 e quale codice comunicare al docente, per esempio `E03` quando la
 virtualizzazione è disabilitata. I dettagli tecnici restano separati e non è
 mai richiesto a uno studente di modificare da solo BIOS, antivirus o file Git.
+Su Windows `E03` rileva automaticamente una CPU Intel o AMD e indica soltanto i
+nomi pertinenti della voce di virtualizzazione. Chiede comunque l'aiuto di un
+adulto e vieta esplicitamente di modificare Secure Boot, TPM o altre opzioni.
 
 #### Aggiornare su Windows
 
