@@ -13,9 +13,9 @@ Solo un account persistito, attivo e con ruolo `admin` può creare, rinominare o
 - revisione e ruolo dell'admin;
 - classe attiva e sua revisione monotona CAS (anche ogni aggiornamento classe richiede la revisione attesa);
 - chiave numerica `(github, organization_subject, team_subject)`;
-- classe e generazione `created_at` del mapping.
+- classe, generazione immutabile `created_at` e revisione monotona `updated_at` del mapping.
 
-Le generazioni sono conservate in `external_group_mapping_generations` da ogni percorso di scrittura, inclusa la compatibilità storage preesistente; anche rename e delete legacy richiedono la generazione attesa. Delete/relink con clock costante o arretrato produce una generazione monotona e impedisce ABA. Un team non viene mai riassegnato implicitamente a un'altra classe.
+Le generazioni sono conservate in `external_group_mapping_generations` da ogni percorso di scrittura, inclusa la compatibilità storage preesistente, e devono avanzare oltre il massimo storico. Rename e delete richiedono generazione e revisione attese. Delete/relink con clock costante o arretrato produce una generazione monotona e impedisce ABA; rename concorrenti non possono sovrascriversi. Un team non viene mai riassegnato implicitamente a un'altra classe.
 
 ## Onboarding pending
 
@@ -27,7 +27,7 @@ La riconciliazione è consentita soltanto quando:
 4. esiste esattamente un team mappato nello snapshot, ricontrollato atomicamente su tutte le chiavi al commit;
 5. la classe mappata è ancora attiva.
 
-La transazione finale verifica nuovamente revisione utente, generazione dell'identità GitHub, generazione del mapping e revisione classe. Solo allora inserisce la membership `student` e promuove il ruolo interno a `student`. Zero team o più team mappati lasciano l'utente `pending` senza membership parziale. Errori o snapshot incompleti non vengono interpretati come assenza di membership.
+La transazione finale verifica nuovamente revisione utente, generazione dell'identità GitHub, generazione e revisione del mapping e revisione classe. Solo allora inserisce la membership `student` e promuove il ruolo interno a `student`. Zero team o più team mappati lasciano l'utente `pending` senza membership parziale. Errori o snapshot incompleti non vengono interpretati come assenza di membership.
 
 ## Limiti
 

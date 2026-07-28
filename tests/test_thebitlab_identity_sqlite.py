@@ -206,16 +206,35 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
+def test_migration_v5_backfills_mapping_revision(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_class(class_group())
+    mapping = ExternalGroupMapping(
+        "github", "1001", "2002", "class-01", NOW, "3A"
+    )
+    storage.save_external_group_mapping(mapping, expected_updated_at=None)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            "UPDATE external_group_mappings SET updated_at = NULL"
+        )
+        connection.execute("DELETE FROM schema_migrations WHERE version = 5")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_external_group_mapping(
+        "github", "1001", "2002"
+    ) == mapping
+
+
 def test_migration_v4_backfills_external_group_mapping_generations(database_path) -> None:
     storage = SqliteIdentityStorage(database_path)
     storage.create_class(class_group())
     mapping = ExternalGroupMapping(
         "github", "1001", "2002", "class-01", NOW, "3A"
     )
-    storage.save_external_group_mapping(mapping)
+    storage.save_external_group_mapping(mapping, expected_updated_at=None)
     with sqlite3.connect(database_path) as connection:
         connection.execute("DROP TABLE external_group_mapping_generations")
-        connection.execute("DELETE FROM schema_migrations WHERE version = 4")
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 4")
 
     upgraded = SqliteIdentityStorage(database_path)
     assert upgraded.read_latest_external_group_mapping_generation(
@@ -354,18 +373,31 @@ def test_classes_memberships_and_group_mapping_crud(storage) -> None:
     assert storage.list_classes(active_only=True) == [first_class]
 
     mapping = ExternalGroupMapping("github", "org-7", "team-42", "class-01", NOW, "3A")
-    storage.save_external_group_mapping(mapping)
-    renamed = replace(mapping, display_name="3A Informatica")
-    storage.save_external_group_mapping(renamed)
+    storage.save_external_group_mapping(mapping, expected_updated_at=None)
+    renamed = replace(mapping, display_name="3A Informatica", updated_at=LATER)
+    storage.save_external_group_mapping(
+        renamed, expected_updated_at=mapping.updated_at
+    )
     expected_mapping = renamed
     assert storage.read_external_group_mapping("GITHUB", "org-7", "team-42") == expected_mapping
     assert storage.list_external_group_mappings("class-01") == [expected_mapping]
 
     with pytest.raises(IdentityStorageConflictError, match="classe diversa"):
-        storage.save_external_group_mapping(replace(mapping, class_id="class-02"))
+        storage.save_external_group_mapping(
+            replace(
+                renamed,
+                class_id="class-02",
+                updated_at=LATER + timedelta(microseconds=1),
+            ),
+            expected_updated_at=renamed.updated_at,
+        )
     assert storage.read_external_group_mapping("github", "org-7", "team-42") == expected_mapping
     assert storage.delete_external_group_mapping(
-        "github", "org-7", "team-42", expected_created_at=mapping.created_at
+        "github",
+        "org-7",
+        "team-42",
+        expected_created_at=renamed.created_at,
+        expected_updated_at=renamed.updated_at,
     ) is True
     assert storage.delete_membership("user-01", "class-01", "STUDENT") is True
 

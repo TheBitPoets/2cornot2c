@@ -227,6 +227,7 @@ class ExternalGroupMapping:
     class_id: str
     created_at: datetime
     display_name: str | None = None
+    updated_at: datetime | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "provider", _required_text(self.provider, "provider", lowercase=True))
@@ -237,8 +238,15 @@ class ExternalGroupMapping:
         )
         object.__setattr__(self, "group_subject", _required_text(self.group_subject, "group_subject"))
         object.__setattr__(self, "class_id", _required_text(self.class_id, "class_id"))
-        object.__setattr__(self, "created_at", _aware_datetime(self.created_at, "created_at"))
+        created_at = _aware_datetime(self.created_at, "created_at")
+        object.__setattr__(self, "created_at", created_at)
         object.__setattr__(self, "display_name", _optional_text(self.display_name, "display_name"))
+        updated_at = created_at if self.updated_at is None else _aware_datetime(
+            self.updated_at, "updated_at"
+        )
+        if updated_at < created_at:
+            raise InvalidIdentityDataError("updated_at mapping non puo precedere created_at.")
+        object.__setattr__(self, "updated_at", updated_at)
 
     @property
     def provider_key(self) -> tuple[str, str, str]:

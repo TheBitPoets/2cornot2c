@@ -26,7 +26,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 _T = TypeVar("_T")
 
 
@@ -190,6 +190,11 @@ _MIGRATION_3 = (
     """,
 )
 
+_MIGRATION_5 = (
+    "ALTER TABLE external_group_mappings ADD COLUMN updated_at TEXT",
+    "UPDATE external_group_mappings SET updated_at = created_at",
+)
+
 _MIGRATION_4 = (
     """
     CREATE TABLE external_group_mapping_generations (
@@ -304,11 +309,21 @@ class SqliteIdentityStorage:
                 (2, _MIGRATION_2),
                 (3, _MIGRATION_3),
                 (4, _MIGRATION_4),
+                (5, _MIGRATION_5),
             )
             for version, statements in migrations:
                 if version in versions:
                     continue
                 for statement in statements:
+                    if version == 5 and statement.startswith("ALTER TABLE"):
+                        columns = {
+                            row["name"]
+                            for row in connection.execute(
+                                "PRAGMA table_info(external_group_mappings)"
+                            )
+                        }
+                        if "updated_at" in columns:
+                            continue
                     connection.execute(statement)
                 connection.execute(
                     "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
@@ -442,6 +457,7 @@ class SqliteIdentityStorage:
             class_id=row["class_id"],
             created_at=_decode_datetime(row["created_at"]),
             display_name=row["display_name"],
+            updated_at=_decode_datetime(row["updated_at"]),
         )
 
     @classmethod
@@ -1128,47 +1144,82 @@ class SqliteIdentityStorage:
             )
             return cursor.rowcount == 1
 
-    def save_external_group_mapping(self, mapping: ExternalGroupMapping) -> None:
+    def save_external_group_mapping(
+        self,
+        mapping: ExternalGroupMapping,
+        *,
+        expected_updated_at: datetime | None,
+    ) -> None:
         created_at = _encode_datetime(mapping.created_at, "created_at")
+        updated_at = _encode_datetime(mapping.updated_at, "updated_at")
+        expected_revision = (
+            None
+            if expected_updated_at is None
+            else _encode_datetime(expected_updated_at, "expected_updated_at")
+        )
+        if expected_revision is None:
+            if updated_at != created_at:
+                raise IdentityStorageConflictError(
+                    "Un nuovo mapping deve iniziare dalla revisione di creazione."
+                )
+        elif updated_at <= expected_revision:
+            raise IdentityStorageConflictError(
+                "La revisione mapping deve avanzare monotonicamente."
+            )
         with self._transaction("save_external_group_mapping") as connection:
             existing = connection.execute(
                 """
-                SELECT class_id, created_at FROM external_group_mappings
+                SELECT class_id, created_at, updated_at FROM external_group_mappings
                 WHERE provider = ? AND organization_subject = ? AND group_subject = ?
                 """,
                 mapping.provider_key,
             ).fetchone()
-            if existing is None:
+            if expected_revision is None:
+                if existing is not None:
+                    raise IdentityStorageMappingGenerationConflictError(
+                        "Mapping creato da un'altra operazione."
+                    )
                 self._reserve_external_group_mapping_generation(
                     connection, mapping, created_at
                 )
                 cursor = connection.execute(
                     """
-                    INSERT INTO external_group_mappings VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO external_group_mappings
+                        (provider, organization_subject, group_subject, class_id,
+                         created_at, display_name, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         *mapping.provider_key,
                         mapping.class_id,
                         created_at,
                         mapping.display_name,
+                        updated_at,
                     ),
                 )
             else:
-                if existing["created_at"] != created_at:
+                if (
+                    existing is None
+                    or existing["created_at"] != created_at
+                    or existing["updated_at"] != expected_revision
+                ):
                     raise IdentityStorageMappingGenerationConflictError(
-                        "Mapping rimosso o ricreato da un'altra operazione."
+                        "Mapping modificato, rimosso o ricreato da un'altra operazione."
                     )
                 cursor = connection.execute(
                     """
-                    UPDATE external_group_mappings SET display_name = ?
+                    UPDATE external_group_mappings
+                    SET display_name = ?, updated_at = ?
                     WHERE provider = ? AND organization_subject = ? AND group_subject = ?
-                        AND class_id = ? AND created_at = ?
+                        AND class_id = ? AND created_at = ? AND updated_at = ?
                     """,
                     (
                         mapping.display_name,
+                        updated_at,
                         *mapping.provider_key,
                         mapping.class_id,
                         created_at,
+                        expected_revision,
                     ),
                 )
             if cursor.rowcount != 1:
@@ -1215,22 +1266,27 @@ class SqliteIdentityStorage:
         group_subject: str,
         *,
         expected_created_at: datetime,
+        expected_updated_at: datetime,
     ) -> bool:
         expected_generation = _encode_datetime(
             expected_created_at, "expected_created_at"
+        )
+        expected_revision = _encode_datetime(
+            expected_updated_at, "expected_updated_at"
         )
         with self._transaction("delete_external_group_mapping") as connection:
             cursor = connection.execute(
                 """
                 DELETE FROM external_group_mappings
                 WHERE provider = ? AND organization_subject = ? AND group_subject = ?
-                    AND created_at = ?
+                    AND created_at = ? AND updated_at = ?
                 """,
                 (
                     provider.lower(),
                     organization_subject,
                     group_subject,
                     expected_generation,
+                    expected_revision,
                 ),
             )
             if cursor.rowcount == 1:
@@ -1272,6 +1328,19 @@ class SqliteIdentityStorage:
         mapping: ExternalGroupMapping,
         created_at: str,
     ) -> None:
+        latest = connection.execute(
+            """
+            SELECT MAX(created_at) AS created_at
+            FROM external_group_mapping_generations
+            WHERE provider = ? AND organization_subject = ? AND group_subject = ?
+            """,
+            mapping.provider_key,
+        ).fetchone()
+        if latest is not None and latest["created_at"] is not None:
+            if created_at <= latest["created_at"]:
+                raise IdentityStorageMappingGenerationConflictError(
+                    "Generazione mapping non monotona."
+                )
         try:
             connection.execute(
                 """
@@ -1294,8 +1363,10 @@ class SqliteIdentityStorage:
         expected_admin_updated_at: datetime,
         expected_class_updated_at: datetime,
         expected_mapping_created_at: datetime | None,
+        expected_mapping_updated_at: datetime | None,
     ) -> None:
         created_at = _encode_datetime(mapping.created_at, "created_at")
+        updated_at = _encode_datetime(mapping.updated_at, "updated_at")
         expected_mapping_generation = (
             None
             if expected_mapping_created_at is None
@@ -1303,6 +1374,18 @@ class SqliteIdentityStorage:
                 expected_mapping_created_at, "expected_mapping_created_at"
             )
         )
+        expected_mapping_revision = (
+            None
+            if expected_mapping_updated_at is None
+            else _encode_datetime(
+                expected_mapping_updated_at, "expected_mapping_updated_at"
+            )
+        )
+        if expected_mapping_generation is None:
+            if expected_mapping_revision is not None or updated_at != created_at:
+                raise IdentityStorageConflictError("Intent create mapping non valido.")
+        elif expected_mapping_revision is None or updated_at <= expected_mapping_revision:
+            raise IdentityStorageConflictError("Revisione mapping non monotona.")
         admin_revision = _encode_datetime(
             expected_admin_updated_at, "expected_admin_updated_at"
         )
@@ -1314,7 +1397,7 @@ class SqliteIdentityStorage:
         ) as connection:
             existing = connection.execute(
                 """
-                SELECT class_id, created_at FROM external_group_mappings
+                SELECT class_id, created_at, updated_at FROM external_group_mappings
                 WHERE provider = ? AND organization_subject = ? AND group_subject = ?
                 """,
                 mapping.provider_key,
@@ -1331,8 +1414,8 @@ class SqliteIdentityStorage:
                     """
                     INSERT INTO external_group_mappings
                         (provider, organization_subject, group_subject, class_id,
-                         created_at, display_name)
-                    SELECT ?, ?, ?, ?, ?, ?
+                         created_at, display_name, updated_at)
+                    SELECT ?, ?, ?, ?, ?, ?, ?
                     WHERE EXISTS (
                         SELECT 1 FROM users
                         WHERE user_id = ? AND active = 1 AND role = 'admin'
@@ -1347,6 +1430,7 @@ class SqliteIdentityStorage:
                         mapping.class_id,
                         created_at,
                         mapping.display_name,
+                        updated_at,
                         admin_user_id,
                         admin_revision,
                         mapping.class_id,
@@ -1357,15 +1441,17 @@ class SqliteIdentityStorage:
                 if (
                     existing is None
                     or existing["created_at"] != expected_mapping_generation
+                    or existing["updated_at"] != expected_mapping_revision
                 ):
                     raise IdentityStorageMappingGenerationConflictError(
                         "Mapping rimosso o ricreato da un'altra operazione."
                     )
                 cursor = connection.execute(
                     """
-                    UPDATE external_group_mappings SET display_name = ?
+                    UPDATE external_group_mappings
+                    SET display_name = ?, updated_at = ?
                     WHERE provider = ? AND organization_subject = ? AND group_subject = ?
-                        AND class_id = ? AND created_at = ?
+                        AND class_id = ? AND created_at = ? AND updated_at = ?
                         AND EXISTS (
                             SELECT 1 FROM users
                             WHERE user_id = ? AND active = 1 AND role = 'admin'
@@ -1378,9 +1464,11 @@ class SqliteIdentityStorage:
                     """,
                     (
                         mapping.display_name,
+                        updated_at,
                         *mapping.provider_key,
                         mapping.class_id,
                         created_at,
+                        expected_mapping_revision,
                         admin_user_id,
                         admin_revision,
                         mapping.class_id,
@@ -1401,6 +1489,7 @@ class SqliteIdentityStorage:
         expected_class_updated_at: datetime,
     ) -> bool:
         created_at = _encode_datetime(mapping.created_at, "created_at")
+        mapping_revision = _encode_datetime(mapping.updated_at, "updated_at")
         admin_revision = _encode_datetime(
             expected_admin_updated_at, "expected_admin_updated_at"
         )
@@ -1414,7 +1503,7 @@ class SqliteIdentityStorage:
                 """
                 DELETE FROM external_group_mappings
                 WHERE provider = ? AND organization_subject = ? AND group_subject = ?
-                    AND class_id = ? AND created_at = ?
+                    AND class_id = ? AND created_at = ? AND updated_at = ?
                     AND EXISTS (
                         SELECT 1 FROM users
                         WHERE user_id = ? AND active = 1 AND role = 'admin'
@@ -1429,6 +1518,7 @@ class SqliteIdentityStorage:
                     *mapping.provider_key,
                     mapping.class_id,
                     created_at,
+                    mapping_revision,
                     admin_user_id,
                     admin_revision,
                     mapping.class_id,
@@ -1536,7 +1626,7 @@ class SqliteIdentityStorage:
             mapped_rows = connection.execute(
                 """
                 SELECT mappings.organization_subject, mappings.group_subject,
-                       mappings.class_id, mappings.created_at
+                       mappings.class_id, mappings.created_at, mappings.updated_at
                 FROM external_group_mappings AS mappings
                 INNER JOIN onboarding_expected_groups AS expected
                     ON expected.organization_subject = mappings.organization_subject
@@ -1549,6 +1639,7 @@ class SqliteIdentityStorage:
                 expected_mapping.group_subject,
                 expected_mapping.class_id,
                 mapping_generation,
+                _encode_datetime(expected_mapping.updated_at, "expected_mapping_updated_at"),
             )
             if len(mapped_rows) != 1 or tuple(mapped_rows[0]) != expected_row:
                 raise IdentityStorageConflictError(
@@ -1568,6 +1659,7 @@ class SqliteIdentityStorage:
                         SELECT 1 FROM external_group_mappings
                         WHERE provider = ? AND organization_subject = ?
                             AND group_subject = ? AND class_id = ? AND created_at = ?
+                            AND updated_at = ?
                     )
                     AND EXISTS (
                         SELECT 1 FROM classes
@@ -1583,6 +1675,7 @@ class SqliteIdentityStorage:
                     *expected_mapping.provider_key,
                     expected_mapping.class_id,
                     mapping_generation,
+                    _encode_datetime(expected_mapping.updated_at, "expected_mapping_updated_at"),
                     membership.class_id,
                     class_revision,
                 ),

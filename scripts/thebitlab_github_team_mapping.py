@@ -193,6 +193,7 @@ class GitHubTeamMappingStorage(Protocol):
         expected_admin_updated_at: datetime,
         expected_class_updated_at: datetime,
         expected_mapping_created_at: datetime | None,
+        expected_mapping_updated_at: datetime | None,
     ) -> None: ...
     def delete_external_group_mapping_for_admin(
         self,
@@ -263,6 +264,7 @@ class GitHubTeamClassMappingService:
                 class_group.class_id,
                 existing.created_at,
                 team.display_name,
+                _next_generation(_utc(self.clock()), existing.updated_at),
             )
             try:
                 self.storage.save_external_group_mapping_for_admin(
@@ -271,6 +273,7 @@ class GitHubTeamClassMappingService:
                     expected_admin_updated_at=actor.updated_at,
                     expected_class_updated_at=class_group.updated_at,
                     expected_mapping_created_at=existing.created_at,
+                    expected_mapping_updated_at=existing.updated_at,
                 )
             except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
                 raise GitHubTeamMappingConflictError(
@@ -297,6 +300,7 @@ class GitHubTeamClassMappingService:
                     expected_admin_updated_at=actor.updated_at,
                     expected_class_updated_at=class_group.updated_at,
                     expected_mapping_created_at=None,
+                    expected_mapping_updated_at=None,
                 )
                 return mapping
             except IdentityStorageMappingGenerationConflictError as error:

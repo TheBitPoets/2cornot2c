@@ -130,18 +130,46 @@ def test_mapping_rejects_non_admin_inactive_class_and_reassignment(setup) -> Non
 def test_legacy_mapping_writes_also_reserve_aba_tombstone(setup) -> None:
     storage, service, _clock = setup
     legacy = ExternalGroupMapping("github", "1001", "2002", "class-01", NOW)
-    storage.save_external_group_mapping(legacy)
+    storage.save_external_group_mapping(legacy, expected_updated_at=None)
     storage.delete_external_group_mapping(
-        "github", "1001", "2002", expected_created_at=legacy.created_at
+        "github",
+        "1001",
+        "2002",
+        expected_created_at=legacy.created_at,
+        expected_updated_at=legacy.updated_at,
     )
     relinked = service.save_mapping("admin-01", "class-01", "1001", "2002")
     assert relinked.created_at == NOW + timedelta(microseconds=1)
     with pytest.raises(IdentityStorageConflictError):
-        storage.save_external_group_mapping(replace(legacy, display_name="stale"))
+        storage.save_external_group_mapping(
+            replace(legacy, display_name="stale", updated_at=NOW + timedelta(seconds=1)),
+            expected_updated_at=legacy.updated_at,
+        )
     with pytest.raises(IdentityStorageConflictError):
         storage.delete_external_group_mapping(
-            "github", "1001", "2002", expected_created_at=legacy.created_at
+            "github",
+            "1001",
+            "2002",
+            expected_created_at=legacy.created_at,
+            expected_updated_at=legacy.updated_at,
         )
+
+    storage.delete_external_group_mapping(
+        "github",
+        "1001",
+        "2002",
+        expected_created_at=relinked.created_at,
+        expected_updated_at=relinked.updated_at,
+    )
+    older_unused = ExternalGroupMapping(
+        "github",
+        "1001",
+        "2002",
+        "class-01",
+        NOW - timedelta(seconds=1),
+    )
+    with pytest.raises(IdentityStorageConflictError):
+        storage.save_external_group_mapping(older_unused, expected_updated_at=None)
 
 
 def test_concurrent_create_cannot_be_misread_as_mapping_rename(
@@ -160,6 +188,30 @@ def test_concurrent_create_cannot_be_misread_as_mapping_rename(
 
     monkeypatch.setattr(
         storage, "save_external_group_mapping_for_admin", create_other_then_save
+    )
+    with pytest.raises(GitHubTeamMappingConflictError):
+        service.save_mapping(
+            "admin-01", "class-01", "1001", "2002", display_name="stale"
+        )
+    persisted = storage.read_external_group_mapping("github", "1001", "2002")
+    assert persisted.display_name == "winner"
+
+
+def test_concurrent_rename_cannot_overwrite_winner(setup, monkeypatch) -> None:
+    storage, service, _clock = setup
+    service.save_mapping("admin-01", "class-01", "1001", "2002", display_name="base")
+    original = storage.save_external_group_mapping_for_admin
+    injected = False
+
+    def rename_other_then_save(mapping, **kwargs):
+        nonlocal injected
+        if not injected:
+            injected = True
+            original(replace(mapping, display_name="winner"), **kwargs)
+        return original(mapping, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "save_external_group_mapping_for_admin", rename_other_then_save
     )
     with pytest.raises(GitHubTeamMappingConflictError):
         service.save_mapping(

@@ -165,7 +165,12 @@ class ClassDirectoryStorage(Protocol):
 
     def delete_membership(self, user_id: str, class_id: str, role: str) -> bool: ...
 
-    def save_external_group_mapping(self, mapping: ExternalGroupMapping) -> None: ...
+    def save_external_group_mapping(
+        self,
+        mapping: ExternalGroupMapping,
+        *,
+        expected_updated_at: datetime | None,
+    ) -> None: ...
 
     def read_external_group_mapping(
         self,
@@ -183,6 +188,7 @@ class ClassDirectoryStorage(Protocol):
         group_subject: str,
         *,
         expected_created_at: datetime,
+        expected_updated_at: datetime,
     ) -> bool: ...
 
     def read_latest_external_group_mapping_generation(
@@ -200,6 +206,7 @@ class ClassDirectoryStorage(Protocol):
         expected_admin_updated_at: datetime,
         expected_class_updated_at: datetime,
         expected_mapping_created_at: datetime | None,
+        expected_mapping_updated_at: datetime | None,
     ) -> None: ...
 
     def delete_external_group_mapping_for_admin(
