@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client as http_client
 import json
+import socket
 import threading
 import time
 from dataclasses import replace
@@ -288,6 +289,8 @@ def test_unknown_path_is_not_claimed(graph) -> None:
 def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) -> None:
     _storage, http, boundary, routes = graph
     monkeypatch.setattr(course_board_server, "PAIRING_BODY_DEADLINE_SECONDS", 0.1)
+    monkeypatch.setattr(course_board_server, "STUDENT_API_BODY_DEADLINE_SECONDS", 0.1)
+    monkeypatch.setattr(course_board_server, "HTTP_HEADER_DEADLINE_SECONDS", 0.1)
     monkeypatch.setenv(
         "THEBITLAB_STUDENT_HELP_SECRET",
         "legacy-secret-that-must-not-downgrade-production",
@@ -392,6 +395,22 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
             page_body = page_response.read()
         finally:
             page_connection.close()
+        slow_api_connection = http_client.HTTPConnection(
+            "127.0.0.1", server.server_address[1], timeout=5
+        )
+        try:
+            slow_api_connection.putrequest("POST", "/api/student-lab/help")
+            slow_api_connection.putheader("X-Forwarded-Proto", "https")
+            slow_api_connection.putheader("Authorization", "Bearer " + bearer)
+            slow_api_connection.putheader("Content-Type", "application/json")
+            slow_api_connection.putheader("Content-Length", "10")
+            slow_api_connection.endheaders(b"x")
+            time.sleep(0.15)
+            slow_api_response = slow_api_connection.getresponse()
+            slow_api_status = slow_api_response.status
+            slow_api_response.read()
+        finally:
+            slow_api_connection.close()
         slow_connection = http_client.HTTPConnection(
             "127.0.0.1", server.server_address[1], timeout=5
         )
@@ -406,6 +425,22 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
             slow_response.read()
         finally:
             slow_connection.close()
+        slow_headers = socket.create_connection(server.server_address, timeout=5)
+        slow_headers.settimeout(2)
+        header_closed = False
+        try:
+            slow_headers.sendall(b"POST /auth/tui/pairings HTTP/1.1\r\n")
+            for byte in b"Host: localhost\r\nContent-Length: 0\r\n\r\n":
+                try:
+                    slow_headers.sendall(bytes((byte,)))
+                except OSError:
+                    header_closed = True
+                    break
+                time.sleep(0.03)
+            if not header_closed:
+                header_closed = slow_headers.recv(1) == b""
+        finally:
+            slow_headers.close()
         wrong_method, _ = exchange("/auth/tui/pairings", method="GET")
         network_path, _ = exchange("//auth/tui/pairings")
     finally:
@@ -424,7 +459,9 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
     assert duplicate_auth_status == 401
     assert bearer.encode() not in duplicate_auth_body
     assert page_status == 200 and b"Collega il terminale" in page_body
+    assert slow_api_status == 400
     assert slow_body_status == 400
+    assert header_closed is True
     assert wrong_method == 405
     assert network_path == 400
     assert boundary.authenticate_bearer("Bearer " + bearer).user.user_id == "student-01"

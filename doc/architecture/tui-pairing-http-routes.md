@@ -15,7 +15,7 @@ Codice e bearer sono accettati soltanto nel body JSON, mai in URL/query. Il brow
 
 Tutte le route richiedono HTTPS diretto o attestato dallo stesso trusted proxy resolver delle route Google/sessione. Sono accettati soltanto request-target origin-form canonici, `POST`, query vuota, Content-Length singolo e body massimo 2048 byte. Transfer-Encoding, JSON con chiavi duplicate, Content-Type diverso da `application/json`, campi extra e codici fuori grammatica falliscono chiusi.
 
-`/auth/tui/pairings` richiede body vuoto; autorizzazione e consumo richiedono un oggetto JSON con la sola chiave `code`. Il Course Board legge il body soltanto dopo avere validato framing e limite; `read1` rivaluta una deadline monotona assoluta a ogni chunk, quindi un client slow-drip non può trattenere indefinitamente il worker prima del rate limit. Framing invalido, body troncato o deadline superata chiudono la connessione per evitare request smuggling/desincronizzazione.
+`/auth/tui/pairings` richiede body vuoto; autorizzazione e consumo richiedono un oggetto JSON con la sola chiave `code`. Una deadline timer parte all'ingresso dell'handler e copre request-line e header prima del dispatch, chiudendo il socket anche con slow-drip distribuito. Il Course Board legge poi il body soltanto dopo avere validato framing e limite; `read1` rivaluta una deadline monotona assoluta a ogni chunk, quindi un client slow-drip non può trattenere indefinitamente il worker prima del rate limit. Framing invalido, body troncato o deadline superata chiudono la connessione per evitare request smuggling/desincronizzazione.
 
 ## Rate limit e retention
 

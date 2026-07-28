@@ -27,6 +27,7 @@ import os
 import re
 import secrets
 import shutil
+import socket
 import ssl
 import subprocess
 import sys
@@ -97,6 +98,8 @@ MAX_HTTP_WORKERS = 64
 MAX_HTTP_WORKERS_PER_CLIENT = 8
 HTTP_CLIENT_TIMEOUT_SECONDS = 15
 PAIRING_BODY_DEADLINE_SECONDS = 15
+STUDENT_API_BODY_DEADLINE_SECONDS = 15
+HTTP_HEADER_DEADLINE_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
@@ -3275,6 +3278,40 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
+    def handle_one_request(self) -> None:
+        generation = getattr(self, "_header_deadline_generation", 0) + 1
+        self._header_deadline_generation = generation
+
+        def expire_headers() -> None:
+            if getattr(self, "_header_deadline_generation", None) != generation:
+                return
+            self.close_connection = True
+            try:
+                self.connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
+        timer = threading.Timer(HTTP_HEADER_DEADLINE_SECONDS, expire_headers)
+        timer.daemon = True
+        self._header_deadline_timer = timer
+        timer.start()
+        try:
+            super().handle_one_request()
+        finally:
+            if getattr(self, "_header_deadline_generation", None) == generation:
+                self._header_deadline_generation = generation + 1
+            timer.cancel()
+            self._header_deadline_timer = None
+
+    def parse_request(self) -> bool:
+        try:
+            return super().parse_request()
+        finally:
+            timer = getattr(self, "_header_deadline_timer", None)
+            if timer is not None:
+                self._header_deadline_generation += 1
+                timer.cancel()
+
     def __getattr__(self, name):
         if type(name) is str and name.startswith("do_"):
             return self.do_unsupported_auth_method
@@ -3633,7 +3670,10 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             )
             if readable:
                 expected = 0 if safe_get_without_body else int(lengths[0])
-                body = self._read_pairing_body_with_deadline(expected)
+                body = self._read_body_with_deadline(
+                    expected,
+                    PAIRING_BODY_DEADLINE_SECONDS,
+                )
                 if body is None:
                     raise ValueError("pairing body timeout")
             else:
@@ -3670,10 +3710,14 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         self.write_tui_pairing_response(response)
         return True
 
-    def _read_pairing_body_with_deadline(self, expected: int) -> bytes | None:
+    def _read_body_with_deadline(
+        self,
+        expected: int,
+        deadline_seconds: float,
+    ) -> bytes | None:
         if expected == 0:
             return b""
-        deadline = time.monotonic() + PAIRING_BODY_DEADLINE_SECONDS
+        deadline = time.monotonic() + deadline_seconds
         chunks: list[bytes] = []
         received = 0
         try:
@@ -4053,7 +4097,14 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_error_json(413, "Richiesta troppo grande o vuota.")
                 return
             try:
-                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                body = self._read_body_with_deadline(
+                    length,
+                    STUDENT_API_BODY_DEADLINE_SECONDS,
+                )
+                if body is None:
+                    raise ValueError("Body richiesta non ricevuto entro la deadline.")
+                payload = json.loads(body.decode("utf-8"))
+                body = None
                 if not isinstance(payload, dict):
                     raise ValueError("Il payload della richiesta deve essere un oggetto JSON.")
                 self.write_json(select_student_final_attempt(payload, student_id=student_id))
@@ -4075,7 +4126,14 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_error_json(413, "Richiesta aiuto troppo grande o vuota.")
                 return
             try:
-                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                body = self._read_body_with_deadline(
+                    length,
+                    STUDENT_API_BODY_DEADLINE_SECONDS,
+                )
+                if body is None:
+                    raise ValueError("Body richiesta non ricevuto entro la deadline.")
+                payload = json.loads(body.decode("utf-8"))
+                body = None
                 if not isinstance(payload, dict):
                     raise ValueError("Il payload della richiesta deve essere un oggetto JSON.")
                 self.write_json(record_student_help(payload, student_id=student_id))

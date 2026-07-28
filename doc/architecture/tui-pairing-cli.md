@@ -45,7 +45,8 @@ Quando `tui_pairing_http_routes` è presente nel server, le quattro API student-
 - rifiuta Authorization duplicato o oversized;
 - autentica il bearer attraverso `TuiBrowserPairingBoundary`, rileggendo sessione, account, ruolo student e pairing correlato;
 - deriva l'identità esclusivamente dal `user_id` autenticato;
-- valida query, Transfer-Encoding, Content-Length e Content-Type prima della lettura del body.
+- valida query, Transfer-Encoding, Content-Length e Content-Type prima della lettura del body;
+- applica deadline monotone assolute sia a request-line/header sia ai body POST student-lab, evitando occupazione slow-drip dei worker autenticati o pubblici.
 
 Il fallback HMAC legacy rimane disponibile soltanto quando il runtime pairing non è composto, per compatibilità con la modalità demo/local. La presenza del runtime federato disabilita completamente tale fallback.
 
