@@ -25,6 +25,7 @@ from scripts.thebitlab_identity_ports import (
     IdentityStorageMappingGenerationConflictError,
     IdentityStorageNotFoundError,
     IdentityStoragePairingExpiredError,
+    IdentityStorageSessionExpiredError,
 )
 
 
@@ -2284,6 +2285,10 @@ class SqliteIdentityStorage:
                     )
                 expired = True
             else:
+                if transaction_instant >= session.expires_at:
+                    raise IdentityStorageSessionExpiredError(
+                        "Sessione TUI scaduta prima dell'inserimento atomico."
+                    )
                 cursor = connection.execute(
                     """
                     UPDATE tui_pairings

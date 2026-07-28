@@ -26,6 +26,7 @@ from scripts.thebitlab_identity_ports import (
     IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
     IdentityStoragePairingExpiredError,
+    IdentityStorageSessionExpiredError,
 )
 
 
@@ -1299,6 +1300,10 @@ class TuiPairingSessionService:
                     )
                 except IdentityStoragePairingExpiredError:
                     raise PairingExpiredError("Pairing scaduto.") from None
+                except IdentityStorageSessionExpiredError:
+                    raise ConcurrentStateChangeError(
+                        "Sessione TUI scaduta durante il consumo."
+                    ) from None
                 except IdentityStorageConflictError:
                     current_pairing = self.storage.read_pairing(pairing.pairing_id)
                     current_account = self.storage.read_user(account.user_id)

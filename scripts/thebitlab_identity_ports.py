@@ -34,6 +34,10 @@ class IdentityStoragePairingExpiredError(IdentityStorageConflictError):
     """Raised after atomically expiring a pairing at transaction time."""
 
 
+class IdentityStorageSessionExpiredError(IdentityStorageConflictError):
+    """Raised when a candidate session expires before atomic insertion."""
+
+
 class IdentityStorageNotFoundError(IdentityStorageError):
     """Raised when an update targets a missing identity record."""
 

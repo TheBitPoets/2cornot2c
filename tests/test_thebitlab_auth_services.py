@@ -1360,6 +1360,36 @@ def test_tui_pairing_role_race_rolls_back_consumption(storage, monkeypatch) -> N
     assert storage.list_user_sessions("user-01") == []
 
 
+def test_tui_session_expiring_while_waiting_for_lock_does_not_consume_pairing(
+    storage,
+) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        session_ttl=timedelta(seconds=1),
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+    storage._clock = lambda: clock.value + timedelta(seconds=2)
+
+    with pytest.raises(ConcurrentStateChangeError):
+        service.consume("pairing-01", issued.code)
+
+    assert storage.read_pairing("pairing-01").status == "authorized"
+    assert storage.list_user_sessions("user-01") == []
+
+
 def test_tui_pairing_concurrent_consumption_issues_exactly_one_session(storage) -> None:
     storage.create_user(account())
     clock = MutableClock()
