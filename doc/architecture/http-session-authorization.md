@@ -53,6 +53,8 @@ Il secret CSRF contiene almeno 32 byte, proviene da ambiente/secret store ed è 
 
 `authenticate` permette anche a `pending` di raggiungere future route di onboarding. `authorize_application` accetta soltanto policy non vuote composte da `admin`, `teacher` e `student`: `pending` non può essere autorizzato ai dati applicativi per errore di configurazione.
 
+La policy successiva per dashboard è implementata da `thebitlab_dashboard_auth.py` e documentata in [dashboard-authorization.md](dashboard-authorization.md): ricontrolla atomicamente revisione utente, ruolo, membership e classi attive e restituisce uno scope dati minimo.
+
 Errori pubblici stabili:
 
 - `400 bad_auth_request`;
@@ -70,7 +72,7 @@ Il logout è esclusivamente `POST`. Per una sessione valida richiede CSRF, revoc
 
 ## Fuori scope
 
-- route concrete nel Course Board e protezione dashboard;
+- route concrete nel Course Board e applicazione dello scope ai file legacy della dashboard;
 - route e browser E2E Google OIDC (il protocol adapter `state`/`nonce`/PKCE è implementato);
 - account linking GitHub;
 - pairing TUI via browser;
