@@ -315,6 +315,7 @@ class UrllibGitHubOAuthTransport:
         serialized = None
         output = None
         process = None
+        process_reaped = False
         release_network_slot = False
         release_termination_slot = False
         deadline = time.monotonic() + timeout_seconds
@@ -400,6 +401,7 @@ class UrllibGitHubOAuthTransport:
                     "GitHub non disponibile."
                 ) from None
             if process is False or process is None:
+                process = None
                 raise GitHubLinkProviderUnavailableError(
                     "GitHub non disponibile."
                 )
@@ -426,8 +428,14 @@ class UrllibGitHubOAuthTransport:
                     output, _stderr = process.communicate(
                         input=serialized, timeout=remaining
                     )
+                    process_reaped = True
                 except subprocess.TimeoutExpired:
                     timed_out = True
+                except Exception:
+                    transfer_to_cleanup(process)
+                    raise GitHubLinkProviderUnavailableError(
+                        "GitHub non disponibile."
+                    ) from None
             serialized = None
             if timed_out:
                 transfer_to_cleanup(process)
@@ -462,7 +470,17 @@ class UrllibGitHubOAuthTransport:
             serialized = None
             output = None
             request = None
+            if (
+                process is not None
+                and not process_reaped
+                and release_network_slot
+                and release_termination_slot
+            ):
+                release_network_slot = False
+                release_termination_slot = False
+                self._schedule_cleanup(process)
             process = None
+            process_reaped = False
             deadline = 0.0
             if release_termination_slot:
                 self._termination_slots.release()

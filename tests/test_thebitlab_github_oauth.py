@@ -189,6 +189,48 @@ def test_transport_enforces_overall_wall_clock_timeout(monkeypatch) -> None:
     assert time.monotonic() - started < 0.15
 
 
+def test_transport_pipe_failure_transfers_process_to_bounded_cleanup(
+    monkeypatch,
+) -> None:
+    class PipeFailureProcess:
+        returncode = None
+        killed = False
+        reaped = False
+
+        def communicate(self, *, input=None, timeout=None):
+            if not self.killed:
+                raise OSError("pipe failure")
+            self.reaped = True
+            self.returncode = -9
+            return b"", b""
+
+        def kill(self):
+            self.killed = True
+
+    transport = UrllibGitHubOAuthTransport()
+    processes = []
+
+    def factory(*_args, **_kwargs):
+        process = PipeFailureProcess()
+        processes.append(process)
+        return process
+
+    monkeypatch.setattr(transport, "_process_factory", factory)
+    for _attempt in range(12):
+        with pytest.raises(GitHubLinkProviderUnavailableError):
+            transport._request(
+                urllib.request.Request("https://api.github.com/user"),
+                timeout_seconds=0.02,
+                max_response_bytes=1024,
+            )
+    for _attempt in range(100):
+        if all(process.reaped for process in processes):
+            break
+        time.sleep(0.002)
+    assert processes
+    assert all(process.killed and process.reaped for process in processes)
+
+
 def test_transport_does_not_spawn_without_reserved_cleanup_capacity(monkeypatch) -> None:
     transport = UrllibGitHubOAuthTransport()
     calls = []
