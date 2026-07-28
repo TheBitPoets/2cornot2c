@@ -17,7 +17,7 @@ python scripts/student_lab_cli.py --student-id rossi-mario
 ```
 
 Il progetto richiede Python 3.11 o successivo; per sviluppo e collaudo e consigliato Python 3.12,
-come nella GitHub Action di qualita. Il futuro renderer a pannelli usa opzionalmente `utui`, fissato
+come nella GitHub Action di qualita. Il renderer a pannelli usa opzionalmente `utui`, fissato
 temporaneamente a un commit verificato:
 
 ```powershell
@@ -46,6 +46,11 @@ py -3.12 scripts/student_lab_cli.py --student-id rossi-mario --renderer utui
 La GitHub Action `uTUI consumer evidence` installa obbligatoriamente l'extra ed esegue adapter,
 layout e smoke CLI su Windows e Linux con Python 3.11, 3.12 e 3.13. Per riprodurre localmente
 il nucleo della stessa verifica:
+
+L'integrazione e documentata dalle PR
+[#489](https://github.com/TheBitPoets/2cornot2c/pull/489) per l'adapter,
+[#493](https://github.com/TheBitPoets/2cornot2c/pull/493) per il collegamento alla CLI e
+[#495](https://github.com/TheBitPoets/2cornot2c/pull/495) per l'evidenza consumer multipiattaforma.
 
 ```powershell
 py -3.12 -m pip install -r requirements-dev.txt -r requirements-utui.txt
