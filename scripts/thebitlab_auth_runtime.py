@@ -9,6 +9,7 @@ import ipaddress
 import os
 import re
 import stat
+import subprocess
 import urllib.parse
 from collections.abc import Mapping
 from pathlib import Path
@@ -33,6 +34,8 @@ from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 _SECRET_RE = re.compile(r"^[A-Za-z0-9_-]{43,86}$")
 _CALLBACK_PATH = "/auth/google/callback"
 _DEFAULT_DATABASE_NAME = ".thebitlab-auth.sqlite3"
+_WINDOWS_REPARSE_POINT = 0x400
+_SID_RE = re.compile(r"^S-1-(?:[0-9]+-)+[0-9]+$")
 
 
 class AuthRuntimeConfigurationError(RuntimeError):
@@ -285,6 +288,7 @@ def _prepare_database_file(path: Path) -> None:
     try:
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         if os.name == "nt":
+            _prepare_windows_database_file(path)
             return
         parent_metadata = path.parent.stat(follow_symlinks=False)
         if (
@@ -309,3 +313,81 @@ def _prepare_database_file(path: Path) -> None:
     finally:
         if descriptor is not None:
             os.close(descriptor)
+
+
+def _prepare_windows_database_file(path: Path) -> None:
+    descriptor = None
+    sid = None
+    sid_process = None
+    try:
+        parent_before = path.parent.lstat()
+        if (
+            not stat.S_ISDIR(parent_before.st_mode)
+            or getattr(parent_before, "st_file_attributes", 0)
+            & _WINDOWS_REPARSE_POINT
+        ):
+            raise OSError("directory database Windows non valida")
+        sid_process = subprocess.run(
+            (
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value",
+            ),
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+        sid = sid_process.stdout.decode("ascii", errors="strict").strip()
+        sid_process = None
+        if _SID_RE.fullmatch(sid) is None:
+            raise OSError("SID Windows non valido")
+        _replace_windows_acl(path.parent, sid, directory=True)
+        parent_after = path.parent.lstat()
+        if (
+            parent_after.st_dev != parent_before.st_dev
+            or parent_after.st_ino != parent_before.st_ino
+            or getattr(parent_after, "st_file_attributes", 0)
+            & _WINDOWS_REPARSE_POINT
+        ):
+            raise OSError("directory database Windows sostituita")
+        if path.exists() or path.is_symlink():
+            existing = path.lstat()
+            if (
+                not stat.S_ISREG(existing.st_mode)
+                or getattr(existing, "st_file_attributes", 0)
+                & _WINDOWS_REPARSE_POINT
+            ):
+                raise OSError("database Windows non regolare")
+        descriptor = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode):
+            raise OSError("database Windows non regolare")
+        _replace_windows_acl(path, sid, directory=False)
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        raise AuthRuntimeConfigurationError(
+            "ACL database autenticazione Windows non disponibile."
+        ) from None
+    finally:
+        sid = None
+        sid_process = None
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _replace_windows_acl(path: Path, sid: str, *, directory: bool) -> None:
+    inheritance = "(OI)(CI)F" if directory else "F"
+    subprocess.run(
+        (
+            "icacls.exe",
+            str(path),
+            "/inheritance:r",
+            "/grant:r",
+            f"*{sid}:{inheritance}",
+            f"*S-1-5-18:{inheritance}",
+        ),
+        check=True,
+        capture_output=True,
+        timeout=10,
+    )
