@@ -5,7 +5,8 @@
 Il runtime espone esclusivamente con opt-in auth:
 
 - `POST /auth/tui/pairings`: crea un pairing pending e restituisce `pairing_id`, `user_code`, path fisso di verifica e scadenza;
-- `POST /auth/tui/pair`: riceve `{"code":"..."}` dal browser, con cookie web e `X-CSRF-Token`, e autorizza soltanto uno student corrente;
+- `GET /auth/tui/pair`: serve la pagina statica CSP/no-store per inserire manualmente il codice;
+- `POST /auth/tui/pair`: riceve `{"code":"..."}` dalla pagina, con cookie web e `X-CSRF-Token`, e autorizza soltanto uno student corrente;
 - `POST /auth/tui/pairings/{pairing_id}/token`: riceve lo stesso codice dalla TUI e tenta il consumo atomico. Un pairing ancora pending o già terminale produce 409; la CLI potrà trattare 409 come polling bounded fino alla scadenza.
 
 Codice e bearer sono accettati soltanto nel body JSON, mai in URL/query. Il browser non riceve il bearer TUI; il terminale non riceve cookie, CSRF o credenziali provider.
@@ -14,7 +15,7 @@ Codice e bearer sono accettati soltanto nel body JSON, mai in URL/query. Il brow
 
 Tutte le route richiedono HTTPS diretto o attestato dallo stesso trusted proxy resolver delle route Google/sessione. Sono accettati soltanto request-target origin-form canonici, `POST`, query vuota, Content-Length singolo e body massimo 2048 byte. Transfer-Encoding, JSON con chiavi duplicate, Content-Type diverso da `application/json`, campi extra e codici fuori grammatica falliscono chiusi.
 
-`/auth/tui/pairings` richiede body vuoto; autorizzazione e consumo richiedono un oggetto JSON con la sola chiave `code`. Il Course Board legge il body soltanto dopo avere validato framing e limite; framing invalido chiude la connessione per evitare request smuggling/desincronizzazione.
+`/auth/tui/pairings` richiede body vuoto; autorizzazione e consumo richiedono un oggetto JSON con la sola chiave `code`. Una deadline timer parte all'ingresso dell'handler e copre request-line e header prima del dispatch, chiudendo il socket anche con slow-drip distribuito. Il Course Board legge poi il body soltanto dopo avere validato framing e limite; `read1` rivaluta una deadline monotona assoluta a ogni chunk, quindi un client slow-drip non può trattenere indefinitamente il worker prima del rate limit. Framing invalido, body troncato o deadline superata chiudono la connessione per evitare request smuggling/desincronizzazione.
 
 ## Rate limit e retention
 
@@ -41,4 +42,4 @@ Body, request e response escludono codice e bearer dai `repr`; gli access log us
 
 ## Limiti
 
-La pagina UI che raccoglie manualmente il codice, l'apertura browser, il polling CLI, la persistenza sicura del bearer e l'uso nelle API student-help restano incrementi successivi.
+Pagina browser, apertura/polling CLI e uso memory-only nelle API student-lab sono descritti in `tui-pairing-cli.md`. Persistenza opzionale sicura, refresh e revoca esplicita al logout TUI restano incrementi successivi.

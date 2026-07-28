@@ -144,6 +144,55 @@ def test_main_reads_student_token_only_from_environment(monkeypatch, tmp_path) -
         student_lab_cli.parse_args()
 
 
+def test_main_pairs_in_browser_and_passes_bearer_only_in_memory(monkeypatch, tmp_path) -> None:
+    captured = {}
+    bearer = "B" * 48
+    monkeypatch.delenv("THEBITLAB_STUDENT_HELP_TOKEN", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "student_lab_cli.py",
+            "--student-id",
+            "rossi-mario",
+            "--root",
+            str(tmp_path),
+            "--server-url",
+            "https://school.test",
+            "--pair-browser",
+        ],
+    )
+    monkeypatch.setattr(
+        student_lab_cli.thebitlab_tui_pairing_client,
+        "acquire_tui_bearer",
+        lambda url: SimpleNamespace(bearer_token=bearer),
+    )
+    monkeypatch.setattr(student_lab_cli, "run_tui", lambda **kwargs: captured.update(kwargs) or 0)
+
+    assert student_lab_cli.main() == 0
+    assert captured["server_token"] == bearer
+    assert captured["server_url"] == "https://school.test"
+
+
+def test_main_rejects_pairing_with_legacy_environment_token(monkeypatch, capsys) -> None:
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN", "legacy-token")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "student_lab_cli.py",
+            "--student-id",
+            "rossi-mario",
+            "--server-url",
+            "https://school.test",
+            "--pair-browser",
+        ],
+    )
+
+    assert student_lab_cli.main() == 1
+    assert "Rimuovi THEBITLAB_STUDENT_HELP_TOKEN" in capsys.readouterr().err
+
+
 def test_renderer_selection_preserves_legacy_for_non_interactive_output(
     monkeypatch,
 ) -> None:
@@ -975,6 +1024,103 @@ def test_fetch_student_lab_payload_uses_authenticated_server_endpoint(monkeypatc
     assert payload["assignments"] == []
     assert "/api/student-lab/assignments?now=" in captured["url"]
     assert captured["headers"]["Authorization"] == "Bearer signed-token"
+
+
+def test_production_student_api_transport_has_absolute_subprocess_timeout(monkeypatch) -> None:
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN", "must-not-reach-worker-env")
+    monkeypatch.setenv("HTTPS_PROXY", "https://proxy.test")
+    request = urllib.request.Request(
+        "https://127.0.0.1:1/api/student-lab/assignments",
+        headers={"Authorization": "Bearer " + "Q" * 48},
+    )
+
+    with pytest.raises(urllib.error.URLError):
+        student_lab_cli._student_api_json_subprocess(request, timeout=1)
+
+    assert "THEBITLAB_STUDENT_HELP_TOKEN" not in (
+        student_lab_cli.thebitlab_tui_pairing_client._transport_environment()
+    )
+
+
+def test_student_api_401_scrubs_bearer_from_recursive_traceback(monkeypatch) -> None:
+    bearer = "Z" * 48
+
+    def rejected(request, timeout):
+        raise urllib.error.HTTPError(
+            request.full_url,
+            401,
+            "Unauthorized",
+            {},
+            io.BytesIO(json.dumps({"error": bearer}).encode()),
+        )
+
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", rejected)
+
+    with pytest.raises(ValueError) as captured:
+        student_lab_cli.fetch_student_lab_payload(
+            server_url="https://teacher.test",
+            server_token=bearer,
+        )
+
+    fragments = [str(captured.value), repr(captured.value)]
+    pending = [captured.value]
+    seen = set()
+    while pending:
+        error = pending.pop()
+        if id(error) in seen:
+            continue
+        seen.add(id(error))
+        traceback = error.__traceback__
+        while traceback is not None:
+            filename = traceback.tb_frame.f_code.co_filename.replace("\\", "/")
+            if filename.endswith("/scripts/student_lab_cli.py"):
+                fragments.extend(repr(value) for value in traceback.tb_frame.f_locals.values())
+            traceback = traceback.tb_next
+        if error.__context__ is not None:
+            pending.append(error.__context__)
+        if error.__cause__ is not None:
+            pending.append(error.__cause__)
+
+    assert bearer not in "\n".join(fragments)
+    assert str(captured.value) == "Server consegne: richiesta rifiutata (HTTP 401)."
+    assert captured.value.__context__ is None
+    assert captured.value.__cause__ is None
+
+
+def test_student_api_200_reflection_scrubs_bearer_from_traceback(monkeypatch) -> None:
+    bearer = "Y" * 48
+
+    class ReflectedResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"assignments": bearer}).encode()
+
+    monkeypatch.setattr(
+        student_lab_cli,
+        "student_api_urlopen",
+        lambda request, timeout: ReflectedResponse(),
+    )
+
+    with pytest.raises(ValueError) as captured:
+        student_lab_cli.fetch_student_lab_payload(
+            server_url="https://teacher.test",
+            server_token=bearer,
+        )
+
+    fragments = [str(captured.value), repr(captured.value)]
+    traceback = captured.value.__traceback__
+    while traceback is not None:
+        filename = traceback.tb_frame.f_code.co_filename.replace("\\", "/")
+        if filename.endswith("/scripts/student_lab_cli.py"):
+            fragments.extend(repr(value) for value in traceback.tb_frame.f_locals.values())
+        traceback = traceback.tb_next
+    assert bearer not in "\n".join(fragments)
+    assert str(captured.value) == "Il server consegne ha restituito una risposta non valida."
 
 
 def test_load_current_payload_enriches_remote_assignment_with_matching_local_paths(monkeypatch, tmp_path) -> None:

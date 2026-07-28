@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import ipaddress
 import json
 import os
@@ -28,6 +29,7 @@ from scripts import (
     student_lab_runner,
     student_lab_service,
     student_lab_utui,
+    thebitlab_tui_pairing_client,
 )
 
 
@@ -35,11 +37,22 @@ InputFn = Callable[[str], str]
 PrintFn = Callable[[str], None]
 DEFAULT_SERVER_URL = "http://127.0.0.1:8765"
 HELP_REQUEST_TIMEOUT_SECONDS = 150
+MAX_STUDENT_API_RESPONSE_BYTES = 2 * 1024 * 1024
 TUI_RENDERERS = {"auto", "legacy", "utui"}
 
 
 class StudentHelpRequestPendingError(ValueError):
     """Report that an idempotent help request is still being processed."""
+
+
+class _MemoryBearer:
+    __slots__ = ("value",)
+
+    def __init__(self, value: str) -> None:
+        self.value = str(value or "")
+
+    def __repr__(self) -> str:
+        return "_MemoryBearer(present=%s)" % bool(self.value)
 
 
 STATUS_LABELS = {
@@ -907,10 +920,12 @@ def record_help_from_tui(
 ) -> dict[str, Any]:
     """Send one student help request to the teacher-side server."""
 
+    credential = _MemoryBearer(server_token)
+    server_token = ""
     assignment_id = clean_text(assignment.get("assignment_id"), "")
     if not assignment_id:
         raise ValueError("Identificativo consegna non disponibile.")
-    if not server_token.strip():
+    if not credential.value.strip():
         raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
     safe_server_url = validated_server_url(server_url, allow_insecure_http)
     clean_request_id = str(request_id or "").strip() or uuid.uuid4().hex
@@ -928,31 +943,48 @@ def record_help_from_tui(
         data=body,
         headers={
             "Content-Type": "application/json; charset=utf-8",
-            "Authorization": f"Bearer {server_token.strip()}",
+            "Authorization": f"Bearer {credential.value.strip()}",
         },
         method="POST",
     )
+    payload = None
+    failure = None
+    pending_failure = False
     try:
-        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        detail = _server_error_detail(error.read())
-        if error.code == 409:
-            raise StudentHelpRequestPendingError(
-                f"Server aiuti: {detail or 'richiesta gia salvata e ancora in elaborazione'}"
-            ) from error
-        raise ValueError(f"Server aiuti: {detail or error.reason}") from error
-    except urllib.error.URLError as error:
-        raise ValueError(
-            f"Server non raggiungibile su {server_url}. Avvialo con scripts/course_board_server.py."
-        ) from error
-    except TimeoutError as error:
-        raise ValueError("Il server aiuti non ha risposto entro il tempo previsto.") from error
-    except (json.JSONDecodeError, UnicodeDecodeError) as error:
-        raise ValueError("Il server aiuti ha restituito una risposta non valida.") from error
+        payload = _student_api_json(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS)
+    except (urllib.error.HTTPError, _StudentApiHttpStatusError) as error:
+        pending_failure = error.code == 409
+        failure = (
+            "Server aiuti: richiesta gia salvata e ancora in elaborazione"
+            if pending_failure
+            else f"Server aiuti: richiesta rifiutata (HTTP {error.code})."
+        )
+    except urllib.error.URLError:
+        failure = (
+            f"Server non raggiungibile su {server_url}. "
+            "Avvialo con scripts/course_board_server.py."
+        )
+    except TimeoutError:
+        failure = "Il server aiuti non ha risposto entro il tempo previsto."
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        failure = "Il server aiuti ha restituito una risposta non valida."
+    else:
+        if _contains_credential(payload, credential.value):
+            payload = None
+            failure = "Il server aiuti ha restituito una risposta non valida."
+    finally:
+        request = None
+        response = None
+        credential = None
+    if failure is not None:
+        if pending_failure:
+            raise StudentHelpRequestPendingError(failure)
+        raise ValueError(failure)
     event = payload.get("event") if isinstance(payload, dict) else None
     if not isinstance(event, dict):
+        payload = None
         raise ValueError("Il server aiuti non ha restituito l'evento salvato.")
+    payload = None
     return event
 
 
@@ -965,31 +997,44 @@ def fetch_help_history_from_server(
 ) -> dict[str, Any]:
     """Load one student's assignment history through the authenticated server API."""
 
+    credential = _MemoryBearer(server_token)
+    server_token = ""
     assignment_id = clean_text(assignment.get("assignment_id"), "")
     if not assignment_id:
         raise ValueError("Identificativo consegna non disponibile.")
-    if not server_token.strip():
+    if not credential.value.strip():
         raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
     safe_server_url = validated_server_url(server_url, allow_insecure_http)
     query = urllib.parse.urlencode({"assignment_id": assignment_id})
     request = urllib.request.Request(
         f"{safe_server_url}/api/student-lab/help-history?{query}",
-        headers={"Authorization": f"Bearer {server_token.strip()}"},
+        headers={"Authorization": f"Bearer {credential.value.strip()}"},
         method="GET",
     )
+    payload = None
+    failure = None
     try:
-        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        detail = _server_error_detail(error.read())
-        raise ValueError(f"Server aiuti: {detail or error.reason}") from error
-    except urllib.error.URLError as error:
-        raise ValueError(f"Server non raggiungibile su {server_url}.") from error
-    except TimeoutError as error:
-        raise ValueError("Il server aiuti non ha risposto entro il tempo previsto.") from error
-    except (json.JSONDecodeError, UnicodeDecodeError) as error:
-        raise ValueError("Il server aiuti ha restituito uno storico non valido.") from error
+        payload = _student_api_json(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS)
+    except (urllib.error.HTTPError, _StudentApiHttpStatusError) as error:
+        failure = f"Server aiuti: richiesta rifiutata (HTTP {error.code})."
+    except urllib.error.URLError:
+        failure = f"Server non raggiungibile su {server_url}."
+    except TimeoutError:
+        failure = "Il server aiuti non ha risposto entro il tempo previsto."
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        failure = "Il server aiuti ha restituito uno storico non valido."
+    else:
+        if _contains_credential(payload, credential.value):
+            payload = None
+            failure = "Il server aiuti ha restituito uno storico non valido."
+    finally:
+        request = None
+        response = None
+        credential = None
+    if failure is not None:
+        raise ValueError(failure)
     if not isinstance(payload, dict) or not isinstance(payload.get("events"), list):
+        payload = None
         raise ValueError("Il server aiuti ha restituito uno storico non valido.")
     return payload
 
@@ -1004,10 +1049,12 @@ def select_final_attempt_from_server(
 ) -> dict[str, Any]:
     """Select one final attempt through the authenticated student API."""
 
+    credential = _MemoryBearer(server_token)
+    server_token = ""
     assignment_id = clean_text(assignment.get("assignment_id"), "")
     if not assignment_id:
         raise ValueError("Identificativo consegna non disponibile.")
-    if not server_token.strip():
+    if not credential.value.strip():
         raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
     safe_server_url = validated_server_url(server_url, allow_insecure_http)
     body = json.dumps(
@@ -1022,34 +1069,58 @@ def select_final_attempt_from_server(
         data=body,
         headers={
             "Content-Type": "application/json; charset=utf-8",
-            "Authorization": f"Bearer {server_token.strip()}",
+            "Authorization": f"Bearer {credential.value.strip()}",
         },
         method="POST",
     )
+    payload = None
+    failure = None
     try:
-        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        detail = _server_error_detail(error.read())
-        raise ValueError(f"Server tentativi: {detail or error.reason}") from error
-    except urllib.error.URLError as error:
-        raise ValueError(f"Server non raggiungibile su {server_url}.") from error
-    except TimeoutError as error:
-        raise ValueError("Il server tentativi non ha risposto entro il tempo previsto.") from error
-    except (json.JSONDecodeError, UnicodeDecodeError) as error:
-        raise ValueError("Il server tentativi ha restituito una risposta non valida.") from error
+        payload = _student_api_json(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS)
+    except (urllib.error.HTTPError, _StudentApiHttpStatusError) as error:
+        failure = f"Server tentativi: richiesta rifiutata (HTTP {error.code})."
+    except urllib.error.URLError:
+        failure = f"Server non raggiungibile su {server_url}."
+    except TimeoutError:
+        failure = "Il server tentativi non ha risposto entro il tempo previsto."
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        failure = "Il server tentativi ha restituito una risposta non valida."
+    else:
+        if _contains_credential(payload, credential.value):
+            payload = None
+            failure = "Il server tentativi ha restituito una risposta non valida."
+    finally:
+        request = None
+        response = None
+        credential = None
+    if failure is not None:
+        raise ValueError(failure)
     selected = payload.get("assignment") if isinstance(payload, dict) else None
     if not isinstance(selected, dict):
+        payload = None
         raise ValueError("Il server tentativi non ha restituito la consegna aggiornata.")
+    payload = None
     return selected
 
 
-def _server_error_detail(body: bytes) -> str:
+def _contains_credential(value: Any, credential: str, depth: int = 0) -> bool:
     try:
-        payload = json.loads(body.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return "richiesta rifiutata"
-    return clean_text(payload.get("error"), "richiesta rifiutata") if isinstance(payload, dict) else "richiesta rifiutata"
+        if depth > 32:
+            return True
+        if isinstance(value, str):
+            return bool(credential) and credential in value
+        if isinstance(value, dict):
+            return any(
+                _contains_credential(key, credential, depth + 1)
+                or _contains_credential(item, credential, depth + 1)
+                for key, item in value.items()
+            )
+        if isinstance(value, (list, tuple)):
+            return any(_contains_credential(item, credential, depth + 1) for item in value)
+        return False
+    finally:
+        value = None
+        credential = ""
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -1066,6 +1137,139 @@ def student_api_urlopen(request: urllib.request.Request, *, timeout: float):
     """Open an authenticated student API request without following redirects."""
 
     return _STUDENT_API_OPENER.open(request, timeout=timeout)
+
+
+_DEFAULT_STUDENT_API_URLOPEN = student_api_urlopen
+
+
+class _StudentApiHttpStatusError(RuntimeError):
+    def __init__(self, code: int) -> None:
+        self.code = code
+        super().__init__("Student API HTTP error.")
+
+
+def _student_api_json(request: urllib.request.Request, *, timeout: float):
+    if student_api_urlopen is not _DEFAULT_STUDENT_API_URLOPEN:
+        with student_api_urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    return _student_api_json_subprocess(request, timeout=timeout)
+
+
+def _student_api_json_subprocess(request: urllib.request.Request, *, timeout: float):
+    specification = json.dumps(
+        {
+            "url": request.full_url,
+            "data": base64.b64encode(request.data or b"").decode("ascii"),
+            "headers": list(request.header_items()),
+            "method": request.get_method(),
+            "timeout": timeout,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    stdout = None
+    failure = False
+    try:
+        returncode, stdout = thebitlab_tui_pairing_client._run_killable_subprocess(
+            [sys.executable, str(Path(__file__).resolve()), "--student-api-worker"],
+            specification,
+            environment=thebitlab_tui_pairing_client._transport_environment(),
+            timeout=timeout,
+        )
+        if (
+            returncode != 0
+            or type(stdout) is not bytes
+            or len(stdout) > MAX_STUDENT_API_RESPONSE_BYTES * 2 + 4096
+        ):
+            failure = True
+    except Exception:
+        failure = True
+    finally:
+        request = None
+        specification = None
+    if failure:
+        stdout = None
+        raise urllib.error.URLError("student API unavailable")
+    try:
+        outcome = json.loads(stdout.decode("utf-8"), object_pairs_hook=_unique_json_object)
+    finally:
+        stdout = None
+    if type(outcome) is not list or len(outcome) != 2:
+        outcome = None
+        raise urllib.error.URLError("student API unavailable")
+    kind, value = outcome
+    outcome = None
+    if kind == "http" and type(value) is int and not isinstance(value, bool):
+        raise _StudentApiHttpStatusError(value)
+    if kind != "ok":
+        value = None
+        raise urllib.error.URLError("student API unavailable")
+    return value
+
+
+def _run_student_api_worker() -> int:
+    request = None
+    raw = None
+    outcome = ["error", None]
+    try:
+        raw = sys.stdin.buffer.read(65537)
+        if len(raw) > 65536:
+            raise ValueError("specification")
+        specification = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_json_object)
+        if type(specification) is not dict or set(specification) != {
+            "url", "data", "headers", "method", "timeout"
+        }:
+            raise ValueError("specification")
+        data = base64.b64decode(specification["data"], validate=True)
+        headers = specification["headers"]
+        if type(headers) is not list or any(
+            type(item) is not list
+            or len(item) != 2
+            or type(item[0]) is not str
+            or type(item[1]) is not str
+            for item in headers
+        ):
+            raise ValueError("headers")
+        request = urllib.request.Request(
+            specification["url"],
+            data=data,
+            headers=dict(headers),
+            method=specification["method"],
+        )
+        try:
+            with _STUDENT_API_OPENER.open(
+                request,
+                timeout=float(specification["timeout"]),
+            ) as response:
+                body = response.read(MAX_STUDENT_API_RESPONSE_BYTES + 1)
+            if len(body) > MAX_STUDENT_API_RESPONSE_BYTES:
+                raise ValueError("response")
+            payload = json.loads(body.decode("utf-8"), object_pairs_hook=_unique_json_object)
+            outcome = ["ok", payload]
+        except urllib.error.HTTPError as error:
+            outcome = ["http", error.code]
+            error.close()
+    except Exception:
+        pass
+    finally:
+        request = None
+        raw = None
+    encoded = json.dumps(outcome, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if len(encoded) > MAX_STUDENT_API_RESPONSE_BYTES * 2 + 4096:
+        return 1
+    sys.stdout.buffer.write(encoded)
+    sys.stdout.buffer.flush()
+    outcome = None
+    encoded = None
+    return 0
+
+
+def _unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if type(key) is not str or key in result:
+            raise ValueError("duplicate")
+        result[key] = value
+    return result
 
 
 def help_result_message(event: dict[str, Any], use_color: bool = False) -> str:
@@ -1212,28 +1416,41 @@ def fetch_student_lab_payload(
 ) -> dict[str, Any]:
     """Load the authenticated student-lab payload from the teacher server."""
 
-    if not server_token.strip():
+    credential = _MemoryBearer(server_token)
+    server_token = ""
+    if not credential.value.strip():
         raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
     safe_server_url = validated_server_url(server_url, allow_insecure_http)
     query = urllib.parse.urlencode({"now": now}) if now else ""
     suffix = f"?{query}" if query else ""
     request = urllib.request.Request(
         f"{safe_server_url}/api/student-lab/assignments{suffix}",
-        headers={"Authorization": f"Bearer {server_token.strip()}"},
+        headers={"Authorization": f"Bearer {credential.value.strip()}"},
     )
+    payload = None
+    failure = None
     try:
-        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        detail = _server_error_detail(error.read())
-        raise ValueError(f"Server consegne: {detail or error.reason}") from error
-    except urllib.error.URLError as error:
-        raise ValueError(f"Server non raggiungibile su {server_url}.") from error
-    except TimeoutError as error:
-        raise ValueError("Il server consegne non ha risposto entro il tempo previsto.") from error
-    except (json.JSONDecodeError, UnicodeDecodeError) as error:
-        raise ValueError("Il server consegne ha restituito una risposta non valida.") from error
+        payload = _student_api_json(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS)
+    except (urllib.error.HTTPError, _StudentApiHttpStatusError) as error:
+        failure = f"Server consegne: richiesta rifiutata (HTTP {error.code})."
+    except urllib.error.URLError:
+        failure = f"Server non raggiungibile su {server_url}."
+    except TimeoutError:
+        failure = "Il server consegne non ha risposto entro il tempo previsto."
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        failure = "Il server consegne ha restituito una risposta non valida."
+    else:
+        if _contains_credential(payload, credential.value):
+            payload = None
+            failure = "Il server consegne ha restituito una risposta non valida."
+    finally:
+        request = None
+        response = None
+        credential = None
+    if failure is not None:
+        raise ValueError(failure)
     if not isinstance(payload, dict) or not isinstance(payload.get("assignments"), list):
+        payload = None
         raise ValueError("Il server consegne ha restituito un payload non valido.")
     return payload
 
@@ -1249,10 +1466,12 @@ def load_current_payload(
 ) -> dict[str, Any]:
     """Load authoritative server data when authenticated, otherwise local data."""
 
-    if server_token.strip():
+    credential = _MemoryBearer(server_token)
+    server_token = ""
+    if credential.value.strip():
         remote_payload = fetch_student_lab_payload(
             server_url=server_url,
-            server_token=server_token,
+            server_token=credential.value,
             now=now,
             allow_insecure_http=allow_insecure_http,
         )
@@ -1349,13 +1568,15 @@ def run_tui(
 ) -> int:
     """Run the interactive student lab loop."""
 
+    memory_bearer = _MemoryBearer(server_token)
+    server_token = ""
     selected_renderer = resolve_tui_renderer(renderer, interactive=interactive)
     payload = load_current_payload(
         root=root,
         student_id=student_id,
         now=now,
         server_url=server_url,
-        server_token=server_token,
+        server_token=memory_bearer.value,
         allow_insecure_http=allow_insecure_http,
     )
     pending_help_request_ids: dict[tuple[str, str, str], str] = {}
@@ -1373,7 +1594,7 @@ def run_tui(
                     student_id=student_id,
                     now=now,
                     server_url=server_url,
-                    server_token=server_token,
+                    server_token=memory_bearer.value,
                     allow_insecure_http=allow_insecure_http,
                 )
             except ValueError as error:
@@ -1482,7 +1703,7 @@ def run_tui(
                             event = record_help_from_tui(
                                 assignment=assignment,
                                 server_url=server_url,
-                                server_token=server_token,
+                                server_token=memory_bearer.value,
                                 help_type=help_type,
                                 prompt=prompt,
                                 request_id=request_id,
@@ -1501,7 +1722,7 @@ def run_tui(
                                     student_id=student_id,
                                     now=now,
                                     server_url=server_url,
-                                    server_token=server_token,
+                                    server_token=memory_bearer.value,
                                     allow_insecure_http=allow_insecure_http,
                                 )
                             except ValueError as error:
@@ -1513,11 +1734,11 @@ def run_tui(
                 continue
             if action == "h":
                 try:
-                    if server_token.strip():
+                    if memory_bearer.value.strip():
                         history = fetch_help_history_from_server(
                             assignment=assignment,
                             server_url=server_url,
-                            server_token=server_token,
+                            server_token=memory_bearer.value,
                             allow_insecure_http=allow_insecure_http,
                         )
                         history_assignment = {**assignment, "help": {"events": history["events"]}}
@@ -1544,12 +1765,12 @@ def run_tui(
                         else ""
                     )
                     try:
-                        if server_token.strip():
+                        if memory_bearer.value.strip():
                             select_final_attempt_from_server(
                                 assignment=assignment,
                                 attempt_id=attempt_id,
                                 server_url=server_url,
-                                server_token=server_token,
+                                server_token=memory_bearer.value,
                                 allow_insecure_http=allow_insecure_http,
                             )
                         else:
@@ -1565,7 +1786,7 @@ def run_tui(
                             student_id=student_id,
                             now=now,
                             server_url=server_url,
-                            server_token=server_token,
+                            server_token=memory_bearer.value,
                             allow_insecure_http=allow_insecure_http,
                         )
                     except ValueError as error:
@@ -1594,7 +1815,7 @@ def run_tui(
                             student_id=student_id,
                             now=now,
                             server_url=server_url,
-                            server_token=server_token,
+                            server_token=memory_bearer.value,
                             allow_insecure_http=allow_insecure_http,
                         )
                     except ValueError as error:
@@ -1645,7 +1866,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--allow-insecure-http",
         action="store_true",
-        help="Consenti HTTP remoto solo per un collaudo su rete controllata; il default richiede HTTPS.",
+        help="Consenti HTTP remoto solo per un collaudo legacy controllato; il pairing richiede sempre HTTPS.",
+    )
+    parser.add_argument(
+        "--pair-browser",
+        action="store_true",
+        help="Autentica questa esecuzione nel browser e conserva il bearer TUI soltanto in memoria.",
     )
     return parser.parse_args()
 
@@ -1654,7 +1880,16 @@ def main() -> int:
     """Run the student lab TUI from the command line."""
 
     args = parse_args()
+    server_token = os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", "")
+    credential = None
     try:
+        if args.pair_browser:
+            if server_token.strip():
+                raise ValueError(
+                    "Rimuovi THEBITLAB_STUDENT_HELP_TOKEN quando usi --pair-browser."
+                )
+            credential = thebitlab_tui_pairing_client.acquire_tui_bearer(args.server_url)
+            server_token = credential.bearer_token
         return run_tui(
             student_id=args.student_id,
             root=args.root.resolve(strict=False),
@@ -1662,7 +1897,7 @@ def main() -> int:
             clear=not args.no_clear,
             use_color=supports_color(args.no_color),
             server_url=args.server_url,
-            server_token=os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", ""),
+            server_token=server_token,
             allow_insecure_http=args.allow_insecure_http,
             backend=args.backend,
             timeout_seconds=args.timeout,
@@ -1672,7 +1907,14 @@ def main() -> int:
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)
         return 1
+    finally:
+        server_token = ""
+        credential = None
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(
+        _run_student_api_worker()
+        if sys.argv[1:] == ["--student-api-worker"]
+        else main()
+    )

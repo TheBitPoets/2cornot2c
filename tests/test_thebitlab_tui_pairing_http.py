@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import http.client as http_client
 import json
+import socket
 import threading
+import time
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
@@ -19,6 +21,7 @@ from scripts.thebitlab_http_auth import HttpAuthenticationRequiredError, HttpSes
 from scripts.thebitlab_identity import UserAccount
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 from scripts.thebitlab_tui_pairing import TuiBrowserPairingBoundary
+from scripts import course_board_server
 from scripts.course_board_server import BoundedThreadingHTTPServer, CourseBoardHandler
 from scripts.thebitlab_tui_pairing_http import TuiPairingHttpRateLimiter, TuiPairingHttpRequest, TuiPairingHttpRoutes
 
@@ -100,6 +103,30 @@ def json_request(path, payload, *headers):
 
 def cookie(established):
     return established.set_cookie.split(";", 1)[0]
+
+
+def test_browser_page_is_fixed_no_store_and_contains_no_pairing_secret(graph) -> None:
+    _storage, _http, _boundary, routes = graph
+
+    response = routes.dispatch(request("/auth/tui/pair", method="GET"))
+    html = response.body.decode("utf-8")
+    headers = dict(response.headers)
+
+    assert response.status_code == 200
+    assert headers["Cache-Control"] == "no-store"
+    assert "default-src 'none'" in headers["Content-Security-Policy"]
+    assert "frame-ancestors 'none'" in headers["Content-Security-Policy"]
+    assert headers["X-Content-Type-Options"] == "nosniff"
+    assert "/auth/session" in html
+    assert "/auth/tui/pair" in html
+    assert "/auth/google/login" in html
+    assert 'target="_blank"' in html
+    assert 'rel="noopener noreferrer"' in html
+    assert "nuova scheda" in html
+    assert "csrf_token" in html
+    assert "user_code" not in html
+    assert "bearer_token" not in html
+    assert "__CSP_NONCE__" not in html
 
 
 def test_full_browser_pairing_delivers_one_tui_bearer(graph) -> None:
@@ -259,8 +286,24 @@ def test_unknown_path_is_not_claimed(graph) -> None:
     assert routes.dispatch(request("/auth/tui/unknown")) is None
 
 
-def test_course_board_socket_delivers_complete_pairing_flow(graph) -> None:
+def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) -> None:
     _storage, http, boundary, routes = graph
+    monkeypatch.setattr(course_board_server, "PAIRING_BODY_DEADLINE_SECONDS", 0.1)
+    monkeypatch.setattr(course_board_server, "STUDENT_API_BODY_DEADLINE_SECONDS", 0.1)
+    monkeypatch.setattr(course_board_server, "HTTP_HEADER_DEADLINE_SECONDS", 0.1)
+    monkeypatch.setenv(
+        "THEBITLAB_STUDENT_HELP_SECRET",
+        "legacy-secret-that-must-not-downgrade-production",
+    )
+    monkeypatch.setattr(
+        course_board_server,
+        "locked_student_lab_payload",
+        lambda *, student_id, now=None: {
+            "schema_version": "student_lab.v1",
+            "student_id": student_id,
+            "assignments": [],
+        },
+    )
     server = BoundedThreadingHTTPServer(("127.0.0.1", 0), CourseBoardHandler)
     server.tui_pairing_http_routes = routes
     server.teacher_token = "T" * 32
@@ -296,6 +339,108 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph) -> None:
             f"/auth/tui/pairings/{start['pairing_id']}/token",
             {"code": start["user_code"]},
         )
+        bearer = json.loads(consume_body)["bearer_token"]
+        assignments_status, assignments_body = exchange(
+            "/api/student-lab/assignments",
+            headers={"Authorization": "Bearer " + bearer},
+            method="GET",
+        )
+        legacy = course_board_server.student_help_auth.create_student_token(
+            "student-01",
+            "legacy-secret-that-must-not-downgrade-production",
+        )
+        legacy_status, _ = exchange(
+            "/api/student-lab/assignments",
+            headers={"Authorization": "Bearer " + legacy},
+            method="GET",
+        )
+        duplicate_query_status, _ = exchange(
+            "/api/student-lab/assignments?now=2026-01-01&now=2026-01-02",
+            headers={"Authorization": "Bearer " + bearer},
+            method="GET",
+        )
+        insecure_status, _ = exchange(
+            "/api/student-lab/assignments",
+            headers={
+                "Authorization": "Bearer " + bearer,
+                "X-Forwarded-Proto": "http",
+            },
+            method="GET",
+        )
+        duplicate_connection = http_client.HTTPConnection(
+            "127.0.0.1", server.server_address[1], timeout=5
+        )
+        try:
+            duplicate_connection.putrequest("GET", "/api/student-lab/assignments")
+            duplicate_connection.putheader("X-Forwarded-Proto", "https")
+            duplicate_connection.putheader("Authorization", "Bearer " + bearer)
+            duplicate_connection.putheader("Authorization", "Bearer " + bearer)
+            duplicate_connection.endheaders()
+            duplicate_response = duplicate_connection.getresponse()
+            duplicate_auth_status = duplicate_response.status
+            duplicate_auth_body = duplicate_response.read()
+        finally:
+            duplicate_connection.close()
+        page_connection = http_client.HTTPConnection(
+            "127.0.0.1", server.server_address[1], timeout=5
+        )
+        try:
+            page_connection.request(
+                "GET",
+                "/auth/tui/pair",
+                headers={"X-Forwarded-Proto": "https"},
+            )
+            page_response = page_connection.getresponse()
+            page_status = page_response.status
+            page_body = page_response.read()
+        finally:
+            page_connection.close()
+        slow_api_connection = http_client.HTTPConnection(
+            "127.0.0.1", server.server_address[1], timeout=5
+        )
+        try:
+            slow_api_connection.putrequest("POST", "/api/student-lab/help")
+            slow_api_connection.putheader("X-Forwarded-Proto", "https")
+            slow_api_connection.putheader("Authorization", "Bearer " + bearer)
+            slow_api_connection.putheader("Content-Type", "application/json")
+            slow_api_connection.putheader("Content-Length", "10")
+            slow_api_connection.endheaders(b"x")
+            time.sleep(0.15)
+            slow_api_response = slow_api_connection.getresponse()
+            slow_api_status = slow_api_response.status
+            slow_api_response.read()
+        finally:
+            slow_api_connection.close()
+        slow_connection = http_client.HTTPConnection(
+            "127.0.0.1", server.server_address[1], timeout=5
+        )
+        try:
+            slow_connection.putrequest("POST", "/auth/tui/pairings")
+            slow_connection.putheader("X-Forwarded-Proto", "https")
+            slow_connection.putheader("Content-Length", "10")
+            slow_connection.endheaders(b"x")
+            time.sleep(0.15)
+            slow_response = slow_connection.getresponse()
+            slow_body_status = slow_response.status
+            slow_response.read()
+        finally:
+            slow_connection.close()
+        slow_headers = socket.create_connection(server.server_address, timeout=5)
+        slow_headers.settimeout(2)
+        header_closed = False
+        try:
+            slow_headers.sendall(b"POST /auth/tui/pairings HTTP/1.1\r\n")
+            for byte in b"Host: localhost\r\nContent-Length: 0\r\n\r\n":
+                try:
+                    slow_headers.sendall(bytes((byte,)))
+                except OSError:
+                    header_closed = True
+                    break
+                time.sleep(0.03)
+            if not header_closed:
+                header_closed = slow_headers.recv(1) == b""
+        finally:
+            slow_headers.close()
         wrong_method, _ = exchange("/auth/tui/pairings", method="GET")
         network_path, _ = exchange("//auth/tui/pairings")
     finally:
@@ -303,10 +448,20 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph) -> None:
         server.server_close()
         thread.join(timeout=5)
 
-    bearer = json.loads(consume_body)["bearer_token"]
     assert begin_status == 201
     assert authorize_status == 204
     assert consume_status == 200
+    assert assignments_status == 200
+    assert json.loads(assignments_body)["student_id"] == "student-01"
+    assert legacy_status == 401
+    assert duplicate_query_status == 400
+    assert insecure_status == 400
+    assert duplicate_auth_status == 401
+    assert bearer.encode() not in duplicate_auth_body
+    assert page_status == 200 and b"Collega il terminale" in page_body
+    assert slow_api_status == 400
+    assert slow_body_status == 400
+    assert header_closed is True
     assert wrong_method == 405
     assert network_path == 400
     assert boundary.authenticate_bearer("Bearer " + bearer).user.user_id == "student-01"
