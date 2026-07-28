@@ -440,6 +440,35 @@ per installare. Su computer con al massimo 8 GiB viene mostrato per primo
 **Docker leggero - 512 MB**; tutte le alternative compatibili restano
 selezionabili.
 
+Prima di installare, la procedura controlla RAM, spazio libero, architettura,
+virtualizzazione hardware e connessione. Docker richiede almeno 4 GiB di RAM e
+8 GiB liberi; una VM richiede almeno 8 GiB di RAM e 20 GiB liberi. Se una
+risorsa obbligatoria manca, nessun componente viene modificato.
+
+#### Aggiornare su Windows
+
+Lo stesso bootstrap può essere rilanciato in sicurezza. È disponibile anche il
+comando esplicito:
+
+```powershell
+irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/update-classroom-windows.ps1 | iex
+```
+
+Aggiorna repository, installer, uTUI e l'immagine Docker quando cambia il
+digest. Le modifiche locali non vengono sovrascritte: un `git pull` non sicuro
+interrompe la procedura.
+
+#### Disinstallare da Windows
+
+```powershell
+irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/uninstall-classroom-windows.ps1 | iex
+```
+
+La procedura mostra il piano e richiede la parola esatta `DISINSTALLA`. Salva
+`lab`, `lab2`, file non tracciati e modifiche locali; rimuove soltanto i
+programmi registrati come installati da 2cornot2c. Una VM esistente blocca la
+disinstallazione e non viene mai distrutta implicitamente.
+
 ### Preparazione automatica del Mac
 
 Su un Mac Apple Silicon nuovo, oppure per riparare un'installazione incompleta,
