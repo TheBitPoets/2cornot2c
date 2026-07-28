@@ -14,7 +14,12 @@ import urllib.parse
 from collections.abc import Mapping
 from pathlib import Path
 
-from scripts.thebitlab_auth_services import FederatedIdentityService, SessionService
+from scripts.thebitlab_auth_services import (
+    FederatedIdentityService,
+    PairingService,
+    SessionService,
+    TuiPairingSessionService,
+)
 from scripts.thebitlab_edge_rate_limit import (
     GoogleOidcLoginAdmissionBoundary,
     SqliteAtomicRateLimitStore,
@@ -31,6 +36,11 @@ from scripts.thebitlab_google_oidc_http import GoogleOidcHttpRoutes
 from scripts.thebitlab_http_auth import HttpSessionAuthBoundary, SessionCookiePolicy
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 from scripts.thebitlab_session_http import SessionHttpRoutes
+from scripts.thebitlab_tui_pairing import TuiBrowserPairingBoundary
+from scripts.thebitlab_tui_pairing_http import (
+    TuiPairingHttpRateLimiter,
+    TuiPairingHttpRoutes,
+)
 
 _SECRET_RE = re.compile(r"^[A-Za-z0-9_-]{43,86}$")
 _CALLBACK_PATH = "/auth/google/callback"
@@ -49,22 +59,27 @@ class AuthRuntimeConfigurationError(RuntimeError):
 class GoogleOidcRuntime:
     """Own the composed service graph while exposing only its HTTP routes."""
 
-    __slots__ = ("_routes", "_session_routes")
+    __slots__ = ("_routes", "_session_routes", "_tui_pairing_routes")
 
     def __init__(
         self,
         routes: GoogleOidcHttpRoutes,
         session_routes: SessionHttpRoutes,
+        tui_pairing_routes: TuiPairingHttpRoutes,
     ) -> None:
         if (
             type(routes) is not GoogleOidcHttpRoutes
             or type(session_routes) is not SessionHttpRoutes
             or session_routes.sessions is not routes.session_discarder
             or session_routes.proxy_resolver is not routes.proxy_resolver
+            or type(tui_pairing_routes) is not TuiPairingHttpRoutes
+            or tui_pairing_routes.proxy_resolver is not routes.proxy_resolver
+            or tui_pairing_routes.boundary.http_sessions is not routes.session_discarder
         ):
             raise AuthRuntimeConfigurationError("Grafo autenticazione non valido.")
         self._routes = routes
         self._session_routes = session_routes
+        self._tui_pairing_routes = tui_pairing_routes
 
     @property
     def routes(self) -> GoogleOidcHttpRoutes:
@@ -73,6 +88,10 @@ class GoogleOidcRuntime:
     @property
     def session_routes(self) -> SessionHttpRoutes:
         return self._session_routes
+
+    @property
+    def tui_pairing_routes(self) -> TuiPairingHttpRoutes:
+        return self._tui_pairing_routes
 
     def __repr__(self) -> str:
         return "GoogleOidcRuntime(configured=True)"
@@ -89,6 +108,7 @@ def compose_google_oidc_runtime(
     client_secret = None
     csrf_secret = None
     rate_limit_pepper = None
+    pairing_pepper = None
     config = None
     cookie_policy = None
     proxy_resolver = None
@@ -99,6 +119,12 @@ def compose_google_oidc_runtime(
     admission = None
     routes = None
     session_routes = None
+    tui_pairing_routes = None
+    rate_limit_store = None
+    pairing_service = None
+    pairing_sessions = None
+    tui_sessions = None
+    pairing_boundary = None
     try:
         client_id = _required(environment, "THEBITLAB_GOOGLE_CLIENT_ID")
         client_secret = _required(environment, "THEBITLAB_GOOGLE_CLIENT_SECRET")
@@ -107,9 +133,16 @@ def compose_google_oidc_runtime(
         rate_limit_pepper = _secret(
             environment, "THEBITLAB_RATE_LIMIT_PEPPER_B64"
         )
-        if hmac.compare_digest(csrf_secret, rate_limit_pepper):
+        pairing_pepper = _secret(
+            environment, "THEBITLAB_TUI_PAIRING_PEPPER_B64"
+        )
+        if (
+            hmac.compare_digest(csrf_secret, rate_limit_pepper)
+            or hmac.compare_digest(csrf_secret, pairing_pepper)
+            or hmac.compare_digest(rate_limit_pepper, pairing_pepper)
+        ):
             raise AuthRuntimeConfigurationError(
-                "I segreti CSRF e rate limit devono essere indipendenti."
+                "I segreti CSRF, rate limit e pairing devono essere indipendenti."
             )
         trusted_proxy_cidrs = _trusted_proxy_cidrs(environment)
         post_login_path = environment.get(
@@ -152,9 +185,10 @@ def compose_google_oidc_runtime(
             FederatedIdentityService(storage),
             http_sessions,
         )
+        rate_limit_store = SqliteAtomicRateLimitStore(database_path)
         admission = GoogleOidcLoginAdmissionBoundary(
             login,
-            SqliteAtomicRateLimitStore(database_path),
+            rate_limit_store,
             proxy_resolver,
             client_key_pepper=rate_limit_pepper,
         )
@@ -166,7 +200,24 @@ def compose_google_oidc_runtime(
             session_cookie_policy=cookie_policy,
         )
         session_routes = SessionHttpRoutes(http_sessions, proxy_resolver)
-        return GoogleOidcRuntime(routes, session_routes)
+        pairing_service = PairingService(storage, pepper=pairing_pepper)
+        pairing_sessions = TuiPairingSessionService(pairing_service)
+        tui_sessions = SessionService(storage, audience="tui")
+        pairing_boundary = TuiBrowserPairingBoundary(
+            pairing_sessions,
+            http_sessions,
+            tui_sessions,
+        )
+        tui_pairing_routes = TuiPairingHttpRoutes(
+            pairing_boundary,
+            proxy_resolver,
+            TuiPairingHttpRateLimiter(
+                rate_limit_store,
+                proxy_resolver,
+                pepper=rate_limit_pepper,
+            ),
+        )
+        return GoogleOidcRuntime(routes, session_routes, tui_pairing_routes)
     except AuthRuntimeConfigurationError:
         raise
     except Exception:
@@ -178,6 +229,7 @@ def compose_google_oidc_runtime(
         client_secret = None
         csrf_secret = None
         rate_limit_pepper = None
+        pairing_pepper = None
         config = None
         cookie_policy = None
         proxy_resolver = None
@@ -188,6 +240,12 @@ def compose_google_oidc_runtime(
         admission = None
         routes = None
         session_routes = None
+        tui_pairing_routes = None
+        rate_limit_store = None
+        pairing_service = None
+        pairing_sessions = None
+        tui_sessions = None
+        pairing_boundary = None
 
 
 def _require_auth_dependencies() -> None:

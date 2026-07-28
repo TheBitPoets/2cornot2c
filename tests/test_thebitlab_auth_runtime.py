@@ -55,6 +55,7 @@ def valid_environment() -> dict[str, str]:
         ),
         "THEBITLAB_AUTH_CSRF_SECRET_B64": encoded_secret(1),
         "THEBITLAB_RATE_LIMIT_PEPPER_B64": encoded_secret(2),
+        "THEBITLAB_TUI_PAIRING_PEPPER_B64": encoded_secret(3),
         "THEBITLAB_TRUSTED_PROXY_CIDRS": "127.0.0.1/32,::1/128",
     }
 
@@ -69,6 +70,9 @@ def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> Non
     assert routes.session_discarder is login.http_sessions
     assert runtime.session_routes.sessions is login.http_sessions
     assert runtime.session_routes.proxy_resolver is routes.proxy_resolver
+    assert runtime.tui_pairing_routes.proxy_resolver is routes.proxy_resolver
+    assert runtime.tui_pairing_routes.boundary.http_sessions is login.http_sessions
+    assert runtime.tui_pairing_routes.boundary.tui_sessions.audience == "tui"
     assert login.http_sessions.sessions.audience == "web"
     assert routes.session_cookie_policy.name == "__Host-thebitlab_session"
     assert routes.session_cookie_policy.secure is True
@@ -107,6 +111,7 @@ def test_composition_accepts_relative_database_and_local_post_login(tmp_path: Pa
     (
         ("THEBITLAB_AUTH_CSRF_SECRET_B64", "too-short", "CSRF_SECRET"),
         ("THEBITLAB_RATE_LIMIT_PEPPER_B64", "=" * 43, "RATE_LIMIT_PEPPER"),
+        ("THEBITLAB_TUI_PAIRING_PEPPER_B64", "too-short", "TUI_PAIRING_PEPPER"),
         ("THEBITLAB_TRUSTED_PROXY_CIDRS", "", "TRUSTED_PROXY"),
         ("THEBITLAB_TRUSTED_PROXY_CIDRS", "127.0.0.1/8", "TRUSTED_PROXY"),
         ("THEBITLAB_TRUSTED_PROXY_CIDRS", "0.0.0.0/0", "TRUSTED_PROXY"),
@@ -142,6 +147,7 @@ def test_composition_rejects_unsafe_configuration_without_echoing_values(
         "THEBITLAB_GOOGLE_CLIENT_SECRET",
         "THEBITLAB_AUTH_CSRF_SECRET_B64",
         "THEBITLAB_RATE_LIMIT_PEPPER_B64",
+        "THEBITLAB_TUI_PAIRING_PEPPER_B64",
     ):
         assert environment[secret_name] not in serialized
 
@@ -295,7 +301,9 @@ def test_course_board_main_requires_explicit_google_auth_opt_in(
 ) -> None:
     from scripts import course_board_server
 
-    runtime = SimpleNamespace(routes=object(), session_routes=object())
+    runtime = SimpleNamespace(
+        routes=object(), session_routes=object(), tui_pairing_routes=object()
+    )
     composition_calls = []
     servers = []
 
@@ -348,8 +356,10 @@ def test_course_board_main_requires_explicit_google_auth_opt_in(
         assert servers[0].google_oidc_runtime is runtime
         assert servers[0].google_oidc_http_routes is runtime.routes
         assert servers[0].session_http_routes is runtime.session_routes
+        assert servers[0].tui_pairing_http_routes is runtime.tui_pairing_routes
     else:
         assert composition_calls == []
         assert not hasattr(servers[0], "google_oidc_runtime")
         assert not hasattr(servers[0], "google_oidc_http_routes")
         assert not hasattr(servers[0], "session_http_routes")
+        assert not hasattr(servers[0], "tui_pairing_http_routes")

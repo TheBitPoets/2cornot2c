@@ -66,6 +66,7 @@ from scripts import (
     thebitlab_services,
     thebitlab_session_http,
     thebitlab_storage,
+    thebitlab_tui_pairing_http,
     thebitlab_tracking_reports,
     track_assignments,
     validate_activity,
@@ -3286,6 +3287,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 "/auth/google/",
                 "/auth/session",
                 "/auth/logout",
+                "/auth/tui/",
             )
         )
 
@@ -3295,7 +3297,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if self._is_sensitive_auth_request_line() or any(
             any(
                 auth_path in str(argument)
-                for auth_path in ("/auth/google/", "/auth/session", "/auth/logout")
+                for auth_path in (
+                    "/auth/google/", "/auth/session", "/auth/logout", "/auth/tui/"
+                )
             )
             for argument in args
         ):
@@ -3318,6 +3322,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 safe_path = "/auth/session"
             elif "/auth/logout" in combined:
                 safe_path = "/auth/logout"
+            elif "/auth/tui/" in combined:
+                safe_path = "/auth/tui"
             else:
                 safe_path = "/auth/invalid"
             safe_line = f"AUTH {safe_path} HTTP"
@@ -3450,6 +3456,111 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             self.write_error_json(400, "Il payload JSON deve essere un oggetto.")
             return None
         return payload
+
+    def dispatch_tui_pairing_http(self, parsed) -> bool:
+        """Delegate browser/TUI pairing routes with bounded body reads."""
+
+        routes = getattr(self.server, "tui_pairing_http_routes", None)
+        request_parts = str(getattr(self, "requestline", "")).split()
+        if routes is not None and routes.handles(parsed.path) and len(request_parts) != 3:
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        if routes is not None and len(request_parts) == 3:
+            raw_target = request_parts[1]
+            raw_parsed = urlparse(raw_target)
+            candidate_path = raw_parsed.path if routes.handles(raw_parsed.path) else parsed.path
+            if routes.handles(candidate_path) and not (
+                raw_target == candidate_path
+                or raw_target.startswith(candidate_path + "?")
+                or raw_target.startswith(candidate_path + "#")
+                or raw_target.startswith(candidate_path + ";")
+            ):
+                self.write_oidc_transport_error(400, "bad_auth_request")
+                return True
+            if routes.handles(raw_parsed.path):
+                parsed = raw_parsed
+        request_parts = None
+        raw_target = None
+        candidate_path = None
+        if routes is None or not routes.handles(parsed.path):
+            return False
+        if parsed.scheme or parsed.netloc or parsed.params:
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        body = b""
+        try:
+            edge = thebitlab_google_oidc_http.EdgeRequestMetadata(
+                str(self.client_address[0]), tuple(self.headers.raw_items())
+            )
+            lengths = [
+                value.strip()
+                for name, value in edge.headers
+                if name.lower() == "content-length"
+            ]
+            transfers = [
+                value for name, value in edge.headers
+                if name.lower() == "transfer-encoding"
+            ]
+            readable = (
+                not transfers
+                and len(lengths) == 1
+                and lengths[0].isdigit()
+                and 0 <= int(lengths[0]) <= 2048
+            )
+            if readable:
+                expected = int(lengths[0])
+                body = self.rfile.read(expected) if expected else b""
+                if len(body) != expected:
+                    self.close_connection = True
+            else:
+                self.close_connection = True
+            raw_query = parsed.query
+            if parsed.fragment:
+                raw_query += "#" + parsed.fragment
+            request = thebitlab_tui_pairing_http.TuiPairingHttpRequest(
+                self.command,
+                parsed.path,
+                raw_query,
+                body,
+                edge,
+                is_tls=isinstance(self.connection, ssl.SSLSocket),
+            )
+        except Exception:  # noqa: BLE001
+            self.close_connection = True
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        try:
+            response = routes.dispatch(request)
+            if response is None:
+                raise RuntimeError("Router pairing senza risposta.")
+        except Exception:  # noqa: BLE001
+            self.write_oidc_transport_error(503, "authentication_unavailable")
+            return True
+        finally:
+            edge = None
+            request = None
+            raw_query = None
+            body = None
+            lengths = None
+            transfers = None
+        self.write_tui_pairing_response(response)
+        return True
+
+    def write_tui_pairing_response(self, response) -> None:
+        guard = getattr(response, "delivery_guard", None)
+        try:
+            self.send_response(response.status_code)
+            for name, value in response.headers:
+                self.send_header(name, value)
+            self.end_headers()
+            if response.body and self.command != "HEAD":
+                self.wfile.write(response.body)
+        except Exception:  # noqa: BLE001
+            if guard is not None:
+                guard.failed()
+            return
+        if guard is not None:
+            guard.delivered()
 
     def dispatch_session_http(self, parsed) -> bool:
         """Delegate exact web-session routes to the injected secure router."""
@@ -3633,6 +3744,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_unsupported_auth_method(self) -> None:
         parsed = urlparse(self.path)
+        if self.dispatch_tui_pairing_http(parsed):
+            return
         if self.dispatch_session_http(parsed):
             return
         if self.dispatch_google_oidc(parsed):
@@ -3641,6 +3754,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_HEAD(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.dispatch_tui_pairing_http(parsed):
+            return
         if self.dispatch_session_http(parsed):
             return
         if self.dispatch_google_oidc(parsed):
@@ -3667,6 +3782,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.dispatch_tui_pairing_http(parsed):
+            return
         if self.dispatch_session_http(parsed):
             return
         if self.dispatch_google_oidc(parsed):
@@ -3760,6 +3877,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.dispatch_tui_pairing_http(parsed):
+            return
         if self.dispatch_session_http(parsed):
             return
         if self.dispatch_google_oidc(parsed):
@@ -4226,6 +4345,7 @@ def main() -> int:
             server.google_oidc_runtime = auth_runtime
             server.google_oidc_http_routes = auth_runtime.routes
             server.session_http_routes = auth_runtime.session_routes
+            server.tui_pairing_http_routes = auth_runtime.tui_pairing_routes
         if not is_loopback_bind_host(args.host):
             print("ATTENZIONE: dashboard e credenziali Basic sono esposte su HTTP non cifrato.")
             print("Preferisci loopback con tunnel SSH oppure un reverse proxy HTTPS.")
