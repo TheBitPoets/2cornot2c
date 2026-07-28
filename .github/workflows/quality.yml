@@ -73,6 +73,25 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install -r requirements-dev.txt -r requirements-utui.txt -r requirements-auth.txt
 
+      - name: Validate Windows lifecycle scripts
+        shell: powershell
+        run: |
+          $failed = $false
+          Get-ChildItem scripts/*classroom-windows.ps1 | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              $_.FullName,
+              [ref]$tokens,
+              [ref]$errors
+            )
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$($_.Message) in $($_.Extent.File)" }
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
+
       - name: Test storage, lab and deletion workflows
         run: >-
           python -m pytest

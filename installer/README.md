@@ -11,6 +11,16 @@ l'ambiente didattico:
 La logica di rilevamento, i controlli e i piani non dipendono dalla UI.
 `utui` si occupa esclusivamente di rendering e input da terminale.
 
+Prima di qualsiasi scrittura, il preflight verifica:
+
+- almeno 4 GiB RAM e 8 GiB disco per Docker;
+- almeno 8 GiB RAM e 20 GiB disco per una VM;
+- virtualizzazione hardware;
+- raggiungibilità dei download.
+
+Le misure non disponibili producono un avviso; una misura sotto soglia blocca
+il piano prima del primo comando di installazione.
+
 ## Bootstrap monocomando
 
 Su macOS Apple Silicon:
@@ -90,6 +100,25 @@ Su Windows:
 cd "$HOME\2cornot2c"
 & .installer-venv\Scripts\python.exe scripts\student_dev_shell.py
 ```
+
+## Aggiornamento e disinstallazione Windows
+
+Aggiornamento idempotente:
+
+```powershell
+irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/update-classroom-windows.ps1 | iex
+```
+
+Disinstallazione protetta:
+
+```powershell
+irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/uninstall-classroom-windows.ps1 | iex
+```
+
+Il bootstrap registra in `~/.2cornot2c/bootstrap-state.json` soltanto Git e
+Python installati da lui. L'executor registra separatamente i passi riusciti.
+La disinstallazione usa entrambi i registri, crea un backup del lavoro, richiede
+`DISINSTALLA` e non esegue mai `vagrant destroy`. Se trova una VM, si ferma.
 
 La parte VM non scarica ancora la box Packer reale e non avvia la VM. Questi
 passi verranno attivati dopo aver fissato URL, versione e checksum degli

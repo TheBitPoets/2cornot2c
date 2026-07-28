@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from installer.model import Host, Provider
+from installer.preflight import GIB, ResourceSnapshot, evaluate
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_docker_preflight_accepts_minimum_resources() -> None:
+    results = evaluate(
+        Host.WINDOWS_AMD64,
+        Provider.DOCKER,
+        ResourceSnapshot(4 * GIB, 8 * GIB, True),
+    )
+
+    assert {result.status for result in results} == {"ok"}
+
+
+def test_vm_preflight_blocks_low_memory_disk_and_virtualization() -> None:
+    results = evaluate(
+        Host.WINDOWS_AMD64,
+        Provider.VIRTUALBOX,
+        ResourceSnapshot(6 * GIB, 10 * GIB, False),
+    )
+
+    assert [result.status for result in results] == [
+        "blocked",
+        "blocked",
+        "blocked",
+    ]
+
+
+def test_unknown_measurements_warn_but_do_not_block_sufficient_disk() -> None:
+    results = evaluate(
+        Host.WINDOWS_AMD64,
+        Provider.DOCKER,
+        ResourceSnapshot(None, 9 * GIB, None),
+    )
+
+    assert [result.status for result in results] == ["warning", "ok", "warning"]
+
+
+def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
+    bootstrap = (ROOT / "scripts" / "bootstrap-classroom-windows.ps1").read_text(
+        encoding="utf-8"
+    )
+    update = (ROOT / "scripts" / "update-classroom-windows.ps1").read_text(
+        encoding="utf-8"
+    )
+    uninstall = (ROOT / "scripts" / "uninstall-classroom-windows.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Test-HostResources" in bootstrap
+    assert "installed_by_bootstrap" in bootstrap
+    assert "bootstrap-classroom-windows.ps1" in update
+    assert 'if ($Confirmation -ne "DISINSTALLA")' in uninstall
+    assert "Remove-Item -LiteralPath $SafeInstallDir" in uninstall
+    assert "TheBitPoets/2cornot2c" in uninstall
+    assert "vagrant destroy" not in uninstall
+    assert "docker image rm $ImageReference" in uninstall
+    assert "docker image rm --force" not in uninstall

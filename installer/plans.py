@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from installer.model import Check, Host, InstallPlan, Provider, Step
 from installer.student_dev import immutable_reference
 
@@ -23,10 +25,57 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
         raise ValueError(f"{provider.value} non è supportato su {host.value}")
 
     if provider is Provider.DOCKER:
-        return _docker_plan(host)
-    if host is Host.MACOS_ARM64:
-        return _macos_plan(provider)
-    return _windows_plan()
+        plan = _docker_plan(host)
+    elif host is Host.MACOS_ARM64:
+        plan = _macos_plan(provider)
+    else:
+        plan = _windows_plan()
+    resources = Check(
+        "resources",
+        "Risorse minime",
+        (
+            sys.executable,
+            "-m",
+            "installer.preflight",
+            "--provider",
+            provider.value,
+        ),
+    )
+    connectivity = (
+        Check(
+            "network",
+            "Connessione download",
+            (
+                "/usr/bin/curl",
+                "--fail",
+                "--silent",
+                "--show-error",
+                "--head",
+                "https://raw.githubusercontent.com/"
+                "TheBitPoets/2cornot2c/main/README.md",
+            ),
+        )
+        if host is Host.MACOS_ARM64
+        else Check(
+            "network",
+            "Connessione download",
+            (
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Invoke-WebRequest -UseBasicParsing -Method Head -TimeoutSec 15 "
+                "'https://raw.githubusercontent.com/"
+                "TheBitPoets/2cornot2c/main/README.md' | Out-Null",
+            ),
+        )
+    )
+    return InstallPlan(
+        plan.host,
+        plan.provider,
+        (resources, connectivity, *plan.checks),
+        plan.steps,
+    )
 
 
 def _macos_plan(provider: Provider) -> InstallPlan:
