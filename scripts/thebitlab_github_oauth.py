@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import json
 import math
+import queue
 import re
 import secrets
 import threading
@@ -182,7 +183,9 @@ class PendingGitHubLinkFlow:
     code_verifier: str = field(repr=False, compare=False)
     creation_marker: object = field(repr=False, compare=False)
     user_id: str
+    session_id: str
     session_token_digest: str
+    session_created_at: datetime
     user_updated_at: datetime
     created_at: datetime
     expires_at: datetime
@@ -223,6 +226,8 @@ def _strict_json_object(data: bytes) -> dict[str, object]:
 
 
 class UrllibGitHubOAuthTransport:
+    _network_slots = threading.BoundedSemaphore(8)
+
     class _NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, request, fp, code, msg, headers, newurl):
             return None
@@ -231,35 +236,62 @@ class UrllibGitHubOAuthTransport:
         self._opener = urllib.request.build_opener(self._NoRedirect())
 
     def _request(self, request: urllib.request.Request, timeout_seconds: float, max_response_bytes: int) -> Mapping[str, object]:
-        data = None
-        result = None
-        rejected = False
-        unavailable = False
-        try:
-            with self._opener.open(request, timeout=timeout_seconds) as response:
-                if response.status != 200:
-                    unavailable = True
-                else:
-                    data = response.read(max_response_bytes + 1)
-            if not unavailable and data is not None:
-                if len(data) > max_response_bytes:
-                    unavailable = True
-                else:
-                    result = _strict_json_object(data)
-        except urllib.error.HTTPError as error:
-            rejected = 400 <= error.code < 500
-            unavailable = not rejected
-            error = None
-        except Exception:
-            unavailable = True
-        finally:
-            data = None
+        outcomes: queue.Queue[tuple[str, Mapping[str, object] | None]] = queue.Queue(maxsize=1)
+        if not self._network_slots.acquire(blocking=False):
             request = None
-        if rejected:
+            raise GitHubLinkProviderUnavailableError("GitHub non disponibile.")
+
+        def perform(bounded_request: urllib.request.Request) -> None:
+            data = None
+            result = None
+            status = "unavailable"
+            try:
+                with self._opener.open(
+                    bounded_request, timeout=timeout_seconds
+                ) as response:
+                    if response.status == 200:
+                        data = response.read(max_response_bytes + 1)
+                if data is not None and len(data) <= max_response_bytes:
+                    result = _strict_json_object(data)
+                    status = "ok"
+            except urllib.error.HTTPError as error:
+                if 400 <= error.code < 500:
+                    status = "rejected"
+                error = None
+            except Exception:
+                pass
+            finally:
+                data = None
+                bounded_request = None
+                outcomes.put((status, result))
+                self._network_slots.release()
+
+        try:
+            worker = threading.Thread(
+                target=perform,
+                args=(request,),
+                name="thebitlab-github-oauth",
+                daemon=True,
+            )
+            worker.start()
+        except Exception:
+            self._network_slots.release()
+            request = None
+            raise GitHubLinkProviderUnavailableError(
+                "GitHub non disponibile."
+            ) from None
+        request = None
+        try:
+            status, result = outcomes.get(timeout=timeout_seconds)
+        except queue.Empty:
+            raise GitHubLinkProviderUnavailableError(
+                "GitHub non disponibile."
+            ) from None
+        if status == "rejected":
             raise GitHubLinkProviderRejectedError(
                 "Richiesta OAuth GitHub rifiutata."
             )
-        if unavailable or result is None:
+        if status != "ok" or result is None:
             raise GitHubLinkProviderUnavailableError(
                 "GitHub non disponibile."
             )
@@ -353,7 +385,9 @@ class InMemoryGitHubLinkFlowStore:
                 and context.user.active
                 and context.user.user_id == flow.user_id
                 and context.user.updated_at == flow.user_updated_at
+                and context.session.session_id == flow.session_id
                 and hmac.compare_digest(context.session.token_digest, flow.session_token_digest)
+                and context.session.created_at == flow.session_created_at
                 and context.session.user_id == flow.user_id
                 and context.session.revoked_at is None
                 and context.session.created_at <= now
@@ -442,7 +476,9 @@ class GitHubAccountLinkService:
             code_verifier=verifier,
             creation_marker=marker,
             user_id=context.user.user_id,
+            session_id=context.session.session_id,
             session_token_digest=context.session.token_digest,
+            session_created_at=context.session.created_at,
             user_updated_at=context.user.updated_at,
             created_at=now,
             expires_at=now + self.config.flow_ttl,
@@ -506,7 +542,11 @@ class GitHubAccountLinkService:
     @classmethod
     def _browser_binding(cls, cookie_header: str | None, state: str) -> tuple[str, str]:
         cookie_name = cls._cookie_name(state)
-        invalid = type(cookie_header) is not str or not cookie_header or len(cookie_header.encode("utf-8")) > _MAX_COOKIE_HEADER_BYTES
+        try:
+            header_size = len(cookie_header.encode("utf-8")) if type(cookie_header) is str else 0
+        except UnicodeEncodeError:
+            raise GitHubLinkStateError("Cookie linking GitHub non valido.") from None
+        invalid = type(cookie_header) is not str or not cookie_header or header_size > _MAX_COOKIE_HEADER_BYTES
         matches = []
         if not invalid:
             for part in cookie_header.split(";"):
@@ -656,6 +696,7 @@ class GitHubAccountLinkService:
                     "Profilo GitHub non valido."
                 )
             identity_failed = False
+            identity_unavailable = False
             try:
                 identity = self.links.link(
                     flow.user_id,
@@ -666,7 +707,11 @@ class GitHubAccountLinkService:
             except AuthApplicationError:
                 identity_failed = True
             except Exception:
-                identity_failed = True
+                identity_unavailable = True
+            if identity_unavailable:
+                raise GitHubLinkProviderUnavailableError(
+                    "Storage linking GitHub non disponibile."
+                )
             if identity_failed or identity is None:
                 raise GitHubLinkIdentityConflictError(
                     "Account GitHub non collegabile."
@@ -701,3 +746,4 @@ class GitHubAccountLinkService:
             profile_failed = False
             assertion_failed = False
             identity_failed = False
+            identity_unavailable = False

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+import time
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -19,6 +21,7 @@ from scripts.thebitlab_github_oauth import (
     GitHubLinkStateError,
     GitHubOAuthConfig,
     InMemoryGitHubLinkFlowStore,
+    UrllibGitHubOAuthTransport,
 )
 from scripts.thebitlab_http_auth import HttpSessionAuthBoundary
 from scripts.thebitlab_identity import UserAccount
@@ -153,6 +156,24 @@ def test_config_pins_endpoints_and_scrubs_secret() -> None:
             config(**overrides)
 
 
+def test_transport_enforces_overall_wall_clock_timeout(monkeypatch) -> None:
+    transport = UrllibGitHubOAuthTransport()
+
+    def blocked_open(*_args, **_kwargs):
+        time.sleep(0.2)
+        raise OSError("blocked")
+
+    monkeypatch.setattr(transport._opener, "open", blocked_open)
+    started = time.monotonic()
+    with pytest.raises(GitHubLinkProviderUnavailableError):
+        transport._request(
+            urllib.request.Request("https://api.github.com/user"),
+            timeout_seconds=0.02,
+            max_response_bytes=1024,
+        )
+    assert time.monotonic() - started < 0.15
+
+
 def test_begin_link_builds_browser_bound_state_and_pkce(tmp_path) -> None:
     service, _storage, flows, _transport, established, _clock = make_service(tmp_path)
     state, _cookie, result = start(service, established.context)
@@ -231,6 +252,16 @@ def test_non_ascii_callback_state_is_a_client_error(tmp_path) -> None:
         )
 
 
+def test_unicode_cookie_is_a_state_error(tmp_path) -> None:
+    service, _storage, _flows, _transport, established, _clock = make_service(tmp_path)
+    with pytest.raises(GitHubLinkStateError):
+        service.complete_link(
+            callback(STATE),
+            cookie_header="\ud800",
+            context=established.context,
+        )
+
+
 def test_callback_replay_provider_cancel_and_expiry_are_terminal(tmp_path) -> None:
     service, _storage, flows, transport, established, clock = make_service(tmp_path)
     state, cookie, _started = start(service, established.context)
@@ -255,6 +286,25 @@ def test_callback_replay_provider_cancel_and_expiry_are_terminal(tmp_path) -> No
             callback(state), cookie_header=cookie, context=established.context
         )
     assert expired.value.clear_transaction_cookie is not None
+    assert transport.exchange_calls == []
+
+
+def test_flow_rejects_reused_token_in_new_session_generation(tmp_path) -> None:
+    service, _storage, flows, transport, established, _clock = make_service(tmp_path)
+    state, cookie, _started = start(service, established.context)
+    replacement_context = replace(
+        established.context,
+        authenticated=replace(
+            established.context.authenticated,
+            session=replace(established.context.session, session_id="session-02"),
+        ),
+    )
+
+    with pytest.raises(GitHubLinkStateError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=replacement_context
+        )
+    assert flows.pending_count() == 1
     assert transport.exchange_calls == []
 
 
@@ -336,6 +386,20 @@ def test_transport_failure_scrubs_oauth_credentials_from_traceback(tmp_path) -> 
     assert VERIFIER not in retained
     assert "github-authorization-code-raw" not in retained
     assert captured.value.__context__ is None
+
+
+def test_unexpected_link_storage_failure_is_unavailable(tmp_path, monkeypatch) -> None:
+    service, _storage, _flows, _transport, established, _clock = make_service(tmp_path)
+    state, cookie, _started = start(service, established.context)
+
+    def fail_link(*_args, **_kwargs):
+        raise RuntimeError("storage unavailable")
+
+    monkeypatch.setattr(service.links, "link", fail_link)
+    with pytest.raises(GitHubLinkProviderUnavailableError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
 
 
 def test_same_user_cannot_link_two_github_subjects_concurrently(tmp_path) -> None:
