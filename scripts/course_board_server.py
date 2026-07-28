@@ -3439,10 +3439,20 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         routes = getattr(self.server, "google_oidc_http_routes", None)
         request_parts = str(getattr(self, "requestline", "")).split()
         if routes is not None and len(request_parts) == 3:
-            raw_parsed = urlparse(request_parts[1])
+            raw_target = request_parts[1]
+            raw_parsed = urlparse(raw_target)
             if routes.handles(raw_parsed.path):
                 parsed = raw_parsed
+            elif routes.handles(parsed.path) and not (
+                raw_target == parsed.path
+                or raw_target.startswith(parsed.path + "?")
+                or raw_target.startswith(parsed.path + "#")
+                or raw_target.startswith(parsed.path + ";")
+            ):
+                self.write_oidc_transport_error(400, "bad_auth_request")
+                return True
         request_parts = None
+        raw_target = None
         if routes is None or not routes.handles(parsed.path):
             return False
         if parsed.scheme or parsed.netloc or parsed.params:

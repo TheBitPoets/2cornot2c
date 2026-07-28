@@ -480,6 +480,9 @@ def test_malformed_request_line_redacts_callback_secret_and_returns_400() -> Non
             + method_secret
             + " / HTTP/1.1"
         )
+        triple_slash = raw_exchange(
+            "GET ///auth/google/login HTTP/1.1"
+        )
     finally:
         server.shutdown()
         server.server_close()
@@ -487,6 +490,7 @@ def test_malformed_request_line_redacts_callback_secret_and_returns_400() -> Non
 
     assert b"400" in response
     assert b"400" in malformed_method
+    assert b"400" in triple_slash
     assert raw_secret.encode("ascii") not in response
     assert method_secret.encode("ascii") not in malformed_method
     serialized = repr(RecordingHandler.messages)
@@ -529,6 +533,7 @@ def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
         network_path = exchange(
             "GET", "//evil.example/auth/google/callback?state=x&code=y"
         )
+        normalized_network_path = exchange("GET", "//auth/google/login")
         absolute_target = exchange(
             "GET", "https://evil.example/auth/google/login"
         )
@@ -548,6 +553,7 @@ def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
     assert fragmented == (400, None)
     assert parameterized == (400, None)
     assert network_path == (400, None)
+    assert normalized_network_path == (400, None)
     assert absolute_target == (400, None)
     assert unsupported == {
         method: (405, "GET")
