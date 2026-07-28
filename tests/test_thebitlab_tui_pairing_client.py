@@ -10,6 +10,7 @@ from email.message import Message
 
 import pytest
 
+from scripts import thebitlab_tui_pairing_client as pairing_client_module
 from scripts.thebitlab_tui_pairing_client import (
     TuiBearerCredential,
     TuiPairingClient,
@@ -149,6 +150,27 @@ def test_poll_honors_bounded_retry_after() -> None:
 
     assert credential.bearer_token == "T" * 48
     assert sleeps == [3.0]
+
+
+def test_production_transport_uses_killable_minimal_environment(monkeypatch) -> None:
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN", "must-not-reach-child-env")
+    monkeypatch.setenv("HTTPS_PROXY", "https://proxy.test")
+    environment = pairing_client_module._transport_environment()
+
+    assert environment["HTTPS_PROXY"] == "https://proxy.test"
+    assert "THEBITLAB_STUDENT_HELP_TOKEN" not in environment
+
+    request = pairing_client_module.urllib.request.Request(
+        "https://127.0.0.1:1/auth/tui/pairings",
+        data=b"",
+        method="POST",
+    )
+    with pytest.raises(TuiPairingClientError, match="non è raggiungibile"):
+        pairing_client_module._request_json_in_killable_process(
+            request,
+            timeout=1,
+            expected_status=201,
+        )
 
 
 @pytest.mark.parametrize(

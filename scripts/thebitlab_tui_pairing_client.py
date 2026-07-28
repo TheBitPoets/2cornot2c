@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import math
+import os
 import queue
 import re
+import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -79,7 +83,7 @@ class TuiPairingClient:
         poll_seconds: float = _DEFAULT_POLL_SECONDS,
     ) -> None:
         self.server_url = _canonical_server_origin(server_url)
-        self._urlopen = urlopen or urllib.request.build_opener(_NoRedirectHandler()).open
+        self._urlopen = urlopen
         self.clock = clock
         self.monotonic = monotonic
         self.sleep = sleep
@@ -250,6 +254,12 @@ class TuiPairingClient:
         timeout: float,
         expected_status: int,
     ):
+        if self._urlopen is None:
+            return _request_json_in_killable_process(
+                request,
+                timeout=timeout,
+                expected_status=expected_status,
+            )
         outcomes: queue.Queue = queue.Queue(maxsize=1)
         if not _TRANSPORT_WORKER_SLOTS.acquire(blocking=False):
             raise TuiPairingClientError("Il server pairing non è raggiungibile.")
@@ -311,44 +321,12 @@ class TuiPairingClient:
         raise TuiPairingClientError(str(value))
 
     def _request_json(self, request: urllib.request.Request, *, timeout: float, expected_status: int):
-        response = None
-        body = None
-        try:
-            response = self._urlopen(request, timeout=timeout)
-            status = getattr(response, "status", None)
-            _require_json_response_headers(response)
-            body = _bounded_read(response)
-            if status != expected_status:
-                raise TuiPairingClientError("Il server pairing ha restituito uno stato inatteso.")
-            return _decode_json(body)
-        except urllib.error.HTTPError as error:
-            response = error
-            body = _bounded_error_read(error)
-            if error.code == 409:
-                raise _PairingPendingError() from None
-            if error.code == 410:
-                raise TuiPairingClientError("Il codice pairing è scaduto. Avvia un nuovo accesso.") from None
-            if error.code == 429:
-                retry_after = _retry_after(error.headers)
-                raise _PairingRateLimitedError(retry_after) from None
-            if 300 <= error.code <= 399:
-                raise TuiPairingClientError("Il server pairing ha rifiutato un redirect non sicuro.") from None
-            raise TuiPairingClientError("Il server pairing ha rifiutato la richiesta.") from None
-        except (urllib.error.URLError, TimeoutError, OSError):
-            raise TuiPairingClientError("Il server pairing non è raggiungibile.") from None
-        except TuiPairingClientError:
-            raise
-        except Exception:
-            raise TuiPairingClientError("Il server pairing non è raggiungibile.") from None
-        finally:
-            if response is not None and hasattr(response, "close"):
-                try:
-                    response.close()
-                except Exception:
-                    pass
-            response = None
-            request = None
-            body = None
+        return _request_json_with_urlopen(
+            self._urlopen,
+            request,
+            timeout=timeout,
+            expected_status=expected_status,
+        )
 
 
 class _PairingPendingError(RuntimeError):
@@ -359,6 +337,195 @@ class _PairingRateLimitedError(RuntimeError):
     def __init__(self, retry_after: int) -> None:
         self.retry_after = retry_after
         super().__init__("Pairing temporaneamente limitato.")
+
+
+def _request_json_in_killable_process(
+    request: urllib.request.Request,
+    *,
+    timeout: float,
+    expected_status: int,
+):
+    specification = json.dumps(
+        {
+            "url": request.full_url,
+            "data": base64.b64encode(request.data or b"").decode("ascii"),
+            "headers": list(request.header_items()),
+            "method": request.get_method(),
+            "timeout": timeout,
+            "expected_status": expected_status,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    process = None
+    stdout = None
+    failure = None
+    try:
+        process = subprocess.Popen(
+            [sys.executable, str(__file__), "--transport-worker"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=_transport_environment(),
+        )
+        try:
+            stdout, _ = process.communicate(input=specification, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            failure = "Il server pairing non è raggiungibile."
+            process.kill()
+            process.communicate(timeout=1)
+        if failure is None and (
+            process.returncode != 0
+            or type(stdout) is not bytes
+            or len(stdout) > _MAX_RESPONSE_BYTES * 2
+        ):
+            failure = "Il server pairing non è raggiungibile."
+    except Exception:
+        failure = "Il server pairing non è raggiungibile."
+    finally:
+        if process is not None and process.poll() is None:
+            try:
+                process.kill()
+                process.communicate(timeout=1)
+            except Exception:
+                pass
+        process = None
+        request = None
+        specification = None
+    if failure is not None:
+        stdout = None
+        raise TuiPairingClientError(failure)
+    try:
+        outcome = _decode_json(stdout)
+    finally:
+        stdout = None
+    if type(outcome) is not list or len(outcome) != 2:
+        raise TuiPairingClientError("Il server pairing non è raggiungibile.")
+    kind, value = outcome
+    if kind == "ok":
+        return value
+    if kind == "pending":
+        raise _PairingPendingError()
+    if kind == "rate" and type(value) is int and not isinstance(value, bool):
+        raise _PairingRateLimitedError(value)
+    if kind == "error" and type(value) is str:
+        raise TuiPairingClientError(value)
+    raise TuiPairingClientError("Il server pairing non è raggiungibile.")
+
+
+def _transport_environment() -> dict[str, str]:
+    allowed = {
+        "HTTPS_PROXY",
+        "https_proxy",
+        "NO_PROXY",
+        "no_proxy",
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "SYSTEMROOT",
+        "WINDIR",
+    }
+    return {key: value for key, value in os.environ.items() if key in allowed}
+
+
+def _run_transport_worker() -> int:
+    request = None
+    outcome = ("error", "Il server pairing non è raggiungibile.")
+    specification = None
+    raw = None
+    try:
+        raw = sys.stdin.buffer.read(8193)
+        if len(raw) > 8192:
+            raise ValueError("specification")
+        specification = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_object)
+        if type(specification) is not dict or set(specification) != {
+            "url", "data", "headers", "method", "timeout", "expected_status"
+        }:
+            raise ValueError("specification")
+        data = base64.b64decode(specification["data"], validate=True)
+        headers = specification["headers"]
+        if type(headers) is not list or any(
+            type(item) is not list
+            or len(item) != 2
+            or type(item[0]) is not str
+            or type(item[1]) is not str
+            for item in headers
+        ):
+            raise ValueError("headers")
+        request = urllib.request.Request(
+            specification["url"],
+            data=data,
+            headers=dict(headers),
+            method=specification["method"],
+        )
+        opener = urllib.request.build_opener(_NoRedirectHandler())
+        try:
+            payload = _request_json_with_urlopen(
+                opener.open,
+                request,
+                timeout=float(specification["timeout"]),
+                expected_status=int(specification["expected_status"]),
+            )
+            outcome = ("ok", payload)
+        except _PairingPendingError:
+            outcome = ("pending", None)
+        except _PairingRateLimitedError as error:
+            outcome = ("rate", error.retry_after)
+        except TuiPairingClientError as error:
+            outcome = ("error", str(error))
+    except Exception:
+        pass
+    finally:
+        request = None
+        specification = None
+        raw = None
+    encoded = json.dumps(outcome, separators=(",", ":")).encode("utf-8")
+    if len(encoded) > _MAX_RESPONSE_BYTES * 2:
+        return 1
+    sys.stdout.buffer.write(encoded)
+    sys.stdout.buffer.flush()
+    outcome = None
+    encoded = None
+    return 0
+
+
+def _request_json_with_urlopen(urlopen, request, *, timeout: float, expected_status: int):
+    response = None
+    body = None
+    try:
+        response = urlopen(request, timeout=timeout)
+        status = getattr(response, "status", None)
+        _require_json_response_headers(response)
+        body = _bounded_read(response)
+        if status != expected_status:
+            raise TuiPairingClientError("Il server pairing ha restituito uno stato inatteso.")
+        return _decode_json(body)
+    except urllib.error.HTTPError as error:
+        response = error
+        body = _bounded_error_read(error)
+        if error.code == 409:
+            raise _PairingPendingError() from None
+        if error.code == 410:
+            raise TuiPairingClientError("Il codice pairing è scaduto. Avvia un nuovo accesso.") from None
+        if error.code == 429:
+            retry_after = _retry_after(error.headers)
+            raise _PairingRateLimitedError(retry_after) from None
+        if 300 <= error.code <= 399:
+            raise TuiPairingClientError("Il server pairing ha rifiutato un redirect non sicuro.") from None
+        raise TuiPairingClientError("Il server pairing ha rifiutato la richiesta.") from None
+    except (urllib.error.URLError, TimeoutError, OSError):
+        raise TuiPairingClientError("Il server pairing non è raggiungibile.") from None
+    except TuiPairingClientError:
+        raise
+    except Exception:
+        raise TuiPairingClientError("Il server pairing non è raggiungibile.") from None
+    finally:
+        if response is not None and hasattr(response, "close"):
+            try:
+                response.close()
+            except Exception:
+                pass
+        response = None
+        request = None
+        body = None
 
 
 def acquire_tui_bearer(
@@ -514,3 +681,7 @@ def _retry_after(headers) -> int:
     if not 1 <= retry_after <= 60:
         raise TuiPairingClientError("Il server pairing ha restituito Retry-After non valido.")
     return retry_after
+
+
+if __name__ == "__main__":
+    raise SystemExit(_run_transport_worker() if sys.argv[1:] == ["--transport-worker"] else 2)

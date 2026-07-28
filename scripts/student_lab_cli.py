@@ -967,8 +967,13 @@ def record_help_from_tui(
         failure = "Il server aiuti non ha risposto entro il tempo previsto."
     except (json.JSONDecodeError, UnicodeDecodeError):
         failure = "Il server aiuti ha restituito una risposta non valida."
+    else:
+        if _contains_credential(payload, credential.value):
+            payload = None
+            failure = "Il server aiuti ha restituito una risposta non valida."
     finally:
         request = None
+        response = None
         credential = None
     if failure is not None:
         if pending_failure:
@@ -976,7 +981,9 @@ def record_help_from_tui(
         raise ValueError(failure)
     event = payload.get("event") if isinstance(payload, dict) else None
     if not isinstance(event, dict):
+        payload = None
         raise ValueError("Il server aiuti non ha restituito l'evento salvato.")
+    payload = None
     return event
 
 
@@ -1016,12 +1023,18 @@ def fetch_help_history_from_server(
         failure = "Il server aiuti non ha risposto entro il tempo previsto."
     except (json.JSONDecodeError, UnicodeDecodeError):
         failure = "Il server aiuti ha restituito uno storico non valido."
+    else:
+        if _contains_credential(payload, credential.value):
+            payload = None
+            failure = "Il server aiuti ha restituito uno storico non valido."
     finally:
         request = None
+        response = None
         credential = None
     if failure is not None:
         raise ValueError(failure)
     if not isinstance(payload, dict) or not isinstance(payload.get("events"), list):
+        payload = None
         raise ValueError("Il server aiuti ha restituito uno storico non valido.")
     return payload
 
@@ -1073,15 +1086,42 @@ def select_final_attempt_from_server(
         failure = "Il server tentativi non ha risposto entro il tempo previsto."
     except (json.JSONDecodeError, UnicodeDecodeError):
         failure = "Il server tentativi ha restituito una risposta non valida."
+    else:
+        if _contains_credential(payload, credential.value):
+            payload = None
+            failure = "Il server tentativi ha restituito una risposta non valida."
     finally:
         request = None
+        response = None
         credential = None
     if failure is not None:
         raise ValueError(failure)
     selected = payload.get("assignment") if isinstance(payload, dict) else None
     if not isinstance(selected, dict):
+        payload = None
         raise ValueError("Il server tentativi non ha restituito la consegna aggiornata.")
+    payload = None
     return selected
+
+
+def _contains_credential(value: Any, credential: str, depth: int = 0) -> bool:
+    try:
+        if depth > 32:
+            return True
+        if isinstance(value, str):
+            return bool(credential) and credential in value
+        if isinstance(value, dict):
+            return any(
+                _contains_credential(key, credential, depth + 1)
+                or _contains_credential(item, credential, depth + 1)
+                for key, item in value.items()
+            )
+        if isinstance(value, (list, tuple)):
+            return any(_contains_credential(item, credential, depth + 1) for item in value)
+        return False
+    finally:
+        value = None
+        credential = ""
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -1268,12 +1308,18 @@ def fetch_student_lab_payload(
         failure = "Il server consegne non ha risposto entro il tempo previsto."
     except (json.JSONDecodeError, UnicodeDecodeError):
         failure = "Il server consegne ha restituito una risposta non valida."
+    else:
+        if _contains_credential(payload, credential.value):
+            payload = None
+            failure = "Il server consegne ha restituito una risposta non valida."
     finally:
         request = None
+        response = None
         credential = None
     if failure is not None:
         raise ValueError(failure)
     if not isinstance(payload, dict) or not isinstance(payload.get("assignments"), list):
+        payload = None
         raise ValueError("Il server consegne ha restituito un payload non valido.")
     return payload
 

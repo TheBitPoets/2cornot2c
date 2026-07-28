@@ -1071,6 +1071,42 @@ def test_student_api_401_scrubs_bearer_from_recursive_traceback(monkeypatch) -> 
     assert captured.value.__cause__ is None
 
 
+def test_student_api_200_reflection_scrubs_bearer_from_traceback(monkeypatch) -> None:
+    bearer = "Y" * 48
+
+    class ReflectedResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"assignments": bearer}).encode()
+
+    monkeypatch.setattr(
+        student_lab_cli,
+        "student_api_urlopen",
+        lambda request, timeout: ReflectedResponse(),
+    )
+
+    with pytest.raises(ValueError) as captured:
+        student_lab_cli.fetch_student_lab_payload(
+            server_url="https://teacher.test",
+            server_token=bearer,
+        )
+
+    fragments = [str(captured.value), repr(captured.value)]
+    traceback = captured.value.__traceback__
+    while traceback is not None:
+        filename = traceback.tb_frame.f_code.co_filename.replace("\\", "/")
+        if filename.endswith("/scripts/student_lab_cli.py"):
+            fragments.extend(repr(value) for value in traceback.tb_frame.f_locals.values())
+        traceback = traceback.tb_next
+    assert bearer not in "\n".join(fragments)
+    assert str(captured.value) == "Il server consegne ha restituito una risposta non valida."
+
+
 def test_load_current_payload_enriches_remote_assignment_with_matching_local_paths(monkeypatch, tmp_path) -> None:
     remote_assignment = sample_assignment(
         status="missing",
