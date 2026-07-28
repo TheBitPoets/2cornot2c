@@ -108,6 +108,7 @@ def test_composition_accepts_relative_database_and_local_post_login(tmp_path: Pa
         ("THEBITLAB_TRUSTED_PROXY_CIDRS", "", "TRUSTED_PROXY"),
         ("THEBITLAB_TRUSTED_PROXY_CIDRS", "127.0.0.1/8", "TRUSTED_PROXY"),
         ("THEBITLAB_TRUSTED_PROXY_CIDRS", "0.0.0.0/0", "TRUSTED_PROXY"),
+        ("THEBITLAB_TRUSTED_PROXY_CIDRS", "::ffff:10.0.0.0/112", "TRUSTED_PROXY"),
         (
             "THEBITLAB_GOOGLE_REDIRECT_URI",
             "https://lab.example.edu/not-the-callback",
@@ -186,8 +187,26 @@ def test_windows_composition_rejects_null_dacl_and_unsafe_ancestor(tmp_path: Pat
     environment["THEBITLAB_AUTH_DB_PATH"] = str(null_dacl / "auth.sqlite3")
     with pytest.raises(AuthRuntimeConfigurationError, match="ACL database"):
         compose_google_oidc_runtime(environment, data_root=tmp_path)
+    sid = subprocess.run(
+        (
+            str(
+                Path(system_root)
+                / "System32"
+                / "WindowsPowerShell"
+                / "v1.0"
+                / "powershell.exe"
+            ),
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "[Security.Principal.WindowsIdentity]::GetCurrent().User.Value",
+        ),
+        check=True,
+        capture_output=True,
+        timeout=10,
+    ).stdout.decode("ascii").strip()
     subprocess.run(
-        (icacls, str(null_dacl), "/reset"),
+        (icacls, str(null_dacl), "/grant", f"*{sid}:(OI)(CI)F"),
         check=True,
         capture_output=True,
         timeout=10,

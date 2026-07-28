@@ -234,12 +234,35 @@ def _trusted_proxy_cidrs(environment: Mapping[str, str]) -> tuple[str, ...]:
     networks = None
     if not invalid:
         try:
-            networks = tuple(ipaddress.ip_network(value, strict=True) for value in values)
+            parsed_networks = tuple(
+                ipaddress.ip_network(value, strict=True) for value in values
+            )
+            mapped_space = ipaddress.IPv6Network("::ffff:0:0/96")
+            normalized_networks = []
+            for network in parsed_networks:
+                if isinstance(network, ipaddress.IPv6Network) and network.subnet_of(
+                    mapped_space
+                ):
+                    mapped = network.network_address.ipv4_mapped
+                    if mapped is None:
+                        raise ValueError("CIDR mapped non valido")
+                    network = ipaddress.IPv4Network(
+                        (mapped, network.prefixlen - mapped_space.prefixlen),
+                        strict=True,
+                    )
+                elif isinstance(network, ipaddress.IPv6Network) and network.overlaps(
+                    mapped_space
+                ):
+                    raise ValueError("CIDR mapped ambiguo")
+                normalized_networks.append(network)
+            networks = tuple(normalized_networks)
             invalid = any(
                 network.num_addresses
                 > (4096 if network.version == 4 else 65536)
                 for network in networks
             )
+            parsed_networks = None
+            normalized_networks = None
         except ValueError:
             invalid = True
     networks = None
