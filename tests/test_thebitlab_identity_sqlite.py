@@ -207,6 +207,46 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
+def test_migration_v10_removes_pairing_correlations_corrupted_under_v9(
+    database_path,
+) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_user(account())
+    pending = pairing()
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=1))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=2))
+    tui_session = session(
+        created_at=consumed.consumed_at,
+        last_seen_at=consumed.consumed_at,
+        expires_at=consumed.consumed_at + timedelta(hours=8),
+        audience="tui",
+        source_pairing_id="pairing-01",
+    )
+    storage.consume_pairing_and_create_session(
+        consumed,
+        tui_session,
+        expected_user_updated_at=NOW,
+        expected_user_role="student",
+    )
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP TRIGGER trg_consumed_pairing_session_immutable")
+        connection.execute(
+            "UPDATE tui_pairings SET consumed_at = ? WHERE pairing_id = 'pairing-01'",
+            (
+                (consumed.consumed_at + timedelta(seconds=1))
+                .isoformat()
+                .replace("+00:00", "Z"),
+            ),
+        )
+        connection.execute("DELETE FROM schema_migrations WHERE version = 10")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_session("session-01") is None
+    assert upgraded.read_pairing("pairing-01").status == "consumed"
+
+
 def test_migration_v8_removes_uncorrelated_legacy_tui_sessions(database_path) -> None:
     storage = SqliteIdentityStorage(database_path)
     storage.create_user(account())

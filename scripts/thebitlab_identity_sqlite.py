@@ -264,6 +264,7 @@ _MIGRATION_9 = (
 )
 
 _MIGRATION_10 = (
+    _MIGRATION_8[0],
     """
     CREATE TRIGGER IF NOT EXISTS trg_consumed_pairing_session_immutable
     BEFORE UPDATE ON tui_pairings
