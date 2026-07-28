@@ -3452,13 +3452,24 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             edge = None
             request = None
             raw_query = None
-        self.send_response(response.status_code)
-        for name, value in response.headers:
-            self.send_header(name, value)
-        self.end_headers()
-        if response.body and self.command != "HEAD":
-            self.wfile.write(response.body)
+        self.write_google_oidc_response(response)
         return True
+
+    def write_google_oidc_response(self, response) -> None:
+        guard = getattr(response, "delivery_guard", None)
+        try:
+            self.send_response(response.status_code)
+            for name, value in response.headers:
+                self.send_header(name, value)
+            self.end_headers()
+            if response.body and self.command != "HEAD":
+                self.wfile.write(response.body)
+        except Exception:  # noqa: BLE001
+            if guard is not None:
+                guard.failed()
+            return
+        if guard is not None:
+            guard.delivered()
 
     def write_oidc_transport_error(self, status_code: int, error_code: str) -> None:
         body = json.dumps(
@@ -3495,6 +3506,12 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         self.do_unsupported_auth_method()
 
     def do_OPTIONS(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_TRACE(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_CONNECT(self) -> None:  # noqa: N802
         self.do_unsupported_auth_method()
 
     def do_GET(self) -> None:  # noqa: N802

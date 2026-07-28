@@ -65,11 +65,40 @@ class GoogleOidcHttpRequest:
             raise ValueError("Metadati HTTP non validi.")
 
 
+class GoogleOidcDeliveryGuard:
+    """Discard one issued session unless the HTTP response is delivered."""
+
+    def __init__(
+        self, discarder: EstablishedSessionDiscarder, established: object
+    ) -> None:
+        self._discarder = discarder
+        self._established = established
+
+    def delivered(self) -> None:
+        self._established = None
+        self._discarder = None
+
+    def failed(self) -> None:
+        established = self._established
+        discarder = self._discarder
+        self._established = None
+        self._discarder = None
+        if established is None or discarder is None:
+            return
+        try:
+            discarder.discard_established_session(established)
+        except Exception:
+            pass
+
+
 @dataclass(frozen=True)
 class GoogleOidcHttpResponse:
     status_code: int
     headers: tuple[tuple[str, str], ...] = field(repr=False, compare=False)
     body: bytes = field(repr=False, compare=False)
+    delivery_guard: GoogleOidcDeliveryGuard | None = field(
+        default=None, repr=False, compare=False
+    )
 
     def __post_init__(self) -> None:
         if type(self.status_code) is not int or not 100 <= self.status_code <= 599:
@@ -92,7 +121,15 @@ class GoogleOidcHttpResponse:
             except UnicodeEncodeError:
                 raise ValueError("Header risposta non serializzabile.") from None
             total += len(item[0].encode("ascii")) + len(encoded_value) + 4
-        if total > _MAX_RESPONSE_HEADER_BYTES or type(self.body) is not bytes or len(self.body) > 4096:
+        if (
+            total > _MAX_RESPONSE_HEADER_BYTES
+            or type(self.body) is not bytes
+            or len(self.body) > 4096
+            or (
+                self.delivery_guard is not None
+                and type(self.delivery_guard) is not GoogleOidcDeliveryGuard
+            )
+        ):
             raise ValueError("Risposta HTTP non valida.")
 
 
@@ -259,6 +296,9 @@ class GoogleOidcHttpRoutes:
                         ("Content-Length", "0"),
                     ),
                     b"",
+                    GoogleOidcDeliveryGuard(
+                        self.session_discarder, result.session
+                    ),
                 )
             except Exception:
                 cleanup_header: tuple[tuple[str, str], ...] = ()

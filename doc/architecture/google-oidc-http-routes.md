@@ -51,7 +51,7 @@ Al successo la route percent-encoda il path locale come URI ASCII e risponde `30
 1. sessione web nuova;
 2. cancellazione del cookie transazionale one-time.
 
-Anche gli errori terminali che hanno consumato il flow propagano esclusivamente il cookie di cleanup validato. La route richiede inoltre un `EstablishedSessionDiscarder`: se un risultato post-callback non può essere serializzato, revoca best-effort la sessione appena emessa e cancella il cookie transazionale, evitando sessioni attive irraggiungibili. La policy cookie dichiarata dalla route deve coincidere con quella del callback service. State/callback non validi diventano 400, identità rifiutata 403, provider/configurazione/infrastruttura 503.
+Anche gli errori terminali che hanno consumato il flow propagano esclusivamente il cookie di cleanup validato. La route richiede inoltre un `EstablishedSessionDiscarder`: se un risultato post-callback non può essere serializzato, revoca best-effort la sessione appena emessa e cancella il cookie transazionale, evitando sessioni attive irraggiungibili. Una risposta callback valida porta un delivery guard one-shot: `CourseBoardHandler` lo conferma soltanto dopo aver scritto status/header/body; qualunque eccezione socket durante la scrittura revoca la sessione prima di abbandonare la richiesta. La policy cookie dichiarata dalla route deve coincidere con quella del callback service. State/callback non validi diventano 400, identità rifiutata 403, provider/configurazione/infrastruttura 503.
 
 ## Segreti e browser policy
 
@@ -67,7 +67,7 @@ Redirect e cookie adapter sono bounded e rifiutano controlli/header injection. I
 
 ## Integrazione Course Board
 
-`CourseBoardHandler` costruisce `EdgeRequestMetadata` dal peer TCP e da `HTTPMessage.raw_items()`, preservando header duplicati. La delega avviene prima dell'autenticazione Basic legacy, così le route pubbliche non vengono scambiate per API docente. GET, HEAD, POST, PUT, DELETE, PATCH e OPTIONS verso path Google esatti passano dallo stesso router; metodi non consentiti ricevono 405 e `Allow: GET`. Query/fragments sovradimensionati o malformati vengono classificati 400 già durante la costruzione della request transport, non 503.
+`CourseBoardHandler` costruisce `EdgeRequestMetadata` dal peer TCP e da `HTTPMessage.raw_items()`, preservando header duplicati. La delega avviene prima dell'autenticazione Basic legacy, così le route pubbliche non vengono scambiate per API docente. GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS, TRACE e CONNECT verso path Google esatti passano dallo stesso router; metodi non consentiti ricevono 405 e `Allow: GET`. Query/fragments sovradimensionati o malformati vengono classificati 400 già durante la costruzione della request transport, non 503.
 
 La composizione runtime deve costruire e iniettare:
 

@@ -426,6 +426,24 @@ def test_unknown_path_is_not_handled() -> None:
     assert router.dispatch(request("/auth/google/unknown")) is None
 
 
+def test_transport_write_failure_discards_issued_session() -> None:
+    router, _admission, callback = routes()
+    response = router.dispatch(
+        request("/auth/google/callback", "state=x&code=y")
+    )
+    handler = object.__new__(CourseBoardHandler)
+    handler.command = "GET"
+
+    def fail_send_response(_status):
+        raise BrokenPipeError("socket closed")
+
+    handler.send_response = fail_send_response
+    handler.write_google_oidc_response(response)
+
+    assert router.session_discarder.calls == [callback.result.session]
+    assert response.delivery_guard._established is None
+
+
 def test_malformed_request_line_redacts_callback_secret_and_returns_400() -> None:
     class RecordingHandler(CourseBoardHandler):
         messages = []
@@ -493,7 +511,9 @@ def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
         )
         unsupported = {
             method: exchange(method, "/auth/google/login")
-            for method in ("PUT", "DELETE", "PATCH", "OPTIONS")
+            for method in (
+                "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE", "CONNECT"
+            )
         }
     finally:
         server.shutdown()
@@ -504,7 +524,9 @@ def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
     assert fragmented == (400, None)
     assert unsupported == {
         method: (405, "GET")
-        for method in ("PUT", "DELETE", "PATCH", "OPTIONS")
+        for method in (
+            "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE", "CONNECT"
+        )
     }
     assert callback.calls == 0
     assert admission.calls == 0
