@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hmac
+import ipaddress
 import os
 import re
 import stat
@@ -95,6 +96,7 @@ def compose_google_oidc_runtime(
         post_login_path = environment.get(
             "THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/tools/course_board.html"
         )
+        _validate_post_login_path(post_login_path)
         database_path = _database_path(environment, data_root)
         _prepare_database_file(database_path)
         _require_auth_dependencies()
@@ -221,15 +223,44 @@ def _trusted_proxy_cidrs(environment: Mapping[str, str]) -> tuple[str, ...]:
     raw = _required(environment, "THEBITLAB_TRUSTED_PROXY_CIDRS")
     values = tuple(raw.split(","))
     raw = None
-    if (
+    invalid = (
         not 1 <= len(values) <= 16
         or any(not value or value != value.strip() or len(value) > 64 for value in values)
         or len(set(values)) != len(values)
-    ):
+    )
+    networks = None
+    if not invalid:
+        try:
+            networks = tuple(ipaddress.ip_network(value, strict=True) for value in values)
+            invalid = any(
+                network.num_addresses
+                > (4096 if network.version == 4 else 65536)
+                for network in networks
+            )
+        except ValueError:
+            invalid = True
+    networks = None
+    if invalid:
         raise AuthRuntimeConfigurationError(
-            "THEBITLAB_TRUSTED_PROXY_CIDRS non valido."
+            "THEBITLAB_TRUSTED_PROXY_CIDRS non valido o troppo ampio."
         )
     return values
+
+
+def _validate_post_login_path(value: object) -> None:
+    parsed = urllib.parse.urlsplit(value) if type(value) is str else None
+    if (
+        parsed is None
+        or not value.startswith("/")
+        or value.startswith("//")
+        or parsed.scheme
+        or parsed.netloc
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise AuthRuntimeConfigurationError(
+            "THEBITLAB_GOOGLE_POST_LOGIN_PATH non valido."
+        )
 
 
 def _database_path(environment: Mapping[str, str], data_root: Path) -> Path:
@@ -255,6 +286,14 @@ def _prepare_database_file(path: Path) -> None:
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         if os.name == "nt":
             return
+        parent_metadata = path.parent.stat(follow_symlinks=False)
+        if (
+            not stat.S_ISDIR(parent_metadata.st_mode)
+            or stat.S_ISLNK(parent_metadata.st_mode)
+            or parent_metadata.st_uid != os.geteuid()
+            or parent_metadata.st_mode & 0o022
+        ):
+            raise OSError("directory database non privata")
         flags = os.O_RDWR | os.O_CREAT
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW

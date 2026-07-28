@@ -19,7 +19,7 @@ La configurazione avviene prima della creazione del server HTTP. Qualunque valor
 | `THEBITLAB_GOOGLE_REDIRECT_URI` | URL HTTPS assoluto con path esatto `/auth/google/callback`, senza query o fragment |
 | `THEBITLAB_AUTH_CSRF_SECRET_B64` | 32–64 byte codificati base64url senza padding |
 | `THEBITLAB_RATE_LIMIT_PEPPER_B64` | 32–64 byte indipendenti, base64url senza padding |
-| `THEBITLAB_TRUSTED_PROXY_CIDRS` | da 1 a 16 reti CIDR canoniche, separate da virgola e senza spazi |
+| `THEBITLAB_TRUSTED_PROXY_CIDRS` | da 1 a 16 reti CIDR canoniche bounded (massimo 4096 indirizzi IPv4 o 65536 IPv6 ciascuna), separate da virgola e senza spazi |
 
 Opzionali:
 
@@ -62,10 +62,10 @@ Il proxy deve:
 - impedire accesso diretto al backend;
 - provenire da una delle CIDR configurate.
 
-Per proxy sullo stesso host usare tipicamente `127.0.0.1/32` e/o `::1/128`, non supernet ampie. Inserire una CIDR in trusted equivale ad autorizzare quel peer ad attestare HTTPS e indirizzo client.
+Per proxy sullo stesso host usare tipicamente `127.0.0.1/32` e/o `::1/128`, non supernet ampie. La composizione rifiuta reti non bounded, incluso `0.0.0.0/0`: inserire una CIDR in trusted equivale ad autorizzare ogni peer in quella rete ad attestare HTTPS e indirizzo client.
 
 Non esiste un fallback HTTP di sviluppo per queste route: per un test browser reale occorre un proxy TLS locale o staging HTTPS.
 
 ## Segreti e backup
 
-I segreti provengono solo dall'environment/secret store. Errori e `repr(GoogleOidcRuntime)` non contengono valori sensibili. Su POSIX la composizione crea o restringe il file SQLite a modalità `0600` e rifiuta target non regolari/symlink; su Windows la protezione dipende dalle ACL ereditate dalla directory deployment. Il database contiene digest di sessione e dati identità, ma resta materiale sensibile: backup, retention e cifratura del volume sono responsabilità del deployment.
+I segreti provengono solo dall'environment/secret store. Errori e `repr(GoogleOidcRuntime)` non contengono valori sensibili. Su POSIX la composizione richiede una directory database posseduta dal processo e non scrivibile da gruppo/altri, crea o restringe il file SQLite a modalità `0600` e rifiuta target non regolari/symlink. La directory privata elimina la sostituzione del pathname fra il controllo iniziale e le successive connessioni SQLite; su Windows la protezione dipende dalle ACL ereditate dalla directory deployment. Il database contiene digest di sessione e dati identità, ma resta materiale sensibile: backup, retention e cifratura del volume sono responsabilità del deployment.

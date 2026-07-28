@@ -79,7 +79,8 @@ def test_composition_accepts_relative_database_and_local_post_login(tmp_path: Pa
         ("THEBITLAB_AUTH_CSRF_SECRET_B64", "too-short", "CSRF_SECRET"),
         ("THEBITLAB_RATE_LIMIT_PEPPER_B64", "=" * 43, "RATE_LIMIT_PEPPER"),
         ("THEBITLAB_TRUSTED_PROXY_CIDRS", "", "TRUSTED_PROXY"),
-        ("THEBITLAB_TRUSTED_PROXY_CIDRS", "127.0.0.1/8", "runtime"),
+        ("THEBITLAB_TRUSTED_PROXY_CIDRS", "127.0.0.1/8", "TRUSTED_PROXY"),
+        ("THEBITLAB_TRUSTED_PROXY_CIDRS", "0.0.0.0/0", "TRUSTED_PROXY"),
         (
             "THEBITLAB_GOOGLE_REDIRECT_URI",
             "https://lab.example.edu/not-the-callback",
@@ -90,6 +91,7 @@ def test_composition_accepts_relative_database_and_local_post_login(tmp_path: Pa
             "https://lab.example.edu/auth/google/callback?next=x",
             "callback canonico",
         ),
+        ("THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/welcome?next=x", "POST_LOGIN"),
         ("THEBITLAB_AUTH_DB_PATH", ":memory:", "AUTH_DB_PATH"),
     ),
 )
@@ -112,6 +114,19 @@ def test_composition_rejects_unsafe_configuration_without_echoing_values(
         "THEBITLAB_RATE_LIMIT_PEPPER_B64",
     ):
         assert environment[secret_name] not in serialized
+
+
+def test_composition_rejects_group_writable_database_directory(tmp_path: Path) -> None:
+    if os.name == "nt":
+        pytest.skip("POSIX mode bits non disponibili")
+    unsafe = tmp_path / "unsafe"
+    unsafe.mkdir(mode=0o770)
+    unsafe.chmod(0o770)
+    environment = valid_environment()
+    environment["THEBITLAB_AUTH_DB_PATH"] = str(unsafe / "auth.sqlite3")
+
+    with pytest.raises(AuthRuntimeConfigurationError, match="database"):
+        compose_google_oidc_runtime(environment, data_root=tmp_path)
 
 
 def test_composition_rejects_reused_secrets(tmp_path: Path) -> None:
