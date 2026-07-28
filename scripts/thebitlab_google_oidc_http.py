@@ -16,6 +16,7 @@ from scripts.thebitlab_edge_rate_limit import (
     GoogleOidcLoginAdmissionBoundary,
     TrustedProxyClientResolver,
 )
+from scripts.thebitlab_http_auth import SessionCookiePolicy
 from scripts.thebitlab_google_oidc import (
     GoogleAuthorizationRequest,
     GoogleOidcCallbackError,
@@ -95,6 +96,10 @@ class GoogleOidcHttpResponse:
             raise ValueError("Risposta HTTP non valida.")
 
 
+class EstablishedSessionDiscarder(Protocol):
+    def discard_established_session(self, established: object) -> bool: ...
+
+
 class GoogleCallbackCompleter(Protocol):
     def complete_callback(
         self,
@@ -112,10 +117,28 @@ class GoogleOidcHttpRoutes:
         admission: GoogleOidcLoginAdmissionBoundary,
         callback: GoogleCallbackCompleter,
         proxy_resolver: TrustedProxyClientResolver,
+        session_discarder: EstablishedSessionDiscarder,
+        *,
+        session_cookie_policy: SessionCookiePolicy = SessionCookiePolicy(),
     ) -> None:
+        if (
+            type(session_cookie_policy) is not SessionCookiePolicy
+            or not session_cookie_policy.secure
+            or session_cookie_policy.allow_insecure_loopback
+            or not session_cookie_policy.name.startswith("__Host-")
+        ):
+            raise ValueError("Policy cookie sessione non valida per route HTTPS.")
+        callback_http = getattr(callback, "http_sessions", None)
+        callback_policy = getattr(callback_http, "cookie_policy", None)
+        if callback_policy is not None and callback_policy != session_cookie_policy:
+            raise ValueError("Policy cookie callback non coerente.")
+        if callback_http is not None and session_discarder is not callback_http:
+            raise ValueError("Discarder sessione callback non coerente.")
         self.admission = admission
         self.callback = callback
         self.proxy_resolver = proxy_resolver
+        self.session_discarder = session_discarder
+        self.session_cookie_policy = session_cookie_policy
 
     def handles(self, path: str) -> bool:
         return path in {_LOGIN_PATH, _CALLBACK_PATH}
@@ -211,26 +234,56 @@ class GoogleOidcHttpRoutes:
                 raise GoogleOidcProviderUnavailableError(
                     "Risultato callback non valido."
                 )
-            location = _redirect_location(result.redirect_path, absolute_https=False)
-            session_cookie = _validated_cookie(
-                result.session.set_cookie, kind="session"
-            )
-            clear_cookie = _validated_cookie(
-                result.clear_transaction_cookie, kind="clear_transaction"
-            )
-            response = GoogleOidcHttpResponse(
-                303,
-                (
-                    ("Location", location),
-                    ("Set-Cookie", session_cookie),
-                    ("Set-Cookie", clear_cookie),
-                    ("Cache-Control", "no-store"),
-                    ("Pragma", "no-cache"),
-                    ("Referrer-Policy", "no-referrer"),
-                    ("Content-Length", "0"),
-                ),
-                b"",
-            )
+            try:
+                location = _redirect_location(
+                    result.redirect_path, absolute_https=False
+                )
+                session_cookie = _validated_cookie(
+                    result.session.set_cookie,
+                    kind="session",
+                    session_policy=self.session_cookie_policy,
+                )
+                clear_cookie = _validated_cookie(
+                    result.clear_transaction_cookie,
+                    kind="clear_transaction",
+                )
+                response = GoogleOidcHttpResponse(
+                    303,
+                    (
+                        ("Location", location),
+                        ("Set-Cookie", session_cookie),
+                        ("Set-Cookie", clear_cookie),
+                        ("Cache-Control", "no-store"),
+                        ("Pragma", "no-cache"),
+                        ("Referrer-Policy", "no-referrer"),
+                        ("Content-Length", "0"),
+                    ),
+                    b"",
+                )
+            except Exception:
+                cleanup_header: tuple[tuple[str, str], ...] = ()
+                try:
+                    cleanup_header = ((
+                        "Set-Cookie",
+                        _validated_cookie(
+                            result.clear_transaction_cookie,
+                            kind="clear_transaction",
+                        ),
+                    ),)
+                except Exception:
+                    cleanup_header = ()
+                try:
+                    self.session_discarder.discard_established_session(
+                        result.session
+                    )
+                except Exception:
+                    pass
+                return self._error(
+                    503,
+                    "authentication_unavailable",
+                    "Servizio di autenticazione temporaneamente non disponibile.",
+                    cleanup_header,
+                )
         finally:
             request = None
             parameters = None
@@ -419,7 +472,12 @@ def _redirect_location(value: object, *, absolute_https: bool) -> str:
     return urllib.parse.quote(value, safe="/-._~!$&'()*+,;=:@%")
 
 
-def _validated_cookie(value: object, *, kind: str) -> str:
+def _validated_cookie(
+    value: object,
+    *,
+    kind: str,
+    session_policy: SessionCookiePolicy | None = None,
+) -> str:
     if (
         type(value) is not str
         or not value
@@ -431,7 +489,11 @@ def _validated_cookie(value: object, *, kind: str) -> str:
     if not parts or "=" not in parts[0] or any(not part for part in parts):
         raise ValueError("Cookie risposta non valido.")
     name, cookie_value = parts[0].split("=", 1)
-    expected_name = "__Host-thebitlab_session" if kind == "session" else None
+    expected_name = (
+        session_policy.name
+        if kind == "session" and type(session_policy) is SessionCookiePolicy
+        else None
+    )
     if kind in {"transaction", "clear_transaction"}:
         valid_name = _TRANSACTION_COOKIE_NAME_RE.fullmatch(name) is not None
     else:
@@ -454,9 +516,15 @@ def _validated_cookie(value: object, *, kind: str) -> str:
         not valid_name
         or flags != {"secure", "httponly"}
         or attributes.get("path") != "/"
-        or attributes.get("samesite", "").lower() != "lax"
         or set(attributes) - {"path", "samesite", "max-age", "expires"}
     ):
+        raise ValueError("Cookie risposta non valido.")
+    expected_same_site = (
+        session_policy.same_site.lower()
+        if kind == "session" and type(session_policy) is SessionCookiePolicy
+        else "lax"
+    )
+    if attributes.get("samesite", "").lower() != expected_same_site:
         raise ValueError("Cookie risposta non valido.")
     max_age = attributes.get("max-age")
     if kind == "clear_transaction":

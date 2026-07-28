@@ -46,12 +46,12 @@ La callback accetta una query massima di 8192 byte e 16 campi. Il parser:
 
 Header `Cookie` multipli vengono concatenati in ordine con `; ` entro 16 KiB, come richiesto dal boundary sessione. Controlli, overflow e body non vuoti falliscono prima del callback service.
 
-Al successo la route percent-encoda il path locale come URI ASCII e risponde `303`; questo evita errori Latin-1 del trasporto anche per path Unicode validi. Invia due `Set-Cookie` separati, con nomi `__Host-`, valori base64url, `Path=/`, `Secure`, `HttpOnly`, `SameSite=Lax`, età bounded e nessun `Domain`:
+Al successo la route percent-encoda il path locale come URI ASCII e risponde `303`; questo evita errori Latin-1 del trasporto anche per path Unicode validi. Invia due `Set-Cookie` separati, con nomi `__Host-`, valori base64url, `Path=/`, `Secure`, `HttpOnly`, SameSite coerente con la `SessionCookiePolicy` prevalidata, età bounded e nessun `Domain`:
 
 1. sessione web nuova;
 2. cancellazione del cookie transazionale one-time.
 
-Anche gli errori terminali che hanno consumato il flow propagano esclusivamente il cookie di cleanup validato. State/callback non validi diventano 400, identità rifiutata 403, provider/configurazione/infrastruttura 503.
+Anche gli errori terminali che hanno consumato il flow propagano esclusivamente il cookie di cleanup validato. La route richiede inoltre un `EstablishedSessionDiscarder`: se un risultato post-callback non può essere serializzato, revoca best-effort la sessione appena emessa e cancella il cookie transazionale, evitando sessioni attive irraggiungibili. La policy cookie dichiarata dalla route deve coincidere con quella del callback service. State/callback non validi diventano 400, identità rifiutata 403, provider/configurazione/infrastruttura 503.
 
 ## Segreti e browser policy
 
@@ -60,7 +60,7 @@ Authorization code, state, cookie transazionale e cookie sessione:
 - non compaiono nei body JSON di errore;
 - sono esclusi dal `repr` di request/response;
 - vengono rimossi dai frame route prima di propagare o tradurre errori;
-- non vengono scritti nell'access log: `CourseBoardHandler.log_request()` registra soltanto metodo e path per le route Google, mai la query;
+- non vengono scritti nell'access log: `CourseBoardHandler.log_request()` registra soltanto metodo e path per le route Google, mai la query; anche `log_error()` redige request-line OAuth malformate prima che `BaseHTTPRequestHandler` abbia popolato `self.path`;
 - non vengono propagati come `Referer`, grazie a `Referrer-Policy: no-referrer` su redirect e errori.
 
 Redirect e cookie adapter sono bounded e rifiutano controlli/header injection. Il login accetta soltanto redirect assoluto HTTPS senza fragment; il callback soltanto path locale assoluto senza scheme, authority, query o fragment.

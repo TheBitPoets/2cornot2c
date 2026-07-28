@@ -3269,12 +3269,31 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
+    def _is_google_auth_request_line(self) -> bool:
+        path = str(getattr(self, "path", ""))
+        requestline = str(getattr(self, "requestline", ""))
+        return "/auth/google/" in path or "/auth/google/" in requestline
+
+    def log_error(self, format, *args) -> None:
+        """Redact even malformed OAuth request lines before parser completion."""
+
+        if self._is_google_auth_request_line() or any(
+            "/auth/google/" in str(argument) for argument in args
+        ):
+            self.log_message("Google auth request non valida")
+            return
+        super().log_error(format, *args)
+
     def log_request(self, code="-", size="-") -> None:
         """Never write OAuth callback queries or codes to access logs."""
 
-        parsed = urlparse(self.path)
-        if parsed.path in {"/auth/google/login", "/auth/google/callback"}:
-            safe_line = f"{self.command} {parsed.path} {self.request_version}"
+        path = str(getattr(self, "path", ""))
+        if self._is_google_auth_request_line():
+            parsed = urlparse(path)
+            safe_path = parsed.path if parsed.path else "/auth/google/invalid"
+            command = str(getattr(self, "command", "INVALID"))
+            version = str(getattr(self, "request_version", "HTTP/1.1"))
+            safe_line = f"{command} {safe_path} {version}"
             self.log_message('"%s" %s %s', safe_line, str(code), str(size))
             return
         super().log_request(code, size)

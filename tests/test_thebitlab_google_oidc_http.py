@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import http.client
+import socket
 import threading
 from types import SimpleNamespace
 
@@ -13,6 +14,7 @@ from scripts.thebitlab_edge_rate_limit import (
     EdgeRequestMetadata,
     TrustedProxyClientResolver,
 )
+from scripts.thebitlab_http_auth import SessionCookiePolicy
 from scripts.thebitlab_google_oidc import (
     GoogleAuthorizationRequest,
     GoogleOidcCallbackError,
@@ -45,6 +47,15 @@ class FakeAdmission:
         if self.error is not None:
             raise self.error
         return self.result
+
+
+class FakeDiscarder:
+    def __init__(self):
+        self.calls = []
+
+    def discard_established_session(self, established):
+        self.calls.append(established)
+        return True
 
 
 class FakeCallback:
@@ -84,11 +95,23 @@ def request(path, query="", *, method="GET", peer="127.0.0.1", headers=(), tls=T
     )
 
 
-def routes(*, trusted=()):
+def routes(*, trusted=(), session_cookie_policy=None):
     admission = FakeAdmission()
     callback = FakeCallback()
     resolver = TrustedProxyClientResolver(trusted)
-    return GoogleOidcHttpRoutes(admission, callback, resolver), admission, callback
+    discarder = FakeDiscarder()
+    kwargs = (
+        {}
+        if session_cookie_policy is None
+        else {"session_cookie_policy": session_cookie_policy}
+    )
+    return (
+        GoogleOidcHttpRoutes(
+            admission, callback, resolver, discarder, **kwargs
+        ),
+        admission,
+        callback,
+    )
 
 
 def header_values(response, name):
@@ -298,6 +321,55 @@ def test_callback_error_taxonomy_is_sanitized_and_clears_terminal_cookie(
     assert header_values(response, "Set-Cookie") == [CLEAR_COOKIE]
 
 
+def test_session_cookie_policy_is_preflighted_and_failed_result_is_discarded() -> None:
+    mismatched_callback = FakeCallback()
+    mismatched_callback.http_sessions = SimpleNamespace(
+        cookie_policy=SessionCookiePolicy(same_site="Strict")
+    )
+    with pytest.raises(ValueError, match="Policy cookie"):
+        GoogleOidcHttpRoutes(
+            FakeAdmission(),
+            mismatched_callback,
+            TrustedProxyClientResolver(),
+            FakeDiscarder(),
+        )
+
+    strict_policy = SessionCookiePolicy(same_site="Strict")
+    strict_router, _admission, strict_callback = routes(
+        session_cookie_policy=strict_policy
+    )
+    strict_callback.result = GoogleOidcLoginResult(
+        "user-01",
+        "student",
+        SimpleNamespace(
+            set_cookie=SESSION_COOKIE.replace("SameSite=Lax", "SameSite=Strict")
+        ),
+        "/student",
+        CLEAR_COOKIE,
+    )
+    strict_response = strict_router.dispatch(
+        request("/auth/google/callback", "state=x&code=y")
+    )
+    assert strict_response.status_code == 303
+
+    router, _admission, callback = routes()
+    callback.result = GoogleOidcLoginResult(
+        "user-01",
+        "student",
+        SimpleNamespace(
+            set_cookie=SESSION_COOKIE.replace("SameSite=Lax", "SameSite=Strict")
+        ),
+        "/student",
+        CLEAR_COOKIE,
+    )
+    failed = router.dispatch(
+        request("/auth/google/callback", "state=x&code=y")
+    )
+    assert failed.status_code == 503
+    assert header_values(failed, "Set-Cookie") == [CLEAR_COOKIE]
+    assert router.session_discarder.calls == [callback.result.session]
+
+
 def test_malformed_adapter_redirects_cookies_and_results_fail_closed() -> None:
     router, admission, callback = routes()
     for bad_url in (
@@ -328,7 +400,10 @@ def test_query_and_cookie_secrets_are_removed_from_route_traceback_frames() -> N
     admission = FakeAdmission()
     callback = ExplodingCallback()
     router = GoogleOidcHttpRoutes(
-        admission, callback, TrustedProxyClientResolver()
+        admission,
+        callback,
+        TrustedProxyClientResolver(),
+        FakeDiscarder(),
     )
     query_secret = "state=raw-state&code=raw-code"
     cookie_secret = "txn=raw-cookie"
@@ -349,6 +424,40 @@ def test_query_and_cookie_secrets_are_removed_from_route_traceback_frames() -> N
 def test_unknown_path_is_not_handled() -> None:
     router, _admission, _callback = routes()
     assert router.dispatch(request("/auth/google/unknown")) is None
+
+
+def test_malformed_request_line_redacts_callback_secret_and_returns_400() -> None:
+    class RecordingHandler(CourseBoardHandler):
+        messages = []
+
+        def log_message(self, format, *args):
+            self.messages.append(format % args)
+
+    router, _admission, _callback = routes(trusted=("127.0.0.0/8",))
+    server = BoundedThreadingHTTPServer(("127.0.0.1", 0), RecordingHandler)
+    server.google_oidc_http_routes = router
+    server.teacher_token = "T" * 32
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    raw_secret = "RAW-CALLBACK-CODE"
+    connection = socket.create_connection(server.server_address, timeout=5)
+    try:
+        connection.sendall(
+            (
+                "GET /auth/google/callback?code="
+                + raw_secret
+                + " EXTRA HTTP/1.1\r\nHost: localhost\r\n\r\n"
+            ).encode("ascii")
+        )
+        response = connection.recv(4096)
+    finally:
+        connection.close()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert b"400" in response
+    assert raw_secret not in repr(RecordingHandler.messages)
 
 
 def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
