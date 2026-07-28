@@ -502,7 +502,7 @@ def start_selected(state: State, *, persist_intent: bool = True) -> None:
     if state.installing:
         return
     provider = state.providers[state.active_index]
-    if persist_intent:
+    if persist_intent and state.host is Host.WINDOWS_AMD64:
         save_intent(provider, "installing")
     plan = install_plan(state.host, provider)
     updates: Queue[tuple[str, Any]] = Queue()

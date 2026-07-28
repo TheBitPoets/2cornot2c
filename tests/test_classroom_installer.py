@@ -284,6 +284,27 @@ def test_restart_result_preserves_resume_intent(monkeypatch, tmp_path) -> None:
     assert load_intent() == (Provider.DOCKER, "awaiting_restart")
 
 
+def test_macos_install_does_not_create_windows_resume_intent(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    pytest.importorskip("utui")
+    from installer.resume import resume_path
+    from installer.tui import State, start_selected
+
+    monkeypatch.setattr("installer.resume.Path.home", lambda: tmp_path)
+    monkeypatch.setattr(
+        "installer.tui.Thread.start",
+        lambda self: None,
+    )
+    state = State(Host.MACOS_ARM64, (Provider.VMWARE,))
+
+    start_selected(state)
+
+    assert state.installing is True
+    assert not resume_path().exists()
+
+
 def test_tui_marks_first_low_memory_choice_as_recommended() -> None:
     pytest.importorskip("utui")
     from installer.tui import State, frame
