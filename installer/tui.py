@@ -396,7 +396,10 @@ def _format_results(
     if (
         provider is Provider.DOCKER
         and results
-        and all(result.status in {"skipped", "succeeded"} for result in results)
+        and all(
+            result.status in {"skipped", "succeeded", "updated"}
+            for result in results
+        )
     ):
         formatted += (
             "Pronto.",
@@ -428,7 +431,8 @@ def apply_selected(state: State) -> None:
     )
     state.confirmation_pending = False
     if results and all(
-        result.status in {"skipped", "succeeded"} for result in results
+        result.status in {"skipped", "succeeded", "updated"}
+        for result in results
     ):
         _remember_provider(provider)
     state.report = _format_results(provider, results)
@@ -571,12 +575,12 @@ def poll_installation(state: State) -> bool:
             state.install_current = index
             state.install_total = total
             state.install_label = label
-            if phase in {"succeeded", "skipped"}:
+            if phase in {"succeeded", "updated", "skipped"}:
                 state.install_completed = index
         elif kind == "result":
             provider = state.providers[state.active_index]
             completed = payload and all(
-                result.status in {"skipped", "succeeded"}
+                result.status in {"skipped", "succeeded", "updated"}
                 for result in payload
             )
             if completed:

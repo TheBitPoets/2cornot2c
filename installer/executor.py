@@ -127,6 +127,10 @@ def execute_plan(
                 (
                     "restart_required"
                     if returncode == 0 and step.restart_after_success
+                    else "updated"
+                    if returncode == 0
+                    and check_by_key.get(step.key) is not None
+                    and check_by_key[step.key].present
                     else "succeeded"
                     if returncode == 0
                     else "failed"
