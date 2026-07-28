@@ -45,27 +45,27 @@ function Test-SafeInstallDirectory {
     $HomePath = [IO.Path]::GetFullPath($HOME).TrimEnd('\')
     $RootPath = [IO.Path]::GetPathRoot($FullPath).TrimEnd('\')
     if (-not $FullPath -or $FullPath -eq $HomePath -or $FullPath -eq $RootPath) {
-        Stop-WithMessage "E26" "La cartella indicata non e sicura" `
-            "Non sono certo che sia la cartella 2cornot2c, quindi non cancellero nulla." `
+        Stop-WithMessage "E26" "La cartella indicata non è sicura" `
+            "Non sono certo che sia la cartella 2cornot2c, quindi non cancellerò nulla." `
             @("Non rimuovere file manualmente."; "Comunica E26 al docente.") $FullPath
     }
     if (Test-Path $FullPath) {
         if (-not (Test-Path (Join-Path $FullPath ".git"))) {
-            Stop-WithMessage "E26" "La cartella indicata non e sicura" `
-                "La cartella non contiene i segni che identificano il progetto. Nessun file e stato cancellato." `
+            Stop-WithMessage "E26" "La cartella indicata non è sicura" `
+                "La cartella non contiene i segni che identificano il progetto. Nessun file è stato cancellato." `
                 @("Non rimuovere file manualmente."; "Comunica E26 al docente.") $FullPath
         }
         if (Get-Command git -ErrorAction SilentlyContinue) {
             $Origin = git -C $FullPath remote get-url origin 2>$null
             if ($LASTEXITCODE -ne 0 -or $Origin -notmatch "TheBitPoets/2cornot2c") {
                 Stop-WithMessage "E27" "La cartella appartiene a un progetto diverso" `
-                    "Per sicurezza la disinstallazione si e fermata e non ha cancellato nulla." `
+                    "Per sicurezza la disinstallazione si è fermata e non ha cancellato nulla." `
                     @("Non rimuovere la cartella manualmente."; "Comunica E27 al docente.") $FullPath
             }
         }
         if (Test-Path (Join-Path $FullPath ".vagrant")) {
-            Stop-WithMessage "E28" "C'e ancora una macchina virtuale VirtualBox" `
-                "La VM puo contenere file. Per evitare perdite non verra eliminata automaticamente." `
+            Stop-WithMessage "E28" "C'è ancora una macchina virtuale VirtualBox" `
+                "La VM può contenere file. Per evitare perdite non verrà eliminata automaticamente." `
                 @(
                     "Non cancellare la VM manualmente."
                     "Chiedi al docente come salvarla o rimuoverla."
@@ -73,8 +73,8 @@ function Test-SafeInstallDirectory {
                 )
         }
         if (Test-Path (Join-Path $FullPath ".vagrant-vmware")) {
-            Stop-WithMessage "E28" "C'e ancora una macchina virtuale VMware" `
-                "La VM puo contenere file. Per evitare perdite non verra eliminata automaticamente." `
+            Stop-WithMessage "E28" "C'è ancora una macchina virtuale VMware" `
+                "La VM può contenere file. Per evitare perdite non verrà eliminata automaticamente." `
                 @(
                     "Non cancellare la VM manualmente."
                     "Chiedi al docente come salvarla o rimuoverla."
@@ -157,7 +157,7 @@ function Backup-StudentWork {
                 [StringComparison]::OrdinalIgnoreCase
             )) {
                 Stop-WithMessage "E29" "Non riesco a salvare tutti i tuoi file" `
-                    "La copia di sicurezza non puo essere completata. La disinstallazione e stata fermata." `
+                    "La copia di sicurezza non può essere completata. La disinstallazione è stata fermata." `
                     @(
                         "Non cancellare il progetto."
                         "Controlla lo spazio libero."
@@ -209,7 +209,7 @@ try {
     $BackupPath = Backup-StudentWork $SafeInstallDir
 } catch {
     Stop-WithMessage "E29" "Non sono riuscito a salvare i tuoi esercizi" `
-        "La copia di sicurezza non e completa. La disinstallazione e stata fermata." `
+        "La copia di sicurezza non è completa. La disinstallazione è stata fermata." `
         @(
             "Non cancellare il progetto."
             "Controlla lo spazio libero sul disco."
@@ -232,7 +232,7 @@ if (Test-Path $SafeInstallDir) {
 }
 
 if ($OwnedPackages.Count -gt 0 -and -not (Get-Command winget -ErrorAction SilentlyContinue)) {
-    Write-Warning "winget non e disponibile: i prerequisiti gestiti non verranno disinstallati."
+    Write-Warning "winget non è disponibile: i prerequisiti gestiti non verranno disinstallati."
     Write-Warning "Pacchetti ancora presenti: $($OwnedPackages -join ', ')"
 }
 elseif ($OwnedPackages.Count -gt 0) {

@@ -16,13 +16,13 @@ try {
         -ForegroundColor Red
     Write-Host "COSA SIGNIFICA" -ForegroundColor Yellow
     Write-Host (
-        "Il collegamento e stato interrotto. L'ambiente gia installato " +
-        "non e stato modificato e puoi continuare a usarlo."
+        "Il collegamento è stato interrotto. L'ambiente già installato " +
+        "non è stato modificato e puoi continuare a usarlo."
     ) -ForegroundColor Yellow
     Write-Host "COSA DEVI FARE" -ForegroundColor Yellow
     Write-Host "1. Controlla con il browser che Internet funzioni." `
         -ForegroundColor Yellow
-    Write-Host "2. Riprova piu tardi." -ForegroundColor Yellow
+    Write-Host "2. Riprova più tardi." -ForegroundColor Yellow
     Write-Host "3. Se ricompare, comunica E25 al docente." `
         -ForegroundColor Yellow
     Write-Host "Dettagli tecnici: $($_.Exception.Message)" `
