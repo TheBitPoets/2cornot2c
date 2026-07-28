@@ -55,6 +55,15 @@ class UserDirectoryStorage(Protocol):
 
     def link_external_identity(self, identity: ExternalIdentity) -> None: ...
 
+    def link_external_identity_for_active_user(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_user_updated_at: datetime,
+    ) -> None:
+        """Atomically link while the active owner revision still matches."""
+        ...
+
     def refresh_external_identity(
         self,
         identity: ExternalIdentity,
@@ -70,6 +79,18 @@ class UserDirectoryStorage(Protocol):
     def list_external_identities(self, user_id: str) -> list[ExternalIdentity]: ...
 
     def unlink_external_identity(self, provider: str, subject: str) -> bool: ...
+
+    def unlink_external_identity_for_active_user(
+        self,
+        provider: str,
+        subject: str,
+        user_id: str,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+    ) -> bool:
+        """Atomically unlink only the expected identity generation and active owner revision."""
+        ...
 
 
 class ClassDirectoryStorage(Protocol):

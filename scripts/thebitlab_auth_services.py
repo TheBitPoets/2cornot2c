@@ -59,6 +59,14 @@ class CredentialGenerationError(AuthApplicationError):
     """Raised when generators repeatedly produce colliding credentials."""
 
 
+class ExternalIdentityLinkConflictError(AuthApplicationError):
+    """Raised when an external account is linked to an incompatible owner."""
+
+
+class ExternalIdentityNotLinkedError(AuthApplicationError):
+    """Raised when an expected external account link does not exist."""
+
+
 class PairingStateError(AuthApplicationError):
     """Raised when a pairing is not in the state required by an operation."""
 
@@ -229,6 +237,43 @@ class FederatedIdentityApplicationStorage(Protocol):
     def provision_user_with_identity(
         self, user: UserAccount, identity: ExternalIdentity
     ) -> None: ...
+
+
+class ExternalIdentityLinkApplicationStorage(Protocol):
+    """Transactional persistence required by authenticated account linking."""
+
+    def read_user(self, user_id: str) -> UserAccount | None: ...
+
+    def read_external_identity(
+        self, provider: str, subject: str
+    ) -> ExternalIdentity | None: ...
+
+    def list_external_identities(self, user_id: str) -> list[ExternalIdentity]: ...
+
+    def link_external_identity_for_active_user(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_user_updated_at: datetime,
+    ) -> None: ...
+
+    def refresh_external_identity(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+    ) -> None: ...
+
+    def unlink_external_identity_for_active_user(
+        self,
+        provider: str,
+        subject: str,
+        user_id: str,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+    ) -> bool: ...
 
 
 class SessionApplicationStorage(Protocol):
@@ -494,6 +539,168 @@ class FederatedIdentityService:
                 "Identita modificata durante l'autenticazione."
             ) from error
         return account
+
+
+class ExternalIdentityLinkService:
+    """Link or unlink one provider account for an already-authenticated user."""
+
+    def __init__(
+        self,
+        storage: ExternalIdentityLinkApplicationStorage,
+        *,
+        expected_provider: str,
+        clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+    ) -> None:
+        self.storage = storage
+        self.expected_provider = _required_text(
+            expected_provider, "expected_provider", lowercase=True
+        )
+        self.clock = clock
+
+    def link(
+        self, user_id: str, assertion: FederatedIdentityAssertion
+    ) -> ExternalIdentity:
+        normalized_user_id = _required_text(user_id, "user_id")
+        try:
+            normalized = FederatedIdentityService._normalize_assertion(assertion)
+        finally:
+            assertion = None
+        if normalized.provider != self.expected_provider:
+            normalized = None
+            raise ProviderProtocolError("Provider account linking non valido.")
+        account = self.storage.read_user(normalized_user_id)
+        if account is None:
+            normalized = None
+            raise InvalidCredentialError("Utente autenticato non valido.")
+        require_active_account(account)
+        provider_links = [
+            identity
+            for identity in self.storage.list_external_identities(account.user_id)
+            if identity.provider == self.expected_provider
+        ]
+        if len(provider_links) > 1:
+            normalized = None
+            raise ConcurrentStateChangeError(
+                "Piu account dello stesso provider risultano collegati."
+            )
+        winner = self.storage.read_external_identity(
+            self.expected_provider, normalized.subject
+        )
+        if winner is not None and winner.user_id != account.user_id:
+            normalized = None
+            raise ExternalIdentityLinkConflictError(
+                "Account provider gia collegato a un altro utente."
+            )
+        if provider_links and provider_links[0].subject != normalized.subject:
+            normalized = None
+            raise ExternalIdentityLinkConflictError(
+                "Un altro account dello stesso provider e gia collegato."
+            )
+        if winner is not None:
+            refreshed = ExternalIdentity(
+                user_id=account.user_id,
+                provider=self.expected_provider,
+                subject=normalized.subject,
+                linked_at=winner.linked_at,
+                email=normalized.email,
+                username=normalized.username,
+            )
+            try:
+                self.storage.refresh_external_identity(
+                    refreshed,
+                    expected_linked_at=winner.linked_at,
+                    expected_user_updated_at=account.updated_at,
+                )
+            except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
+                raise ConcurrentStateChangeError(
+                    "Account provider modificato durante il collegamento."
+                ) from error
+            return refreshed
+
+        linked_at = _utc(self.clock())
+        for _attempt in range(_MAX_ATTEMPTS):
+            identity = ExternalIdentity(
+                user_id=account.user_id,
+                provider=self.expected_provider,
+                subject=normalized.subject,
+                linked_at=linked_at,
+                email=normalized.email,
+                username=normalized.username,
+            )
+            try:
+                self.storage.link_external_identity_for_active_user(
+                    identity,
+                    expected_user_updated_at=account.updated_at,
+                )
+                return identity
+            except IdentityStorageGenerationConflictError:
+                current = self.storage.read_external_identity(
+                    self.expected_provider, normalized.subject
+                )
+                if current is not None:
+                    if current.user_id == account.user_id:
+                        return self.link(account.user_id, normalized)
+                    raise ExternalIdentityLinkConflictError(
+                        "Account provider gia collegato a un altro utente."
+                    )
+                try:
+                    linked_at += timedelta(microseconds=1)
+                except OverflowError as error:
+                    raise ConcurrentStateChangeError(
+                        "Generazione link provider esaurita."
+                    ) from error
+            except IdentityStorageConflictError as error:
+                current = self.storage.read_external_identity(
+                    self.expected_provider, normalized.subject
+                )
+                if current is not None and current.user_id != account.user_id:
+                    raise ExternalIdentityLinkConflictError(
+                        "Account provider gia collegato a un altro utente."
+                    ) from error
+                raise ConcurrentStateChangeError(
+                    "Utente o account modificato durante il collegamento."
+                ) from error
+        raise ConcurrentStateChangeError(
+            "Impossibile riservare una generazione link provider."
+        )
+
+    def unlink(self, user_id: str) -> ExternalIdentity:
+        normalized_user_id = _required_text(user_id, "user_id")
+        account = self.storage.read_user(normalized_user_id)
+        if account is None:
+            raise InvalidCredentialError("Utente autenticato non valido.")
+        require_active_account(account)
+        provider_links = [
+            identity
+            for identity in self.storage.list_external_identities(account.user_id)
+            if identity.provider == self.expected_provider
+        ]
+        if not provider_links:
+            raise ExternalIdentityNotLinkedError(
+                "Nessun account provider collegato."
+            )
+        if len(provider_links) != 1:
+            raise ConcurrentStateChangeError(
+                "Stato account provider ambiguo."
+            )
+        identity = provider_links[0]
+        try:
+            removed = self.storage.unlink_external_identity_for_active_user(
+                identity.provider,
+                identity.subject,
+                identity.user_id,
+                expected_linked_at=identity.linked_at,
+                expected_user_updated_at=account.updated_at,
+            )
+        except IdentityStorageConflictError as error:
+            raise ConcurrentStateChangeError(
+                "Account provider modificato durante lo scollegamento."
+            ) from error
+        if removed is not True:
+            raise ConcurrentStateChangeError(
+                "Account provider rimosso durante lo scollegamento."
+            )
+        return identity
 
 
 class SessionService:
