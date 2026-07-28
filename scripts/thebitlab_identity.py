@@ -8,10 +8,12 @@ from typing import Literal
 UserRole = Literal["admin", "teacher", "student", "pending"]
 MembershipRole = Literal["teacher", "student"]
 PairingStatus = Literal["pending", "authorized", "consumed", "expired", "revoked"]
+SessionAudience = Literal["web", "tui"]
 
 USER_ROLES = frozenset({"admin", "teacher", "student", "pending"})
 MEMBERSHIP_ROLES = frozenset({"teacher", "student"})
 PAIRING_STATUSES = frozenset({"pending", "authorized", "consumed", "expired", "revoked"})
+SESSION_AUDIENCES = frozenset({"web", "tui"})
 DIGEST_HEX_LENGTHS = {
     "sha256": 64,
     "sha512": 128,
@@ -266,6 +268,8 @@ class UserSession:
     expires_at: datetime
     last_seen_at: datetime
     revoked_at: datetime | None = None
+    audience: SessionAudience = "web"
+    source_pairing_id: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "session_id", _required_text(self.session_id, "session_id"))
@@ -279,6 +283,18 @@ class UserSession:
                 allowed_algorithms=SESSION_DIGEST_ALGORITHMS,
             ),
         )
+        audience = _required_text(self.audience, "audience", lowercase=True)
+        if audience not in SESSION_AUDIENCES:
+            raise InvalidIdentityDataError("Audience sessione non supportata.")
+        object.__setattr__(self, "audience", audience)
+        source_pairing_id = _optional_text(
+            self.source_pairing_id, "source_pairing_id"
+        )
+        if (audience == "tui") != (source_pairing_id is not None):
+            raise InvalidIdentityDataError(
+                "Solo una sessione TUI richiede source_pairing_id."
+            )
+        object.__setattr__(self, "source_pairing_id", source_pairing_id)
         object.__setattr__(self, "created_at", _aware_datetime(self.created_at, "created_at"))
         expires_at = _aware_datetime(self.expires_at, "expires_at")
         last_seen_at = _aware_datetime(self.last_seen_at, "last_seen_at")

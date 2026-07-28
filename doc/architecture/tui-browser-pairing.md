@@ -1,0 +1,72 @@
+# Pairing TUI mediato dal browser
+
+## Scopo
+
+`scripts/thebitlab_tui_pairing.py` completa il protocollo provider-independent tra una TUI non autenticata e una sessione web TheBitLab già autenticata. Il terminale non riceve password, cookie, authorization code, access token Google/GitHub o altri segreti del provider.
+
+Questo incremento implementa boundary e transazione applicativa. Il costruttore richiede che sessioni web, servizio pairing interno e sessioni TUI condividano la stessa istanza del registro identity, impedendo confusione tra utenti omonimi di database distinti. I riferimenti storage e l'intero grafo `HttpSessionAuthBoundary`/`TuiPairingSessionService`/`PairingService` sono proprietà read-only; il service TUI deriva sempre il registro dal `PairingService`, senza conservarne una copia divergente. Ogni operazione pubblica ripete inoltre il controllo dell'intero grafo web/pairing/TUI prima e dopo ogni callback mutabile e prima di restituire risultati, quindi anche una sostituzione fault-injected successiva alla costruzione o durante una chiamata fallisce con 503. Le route concrete Course Board, l'apertura automatica del browser e la conservazione locale del bearer restano adapter successivi.
+
+## Flusso
+
+1. La TUI richiede `begin()` e riceve `pairing_id`, codice utente one-time, scadenza e un path locale fisso di verifica.
+2. L'utente apre il browser, possiede già una sessione web e invia il codice con `POST` e CSRF.
+3. `HttpSessionAuthBoundary` richiede ruolo interno `student`; `PairingService` ricontrolla account attivo, ruolo e revisione durante il CAS `pending -> authorized`.
+4. La TUI presenta `pairing_id + codice` a `consume()`.
+5. `TuiPairingSessionService` prepara la transizione `authorized -> consumed`, genera e valida un bearer base64url ad alta entropia entro limiti HTTP e chiama una singola operazione SQLite.
+6. SQLite ricontrolla digest/generazione/stato pairing, scadenza al tempo della transazione, utente attivo, ruolo `student` e revisione; poi aggiorna il pairing e inserisce la sessione nella stessa transazione, registrando `source_pairing_id` univoco.
+7. La TUI riceve il bearer una sola volta e lo userà come `Authorization: Bearer` nelle future route concrete.
+
+Il path di verifica è soltanto path assoluto locale, senza schema, host, query o fragment: il boundary non costruisce redirect arbitrari che possano ricevere il codice.
+
+## Atomicità e race
+
+Consumo e sessione sono all-or-nothing:
+
+- collisione di session ID o digest esegue rollback del consumo;
+- cambio ruolo, disabilitazione o revisione utente concorrente esegue rollback;
+- revoca, scadenza o consumo concorrente impediscono l'inserimento della sessione;
+- un solo consumo concorrente può vincere;
+- il clock storage viene ricontrollato nella transazione e la scadenza è esclusiva (`now < expires_at`);
+- una sessione non viene emessa per ruoli `teacher`, `admin` o `pending`.
+
+Una risposta persa dopo il commit può lasciare una sessione non consegnata fino alla scadenza, ma non permette replay del codice né recupero del bearer dal database. La TUI deve avviare un nuovo pairing. Il cleanup pairing esclude i record ancora referenziati da sessioni TUI; dopo il cleanup/scadenza della sessione, il pairing può essere rimosso senza bloccare il resto del batch.
+
+## Segreti
+
+- il codice breve è persistito esclusivamente come HMAC SHA-256 con pepper esterno di almeno 32 byte;
+- il bearer è persistito esclusivamente come digest SHA-256;
+- codice e bearer sono esclusi da `repr` e rimossi dai frame prima della propagazione degli errori;
+- il cookie web non viene restituito alla TUI;
+- il bearer TUI non viene inserito in URL, query string o log.
+
+`IssuedTuiCredential` è una risposta one-shot. Prima di esporla, il boundary ricontrolla audience `tui`, `source_pairing_id` richiesto, stato pairing consumato, correlazione digest/sessione/utente e autenticabilità tramite il service TUI; un risultato adapter web, estraneo o malformato produce 503 e non viene divulgato. Il cleanup revoca soltanto quando pairing richiesto, bearer, digest, metadati restituiti e record persistiti coincidono, evitando la revoca di sessioni estranee in una risposta adapter incoerente. La futura CLI dovrà conservare la credenziale con permessi filesystem restrittivi oppure soltanto in memoria; questa decisione resta fuori dal boundary.
+
+## Autenticazione TUI
+
+`authenticate_bearer()` accetta un unico header canonico `Authorization: Bearer` senza whitespace esterno o controlli, applica limiti di lunghezza e grammatica base64url, usa `SessionService` per scadenza/revoca/account/revisione e ricontrolla esplicitamente audience `tui` e ruolo corrente `student` anche su risultati adapter fault-injected. Sessione, utente e pairing correlato sono validati in una singola snapshot SQLite, che fornisce il punto di linearizzazione per revoche, disabilitazioni e cambi ruolo concorrenti. Cambio ruolo o disabilitazione diventano effettivi alla richiesta successiva.
+
+Le sessioni TUI usano lo stesso registro transazionale ma hanno audience persistita `tui` e un `source_pairing_id` non nullo e univoco; le sessioni cookie hanno audience `web` e nessuna sorgente pairing. Le API storage generiche di creazione sessione sono web-only. Un trigger SQLite rifiuta inoltre insert TUI diretti se il pairing non è già `consumed`, non appartiene allo stesso utente o non ha `consumed_at == session.created_at`; Per le sessioni TUI, ID sessione/utente, digest, creazione/scadenza, audience e sorgente sono immutabili; audience e sorgente restano immutabili per ogni sessione. Finché una sessione la referenzia, anche identità e stato terminale del pairing consumato sono immutabili. Le revoche richieste da un `SessionService` sono limitate alla sua audience; la revoca account-wide resta un'operazione storage esplicita usata dai lifecycle amministrativi. Le migrazioni eliminano sia sessioni TUI non correlate sia combinazioni web con sorgente pairing; prima di installare l'immutabilità lato pairing, v10 ripete la verifica per rimuovere eventuali correlazioni corrotte sotto lo schema precedente. La v11 ripete quarantena e installazione trigger per coprire anche database che avevano già registrato una prima revisione della v10. `SessionService` richiede l'audience configurata durante autenticazione e revoca: un bearer web non è accettato dal boundary TUI e un bearer TUI non autentica il cookie web.
+
+## Errori pubblici
+
+- `400 tui_pairing_invalid`: codice o richiesta non validi;
+- `401 authentication_required`: bearer TUI assente/malformato/non valido;
+- `403 authorization_denied`: sessione browser o bearer con ruolo incompatibile;
+- `409 tui_pairing_conflict`: pairing già autorizzato, consumato, revocato o modificato;
+- `410 tui_pairing_expired`: scadenza esclusiva raggiunta;
+- `503 tui_pairing_unavailable`: storage, generatori o contratti adapter malformati.
+
+I dettagli storage e le credenziali non sono concatenati agli errori pubblici.
+
+## Limiti prima dell'esposizione Internet
+
+Le route di `begin`, autorizzazione e consumo devono avere limiti globali/per-client e limiti specifici sui tentativi di codice. La policy trusted-proxy e il rate limiting sono tracciati in #549. Sono inoltre obbligatori HTTPS, header cache-control appropriati e nessun logging dei body/codici.
+
+## Fuori scope
+
+- wiring HTTP concreto e browser E2E;
+- apertura browser e polling nella CLI/TUI;
+- persistenza locale del bearer;
+- sostituzione immediata dei token HMAC della demo;
+- pairing docente/admin;
+- TLS/reverse proxy e rate limiting #549.

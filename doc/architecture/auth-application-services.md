@@ -48,7 +48,9 @@ Una sessione revocata o appartenente a un account disabilitato fallisce chiusa. 
 
 La disabilitazione di un account revoca atomicamente le sue sessioni e rimuove pairing ancora autorizzati, impedendo che una successiva riabilitazione faccia rivivere credenziali precedenti. Gli aggiornamenti utente richiedono `created_at` immutabile, un nuovo `updated_at` strettamente successivo e l'`expected_updated_at` della revisione letta. Il compare-and-swap impedisce a uno snapshot stale di riattivare l'account anche se prova a presentare un timestamp futuro.
 
-Il ruolo `pending` puo possedere una sessione per completare onboarding, ma `HttpSessionAuthBoundary.authorize_application` lo esclude dalle policy sui dati applicativi.
+Ogni sessione persiste inoltre l'audience `web` o `tui`. `SessionService` emette, autentica e revoca soltanto la propria audience, impedendo che bearer conservati nel terminale vengano riutilizzati come cookie browser o viceversa. Una sessione TUI può essere emessa soltanto dalla transazione pairing e conserva il `source_pairing_id` univoco verificato a ogni boundary.
+
+Il ruolo `pending` puo possedere una sessione web per completare onboarding, ma `HttpSessionAuthBoundary.authorize_application` lo esclude dalle policy sui dati applicativi.
 
 ## Pairing TUI
 
@@ -60,6 +62,8 @@ Il ruolo `pending` puo possedere una sessione per completare onboarding, ma `Htt
 - non entra nel database.
 
 Il codice raw compare soltanto in `IssuedPairing`, con `repr` oscurato; codice e pepper vengono rimossi dai frame locali prima di propagare errori. Il costruttore conserva temporaneamente il pepper in un contenitore che viene svuotato prima di rilanciare errori di configurazione. Autorizzazione e consumo richiedono il codice; il consumo richiede inoltre il `pairing_id`. Controllo account attivo, revisione `users.updated_at` e transizione di autorizzazione/consumo sono atomici, impedendo ABA di disabilitazione/riabilitazione. Le transizioni vengono salvate tramite CAS, quindi una sola operazione concorrente puo autorizzare, consumare, scadere o revocare il record. Un clock anteriore all'autorizzazione viene rifiutato prima della transizione.
+
+Il boundary di emissione sessione TUI è descritto in [tui-browser-pairing.md](tui-browser-pairing.md). Consumo pairing e creazione della sessione studente sono ora una singola transazione SQLite con ricontrollo di ruolo, revisione, scadenza e clock storage.
 
 La limitazione dei tentativi sul codice appartiene al futuro adapter HTTP e rimane obbligatoria prima dell'esposizione in rete.
 
@@ -81,5 +85,5 @@ I messaggi non includono credenziali raw. Gli errori storage condivisi sono defi
 - route/browser E2E Google OIDC e GitHub OAuth (l'adapter Google è descritto in `google-oidc-adapter.md`);
 - integrazione del boundary HTTP nelle route e nelle dashboard concrete;
 - rate limiting distribuito;
-- emissione atomica di una sessione TUI dopo il consumo;
-- UI e browser E2E.
+- route concrete, UI e browser E2E del pairing TUI;
+- apertura browser, polling e persistenza locale del bearer nella CLI.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError, fields
+from dataclasses import FrozenInstanceError, fields, replace
 from datetime import datetime, timedelta, timezone, tzinfo
 
 import pytest
@@ -190,6 +190,12 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
     )
 
     assert session.token_digest == DIGEST
+    assert session.audience == "web"
+    tui_session = replace(
+        session, audience="tui", source_pairing_id="pairing-01"
+    )
+    assert tui_session.audience == "tui"
+    assert tui_session.source_pairing_id == "pairing-01"
     assert "token" not in {field.name for field in fields(UserSession)}
     assert "token_digest" in {field.name for field in fields(UserSession)}
 
@@ -212,6 +218,9 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
         ),
         ({"revoked_at": LATER}, "durata della sessione"),
         ({"revoked_at": LATER + timedelta(seconds=1)}, "durata della sessione"),
+        ({"audience": "provider-token"}, "Audience sessione"),
+        ({"source_pairing_id": "pairing-01"}, "Solo una sessione TUI"),
+        ({"audience": "tui"}, "source_pairing_id"),
     ],
 )
 def test_session_rejects_unsafe_digest_and_invalid_times(overrides, match) -> None:
@@ -478,7 +487,7 @@ def test_digest_lookup_ports_do_not_require_raw_credentials() -> None:
         def list_user_sessions(self, user_id):
             return [item for item in self.records.values() if item.user_id == user_id]
 
-        def revoke_user_sessions(self, user_id, revoked_at):
+        def revoke_user_sessions(self, user_id, revoked_at, *, audience=None):
             return 0
 
         def delete_expired_sessions(self, expired_before):

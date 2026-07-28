@@ -151,6 +151,18 @@ def test_cookie_policy_is_secure_by_default_and_loopback_is_explicit() -> None:
     )
 
 
+def test_http_boundary_rejects_non_web_session_audience(storage, clock) -> None:
+    web_sessions = SessionService(storage, clock=clock, audience="web")
+    with pytest.raises(AttributeError):
+        web_sessions.audience = "tui"
+    with pytest.raises(ValueError, match="audience web"):
+        HttpSessionAuthBoundary(
+            SessionService(storage, clock=clock, audience="tui"),
+            csrf_secret=CSRF_SECRET,
+            clock=clock,
+        )
+
+
 def test_establishes_secure_cookie_and_never_persists_or_reprs_raw_values(
     storage, database_path, clock
 ) -> None:
@@ -221,6 +233,8 @@ def test_generated_cookie_pair_must_fit_request_header_limit(storage, clock) -> 
 
 def test_storage_and_unexpected_failures_are_sanitized_at_http_boundary() -> None:
     class BrokenSessions:
+        audience = "web"
+
         def authenticate(self, _bearer):
             raise RuntimeError("raw storage backend details")
 
@@ -353,6 +367,8 @@ def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock)
     )
 
     class LongSessionService:
+        audience = "web"
+
         def issue(self, _user_id):
             return IssuedSession(long_session, bearer)
 
@@ -405,6 +421,36 @@ def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock)
         wrong_owner.establish_session("requested-user")
 
 
+def test_http_boundary_rejects_tui_session_from_nominal_web_adapter(clock) -> None:
+    bearer = "A" * 40
+    user = account()
+    tui_session = UserSession(
+        "tui-session",
+        user.user_id,
+        session_token_digest(bearer),
+        NOW,
+        NOW + timedelta(hours=8),
+        NOW,
+        audience="tui",
+        source_pairing_id="pairing-01",
+    )
+
+    class MalformedWebAdapter:
+        audience = "web"
+
+        def authenticate(self, _bearer):
+            return AuthenticatedSession(tui_session, user)
+
+    boundary = HttpSessionAuthBoundary(
+        MalformedWebAdapter(), csrf_secret=CSRF_SECRET, clock=clock
+    )
+    request = HttpAuthRequest(
+        "GET", f"__Host-thebitlab_session={bearer}"
+    )
+    with pytest.raises(HttpAuthUnavailableError):
+        boundary.authenticate(request)
+
+
 def test_set_cookie_max_age_uses_response_time(clock) -> None:
     bearer = "A" * 40
     user = account()
@@ -418,6 +464,8 @@ def test_set_cookie_max_age_uses_response_time(clock) -> None:
     )
 
     class DelayedSessionService:
+        audience = "web"
+
         def issue(self, _user_id):
             return IssuedSession(session, bearer)
 
@@ -455,6 +503,8 @@ def test_subsecond_remaining_session_is_revoked_instead_of_emitting_deleted_cook
     revoked = []
 
     class ShortSessionService:
+        audience = "web"
+
         def issue(self, _user_id):
             return IssuedSession(session, bearer)
 

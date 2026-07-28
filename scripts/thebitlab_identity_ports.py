@@ -30,6 +30,14 @@ class IdentityStorageMappingGenerationConflictError(IdentityStorageConflictError
     """Raised when an immutable external-group mapping generation was already used."""
 
 
+class IdentityStoragePairingExpiredError(IdentityStorageConflictError):
+    """Raised after atomically expiring a pairing at transaction time."""
+
+
+class IdentityStorageSessionExpiredError(IdentityStorageConflictError):
+    """Raised when a candidate session expires before atomic insertion."""
+
+
 class IdentityStorageNotFoundError(IdentityStorageError):
     """Raised when an update targets a missing identity record."""
 
@@ -259,8 +267,14 @@ class SessionStorage(Protocol):
 
     def list_user_sessions(self, user_id: str) -> list[UserSession]: ...
 
-    def revoke_user_sessions(self, user_id: str, revoked_at: datetime) -> int:
-        """Atomically revoke active sessions, rejecting a stale revocation instant."""
+    def revoke_user_sessions(
+        self,
+        user_id: str,
+        revoked_at: datetime,
+        *,
+        audience: str | None = None,
+    ) -> int:
+        """Atomically revoke active sessions, optionally limited to one audience."""
         ...
 
     def delete_expired_sessions(self, expired_before: datetime) -> int:
@@ -277,12 +291,29 @@ class TuiPairingStorage(Protocol):
 
     def read_pairing_by_code_digest(self, code_digest: str) -> TuiPairing | None: ...
 
+    def read_tui_authentication_snapshot(
+        self, token_digest: str, pairing_id: str
+    ) -> tuple[UserSession | None, UserAccount | None, TuiPairing | None]:
+        """Read correlated TUI session, owner, and pairing in one snapshot."""
+        ...
+
     def save_pairing(self, pairing: TuiPairing) -> None: ...
 
     def save_pairing_for_active_user(
         self, pairing: TuiPairing, *, expected_user_updated_at: datetime
     ) -> None:
         """Transition a pairing only while its active user revision remains unchanged."""
+        ...
+
+    def consume_pairing_and_create_session(
+        self,
+        pairing: TuiPairing,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_user_role: str,
+    ) -> None:
+        """Atomically consume an authorized pairing and create its user session."""
         ...
 
     def delete_expired_pairings(self, expired_before: datetime) -> int:

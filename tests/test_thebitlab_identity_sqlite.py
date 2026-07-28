@@ -24,6 +24,7 @@ from scripts.thebitlab_identity_sqlite import (
     IdentityStorageError,
     IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
+    IdentityStoragePairingExpiredError,
     SCHEMA_VERSION,
     SqliteIdentityStorage,
 )
@@ -206,6 +207,104 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
+def test_migration_v11_rechecks_correlations_after_earlier_v10(
+    database_path,
+) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_user(account())
+    pending = pairing()
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=1))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=2))
+    tui_session = session(
+        created_at=consumed.consumed_at,
+        last_seen_at=consumed.consumed_at,
+        expires_at=consumed.consumed_at + timedelta(hours=8),
+        audience="tui",
+        source_pairing_id="pairing-01",
+    )
+    storage.consume_pairing_and_create_session(
+        consumed,
+        tui_session,
+        expected_user_updated_at=NOW,
+        expected_user_role="student",
+    )
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP TRIGGER trg_consumed_pairing_session_immutable")
+        connection.execute(
+            "UPDATE tui_pairings SET consumed_at = ? WHERE pairing_id = 'pairing-01'",
+            (
+                (consumed.consumed_at + timedelta(seconds=1))
+                .isoformat()
+                .replace("+00:00", "Z"),
+            ),
+        )
+        connection.execute("DELETE FROM schema_migrations WHERE version = 11")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_session("session-01") is None
+    assert upgraded.read_pairing("pairing-01").status == "consumed"
+
+
+def test_migration_v8_removes_uncorrelated_legacy_tui_sessions(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_user(account())
+    storage.create_pairing(pairing())
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP TRIGGER trg_sessions_validate_pairing_insert")
+        connection.execute("DROP TRIGGER trg_sessions_immutable_audience_update")
+        connection.execute("DROP INDEX uq_sessions_source_pairing")
+        connection.execute(
+            """
+            INSERT INTO sessions
+                (session_id, user_id, token_digest, created_at, expires_at,
+                 last_seen_at, revoked_at, audience, source_pairing_id)
+            VALUES (?, ?, ?, ?, ?, ?, NULL, 'tui', NULL)
+            """,
+            (
+                "legacy-tui",
+                "user-01",
+                "sha256:" + "9" * 64,
+                NOW.isoformat().replace("+00:00", "Z"),
+                LATER.isoformat().replace("+00:00", "Z"),
+                NOW.isoformat().replace("+00:00", "Z"),
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO sessions
+                (session_id, user_id, token_digest, created_at, expires_at,
+                 last_seen_at, revoked_at, audience, source_pairing_id)
+            VALUES (?, ?, ?, ?, ?, ?, NULL, 'web', 'pairing-01')
+            """,
+            (
+                "legacy-web-with-pairing",
+                "user-01",
+                "sha256:" + "8" * 64,
+                NOW.isoformat().replace("+00:00", "Z"),
+                LATER.isoformat().replace("+00:00", "Z"),
+                NOW.isoformat().replace("+00:00", "Z"),
+            ),
+        )
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 7")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_session("legacy-tui") is None
+    assert upgraded.read_session("legacy-web-with-pairing") is None
+
+
+def test_migration_v6_backfills_existing_sessions_as_web(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_user(account())
+    storage.create_session(session())
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 6")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_session("session-01").audience == "web"
+
+
 def test_migration_v5_backfills_mapping_revision(database_path) -> None:
     storage = SqliteIdentityStorage(database_path)
     storage.create_class(class_group())
@@ -217,7 +316,7 @@ def test_migration_v5_backfills_mapping_revision(database_path) -> None:
         connection.execute(
             "UPDATE external_group_mappings SET updated_at = NULL"
         )
-        connection.execute("DELETE FROM schema_migrations WHERE version = 5")
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 5")
 
     upgraded = SqliteIdentityStorage(database_path)
     assert upgraded.read_external_group_mapping(
@@ -466,7 +565,7 @@ def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
     with sqlite3.connect(database_path) as connection:
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     "session-last-seen-boundary",
                     "user-01",
@@ -475,11 +574,13 @@ def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
                     expires_at,
                     expires_at,
                     None,
+                    "web",
+                    None,
                 ),
             )
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     "session-revocation-boundary",
                     "user-01",
@@ -488,6 +589,8 @@ def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
                     expires_at,
                     before_expiration,
                     expires_at,
+                    "web",
+                    None,
                 ),
             )
 
@@ -580,6 +683,177 @@ def test_active_pairing_transition_requires_matching_user_revision(storage) -> N
             authorized, expected_user_updated_at=original.updated_at
         )
     assert storage.read_pairing("pairing-01") == pending
+
+
+def test_pairing_session_creation_is_atomic_with_consumption(
+    storage, database_path
+) -> None:
+    storage.create_user(account())
+    pending = pairing()
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=6))
+    issued_session = session(
+        created_at=consumed.consumed_at,
+        last_seen_at=consumed.consumed_at,
+        expires_at=consumed.consumed_at + timedelta(hours=8),
+        audience="tui",
+        source_pairing_id="pairing-01",
+    )
+
+    storage.consume_pairing_and_create_session(
+        consumed,
+        issued_session,
+        expected_user_updated_at=NOW,
+        expected_user_role="student",
+    )
+
+    assert storage.read_pairing("pairing-01") == consumed
+    assert storage.read_session("session-01") == issued_session
+    with sqlite3.connect(database_path) as connection:
+        with pytest.raises(sqlite3.IntegrityError, match="immutable session"):
+            connection.execute(
+                """
+                UPDATE sessions SET created_at = ?, last_seen_at = ?
+                WHERE session_id = 'session-01'
+                """,
+                (
+                    (consumed.consumed_at + timedelta(seconds=1))
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                    (consumed.consumed_at + timedelta(seconds=1))
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                ),
+            )
+        with pytest.raises(sqlite3.IntegrityError, match="pairing correlation"):
+            connection.execute(
+                """
+                UPDATE tui_pairings SET consumed_at = ?
+                WHERE pairing_id = 'pairing-01'
+                """,
+                (
+                    (consumed.consumed_at + timedelta(seconds=1))
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                ),
+            )
+    assert storage.delete_expired_pairings(LATER + timedelta(minutes=1)) == 0
+    assert storage.read_pairing("pairing-01") == consumed
+    assert storage.delete_expired_sessions(issued_session.expires_at) == 1
+    assert storage.delete_expired_pairings(issued_session.expires_at) == 1
+
+
+def test_generic_session_paths_and_sql_trigger_reject_unconsumed_tui_session(
+    storage, database_path
+) -> None:
+    storage.create_user(account())
+    pending = pairing()
+    storage.create_pairing(pending)
+    tui_session = session(
+        audience="tui",
+        source_pairing_id="pairing-01",
+    )
+
+    with pytest.raises(IdentityStorageConflictError):
+        storage.create_session(tui_session)
+    with pytest.raises(IdentityStorageConflictError):
+        storage.create_session_for_active_user(
+            tui_session, expected_user_updated_at=NOW
+        )
+    with sqlite3.connect(database_path) as connection:
+        with pytest.raises(sqlite3.IntegrityError, match="pairing correlation"):
+            connection.execute(
+                """
+                INSERT INTO sessions
+                    (session_id, user_id, token_digest, created_at, expires_at,
+                     last_seen_at, revoked_at, audience, source_pairing_id)
+                VALUES (?, ?, ?, ?, ?, ?, NULL, 'tui', ?)
+                """,
+                (
+                    tui_session.session_id,
+                    tui_session.user_id,
+                    tui_session.token_digest,
+                    NOW.isoformat().replace("+00:00", "Z"),
+                    LATER.isoformat().replace("+00:00", "Z"),
+                    NOW.isoformat().replace("+00:00", "Z"),
+                    "pairing-01",
+                ),
+            )
+
+
+def test_pairing_session_creation_rechecks_expiry_at_transaction_time(storage) -> None:
+    storage.create_user(account())
+    pending = pairing()
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=6))
+    issued_session = session(
+        created_at=consumed.consumed_at,
+        last_seen_at=consumed.consumed_at,
+        expires_at=consumed.consumed_at + timedelta(hours=8),
+        audience="tui",
+        source_pairing_id="pairing-01",
+    )
+    storage._clock = lambda: LATER
+
+    with pytest.raises(IdentityStoragePairingExpiredError):
+        storage.consume_pairing_and_create_session(
+            consumed,
+            issued_session,
+            expected_user_updated_at=NOW,
+            expected_user_role="student",
+        )
+    expired = storage.read_pairing("pairing-01")
+    assert expired.status == "expired"
+    assert expired.expired_at == LATER
+    assert storage.read_session("session-01") is None
+
+
+def test_pairing_session_creation_rolls_back_on_role_or_session_conflict(storage) -> None:
+    storage.create_user(account(role="teacher"))
+    pending = pairing()
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=6))
+    issued_session = session(
+        created_at=consumed.consumed_at,
+        last_seen_at=consumed.consumed_at,
+        expires_at=consumed.consumed_at + timedelta(hours=8),
+        audience="tui",
+        source_pairing_id="pairing-01",
+    )
+
+    with pytest.raises(IdentityStorageConflictError):
+        storage.consume_pairing_and_create_session(
+            consumed,
+            issued_session,
+            expected_user_updated_at=NOW,
+            expected_user_role="student",
+        )
+    assert storage.read_pairing("pairing-01") == authorized
+    assert storage.read_session("session-01") is None
+
+    current = storage.read_user("user-01")
+    storage.save_user(
+        replace(current, role="student", updated_at=NOW + timedelta(minutes=7)),
+        expected_updated_at=current.updated_at,
+    )
+    storage.create_session(
+        replace(issued_session, audience="web", source_pairing_id=None)
+    )
+    with pytest.raises(IdentityStorageConflictError):
+        storage.consume_pairing_and_create_session(
+            consumed,
+            replace(issued_session, session_id="session-02"),
+            expected_user_updated_at=NOW + timedelta(minutes=7),
+            expected_user_role="student",
+        )
+    assert storage.read_pairing("pairing-01") == authorized
+    assert storage.read_session("session-02") is None
 
 
 def test_pairing_consumption_is_atomic_and_terminal(storage) -> None:

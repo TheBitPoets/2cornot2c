@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import re
 import secrets
 import string
+import unicodedata
 import uuid
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
@@ -24,11 +26,14 @@ from scripts.thebitlab_identity_ports import (
     IdentityStorageConflictError,
     IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
+    IdentityStoragePairingExpiredError,
+    IdentityStorageSessionExpiredError,
 )
 
 
 _MAX_ATTEMPTS = 5
 _PAIRING_ALPHABET = string.ascii_uppercase + string.digits
+_SESSION_BEARER_RE = re.compile(r"^[A-Za-z0-9_-]{32,1024}$")
 
 
 class AuthApplicationError(RuntimeError):
@@ -83,8 +88,13 @@ def _required_text(value: str, field_name: str, *, lowercase: bool = False) -> s
         normalized = normalized.lower()
     if not normalized or len(normalized) > 512:
         raise ProviderProtocolError(f"{field_name} non valido.")
-    if any(ord(character) < 32 or ord(character) == 127 for character in normalized):
-        raise ProviderProtocolError(f"{field_name} contiene caratteri di controllo.")
+    if any(
+        ord(character) < 32
+        or ord(character) == 127
+        or unicodedata.category(character) == "Cs"
+        for character in normalized
+    ):
+        raise ProviderProtocolError(f"{field_name} contiene caratteri non validi.")
     return normalized
 
 
@@ -111,29 +121,98 @@ def _generated_text(value: str, field_name: str, *, minimum_length: int = 1) -> 
         normalized = _required_text(value, field_name)
     except ProviderProtocolError as error:
         raise CredentialGenerationError(f"{field_name} generato non valido.") from error
-    if normalized != value or len(normalized) < minimum_length:
+    if (
+        normalized != value
+        or len(normalized) < minimum_length
+        or any(
+            unicodedata.category(character).startswith("C")
+            for character in normalized
+        )
+    ):
         raise CredentialGenerationError(f"{field_name} generato non valido.")
     return normalized
+
+
+def valid_session_bearer(raw_token: object) -> bool:
+    """Return whether a generated bearer is safe for HTTP cookie/header transport."""
+    return type(raw_token) is str and _SESSION_BEARER_RE.fullmatch(raw_token) is not None
 
 
 def session_token_digest(raw_token: str) -> str:
     """Digest one high-entropy bearer token without retaining the raw value."""
 
-    token = _required_text(raw_token, "raw_token")
-    if token != raw_token or len(token) < 32:
-        raise CredentialGenerationError("Il token di sessione generato non e valido.")
-    return "sha256:" + hashlib.sha256(token.encode("utf-8")).hexdigest()
+    token = None
+    encoded = None
+    try:
+        if (
+            type(raw_token) is not str
+            or not raw_token
+            or len(raw_token) > 512
+            or raw_token != raw_token.strip()
+            or any(
+                ord(character) < 32 or ord(character) == 127
+                for character in raw_token
+            )
+        ):
+            raise CredentialGenerationError(
+                "Il token di sessione generato non e valido."
+            )
+        token = raw_token
+        if len(token) < 32:
+            raise CredentialGenerationError(
+                "Il token di sessione generato non e valido."
+            )
+        try:
+            encoded = token.encode("utf-8")
+        except UnicodeError:
+            raise CredentialGenerationError(
+                "Il token di sessione generato non e valido."
+            ) from None
+        return "sha256:" + hashlib.sha256(encoded).hexdigest()
+    finally:
+        raw_token = None
+        token = None
+        encoded = None
 
 
 def pairing_code_digest(raw_code: str, pepper: bytes) -> str:
     """Key one low-entropy pairing code with a server-side pepper."""
 
-    code = _required_text(raw_code, "raw_code")
-    if code != raw_code:
-        raise CredentialGenerationError("Il codice pairing generato non e valido.")
-    if type(pepper) is not bytes or len(pepper) < 32:
-        raise AuthApplicationError("Il pepper pairing deve contenere almeno 32 byte.")
-    return "hmac-sha256:" + hmac.new(pepper, code.encode("utf-8"), hashlib.sha256).hexdigest()
+    code = None
+    encoded = None
+    try:
+        if (
+            type(raw_code) is not str
+            or not raw_code
+            or len(raw_code) > 512
+            or raw_code != raw_code.strip()
+            or any(
+                ord(character) < 32 or ord(character) == 127
+                for character in raw_code
+            )
+        ):
+            raise CredentialGenerationError(
+                "Il codice pairing generato non e valido."
+            )
+        code = raw_code
+        if type(pepper) is not bytes or len(pepper) < 32:
+            raise AuthApplicationError(
+                "Il pepper pairing deve contenere almeno 32 byte."
+            )
+        try:
+            encoded = code.encode("utf-8")
+        except UnicodeError:
+            raise CredentialGenerationError(
+                "Il codice pairing generato non e valido."
+            ) from None
+        return "hmac-sha256:" + hmac.new(
+            pepper, encoded, hashlib.sha256
+        ).hexdigest()
+    finally:
+        raw_code = None
+        code = None
+        encoded = None
+        pepper = None
 
 
 def _session_digest_for_verification(raw_token: str) -> str:
@@ -318,13 +397,19 @@ class SessionApplicationStorage(Protocol):
 
     def read_session_by_token_digest(self, token_digest: str) -> UserSession | None: ...
 
+    def read_tui_authentication_snapshot(
+        self, token_digest: str, pairing_id: str
+    ) -> tuple[UserSession | None, UserAccount | None, TuiPairing | None]: ...
+
     def save_session(self, session: UserSession) -> None: ...
 
     def save_session_for_active_user(
         self, session: UserSession, *, expected_user_updated_at: datetime
     ) -> None: ...
 
-    def revoke_user_sessions(self, user_id: str, revoked_at: datetime) -> int: ...
+    def revoke_user_sessions(
+        self, user_id: str, revoked_at: datetime, *, audience: str | None = None
+    ) -> int: ...
 
 
 class PairingApplicationStorage(Protocol):
@@ -338,10 +423,23 @@ class PairingApplicationStorage(Protocol):
 
     def read_pairing_by_code_digest(self, code_digest: str) -> TuiPairing | None: ...
 
+    def read_tui_authentication_snapshot(
+        self, token_digest: str, pairing_id: str
+    ) -> tuple[UserSession | None, UserAccount | None, TuiPairing | None]: ...
+
     def save_pairing(self, pairing: TuiPairing) -> None: ...
 
     def save_pairing_for_active_user(
         self, pairing: TuiPairing, *, expected_user_updated_at: datetime
+    ) -> None: ...
+
+    def consume_pairing_and_create_session(
+        self,
+        pairing: TuiPairing,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_user_role: str,
     ) -> None: ...
 
 
@@ -828,14 +926,31 @@ class SessionService:
         ttl: timedelta = timedelta(hours=8),
         token_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32),
         session_id_factory: Callable[[], str] = lambda: str(uuid.uuid4()),
+        audience: str = "web",
     ) -> None:
-        self.storage = storage
+        self._storage = storage
         self.clock = clock
         self.ttl = _positive_ttl(ttl, "ttl sessione")
+        normalized_audience = _required_text(audience, "audience", lowercase=True)
+        if normalized_audience not in {"web", "tui"}:
+            raise AuthApplicationError("Audience sessione non valida.")
+        self._audience = normalized_audience
         self.token_factory = token_factory
         self.session_id_factory = session_id_factory
 
+    @property
+    def storage(self) -> SessionApplicationStorage:
+        return self._storage
+
+    @property
+    def audience(self) -> str:
+        return self._audience
+
     def issue(self, user_id: str) -> IssuedSession:
+        if self.audience != "web":
+            raise AuthApplicationError(
+                "Le sessioni TUI possono essere emesse soltanto dal pairing atomico."
+            )
         account = self.storage.read_user(user_id)
         if account is None:
             raise InvalidCredentialError("Utente non disponibile.")
@@ -861,6 +976,7 @@ class SessionService:
                     created_at=now,
                     expires_at=now + self.ttl,
                     last_seen_at=now,
+                    audience=self.audience,
                 )
                 try:
                     self.storage.create_session_for_active_user(
@@ -909,7 +1025,11 @@ class SessionService:
         digest: str,
         now: datetime,
     ) -> tuple[UserSession, UserAccount]:
-        if session is None or not hmac.compare_digest(session.token_digest, digest):
+        if (
+            session is None
+            or session.audience != self.audience
+            or not hmac.compare_digest(session.token_digest, digest)
+        ):
             raise InvalidCredentialError("Sessione non valida.")
         if now < session.last_seen_at:
             raise ConcurrentStateChangeError("Clock anteriore all'ultimo utilizzo della sessione.")
@@ -928,8 +1048,11 @@ class SessionService:
             bearer_token = None
         session = self.storage.read_session_by_token_digest(digest)
         now = _utc(self.clock())
-        if session is None or session.revoked_at is not None or not hmac.compare_digest(
-            session.token_digest, digest
+        if (
+            session is None
+            or session.audience != self.audience
+            or session.revoked_at is not None
+            or not hmac.compare_digest(session.token_digest, digest)
         ):
             return False
         if now < session.created_at or now >= session.expires_at:
@@ -949,7 +1072,9 @@ class SessionService:
 
     def revoke_all(self, user_id: str) -> int:
         try:
-            return self.storage.revoke_user_sessions(user_id, _utc(self.clock()))
+            return self.storage.revoke_user_sessions(
+                user_id, _utc(self.clock()), audience=self.audience
+            )
         except IdentityStorageConflictError as error:
             raise ConcurrentStateChangeError(
                 "Clock anteriore allo stato delle sessioni attive."
@@ -985,7 +1110,7 @@ class PairingService:
             pepper_box[0] = None
             candidate_pepper = None
             raise AuthApplicationError("Configurazione pairing non valida.")
-        self.storage = storage
+        self._storage = storage
         self.clock = clock
         self.ttl = validated_ttl
         self.code_factory = code_factory
@@ -993,6 +1118,10 @@ class PairingService:
         self.pepper = candidate_pepper
         candidate_pepper = None
         pepper_box[0] = None
+
+    @property
+    def storage(self) -> PairingApplicationStorage:
+        return self._storage
 
     def issue(self) -> IssuedPairing:
         now = _utc(self.clock())
@@ -1025,7 +1154,9 @@ class PairingService:
                 code = None
         raise CredentialGenerationError("Impossibile generare un pairing univoco.")
 
-    def authorize(self, code: str, user_id: str) -> TuiPairing:
+    def authorize(
+        self, code: str, user_id: str, *, required_role: str | None = None
+    ) -> TuiPairing:
         try:
             digest = _pairing_digest_for_verification(code, self.pepper)
         finally:
@@ -1033,6 +1164,8 @@ class PairingService:
         pairing = self.storage.read_pairing_by_code_digest(digest)
         now = _utc(self.clock())
         pairing = self._require_secret(pairing, digest)
+        if pairing.status == "expired":
+            raise PairingExpiredError("Pairing scaduto.")
         if pairing.status != "pending":
             raise PairingStateError("Pairing non disponibile per l'autorizzazione.")
         self._require_current(pairing, now)
@@ -1040,6 +1173,8 @@ class PairingService:
         if account is None:
             raise InvalidCredentialError("Utente non disponibile.")
         require_active_account(account)
+        if required_role is not None and account.role != required_role:
+            raise InvalidCredentialError("Utente pairing non disponibile.")
         authorized = authorize_pairing(pairing, account.user_id, now)
         self._save_transition(
             authorized,
@@ -1050,12 +1185,30 @@ class PairingService:
 
     def consume(self, pairing_id: str, code: str) -> TuiPairing:
         try:
+            _pairing, account, consumed = self._prepare_consumption(
+                pairing_id, code
+            )
+            self._save_transition(
+                consumed,
+                require_active_user=True,
+                expected_user_updated_at=account.updated_at,
+            )
+            return consumed
+        finally:
+            code = None
+
+    def _prepare_consumption(
+        self, pairing_id: str, code: str
+    ) -> tuple[TuiPairing, UserAccount, TuiPairing]:
+        try:
             digest = _pairing_digest_for_verification(code, self.pepper)
         finally:
             code = None
         pairing = self.storage.read_pairing(pairing_id)
         now = _utc(self.clock())
         pairing = self._require_secret(pairing, digest)
+        if pairing.status == "expired":
+            raise PairingExpiredError("Pairing scaduto.")
         if pairing.status != "authorized":
             raise PairingStateError("Pairing non disponibile per il consumo.")
         self._require_current(pairing, now)
@@ -1063,13 +1216,7 @@ class PairingService:
         if account is None:
             raise InvalidCredentialError("Utente pairing non disponibile.")
         require_active_account(account)
-        consumed = consume_pairing(pairing, now)
-        self._save_transition(
-            consumed,
-            require_active_user=True,
-            expected_user_updated_at=account.updated_at,
-        )
-        return consumed
+        return pairing, account, consume_pairing(pairing, now)
 
     def revoke(self, pairing_id: str) -> TuiPairing:
         pairing = self.storage.read_pairing(pairing_id)
@@ -1119,7 +1266,15 @@ class PairingService:
                 )
             else:
                 self.storage.save_pairing(pairing)
+        except IdentityStoragePairingExpiredError:
+            raise PairingExpiredError("Pairing scaduto.") from None
         except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
+            current_pairing = self.storage.read_pairing(pairing.pairing_id)
+            if (
+                type(current_pairing) is TuiPairing
+                and current_pairing.status == "expired"
+            ):
+                raise PairingExpiredError("Pairing scaduto.") from None
             if require_active_user and pairing.user_id is not None:
                 account = self.storage.read_user(pairing.user_id)
                 if account is None:
@@ -1128,3 +1283,131 @@ class PairingService:
             raise ConcurrentStateChangeError(
                 "Pairing modificato da un'altra operazione."
             ) from error
+
+
+class TuiPairingSessionService:
+    """Issue a student bearer atomically with one authorized pairing consumption."""
+
+    def __init__(
+        self,
+        pairings: PairingService,
+        *,
+        session_ttl: timedelta = timedelta(hours=8),
+        token_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32),
+        session_id_factory: Callable[[], str] = lambda: str(uuid.uuid4()),
+    ) -> None:
+        if type(pairings) is not PairingService:
+            raise AuthApplicationError("Servizio pairing non valido.")
+        self._pairings = pairings
+        self.session_ttl = _positive_ttl(session_ttl, "ttl sessione TUI")
+        self.token_factory = token_factory
+        self.session_id_factory = session_id_factory
+
+    @property
+    def pairings(self) -> PairingService:
+        return self._pairings
+
+    @property
+    def storage(self) -> PairingApplicationStorage:
+        return self.pairings.storage
+
+    def issue(self) -> IssuedPairing:
+        return self.pairings.issue()
+
+    def authorize(self, code: str, user_id: str) -> TuiPairing:
+        try:
+            return self.pairings.authorize(
+                code, user_id, required_role="student"
+            )
+        finally:
+            code = None
+
+    def revoke(self, pairing_id: str) -> TuiPairing:
+        return self.pairings.revoke(pairing_id)
+
+    def consume(self, pairing_id: str, code: str) -> IssuedSession:
+        try:
+            pairing, account, consumed = self.pairings._prepare_consumption(
+                pairing_id, code
+            )
+        finally:
+            code = None
+        if account.role != "student":
+            pairing = None
+            consumed = None
+            account = None
+            raise InvalidCredentialError("Utente pairing non disponibile.")
+        for _attempt in range(_MAX_ATTEMPTS):
+            raw_token = self.token_factory()
+            try:
+                if not valid_session_bearer(raw_token):
+                    raise CredentialGenerationError(
+                        "Token di sessione TUI generato non valido."
+                    )
+                digest_failed = False
+                try:
+                    digest = session_token_digest(raw_token)
+                except AuthApplicationError:
+                    digest_failed = True
+                    digest = ""
+                if digest_failed:
+                    raise CredentialGenerationError(
+                        "Token di sessione TUI generato non valido."
+                    )
+                session = UserSession(
+                    session_id=_generated_text(
+                        self.session_id_factory(), "session_id TUI"
+                    ),
+                    user_id=account.user_id,
+                    token_digest=digest,
+                    created_at=consumed.consumed_at,
+                    expires_at=consumed.consumed_at + self.session_ttl,
+                    last_seen_at=consumed.consumed_at,
+                    audience="tui",
+                    source_pairing_id=pairing.pairing_id,
+                )
+                try:
+                    self.storage.consume_pairing_and_create_session(
+                        consumed,
+                        session,
+                        expected_user_updated_at=account.updated_at,
+                        expected_user_role="student",
+                    )
+                except IdentityStoragePairingExpiredError:
+                    raise PairingExpiredError("Pairing scaduto.") from None
+                except IdentityStorageSessionExpiredError:
+                    raise ConcurrentStateChangeError(
+                        "Sessione TUI scaduta durante il consumo."
+                    ) from None
+                except IdentityStorageConflictError:
+                    current_pairing = self.storage.read_pairing(pairing.pairing_id)
+                    current_account = self.storage.read_user(account.user_id)
+                    if (
+                        type(current_pairing) is TuiPairing
+                        and current_pairing.status == "expired"
+                    ):
+                        raise PairingExpiredError("Pairing scaduto.") from None
+                    if current_pairing != pairing:
+                        raise ConcurrentStateChangeError(
+                            "Pairing modificato durante il consumo."
+                        ) from None
+                    if current_account is None:
+                        raise InvalidCredentialError(
+                            "Utente pairing non disponibile."
+                        ) from None
+                    require_active_account(current_account)
+                    if current_account.role != "student":
+                        raise InvalidCredentialError(
+                            "Utente pairing non disponibile."
+                        ) from None
+                    if current_account.updated_at != account.updated_at:
+                        raise ConcurrentStateChangeError(
+                            "Utente modificato durante il consumo pairing."
+                        ) from None
+                    continue
+                return IssuedSession(session, raw_token)
+            finally:
+                raw_token = None
+        raise CredentialGenerationError(
+            "Impossibile generare una sessione TUI univoca."
+        )

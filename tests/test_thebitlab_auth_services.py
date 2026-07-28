@@ -25,9 +25,12 @@ from scripts.thebitlab_auth_services import (
     PairingExpiredError,
     PairingService,
     PairingStateError,
+    pairing_code_digest,
     ProviderAuthenticationError,
     ProviderProtocolError,
     SessionService,
+    session_token_digest,
+    TuiPairingSessionService,
 )
 from scripts.thebitlab_identity import AccountDisabledError, ExternalIdentity, UserAccount
 from scripts.thebitlab_identity_sqlite import (
@@ -1165,6 +1168,37 @@ def test_pairing_consume_and_revoke_reject_clock_rollback(storage) -> None:
         service.revoke("pairing-01")
 
 
+def test_surrogate_credentials_are_rejected_without_traceback_leaks() -> None:
+    pairing_secret = "PAIRCODE42\ud800"
+    with pytest.raises(CredentialGenerationError) as pairing_error:
+        pairing_code_digest(pairing_secret, PEPPER)
+    assert pairing_secret not in traceback_locals(
+        pairing_error.value, "pairing_code_digest"
+    )
+
+    bearer_secret = "T" * 40 + "\ud800"
+    with pytest.raises(CredentialGenerationError) as bearer_error:
+        session_token_digest(bearer_secret)
+    assert bearer_secret not in traceback_locals(
+        bearer_error.value, "session_token_digest"
+    )
+
+    for digest_function, secret, function_name in (
+        (pairing_code_digest, "PAIRCODE42\nSECRET", "pairing_code_digest"),
+        (session_token_digest, "A" * 20 + "\n" + "B" * 20, "session_token_digest"),
+    ):
+        arguments = (secret, PEPPER) if digest_function is pairing_code_digest else (secret,)
+        with pytest.raises(CredentialGenerationError) as control_error:
+            digest_function(*arguments)
+        assert secret not in traceback_locals(
+            control_error.value, function_name
+        )
+        assert not any(
+            secret in repr(value)
+            for value in traceback_locals(control_error.value, "_required_text")
+        )
+
+
 def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> None:
     storage.create_user(account())
     clock = MutableClock()
@@ -1181,12 +1215,65 @@ def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> N
     with pytest.raises(InvalidCredentialError, match="non valido") as wrong:
         service.authorize("WRONGCODE9", "user-01")
     assert "WRONGCODE9" not in traceback_locals(wrong.value, "authorize")
+    with pytest.raises(InvalidCredentialError, match="non valido") as wrong_consume:
+        service.consume(issued.pairing.pairing_id, "WRONGCODE9")
+    assert "WRONGCODE9" not in traceback_locals(
+        wrong_consume.value, "consume"
+    )
     with pytest.raises(InvalidCredentialError, match="non valido"):
         service.authorize("", "user-01")
     clock.value = NOW + timedelta(minutes=2)
     with pytest.raises(PairingExpiredError):
         service.authorize(issued.code, "user-01")
     assert storage.read_pairing("pairing-01").status == "expired"
+
+
+def test_pairing_authorization_rechecks_storage_clock_after_lock(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    storage._clock = lambda: NOW + timedelta(minutes=10)
+
+    with pytest.raises(PairingExpiredError):
+        service.authorize(issued.code, "user-01")
+
+    assert storage.read_pairing("pairing-01").status == "expired"
+
+
+def test_pairing_authorization_observes_concurrent_expiry(storage, monkeypatch) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    original = storage.save_pairing_for_active_user
+
+    def expire_then_authorize(pairing, **kwargs):
+        current = storage.read_pairing(pairing.pairing_id)
+        storage.save_pairing(
+            replace(current, status="expired", expired_at=current.expires_at)
+        )
+        return original(pairing, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "save_pairing_for_active_user", expire_then_authorize
+    )
+    with pytest.raises(PairingExpiredError):
+        service.authorize(issued.code, "user-01")
 
 
 def test_pairing_concurrent_consumption_has_one_winner(storage) -> None:
@@ -1217,6 +1304,207 @@ def test_pairing_concurrent_consumption_has_one_winner(storage) -> None:
     assert storage.read_pairing("pairing-01").status == "consumed"
 
 
+def test_tui_pairing_consumption_atomically_issues_student_session(
+    storage, database_path
+) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value = NOW + timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+
+    credential = service.consume(issued.pairing.pairing_id, issued.code)
+
+    assert credential.bearer_token not in repr(credential)
+    assert storage.read_pairing("pairing-01").status == "consumed"
+    authenticated = SessionService(
+        storage, clock=clock, audience="tui"
+    ).authenticate(credential.bearer_token)
+    assert authenticated.user.user_id == "user-01"
+    with sqlite3.connect(database_path) as connection:
+        persisted = connection.execute(
+            "SELECT token_digest FROM sessions WHERE session_id = 'tui-session-01'"
+        ).fetchone()[0]
+    assert credential.bearer_token not in persisted
+
+
+def test_tui_pairing_rejects_non_student_without_consuming(storage) -> None:
+    storage.create_user(account(role="teacher"))
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(pairings)
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    with pytest.raises(InvalidCredentialError):
+        service.authorize(issued.code, "user-01")
+
+    assert storage.read_pairing("pairing-01").status == "pending"
+    assert storage.list_user_sessions("user-01") == []
+
+
+def test_tui_pairing_role_race_rolls_back_consumption(storage, monkeypatch) -> None:
+    original_account = account()
+    storage.create_user(original_account)
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+    original = storage.consume_pairing_and_create_session
+
+    def change_role_then_consume(*args, **kwargs):
+        current = storage.read_user("user-01")
+        storage.save_user(
+            replace(current, role="teacher", updated_at=NOW + timedelta(minutes=2)),
+            expected_updated_at=current.updated_at,
+        )
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "consume_pairing_and_create_session", change_role_then_consume
+    )
+    with pytest.raises(InvalidCredentialError):
+        service.consume("pairing-01", issued.code)
+    assert storage.read_pairing("pairing-01").status == "authorized"
+    assert storage.list_user_sessions("user-01") == []
+
+
+def test_tui_session_expiring_while_waiting_for_lock_does_not_consume_pairing(
+    storage,
+) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        session_ttl=timedelta(seconds=1),
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+    storage._clock = lambda: clock.value + timedelta(seconds=2)
+
+    with pytest.raises(ConcurrentStateChangeError):
+        service.consume("pairing-01", issued.code)
+
+    assert storage.read_pairing("pairing-01").status == "authorized"
+    assert storage.list_user_sessions("user-01") == []
+
+
+def test_tui_pairing_concurrent_consumption_issues_exactly_one_session(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+
+    def consume_once():
+        try:
+            service.consume("pairing-01", issued.code)
+            return "issued"
+        except (PairingStateError, ConcurrentStateChangeError):
+            return "rejected"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(lambda _index: consume_once(), range(2)))
+
+    assert sorted(outcomes) == ["issued", "rejected"]
+    assert len(storage.list_user_sessions("user-01")) == 1
+    assert storage.read_pairing("pairing-01").status == "consumed"
+
+
+def test_concurrent_consumers_both_observe_expiry(storage, monkeypatch) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+    original = storage.consume_pairing_and_create_session
+    storage._clock = clock
+    barrier = threading.Barrier(
+        2, action=lambda: setattr(clock, "value", NOW + timedelta(minutes=10))
+    )
+
+    def expire_then_consume(*args, **kwargs):
+        barrier.wait(timeout=5)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "consume_pairing_and_create_session", expire_then_consume
+    )
+
+    def consume_once():
+        with pytest.raises(PairingExpiredError):
+            service.consume("pairing-01", issued.code)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        list(executor.map(lambda _index: consume_once(), range(2)))
+
+    assert storage.read_pairing("pairing-01").status == "expired"
+    assert storage.list_user_sessions("user-01") == []
+
+
 def test_invalid_pairing_generator_fails_before_persistence(storage) -> None:
     service = PairingService(
         storage,
@@ -1228,6 +1516,30 @@ def test_invalid_pairing_generator_fails_before_persistence(storage) -> None:
     with pytest.raises(CredentialGenerationError, match="Codice pairing"):
         service.issue()
     assert storage.read_pairing("pairing-01") is None
+
+
+def test_provider_display_name_allows_valid_emoji_joiners() -> None:
+    assertion = FederatedIdentityAssertion(
+        "google", "google-emoji", "Utente 👩‍💻"
+    )
+    assert assertion.display_name == "Utente 👩‍💻"
+
+
+@pytest.mark.parametrize(
+    "generated",
+    ("AAAA\u009b31mBBBB", "pair\u202eid"),
+)
+def test_generated_pairing_text_rejects_unsafe_unicode(storage, generated) -> None:
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=MutableClock(),
+        code_factory=lambda: generated,
+        pairing_id_factory=lambda: generated,
+    )
+    with pytest.raises(CredentialGenerationError):
+        service.issue()
+    assert storage.read_pairing(generated) is None
 
 
 def test_invalid_pairing_id_does_not_remain_in_frame_with_generated_code(storage) -> None:
