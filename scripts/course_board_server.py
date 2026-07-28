@@ -3406,25 +3406,33 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             edge = thebitlab_google_oidc_http.EdgeRequestMetadata(
                 str(self.client_address[0]), tuple(self.headers.raw_items())
             )
+            raw_query = parsed.query
+            if parsed.fragment:
+                raw_query += "#" + parsed.fragment
             request = thebitlab_google_oidc_http.GoogleOidcHttpRequest(
                 self.command,
                 parsed.path,
-                parsed.query,
+                raw_query,
                 edge,
                 is_tls=isinstance(self.connection, ssl.SSLSocket),
             )
+        except (
+            ValueError,
+            thebitlab_google_oidc_http.EdgeClientAttributionError,
+        ):
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        try:
             response = routes.dispatch(request)
             if response is None:
                 raise RuntimeError("Router OIDC senza risposta.")
         except Exception:  # noqa: BLE001
-            body = b'{"error":"authentication_unavailable"}'
-            self.send_response(503)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Cache-Control", "no-store")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
+            self.write_oidc_transport_error(503, "authentication_unavailable")
             return True
+        finally:
+            edge = None
+            request = None
+            raw_query = None
         self.send_response(response.status_code)
         for name, value in response.headers:
             self.send_header(name, value)
@@ -3433,11 +3441,42 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             self.wfile.write(response.body)
         return True
 
+    def write_oidc_transport_error(self, status_code: int, error_code: str) -> None:
+        body = json.dumps(
+            {"error": error_code}, separators=(",", ":")
+        ).encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def do_unsupported_auth_method(self) -> None:
+        parsed = urlparse(self.path)
+        if self.dispatch_google_oidc(parsed):
+            return
+        self.send_error(501)
+
     def do_HEAD(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         if self.dispatch_google_oidc(parsed):
             return
         self.send_error(501)
+
+    def do_PUT(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_PATCH(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)

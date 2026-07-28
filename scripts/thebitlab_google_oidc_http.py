@@ -37,6 +37,10 @@ _MAX_COOKIE_HEADER_BYTES = 16_384
 _MAX_RESPONSE_HEADER_BYTES = 16_384
 _PERCENT_ESCAPE_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
 _HEADER_NAME_RE = re.compile(r"^[!#$%&'*+.^_`|~0-9A-Za-z-]+$")
+_COOKIE_VALUE_RE = re.compile(r"^[A-Za-z0-9_-]{32,1024}$")
+_TRANSACTION_COOKIE_NAME_RE = re.compile(
+    r"^__Host-thebitlab_oidc_txn-[0-9a-f]{24}$"
+)
 
 
 @dataclass(frozen=True)
@@ -82,7 +86,11 @@ class GoogleOidcHttpResponse:
                 or any(ord(character) < 32 or ord(character) == 127 for character in item[1])
             ):
                 raise ValueError("Header risposta non validi.")
-            total += len(item[0].encode("ascii")) + len(item[1].encode("utf-8")) + 4
+            try:
+                encoded_value = item[1].encode("latin-1")
+            except UnicodeEncodeError:
+                raise ValueError("Header risposta non serializzabile.") from None
+            total += len(item[0].encode("ascii")) + len(encoded_value) + 4
         if total > _MAX_RESPONSE_HEADER_BYTES or type(self.body) is not bytes or len(self.body) > 4096:
             raise ValueError("Risposta HTTP non valida.")
 
@@ -165,7 +173,9 @@ class GoogleOidcHttpRoutes:
             if type(started) is not GoogleAuthorizationRequest:
                 raise EdgeRateLimitUnavailableError()
             location = _redirect_location(started.authorization_url, absolute_https=True)
-            transaction_cookie = _set_cookie(started.set_cookie)
+            transaction_cookie = _validated_cookie(
+                started.set_cookie, kind="transaction"
+            )
             response = GoogleOidcHttpResponse(
                 302,
                 (
@@ -202,8 +212,12 @@ class GoogleOidcHttpRoutes:
                     "Risultato callback non valido."
                 )
             location = _redirect_location(result.redirect_path, absolute_https=False)
-            session_cookie = _set_cookie(result.session.set_cookie)
-            clear_cookie = _set_cookie(result.clear_transaction_cookie)
+            session_cookie = _validated_cookie(
+                result.session.set_cookie, kind="session"
+            )
+            clear_cookie = _validated_cookie(
+                result.clear_transaction_cookie, kind="clear_transaction"
+            )
             response = GoogleOidcHttpResponse(
                 303,
                 (
@@ -230,7 +244,10 @@ class GoogleOidcHttpRoutes:
         extra_headers: tuple[tuple[str, str], ...] = ()
         if clear_cookie is not None:
             try:
-                extra_headers = (("Set-Cookie", _set_cookie(clear_cookie)),)
+                extra_headers = ((
+                    "Set-Cookie",
+                    _validated_cookie(clear_cookie, kind="clear_transaction"),
+                ),)
             except Exception:
                 return self._error(
                     503,
@@ -368,9 +385,27 @@ def _redirect_location(value: object, *, absolute_https: bool) -> str:
         raise ValueError("Redirect non valido.")
     parsed = urllib.parse.urlsplit(value)
     if absolute_https:
-        if parsed.scheme != "https" or not parsed.netloc or parsed.fragment:
+        try:
+            port = parsed.port
+        except ValueError:
+            raise ValueError("Redirect non valido.") from None
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != "accounts.google.com"
+            or parsed.username is not None
+            or parsed.password is not None
+            or port not in {None, 443}
+            or parsed.path != "/o/oauth2/v2/auth"
+            or not parsed.query
+            or parsed.fragment
+        ):
             raise ValueError("Redirect non valido.")
-    elif (
+        try:
+            value.encode("ascii")
+        except UnicodeEncodeError:
+            raise ValueError("Redirect non valido.") from None
+        return value
+    if (
         not value.startswith("/")
         or value.startswith("//")
         or parsed.scheme
@@ -379,15 +414,60 @@ def _redirect_location(value: object, *, absolute_https: bool) -> str:
         or parsed.fragment
     ):
         raise ValueError("Redirect non valido.")
-    return value
+    if _PERCENT_ESCAPE_RE.search(value) is not None:
+        raise ValueError("Redirect non valido.")
+    return urllib.parse.quote(value, safe="/-._~!$&'()*+,;=:@%")
 
 
-def _set_cookie(value: object) -> str:
+def _validated_cookie(value: object, *, kind: str) -> str:
     if (
         type(value) is not str
         or not value
         or len(value.encode("utf-8", errors="surrogatepass")) > 4096
         or any(ord(character) < 32 or ord(character) == 127 for character in value)
     ):
+        raise ValueError("Cookie risposta non valido.")
+    parts = [part.strip() for part in value.split(";")]
+    if not parts or "=" not in parts[0] or any(not part for part in parts):
+        raise ValueError("Cookie risposta non valido.")
+    name, cookie_value = parts[0].split("=", 1)
+    expected_name = "__Host-thebitlab_session" if kind == "session" else None
+    if kind in {"transaction", "clear_transaction"}:
+        valid_name = _TRANSACTION_COOKIE_NAME_RE.fullmatch(name) is not None
+    else:
+        valid_name = kind == "session" and name == expected_name
+    flags: set[str] = set()
+    attributes: dict[str, str] = {}
+    for part in parts[1:]:
+        if "=" in part:
+            key, attribute_value = part.split("=", 1)
+            lowered = key.lower()
+            if lowered in attributes or lowered in flags:
+                raise ValueError("Cookie risposta non valido.")
+            attributes[lowered] = attribute_value
+        else:
+            lowered = part.lower()
+            if lowered in flags or lowered in attributes:
+                raise ValueError("Cookie risposta non valido.")
+            flags.add(lowered)
+    if (
+        not valid_name
+        or flags != {"secure", "httponly"}
+        or attributes.get("path") != "/"
+        or attributes.get("samesite", "").lower() != "lax"
+        or set(attributes) - {"path", "samesite", "max-age", "expires"}
+    ):
+        raise ValueError("Cookie risposta non valido.")
+    max_age = attributes.get("max-age")
+    if kind == "clear_transaction":
+        valid_value = cookie_value == "" and max_age == "0" and "expires" in attributes
+    else:
+        valid_value = (
+            _COOKIE_VALUE_RE.fullmatch(cookie_value) is not None
+            and max_age is not None
+            and max_age.isdigit()
+            and 1 <= int(max_age) <= 2_678_400
+        )
+    if not valid_value:
         raise ValueError("Cookie risposta non valido.")
     return value

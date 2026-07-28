@@ -29,7 +29,7 @@ Il deployment deve impedire accesso diretto al backend HTTP quando usa TLS termi
 
 1. richiede `GET`, query vuota e nessun body/transfer encoding;
 2. passa da `GoogleOidcLoginAdmissionBoundary`, quindi i bucket globali e per-client vengono consumati prima di creare state/nonce/PKCE;
-3. valida fail-closed il risultato adapter;
+3. valida fail-closed il risultato adapter: endpoint esatto `https://accounts.google.com/o/oauth2/v2/auth`, nessuna userinfo/porta estranea/fragment, cookie `__Host-thebitlab_oidc_txn-*` con valore base64url e attributi sicuri senza `Domain`;
 4. risponde `302` con authorization URL HTTPS canonica e cookie transazionale;
 5. aggiunge `Cache-Control: no-store`, `Pragma: no-cache`, `Referrer-Policy: no-referrer` e body vuoto.
 
@@ -46,7 +46,7 @@ La callback accetta una query massima di 8192 byte e 16 campi. Il parser:
 
 Header `Cookie` multipli vengono concatenati in ordine con `; ` entro 16 KiB, come richiesto dal boundary sessione. Controlli, overflow e body non vuoti falliscono prima del callback service.
 
-Al successo la route risponde `303` verso il solo path locale configurato e invia due `Set-Cookie` separati:
+Al successo la route percent-encoda il path locale come URI ASCII e risponde `303`; questo evita errori Latin-1 del trasporto anche per path Unicode validi. Invia due `Set-Cookie` separati, con nomi `__Host-`, valori base64url, `Path=/`, `Secure`, `HttpOnly`, `SameSite=Lax`, età bounded e nessun `Domain`:
 
 1. sessione web nuova;
 2. cancellazione del cookie transazionale one-time.
@@ -67,7 +67,7 @@ Redirect e cookie adapter sono bounded e rifiutano controlli/header injection. I
 
 ## Integrazione Course Board
 
-`CourseBoardHandler` costruisce `EdgeRequestMetadata` dal peer TCP e da `HTTPMessage.raw_items()`, preservando header duplicati. La delega avviene prima dell'autenticazione Basic legacy, così le route pubbliche non vengono scambiate per API docente. GET, POST e HEAD verso path Google esatti passano dallo stesso router; metodi non consentiti ricevono 405 e `Allow: GET`.
+`CourseBoardHandler` costruisce `EdgeRequestMetadata` dal peer TCP e da `HTTPMessage.raw_items()`, preservando header duplicati. La delega avviene prima dell'autenticazione Basic legacy, così le route pubbliche non vengono scambiate per API docente. GET, HEAD, POST, PUT, DELETE, PATCH e OPTIONS verso path Google esatti passano dallo stesso router; metodi non consentiti ricevono 405 e `Allow: GET`. Query/fragments sovradimensionati o malformati vengono classificati 400 già durante la costruzione della request transport, non 503.
 
 La composizione runtime deve costruire e iniettare:
 

@@ -28,9 +28,10 @@ from scripts.thebitlab_google_oidc_http import (
 
 
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth?state=raw-state"
-TXN_COOKIE = "__Host-thebitlab_oidc_txn-deadbeef=raw-binding; Path=/; Secure; HttpOnly; SameSite=Lax"
-SESSION_COOKIE = "__Host-thebitlab_session=raw-session; Path=/; Secure; HttpOnly; SameSite=Lax"
-CLEAR_COOKIE = "__Host-thebitlab_oidc_txn-deadbeef=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Lax"
+TXN_NAME = "__Host-thebitlab_oidc_txn-" + "a" * 24
+TXN_COOKIE = f"{TXN_NAME}={'B' * 40}; Path=/; Max-Age=600; Secure; HttpOnly; SameSite=Lax"
+SESSION_COOKIE = f"__Host-thebitlab_session={'S' * 40}; Path=/; Max-Age=28800; Secure; HttpOnly; SameSite=Lax"
+CLEAR_COOKIE = f"{TXN_NAME}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Lax"
 
 
 class FakeAdmission:
@@ -118,7 +119,7 @@ def test_login_returns_bounded_no_store_redirect_and_cookie() -> None:
     assert response.body == b""
     assert admission.calls == 1
     assert "raw-state" not in repr(response)
-    assert "raw-binding" not in repr(response)
+    assert "B" * 40 not in repr(response)
 
 
 def test_login_rejects_query_body_and_non_get_before_admission() -> None:
@@ -222,6 +223,34 @@ def test_callback_preserves_duplicate_parameters_and_combines_cookies() -> None:
     assert callback.cookie == "first=one; second=two"
 
 
+def test_callback_percent_encodes_unicode_local_redirect() -> None:
+    router, _admission, callback = routes()
+    callback.result = GoogleOidcLoginResult(
+        "user-01",
+        "student",
+        SimpleNamespace(set_cookie=SESSION_COOKIE),
+        "/student/😀",
+        CLEAR_COOKIE,
+    )
+    response = router.dispatch(
+        request("/auth/google/callback", "state=x&code=y")
+    )
+    assert response.status_code == 303
+    assert header_values(response, "Location") == ["/student/%F0%9F%98%80"]
+    header_values(response, "Location")[0].encode("ascii")
+    callback.result = GoogleOidcLoginResult(
+        "user-01",
+        "student",
+        SimpleNamespace(set_cookie=SESSION_COOKIE),
+        "/student/%F0%9F%98%80",
+        CLEAR_COOKIE,
+    )
+    encoded = router.dispatch(
+        request("/auth/google/callback", "state=x&code=y")
+    )
+    assert header_values(encoded, "Location") == ["/student/%F0%9F%98%80"]
+
+
 def test_callback_rejects_malformed_query_and_cookie_before_service() -> None:
     router, _admission, callback = routes()
     queries = ("", "state=x&broken", "state=%ZZ", "state=%FF")
@@ -271,10 +300,20 @@ def test_callback_error_taxonomy_is_sanitized_and_clears_terminal_cookie(
 
 def test_malformed_adapter_redirects_cookies_and_results_fail_closed() -> None:
     router, admission, callback = routes()
-    admission.result = GoogleAuthorizationRequest("http://attacker.test", TXN_COOKIE)
-    assert router.dispatch(request("/auth/google/login")).status_code == 503
-    admission.result = GoogleAuthorizationRequest(AUTH_URL, "bad\r\nX-Evil: yes")
-    assert router.dispatch(request("/auth/google/login")).status_code == 503
+    for bad_url in (
+        "http://attacker.test",
+        "https://evil.example/phish?state=x",
+        "https://accounts.google.com.evil.example/o/oauth2/v2/auth?state=x",
+    ):
+        admission.result = GoogleAuthorizationRequest(bad_url, TXN_COOKIE)
+        assert router.dispatch(request("/auth/google/login")).status_code == 503
+    for bad_cookie in (
+        "bad\r\nX-Evil: yes",
+        f"{TXN_NAME}={'B' * 40}; Domain=example.test; Path=/; Max-Age=600; Secure; HttpOnly; SameSite=Lax",
+        f"attacker={'B' * 40}; Path=/; Max-Age=600; Secure; HttpOnly; SameSite=Lax",
+    ):
+        admission.result = GoogleAuthorizationRequest(AUTH_URL, bad_cookie)
+        assert router.dispatch(request("/auth/google/login")).status_code == 503
     callback.result = "malformed"
     assert router.dispatch(
         request("/auth/google/callback", "state=x&code=y")
@@ -310,6 +349,56 @@ def test_query_and_cookie_secrets_are_removed_from_route_traceback_frames() -> N
 def test_unknown_path_is_not_handled() -> None:
     router, _admission, _callback = routes()
     assert router.dispatch(request("/auth/google/unknown")) is None
+
+
+def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
+    router, admission, callback = routes(trusted=("127.0.0.0/8",))
+    server = BoundedThreadingHTTPServer(("127.0.0.1", 0), CourseBoardHandler)
+    server.google_oidc_http_routes = router
+    server.teacher_token = "T" * 32
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    def exchange(method, target):
+        connection = http.client.HTTPConnection(
+            "127.0.0.1", server.server_address[1], timeout=5
+        )
+        try:
+            connection.request(
+                method,
+                target,
+                headers={"X-Forwarded-Proto": "https"},
+            )
+            response = connection.getresponse()
+            response.read()
+            return response.status, response.getheader("Allow")
+        finally:
+            connection.close()
+
+    try:
+        oversized = exchange(
+            "GET", "/auth/google/callback?state=x&code=" + "a" * 8200
+        )
+        fragmented = exchange(
+            "GET", "/auth/google/callback?state=x&code=y#fragment"
+        )
+        unsupported = {
+            method: exchange(method, "/auth/google/login")
+            for method in ("PUT", "DELETE", "PATCH", "OPTIONS")
+        }
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert oversized == (400, None)
+    assert fragmented == (400, None)
+    assert unsupported == {
+        method: (405, "GET")
+        for method in ("PUT", "DELETE", "PATCH", "OPTIONS")
+    }
+    assert callback.calls == 0
+    assert admission.calls == 0
 
 
 def test_course_board_access_log_redacts_callback_query() -> None:
