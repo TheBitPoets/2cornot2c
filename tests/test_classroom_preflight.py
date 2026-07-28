@@ -61,6 +61,7 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "installed_by_bootstrap" in bootstrap
     assert "Install-ClassroomLauncher" in bootstrap
     assert "prepare-wsl-windows.ps1" in bootstrap
+    assert "remove-wsl-windows.ps1" in bootstrap
     assert "Ambiente 2cornot2c.lnk" in bootstrap
     assert "bootstrap-classroom-windows.ps1" in update
     assert ".installer-venv\\Scripts\\python.exe" in manager
@@ -83,3 +84,20 @@ def test_wsl_preparation_is_elevated_and_resumes_after_restart() -> None:
     assert "-Verb RunAs" in source
     assert "2cornot2c-resume" in source
     assert "RunOnce" in source
+
+
+def test_wsl_rollback_refuses_to_remove_personal_distributions() -> None:
+    cleanup = (ROOT / "scripts" / "remove-wsl-windows.ps1").read_text(
+        encoding="utf-8"
+    )
+    uninstall = (ROOT / "scripts" / "uninstall-classroom-windows.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert "PersonalDistributions" in cleanup
+    assert "docker-desktop" in cleanup
+    assert "dati personali" in cleanup
+    assert "wsl.exe --uninstall" in cleanup
+    assert "Test-WslInstalledByClassroom" in uninstall
+    assert '"restart_required", "succeeded"' in uninstall
+    assert "Start-Sleep -Seconds 2" in uninstall

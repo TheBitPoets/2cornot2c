@@ -90,6 +90,7 @@ function Install-ClassroomLauncher {
     foreach ($ScriptName in @(
         "manage-classroom-windows.ps1"
         "prepare-wsl-windows.ps1"
+        "remove-wsl-windows.ps1"
         "update-classroom-windows.ps1"
         "uninstall-classroom-windows.ps1"
     )) {

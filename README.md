@@ -491,6 +491,12 @@ La procedura mostra il piano e richiede la parola esatta `DISINSTALLA`. Salva
 programmi registrati come installati da 2cornot2c. Una VM esistente blocca la
 disinstallazione e non viene mai distrutta implicitamente.
 
+Anche un'installazione in corso può essere annullata premendo `c` nella TUI e
+confermando con `s`. Il passo Windows già avviato termina in sicurezza, poi la
+procedura rimuove automaticamente quanto installato fino a quel momento. WSL
+viene rimosso soltanto quando risulta installato da 2cornot2c e non contiene
+distribuzioni personali.
+
 ### Preparazione automatica del Mac
 
 Su un Mac Apple Silicon nuovo, oppure per riparare un'installazione incompleta,

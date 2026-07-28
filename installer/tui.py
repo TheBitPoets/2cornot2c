@@ -7,7 +7,7 @@ from io import UnsupportedOperation
 from pathlib import Path
 from queue import Empty, Queue
 import sys
-from threading import Thread
+from threading import Event, Thread
 from time import monotonic
 from typing import Any
 
@@ -59,6 +59,9 @@ class State:
     install_tick: int = 0
     install_updates: Queue[tuple[str, Any]] | None = None
     install_thread: Thread | None = None
+    install_cancel: Event | None = None
+    cancel_confirmation_pending: bool = False
+    cancellation_requested: bool = False
     running: bool = True
 
 
@@ -123,15 +126,27 @@ def build_screen(
             min_width=38,
         )
         visible_report = (
-            _installation_report(state) if state.installing else state.report
+            _cancel_confirmation_report(state)
+            if state.cancel_confirmation_pending
+            else _installation_report(state)
+            if state.installing
+            else state.report
         )
         report_title = "Diagnosi"
         if state.installing:
-            command_text = (
-                "Installazione in corso\n"
-                "Attendi il completamento\n"
-                "Non chiudere la finestra"
-            )
+            if state.cancel_confirmation_pending:
+                command_text = "s: annulla e ripulisci\nn/Esc: continua"
+            elif state.cancellation_requested:
+                command_text = (
+                    "Annullamento richiesto\n"
+                    "Attendi la pulizia automatica"
+                )
+            else:
+                command_text = (
+                    "Installazione in corso\n"
+                    "c: annulla e ripulisci\n"
+                    "Non chiudere la finestra"
+                )
         elif state.confirmation_pending:
             command_text = "s: conferma installazione\nn/Esc: annulla"
         else:
@@ -406,14 +421,54 @@ def _installation_report(state: State) -> tuple[str, ...]:
         cells[min(width - 1, pulse)] = "▓"
     minutes, seconds = divmod(state.install_elapsed, 60)
     current = min(max(1, state.install_current), total)
+    status = (
+        "ANNULLAMENTO RICHIESTO"
+        if state.cancellation_requested
+        else "INSTALLAZIONE IN CORSO"
+    )
+    guidance = (
+        "Attendo che il passo corrente termini, poi ripulisco tutto."
+        if state.cancellation_requested
+        else "Controlla con Alt+Tab eventuali richieste di Windows."
+    )
     return (
-        "INSTALLAZIONE IN CORSO",
+        status,
         f"Passo {current} di {total} - {state.install_label}",
         f"[{''.join(cells)}] {state.install_completed}/{total}",
         f"Attività in corso - tempo trascorso {minutes:02d}:{seconds:02d}",
         "Non chiudere questa finestra.",
-        "Controlla con Alt+Tab eventuali richieste di Windows.",
+        guidance,
     )
+
+
+def _cancel_confirmation_report(state: State) -> tuple[str, ...]:
+    """Spiega perché il passo attivo non viene terminato brutalmente."""
+
+    return (
+        "ANNULLARE L'INSTALLAZIONE?",
+        f"Passo attuale: {state.install_label}",
+        "Il passo attuale terminerà in sicurezza.",
+        "Poi verranno rimossi tutti i componenti installati da 2cornot2c.",
+        "Gli eventuali esercizi verranno salvati.",
+        "Premi s per annullare oppure n per continuare.",
+    )
+
+
+def request_installation_cancel(state: State) -> None:
+    """Apre la conferma senza interrompere processi di sistema."""
+
+    if state.installing and not state.cancellation_requested:
+        state.cancel_confirmation_pending = True
+
+
+def confirm_installation_cancel(state: State) -> None:
+    """Richiede uno stop cooperativo al termine del comando corrente."""
+
+    if not state.installing or state.install_cancel is None:
+        return
+    state.cancel_confirmation_pending = False
+    state.cancellation_requested = True
+    state.install_cancel.set()
 
 
 def start_selected(state: State) -> None:
@@ -424,6 +479,7 @@ def start_selected(state: State) -> None:
     provider = state.providers[state.active_index]
     plan = install_plan(state.host, provider)
     updates: Queue[tuple[str, Any]] = Queue()
+    cancellation = Event()
     state.confirmation_pending = False
     state.installing = True
     state.install_current = 0
@@ -434,6 +490,9 @@ def start_selected(state: State) -> None:
     state.install_started_at = monotonic()
     state.install_tick = 0
     state.install_updates = updates
+    state.install_cancel = cancellation
+    state.cancel_confirmation_pending = False
+    state.cancellation_requested = False
 
     def publish(
         phase: str,
@@ -450,8 +509,13 @@ def start_selected(state: State) -> None:
                 diagnose(plan),
                 log_path=Path.home() / ".2cornot2c" / "installer.jsonl",
                 progress=publish,
+                cancel_requested=cancellation.is_set,
             )
-            updates.put(("result", results))
+            updates.put(
+                ("cancelled", results)
+                if cancellation.is_set()
+                else ("result", results)
+            )
         except Exception as error:
             updates.put(("error", error))
 
@@ -487,6 +551,15 @@ def poll_installation(state: State) -> bool:
             state.report = _format_results(provider, payload)
             state.installing = False
             state.install_thread = None
+        elif kind == "cancelled":
+            state.installing = False
+            state.install_thread = None
+            try:
+                launch_windows_action("uninstall")
+                state.running = False
+            except Exception as error:
+                message = for_check("installer", str(error))
+                state.report = message.lines(str(error))
         else:
             error = for_check("installer", str(payload))
             state.report = error.lines(str(payload))
@@ -547,6 +620,21 @@ def main() -> int:
                 if event is not None:
                     character = event.character if event.key is Key.CHARACTER else ""
                     if state.installing:
+                        if (
+                            character == "s"
+                            and state.cancel_confirmation_pending
+                        ):
+                            confirm_installation_cancel(state)
+                        elif (
+                            character == "n" or event.key is Key.ESCAPE
+                        ) and state.cancel_confirmation_pending:
+                            state.cancel_confirmation_pending = False
+                        elif (
+                            character == "c"
+                            and not state.cancel_confirmation_pending
+                            and not state.cancellation_requested
+                        ):
+                            request_installation_cancel(state)
                         changed = True
                     elif state.screen == "home":
                         if character == "s" and state.confirmation_pending:
