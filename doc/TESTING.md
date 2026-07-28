@@ -28,9 +28,12 @@ python3.12 -m pip install -r requirements-utui.txt
 python3.12 -m pytest tests/test_student_lab_utui.py
 ```
 
-Senza questa dipendenza i test che esercitano i widget vengono saltati; proiezione dei dati e
-fallback restano comunque verificati. La CI consumer dovra installare esplicitamente entrambi i
-file dei requisiti prima che il nuovo renderer venga collegato alla CLI.
+Senza questa dipendenza la suite predefinita salta i test che esercitano i widget; proiezione dei
+dati e fallback restano comunque verificati. Il workflow dedicato `uTUI consumer evidence`
+installa `requirements-dev.txt` e `requirements-utui.txt`, imposta
+`THEBITLAB_REQUIRE_UTUI=1` e verifica adapter, layout e CLI su Windows e Linux con Python
+3.11, 3.12 e 3.13. La matrice che impedisce skip accidentali e stata introdotta dalla
+[PR #495](https://github.com/TheBitPoets/2cornot2c/pull/495).
 
 ## Test Python locali
 
