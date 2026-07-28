@@ -280,10 +280,12 @@ class TuiPairingHttpRoutes:
         now = pairing_service.clock()
         if type(now) is not datetime or now.tzinfo is None or now.utcoffset() is None:
             raise EdgeRateLimitStoreError("Clock cleanup pairing non valido.")
-        removed = pairing_service.storage.delete_expired_pairings(
-            now.astimezone(timezone.utc)
-        )
-        if type(removed) is not int or removed < 0:
+        cutoff = now.astimezone(timezone.utc)
+        removed_sessions = pairing_service.storage.delete_expired_sessions(cutoff)
+        if type(removed_sessions) is not int or removed_sessions < 0:
+            raise EdgeRateLimitStoreError("Cleanup sessioni non valido.")
+        removed_pairings = pairing_service.storage.delete_expired_pairings(cutoff)
+        if type(removed_pairings) is not int or removed_pairings < 0:
             raise EdgeRateLimitStoreError("Cleanup pairing non valido.")
 
     @staticmethod

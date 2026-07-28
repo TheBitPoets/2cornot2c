@@ -4,7 +4,7 @@ import http.client as http_client
 import json
 import threading
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -212,6 +212,35 @@ def test_browser_authorization_requires_cookie_and_csrf(graph) -> None:
 def test_transport_is_fail_closed(graph, candidate, status) -> None:
     _storage, _http, _boundary, routes = graph
     assert routes.dispatch(candidate).status_code == status
+
+
+def test_begin_cleans_expired_tui_session_before_consumed_pairing(graph) -> None:
+    storage, http, boundary, routes = graph
+    start = json.loads(routes.dispatch(request("/auth/tui/pairings")).body)
+    browser = http.establish_session("student-01")
+    routes.dispatch(
+        json_request(
+            "/auth/tui/pair",
+            {"code": start["user_code"]},
+            ("Cookie", cookie(browser)),
+            ("X-CSRF-Token", browser.context.csrf_token),
+        )
+    )
+    consumed = routes.dispatch(
+        json_request(
+            f"/auth/tui/pairings/{start['pairing_id']}/token",
+            {"code": start["user_code"]},
+        )
+    )
+    bearer = json.loads(consumed.body)["bearer_token"]
+    consumed.delivery_guard.delivered()
+    boundary.pairings.pairings.clock = lambda: NOW + timedelta(hours=9)
+
+    fresh = routes.dispatch(request("/auth/tui/pairings"))
+
+    assert fresh.status_code == 201
+    assert storage.read_session_by_token_digest(session_token_digest(bearer)) is None
+    assert storage.read_pairing(start["pairing_id"]) is None
 
 
 def test_begin_rate_limit_prevents_ninth_pairing_allocation(graph) -> None:

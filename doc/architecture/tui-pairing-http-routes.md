@@ -20,7 +20,7 @@ Tutte le route richiedono HTTPS diretto o attestato dallo stesso trusted proxy r
 
 Un unico store SQLite atomico, condiviso col login Google, applica bucket globali e per-client distinti a begin, authorize e consume. Consume aggiunge un bucket HMAC per pairing, impedendo tentativi distribuiti eccessivi sullo stesso identificatore. IP, pairing e codici non vengono persistiti nei bucket in chiaro.
 
-Prima di ogni begin ammesso viene eseguito cleanup fail-closed dei pairing scaduti non referenziati da sessioni TUI. La combinazione tra TTL, limiti globali/client e cleanup impedisce crescita persistente incontrollata da parte dell'ingresso pubblico.
+Prima di ogni begin ammesso vengono eliminate fail-closed prima le sessioni scadute di entrambe le audience e poi i pairing scaduti non più referenziati. L'ordine libera le correlazioni TUI consumate senza violare i vincoli SQLite. La combinazione tra TTL, limiti globali/client e cleanup impedisce crescita persistente incontrollata da parte dell'ingresso pubblico.
 
 ## Consegna one-shot
 
