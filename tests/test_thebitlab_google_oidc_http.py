@@ -457,26 +457,41 @@ def test_malformed_request_line_redacts_callback_secret_and_returns_400() -> Non
     server.teacher_token = "T" * 32
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    def raw_exchange(request_line):
+        connection = socket.create_connection(server.server_address, timeout=5)
+        try:
+            connection.sendall(
+                (request_line + "\r\nHost: localhost\r\n\r\n").encode("ascii")
+            )
+            return connection.recv(4096)
+        finally:
+            connection.close()
+
     raw_secret = "RAW-CALLBACK-CODE"
-    connection = socket.create_connection(server.server_address, timeout=5)
+    method_secret = "METHODSECRET"
     try:
-        connection.sendall(
-            (
-                "GET /auth/google/callback?code="
-                + raw_secret
-                + " EXTRA HTTP/1.1\r\nHost: localhost\r\n\r\n"
-            ).encode("ascii")
+        response = raw_exchange(
+            "GET /auth/google/callback?code="
+            + raw_secret
+            + " EXTRA HTTP/1.1"
         )
-        response = connection.recv(4096)
+        malformed_method = raw_exchange(
+            "/auth/google/callback?code="
+            + method_secret
+            + " / HTTP/1.1"
+        )
     finally:
-        connection.close()
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
 
     assert b"400" in response
+    assert b"400" in malformed_method
     assert raw_secret.encode("ascii") not in response
-    assert raw_secret not in repr(RecordingHandler.messages)
+    assert method_secret.encode("ascii") not in malformed_method
+    serialized = repr(RecordingHandler.messages)
+    assert raw_secret not in serialized
+    assert method_secret not in serialized
 
 
 def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:

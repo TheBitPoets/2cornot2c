@@ -3293,12 +3293,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         """Never write OAuth callback queries or codes to access logs."""
 
         path = str(getattr(self, "path", ""))
+        requestline = str(getattr(self, "requestline", ""))
         if self._is_google_auth_request_line():
-            parsed = urlparse(path)
-            safe_path = parsed.path if parsed.path else "/auth/google/invalid"
-            command = str(getattr(self, "command", "INVALID"))
-            version = str(getattr(self, "request_version", "HTTP/1.1"))
-            safe_line = f"{command} {safe_path} {version}"
+            combined = path + " " + requestline
+            if "/auth/google/callback" in combined:
+                safe_path = "/auth/google/callback"
+            elif "/auth/google/login" in combined:
+                safe_path = "/auth/google/login"
+            else:
+                safe_path = "/auth/google/invalid"
+            safe_line = f"AUTH {safe_path} HTTP"
             self.log_message('"%s" %s %s', safe_line, str(code), str(size))
             return
         super().log_request(code, size)
@@ -3308,10 +3312,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
         if self._is_google_auth_request_line():
             self.close_connection = True
-            self.write_oidc_transport_error(
-                int(code) if isinstance(code, int) else 400,
-                "bad_auth_request",
-            )
+            self.write_oidc_transport_error(400, "bad_auth_request")
             return
         super().send_error(code, message, explain)
 
