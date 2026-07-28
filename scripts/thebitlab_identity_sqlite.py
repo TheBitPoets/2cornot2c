@@ -28,7 +28,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 _T = TypeVar("_T")
 
 
@@ -289,6 +289,12 @@ _MIGRATION_10 = (
     """,
 )
 
+_MIGRATION_11 = (
+    _MIGRATION_8[0],
+    "DROP TRIGGER IF EXISTS trg_consumed_pairing_session_immutable",
+    _MIGRATION_10[1],
+)
+
 _MIGRATION_4 = (
     """
     CREATE TABLE external_group_mapping_generations (
@@ -409,6 +415,7 @@ class SqliteIdentityStorage:
                 (8, _MIGRATION_8),
                 (9, _MIGRATION_9),
                 (10, _MIGRATION_10),
+                (11, _MIGRATION_11),
             )
             for version, statements in migrations:
                 if version in versions:

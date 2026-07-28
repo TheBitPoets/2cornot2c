@@ -207,7 +207,7 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
-def test_migration_v10_removes_pairing_correlations_corrupted_under_v9(
+def test_migration_v11_rechecks_correlations_after_earlier_v10(
     database_path,
 ) -> None:
     storage = SqliteIdentityStorage(database_path)
@@ -240,7 +240,7 @@ def test_migration_v10_removes_pairing_correlations_corrupted_under_v9(
                 .replace("+00:00", "Z"),
             ),
         )
-        connection.execute("DELETE FROM schema_migrations WHERE version = 10")
+        connection.execute("DELETE FROM schema_migrations WHERE version = 11")
 
     upgraded = SqliteIdentityStorage(database_path)
     assert upgraded.read_session("session-01") is None
