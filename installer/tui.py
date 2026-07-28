@@ -219,6 +219,25 @@ def _border_positions(row: str) -> tuple[int, ...]:
     return tuple(index for index, character in enumerate(row) if character == border)
 
 
+def _paint_text_only(
+    row: str,
+    start: int,
+    end: int,
+    escape: str,
+) -> str:
+    """Colora il contenuto senza includere padding o bordi del pannello."""
+
+    segment = row[start:end]
+    text = segment.rstrip(" ")
+    padding = segment[len(text) :]
+    if not text:
+        return row
+    return (
+        f"{row[:start]}{escape}{text}\x1b[0m"
+        f"{padding}{row[end:]}"
+    )
+
+
 def _paint_guidance_rows(rows: list[str]) -> list[str]:
     """Propaga il colore sulle righe visuali prodotte dal wrapping."""
 
@@ -260,15 +279,17 @@ def _paint_guidance_rows(rows: list[str]) -> list[str]:
             if not right_indices:
                 active_right_border = None
                 result.append(
-                    f"{row[:start]}{active_escape}{row[start:]}\x1b[0m"
+                    _paint_text_only(
+                        row,
+                        start,
+                        len(row),
+                        active_escape,
+                    )
                 )
                 continue
             active_right_border = right_indices[0]
             end = borders[active_right_border]
-            result.append(
-                f"{row[:start]}{active_escape}{row[start:end]}"
-                f"\x1b[0m{row[end:]}"
-            )
+            result.append(_paint_text_only(row, start, end, active_escape))
             continue
         if (
             active_escape is None
@@ -286,9 +307,7 @@ def _paint_guidance_rows(rows: list[str]) -> list[str]:
             active_right_border = None
             result.append(row)
             continue
-        result.append(
-            f"{row[:start]}{active_escape}{row[start:end]}\x1b[0m{row[end:]}"
-        )
+        result.append(_paint_text_only(row, start, end, active_escape))
     return result
 
 
