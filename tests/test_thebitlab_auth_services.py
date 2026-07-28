@@ -12,6 +12,9 @@ from scripts.thebitlab_auth_services import (
     AuthApplicationError,
     ConcurrentStateChangeError,
     CredentialGenerationError,
+    ExternalIdentityLinkConflictError,
+    ExternalIdentityLinkService,
+    ExternalIdentityNotLinkedError,
     FakeFederatedIdentityProvider,
     FederatedIdentityAssertion,
     FederatedIdentityService,
@@ -93,6 +96,162 @@ def google_assertion(subject="google-42"):
         email_verified=True,
         username="mario",
     )
+
+
+def github_assertion(subject="123456"):
+    return FederatedIdentityAssertion(
+        "github",
+        subject,
+        "Mario Rossi",
+        email="Mario@Example.Test",
+        email_verified=False,
+        username="mario-gh",
+    )
+
+
+def test_authenticated_external_account_link_unlink_and_relink(storage) -> None:
+    user = account()
+    storage.create_user(user)
+    clock = MutableClock()
+    service = ExternalIdentityLinkService(
+        storage, expected_provider="github", clock=clock
+    )
+    issued = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "s" * 32,
+        session_id_factory=lambda: "link-session",
+    ).issue(user.user_id)
+
+    linked = service.link(user.user_id, github_assertion())
+    assert linked.provider_key == ("github", "123456")
+    assert linked.user_id == user.user_id
+    assert service.link(user.user_id, github_assertion()).linked_at == linked.linked_at
+
+    removed = service.unlink(user.user_id, expected_session=issued.session)
+    assert removed == linked
+    assert storage.read_external_identity("github", "123456") is None
+    with pytest.raises(ExternalIdentityNotLinkedError):
+        service.unlink(user.user_id, expected_session=issued.session)
+
+    relinked = service.link(
+        user.user_id,
+        github_assertion(),
+        expected_session=issued.session,
+    )
+    assert relinked.linked_at == linked.linked_at + timedelta(microseconds=1)
+
+    generations = [linked.linked_at, relinked.linked_at]
+    for _attempt in range(8):
+        service.unlink(user.user_id, expected_session=issued.session)
+        relinked = service.link(
+            user.user_id,
+            github_assertion(),
+            expected_session=issued.session,
+        )
+        generations.append(relinked.linked_at)
+    assert generations == sorted(set(generations))
+
+
+def test_external_account_relink_generation_survives_clock_rollback(storage) -> None:
+    user = account()
+    storage.create_user(user)
+    clock = MutableClock()
+    issued = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "r" * 32,
+        session_id_factory=lambda: "rollback-session",
+    ).issue(user.user_id)
+    service = ExternalIdentityLinkService(
+        storage, expected_provider="github", clock=clock
+    )
+    clock.value = NOW + timedelta(seconds=10)
+    first = service.link(
+        user.user_id, github_assertion(), expected_session=issued.session
+    )
+    service.unlink(user.user_id, expected_session=issued.session)
+
+    clock.value = NOW + timedelta(seconds=5)
+    second = service.link(
+        user.user_id, github_assertion(), expected_session=issued.session
+    )
+    assert second.linked_at == first.linked_at + timedelta(microseconds=1)
+
+
+def test_external_account_unlink_requires_persisted_live_session(storage) -> None:
+    user = account()
+    storage.create_user(user)
+    clock = MutableClock()
+    issued = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "u" * 32,
+        session_id_factory=lambda: "unlink-session",
+    ).issue(user.user_id)
+    service = ExternalIdentityLinkService(
+        storage, expected_provider="github", clock=clock
+    )
+    linked = service.link(
+        user.user_id,
+        github_assertion(),
+        expected_session=issued.session,
+        expected_user_updated_at=user.updated_at,
+    )
+    storage.save_session(replace(issued.session, revoked_at=NOW))
+
+    with pytest.raises(ConcurrentStateChangeError):
+        service.unlink(user.user_id, expected_session=issued.session)
+    assert storage.read_external_identity(*linked.provider_key) == linked
+
+
+def test_external_account_link_rejects_provider_and_cross_user_conflicts(storage) -> None:
+    first = account("first")
+    second = account("second")
+    storage.create_user(first)
+    storage.create_user(second)
+    service = ExternalIdentityLinkService(
+        storage, expected_provider="github", clock=MutableClock()
+    )
+
+    service.link(first.user_id, github_assertion())
+    with pytest.raises(ExternalIdentityLinkConflictError):
+        service.link(second.user_id, github_assertion())
+    with pytest.raises(ExternalIdentityLinkConflictError):
+        service.link(first.user_id, github_assertion("999999"))
+    with pytest.raises(ProviderProtocolError):
+        service.link(first.user_id, google_assertion())
+
+
+def test_external_account_link_cas_blocks_disable_and_unlink_relink_races(
+    storage, monkeypatch
+) -> None:
+    original = account()
+    storage.create_user(original)
+    service = ExternalIdentityLinkService(
+        storage, expected_provider="github", clock=MutableClock()
+    )
+    real_link = storage.link_external_identity_for_active_user
+
+    def disable_then_link(identity, *, expected_user_updated_at):
+        storage.save_user(
+            replace(
+                original,
+                active=False,
+                updated_at=NOW + timedelta(seconds=1),
+            ),
+            expected_updated_at=original.updated_at,
+        )
+        return real_link(
+            identity, expected_user_updated_at=expected_user_updated_at
+        )
+
+    monkeypatch.setattr(
+        storage, "link_external_identity_for_active_user", disable_then_link
+    )
+    with pytest.raises(ConcurrentStateChangeError):
+        service.link(original.user_id, github_assertion())
+    assert storage.read_external_identity("github", "123456") is None
 
 
 def test_fake_google_onboards_unknown_user_as_pending_atomically(storage) -> None:

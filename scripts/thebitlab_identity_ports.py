@@ -55,6 +55,28 @@ class UserDirectoryStorage(Protocol):
 
     def link_external_identity(self, identity: ExternalIdentity) -> None: ...
 
+    def link_external_identity_for_active_user(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_user_updated_at: datetime,
+    ) -> None:
+        """Atomically link while the active owner revision still matches."""
+        ...
+
+    def link_external_identity_for_active_session(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+        expected_session_created_at: datetime,
+        expected_session_valid_at: datetime,
+    ) -> None:
+        """Atomically link while both active user and session still match."""
+        ...
+
     def refresh_external_identity(
         self,
         identity: ExternalIdentity,
@@ -65,11 +87,57 @@ class UserDirectoryStorage(Protocol):
         """Refresh a link only while its active owner revision remains unchanged."""
         ...
 
+    def refresh_external_identity_for_active_session(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+        expected_session_created_at: datetime,
+        expected_session_valid_at: datetime,
+    ) -> None:
+        """Refresh a link while active user and session still match."""
+        ...
+
     def read_external_identity(self, provider: str, subject: str) -> ExternalIdentity | None: ...
+
+    def read_latest_external_identity_generation(
+        self, provider: str, subject: str
+    ) -> datetime | None: ...
 
     def list_external_identities(self, user_id: str) -> list[ExternalIdentity]: ...
 
     def unlink_external_identity(self, provider: str, subject: str) -> bool: ...
+
+    def unlink_external_identity_for_active_user(
+        self,
+        provider: str,
+        subject: str,
+        user_id: str,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+    ) -> bool:
+        """Atomically unlink only the expected identity generation and active owner revision."""
+        ...
+
+    def unlink_external_identity_for_active_session(
+        self,
+        provider: str,
+        subject: str,
+        user_id: str,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+        expected_session_created_at: datetime,
+        expected_session_valid_at: datetime,
+    ) -> bool:
+        """Atomically unlink while identity, active owner, and live session match."""
+        ...
 
 
 class ClassDirectoryStorage(Protocol):

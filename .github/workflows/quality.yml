@@ -105,6 +105,7 @@ jobs:
           tests/test_track_assignments.py
           tests/test_course_board_server.py
           tests/test_thebitlab_google_oidc.py
+          tests/test_thebitlab_github_oauth.py
 
       - name: Test portable Node.js and SQL runners
         run: >-

@@ -25,7 +25,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 _T = TypeVar("_T")
 
 
@@ -148,6 +148,47 @@ _MIGRATION_1 = (
     "CREATE INDEX idx_tui_pairings_expires ON tui_pairings(expires_at)",
 )
 
+_MIGRATION_3 = (
+    """
+    CREATE TABLE external_identity_link_conflicts (
+        provider TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        linked_at TEXT NOT NULL,
+        email TEXT,
+        username TEXT,
+        PRIMARY KEY (provider, subject)
+    )
+    """,
+    """
+    INSERT INTO external_identity_link_conflicts
+        (provider, subject, user_id, linked_at, email, username)
+    SELECT provider, subject, user_id, linked_at, email, username
+    FROM external_identities
+    WHERE (user_id, provider) IN (
+        SELECT user_id, provider FROM external_identities
+        GROUP BY user_id, provider HAVING COUNT(*) > 1
+    )
+    """,
+    """
+    INSERT OR IGNORE INTO external_identity_generations
+        (provider, subject, linked_at)
+    SELECT provider, subject, linked_at
+    FROM external_identity_link_conflicts
+    """,
+    """
+    DELETE FROM external_identities
+    WHERE (user_id, provider) IN (
+        SELECT user_id, provider FROM external_identity_link_conflicts
+        GROUP BY user_id, provider
+    )
+    """,
+    """
+    CREATE UNIQUE INDEX uq_external_identities_user_provider
+    ON external_identities(user_id, provider)
+    """,
+)
+
 _MIGRATION_2 = (
     """
     CREATE TABLE external_identity_generations (
@@ -183,12 +224,18 @@ def _decode_datetime(value: str | None) -> datetime | None:
 class SqliteIdentityStorage:
     """SQLite source-of-truth adapter for identity, class, session and pairing ports."""
 
-    def __init__(self, database_path: Path | str) -> None:
+    def __init__(
+        self,
+        database_path: Path | str,
+        *,
+        clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+    ) -> None:
         if str(database_path) == ":memory:":
             raise IdentityStorageError(
                 "Usare un file temporaneo: connessioni isolate non supportano SQLite :memory:."
             )
         self.database_path = Path(database_path)
+        self._clock = clock
         try:
             self.database_path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as error:
@@ -233,7 +280,11 @@ class SqliteIdentityStorage:
                 )
             if versions and versions != set(range(1, max(versions) + 1)):
                 raise IdentityStorageError("Sequenza migrazioni identity non valida.")
-            migrations = ((1, _MIGRATION_1), (2, _MIGRATION_2))
+            migrations = (
+                (1, _MIGRATION_1),
+                (2, _MIGRATION_2),
+                (3, _MIGRATION_3),
+            )
             for version, statements in migrations:
                 if version in versions:
                     continue
@@ -555,6 +606,112 @@ class SqliteIdentityStorage:
                 ),
             )
 
+    def link_external_identity_for_active_user(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_user_updated_at: datetime,
+    ) -> None:
+        linked_at = _encode_datetime(identity.linked_at, "linked_at")
+        expected_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        with self._transaction("link_external_identity_for_active_user") as connection:
+            self._reserve_external_identity_generation(
+                connection, identity.provider, identity.subject, linked_at
+            )
+            cursor = connection.execute(
+                """
+                INSERT INTO external_identities
+                    (provider, subject, user_id, linked_at, email, username)
+                SELECT ?, ?, user_id, ?, ?, ? FROM users
+                WHERE user_id = ? AND active = 1 AND updated_at = ?
+                """,
+                (
+                    identity.provider,
+                    identity.subject,
+                    linked_at,
+                    identity.email,
+                    identity.username,
+                    identity.user_id,
+                    expected_revision,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise IdentityStorageConflictError(
+                    "Utente modificato o disabilitato durante il collegamento."
+                )
+
+    def link_external_identity_for_active_session(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+        expected_session_created_at: datetime,
+        expected_session_valid_at: datetime,
+    ) -> None:
+        linked_at = _encode_datetime(identity.linked_at, "linked_at")
+        expected_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        expected_created_at = _encode_datetime(
+            expected_session_created_at, "expected_session_created_at"
+        )
+        expected_valid_at = _encode_datetime(
+            expected_session_valid_at, "expected_session_valid_at"
+        )
+        with self._transaction(
+            "link_external_identity_for_active_session"
+        ) as connection:
+            transaction_valid_at = max(
+                expected_valid_at,
+                _encode_datetime(self._clock(), "storage_clock"),
+            )
+            self._reserve_external_identity_generation(
+                connection, identity.provider, identity.subject, linked_at
+            )
+            cursor = connection.execute(
+                """
+                INSERT INTO external_identities
+                    (provider, subject, user_id, linked_at, email, username)
+                SELECT ?, ?, users.user_id, ?, ?, ? FROM users
+                WHERE users.user_id = ? AND users.active = 1
+                    AND users.updated_at = ?
+                    AND EXISTS (
+                        SELECT 1 FROM sessions
+                        WHERE sessions.session_id = ?
+                            AND sessions.token_digest = ?
+                            AND sessions.created_at = ?
+                            AND sessions.user_id = users.user_id
+                            AND sessions.revoked_at IS NULL
+                            AND sessions.created_at <= ?
+                            AND sessions.last_seen_at <= ?
+                            AND sessions.expires_at > ?
+                    )
+                """,
+                (
+                    identity.provider,
+                    identity.subject,
+                    linked_at,
+                    identity.email,
+                    identity.username,
+                    identity.user_id,
+                    expected_revision,
+                    expected_session_id,
+                    expected_session_token_digest,
+                    expected_created_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise IdentityStorageConflictError(
+                    "Utente o sessione modificati durante il collegamento."
+                )
+
     def refresh_external_identity(
         self,
         identity: ExternalIdentity,
@@ -603,12 +760,99 @@ class SqliteIdentityStorage:
                     "Identita provider ricollegata da un'altra operazione."
                 )
 
+    def refresh_external_identity_for_active_session(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+        expected_session_created_at: datetime,
+        expected_session_valid_at: datetime,
+    ) -> None:
+        expected_generation = _encode_datetime(
+            expected_linked_at, "expected_linked_at"
+        )
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        expected_created_at = _encode_datetime(
+            expected_session_created_at, "expected_session_created_at"
+        )
+        expected_valid_at = _encode_datetime(
+            expected_session_valid_at, "expected_session_valid_at"
+        )
+        with self._transaction(
+            "refresh_external_identity_for_active_session"
+        ) as connection:
+            transaction_valid_at = max(
+                expected_valid_at,
+                _encode_datetime(self._clock(), "storage_clock"),
+            )
+            cursor = connection.execute(
+                """
+                UPDATE external_identities SET email = ?, username = ?
+                WHERE provider = ? AND subject = ? AND user_id = ? AND linked_at = ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE users.user_id = external_identities.user_id
+                            AND users.active = 1 AND users.updated_at = ?
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM sessions
+                        WHERE sessions.session_id = ?
+                            AND sessions.token_digest = ?
+                            AND sessions.created_at = ?
+                            AND sessions.user_id = external_identities.user_id
+                            AND sessions.revoked_at IS NULL
+                            AND sessions.created_at <= ?
+                            AND sessions.last_seen_at <= ?
+                            AND sessions.expires_at > ?
+                    )
+                """,
+                (
+                    identity.email,
+                    identity.username,
+                    identity.provider,
+                    identity.subject,
+                    identity.user_id,
+                    expected_generation,
+                    expected_user_revision,
+                    expected_session_id,
+                    expected_session_token_digest,
+                    expected_created_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise IdentityStorageConflictError(
+                    "Identita, utente o sessione modificati durante il refresh."
+                )
+
     def read_external_identity(self, provider: str, subject: str) -> ExternalIdentity | None:
         row = self._query_one(
             "SELECT * FROM external_identities WHERE provider = ? AND subject = ?",
             (provider.lower(), subject),
         )
         return None if row is None else self._external_identity(row)
+
+    def read_latest_external_identity_generation(
+        self, provider: str, subject: str
+    ) -> datetime | None:
+        row = self._query_one(
+            """
+            SELECT MAX(linked_at) AS linked_at
+            FROM external_identity_generations
+            WHERE provider = ? AND subject = ?
+            """,
+            (provider.lower(), subject),
+        )
+        if row is None or row["linked_at"] is None:
+            return None
+        return _decode_datetime(row["linked_at"])
 
     def list_external_identities(self, user_id: str) -> list[ExternalIdentity]:
         rows = self._query_all(
@@ -624,6 +868,139 @@ class SqliteIdentityStorage:
                 (provider.lower(), subject),
             )
             return cursor.rowcount == 1
+
+    def unlink_external_identity_for_active_user(
+        self,
+        provider: str,
+        subject: str,
+        user_id: str,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+    ) -> bool:
+        expected_generation = _encode_datetime(
+            expected_linked_at, "expected_linked_at"
+        )
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        with self._transaction(
+            "unlink_external_identity_for_active_user"
+        ) as connection:
+            cursor = connection.execute(
+                """
+                DELETE FROM external_identities
+                WHERE provider = ? AND subject = ? AND user_id = ? AND linked_at = ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE users.user_id = external_identities.user_id
+                            AND users.active = 1 AND users.updated_at = ?
+                    )
+                """,
+                (
+                    provider.lower(),
+                    subject,
+                    user_id,
+                    expected_generation,
+                    expected_user_revision,
+                ),
+            )
+            if cursor.rowcount == 1:
+                return True
+            exists = connection.execute(
+                """
+                SELECT 1 FROM external_identities
+                WHERE provider = ? AND subject = ?
+                """,
+                (provider.lower(), subject),
+            ).fetchone()
+            if exists is None:
+                return False
+            raise IdentityStorageConflictError(
+                "Identita o utente modificati durante lo scollegamento."
+            )
+
+    def unlink_external_identity_for_active_session(
+        self,
+        provider: str,
+        subject: str,
+        user_id: str,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+        expected_session_created_at: datetime,
+        expected_session_valid_at: datetime,
+    ) -> bool:
+        expected_generation = _encode_datetime(
+            expected_linked_at, "expected_linked_at"
+        )
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        expected_created_at = _encode_datetime(
+            expected_session_created_at, "expected_session_created_at"
+        )
+        expected_valid_at = _encode_datetime(
+            expected_session_valid_at, "expected_session_valid_at"
+        )
+        with self._transaction(
+            "unlink_external_identity_for_active_session"
+        ) as connection:
+            transaction_valid_at = max(
+                expected_valid_at,
+                _encode_datetime(self._clock(), "storage_clock"),
+            )
+            cursor = connection.execute(
+                """
+                DELETE FROM external_identities
+                WHERE provider = ? AND subject = ? AND user_id = ? AND linked_at = ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE users.user_id = external_identities.user_id
+                            AND users.active = 1 AND users.updated_at = ?
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM sessions
+                        WHERE sessions.session_id = ?
+                            AND sessions.token_digest = ?
+                            AND sessions.created_at = ?
+                            AND sessions.user_id = external_identities.user_id
+                            AND sessions.revoked_at IS NULL
+                            AND sessions.created_at <= ?
+                            AND sessions.last_seen_at <= ?
+                            AND sessions.expires_at > ?
+                    )
+                """,
+                (
+                    provider.lower(),
+                    subject,
+                    user_id,
+                    expected_generation,
+                    expected_user_revision,
+                    expected_session_id,
+                    expected_session_token_digest,
+                    expected_created_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                ),
+            )
+            if cursor.rowcount == 1:
+                return True
+            exists = connection.execute(
+                """
+                SELECT 1 FROM external_identities
+                WHERE provider = ? AND subject = ?
+                """,
+                (provider.lower(), subject),
+            ).fetchone()
+            if exists is None:
+                return False
+            raise IdentityStorageConflictError(
+                "Identita, utente o sessione modificati durante lo scollegamento."
+            )
 
     def create_class(self, class_group: ClassGroup) -> None:
         with self._transaction("create_class") as connection:
