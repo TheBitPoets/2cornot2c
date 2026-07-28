@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import ipaddress
 import json
 import os
@@ -36,6 +37,7 @@ InputFn = Callable[[str], str]
 PrintFn = Callable[[str], None]
 DEFAULT_SERVER_URL = "http://127.0.0.1:8765"
 HELP_REQUEST_TIMEOUT_SECONDS = 150
+MAX_STUDENT_API_RESPONSE_BYTES = 2 * 1024 * 1024
 TUI_RENDERERS = {"auto", "legacy", "utui"}
 
 
@@ -949,9 +951,8 @@ def record_help_from_tui(
     failure = None
     pending_failure = False
     try:
-        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
+        payload = _student_api_json(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS)
+    except (urllib.error.HTTPError, _StudentApiHttpStatusError) as error:
         pending_failure = error.code == 409
         failure = (
             "Server aiuti: richiesta gia salvata e ancora in elaborazione"
@@ -1013,9 +1014,8 @@ def fetch_help_history_from_server(
     payload = None
     failure = None
     try:
-        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
+        payload = _student_api_json(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS)
+    except (urllib.error.HTTPError, _StudentApiHttpStatusError) as error:
         failure = f"Server aiuti: richiesta rifiutata (HTTP {error.code})."
     except urllib.error.URLError:
         failure = f"Server non raggiungibile su {server_url}."
@@ -1076,9 +1076,8 @@ def select_final_attempt_from_server(
     payload = None
     failure = None
     try:
-        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
+        payload = _student_api_json(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS)
+    except (urllib.error.HTTPError, _StudentApiHttpStatusError) as error:
         failure = f"Server tentativi: richiesta rifiutata (HTTP {error.code})."
     except urllib.error.URLError:
         failure = f"Server non raggiungibile su {server_url}."
@@ -1138,6 +1137,154 @@ def student_api_urlopen(request: urllib.request.Request, *, timeout: float):
     """Open an authenticated student API request without following redirects."""
 
     return _STUDENT_API_OPENER.open(request, timeout=timeout)
+
+
+_DEFAULT_STUDENT_API_URLOPEN = student_api_urlopen
+
+
+class _StudentApiHttpStatusError(RuntimeError):
+    def __init__(self, code: int) -> None:
+        self.code = code
+        super().__init__("Student API HTTP error.")
+
+
+def _student_api_json(request: urllib.request.Request, *, timeout: float):
+    if student_api_urlopen is not _DEFAULT_STUDENT_API_URLOPEN:
+        with student_api_urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    return _student_api_json_subprocess(request, timeout=timeout)
+
+
+def _student_api_json_subprocess(request: urllib.request.Request, *, timeout: float):
+    specification = json.dumps(
+        {
+            "url": request.full_url,
+            "data": base64.b64encode(request.data or b"").decode("ascii"),
+            "headers": list(request.header_items()),
+            "method": request.get_method(),
+            "timeout": timeout,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    process = None
+    stdout = None
+    failure = False
+    try:
+        process = subprocess.Popen(
+            [sys.executable, str(Path(__file__).resolve()), "--student-api-worker"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=thebitlab_tui_pairing_client._transport_environment(),
+        )
+        try:
+            stdout, _ = process.communicate(input=specification, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            failure = True
+            process.kill()
+            process.communicate(timeout=1)
+        if not failure and (
+            process.returncode != 0
+            or type(stdout) is not bytes
+            or len(stdout) > MAX_STUDENT_API_RESPONSE_BYTES * 2 + 4096
+        ):
+            failure = True
+    except Exception:
+        failure = True
+    finally:
+        if process is not None and process.poll() is None:
+            try:
+                process.kill()
+                process.communicate(timeout=1)
+            except Exception:
+                pass
+        process = None
+        request = None
+        specification = None
+    if failure:
+        stdout = None
+        raise urllib.error.URLError("student API unavailable")
+    try:
+        outcome = json.loads(stdout.decode("utf-8"), object_pairs_hook=_unique_json_object)
+    finally:
+        stdout = None
+    if type(outcome) is not list or len(outcome) != 2:
+        outcome = None
+        raise urllib.error.URLError("student API unavailable")
+    kind, value = outcome
+    outcome = None
+    if kind == "http" and type(value) is int and not isinstance(value, bool):
+        raise _StudentApiHttpStatusError(value)
+    if kind != "ok":
+        value = None
+        raise urllib.error.URLError("student API unavailable")
+    return value
+
+
+def _run_student_api_worker() -> int:
+    request = None
+    raw = None
+    outcome = ["error", None]
+    try:
+        raw = sys.stdin.buffer.read(65537)
+        if len(raw) > 65536:
+            raise ValueError("specification")
+        specification = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_json_object)
+        if type(specification) is not dict or set(specification) != {
+            "url", "data", "headers", "method", "timeout"
+        }:
+            raise ValueError("specification")
+        data = base64.b64decode(specification["data"], validate=True)
+        headers = specification["headers"]
+        if type(headers) is not list or any(
+            type(item) is not list
+            or len(item) != 2
+            or type(item[0]) is not str
+            or type(item[1]) is not str
+            for item in headers
+        ):
+            raise ValueError("headers")
+        request = urllib.request.Request(
+            specification["url"],
+            data=data,
+            headers=dict(headers),
+            method=specification["method"],
+        )
+        try:
+            with _STUDENT_API_OPENER.open(
+                request,
+                timeout=float(specification["timeout"]),
+            ) as response:
+                body = response.read(MAX_STUDENT_API_RESPONSE_BYTES + 1)
+            if len(body) > MAX_STUDENT_API_RESPONSE_BYTES:
+                raise ValueError("response")
+            payload = json.loads(body.decode("utf-8"), object_pairs_hook=_unique_json_object)
+            outcome = ["ok", payload]
+        except urllib.error.HTTPError as error:
+            outcome = ["http", error.code]
+            error.close()
+    except Exception:
+        pass
+    finally:
+        request = None
+        raw = None
+    encoded = json.dumps(outcome, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if len(encoded) > MAX_STUDENT_API_RESPONSE_BYTES * 2 + 4096:
+        return 1
+    sys.stdout.buffer.write(encoded)
+    sys.stdout.buffer.flush()
+    outcome = None
+    encoded = None
+    return 0
+
+
+def _unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if type(key) is not str or key in result:
+            raise ValueError("duplicate")
+        result[key] = value
+    return result
 
 
 def help_result_message(event: dict[str, Any], use_color: bool = False) -> str:
@@ -1298,9 +1445,8 @@ def fetch_student_lab_payload(
     payload = None
     failure = None
     try:
-        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
+        payload = _student_api_json(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS)
+    except (urllib.error.HTTPError, _StudentApiHttpStatusError) as error:
         failure = f"Server consegne: richiesta rifiutata (HTTP {error.code})."
     except urllib.error.URLError:
         failure = f"Server non raggiungibile su {server_url}."
@@ -1782,4 +1928,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(
+        _run_student_api_worker()
+        if sys.argv[1:] == ["--student-api-worker"]
+        else main()
+    )

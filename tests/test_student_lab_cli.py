@@ -1026,6 +1026,22 @@ def test_fetch_student_lab_payload_uses_authenticated_server_endpoint(monkeypatc
     assert captured["headers"]["Authorization"] == "Bearer signed-token"
 
 
+def test_production_student_api_transport_has_absolute_subprocess_timeout(monkeypatch) -> None:
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN", "must-not-reach-worker-env")
+    monkeypatch.setenv("HTTPS_PROXY", "https://proxy.test")
+    request = urllib.request.Request(
+        "https://127.0.0.1:1/api/student-lab/assignments",
+        headers={"Authorization": "Bearer " + "Q" * 48},
+    )
+
+    with pytest.raises(urllib.error.URLError):
+        student_lab_cli._student_api_json_subprocess(request, timeout=1)
+
+    assert "THEBITLAB_STUDENT_HELP_TOKEN" not in (
+        student_lab_cli.thebitlab_tui_pairing_client._transport_environment()
+    )
+
+
 def test_student_api_401_scrubs_bearer_from_recursive_traceback(monkeypatch) -> None:
     bearer = "Z" * 48
 
