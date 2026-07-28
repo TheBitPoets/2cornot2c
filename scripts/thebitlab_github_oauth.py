@@ -275,6 +275,41 @@ class UrllibGitHubOAuthTransport:
 
     def __init__(self) -> None:
         self._process_factory = subprocess.Popen
+        self._cleanup_queue: queue.Queue[object] = queue.Queue(maxsize=8)
+        self._cleanup_ready = False
+        try:
+            threading.Thread(
+                target=self._cleanup_worker,
+                name="thebitlab-github-oauth-cleanup",
+                daemon=True,
+            ).start()
+            self._cleanup_ready = True
+        except Exception:
+            self._cleanup_ready = False
+
+    def _cleanup_worker(self) -> None:
+        while True:
+            candidate = self._cleanup_queue.get()
+            cleaned = False
+            try:
+                candidate.kill()
+                candidate.communicate()
+                cleaned = True
+            except Exception:
+                pass
+            finally:
+                if cleaned:
+                    self._termination_slots.release()
+                    self._network_slots.release()
+                candidate = None
+                self._cleanup_queue.task_done()
+
+    def _schedule_cleanup(self, candidate) -> None:
+        try:
+            self._cleanup_queue.put_nowait(candidate)
+        except queue.Full:
+            # Reserved slots remain held fail-closed if cleanup cannot be scheduled.
+            pass
 
     def _request(self, request: urllib.request.Request, timeout_seconds: float, max_response_bytes: int) -> Mapping[str, object]:
         serialized = None
@@ -283,6 +318,9 @@ class UrllibGitHubOAuthTransport:
         release_network_slot = False
         release_termination_slot = False
         deadline = time.monotonic() + timeout_seconds
+        if not self._cleanup_ready:
+            request = None
+            raise GitHubLinkProviderUnavailableError("GitHub non disponibile.")
         if not self._network_slots.acquire(blocking=False):
             request = None
             raise GitHubLinkProviderUnavailableError("GitHub non disponibile.")
@@ -301,41 +339,11 @@ class UrllibGitHubOAuthTransport:
             abandoned = threading.Event()
             handoff = threading.Lock()
 
-            def terminate_and_reap(candidate) -> None:
-                try:
-                    candidate.kill()
-                    candidate.communicate()
-                except Exception:
-                    pass
-                finally:
-                    self._termination_slots.release()
-                    self._network_slots.release()
-
-            def start_reaper(candidate) -> None:
+            def transfer_to_cleanup(candidate) -> None:
                 nonlocal release_network_slot, release_termination_slot
                 release_network_slot = False
                 release_termination_slot = False
-                try:
-                    threading.Thread(
-                        target=terminate_and_reap,
-                        args=(candidate,),
-                        name="thebitlab-github-oauth-reap",
-                        daemon=True,
-                    ).start()
-                except Exception:
-                    cleaned = False
-                    try:
-                        candidate.kill()
-                        candidate.communicate(
-                            timeout=max(0.01, min(timeout_seconds, 0.25))
-                        )
-                        cleaned = True
-                    except Exception:
-                        pass
-                    if cleaned:
-                        self._termination_slots.release()
-                        self._network_slots.release()
-                    # If cleanup cannot be proven, both slots stay reserved fail-closed.
+                self._schedule_cleanup(candidate)
 
             def start_process() -> None:
                 candidate = None
@@ -353,7 +361,7 @@ class UrllibGitHubOAuthTransport:
                 with handoff:
                     if abandoned.is_set():
                         if candidate is not None and candidate is not False:
-                            terminate_and_reap(candidate)
+                            self._schedule_cleanup(candidate)
                         else:
                             self._termination_slots.release()
                             self._network_slots.release()
@@ -384,7 +392,7 @@ class UrllibGitHubOAuthTransport:
                     except queue.Empty:
                         late_process = None
                 if late_process is not None and late_process is not False:
-                    start_reaper(late_process)
+                    transfer_to_cleanup(late_process)
                 elif late_process is False:
                     self._termination_slots.release()
                     self._network_slots.release()
@@ -422,7 +430,7 @@ class UrllibGitHubOAuthTransport:
                     timed_out = True
             serialized = None
             if timed_out:
-                start_reaper(process)
+                transfer_to_cleanup(process)
                 raise GitHubLinkProviderUnavailableError(
                     "GitHub non disponibile."
                 )

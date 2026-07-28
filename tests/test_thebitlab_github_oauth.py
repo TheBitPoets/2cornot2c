@@ -235,54 +235,33 @@ def test_transport_start_thread_failure_releases_capacity(monkeypatch) -> None:
     transport._process_start_slots.release()
 
 
-def test_transport_reaps_synchronously_if_reaper_thread_cannot_start(
+def test_transport_fails_before_spawn_if_cleanup_worker_cannot_start(
     monkeypatch,
 ) -> None:
-    class TimedOutProcess:
-        returncode = -9
-        killed = False
-        reaped = False
-
-        def communicate(self, *, input=None, timeout=None):
-            if not self.killed:
-                raise subprocess.TimeoutExpired("worker", timeout)
-            self.reaped = True
-            return b"", b""
-
-        def kill(self):
-            self.killed = True
-
-    transport = UrllibGitHubOAuthTransport()
-    processes = []
-
-    def factory(*_args, **_kwargs):
-        process = TimedOutProcess()
-        processes.append(process)
-        return process
-
-    monkeypatch.setattr(transport, "_process_factory", factory)
     thread_class = __import__("threading").Thread
     original_start = thread_class.start
 
     def selective_start(thread):
-        if thread.name == "thebitlab-github-oauth-reap":
-            raise RuntimeError("reaper unavailable")
+        if thread.name == "thebitlab-github-oauth-cleanup":
+            raise RuntimeError("cleanup unavailable")
         return original_start(thread)
 
-    monkeypatch.setattr(thread_class, "start", selective_start)
-    for _attempt in range(10):
-        with pytest.raises(GitHubLinkProviderUnavailableError):
-            transport._request(
-                urllib.request.Request("https://api.github.com/user"),
-                timeout_seconds=0.01,
-                max_response_bytes=1024,
-            )
-    assert len(processes) == 10
-    assert all(process.killed and process.reaped for process in processes)
-    assert transport._network_slots.acquire(blocking=False) is True
-    transport._network_slots.release()
-    assert transport._termination_slots.acquire(blocking=False) is True
-    transport._termination_slots.release()
+    with monkeypatch.context() as scoped:
+        scoped.setattr(thread_class, "start", selective_start)
+        transport = UrllibGitHubOAuthTransport()
+    calls = []
+    monkeypatch.setattr(
+        transport,
+        "_process_factory",
+        lambda *_args, **_kwargs: calls.append(True),
+    )
+    with pytest.raises(GitHubLinkProviderUnavailableError):
+        transport._request(
+            urllib.request.Request("https://api.github.com/user"),
+            timeout_seconds=0.01,
+            max_response_bytes=1024,
+        )
+    assert calls == []
 
 
 def test_transport_deadline_includes_process_startup(monkeypatch) -> None:
