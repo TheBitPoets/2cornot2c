@@ -166,6 +166,7 @@ class TuiBrowserPairingBoundary:
         except Exception:
             unavailable = True
         if unavailable or type(issued) is not IssuedPairing:
+            issued = None
             raise TuiPairingUnavailableError()
         malformed = False
         result = None
@@ -216,6 +217,7 @@ class TuiBrowserPairingBoundary:
                 or type(result) is not TuiPairing
                 or result.status != "authorized"
             ):
+                result = None
                 raise TuiPairingUnavailableError()
         finally:
             request = None
@@ -312,6 +314,7 @@ class TuiBrowserPairingBoundary:
         if invalid:
             raise HttpAuthenticationRequiredError()
         if unavailable or authenticated is None:
+            authenticated = None
             raise TuiPairingUnavailableError()
         if authenticated.user.role != "student":
             raise HttpAuthorizationDeniedError()

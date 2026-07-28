@@ -417,6 +417,32 @@ def test_malformed_issued_pair_cannot_disclose_or_revoke_foreign_tui_session(
     assert boundary.tui_sessions.authenticate(raw_bearer).user.user_id == "student-01"
 
 
+def test_malformed_adapter_echoes_are_removed_from_public_tracebacks(
+    setup, monkeypatch
+) -> None:
+    _storage, _clock, boundary, http = setup
+    code = "PAIRCODE42"
+    monkeypatch.setattr(boundary.pairings, "issue", lambda: code)
+    with pytest.raises(TuiPairingUnavailableError) as begin_error:
+        boundary.begin()
+    assert code not in traceback_locals_repr(begin_error.value, "begin")
+
+    monkeypatch.setattr(boundary.pairings, "authorize", lambda *_args: code)
+    with pytest.raises(TuiPairingUnavailableError) as authorize_error:
+        boundary.authorize_browser(browser_request(http, "student-01"), code)
+    assert code not in traceback_locals_repr(
+        authorize_error.value, "authorize_browser"
+    )
+
+    bearer = "S" * 40
+    monkeypatch.setattr(boundary.tui_sessions, "authenticate", lambda _raw: bearer)
+    with pytest.raises(TuiPairingUnavailableError) as auth_error:
+        boundary.authenticate_bearer("Bearer " + bearer)
+    assert bearer not in traceback_locals_repr(
+        auth_error.value, "authenticate_bearer"
+    )
+
+
 def test_unexpected_pairing_failure_is_sanitized(setup, monkeypatch) -> None:
     _storage, _clock, boundary, _http = setup
 
