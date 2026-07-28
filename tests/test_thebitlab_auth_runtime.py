@@ -186,6 +186,12 @@ def test_windows_composition_rejects_null_dacl_and_unsafe_ancestor(tmp_path: Pat
     environment["THEBITLAB_AUTH_DB_PATH"] = str(null_dacl / "auth.sqlite3")
     with pytest.raises(AuthRuntimeConfigurationError, match="ACL database"):
         compose_google_oidc_runtime(environment, data_root=tmp_path)
+    subprocess.run(
+        (icacls, str(null_dacl), "/reset"),
+        check=True,
+        capture_output=True,
+        timeout=10,
+    )
 
     unsafe_ancestor = tmp_path / "unsafe-ancestor"
     unsafe_ancestor.mkdir()
