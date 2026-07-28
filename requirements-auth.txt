@@ -1,2 +1,3 @@
 # Official Google OpenID Connect ID-token verification and HTTPS transport.
 google-auth>=2.40,<3
+cryptography>=42,<47
