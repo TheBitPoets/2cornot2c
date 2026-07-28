@@ -137,7 +137,9 @@ Su Windows:
 
 apri **Ambiente 2cornot2c** dal desktop o dal menu Start e scegli
 **Avvia l'ambiente**. Il launcher usa automaticamente Docker o VirtualBox in
-base all'ultima installazione completata.
+base all'ultima installazione completata. Al primo avvio dopo un aggiornamento,
+riconosce anche gli ambienti creati dalle versioni precedenti tramite il
+registro e una verifica diretta dell'immagine Docker.
 
 ## Aggiornamento e disinstallazione Windows
 
