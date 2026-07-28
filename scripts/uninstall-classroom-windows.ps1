@@ -17,9 +17,26 @@ $InstallDir = if ($env:CLASSROOM_INSTALL_DIR) {
 }
 
 function Stop-WithMessage {
-    param([string]$Message)
+    param(
+        [string]$Code,
+        [string]$Title,
+        [string]$Explanation,
+        [string[]]$Actions = @(),
+        [string]$Technical = ""
+    )
     Write-Host ""
-    Write-Host "ERRORE: $Message" -ForegroundColor Red
+    Write-Host "ERRORE $Code - $Title" -ForegroundColor Red
+    Write-Host "COSA SIGNIFICA" -ForegroundColor Yellow
+    Write-Host $Explanation -ForegroundColor Yellow
+    Write-Host "COSA DEVI FARE" -ForegroundColor Yellow
+    for ($Index = 0; $Index -lt $Actions.Count; $Index++) {
+        Write-Host "$($Index + 1). $($Actions[$Index])" -ForegroundColor Yellow
+    }
+    Write-Host "Se chiedi aiuto, comunica questo codice: $Code" `
+        -ForegroundColor Yellow
+    if ($Technical) {
+        Write-Host "Dettagli tecnici: $Technical" -ForegroundColor DarkGray
+    }
     exit 1
 }
 
@@ -28,28 +45,41 @@ function Test-SafeInstallDirectory {
     $HomePath = [IO.Path]::GetFullPath($HOME).TrimEnd('\')
     $RootPath = [IO.Path]::GetPathRoot($FullPath).TrimEnd('\')
     if (-not $FullPath -or $FullPath -eq $HomePath -or $FullPath -eq $RootPath) {
-        Stop-WithMessage "Directory di installazione non sicura: $FullPath"
+        Stop-WithMessage "E26" "La cartella indicata non e sicura" `
+            "Non sono certo che sia la cartella 2cornot2c, quindi non cancellero nulla." `
+            @("Non rimuovere file manualmente."; "Comunica E26 al docente.") $FullPath
     }
     if (Test-Path $FullPath) {
         if (-not (Test-Path (Join-Path $FullPath ".git"))) {
-            Stop-WithMessage "La directory non è un clone Git: $FullPath"
+            Stop-WithMessage "E26" "La cartella indicata non e sicura" `
+                "La cartella non contiene i segni che identificano il progetto. Nessun file e stato cancellato." `
+                @("Non rimuovere file manualmente."; "Comunica E26 al docente.") $FullPath
         }
         if (Get-Command git -ErrorAction SilentlyContinue) {
             $Origin = git -C $FullPath remote get-url origin 2>$null
             if ($LASTEXITCODE -ne 0 -or $Origin -notmatch "TheBitPoets/2cornot2c") {
-                Stop-WithMessage "Repository inatteso: $FullPath"
+                Stop-WithMessage "E27" "La cartella appartiene a un progetto diverso" `
+                    "Per sicurezza la disinstallazione si e fermata e non ha cancellato nulla." `
+                    @("Non rimuovere la cartella manualmente."; "Comunica E27 al docente.") $FullPath
             }
         }
         if (Test-Path (Join-Path $FullPath ".vagrant")) {
-            Stop-WithMessage (
-                "È presente una VM VirtualBox. Non verrà rimossa automaticamente. " +
-                "Spegni e rimuovi prima la VM con la procedura guidata."
-            )
+            Stop-WithMessage "E28" "C'e ancora una macchina virtuale VirtualBox" `
+                "La VM puo contenere file. Per evitare perdite non verra eliminata automaticamente." `
+                @(
+                    "Non cancellare la VM manualmente."
+                    "Chiedi al docente come salvarla o rimuoverla."
+                    "Poi ripeti la disinstallazione."
+                )
         }
         if (Test-Path (Join-Path $FullPath ".vagrant-vmware")) {
-            Stop-WithMessage (
-                "È presente una VM VMware. Non verrà rimossa automaticamente."
-            )
+            Stop-WithMessage "E28" "C'e ancora una macchina virtuale VMware" `
+                "La VM puo contenere file. Per evitare perdite non verra eliminata automaticamente." `
+                @(
+                    "Non cancellare la VM manualmente."
+                    "Chiedi al docente come salvarla o rimuoverla."
+                    "Poi ripeti la disinstallazione."
+                )
         }
     }
     return $FullPath
@@ -126,7 +156,13 @@ function Backup-StudentWork {
                 $Prefix,
                 [StringComparison]::OrdinalIgnoreCase
             )) {
-                Stop-WithMessage "Percorso non sicuro nel repository: $RelativePath"
+                Stop-WithMessage "E29" "Non riesco a salvare tutti i tuoi file" `
+                    "La copia di sicurezza non puo essere completata. La disinstallazione e stata fermata." `
+                    @(
+                        "Non cancellare il progetto."
+                        "Controlla lo spazio libero."
+                        "Comunica E29 al docente."
+                    ) $RelativePath
             }
             $Destination = Join-Path $Backup $RelativePath
             New-Item -ItemType Directory -Force `
@@ -169,7 +205,17 @@ if ($Confirmation -ne "DISINSTALLA") {
     exit 2
 }
 
-$BackupPath = Backup-StudentWork $SafeInstallDir
+try {
+    $BackupPath = Backup-StudentWork $SafeInstallDir
+} catch {
+    Stop-WithMessage "E29" "Non sono riuscito a salvare i tuoi esercizi" `
+        "La copia di sicurezza non e completa. La disinstallazione e stata fermata." `
+        @(
+            "Non cancellare il progetto."
+            "Controlla lo spazio libero sul disco."
+            "Comunica E29 al docente."
+        ) $_.Exception.Message
+}
 if ($BackupPath) {
     Write-Host "Backup creato: $BackupPath"
 }

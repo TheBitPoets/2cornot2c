@@ -445,6 +445,12 @@ virtualizzazione hardware e connessione. Docker richiede almeno 4 GiB di RAM e
 8 GiB liberi; una VM richiede almeno 8 GiB di RAM e 20 GiB liberi. Se una
 risorsa obbligatoria manca, nessun componente viene modificato.
 
+Gli errori destinati agli studenti hanno un codice stabile, un titolo rosso e
+istruzioni semplici in giallo. Ogni messaggio spiega cosa è successo, cosa fare
+e quale codice comunicare al docente, per esempio `E03` quando la
+virtualizzazione è disabilitata. I dettagli tecnici restano separati e non è
+mai richiesto a uno studente di modificare da solo BIOS, antivirus o file Git.
+
 #### Aggiornare su Windows
 
 Lo stesso bootstrap può essere rilanciato in sicurezza. È disponibile anche il

@@ -26,6 +26,7 @@ from installer.model import Host, Provider
 from installer.platforms import detect_host
 from installer.plans import install_plan, supported_providers
 from installer.resources import order_by_recommendation, total_memory_bytes
+from installer.student_errors import ERRORS, for_check, for_step
 
 
 @dataclass(slots=True)
@@ -84,7 +85,31 @@ def build_screen(state: State):
 def frame(state: State, width: int, height: int, *, color: bool) -> list[str]:
     """Renderizza un frame deterministico."""
 
-    return render_lines(build_screen(state), width, height, color=color)
+    rows = render_lines(build_screen(state), width, height, color=color)
+    if not color:
+        return rows
+    return [_paint_guidance(row) for row in rows]
+
+
+def _paint_guidance(row: str) -> str:
+    """Colora dopo il layout, senza alterare i calcoli di larghezza uTUI."""
+
+    markers = (
+        ("ERRORE E", "\x1b[31m"),
+        ("COSA SIGNIFICA:", "\x1b[33m"),
+        ("COSA DEVI FARE:", "\x1b[33m"),
+        ("COSA FARE ", "\x1b[33m"),
+        ("CODICE DA COMUNICARE", "\x1b[33m"),
+    )
+    for marker, escape in markers:
+        start = row.find(marker)
+        if start < 0:
+            continue
+        end = row.rfind("│")
+        if end <= start:
+            end = len(row)
+        return f"{row[:start]}{escape}{row[start:end]}\x1b[0m{row[end:]}"
+    return row
 
 
 def refresh_report(state: State) -> None:
@@ -92,10 +117,16 @@ def refresh_report(state: State) -> None:
 
     provider = state.providers[state.active_index]
     results = diagnose(install_plan(state.host, provider))
-    state.report = tuple(
-        f"[{'OK' if result.ok else 'MANCA'}] {result.check.label}: {result.detail}"
-        for result in results
-    )
+    report: list[str] = []
+    for result in results:
+        if not result.ok and result.check.key in {"resources", "network"}:
+            report.extend(for_check(result.check.key, result.detail).lines(result.detail))
+        else:
+            report.append(
+                f"[{'OK' if result.ok else 'MANCA'}] "
+                f"{result.check.label}: {result.detail}"
+            )
+    state.report = tuple(report)
 
 
 def request_confirmation(state: State) -> None:
@@ -121,10 +152,20 @@ def apply_selected(state: State) -> None:
         log_path=Path.home() / ".2cornot2c" / "installer.jsonl",
     )
     state.confirmation_pending = False
-    state.report = tuple(
-        f"[{result.status.upper()}] {result.label}: {result.detail}"
-        for result in results
-    ) or ("Nessun passo necessario.",)
+    report: list[str] = []
+    for result in results:
+        if result.status in {"failed", "blocked"}:
+            error = (
+                for_step(result.key)
+                if result.status == "failed"
+                else for_check(result.key, result.detail)
+            )
+            report.extend(error.lines(result.detail))
+        else:
+            report.append(
+                f"[{result.status.upper()}] {result.label}: {result.detail}"
+            )
+    state.report = tuple(report) or ("Nessun passo necessario.",)
     if (
         provider is Provider.DOCKER
         and results
@@ -192,7 +233,8 @@ def main() -> int:
                 if state.running and changed:
                     present(frame(state, size.width, size.height, color=color))
     except UnsupportedOperation as error:
-        print(f"Terminale interattivo non disponibile: {error}", file=sys.stderr)
+        for line in ERRORS["terminal"].lines(str(error)):
+            print(line, file=sys.stderr)
         return 2
     finally:
         print()
