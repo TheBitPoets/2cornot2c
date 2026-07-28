@@ -315,6 +315,7 @@ class TuiBrowserPairingBoundary:
     def authenticate_bearer(self, authorization_header: str) -> TuiAuthenticatedContext:
         bearer = None
         invalid = False
+        denied = False
         unavailable = False
         authenticated = None
         try:
@@ -336,10 +337,13 @@ class TuiBrowserPairingBoundary:
                 except Exception:
                     structurally_valid = False
                 if not structurally_valid:
-                    if self._credential_is_currently_invalid(
+                    current_status = self._credential_current_status(
                         authenticated, bearer
-                    ):
+                    )
+                    if current_status == "invalid":
                         invalid = True
+                    elif current_status == "denied":
+                        denied = True
                     else:
                         unavailable = True
         finally:
@@ -350,7 +354,7 @@ class TuiBrowserPairingBoundary:
         if unavailable or authenticated is None:
             authenticated = None
             raise TuiPairingUnavailableError()
-        if authenticated.user.role != "student":
+        if denied or authenticated.user.role != "student":
             raise HttpAuthorizationDeniedError()
         return TuiAuthenticatedContext(authenticated)
 
@@ -492,17 +496,17 @@ class TuiBrowserPairingBoundary:
             and persisted_pairing.consumed_at == authenticated.session.created_at
         )
 
-    def _credential_is_currently_invalid(
+    def _credential_current_status(
         self,
         authenticated: AuthenticatedSession | None,
         bearer: str,
-    ) -> bool:
+    ) -> str:
         if (
             type(authenticated) is not AuthenticatedSession
             or type(authenticated.session) is not UserSession
             or authenticated.session.audience != "tui"
         ):
-            return False
+            return "unavailable"
         try:
             digest = session_token_digest(bearer)
             persisted, user, _pairing = (
@@ -511,17 +515,21 @@ class TuiBrowserPairingBoundary:
                 )
             )
             if type(persisted) is not UserSession:
-                return False
+                return "unavailable"
             now = _utc(self.tui_sessions.clock(), "session_clock")
             self._require_shared_registry()
-            return (
+            if (
                 persisted.revoked_at is not None
                 or not persisted.created_at <= now < persisted.expires_at
                 or user is None
                 or not user.active
-            )
+            ):
+                return "invalid"
+            if user.role != "student":
+                return "denied"
+            return "unavailable"
         except Exception:
-            return False
+            return "unavailable"
 
     def _best_effort_revoke_issued(
         self, issued: IssuedSession, expected_pairing_id: str
