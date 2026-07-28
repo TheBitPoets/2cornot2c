@@ -33,30 +33,30 @@ ERRORS = {
     "memory": StudentError(
         "E02",
         "Il computer non ha abbastanza memoria RAM",
-        "La RAM e lo spazio di lavoro temporaneo del computer.",
+        "La RAM è lo spazio di lavoro temporaneo del computer.",
         ("Chiudi gli altri programmi e riprova.", "Comunica E02 al docente."),
     ),
     "virtualization": StudentError(
         "E03",
-        "La virtualizzazione del computer e disabilitata",
+        "La virtualizzazione del computer è disabilitata",
         "Docker e le VM ne hanno bisogno. Non hai rotto nulla.",
         (
-            "Apri Gestione attivita, Prestazioni, CPU.",
+            "Apri Gestione attività, poi Prestazioni e infine CPU.",
             "Non cambiare il BIOS da solo: chiedi a un adulto o al docente.",
         ),
     ),
     "disk": StudentError(
         "E05",
-        "Non c'e abbastanza spazio libero sul disco",
+        "Non c'è abbastanza spazio libero sul disco",
         "Serve spazio per conservare programmi ed esercizi.",
         (
             "Svuota il Cestino o sposta file personali.",
-            "Non cancellare file che non riconosci e poi riprova.",
+            "Non cancellare file che non riconosci; poi riprova.",
         ),
     ),
     "resources": StudentError(
         "E06",
-        "Il controllo delle risorse non e riuscito",
+        "Il controllo delle risorse non è riuscito",
         "RAM, disco o virtualizzazione non rispettano i requisiti.",
         ("Leggi i dettagli qui sotto.", "Comunica E06 al docente."),
     ),
@@ -71,8 +71,8 @@ ERRORS = {
     ),
     "winget": StudentError(
         "E08",
-        "Il programma di installazione di Windows non e disponibile",
-        "winget e lo strumento ufficiale usato da Windows.",
+        "Il programma di installazione di Windows non è disponibile",
+        "winget è lo strumento ufficiale usato da Windows.",
         (
             "Aggiorna App Installer dal Microsoft Store.",
             "Riapri PowerShell e rilancia il comando.",
@@ -80,14 +80,14 @@ ERRORS = {
     ),
     "docker": StudentError(
         "E17",
-        "Docker Desktop non e installato",
+        "Docker Desktop non è installato",
         "Docker avvia l'ambiente Linux leggero.",
         ("Conferma l'installazione dal menu.", "Accetta la richiesta di Windows."),
     ),
     "docker-engine": StudentError(
         "E19",
-        "Docker Desktop e installato ma non e acceso",
-        "Il programma e presente, ma il suo motore non e ancora pronto.",
+        "Docker Desktop è installato ma non è acceso",
+        "Il programma è presente, ma il suo motore non è ancora pronto.",
         (
             "Avvia Docker Desktop dal menu Start.",
             "Completa WSL 2, accetta le condizioni e riavvia se richiesto.",
@@ -97,22 +97,22 @@ ERRORS = {
     "student-image": StudentError(
         "E21",
         "Non riesco a scaricare l'ambiente Linux",
-        "Docker funziona, ma il download non e completo.",
+        "Docker funziona, ma il download non è completo.",
         (
             "Lascia Docker Desktop aperto e controlla Internet.",
-            "Rilancia l'installer: non perderai quanto gia scaricato.",
+            "Rilancia l'installer: non perderai quanto già scaricato.",
         ),
     ),
     "student-security": StudentError(
         "E22",
         "L'ambiente Linux non supera il controllo di sicurezza",
-        "Per sicurezza non verra avviato nulla e il tuo lavoro resta intatto.",
+        "Per sicurezza non verrà avviato nulla e il tuo lavoro resta intatto.",
         ("Non scaricare immagini alternative.", "Comunica E22 al docente."),
     ),
     "docker-command": StudentError(
         "E23",
         "PowerShell non riesce a trovare Docker",
-        "Docker puo essere appena stato installato e Windows non lo vede ancora.",
+        "Docker può essere appena stato installato e Windows non lo vede ancora.",
         (
             "Chiudi PowerShell e avvia Docker Desktop.",
             "Apri un nuovo PowerShell; se serve, riavvia Windows.",
@@ -120,8 +120,8 @@ ERRORS = {
     ),
     "container": StudentError(
         "E24",
-        "L'ambiente Linux non e riuscito ad avviarsi",
-        "Il tuo lavoro non e stato cancellato.",
+        "L'ambiente Linux non è riuscito ad avviarsi",
+        "Il tuo lavoro non è stato cancellato.",
         (
             "Controlla che Docker Desktop sia aperto e pronto.",
             "Riprova; se ricompare, comunica E24 al docente.",
@@ -129,7 +129,7 @@ ERRORS = {
     ),
     "terminal": StudentError(
         "E16",
-        "Questo terminale non puo mostrare il menu",
+        "Questo terminale non può mostrare il menu",
         "Serve un terminale interattivo.",
         ("Apri PowerShell o Windows Terminal.", "Rilancia lo stesso comando."),
     ),
@@ -162,8 +162,8 @@ def for_check(key: str, detail: str) -> StudentError:
         key,
         StudentError(
             "E09",
-            "Un componente necessario non e disponibile",
-            "La procedura si e fermata senza cancellare il tuo lavoro.",
+            "Un componente necessario non è disponibile",
+            "La procedura si è fermata senza cancellare il tuo lavoro.",
             ("Rilancia l'installer.", "Se ricompare, comunica E09 al docente."),
         ),
     )
@@ -173,8 +173,8 @@ def for_step(key: str) -> StudentError:
     if key == "docker":
         return StudentError(
             "E18",
-            "Windows non e riuscito a installare Docker Desktop",
-            "L'installazione e stata interrotta o non autorizzata.",
+            "Windows non è riuscito a installare Docker Desktop",
+            "L'installazione è stata interrotta o non autorizzata.",
             (
                 "Controlla se Windows aspetta una conferma.",
                 "Riavvia e rilancia il comando; se ricompare comunica E18.",

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+import unicodedata
+
 from installer.student_errors import ERRORS, for_check, for_step, resource_error
 from installer.tui import _paint_guidance
 
@@ -70,3 +73,23 @@ def test_windows_scripts_render_error_and_explanation_colors() -> None:
         assert "ForegroundColor Red" in source
         assert "ForegroundColor Yellow" in source
         assert "COSA SIGNIFICA" in source
+
+
+def test_student_facing_messages_use_italian_accents() -> None:
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    paths = (
+        root / "installer" / "student_errors.py",
+        root / "scripts" / "bootstrap-classroom-windows.ps1",
+        root / "scripts" / "update-classroom-windows.ps1",
+        root / "scripts" / "uninstall-classroom-windows.ps1",
+    )
+    missing_accents = re.compile(
+        r"\b(?:non e|gia|puo|verra|piu|c'e|attivita)\b",
+        re.IGNORECASE,
+    )
+    for path in paths:
+        source = path.read_text(encoding="utf-8")
+        assert unicodedata.normalize("NFC", source) == source
+        assert not missing_accents.search(source), path

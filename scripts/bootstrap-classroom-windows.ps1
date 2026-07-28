@@ -61,7 +61,7 @@ function Install-WingetPackage {
         Stop-WithMessage "E09" "Installazione di $Id non riuscita" `
             "Windows ha interrotto o rifiutato l'installazione. Non devi ricominciare da zero." `
             @(
-                "Controlla se Windows aspetta una conferma e scegli Si."
+                "Controlla se Windows aspetta una conferma e scegli Sì."
                 "Rilancia lo stesso comando: i componenti presenti saranno saltati."
                 "Se ricompare, comunica E09 al docente."
             ) "winget exit code $LASTEXITCODE"
@@ -93,7 +93,7 @@ function Test-HostResources {
         )
     } catch {
         Stop-WithMessage "E06" "Non riesco a controllare la memoria del computer" `
-            "Windows non ha permesso alla procedura di leggere la RAM. Non e stato modificato nulla." `
+            "Windows non ha permesso alla procedura di leggere la RAM. Non è stato modificato nulla." `
             @(
                 "Chiudi PowerShell e riaprilo."
                 "Rilancia lo stesso comando."
@@ -102,7 +102,7 @@ function Test-HostResources {
     }
     if ($MemoryGiB -lt 4) {
         Stop-WithMessage "E02" "Il computer non ha abbastanza memoria RAM" `
-            "La RAM e lo spazio di lavoro temporaneo del computer. Docker richiede almeno 4 GiB." `
+            "La RAM è lo spazio di lavoro temporaneo del computer. Docker richiede almeno 4 GiB." `
             @(
                 "Chiudi gli altri programmi e riprova."
                 "Se l'errore rimane, comunica E02 al docente."
@@ -115,8 +115,8 @@ function Test-HostResources {
     $Drive = Get-PSDrive -Name $DriveName
     $FreeGiB = [math]::Round([double]$Drive.Free / 1GB, 1)
     if ($FreeGiB -lt 3) {
-        Stop-WithMessage "E05" "Non c'e abbastanza spazio libero sul disco" `
-            "Il disco conserva programmi ed esercizi. Per iniziare servono almeno 3 GiB liberi; Docker ne richiedera 8 e una VM 20." `
+        Stop-WithMessage "E05" "Non c'è abbastanza spazio libero sul disco" `
+            "Il disco conserva programmi ed esercizi. Per iniziare servono almeno 3 GiB liberi; Docker ne richiederà 8 e una VM 20." `
             @(
                 "Svuota il Cestino o sposta file personali su un altro disco."
                 "Non cancellare file che non riconosci."
@@ -128,8 +128,8 @@ function Test-HostResources {
         $Virtualization = Get-CimInstance Win32_Processor |
             Select-Object -First 1 -ExpandProperty VirtualizationFirmwareEnabled
         if ($Virtualization -eq $false) {
-            Stop-WithMessage "E03" "La virtualizzazione del computer e disabilitata" `
-                "Docker e le macchine virtuali hanno bisogno di questa funzione. Il computer probabilmente la possiede, ma e spenta. Non hai rotto nulla." `
+            Stop-WithMessage "E03" "La virtualizzazione del computer è disabilitata" `
+                "Docker e le macchine virtuali hanno bisogno di questa funzione. Il computer probabilmente la possiede, ma è spenta. Non hai rotto nulla." `
                 @(
                     "Premi Ctrl+Maiusc+Esc, apri Prestazioni e poi CPU."
                     "Controlla se accanto a Virtualizzazione compare Disabilitata."
@@ -175,8 +175,8 @@ if (-not [Environment]::Is64BitOperatingSystem) {
         )
 }
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-    Stop-WithMessage "E08" "Il programma di installazione di Windows non e disponibile" `
-        "winget e lo strumento ufficiale che Windows usa per installare le applicazioni." `
+    Stop-WithMessage "E08" "Il programma di installazione di Windows non è disponibile" `
+        "winget è lo strumento ufficiale che Windows usa per installare le applicazioni." `
         @(
             "Apri Microsoft Store."
             "Cerca App Installer di Microsoft e installalo o aggiornalo."
@@ -206,12 +206,12 @@ $env:Path = @(
 ) -join [IO.Path]::PathSeparator
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Stop-WithMessage "E10" "Git e installato ma Windows non riesce ancora a trovarlo" `
+    Stop-WithMessage "E10" "Git è installato ma Windows non riesce ancora a trovarlo" `
         "A volte Windows riconosce un nuovo programma solamente dopo un riavvio." `
         @("Riavvia Windows."; "Riapri PowerShell e rilancia lo stesso comando.")
 }
 if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
-    Stop-WithMessage "E10" "Python e installato ma Windows non riesce ancora a trovarlo" `
+    Stop-WithMessage "E10" "Python è installato ma Windows non riesce ancora a trovarlo" `
         "A volte Windows riconosce un nuovo programma solamente dopo un riavvio." `
         @("Riavvia Windows."; "Riapri PowerShell e rilancia lo stesso comando.")
 }
@@ -229,8 +229,8 @@ if (Test-Path (Join-Path $InstallDir ".git")) {
             ) "git pull exit code $LASTEXITCODE"
     }
 } elseif (Test-Path $InstallDir) {
-    Stop-WithMessage "E11" "La cartella 2cornot2c e gia occupata" `
-        "La cartella esiste ma non contiene il nostro ambiente. Per sicurezza non verra modificata o cancellata." `
+    Stop-WithMessage "E11" "La cartella 2cornot2c è già occupata" `
+        "La cartella esiste ma non contiene il nostro ambiente. Per sicurezza non verrà modificata o cancellata." `
         @(
             "Rinomina la cartella in 2cornot2c-vecchia oppure chiedi al docente di controllarla."
             "Rilancia il comando."
@@ -239,7 +239,7 @@ if (Test-Path (Join-Path $InstallDir ".git")) {
     git clone $RepositoryUrl $InstallDir
     if ($LASTEXITCODE -ne 0) {
         Stop-WithMessage "E12" "Non sono riuscito a scaricare l'ambiente 2cornot2c" `
-            "Il download e stato interrotto. Non cancellare manualmente una cartella rimasta incompleta." `
+            "Il download è stato interrotto. Non cancellare manualmente una cartella rimasta incompleta." `
             @(
                 "Controlla Internet e riprova."
                 "Se ricompare, comunica E12 al docente."
@@ -252,7 +252,7 @@ $VenvDir = Join-Path $InstallDir ".installer-venv"
 & py -3.12 -m venv $VenvDir
 if ($LASTEXITCODE -ne 0) {
     Stop-WithMessage "E14" "Non sono riuscito a preparare l'interfaccia guidata" `
-        "Il progetto e stato scaricato, ma Python non ha preparato il menu. Il lavoro gia svolto non e perso." `
+        "Il progetto è stato scaricato, ma Python non ha preparato il menu. Il lavoro già svolto non è andato perso." `
         @("Riavvia Windows."; "Rilancia lo stesso comando."; "Se ricompare, comunica E14 al docente.") `
         "venv exit code $LASTEXITCODE"
 }
