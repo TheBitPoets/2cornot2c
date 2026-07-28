@@ -66,6 +66,7 @@ class State:
 
 
 ACTION_LABELS = (
+    "Avvia l'ambiente",
     "Installa, completa o ripara",
     "Aggiorna l'ambiente",
     "Disinstalla l'ambiente",
@@ -322,17 +323,24 @@ def open_home_action(state: State) -> None:
     """Apre la funzione selezionata oppure ne richiede conferma."""
 
     if state.action_index == 0:
+        try:
+            launch_windows_action("launch")
+            state.running = False
+        except Exception as error:
+            message = for_check("installer", str(error))
+            state.report = message.lines(str(error))
+    elif state.action_index == 1:
         state.screen = "providers"
         state.confirmation_pending = False
         state.report = ("Premi Invio per eseguire la diagnosi.",)
-    elif state.action_index == 1:
+    elif state.action_index == 2:
         state.confirmation_pending = True
         state.report = (
             "Aggiornamento dell'ambiente",
             "Gli esercizi e le impostazioni personali saranno conservati.",
             "Premi s per continuare oppure n per annullare.",
         )
-    elif state.action_index == 2:
+    elif state.action_index == 3:
         state.confirmation_pending = True
         state.report = (
             "Disinstallazione protetta",
@@ -347,7 +355,7 @@ def open_home_action(state: State) -> None:
 def confirm_home_action(state: State) -> None:
     """Passa l'operazione a una console separata e termina la TUI."""
 
-    action = "update" if state.action_index == 1 else "uninstall"
+    action = "update" if state.action_index == 2 else "uninstall"
     launch_windows_action(action)
     state.confirmation_pending = False
     state.running = False
@@ -389,10 +397,21 @@ def _format_results(
         and all(result.status in {"skipped", "succeeded"} for result in results)
     ):
         formatted += (
-            "Pronto. Esci con q, poi avvia:",
-            "python scripts/student_dev_shell.py",
+            "Pronto.",
+            "Premi m e scegli Avvia l'ambiente.",
         )
     return formatted
+
+
+def _remember_provider(provider: Provider) -> None:
+    """Salva la scelta che il launcher userà al prossimo avvio."""
+
+    state_dir = Path.home() / ".2cornot2c"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    temporary = state_dir / "selected-provider.txt.tmp"
+    destination = state_dir / "selected-provider.txt"
+    temporary.write_text(provider.value, encoding="utf-8")
+    temporary.replace(destination)
 
 
 def apply_selected(state: State) -> None:
@@ -406,6 +425,10 @@ def apply_selected(state: State) -> None:
         log_path=Path.home() / ".2cornot2c" / "installer.jsonl",
     )
     state.confirmation_pending = False
+    if results and all(
+        result.status in {"skipped", "succeeded"} for result in results
+    ):
+        _remember_provider(provider)
     state.report = _format_results(provider, results)
 
 
@@ -548,6 +571,11 @@ def poll_installation(state: State) -> bool:
                 state.install_completed = index
         elif kind == "result":
             provider = state.providers[state.active_index]
+            if payload and all(
+                result.status in {"skipped", "succeeded"}
+                for result in payload
+            ):
+                _remember_provider(provider)
             state.report = _format_results(provider, payload)
             state.installing = False
             state.install_thread = None

@@ -135,10 +135,9 @@ cd ~/2cornot2c
 
 Su Windows:
 
-```powershell
-cd "$HOME\2cornot2c"
-& .installer-venv\Scripts\python.exe scripts\student_dev_shell.py
-```
+apri **Ambiente 2cornot2c** dal desktop o dal menu Start e scegli
+**Avvia l'ambiente**. Il launcher usa automaticamente Docker o VirtualBox in
+base all'ultima installazione completata.
 
 ## Aggiornamento e disinstallazione Windows
 
