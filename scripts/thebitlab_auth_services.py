@@ -264,6 +264,7 @@ class ExternalIdentityLinkApplicationStorage(Protocol):
         expected_user_updated_at: datetime,
         expected_session_id: str,
         expected_session_token_digest: str,
+        expected_session_valid_at: datetime,
     ) -> None: ...
 
     def refresh_external_identity(
@@ -282,6 +283,7 @@ class ExternalIdentityLinkApplicationStorage(Protocol):
         expected_user_updated_at: datetime,
         expected_session_id: str,
         expected_session_token_digest: str,
+        expected_session_valid_at: datetime,
     ) -> None: ...
 
     def unlink_external_identity_for_active_user(
@@ -596,6 +598,17 @@ class ExternalIdentityLinkService:
             normalized = None
             raise InvalidCredentialError("Utente autenticato non valido.")
         require_active_account(account)
+        if (
+            expected_session is not None
+            and (
+                type(expected_session) is not UserSession
+                or expected_session.user_id != account.user_id
+            )
+        ):
+            normalized = None
+            expected_session = None
+            raise InvalidCredentialError("Sessione autenticata non valida.")
+        operation_now = _utc(self.clock())
         provider_links = [
             identity
             for identity in self.storage.list_external_identities(account.user_id)
@@ -642,6 +655,7 @@ class ExternalIdentityLinkService:
                         expected_user_updated_at=account.updated_at,
                         expected_session_id=expected_session.session_id,
                         expected_session_token_digest=expected_session.token_digest,
+                        expected_session_valid_at=operation_now,
                     )
             except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
                 raise ConcurrentStateChangeError(
@@ -649,7 +663,7 @@ class ExternalIdentityLinkService:
                 ) from error
             return refreshed
 
-        linked_at = _utc(self.clock())
+        linked_at = operation_now
         for _attempt in range(_MAX_ATTEMPTS):
             identity = ExternalIdentity(
                 user_id=account.user_id,
@@ -671,6 +685,7 @@ class ExternalIdentityLinkService:
                         expected_user_updated_at=account.updated_at,
                         expected_session_id=expected_session.session_id,
                         expected_session_token_digest=expected_session.token_digest,
+                        expected_session_valid_at=operation_now,
                     )
                 return identity
             except IdentityStorageGenerationConflictError:

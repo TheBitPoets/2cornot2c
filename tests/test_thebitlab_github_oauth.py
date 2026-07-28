@@ -263,6 +263,29 @@ def test_revoked_session_race_cannot_persist_link(tmp_path) -> None:
     assert storage.read_external_identity("github", "123456") is None
 
 
+def test_session_expiring_during_provider_calls_cannot_persist_link(tmp_path) -> None:
+    class ExpireDuringProfile(FakeTransport):
+        clock = None
+
+        def read_user(self, **kwargs):
+            result = super().read_user(**kwargs)
+            self.clock.value += timedelta(hours=9)
+            return result
+
+    transport = ExpireDuringProfile()
+    service, storage, _flows, _transport, established, clock = make_service(
+        tmp_path, transport=transport
+    )
+    transport.clock = clock
+    state, cookie, _started = start(service, established.context)
+
+    with pytest.raises(GitHubLinkIdentityConflictError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
+    assert storage.read_external_identity("github", "123456") is None
+
+
 def test_transport_failure_scrubs_oauth_credentials_from_traceback(tmp_path) -> None:
     class RawFailureTransport(FakeTransport):
         def exchange_code(self, **kwargs):
@@ -334,6 +357,20 @@ def test_invalid_profile_and_cross_user_link_conflict_fail_closed(tmp_path) -> N
     )
     service, storage, _flows, _transport, established, _clock = make_service(
         tmp_path, transport=bad_transport
+    )
+    state, cookie, _started = start(service, established.context)
+    with pytest.raises(GitHubLinkProviderRejectedError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
+    assert storage.read_external_identity("github", "123456") is None
+
+    empty_email_transport = FakeTransport(
+        profile={"id": 123456, "login": "mario", "email": ""}
+    )
+    empty_path = tmp_path / "empty-email"
+    service, storage, _flows, _transport, established, _clock = make_service(
+        empty_path, transport=empty_email_transport
     )
     state, cookie, _started = start(service, established.context)
     with pytest.raises(GitHubLinkProviderRejectedError):

@@ -144,6 +144,7 @@ def test_migration_v2_upgrades_and_backfills_existing_v1_identity(database_path)
 
     with sqlite3.connect(database_path) as connection:
         connection.execute("DROP INDEX uq_external_identities_user_provider")
+        connection.execute("DROP TABLE external_identity_link_conflicts")
         connection.execute("DROP TABLE external_identity_generations")
         connection.execute("DELETE FROM schema_migrations WHERE version >= 2")
 
@@ -202,6 +203,40 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.read_external_identity("github", "4242") == expected_refresh
     assert storage.unlink_external_identity("github", "4242") is True
     assert storage.unlink_external_identity("github", "4242") is False
+
+
+def test_migration_v3_quarantines_ambiguous_provider_links(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_user(account())
+    storage.link_external_identity(
+        ExternalIdentity("user-01", "github", "101", NOW)
+    )
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP INDEX uq_external_identities_user_provider")
+        connection.execute("DROP TABLE external_identity_link_conflicts")
+        connection.execute("DELETE FROM schema_migrations WHERE version = 3")
+        connection.execute(
+            """
+            INSERT INTO external_identities
+                (provider, subject, user_id, linked_at, email, username)
+            VALUES ('github', '202', 'user-01', ?, NULL, 'second')
+            """,
+            ((NOW + timedelta(microseconds=1)).isoformat().replace("+00:00", "Z"),),
+        )
+
+    migrated = SqliteIdentityStorage(database_path)
+    assert migrated.list_external_identities("user-01") == []
+    with sqlite3.connect(database_path) as connection:
+        quarantined = connection.execute(
+            """
+            SELECT provider, subject, user_id
+            FROM external_identity_link_conflicts ORDER BY subject
+            """
+        ).fetchall()
+    assert quarantined == [
+        ("github", "101", "user-01"),
+        ("github", "202", "user-01"),
+    ]
 
 
 def test_external_identity_generation_tombstone_prevents_aba_refresh(storage) -> None:

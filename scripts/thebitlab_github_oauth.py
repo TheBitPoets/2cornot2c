@@ -602,7 +602,24 @@ class GitHubAccountLinkService:
                 or type(login) is not str
                 or not login.strip()
                 or len(login) > 255
-                or (email is not None and (type(email) is not str or len(email) > 512))
+                or any(ord(character) < 0x21 or ord(character) == 0x7F for character in login)
+                or (
+                    email is not None
+                    and (
+                        type(email) is not str
+                        or not email.strip()
+                        or len(email) > 512
+                        or any(ord(character) < 0x20 or ord(character) == 0x7F for character in email)
+                    )
+                )
+                or (
+                    name is not None
+                    and (
+                        type(name) is not str
+                        or len(name.strip()) > 512
+                        or any(ord(character) < 0x20 or ord(character) == 0x7F for character in name)
+                    )
+                )
                 or any(
                     type(value) is str and access_token in value
                     for value in (login, email, name)
@@ -610,14 +627,22 @@ class GitHubAccountLinkService:
             ):
                 raise GitHubLinkProviderRejectedError("Profilo GitHub non valido.")
             access_token = None
-            assertion = FederatedIdentityAssertion(
-                provider="github",
-                subject=str(github_id),
-                display_name=name.strip() if type(name) is str and name.strip() else login.strip(),
-                email=email,
-                email_verified=False,
-                username=login.strip(),
-            )
+            assertion_failed = False
+            try:
+                assertion = FederatedIdentityAssertion(
+                    provider="github",
+                    subject=str(github_id),
+                    display_name=name.strip() if type(name) is str and name.strip() else login.strip(),
+                    email=email,
+                    email_verified=False,
+                    username=login.strip(),
+                )
+            except Exception:
+                assertion_failed = True
+            if assertion_failed or assertion is None:
+                raise GitHubLinkProviderRejectedError(
+                    "Profilo GitHub non valido."
+                )
             identity_failed = False
             try:
                 identity = self.links.link(
@@ -660,4 +685,5 @@ class GitHubAccountLinkService:
             exchange_failed = False
             profile_rejected = False
             profile_failed = False
+            assertion_failed = False
             identity_failed = False
