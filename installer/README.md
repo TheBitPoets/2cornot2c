@@ -98,6 +98,11 @@ python -m installer.tui
 ```
 
 Nel menu premi `a`, controlla il provider mostrato e premi `s` per confermare.
+
+L'esecuzione avviene in un worker mentre il ciclo TUI continua a ridisegnare la
+schermata. `execute_plan` pubblica eventi per inizio e fine di ciascun passo;
+la UI mostra avanzamento per passi, attività indeterminata durante i comandi
+lunghi e tempo trascorso, senza inventare una percentuale di download.
 `n` o `Esc` annullano senza modifiche.
 
 Il percorso Docker scarica già l'immagine Ubuntu multiarch da GHCR usando il
