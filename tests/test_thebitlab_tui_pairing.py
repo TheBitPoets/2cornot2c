@@ -392,7 +392,6 @@ def test_malformed_issued_pair_cannot_disclose_or_revoke_foreign_tui_session(
     authorized = authorize_pairing(pending, "student-01", NOW + timedelta(minutes=1))
     storage.save_pairing(authorized)
     consumed = consume_pairing(authorized, NOW + timedelta(minutes=2))
-    storage.save_pairing(consumed)
     raw_bearer = "F" * 40
     foreign_session = UserSession(
         "foreign-session",
@@ -404,7 +403,12 @@ def test_malformed_issued_pair_cannot_disclose_or_revoke_foreign_tui_session(
         audience="tui",
         source_pairing_id="foreign-pairing",
     )
-    storage.create_session(foreign_session)
+    storage.consume_pairing_and_create_session(
+        consumed,
+        foreign_session,
+        expected_user_updated_at=NOW,
+        expected_user_role="student",
+    )
     monkeypatch.setattr(
         boundary.pairings,
         "consume",

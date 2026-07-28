@@ -28,7 +28,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 _T = TypeVar("_T")
 
 
@@ -210,6 +210,45 @@ _MIGRATION_7 = (
     "ON sessions(source_pairing_id) WHERE source_pairing_id IS NOT NULL",
 )
 
+_MIGRATION_8 = (
+    """
+    DELETE FROM sessions
+    WHERE audience = 'tui' AND NOT EXISTS (
+        SELECT 1 FROM tui_pairings
+        WHERE tui_pairings.pairing_id = sessions.source_pairing_id
+            AND tui_pairings.status = 'consumed'
+            AND tui_pairings.user_id = sessions.user_id
+            AND tui_pairings.consumed_at = sessions.created_at
+    )
+    """,
+    """
+    CREATE TRIGGER IF NOT EXISTS trg_sessions_validate_pairing_insert
+    BEFORE INSERT ON sessions
+    WHEN (NEW.audience = 'web' AND NEW.source_pairing_id IS NOT NULL)
+        OR (NEW.audience = 'tui' AND (
+            NEW.source_pairing_id IS NULL OR NOT EXISTS (
+                SELECT 1 FROM tui_pairings
+                WHERE pairing_id = NEW.source_pairing_id
+                    AND status = 'consumed'
+                    AND user_id = NEW.user_id
+                    AND consumed_at = NEW.created_at
+            )
+        ))
+    BEGIN
+        SELECT RAISE(ABORT, 'invalid session pairing correlation');
+    END
+    """,
+    """
+    CREATE TRIGGER IF NOT EXISTS trg_sessions_immutable_audience_update
+    BEFORE UPDATE OF audience, source_pairing_id ON sessions
+    WHEN NEW.audience != OLD.audience
+        OR NEW.source_pairing_id IS NOT OLD.source_pairing_id
+    BEGIN
+        SELECT RAISE(ABORT, 'immutable session audience');
+    END
+    """,
+)
+
 _MIGRATION_4 = (
     """
     CREATE TABLE external_group_mapping_generations (
@@ -327,6 +366,7 @@ class SqliteIdentityStorage:
                 (5, _MIGRATION_5),
                 (6, _MIGRATION_6),
                 (7, _MIGRATION_7),
+                (8, _MIGRATION_8),
             )
             for version, statements in migrations:
                 if version in versions:
@@ -1817,6 +1857,10 @@ class SqliteIdentityStorage:
             )
 
     def create_session(self, session: UserSession) -> None:
+        if session.audience != "web" or session.source_pairing_id is not None:
+            raise IdentityStorageConflictError(
+                "Le sessioni TUI richiedono il consumo pairing atomico."
+            )
         with self._transaction("create_session") as connection:
             connection.execute(
                 """
@@ -1843,6 +1887,10 @@ class SqliteIdentityStorage:
     def create_session_for_active_user(
         self, session: UserSession, *, expected_user_updated_at: datetime
     ) -> None:
+        if session.audience != "web" or session.source_pairing_id is not None:
+            raise IdentityStorageConflictError(
+                "Le sessioni TUI richiedono il consumo pairing atomico."
+            )
         expected_user_revision = _encode_datetime(
             expected_user_updated_at, "expected_user_updated_at"
         )
