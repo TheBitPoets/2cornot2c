@@ -1026,6 +1026,50 @@ def test_fetch_student_lab_payload_uses_authenticated_server_endpoint(monkeypatc
     assert captured["headers"]["Authorization"] == "Bearer signed-token"
 
 
+def test_student_api_401_scrubs_bearer_from_recursive_traceback(monkeypatch) -> None:
+    bearer = "Z" * 48
+
+    def rejected(request, timeout):
+        raise urllib.error.HTTPError(
+            request.full_url,
+            401,
+            "Unauthorized",
+            {},
+            io.BytesIO(b'{"error":"Autenticazione richiesta."}'),
+        )
+
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", rejected)
+
+    with pytest.raises(ValueError) as captured:
+        student_lab_cli.fetch_student_lab_payload(
+            server_url="https://teacher.test",
+            server_token=bearer,
+        )
+
+    fragments = [str(captured.value), repr(captured.value)]
+    pending = [captured.value]
+    seen = set()
+    while pending:
+        error = pending.pop()
+        if id(error) in seen:
+            continue
+        seen.add(id(error))
+        traceback = error.__traceback__
+        while traceback is not None:
+            filename = traceback.tb_frame.f_code.co_filename.replace("\\", "/")
+            if filename.endswith("/scripts/student_lab_cli.py"):
+                fragments.extend(repr(value) for value in traceback.tb_frame.f_locals.values())
+            traceback = traceback.tb_next
+        if error.__context__ is not None:
+            pending.append(error.__context__)
+        if error.__cause__ is not None:
+            pending.append(error.__cause__)
+
+    assert bearer not in "\n".join(fragments)
+    assert captured.value.__context__ is None
+    assert captured.value.__cause__ is None
+
+
 def test_load_current_payload_enriches_remote_assignment_with_matching_local_paths(monkeypatch, tmp_path) -> None:
     remote_assignment = sample_assignment(
         status="missing",

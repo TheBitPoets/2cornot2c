@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import math
+import queue
 import re
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -99,7 +101,11 @@ class TuiPairingClient:
                 method="POST",
             )
             try:
-                payload = self._request_json(request, timeout=timeout, expected_status=201)
+                payload = self._request_json_bounded(
+                    request,
+                    timeout=timeout,
+                    expected_status=201,
+                )
             except _PairingRateLimitedError as error:
                 raise TuiPairingClientError(
                     f"Troppe richieste pairing. Riprova tra {error.retry_after} secondi."
@@ -178,7 +184,7 @@ class TuiPairingClient:
                     method="POST",
                 )
                 try:
-                    payload = self._request_json(
+                    payload = self._request_json_bounded(
                         request,
                         timeout=request_timeout,
                         expected_status=200,
@@ -234,6 +240,61 @@ class TuiPairingClient:
             raise TuiPairingClientError("Clock monotono locale non valido.")
         self._last_monotonic = result
         return result
+
+    def _request_json_bounded(
+        self,
+        request: urllib.request.Request,
+        *,
+        timeout: float,
+        expected_status: int,
+    ):
+        outcomes: queue.Queue = queue.Queue(maxsize=1)
+
+        def worker() -> None:
+            worker_request = request
+            try:
+                payload = self._request_json(
+                    worker_request,
+                    timeout=timeout,
+                    expected_status=expected_status,
+                )
+                outcome = ("ok", payload)
+            except _PairingPendingError:
+                outcome = ("pending", None)
+            except _PairingRateLimitedError as error:
+                outcome = ("rate", error.retry_after)
+            except TuiPairingClientError as error:
+                outcome = ("error", str(error))
+            except Exception:
+                outcome = ("error", "Il server pairing non è raggiungibile.")
+            finally:
+                worker_request = None
+            try:
+                outcomes.put_nowait(outcome)
+            except queue.Full:
+                pass
+            outcome = None
+
+        thread = threading.Thread(
+            target=worker,
+            name="thebitlab-tui-pairing-request",
+            daemon=True,
+        )
+        try:
+            thread.start()
+            kind, value = outcomes.get(timeout=timeout)
+        except (RuntimeError, queue.Empty):
+            raise TuiPairingClientError("Il server pairing non è raggiungibile.") from None
+        finally:
+            request = None
+            thread = None
+        if kind == "ok":
+            return value
+        if kind == "pending":
+            raise _PairingPendingError()
+        if kind == "rate":
+            raise _PairingRateLimitedError(value)
+        raise TuiPairingClientError(str(value))
 
     def _request_json(self, request: urllib.request.Request, *, timeout: float, expected_status: int):
         response = None

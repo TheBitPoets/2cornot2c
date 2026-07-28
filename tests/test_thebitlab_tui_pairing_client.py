@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import time
 import urllib.error
 from datetime import datetime, timedelta, timezone
 from email.message import Message
@@ -206,6 +207,30 @@ def test_poll_caps_each_network_timeout_at_pairing_deadline() -> None:
 
     assert credential.bearer_token == "T" * 48
     assert observed == [pytest.approx(0.25)]
+
+
+def test_poll_watchdog_bounds_a_stalled_transport_by_deadline() -> None:
+    def stalled(request, timeout):
+        time.sleep(1)
+        return Response(200, credential_payload())
+
+    client = TuiPairingClient(
+        "https://school.test",
+        urlopen=stalled,
+        clock=lambda: NOW,
+    )
+    start = TuiPairingStart(
+        "pairing_abc123",
+        "PAIRCODE123",
+        "https://school.test/auth/tui/pair",
+        NOW + timedelta(seconds=0.1),
+    )
+
+    started_at = time.monotonic()
+    with pytest.raises(TuiPairingClientError, match="non è raggiungibile"):
+        client.poll(start)
+
+    assert time.monotonic() - started_at < 0.5
 
 
 def test_poll_expires_against_monotonic_deadline_without_more_requests() -> None:
