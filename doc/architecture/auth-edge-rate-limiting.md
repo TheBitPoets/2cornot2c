@@ -14,7 +14,7 @@ L'incremento chiude il requisito #549 per `/auth/google/login`. Il wiring `BaseH
 - Se il peer è trusted, è accettato al massimo un `X-Forwarded-For` bounded.
 - La catena viene percorsa da destra rimuovendo soltanto proxy trusted; il primo hop non trusted è il client attribuito.
 - `Forwarded`, combinazioni `Forwarded` + `X-Forwarded-For`, header duplicati, hop vuoti, host con porta, zone ID IPv6, catene eccessive e valori non IP falliscono con `400 invalid_client_address`.
-- IPv4 e IPv6 sono canonicalizzati con `ipaddress`; gli IPv4-mapped IPv6 vengono normalizzati all'IPv4 equivalente prima sia del trust check sia della derivazione bucket.
+- IPv4 e IPv6 sono canonicalizzati con `ipaddress`; indirizzi e CIDR IPv4-mapped IPv6 vengono normalizzati all'IPv4 equivalente prima sia del trust check sia della derivazione bucket, mentre supernet mapped ambigue vengono rifiutate.
 
 La configurazione dei CIDR deve corrispondere esattamente ai reverse proxy controllati dal deployment. Non è sicuro fidarsi indiscriminatamente di reti LAN o degli header provenienti da Internet.
 

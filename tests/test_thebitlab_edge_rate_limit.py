@@ -122,7 +122,9 @@ def test_trusted_proxy_rejects_ambiguous_or_malformed_forwarding() -> None:
 
 
 def test_resolver_canonicalizes_ipv6_mapped_ipv4_and_rejects_zone_ids() -> None:
-    resolver = TrustedProxyClientResolver(("10.0.0.0/8",))
+    resolver = TrustedProxyClientResolver(
+        ("10.0.0.0/8", "::ffff:10.0.0.0/104")
+    )
     assert resolver.resolve(request("2001:0db8:0:0::1")) == "2001:db8::1"
     assert resolver.resolve(request("::ffff:203.0.113.7")) == "203.0.113.7"
     assert resolver.resolve(
@@ -131,6 +133,13 @@ def test_resolver_canonicalizes_ipv6_mapped_ipv4_and_rejects_zone_ids() -> None:
             ("X-Forwarded-For", "::ffff:198.51.100.8"),
         )
     ) == "198.51.100.8"
+    mapped_only = TrustedProxyClientResolver(("::ffff:10.0.0.0/104",))
+    assert mapped_only.resolve(
+        request(
+            "::ffff:10.0.0.5",
+            ("X-Forwarded-For", "198.51.100.9"),
+        )
+    ) == "198.51.100.9"
     with pytest.raises(EdgeClientAttributionError):
         resolver.resolve(request("fe80::1%eth0"))
 
@@ -382,6 +391,8 @@ def test_malformed_login_adapter_result_fails_closed() -> None:
 
 
 def test_rule_and_store_configuration_validation(tmp_path) -> None:
+    with pytest.raises(ValueError):
+        TrustedProxyClientResolver(("::fffe:0:0/95",))
     with pytest.raises(ValueError):
         RateLimitRule("bad name", 1, timedelta(seconds=60))
     with pytest.raises(ValueError):

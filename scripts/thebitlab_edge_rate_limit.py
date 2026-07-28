@@ -166,8 +166,7 @@ class TrustedProxyClientResolver:
             raise ValueError("max_forwarded_header_bytes non valido.")
         try:
             networks = tuple(
-                ipaddress.ip_network(value, strict=True)
-                for value in trusted_proxy_cidrs
+                self._network(value) for value in trusted_proxy_cidrs
             )
         except (TypeError, ValueError) as error:
             raise ValueError("CIDR proxy trusted non valido.") from error
@@ -208,6 +207,23 @@ class TrustedProxyClientResolver:
 
     def _trusted(self, address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
         return any(address in network for network in self._trusted_networks)
+
+    @staticmethod
+    def _network(value: str) -> ipaddress.IPv4Network | ipaddress.IPv6Network:
+        network = ipaddress.ip_network(value, strict=True)
+        if isinstance(network, ipaddress.IPv6Network):
+            mapped_space = ipaddress.IPv6Network("::ffff:0:0/96")
+            if network.subnet_of(mapped_space):
+                mapped = network.network_address.ipv4_mapped
+                if mapped is None:
+                    raise ValueError("CIDR mapped non valido.")
+                return ipaddress.IPv4Network(
+                    (mapped, network.prefixlen - mapped_space.prefixlen),
+                    strict=True,
+                )
+            if network.overlaps(mapped_space):
+                raise ValueError("CIDR mapped ambiguo.")
+        return network
 
     @staticmethod
     def _address(value: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
