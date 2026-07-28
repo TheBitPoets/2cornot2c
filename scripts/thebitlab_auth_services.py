@@ -849,7 +849,7 @@ class SessionService:
         session_id_factory: Callable[[], str] = lambda: str(uuid.uuid4()),
         audience: str = "web",
     ) -> None:
-        self.storage = storage
+        self._storage = storage
         self.clock = clock
         self.ttl = _positive_ttl(ttl, "ttl sessione")
         normalized_audience = _required_text(audience, "audience", lowercase=True)
@@ -858,6 +858,10 @@ class SessionService:
         self.audience = normalized_audience
         self.token_factory = token_factory
         self.session_id_factory = session_id_factory
+
+    @property
+    def storage(self) -> SessionApplicationStorage:
+        return self._storage
 
     def issue(self, user_id: str) -> IssuedSession:
         if self.audience != "web":
@@ -1023,7 +1027,7 @@ class PairingService:
             pepper_box[0] = None
             candidate_pepper = None
             raise AuthApplicationError("Configurazione pairing non valida.")
-        self.storage = storage
+        self._storage = storage
         self.clock = clock
         self.ttl = validated_ttl
         self.code_factory = code_factory
@@ -1031,6 +1035,10 @@ class PairingService:
         self.pepper = candidate_pepper
         candidate_pepper = None
         pepper_box[0] = None
+
+    @property
+    def storage(self) -> PairingApplicationStorage:
+        return self._storage
 
     def issue(self) -> IssuedPairing:
         now = _utc(self.clock())
@@ -1195,10 +1203,13 @@ class TuiPairingSessionService:
         if type(pairings) is not PairingService:
             raise AuthApplicationError("Servizio pairing non valido.")
         self.pairings = pairings
-        self.storage = pairings.storage
         self.session_ttl = _positive_ttl(session_ttl, "ttl sessione TUI")
         self.token_factory = token_factory
         self.session_id_factory = session_id_factory
+
+    @property
+    def storage(self) -> PairingApplicationStorage:
+        return self.pairings.storage
 
     def issue(self) -> IssuedPairing:
         return self.pairings.issue()

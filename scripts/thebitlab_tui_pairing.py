@@ -152,6 +152,7 @@ class TuiBrowserPairingBoundary:
             or tui_sessions.audience != "tui"
             or getattr(http_sessions.sessions, "audience", None) != "web"
             or pairings.storage is not tui_sessions.storage
+            or pairings.pairings.storage is not tui_sessions.storage
             or http_sessions.sessions.storage is not tui_sessions.storage
         ):
             raise ValueError("Audience sessioni pairing non configurate correttamente.")

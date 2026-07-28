@@ -153,6 +153,12 @@ def test_boundary_rejects_distinct_identity_registries(setup, tmp_path) -> None:
             boundary.http_sessions,
             other_tui_sessions,
         )
+    with pytest.raises(AttributeError):
+        boundary.pairings.storage = other
+    with pytest.raises(AttributeError):
+        boundary.pairings.pairings.storage = other
+    with pytest.raises(AttributeError):
+        boundary.http_sessions.sessions.storage = other
 
 
 def test_student_browser_authorizes_and_tui_consumes_once(setup) -> None:
