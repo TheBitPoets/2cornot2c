@@ -232,27 +232,38 @@ class UrllibGitHubOAuthTransport:
 
     def _request(self, request: urllib.request.Request, timeout_seconds: float, max_response_bytes: int) -> Mapping[str, object]:
         data = None
+        result = None
+        rejected = False
+        unavailable = False
         try:
             with self._opener.open(request, timeout=timeout_seconds) as response:
                 if response.status != 200:
-                    raise GitHubLinkProviderUnavailableError("GitHub non disponibile.")
-                data = response.read(max_response_bytes + 1)
-            if len(data) > max_response_bytes:
-                raise GitHubLinkProviderUnavailableError("Risposta GitHub oltre il limite.")
-            return _strict_json_object(data)
-        except GitHubLinkError:
-            raise
+                    unavailable = True
+                else:
+                    data = response.read(max_response_bytes + 1)
+            if not unavailable and data is not None:
+                if len(data) > max_response_bytes:
+                    unavailable = True
+                else:
+                    result = _strict_json_object(data)
         except urllib.error.HTTPError as error:
-            status = error.code
+            rejected = 400 <= error.code < 500
+            unavailable = not rejected
             error = None
-            if 400 <= status < 500:
-                raise GitHubLinkProviderRejectedError("Richiesta OAuth GitHub rifiutata.")
-            raise GitHubLinkProviderUnavailableError("GitHub non disponibile.")
         except Exception:
-            raise GitHubLinkProviderUnavailableError("GitHub non disponibile.")
+            unavailable = True
         finally:
             data = None
             request = None
+        if rejected:
+            raise GitHubLinkProviderRejectedError(
+                "Richiesta OAuth GitHub rifiutata."
+            )
+        if unavailable or result is None:
+            raise GitHubLinkProviderUnavailableError(
+                "GitHub non disponibile."
+            )
+        return result
 
     def exchange_code(self, *, form: Mapping[str, str], timeout_seconds: float, max_response_bytes: int) -> Mapping[str, object]:
         payload = None
@@ -525,25 +536,60 @@ class GitHubAccountLinkService:
             flow_consumed = True
             if provider_error:
                 raise GitHubLinkCallbackError("Autorizzazione GitHub annullata.")
-            token_response = self.transport.exchange_code(
-                form={
-                    "client_id": self.config.client_id,
-                    "client_secret": self.config.client_secret,
-                    "code": code,
-                    "redirect_uri": self.config.redirect_uri,
-                    "code_verifier": flow.code_verifier,
-                },
-                timeout_seconds=float(self.config.timeout_seconds),
-                max_response_bytes=self.config.max_response_bytes,
-            )
+            token_form = {
+                "client_id": self.config.client_id,
+                "client_secret": self.config.client_secret,
+                "code": code,
+                "redirect_uri": self.config.redirect_uri,
+                "code_verifier": flow.code_verifier,
+            }
+            exchange_rejected = False
+            exchange_failed = False
+            try:
+                token_response = self.transport.exchange_code(
+                    form=token_form,
+                    timeout_seconds=float(self.config.timeout_seconds),
+                    max_response_bytes=self.config.max_response_bytes,
+                )
+            except GitHubLinkProviderRejectedError:
+                exchange_rejected = True
+            except Exception:
+                exchange_failed = True
+            finally:
+                token_form = None
+                code = None
+            if exchange_rejected:
+                raise GitHubLinkProviderRejectedError(
+                    "Authorization code GitHub rifiutato."
+                )
+            if exchange_failed:
+                raise GitHubLinkProviderUnavailableError(
+                    "Token exchange GitHub non disponibile."
+                )
             access_token = token_response.get("access_token") if isinstance(token_response, Mapping) else None
             if type(access_token) is not str or not 20 <= len(access_token) <= 2048 or any(ord(character) < 0x21 for character in access_token):
                 raise GitHubLinkProviderRejectedError("Token GitHub non valido.")
-            profile = self.transport.read_user(
-                access_token=access_token,
-                timeout_seconds=float(self.config.timeout_seconds),
-                max_response_bytes=self.config.max_response_bytes,
-            )
+            profile_rejected = False
+            profile_failed = False
+            try:
+                profile = self.transport.read_user(
+                    access_token=access_token,
+                    timeout_seconds=float(self.config.timeout_seconds),
+                    max_response_bytes=self.config.max_response_bytes,
+                )
+            except GitHubLinkProviderRejectedError:
+                profile_rejected = True
+            except Exception:
+                profile_failed = True
+            if profile_rejected or profile_failed:
+                access_token = None
+                if profile_rejected:
+                    raise GitHubLinkProviderRejectedError(
+                        "Profilo GitHub rifiutato."
+                    )
+                raise GitHubLinkProviderUnavailableError(
+                    "Profilo GitHub non disponibile."
+                )
             github_id = profile.get("id") if isinstance(profile, Mapping) else None
             login = profile.get("login") if isinstance(profile, Mapping) else None
             email = profile.get("email") if isinstance(profile, Mapping) else None
@@ -552,6 +598,7 @@ class GitHubAccountLinkService:
                 type(github_id) is not int
                 or isinstance(github_id, bool)
                 or github_id <= 0
+                or github_id > 9223372036854775807
                 or type(login) is not str
                 or not login.strip()
                 or len(login) > 255
@@ -571,10 +618,21 @@ class GitHubAccountLinkService:
                 email_verified=False,
                 username=login.strip(),
             )
+            identity_failed = False
             try:
-                identity = self.links.link(flow.user_id, assertion)
+                identity = self.links.link(
+                    flow.user_id,
+                    assertion,
+                    expected_session=context.session,
+                )
             except AuthApplicationError:
-                raise GitHubLinkIdentityConflictError("Account GitHub non collegabile.")
+                identity_failed = True
+            except Exception:
+                identity_failed = True
+            if identity_failed or identity is None:
+                raise GitHubLinkIdentityConflictError(
+                    "Account GitHub non collegabile."
+                )
             return GitHubLinkResult(identity, self.config.post_link_path, self._clear_cookie(cookie_name))
         except GitHubLinkError as error:
             if flow_consumed and cookie_name is not None:
@@ -597,3 +655,9 @@ class GitHubAccountLinkService:
             access_token = None
             profile = None
             assertion = None
+            token_form = None
+            exchange_rejected = False
+            exchange_failed = False
+            profile_rejected = False
+            profile_failed = False
+            identity_failed = False

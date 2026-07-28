@@ -143,8 +143,9 @@ def test_migration_v2_upgrades_and_backfills_existing_v1_identity(database_path)
     storage.provision_user_with_identity(user, identity)
 
     with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP INDEX uq_external_identities_user_provider")
         connection.execute("DROP TABLE external_identity_generations")
-        connection.execute("DELETE FROM schema_migrations WHERE version = 2")
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 2")
 
     upgraded = SqliteIdentityStorage(database_path)
     with sqlite3.connect(database_path) as connection:
@@ -155,7 +156,9 @@ def test_migration_v2_upgrades_and_backfills_existing_v1_identity(database_path)
         ]
         assert connection.execute(
             "SELECT version FROM schema_migrations ORDER BY version"
-        ).fetchall() == [(1,), (2,)]
+        ).fetchall() == [
+            (version,) for version in range(1, SCHEMA_VERSION + 1)
+        ]
 
     assert upgraded.unlink_external_identity("google", "subject-01") is True
     with pytest.raises(IdentityStorageConflictError):

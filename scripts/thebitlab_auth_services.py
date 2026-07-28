@@ -257,12 +257,31 @@ class ExternalIdentityLinkApplicationStorage(Protocol):
         expected_user_updated_at: datetime,
     ) -> None: ...
 
+    def link_external_identity_for_active_session(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+    ) -> None: ...
+
     def refresh_external_identity(
         self,
         identity: ExternalIdentity,
         *,
         expected_linked_at: datetime,
         expected_user_updated_at: datetime,
+    ) -> None: ...
+
+    def refresh_external_identity_for_active_session(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
     ) -> None: ...
 
     def unlink_external_identity_for_active_user(
@@ -558,7 +577,11 @@ class ExternalIdentityLinkService:
         self.clock = clock
 
     def link(
-        self, user_id: str, assertion: FederatedIdentityAssertion
+        self,
+        user_id: str,
+        assertion: FederatedIdentityAssertion,
+        *,
+        expected_session: UserSession | None = None,
     ) -> ExternalIdentity:
         normalized_user_id = _required_text(user_id, "user_id")
         try:
@@ -606,11 +629,20 @@ class ExternalIdentityLinkService:
                 username=normalized.username,
             )
             try:
-                self.storage.refresh_external_identity(
-                    refreshed,
-                    expected_linked_at=winner.linked_at,
-                    expected_user_updated_at=account.updated_at,
-                )
+                if expected_session is None:
+                    self.storage.refresh_external_identity(
+                        refreshed,
+                        expected_linked_at=winner.linked_at,
+                        expected_user_updated_at=account.updated_at,
+                    )
+                else:
+                    self.storage.refresh_external_identity_for_active_session(
+                        refreshed,
+                        expected_linked_at=winner.linked_at,
+                        expected_user_updated_at=account.updated_at,
+                        expected_session_id=expected_session.session_id,
+                        expected_session_token_digest=expected_session.token_digest,
+                    )
             except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
                 raise ConcurrentStateChangeError(
                     "Account provider modificato durante il collegamento."
@@ -628,10 +660,18 @@ class ExternalIdentityLinkService:
                 username=normalized.username,
             )
             try:
-                self.storage.link_external_identity_for_active_user(
-                    identity,
-                    expected_user_updated_at=account.updated_at,
-                )
+                if expected_session is None:
+                    self.storage.link_external_identity_for_active_user(
+                        identity,
+                        expected_user_updated_at=account.updated_at,
+                    )
+                else:
+                    self.storage.link_external_identity_for_active_session(
+                        identity,
+                        expected_user_updated_at=account.updated_at,
+                        expected_session_id=expected_session.session_id,
+                        expected_session_token_digest=expected_session.token_digest,
+                    )
                 return identity
             except IdentityStorageGenerationConflictError:
                 current = self.storage.read_external_identity(
@@ -639,7 +679,11 @@ class ExternalIdentityLinkService:
                 )
                 if current is not None:
                     if current.user_id == account.user_id:
-                        return self.link(account.user_id, normalized)
+                        return self.link(
+                            account.user_id,
+                            normalized,
+                            expected_session=expected_session,
+                        )
                     raise ExternalIdentityLinkConflictError(
                         "Account provider gia collegato a un altro utente."
                     )

@@ -64,6 +64,17 @@ class UserDirectoryStorage(Protocol):
         """Atomically link while the active owner revision still matches."""
         ...
 
+    def link_external_identity_for_active_session(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+    ) -> None:
+        """Atomically link while both active user and session still match."""
+        ...
+
     def refresh_external_identity(
         self,
         identity: ExternalIdentity,
@@ -72,6 +83,18 @@ class UserDirectoryStorage(Protocol):
         expected_user_updated_at: datetime,
     ) -> None:
         """Refresh a link only while its active owner revision remains unchanged."""
+        ...
+
+    def refresh_external_identity_for_active_session(
+        self,
+        identity: ExternalIdentity,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+    ) -> None:
+        """Refresh a link while active user and session still match."""
         ...
 
     def read_external_identity(self, provider: str, subject: str) -> ExternalIdentity | None: ...

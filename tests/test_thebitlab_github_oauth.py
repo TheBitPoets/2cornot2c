@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlsplit
 
@@ -13,6 +15,7 @@ from scripts.thebitlab_github_oauth import (
     GitHubLinkConfigurationError,
     GitHubLinkIdentityConflictError,
     GitHubLinkProviderRejectedError,
+    GitHubLinkProviderUnavailableError,
     GitHubLinkStateError,
     GitHubOAuthConfig,
     InMemoryGitHubLinkFlowStore,
@@ -126,6 +129,16 @@ def callback(state):
     return {"code": ["github-authorization-code-raw"], "state": [state]}
 
 
+def traceback_locals_repr(error, *names):
+    values = []
+    current = error.__traceback__
+    while current is not None:
+        if current.tb_frame.f_code.co_name in names:
+            values.extend(current.tb_frame.f_locals.values())
+        current = current.tb_next
+    return repr(values)
+
+
 def test_config_pins_endpoints_and_scrubs_secret() -> None:
     configured = config()
     assert CLIENT_SECRET not in repr(configured)
@@ -235,8 +248,90 @@ def test_callback_replay_provider_cancel_and_expiry_are_terminal(tmp_path) -> No
     assert transport.exchange_calls == []
 
 
+def test_revoked_session_race_cannot_persist_link(tmp_path) -> None:
+    service, storage, flows, _transport, established, _clock = make_service(tmp_path)
+    state, cookie, _started = start(service, established.context)
+    storage.save_session(
+        replace(established.context.session, revoked_at=NOW)
+    )
+
+    with pytest.raises(GitHubLinkIdentityConflictError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
+    assert flows.pending_count() == 0
+    assert storage.read_external_identity("github", "123456") is None
+
+
+def test_transport_failure_scrubs_oauth_credentials_from_traceback(tmp_path) -> None:
+    class RawFailureTransport(FakeTransport):
+        def exchange_code(self, **kwargs):
+            raise RuntimeError(repr(kwargs))
+
+    service, _storage, _flows, _transport, established, _clock = make_service(
+        tmp_path, transport=RawFailureTransport()
+    )
+    state, cookie, _started = start(service, established.context)
+    with pytest.raises(GitHubLinkProviderUnavailableError) as captured:
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
+    retained = traceback_locals_repr(
+        captured.value, "complete_link", "exchange_code"
+    )
+    assert CLIENT_SECRET not in retained
+    assert VERIFIER not in retained
+    assert "github-authorization-code-raw" not in retained
+    assert captured.value.__context__ is None
+
+
+def test_same_user_cannot_link_two_github_subjects_concurrently(tmp_path) -> None:
+    storage = SqliteIdentityStorage(tmp_path / "race.sqlite3")
+    storage.create_user(user())
+    barrier = __import__("threading").Barrier(2)
+
+    class BarrierStorage:
+        def __getattr__(self, name):
+            return getattr(storage, name)
+
+        def list_external_identities(self, user_id):
+            result = storage.list_external_identities(user_id)
+            barrier.wait(timeout=5)
+            return result
+
+    service = ExternalIdentityLinkService(
+        BarrierStorage(), expected_provider="github", clock=Clock()
+    )
+
+    def link(subject):
+        from scripts.thebitlab_auth_services import FederatedIdentityAssertion
+
+        try:
+            service.link(
+                "user-01",
+                FederatedIdentityAssertion(
+                    "github", subject, "Mario", username=f"u{subject}"
+                ),
+            )
+            return "linked"
+        except Exception:
+            return "conflict"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(link, ("101", "202")))
+    assert sorted(outcomes) == ["conflict", "linked"]
+    persisted = [
+        identity
+        for identity in storage.list_external_identities("user-01")
+        if identity.provider == "github"
+    ]
+    assert len(persisted) == 1
+
+
 def test_invalid_profile_and_cross_user_link_conflict_fail_closed(tmp_path) -> None:
-    bad_transport = FakeTransport(profile={"id": "123456", "login": "mario"})
+    bad_transport = FakeTransport(
+        profile={"id": 9223372036854775808, "login": "mario"}
+    )
     service, storage, _flows, _transport, established, _clock = make_service(
         tmp_path, transport=bad_transport
     )
