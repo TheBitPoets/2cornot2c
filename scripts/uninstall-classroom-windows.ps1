@@ -186,7 +186,9 @@ function Get-ClassroomShortcutPaths {
     )
     foreach ($DesktopDir in @(
         [Environment]::GetFolderPath("Desktop")
+        [Environment]::GetFolderPath("CommonDesktopDirectory")
         (Join-Path $HOME "Desktop")
+        $(if ($env:PUBLIC) { Join-Path $env:PUBLIC "Desktop" })
         $(if ($env:OneDrive) { Join-Path $env:OneDrive "Desktop" })
         $(if ($env:OneDriveConsumer) {
             Join-Path $env:OneDriveConsumer "Desktop"
@@ -201,10 +203,22 @@ function Get-ClassroomShortcutPaths {
             )
         }
     }
-    [void]$Candidates.Add(
-        (Join-Path $env:APPDATA `
-            "Microsoft\Windows\Start Menu\Programs\Ambiente 2cornot2c.lnk")
-    )
+    foreach ($ProgramsDir in @(
+        [Environment]::GetFolderPath("Programs")
+        [Environment]::GetFolderPath("CommonPrograms")
+        $(if ($env:APPDATA) {
+            Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
+        })
+        $(if ($env:ProgramData) {
+            Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs"
+        })
+    )) {
+        if ($ProgramsDir) {
+            [void]$Candidates.Add(
+                (Join-Path $ProgramsDir "Ambiente 2cornot2c.lnk")
+            )
+        }
+    }
     return @($Candidates)
 }
 
