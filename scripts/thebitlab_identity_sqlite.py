@@ -16,6 +16,7 @@ from scripts.thebitlab_identity import (
     UserAccount,
     UserSession,
 )
+from scripts.thebitlab_dashboard_auth_ports import DashboardAuthorizationSnapshot
 from scripts.thebitlab_identity_ports import (
     IdentityStorageConflictError,
     IdentityStorageCorruptionError,
@@ -1101,6 +1102,96 @@ class SqliteIdentityStorage:
         where = " WHERE active = 1" if active_only else ""
         rows = self._query_all(f"SELECT * FROM classes{where} ORDER BY class_id")
         return [self._class_group(row) for row in rows]
+
+    def read_dashboard_authorization_snapshot(
+        self,
+        actor_user_id: str,
+        *,
+        expected_actor_updated_at: datetime,
+        target_user_id: str | None = None,
+    ) -> DashboardAuthorizationSnapshot | None:
+        expected_revision = _encode_datetime(
+            expected_actor_updated_at, "expected_actor_updated_at"
+        )
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN")
+            actor = connection.execute(
+                """
+                SELECT user_id, role, updated_at FROM users
+                WHERE user_id = ? AND active = 1 AND updated_at = ?
+                """,
+                (actor_user_id, expected_revision),
+            ).fetchone()
+            if actor is None:
+                connection.commit()
+                return None
+            actor_classes = tuple(
+                row["class_id"]
+                for row in connection.execute(
+                    """
+                    SELECT memberships.class_id
+                    FROM class_memberships AS memberships
+                    JOIN classes ON classes.class_id = memberships.class_id
+                    WHERE memberships.user_id = ? AND memberships.role = ?
+                        AND classes.active = 1
+                    ORDER BY memberships.class_id
+                    """,
+                    (actor["user_id"], actor["role"]),
+                )
+            )
+            target = None
+            target_classes: tuple[str, ...] = ()
+            if target_user_id is not None:
+                target = connection.execute(
+                    """
+                    SELECT user_id, role FROM users
+                    WHERE user_id = ? AND active = 1
+                    """,
+                    (target_user_id,),
+                ).fetchone()
+                if target is not None:
+                    target_classes = tuple(
+                        row["class_id"]
+                        for row in connection.execute(
+                            """
+                            SELECT memberships.class_id
+                            FROM class_memberships AS memberships
+                            JOIN classes ON classes.class_id = memberships.class_id
+                            WHERE memberships.user_id = ?
+                                AND memberships.role = 'student'
+                                AND classes.active = 1
+                            ORDER BY memberships.class_id
+                            """,
+                            (target["user_id"],),
+                        )
+                    )
+            snapshot = DashboardAuthorizationSnapshot(
+                actor_user_id=actor["user_id"],
+                actor_role=actor["role"],
+                actor_updated_at=_decode_datetime(actor["updated_at"]),
+                actor_class_ids=actor_classes,
+                target_user_id=None if target is None else target["user_id"],
+                target_role=None if target is None else target["role"],
+                target_class_ids=target_classes,
+            )
+            connection.commit()
+            return snapshot
+        except (ValueError, TypeError) as error:
+            connection.rollback()
+            raise IdentityStorageCorruptionError(
+                "Snapshot autorizzazione dashboard persistito non valido."
+            ) from error
+        except sqlite3.DatabaseError as error:
+            connection.rollback()
+            raise IdentityStorageError(
+                "Errore SQLite durante autorizzazione dashboard."
+            ) from error
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     def save_membership(self, membership: ClassMembership) -> None:
         with self._transaction("save_membership") as connection:
