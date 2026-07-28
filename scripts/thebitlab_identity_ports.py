@@ -117,6 +117,21 @@ class UserDirectoryStorage(Protocol):
         """Atomically unlink only the expected identity generation and active owner revision."""
         ...
 
+    def unlink_external_identity_for_active_session(
+        self,
+        provider: str,
+        subject: str,
+        user_id: str,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+        expected_session_valid_at: datetime,
+    ) -> bool:
+        """Atomically unlink while identity, active owner, and live session match."""
+        ...
+
 
 class ClassDirectoryStorage(Protocol):
     """Persistence port for classes, memberships, and provider group mappings."""

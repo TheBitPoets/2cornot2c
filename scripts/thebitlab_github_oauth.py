@@ -567,7 +567,14 @@ class GitHubAccountLinkService:
                     "Token exchange GitHub non disponibile."
                 )
             access_token = token_response.get("access_token") if isinstance(token_response, Mapping) else None
-            if type(access_token) is not str or not 20 <= len(access_token) <= 2048 or any(ord(character) < 0x21 for character in access_token):
+            token_type = token_response.get("token_type") if isinstance(token_response, Mapping) else None
+            if (
+                type(access_token) is not str
+                or not 20 <= len(access_token) <= 2048
+                or any(ord(character) < 0x21 for character in access_token)
+                or type(token_type) is not str
+                or token_type.lower() != "bearer"
+            ):
                 raise GitHubLinkProviderRejectedError("Token GitHub non valido.")
             profile_rejected = False
             profile_failed = False
@@ -649,6 +656,7 @@ class GitHubAccountLinkService:
                     flow.user_id,
                     assertion,
                     expected_session=context.session,
+                    expected_user_updated_at=flow.user_updated_at,
                 )
             except AuthApplicationError:
                 identity_failed = True
@@ -678,6 +686,7 @@ class GitHubAccountLinkService:
             flow = None
             token_response = None
             access_token = None
+            token_type = None
             profile = None
             assertion = None
             token_form = None

@@ -879,6 +879,78 @@ class SqliteIdentityStorage:
                 "Identita o utente modificati durante lo scollegamento."
             )
 
+    def unlink_external_identity_for_active_session(
+        self,
+        provider: str,
+        subject: str,
+        user_id: str,
+        *,
+        expected_linked_at: datetime,
+        expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+        expected_session_valid_at: datetime,
+    ) -> bool:
+        expected_generation = _encode_datetime(
+            expected_linked_at, "expected_linked_at"
+        )
+        expected_user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        expected_valid_at = _encode_datetime(
+            expected_session_valid_at, "expected_session_valid_at"
+        )
+        with self._transaction(
+            "unlink_external_identity_for_active_session"
+        ) as connection:
+            cursor = connection.execute(
+                """
+                DELETE FROM external_identities
+                WHERE provider = ? AND subject = ? AND user_id = ? AND linked_at = ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE users.user_id = external_identities.user_id
+                            AND users.active = 1 AND users.updated_at = ?
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM sessions
+                        WHERE sessions.session_id = ?
+                            AND sessions.token_digest = ?
+                            AND sessions.user_id = external_identities.user_id
+                            AND sessions.revoked_at IS NULL
+                            AND sessions.created_at <= ?
+                            AND sessions.last_seen_at <= ?
+                            AND sessions.expires_at > ?
+                    )
+                """,
+                (
+                    provider.lower(),
+                    subject,
+                    user_id,
+                    expected_generation,
+                    expected_user_revision,
+                    expected_session_id,
+                    expected_session_token_digest,
+                    expected_valid_at,
+                    expected_valid_at,
+                    expected_valid_at,
+                ),
+            )
+            if cursor.rowcount == 1:
+                return True
+            exists = connection.execute(
+                """
+                SELECT 1 FROM external_identities
+                WHERE provider = ? AND subject = ?
+                """,
+                (provider.lower(), subject),
+            ).fetchone()
+            if exists is None:
+                return False
+            raise IdentityStorageConflictError(
+                "Identita, utente o sessione modificati durante lo scollegamento."
+            )
+
     def create_class(self, class_group: ClassGroup) -> None:
         with self._transaction("create_class") as connection:
             connection.execute(

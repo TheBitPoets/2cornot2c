@@ -112,23 +112,56 @@ def github_assertion(subject="123456"):
 def test_authenticated_external_account_link_unlink_and_relink(storage) -> None:
     user = account()
     storage.create_user(user)
+    clock = MutableClock()
     service = ExternalIdentityLinkService(
-        storage, expected_provider="github", clock=MutableClock()
+        storage, expected_provider="github", clock=clock
     )
+    issued = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "s" * 32,
+        session_id_factory=lambda: "link-session",
+    ).issue(user.user_id)
 
     linked = service.link(user.user_id, github_assertion())
     assert linked.provider_key == ("github", "123456")
     assert linked.user_id == user.user_id
     assert service.link(user.user_id, github_assertion()).linked_at == linked.linked_at
 
-    removed = service.unlink(user.user_id)
+    removed = service.unlink(user.user_id, expected_session=issued.session)
     assert removed == linked
     assert storage.read_external_identity("github", "123456") is None
     with pytest.raises(ExternalIdentityNotLinkedError):
-        service.unlink(user.user_id)
+        service.unlink(user.user_id, expected_session=issued.session)
 
     relinked = service.link(user.user_id, github_assertion())
     assert relinked.linked_at == linked.linked_at + timedelta(microseconds=1)
+
+
+def test_external_account_unlink_requires_persisted_live_session(storage) -> None:
+    user = account()
+    storage.create_user(user)
+    clock = MutableClock()
+    issued = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "u" * 32,
+        session_id_factory=lambda: "unlink-session",
+    ).issue(user.user_id)
+    service = ExternalIdentityLinkService(
+        storage, expected_provider="github", clock=clock
+    )
+    linked = service.link(
+        user.user_id,
+        github_assertion(),
+        expected_session=issued.session,
+        expected_user_updated_at=user.updated_at,
+    )
+    storage.save_session(replace(issued.session, revoked_at=NOW))
+
+    with pytest.raises(ConcurrentStateChangeError):
+        service.unlink(user.user_id, expected_session=issued.session)
+    assert storage.read_external_identity(*linked.provider_key) == linked
 
 
 def test_external_account_link_rejects_provider_and_cross_user_conflicts(storage) -> None:

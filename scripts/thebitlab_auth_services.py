@@ -286,7 +286,7 @@ class ExternalIdentityLinkApplicationStorage(Protocol):
         expected_session_valid_at: datetime,
     ) -> None: ...
 
-    def unlink_external_identity_for_active_user(
+    def unlink_external_identity_for_active_session(
         self,
         provider: str,
         subject: str,
@@ -294,6 +294,9 @@ class ExternalIdentityLinkApplicationStorage(Protocol):
         *,
         expected_linked_at: datetime,
         expected_user_updated_at: datetime,
+        expected_session_id: str,
+        expected_session_token_digest: str,
+        expected_session_valid_at: datetime,
     ) -> bool: ...
 
 
@@ -584,6 +587,7 @@ class ExternalIdentityLinkService:
         assertion: FederatedIdentityAssertion,
         *,
         expected_session: UserSession | None = None,
+        expected_user_updated_at: datetime | None = None,
     ) -> ExternalIdentity:
         normalized_user_id = _required_text(user_id, "user_id")
         try:
@@ -609,6 +613,15 @@ class ExternalIdentityLinkService:
             expected_session = None
             raise InvalidCredentialError("Sessione autenticata non valida.")
         operation_now = _utc(self.clock())
+        if expected_user_updated_at is not None:
+            expected_revision = _utc(expected_user_updated_at)
+            if account.updated_at != expected_revision:
+                normalized = None
+                raise ConcurrentStateChangeError(
+                    "Utente modificato durante il collegamento."
+                )
+        else:
+            expected_revision = account.updated_at
         provider_links = [
             identity
             for identity in self.storage.list_external_identities(account.user_id)
@@ -646,13 +659,13 @@ class ExternalIdentityLinkService:
                     self.storage.refresh_external_identity(
                         refreshed,
                         expected_linked_at=winner.linked_at,
-                        expected_user_updated_at=account.updated_at,
+                        expected_user_updated_at=expected_revision,
                     )
                 else:
                     self.storage.refresh_external_identity_for_active_session(
                         refreshed,
                         expected_linked_at=winner.linked_at,
-                        expected_user_updated_at=account.updated_at,
+                        expected_user_updated_at=expected_revision,
                         expected_session_id=expected_session.session_id,
                         expected_session_token_digest=expected_session.token_digest,
                         expected_session_valid_at=operation_now,
@@ -677,12 +690,12 @@ class ExternalIdentityLinkService:
                 if expected_session is None:
                     self.storage.link_external_identity_for_active_user(
                         identity,
-                        expected_user_updated_at=account.updated_at,
+                        expected_user_updated_at=expected_revision,
                     )
                 else:
                     self.storage.link_external_identity_for_active_session(
                         identity,
-                        expected_user_updated_at=account.updated_at,
+                        expected_user_updated_at=expected_revision,
                         expected_session_id=expected_session.session_id,
                         expected_session_token_digest=expected_session.token_digest,
                         expected_session_valid_at=operation_now,
@@ -698,6 +711,7 @@ class ExternalIdentityLinkService:
                             account.user_id,
                             normalized,
                             expected_session=expected_session,
+                            expected_user_updated_at=expected_revision,
                         )
                     raise ExternalIdentityLinkConflictError(
                         "Account provider gia collegato a un altro utente."
@@ -723,12 +737,24 @@ class ExternalIdentityLinkService:
             "Impossibile riservare una generazione link provider."
         )
 
-    def unlink(self, user_id: str) -> ExternalIdentity:
+    def unlink(
+        self,
+        user_id: str,
+        *,
+        expected_session: UserSession,
+    ) -> ExternalIdentity:
         normalized_user_id = _required_text(user_id, "user_id")
         account = self.storage.read_user(normalized_user_id)
         if account is None:
             raise InvalidCredentialError("Utente autenticato non valido.")
         require_active_account(account)
+        if (
+            type(expected_session) is not UserSession
+            or expected_session.user_id != account.user_id
+        ):
+            expected_session = None
+            raise InvalidCredentialError("Sessione autenticata non valida.")
+        operation_now = _utc(self.clock())
         provider_links = [
             identity
             for identity in self.storage.list_external_identities(account.user_id)
@@ -744,12 +770,15 @@ class ExternalIdentityLinkService:
             )
         identity = provider_links[0]
         try:
-            removed = self.storage.unlink_external_identity_for_active_user(
+            removed = self.storage.unlink_external_identity_for_active_session(
                 identity.provider,
                 identity.subject,
                 identity.user_id,
                 expected_linked_at=identity.linked_at,
                 expected_user_updated_at=account.updated_at,
+                expected_session_id=expected_session.session_id,
+                expected_session_token_digest=expected_session.token_digest,
+                expected_session_valid_at=operation_now,
             )
         except IdentityStorageConflictError as error:
             raise ConcurrentStateChangeError(

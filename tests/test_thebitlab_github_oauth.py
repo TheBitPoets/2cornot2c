@@ -263,6 +263,26 @@ def test_revoked_session_race_cannot_persist_link(tmp_path) -> None:
     assert storage.read_external_identity("github", "123456") is None
 
 
+def test_user_revision_changing_during_flow_cannot_persist_link(tmp_path) -> None:
+    service, storage, flows, _transport, established, _clock = make_service(tmp_path)
+    state, cookie, _started = start(service, established.context)
+    storage.save_user(
+        replace(
+            established.context.user,
+            role="pending",
+            updated_at=NOW + timedelta(seconds=1),
+        ),
+        expected_updated_at=established.context.user.updated_at,
+    )
+
+    with pytest.raises(GitHubLinkIdentityConflictError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
+    assert flows.pending_count() == 0
+    assert storage.read_external_identity("github", "123456") is None
+
+
 def test_session_expiring_during_provider_calls_cannot_persist_link(tmp_path) -> None:
     class ExpireDuringProfile(FakeTransport):
         clock = None
@@ -352,6 +372,18 @@ def test_same_user_cannot_link_two_github_subjects_concurrently(tmp_path) -> Non
 
 
 def test_invalid_profile_and_cross_user_link_conflict_fail_closed(tmp_path) -> None:
+    missing_type_transport = FakeTransport(token={"access_token": ACCESS_TOKEN})
+    missing_type_path = tmp_path / "missing-token-type"
+    service, storage, _flows, _transport, established, _clock = make_service(
+        missing_type_path, transport=missing_type_transport
+    )
+    state, cookie, _started = start(service, established.context)
+    with pytest.raises(GitHubLinkProviderRejectedError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
+    assert storage.read_external_identity("github", "123456") is None
+
     bad_transport = FakeTransport(
         profile={"id": 9223372036854775808, "login": "mario"}
     )
