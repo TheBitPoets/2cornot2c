@@ -21,6 +21,20 @@ Prima di qualsiasi scrittura, il preflight verifica:
 Le misure non disponibili producono un avviso; una misura sotto soglia blocca
 il piano prima del primo comando di installazione.
 
+## Messaggi per gli studenti
+
+Gli errori mostrati dalla procedura usano un catalogo stabile:
+
+- titolo `ERRORE Exx` in rosso;
+- spiegazione e azioni in giallo;
+- codice breve da comunicare al docente;
+- dettaglio tecnico separato.
+
+Il catalogo Python è in `installer/student_errors.py`. Gli script PowerShell
+usano la stessa convenzione durante bootstrap, aggiornamento e disinstallazione.
+Gli studenti non vengono invitati a disattivare protezioni o modificare da soli
+il BIOS; il caso `E03` chiede espressamente l'aiuto di un adulto o del docente.
+
 ## Bootstrap monocomando
 
 Su macOS Apple Silicon:

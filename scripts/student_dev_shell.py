@@ -15,6 +15,8 @@ except ModuleNotFoundError:  # Esecuzione diretta: python scripts/student_dev_sh
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from installer import student_dev
 
+from installer.student_errors import ERRORS, print_error
+
 
 def image_reference() -> str:
     """Restituisce il riferimento GHCR immutabile verificato."""
@@ -80,16 +82,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         command = docker_command(workspace=args.workspace, memory=args.memory)
     except (OSError, ValueError, student_dev.StudentDevLockError) as error:
-        print(f"Ambiente student-dev non disponibile: {error}")
+        print_error(ERRORS["student-security"], str(error))
         return 1
     if args.print_command:
         print(shlex.join(command))
         return 0
     try:
-        return subprocess.run(command, check=False).returncode
+        returncode = subprocess.run(command, check=False).returncode
     except FileNotFoundError:
-        print("Docker non è installato o non è disponibile nel PATH.")
+        print_error(ERRORS["docker-command"])
         return 1
+    if returncode != 0:
+        print_error(ERRORS["container"], f"docker exit code {returncode}")
+    return returncode
 
 
 if __name__ == "__main__":

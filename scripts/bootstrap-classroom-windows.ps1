@@ -26,9 +26,30 @@ if (Test-Path $StatePath) {
 }
 
 function Stop-WithMessage {
-    param([string]$Message)
+    param(
+        [string]$Code,
+        [string]$Title,
+        [string]$Explanation,
+        [string[]]$Actions = @(),
+        [string]$Technical = ""
+    )
     Write-Host ""
-    Write-Host "ERRORE: $Message" -ForegroundColor Red
+    Write-Host "ERRORE $Code - $Title" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "COSA SIGNIFICA" -ForegroundColor Yellow
+    Write-Host $Explanation -ForegroundColor Yellow
+    if ($Actions.Count -gt 0) {
+        Write-Host ""
+        Write-Host "COSA DEVI FARE" -ForegroundColor Yellow
+        for ($Index = 0; $Index -lt $Actions.Count; $Index++) {
+            Write-Host "$($Index + 1). $($Actions[$Index])" -ForegroundColor Yellow
+        }
+    }
+    Write-Host ""
+    Write-Host "Se chiedi aiuto, comunica questo codice: $Code" -ForegroundColor Yellow
+    if ($Technical) {
+        Write-Host "Dettagli tecnici: $Technical" -ForegroundColor DarkGray
+    }
     exit 1
 }
 
@@ -37,7 +58,13 @@ function Install-WingetPackage {
     winget install --id $Id --exact --silent `
         --accept-package-agreements --accept-source-agreements
     if ($LASTEXITCODE -ne 0) {
-        Stop-WithMessage "Installazione non riuscita: $Id"
+        Stop-WithMessage "E09" "Installazione di $Id non riuscita" `
+            "Windows ha interrotto o rifiutato l'installazione. Non devi ricominciare da zero." `
+            @(
+                "Controlla se Windows aspetta una conferma e scegli Si."
+                "Rilancia lo stesso comando: i componenti presenti saranno saltati."
+                "Se ricompare, comunica E09 al docente."
+            ) "winget exit code $LASTEXITCODE"
     }
     if (-not $InstalledByBootstrap.Contains($Id)) {
         $InstalledByBootstrap.Add($Id)
@@ -65,10 +92,21 @@ function Test-HostResources {
             1
         )
     } catch {
-        Stop-WithMessage "Impossibile misurare la RAM: $($_.Exception.Message)"
+        Stop-WithMessage "E06" "Non riesco a controllare la memoria del computer" `
+            "Windows non ha permesso alla procedura di leggere la RAM. Non e stato modificato nulla." `
+            @(
+                "Chiudi PowerShell e riaprilo."
+                "Rilancia lo stesso comando."
+                "Se ricompare, comunica E06 al docente."
+            ) $_.Exception.Message
     }
     if ($MemoryGiB -lt 4) {
-        Stop-WithMessage "RAM insufficiente: $MemoryGiB GiB; minimo 4 GiB."
+        Stop-WithMessage "E02" "Il computer non ha abbastanza memoria RAM" `
+            "La RAM e lo spazio di lavoro temporaneo del computer. Docker richiede almeno 4 GiB." `
+            @(
+                "Chiudi gli altri programmi e riprova."
+                "Se l'errore rimane, comunica E02 al docente."
+            ) "RAM trovata: $MemoryGiB GiB; necessaria: 4 GiB"
     }
 
     $FullInstallDir = [IO.Path]::GetFullPath($InstallDir)
@@ -77,21 +115,32 @@ function Test-HostResources {
     $Drive = Get-PSDrive -Name $DriveName
     $FreeGiB = [math]::Round([double]$Drive.Free / 1GB, 1)
     if ($FreeGiB -lt 3) {
-        Stop-WithMessage (
-            "Spazio insufficiente per il bootstrap: $FreeGiB GiB; minimo 3 GiB."
-        )
+        Stop-WithMessage "E05" "Non c'e abbastanza spazio libero sul disco" `
+            "Il disco conserva programmi ed esercizi. Per iniziare servono almeno 3 GiB liberi; Docker ne richiedera 8 e una VM 20." `
+            @(
+                "Svuota il Cestino o sposta file personali su un altro disco."
+                "Non cancellare file che non riconosci."
+                "Rilancia il comando."
+            ) "Spazio disponibile: $FreeGiB GiB; necessario ora: 3 GiB"
     }
 
     try {
         $Virtualization = Get-CimInstance Win32_Processor |
             Select-Object -First 1 -ExpandProperty VirtualizationFirmwareEnabled
         if ($Virtualization -eq $false) {
-            Stop-WithMessage (
-                "Virtualizzazione hardware disabilitata. Abilitala nel BIOS/UEFI."
-            )
+            Stop-WithMessage "E03" "La virtualizzazione del computer e disabilitata" `
+                "Docker e le macchine virtuali hanno bisogno di questa funzione. Il computer probabilmente la possiede, ma e spenta. Non hai rotto nulla." `
+                @(
+                    "Premi Ctrl+Maiusc+Esc, apri Prestazioni e poi CPU."
+                    "Controlla se accanto a Virtualizzazione compare Disabilitata."
+                    "Non cambiare il BIOS da solo: chiedi a un adulto o al docente e comunica E03 e il modello del computer."
+                )
         }
     } catch {
-        Write-Warning "Virtualizzazione non verificabile automaticamente."
+        Write-Host "AVVISO W04 - Virtualizzazione non verificabile automaticamente." `
+            -ForegroundColor Yellow
+        Write-Host "Puoi continuare. Se Docker non parte, comunica W04 al docente." `
+            -ForegroundColor Yellow
     }
 
     try {
@@ -99,7 +148,13 @@ function Test-HostResources {
             "https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/README.md" |
             Out-Null
     } catch {
-        Stop-WithMessage "GitHub non raggiungibile. Controlla la connessione."
+        Stop-WithMessage "E07" "Non riesco a collegarmi al server di download" `
+            "La procedura ha bisogno di Internet. L'antivirus o la rete potrebbero bloccare GitHub." `
+            @(
+                "Controlla con il browser che Internet funzioni."
+                "Non disattivare l'antivirus."
+                "Riprova; se ricompare, comunica E07 al docente."
+            ) $_.Exception.Message
     }
 
     Write-Host "RAM: $MemoryGiB GiB"
@@ -112,10 +167,21 @@ function Test-HostResources {
 }
 
 if (-not [Environment]::Is64BitOperatingSystem) {
-    Stop-WithMessage "È richiesto Windows 10/11 a 64 bit."
+    Stop-WithMessage "E01" "Serve Windows 10 o Windows 11 a 64 bit" `
+        "Questo computer usa una versione di Windows non compatibile. Non hai sbagliato nulla." `
+        @(
+            "Apri Impostazioni, Sistema, Informazioni."
+            "Fai una foto della voce Tipo sistema e mostrala al docente."
+        )
 }
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-    Stop-WithMessage "Windows Package Manager (winget) non è disponibile."
+    Stop-WithMessage "E08" "Il programma di installazione di Windows non e disponibile" `
+        "winget e lo strumento ufficiale che Windows usa per installare le applicazioni." `
+        @(
+            "Apri Microsoft Store."
+            "Cerca App Installer di Microsoft e installalo o aggiornalo."
+            "Chiudi e riapri PowerShell, poi rilancia il comando."
+        )
 }
 
 Write-Host "Bootstrap ambiente didattico 2cornot2c"
@@ -140,24 +206,44 @@ $env:Path = @(
 ) -join [IO.Path]::PathSeparator
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Stop-WithMessage "Git non è disponibile. Riavvia Windows e riprova."
+    Stop-WithMessage "E10" "Git e installato ma Windows non riesce ancora a trovarlo" `
+        "A volte Windows riconosce un nuovo programma solamente dopo un riavvio." `
+        @("Riavvia Windows."; "Riapri PowerShell e rilancia lo stesso comando.")
 }
 if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
-    Stop-WithMessage "Python Launcher non è disponibile. Riavvia Windows e riprova."
+    Stop-WithMessage "E10" "Python e installato ma Windows non riesce ancora a trovarlo" `
+        "A volte Windows riconosce un nuovo programma solamente dopo un riavvio." `
+        @("Riavvia Windows."; "Riapri PowerShell e rilancia lo stesso comando.")
 }
 
 Write-Host "[2/4] Preparazione repository..."
 if (Test-Path (Join-Path $InstallDir ".git")) {
     git -C $InstallDir pull --ff-only
     if ($LASTEXITCODE -ne 0) {
-        Stop-WithMessage "Aggiornamento repository non riuscito."
+        Stop-WithMessage "E13" "Non posso aggiornare il progetto in sicurezza" `
+            "La rete potrebbe essere assente oppure alcuni file potrebbero essere stati modificati. Ho fermato tutto per non perdere il tuo lavoro." `
+            @(
+                "Non cancellare la cartella e non usare comandi Git trovati su Internet."
+                "Controlla Internet."
+                "Se l'errore rimane, comunica E13 al docente."
+            ) "git pull exit code $LASTEXITCODE"
     }
 } elseif (Test-Path $InstallDir) {
-    Stop-WithMessage "La directory esiste ma non è un repository Git: $InstallDir"
+    Stop-WithMessage "E11" "La cartella 2cornot2c e gia occupata" `
+        "La cartella esiste ma non contiene il nostro ambiente. Per sicurezza non verra modificata o cancellata." `
+        @(
+            "Rinomina la cartella in 2cornot2c-vecchia oppure chiedi al docente di controllarla."
+            "Rilancia il comando."
+        ) $InstallDir
 } else {
     git clone $RepositoryUrl $InstallDir
     if ($LASTEXITCODE -ne 0) {
-        Stop-WithMessage "Clone repository non riuscito."
+        Stop-WithMessage "E12" "Non sono riuscito a scaricare l'ambiente 2cornot2c" `
+            "Il download e stato interrotto. Non cancellare manualmente una cartella rimasta incompleta." `
+            @(
+                "Controlla Internet e riprova."
+                "Se ricompare, comunica E12 al docente."
+            ) "git clone exit code $LASTEXITCODE"
     }
 }
 
@@ -165,13 +251,22 @@ Write-Host "[3/4] Preparazione interfaccia guidata..."
 $VenvDir = Join-Path $InstallDir ".installer-venv"
 & py -3.12 -m venv $VenvDir
 if ($LASTEXITCODE -ne 0) {
-    Stop-WithMessage "Creazione ambiente Python non riuscita."
+    Stop-WithMessage "E14" "Non sono riuscito a preparare l'interfaccia guidata" `
+        "Il progetto e stato scaricato, ma Python non ha preparato il menu. Il lavoro gia svolto non e perso." `
+        @("Riavvia Windows."; "Rilancia lo stesso comando."; "Se ricompare, comunica E14 al docente.") `
+        "venv exit code $LASTEXITCODE"
 }
 $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 & $VenvPython -m pip install --disable-pip-version-check `
     -r (Join-Path $InstallDir "requirements-utui.txt")
 if ($LASTEXITCODE -ne 0) {
-    Stop-WithMessage "Installazione uTUI non riuscita."
+    Stop-WithMessage "E15" "Non sono riuscito a installare il menu guidato" `
+        "Python funziona, ma non ha scaricato un componente del menu." `
+        @(
+            "Controlla Internet."
+            "Rilancia lo stesso comando."
+            "Se ricompare, comunica E15 al docente."
+        ) "pip exit code $LASTEXITCODE"
 }
 
 Write-Host "[4/4] Avvio procedura guidata..."
