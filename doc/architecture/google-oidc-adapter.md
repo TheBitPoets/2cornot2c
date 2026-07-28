@@ -42,7 +42,7 @@ State e nonce raw esistono soltanto nella URL consegnata al browser. Lo store co
 
 `InMemoryGoogleOidcFlowStore` è protetto da lock e consuma lo state con una singola `pop`: un solo callback concorrente può vincere. La scadenza è esclusiva (`now >= expires_at`). Errori provider con state valido consumano comunque il flow. Il cleanup riceve un cutoff esplicito; ogni creazione elimina inoltre i flow già scaduti e lo store impone un cap configurabile, evitando crescita non limitata dei verifier raw.
 
-Lo store è adatto al server MVP a processo singolo. Deployment multi-process richiederà uno store transazionale condiviso; non è ammesso usare sticky session come unica garanzia di replay protection. Il cap limita la memoria ma non sostituisce il controllo abuso: la futura route pubblica deve applicare rate limit per-client e globale, trusted-proxy-aware, prima di `begin_login()`; il requisito è tracciato in #549.
+Lo store è adatto al server MVP a processo singolo. Deployment multi-process richiederà uno store transazionale condiviso; non è ammesso usare sticky session come unica garanzia di replay protection. Il cap limita la memoria ma non sostituisce il controllo abuso: `GoogleOidcLoginAdmissionBoundary`, documentato in [auth-edge-rate-limiting.md](auth-edge-rate-limiting.md), applica rate limit atomici per-client e globali, trusted-proxy-aware, prima di `begin_login()`. La futura route concreta deve passare esclusivamente da quel boundary.
 
 ## Callback
 
@@ -95,4 +95,5 @@ I messaggi non includono valori OAuth raw o dettagli backend.
 - protezione dashboard;
 - persistenza flow multi-process;
 - GitHub linking;
-- TLS termination e deployment pubblico.
+- TLS termination e deployment pubblico;
+- wiring HTTP concreto del boundary edge e store rate-limit multi-host.
