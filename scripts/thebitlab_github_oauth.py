@@ -7,11 +7,13 @@ import hashlib
 import hmac
 import json
 import math
+import queue
 import re
 import secrets
 import subprocess
 import sys
 import threading
+import time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
@@ -262,6 +264,7 @@ except Exception:
 
 class UrllibGitHubOAuthTransport:
     _network_slots = threading.BoundedSemaphore(8)
+    _process_start_slots = threading.BoundedSemaphore(8)
 
     def __init__(self) -> None:
         self._process_factory = subprocess.Popen
@@ -271,10 +274,86 @@ class UrllibGitHubOAuthTransport:
         output = None
         process = None
         timed_out = False
+        deadline = time.monotonic() + timeout_seconds
         if not self._network_slots.acquire(blocking=False):
             request = None
             raise GitHubLinkProviderUnavailableError("GitHub non disponibile.")
         try:
+            if not self._process_start_slots.acquire(blocking=False):
+                raise GitHubLinkProviderUnavailableError(
+                    "GitHub non disponibile."
+                )
+            started: queue.Queue[object] = queue.Queue(maxsize=1)
+            abandoned = threading.Event()
+            handoff = threading.Lock()
+
+            def terminate_and_reap(candidate) -> None:
+                try:
+                    candidate.kill()
+                    candidate.communicate()
+                except Exception:
+                    pass
+
+            def start_process() -> None:
+                candidate = None
+                try:
+                    candidate = self._process_factory(
+                        [sys.executable, "-I", "-c", _URLLIB_WORKER],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL,
+                    )
+                except Exception:
+                    candidate = False
+                finally:
+                    self._process_start_slots.release()
+                with handoff:
+                    if abandoned.is_set():
+                        if candidate is not None and candidate is not False:
+                            threading.Thread(
+                                target=terminate_and_reap,
+                                args=(candidate,),
+                                name="thebitlab-github-oauth-reap",
+                                daemon=True,
+                            ).start()
+                        return
+                    started.put(candidate)
+
+            threading.Thread(
+                target=start_process,
+                name="thebitlab-github-oauth-start",
+                daemon=True,
+            ).start()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                with handoff:
+                    abandoned.set()
+                raise GitHubLinkProviderUnavailableError(
+                    "GitHub non disponibile."
+                )
+            try:
+                process = started.get(timeout=remaining)
+            except queue.Empty:
+                with handoff:
+                    abandoned.set()
+                    try:
+                        late_process = started.get_nowait()
+                    except queue.Empty:
+                        late_process = None
+                if late_process is not None and late_process is not False:
+                    threading.Thread(
+                        target=terminate_and_reap,
+                        args=(late_process,),
+                        name="thebitlab-github-oauth-reap",
+                        daemon=True,
+                    ).start()
+                raise GitHubLinkProviderUnavailableError(
+                    "GitHub non disponibile."
+                ) from None
+            if process is False or process is None:
+                raise GitHubLinkProviderUnavailableError(
+                    "GitHub non disponibile."
+                )
             serialized = json.dumps(
                 {
                     "url": request.full_url,
@@ -291,21 +370,24 @@ class UrllibGitHubOAuthTransport:
                 separators=(",", ":"),
             ).encode("utf-8")
             request = None
-            process = self._process_factory(
-                [sys.executable, "-I", "-c", _URLLIB_WORKER],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-            )
-            try:
-                output, _stderr = process.communicate(
-                    input=serialized, timeout=timeout_seconds
-                )
-            except subprocess.TimeoutExpired:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
                 timed_out = True
-                process.kill()
-                output, _stderr = process.communicate()
+            else:
+                try:
+                    output, _stderr = process.communicate(
+                        input=serialized, timeout=remaining
+                    )
+                except subprocess.TimeoutExpired:
+                    timed_out = True
             serialized = None
+            if timed_out:
+                threading.Thread(
+                    target=terminate_and_reap,
+                    args=(process,),
+                    name="thebitlab-github-oauth-reap",
+                    daemon=True,
+                ).start()
             if timed_out or process.returncode not in {0, 10}:
                 raise GitHubLinkProviderUnavailableError(
                     "GitHub non disponibile."
@@ -335,6 +417,7 @@ class UrllibGitHubOAuthTransport:
             output = None
             request = None
             process = None
+            deadline = 0.0
             self._network_slots.release()
 
     def exchange_code(self, *, form: Mapping[str, str], timeout_seconds: float, max_response_bytes: int) -> Mapping[str, object]:

@@ -185,6 +185,34 @@ def test_transport_enforces_overall_wall_clock_timeout(monkeypatch) -> None:
     assert time.monotonic() - started < 0.15
 
 
+def test_transport_deadline_includes_process_startup(monkeypatch) -> None:
+    class LateProcess:
+        returncode = -9
+
+        def communicate(self, *, input=None, timeout=None):
+            return b"", b""
+
+        def kill(self):
+            return None
+
+    transport = UrllibGitHubOAuthTransport()
+
+    def delayed_factory(*_args, **_kwargs):
+        time.sleep(0.12)
+        return LateProcess()
+
+    monkeypatch.setattr(transport, "_process_factory", delayed_factory)
+    started = time.monotonic()
+    with pytest.raises(GitHubLinkProviderUnavailableError):
+        transport._request(
+            urllib.request.Request("https://api.github.com/user"),
+            timeout_seconds=0.01,
+            max_response_bytes=1024,
+        )
+    assert time.monotonic() - started < 0.08
+    time.sleep(0.13)
+
+
 def test_begin_link_builds_browser_bound_state_and_pkce(tmp_path) -> None:
     service, _storage, flows, _transport, established, _clock = make_service(tmp_path)
     state, _cookie, result = start(service, established.context)
