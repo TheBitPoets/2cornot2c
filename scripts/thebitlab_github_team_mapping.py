@@ -20,7 +20,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 _MAX_GITHUB_SUBJECT = 9223372036854775807
-_MAX_TEAMS = 1000
+_MAX_TEAMS = 200
 _MAX_ATTEMPTS = 5
 
 
@@ -199,6 +199,7 @@ class GitHubTeamMappingStorage(Protocol):
         expected_identity_subject: str,
         expected_identity_linked_at: datetime,
         expected_mapping: ExternalGroupMapping,
+        expected_snapshot_group_keys: tuple[tuple[str, str], ...],
         expected_class_updated_at: datetime,
     ) -> None: ...
 
@@ -333,10 +334,21 @@ class GitHubPendingOnboardingService:
         directory: GitHubTeamDirectory,
         *,
         clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+        max_snapshot_age: timedelta = timedelta(minutes=2),
+        future_skew: timedelta = timedelta(seconds=30),
     ) -> None:
+        if (
+            type(max_snapshot_age) is not timedelta
+            or not timedelta(seconds=1) <= max_snapshot_age <= timedelta(minutes=10)
+            or type(future_skew) is not timedelta
+            or not timedelta(0) <= future_skew <= timedelta(minutes=2)
+        ):
+            raise GitHubTeamDirectoryRejectedError("Policy freschezza snapshot non valida.")
         self.storage = storage
         self.directory = directory
         self.clock = clock
+        self.max_snapshot_age = max_snapshot_age
+        self.future_skew = future_skew
 
     def reconcile(self, user_id: str) -> GitHubPendingOnboardingResult:
         account = self.storage.read_user(_text(user_id, "user_id"))
@@ -354,7 +366,7 @@ class GitHubPendingOnboardingService:
         identity = github_identities[0]
         try:
             snapshot = self.directory.read_complete_memberships(identity.subject)
-        except GitHubTeamDirectoryUnavailableError:
+        except (GitHubTeamDirectoryUnavailableError, GitHubTeamDirectoryRejectedError):
             raise
         except Exception as error:
             raise GitHubTeamDirectoryUnavailableError(
@@ -362,6 +374,13 @@ class GitHubPendingOnboardingService:
             ) from error
         if type(snapshot) is not GitHubTeamMembershipSnapshot or snapshot.user_subject != identity.subject:
             raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non correlato all'utente.")
+        validation_now = _utc(self.clock())
+        if (
+            snapshot.captured_at < identity.linked_at
+            or snapshot.captured_at <= validation_now - self.max_snapshot_age
+            or snapshot.captured_at > validation_now + self.future_skew
+        ):
+            raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non fresco.")
 
         mapped: list[ExternalGroupMapping] = []
         for team in snapshot.teams:
@@ -392,6 +411,10 @@ class GitHubPendingOnboardingService:
                 expected_identity_subject=identity.subject,
                 expected_identity_linked_at=identity.linked_at,
                 expected_mapping=mapping,
+                expected_snapshot_group_keys=tuple(
+                    (team.organization_subject, team.team_subject)
+                    for team in snapshot.teams
+                ),
                 expected_class_updated_at=class_group.updated_at,
             )
         except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:

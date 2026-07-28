@@ -19,6 +19,7 @@ from scripts.thebitlab_github_team_mapping import (
 from scripts.thebitlab_identity import (
     ClassGroup,
     ClassMembership,
+    ExternalGroupMapping,
     ExternalIdentity,
     UserAccount,
 )
@@ -111,6 +112,15 @@ def test_mapping_rejects_non_admin_inactive_class_and_reassignment(setup) -> Non
         service.save_mapping("admin-01", "class-02", "1001", "3003")
 
 
+def test_legacy_mapping_writes_also_reserve_aba_tombstone(setup) -> None:
+    storage, service, _clock = setup
+    legacy = ExternalGroupMapping("github", "1001", "2002", "class-01", NOW)
+    storage.save_external_group_mapping(legacy)
+    storage.delete_external_group_mapping("github", "1001", "2002")
+    relinked = service.save_mapping("admin-01", "class-01", "1001", "2002")
+    assert relinked.created_at == NOW + timedelta(microseconds=1)
+
+
 def test_admin_revision_race_cannot_create_mapping(setup, monkeypatch) -> None:
     storage, service, _clock = setup
     original = storage.save_external_group_mapping_for_admin
@@ -180,6 +190,22 @@ def test_zero_or_multiple_mapped_teams_remain_pending_without_partial_membership
     assert storage.list_user_memberships("pending-01") == []
 
 
+def test_stale_snapshot_never_onboards_pending_user(setup) -> None:
+    storage, mappings, _clock = setup
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    stale = GitHubTeamMembershipSnapshot(
+        "123456",
+        (GitHubTeamMembership("1001", "2002"),),
+        NOW - timedelta(minutes=3),
+    )
+    directory = FakeGitHubTeamDirectory({"123456": stale})
+    with pytest.raises(GitHubTeamDirectoryRejectedError):
+        GitHubPendingOnboardingService(storage, directory, clock=lambda: NOW).reconcile(
+            "pending-01"
+        )
+    assert storage.read_user("pending-01").role == "pending"
+
+
 def test_provider_unavailable_or_mismatched_snapshot_never_mutates_user(setup) -> None:
     storage, mappings, _clock = setup
     mappings.save_mapping("admin-01", "class-01", "1001", "2002")
@@ -187,11 +213,52 @@ def test_provider_unavailable_or_mismatched_snapshot_never_mutates_user(setup) -
     with pytest.raises(GitHubTeamDirectoryUnavailableError):
         GitHubPendingOnboardingService(storage, unavailable).reconcile("pending-01")
 
+    class RejectingDirectory:
+        def read_complete_memberships(self, _subject):
+            raise GitHubTeamDirectoryRejectedError("malformed")
+
+    with pytest.raises(GitHubTeamDirectoryRejectedError):
+        GitHubPendingOnboardingService(storage, RejectingDirectory()).reconcile(
+            "pending-01"
+        )
+
     mismatched = FakeGitHubTeamDirectory(
         {"123456": snapshot("654321", GitHubTeamMembership("1001", "2002"))}
     )
     with pytest.raises(GitHubTeamDirectoryRejectedError):
         GitHubPendingOnboardingService(storage, mismatched).reconcile("pending-01")
+    assert storage.read_user("pending-01").role == "pending"
+    assert storage.list_user_memberships("pending-01") == []
+
+
+def test_second_team_mapped_during_onboarding_blocks_promotion(
+    setup, monkeypatch
+) -> None:
+    storage, mappings, _clock = setup
+    storage.create_class(class_group("class-02"))
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    directory = FakeGitHubTeamDirectory(
+        {
+            "123456": snapshot(
+                "123456",
+                GitHubTeamMembership("1001", "2002"),
+                GitHubTeamMembership("1001", "3003"),
+            )
+        }
+    )
+    original = storage.onboard_pending_user_from_external_group
+
+    def map_second_then_onboard(*args, **kwargs):
+        mappings.save_mapping("admin-01", "class-02", "1001", "3003")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "onboard_pending_user_from_external_group", map_second_then_onboard
+    )
+    with pytest.raises(GitHubTeamMappingConflictError):
+        GitHubPendingOnboardingService(storage, directory, clock=lambda: NOW).reconcile(
+            "pending-01"
+        )
     assert storage.read_user("pending-01").role == "pending"
     assert storage.list_user_memberships("pending-01") == []
 

@@ -214,6 +214,7 @@ class ClassDirectoryStorage(Protocol):
         expected_identity_subject: str,
         expected_identity_linked_at: datetime,
         expected_mapping: ExternalGroupMapping,
+        expected_snapshot_group_keys: tuple[tuple[str, str], ...],
         expected_class_updated_at: datetime,
     ) -> None: ...
 

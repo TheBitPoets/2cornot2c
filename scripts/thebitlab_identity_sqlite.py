@@ -1107,23 +1107,44 @@ class SqliteIdentityStorage:
             return cursor.rowcount == 1
 
     def save_external_group_mapping(self, mapping: ExternalGroupMapping) -> None:
+        created_at = _encode_datetime(mapping.created_at, "created_at")
         with self._transaction("save_external_group_mapping") as connection:
-            cursor = connection.execute(
+            existing = connection.execute(
                 """
-                INSERT INTO external_group_mappings VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(provider, organization_subject, group_subject) DO UPDATE SET
-                    display_name = excluded.display_name
-                WHERE external_group_mappings.class_id = excluded.class_id
+                SELECT class_id, created_at FROM external_group_mappings
+                WHERE provider = ? AND organization_subject = ? AND group_subject = ?
                 """,
-                (
-                    mapping.provider,
-                    mapping.organization_subject,
-                    mapping.group_subject,
-                    mapping.class_id,
-                    _encode_datetime(mapping.created_at, "created_at"),
-                    mapping.display_name,
-                ),
-            )
+                mapping.provider_key,
+            ).fetchone()
+            if existing is None:
+                self._reserve_external_group_mapping_generation(
+                    connection, mapping, created_at
+                )
+                cursor = connection.execute(
+                    """
+                    INSERT INTO external_group_mappings VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        *mapping.provider_key,
+                        mapping.class_id,
+                        created_at,
+                        mapping.display_name,
+                    ),
+                )
+            else:
+                cursor = connection.execute(
+                    """
+                    UPDATE external_group_mappings SET display_name = ?
+                    WHERE provider = ? AND organization_subject = ? AND group_subject = ?
+                        AND class_id = ? AND created_at = ?
+                    """,
+                    (
+                        mapping.display_name,
+                        *mapping.provider_key,
+                        mapping.class_id,
+                        existing["created_at"],
+                    ),
+                )
             if cursor.rowcount != 1:
                 raise IdentityStorageConflictError(
                     "Il gruppo provider e gia associato a una classe diversa."
@@ -1368,8 +1389,25 @@ class SqliteIdentityStorage:
         expected_identity_subject: str,
         expected_identity_linked_at: datetime,
         expected_mapping: ExternalGroupMapping,
+        expected_snapshot_group_keys: tuple[tuple[str, str], ...],
         expected_class_updated_at: datetime,
     ) -> None:
+        if (
+            type(expected_snapshot_group_keys) is not tuple
+            or not expected_snapshot_group_keys
+            or any(
+                type(key) is not tuple
+                or len(key) != 2
+                or any(type(value) is not str or not value for value in key)
+                for key in expected_snapshot_group_keys
+            )
+            or len(expected_snapshot_group_keys) != len(set(expected_snapshot_group_keys))
+            or expected_mapping.provider != "github"
+            or membership.source_provider != "github"
+            or membership.class_id != expected_mapping.class_id
+            or membership.source_group_subject != expected_mapping.group_subject
+        ):
+            raise IdentityStorageError("Snapshot gruppi onboarding non valido.")
         joined_at = _encode_datetime(membership.joined_at, "joined_at")
         user_revision = _encode_datetime(
             expected_user_updated_at, "expected_user_updated_at"
@@ -1386,6 +1424,40 @@ class SqliteIdentityStorage:
         with self._transaction(
             "onboard_pending_user_from_external_group"
         ) as connection:
+            connection.execute(
+                """
+                CREATE TEMP TABLE onboarding_expected_groups (
+                    organization_subject TEXT NOT NULL,
+                    group_subject TEXT NOT NULL,
+                    PRIMARY KEY (organization_subject, group_subject)
+                )
+                """
+            )
+            connection.executemany(
+                "INSERT INTO onboarding_expected_groups VALUES (?, ?)",
+                expected_snapshot_group_keys,
+            )
+            mapped_rows = connection.execute(
+                """
+                SELECT mappings.organization_subject, mappings.group_subject,
+                       mappings.class_id, mappings.created_at
+                FROM external_group_mappings AS mappings
+                INNER JOIN onboarding_expected_groups AS expected
+                    ON expected.organization_subject = mappings.organization_subject
+                    AND expected.group_subject = mappings.group_subject
+                WHERE mappings.provider = 'github'
+                """
+            ).fetchall()
+            expected_row = (
+                expected_mapping.organization_subject,
+                expected_mapping.group_subject,
+                expected_mapping.class_id,
+                mapping_generation,
+            )
+            if len(mapped_rows) != 1 or tuple(mapped_rows[0]) != expected_row:
+                raise IdentityStorageConflictError(
+                    "Insieme mapping GitHub modificato durante onboarding."
+                )
             cursor = connection.execute(
                 """
                 UPDATE users SET role = 'student', updated_at = ?
