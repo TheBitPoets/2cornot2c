@@ -35,6 +35,7 @@ _COOKIE_PREFIX = "__Host-thebitlab_github_link-"
 _UNRESERVED_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{10,256}$")
 _MAX_COOKIE_HEADER_BYTES = 4096
+_MAX_WORKER_INPUT_BYTES = 3072
 
 
 class GitHubLinkError(RuntimeError):
@@ -129,14 +130,15 @@ class GitHubOAuthConfig:
             raise ValueError
         if (
             type(self.client_secret) is not str
-            or not 1 <= len(self.client_secret) <= 2048
-            or any(ord(character) < 0x20 for character in self.client_secret)
+            or not 20 <= len(self.client_secret) <= 256
+            or _UNRESERVED_RE.fullmatch(self.client_secret) is None
         ):
             raise ValueError
         parsed = urllib.parse.urlsplit(self.redirect_uri) if type(self.redirect_uri) is str else None
         if (
             parsed is None
             or parsed.scheme != "https"
+            or not 1 <= len(self.redirect_uri) <= 512
             or not parsed.hostname
             or parsed.username is not None
             or parsed.password is not None
@@ -421,6 +423,10 @@ class UrllibGitHubOAuthTransport:
                 separators=(",", ":"),
             ).encode("utf-8")
             request = None
+            if len(serialized) > _MAX_WORKER_INPUT_BYTES:
+                raise GitHubLinkProviderUnavailableError(
+                    "Richiesta GitHub troppo grande."
+                )
             remaining = deadline - time.monotonic()
             timed_out = remaining <= 0
             if not timed_out:
@@ -723,7 +729,14 @@ class GitHubAccountLinkService:
             type(state) is not str
             or not 32 <= len(state) <= 256
             or _UNRESERVED_RE.fullmatch(state) is None
-            or (not provider_error and (type(code) is not str or not code))
+            or (
+                not provider_error
+                and (
+                    type(code) is not str
+                    or not 1 <= len(code) <= 512
+                    or _UNRESERVED_RE.fullmatch(code) is None
+                )
+            )
         ):
             raise GitHubLinkCallbackError("Callback GitHub non valido.")
         return code or "", state, provider_error
@@ -804,8 +817,8 @@ class GitHubAccountLinkService:
             token_type = token_response.get("token_type") if isinstance(token_response, Mapping) else None
             if (
                 type(access_token) is not str
-                or not 20 <= len(access_token) <= 2048
-                or any(ord(character) < 0x21 for character in access_token)
+                or not 20 <= len(access_token) <= 512
+                or _UNRESERVED_RE.fullmatch(access_token) is None
                 or type(token_type) is not str
                 or token_type.lower() != "bearer"
             ):

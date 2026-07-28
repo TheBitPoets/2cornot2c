@@ -189,6 +189,43 @@ def test_transport_enforces_overall_wall_clock_timeout(monkeypatch) -> None:
     assert time.monotonic() - started < 0.15
 
 
+def test_transport_rejects_oversized_worker_input_before_pipe_write(
+    monkeypatch,
+) -> None:
+    class WaitingProcess:
+        returncode = None
+        killed = False
+        input_writes = 0
+
+        def communicate(self, *, input=None, timeout=None):
+            if input is not None:
+                self.input_writes += 1
+            return b"", b""
+
+        def kill(self):
+            self.killed = True
+
+    transport = UrllibGitHubOAuthTransport()
+    process = WaitingProcess()
+    monkeypatch.setattr(
+        transport, "_process_factory", lambda *_args, **_kwargs: process
+    )
+    with pytest.raises(GitHubLinkProviderUnavailableError):
+        transport._request(
+            urllib.request.Request(
+                "https://api.github.com/user", data=b"x" * 5000, method="POST"
+            ),
+            timeout_seconds=0.02,
+            max_response_bytes=1024,
+        )
+    for _attempt in range(50):
+        if process.killed:
+            break
+        time.sleep(0.002)
+    assert process.killed is True
+    assert process.input_writes == 0
+
+
 def test_transport_pipe_failure_transfers_process_to_bounded_cleanup(
     monkeypatch,
 ) -> None:
@@ -404,12 +441,16 @@ def test_wrong_cookie_or_session_does_not_consume_flow(tmp_path) -> None:
 
 def test_non_ascii_callback_state_is_a_client_error(tmp_path) -> None:
     service, _storage, _flows, _transport, established, _clock = make_service(tmp_path)
-    with pytest.raises(GitHubLinkCallbackError):
-        service.complete_link(
-            {"code": ["authorization-code"], "state": ["é" * 32]},
-            cookie_header="invalid=cookie",
-            context=established.context,
-        )
+    for parameters in (
+        {"code": ["authorization-code"], "state": ["é" * 32]},
+        {"code": ["x" * 513], "state": [STATE]},
+    ):
+        with pytest.raises(GitHubLinkCallbackError):
+            service.complete_link(
+                parameters,
+                cookie_header="invalid=cookie",
+                context=established.context,
+            )
 
 
 def test_unicode_cookie_is_a_state_error(tmp_path) -> None:
