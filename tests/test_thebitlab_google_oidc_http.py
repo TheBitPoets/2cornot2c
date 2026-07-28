@@ -512,7 +512,8 @@ def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
         unsupported = {
             method: exchange(method, "/auth/google/login")
             for method in (
-                "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE", "CONNECT"
+                "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE", "CONNECT",
+                "PROPFIND",
             )
         }
     finally:
@@ -525,7 +526,8 @@ def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
     assert unsupported == {
         method: (405, "GET")
         for method in (
-            "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE", "CONNECT"
+            "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE", "CONNECT",
+            "PROPFIND",
         )
     }
     assert callback.calls == 0

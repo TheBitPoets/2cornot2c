@@ -3269,6 +3269,11 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
+    def __getattr__(self, name):
+        if type(name) is str and name.startswith("do_"):
+            return self.do_unsupported_auth_method
+        raise AttributeError(name)
+
     def _is_google_auth_request_line(self) -> bool:
         path = str(getattr(self, "path", ""))
         requestline = str(getattr(self, "requestline", ""))

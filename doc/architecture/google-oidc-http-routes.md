@@ -67,7 +67,7 @@ Redirect e cookie adapter sono bounded e rifiutano controlli/header injection. I
 
 ## Integrazione Course Board
 
-`CourseBoardHandler` costruisce `EdgeRequestMetadata` dal peer TCP e da `HTTPMessage.raw_items()`, preservando header duplicati. La delega avviene prima dell'autenticazione Basic legacy, così le route pubbliche non vengono scambiate per API docente. GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS, TRACE e CONNECT verso path Google esatti passano dallo stesso router; metodi non consentiti ricevono 405 e `Allow: GET`. Query/fragments sovradimensionati o malformati vengono classificati 400 già durante la costruzione della request transport, non 503.
+`CourseBoardHandler` costruisce `EdgeRequestMetadata` dal peer TCP e da `HTTPMessage.raw_items()`, preservando header duplicati. La delega avviene prima dell'autenticazione Basic legacy, così le route pubbliche non vengono scambiate per API docente. Qualunque metodo verso path Google esatti passa dallo stesso router: oltre ai metodi comuni, un fallback dinamico `do_*` copre estensioni come WebDAV `PROPFIND`. Ogni metodo diverso da GET riceve 405 e `Allow: GET`. Query/fragments sovradimensionati o malformati vengono classificati 400 già durante la costruzione della request transport, non 503.
 
 La composizione runtime deve costruire e iniettare:
 
