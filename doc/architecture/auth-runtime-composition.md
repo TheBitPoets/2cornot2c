@@ -43,7 +43,8 @@ python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_b
 5. flow OIDC bounded in memoria, transport Google HTTPS e verifier ufficiale X.509-only;
 6. `SqliteAtomicRateLimitStore` sullo stesso file, condivisibile fra processi dello stesso host;
 7. un solo `TrustedProxyClientResolver`, condiviso fra attribuzione client e verifica HTTPS;
-8. `GoogleOidcHttpRoutes` con lo stesso boundary sessione usato dal callback e dal delivery cleanup.
+8. `GoogleOidcHttpRoutes` con lo stesso boundary sessione usato dal callback e dal delivery cleanup;
+9. `SessionHttpRoutes` per session status/logout, vincolato allo stesso boundary web e allo stesso resolver proxy.
 
 Il flow OIDC resta volutamente in memoria: un callback deve raggiungere lo stesso processo che ha iniziato il login. Un deployment multi-replica richiede sticky routing oppure un futuro flow store condiviso.
 

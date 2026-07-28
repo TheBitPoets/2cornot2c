@@ -67,6 +67,8 @@ def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> Non
     assert routes.admission.login is login
     assert routes.proxy_resolver is routes.admission.resolver
     assert routes.session_discarder is login.http_sessions
+    assert runtime.session_routes.sessions is login.http_sessions
+    assert runtime.session_routes.proxy_resolver is routes.proxy_resolver
     assert login.http_sessions.sessions.audience == "web"
     assert routes.session_cookie_policy.name == "__Host-thebitlab_session"
     assert routes.session_cookie_policy.secure is True
@@ -293,7 +295,7 @@ def test_course_board_main_requires_explicit_google_auth_opt_in(
 ) -> None:
     from scripts import course_board_server
 
-    runtime = SimpleNamespace(routes=object())
+    runtime = SimpleNamespace(routes=object(), session_routes=object())
     composition_calls = []
     servers = []
 
@@ -345,7 +347,9 @@ def test_course_board_main_requires_explicit_google_auth_opt_in(
         assert len(composition_calls) == 1
         assert servers[0].google_oidc_runtime is runtime
         assert servers[0].google_oidc_http_routes is runtime.routes
+        assert servers[0].session_http_routes is runtime.session_routes
     else:
         assert composition_calls == []
         assert not hasattr(servers[0], "google_oidc_runtime")
         assert not hasattr(servers[0], "google_oidc_http_routes")
+        assert not hasattr(servers[0], "session_http_routes")

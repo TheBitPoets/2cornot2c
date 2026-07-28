@@ -1,0 +1,299 @@
+from __future__ import annotations
+
+import http.client
+import json
+import socket
+import threading
+from datetime import datetime, timezone
+
+import pytest
+
+from scripts.thebitlab_auth_services import SessionService
+from scripts.thebitlab_edge_rate_limit import EdgeRequestMetadata, TrustedProxyClientResolver
+from scripts.thebitlab_http_auth import HttpSessionAuthBoundary, SessionCookiePolicy
+from scripts.thebitlab_identity import UserAccount
+from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
+from scripts.course_board_server import BoundedThreadingHTTPServer, CourseBoardHandler
+from scripts.thebitlab_session_http import SessionHttpRequest, SessionHttpRoutes
+
+NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
+
+
+class SequenceFactory:
+    def __init__(self, *values):
+        self.values = iter(values)
+
+    def __call__(self):
+        return next(self.values)
+
+
+def account(role="student"):
+    return UserAccount(
+        user_id="user-01",
+        display_name="Mario Rossi",
+        role=role,
+        active=True,
+        created_at=NOW,
+        updated_at=NOW,
+        primary_email="private@example.test",
+    )
+
+
+@pytest.fixture
+def graph(tmp_path):
+    storage = SqliteIdentityStorage(tmp_path / "identity.sqlite3", clock=lambda: NOW)
+    storage.create_user(account())
+    sessions = SessionService(
+        storage,
+        clock=lambda: NOW,
+        token_factory=SequenceFactory("A" * 40),
+        session_id_factory=SequenceFactory("session-01"),
+    )
+    boundary = HttpSessionAuthBoundary(
+        sessions,
+        csrf_secret=b"c" * 32,
+        cookie_policy=SessionCookiePolicy(),
+        clock=lambda: NOW,
+    )
+    routes = SessionHttpRoutes(
+        boundary,
+        TrustedProxyClientResolver(("127.0.0.1/32",)),
+    )
+    established = boundary.establish_session("user-01")
+    return storage, boundary, routes, established
+
+
+def edge(*headers):
+    return EdgeRequestMetadata(
+        "127.0.0.1",
+        (("X-Forwarded-Proto", "https"),) + tuple(headers),
+    )
+
+
+def cookie(established):
+    return established.set_cookie.split(";", 1)[0]
+
+
+def request(method, path, *headers, query=""):
+    return SessionHttpRequest(method, path, query, edge(*headers))
+
+
+def header(response, name):
+    values = [value for key, value in response.headers if key.lower() == name.lower()]
+    return values[0] if len(values) == 1 else values
+
+
+def test_current_session_returns_minimal_snapshot_and_csrf(graph) -> None:
+    _storage, _boundary, routes, established = graph
+
+    response = routes.dispatch(
+        request("GET", "/auth/session", ("Cookie", cookie(established)))
+    )
+
+    assert response.status_code == 200
+    payload = json.loads(response.body)
+    assert payload == {
+        "authenticated": True,
+        "user": {
+            "user_id": "user-01",
+            "display_name": "Mario Rossi",
+            "role": "student",
+        },
+        "session": {"expires_at": "2026-09-01T16:00:00.000000Z"},
+        "csrf_token": established.context.csrf_token,
+    }
+    assert "private@example.test" not in response.body.decode("utf-8")
+    assert header(response, "Cache-Control") == "no-store"
+    assert header(response, "Referrer-Policy") == "no-referrer"
+    assert established.context.csrf_token not in repr(response)
+    assert cookie(established) not in repr(response)
+
+
+def test_logout_requires_csrf_revokes_session_and_clears_cookie(graph) -> None:
+    _storage, _boundary, routes, established = graph
+    browser_cookie = cookie(established)
+
+    rejected = routes.dispatch(
+        request("POST", "/auth/logout", ("Cookie", browser_cookie))
+    )
+    logged_out = routes.dispatch(
+        request(
+            "POST",
+            "/auth/logout",
+            ("Cookie", browser_cookie),
+            ("X-CSRF-Token", established.context.csrf_token),
+        )
+    )
+    after = routes.dispatch(
+        request("GET", "/auth/session", ("Cookie", browser_cookie))
+    )
+
+    assert rejected.status_code == 403
+    assert json.loads(rejected.body)["error"] == "csrf_rejected"
+    assert logged_out.status_code == 204
+    assert logged_out.body == b""
+    cleared = header(logged_out, "Set-Cookie")
+    assert cleared.startswith("__Host-thebitlab_session=;")
+    assert "Max-Age=0" in cleared
+    assert "Secure" in cleared and "HttpOnly" in cleared
+    assert after.status_code == 401
+
+
+def test_logout_clears_well_formed_stale_cookie_without_csrf_oracle(graph) -> None:
+    _storage, _boundary, routes, _established = graph
+    stale_cookie = "__Host-thebitlab_session=" + "Z" * 40
+
+    response = routes.dispatch(
+        request(
+            "POST",
+            "/auth/logout",
+            ("Cookie", stale_cookie),
+            ("X-CSRF-Token", "x" * 43),
+        )
+    )
+
+    assert response.status_code == 204
+    assert "Max-Age=0" in header(response, "Set-Cookie")
+    assert stale_cookie not in repr(response)
+
+
+@pytest.mark.parametrize(
+    ("candidate", "status", "error_code", "allow"),
+    (
+        (SessionHttpRequest("GET", "/auth/session", "", EdgeRequestMetadata("127.0.0.1")), 400, "https_required", None),
+        (request("GET", "/auth/session", query="unexpected=1"), 400, "bad_auth_request", None),
+        (request("POST", "/auth/session", ("Content-Length", "1")), 400, "bad_auth_request", None),
+        (request("DELETE", "/auth/session"), 405, "auth_method_not_allowed", "GET"),
+    ),
+)
+def test_route_rejects_transport_before_sensitive_operations(
+    graph, candidate, status, error_code, allow
+) -> None:
+    _storage, _boundary, routes, _established = graph
+
+    response = routes.dispatch(candidate)
+
+    assert response.status_code == status
+    assert json.loads(response.body)["error"] == error_code
+    if allow is not None:
+        assert header(response, "Allow") == allow
+
+
+def test_method_and_header_policy_is_exact(graph) -> None:
+    _storage, _boundary, routes, established = graph
+    browser_cookie = cookie(established)
+
+    wrong_session_method = routes.dispatch(
+        request("POST", "/auth/session", ("Cookie", browser_cookie))
+    )
+    wrong_logout_method = routes.dispatch(
+        request("GET", "/auth/logout", ("Cookie", browser_cookie))
+    )
+    duplicate_csrf = routes.dispatch(
+        request(
+            "POST",
+            "/auth/logout",
+            ("Cookie", browser_cookie),
+            ("X-CSRF-Token", established.context.csrf_token),
+            ("X-CSRF-Token", established.context.csrf_token),
+        )
+    )
+    duplicate_forwarded = routes.dispatch(SessionHttpRequest(
+        "GET",
+        "/auth/session",
+        "",
+        EdgeRequestMetadata(
+            "127.0.0.1",
+            (
+                ("X-Forwarded-Proto", "https"),
+                ("X-Forwarded-Proto", "https"),
+                ("Cookie", browser_cookie),
+            ),
+        ),
+    ))
+
+    assert wrong_session_method.status_code == 405
+    assert header(wrong_session_method, "Allow") == "GET"
+    assert wrong_logout_method.status_code == 405
+    assert header(wrong_logout_method, "Allow") == "POST"
+    assert duplicate_csrf.status_code == 403
+    assert duplicate_forwarded.status_code == 400
+
+
+def test_duplicate_cookie_headers_are_preserved_for_boundary_rejection(graph) -> None:
+    _storage, _boundary, routes, established = graph
+    browser_cookie = cookie(established)
+
+    response = routes.dispatch(
+        request(
+            "GET",
+            "/auth/session",
+            ("Cookie", browser_cookie),
+            ("Cookie", browser_cookie),
+        )
+    )
+
+    assert response.status_code == 401
+    assert json.loads(response.body)["error"] == "authentication_required"
+
+
+def test_unknown_path_is_not_claimed(graph) -> None:
+    _storage, _boundary, routes, _established = graph
+    assert routes.dispatch(request("GET", "/auth/other")) is None
+
+
+def test_course_board_socket_serves_status_and_logout_without_basic_auth(graph) -> None:
+    _storage, _boundary, routes, established = graph
+    server = BoundedThreadingHTTPServer(("127.0.0.1", 0), CourseBoardHandler)
+    server.session_http_routes = routes
+    server.teacher_token = "T" * 32
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    def exchange(method, path, headers):
+        connection = http.client.HTTPConnection(
+            "127.0.0.1", server.server_address[1], timeout=5
+        )
+        try:
+            connection.request(method, path, headers=headers)
+            response = connection.getresponse()
+            return response.status, dict(response.getheaders()), response.read()
+        finally:
+            connection.close()
+
+    browser_cookie = cookie(established)
+    common = {"X-Forwarded-Proto": "https", "Cookie": browser_cookie}
+    try:
+        status = exchange("GET", "/auth/session", common)
+        logout = exchange(
+            "POST",
+            "/auth/logout",
+            {**common, "X-CSRF-Token": established.context.csrf_token},
+        )
+        after = exchange("GET", "/auth/session", common)
+        malformed = exchange("GET", "//auth/session", common)
+        raw = socket.create_connection(server.server_address, timeout=5)
+        try:
+            raw.sendall(
+                (
+                    "GET ///auth/session HTTP/1.1\r\n"
+                    "Host: localhost\r\n"
+                    "X-Forwarded-Proto: https\r\n"
+                    f"Cookie: {browser_cookie}\r\n\r\n"
+                ).encode("ascii")
+            )
+            triple_slash = raw.recv(4096)
+        finally:
+            raw.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert status[0] == 200
+    assert json.loads(status[2])["user"]["user_id"] == "user-01"
+    assert logout[0] == 204
+    assert "Max-Age=0" in logout[1]["Set-Cookie"]
+    assert after[0] == 401
+    assert malformed[0] == 400
+    assert b"400" in triple_slash

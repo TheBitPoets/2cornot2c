@@ -30,6 +30,7 @@ from scripts.thebitlab_google_oidc import (
 from scripts.thebitlab_google_oidc_http import GoogleOidcHttpRoutes
 from scripts.thebitlab_http_auth import HttpSessionAuthBoundary, SessionCookiePolicy
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
+from scripts.thebitlab_session_http import SessionHttpRoutes
 
 _SECRET_RE = re.compile(r"^[A-Za-z0-9_-]{43,86}$")
 _CALLBACK_PATH = "/auth/google/callback"
@@ -48,16 +49,30 @@ class AuthRuntimeConfigurationError(RuntimeError):
 class GoogleOidcRuntime:
     """Own the composed service graph while exposing only its HTTP routes."""
 
-    __slots__ = ("_routes",)
+    __slots__ = ("_routes", "_session_routes")
 
-    def __init__(self, routes: GoogleOidcHttpRoutes) -> None:
-        if type(routes) is not GoogleOidcHttpRoutes:
+    def __init__(
+        self,
+        routes: GoogleOidcHttpRoutes,
+        session_routes: SessionHttpRoutes,
+    ) -> None:
+        if (
+            type(routes) is not GoogleOidcHttpRoutes
+            or type(session_routes) is not SessionHttpRoutes
+            or session_routes.sessions is not routes.session_discarder
+            or session_routes.proxy_resolver is not routes.proxy_resolver
+        ):
             raise AuthRuntimeConfigurationError("Grafo autenticazione non valido.")
         self._routes = routes
+        self._session_routes = session_routes
 
     @property
     def routes(self) -> GoogleOidcHttpRoutes:
         return self._routes
+
+    @property
+    def session_routes(self) -> SessionHttpRoutes:
+        return self._session_routes
 
     def __repr__(self) -> str:
         return "GoogleOidcRuntime(configured=True)"
@@ -83,6 +98,7 @@ def compose_google_oidc_runtime(
     login = None
     admission = None
     routes = None
+    session_routes = None
     try:
         client_id = _required(environment, "THEBITLAB_GOOGLE_CLIENT_ID")
         client_secret = _required(environment, "THEBITLAB_GOOGLE_CLIENT_SECRET")
@@ -149,7 +165,8 @@ def compose_google_oidc_runtime(
             http_sessions,
             session_cookie_policy=cookie_policy,
         )
-        return GoogleOidcRuntime(routes)
+        session_routes = SessionHttpRoutes(http_sessions, proxy_resolver)
+        return GoogleOidcRuntime(routes, session_routes)
     except AuthRuntimeConfigurationError:
         raise
     except Exception:
@@ -170,6 +187,7 @@ def compose_google_oidc_runtime(
         login = None
         admission = None
         routes = None
+        session_routes = None
 
 
 def _require_auth_dependencies() -> None:
