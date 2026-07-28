@@ -1190,6 +1190,26 @@ def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> N
     assert storage.read_pairing("pairing-01").status == "expired"
 
 
+def test_pairing_authorization_rechecks_storage_clock_after_lock(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    storage._clock = lambda: NOW + timedelta(minutes=10)
+
+    with pytest.raises(PairingExpiredError):
+        service.authorize(issued.code, "user-01")
+
+    assert storage.read_pairing("pairing-01").status == "expired"
+
+
 def test_pairing_concurrent_consumption_has_one_winner(storage) -> None:
     storage.create_user(account())
     clock = MutableClock()

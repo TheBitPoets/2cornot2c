@@ -176,6 +176,9 @@ class HttpSessionAuthBoundary:
         if invalid_secret:
             candidate_secret = None
             raise ValueError("Il secret CSRF deve contenere almeno 32 byte.")
+        if getattr(sessions, "audience", None) != "web":
+            candidate_secret = None
+            raise ValueError("Il boundary HTTP richiede sessioni con audience web.")
         self._sessions = sessions
         self.cookie_policy = cookie_policy
         self.clock = clock

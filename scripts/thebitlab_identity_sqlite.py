@@ -2380,13 +2380,22 @@ class SqliteIdentityStorage:
             active_user_sql = ""
             active_user_values = ()
         placeholders = ", ".join("?" for _ in predecessors)
+        expiry_sql = " AND expires_at > ?" if pairing.status == "authorized" else ""
+        expired_during_authorization = False
         with self._transaction("save_pairing") as connection:
+            expiry_values = (
+                (
+                    _encode_datetime(self._clock(), "pairing_transition_clock"),
+                )
+                if pairing.status == "authorized"
+                else ()
+            )
             cursor = connection.execute(
                 f"""
                 UPDATE tui_pairings SET status = ?, user_id = ?, authorized_at = ?,
                     consumed_at = ?, expired_at = ?, revoked_at = ?
                 WHERE pairing_id = ? AND code_digest = ? AND created_at = ? AND expires_at = ?
-                    AND status IN ({placeholders}){prior_identity_sql}{active_user_sql}
+                    AND status IN ({placeholders}){prior_identity_sql}{active_user_sql}{expiry_sql}
                 """,
                 (
                     values[2],
@@ -2402,17 +2411,41 @@ class SqliteIdentityStorage:
                 )
                 + predecessors
                 + prior_identity_values
-                + active_user_values,
+                + active_user_values
+                + expiry_values,
             )
             if cursor.rowcount != 1:
-                exists = connection.execute(
-                    "SELECT 1 FROM tui_pairings WHERE pairing_id = ?", (pairing.pairing_id,)
+                current = connection.execute(
+                    "SELECT status, expires_at FROM tui_pairings WHERE pairing_id = ?",
+                    (pairing.pairing_id,),
                 ).fetchone()
-                if exists is None:
+                if current is None:
                     raise IdentityStorageNotFoundError("Pairing da aggiornare non trovato.")
-                raise IdentityStorageConflictError(
-                    "Pairing modificato, transitato o associato a un utente non attivo."
-                )
+                if (
+                    pairing.status == "authorized"
+                    and current["status"] == "pending"
+                    and current["expires_at"] <= expiry_values[0]
+                ):
+                    expired_cursor = connection.execute(
+                        """
+                        UPDATE tui_pairings SET status = 'expired', expired_at = ?
+                        WHERE pairing_id = ? AND status = 'pending' AND expires_at <= ?
+                        """,
+                        (expiry_values[0], pairing.pairing_id, expiry_values[0]),
+                    )
+                    if expired_cursor.rowcount != 1:
+                        raise IdentityStorageConflictError(
+                            "Pairing modificato durante la scadenza."
+                        )
+                    expired_during_authorization = True
+                else:
+                    raise IdentityStorageConflictError(
+                        "Pairing modificato, transitato o associato a un utente non attivo."
+                    )
+        if expired_during_authorization:
+            raise IdentityStoragePairingExpiredError(
+                "Pairing scaduto durante l'autorizzazione."
+            )
 
     def delete_expired_pairings(self, expired_before: datetime) -> int:
         encoded = _encode_datetime(expired_before, "expired_before")

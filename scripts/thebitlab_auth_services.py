@@ -1186,6 +1186,8 @@ class PairingService:
                 )
             else:
                 self.storage.save_pairing(pairing)
+        except IdentityStoragePairingExpiredError:
+            raise PairingExpiredError("Pairing scaduto.") from None
         except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
             if require_active_user and pairing.user_id is not None:
                 account = self.storage.read_user(pairing.user_id)

@@ -151,6 +151,15 @@ def test_cookie_policy_is_secure_by_default_and_loopback_is_explicit() -> None:
     )
 
 
+def test_http_boundary_rejects_non_web_session_audience(storage, clock) -> None:
+    with pytest.raises(ValueError, match="audience web"):
+        HttpSessionAuthBoundary(
+            SessionService(storage, clock=clock, audience="tui"),
+            csrf_secret=CSRF_SECRET,
+            clock=clock,
+        )
+
+
 def test_establishes_secure_cookie_and_never_persists_or_reprs_raw_values(
     storage, database_path, clock
 ) -> None:
@@ -221,6 +230,8 @@ def test_generated_cookie_pair_must_fit_request_header_limit(storage, clock) -> 
 
 def test_storage_and_unexpected_failures_are_sanitized_at_http_boundary() -> None:
     class BrokenSessions:
+        audience = "web"
+
         def authenticate(self, _bearer):
             raise RuntimeError("raw storage backend details")
 
@@ -353,6 +364,8 @@ def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock)
     )
 
     class LongSessionService:
+        audience = "web"
+
         def issue(self, _user_id):
             return IssuedSession(long_session, bearer)
 
@@ -418,6 +431,8 @@ def test_set_cookie_max_age_uses_response_time(clock) -> None:
     )
 
     class DelayedSessionService:
+        audience = "web"
+
         def issue(self, _user_id):
             return IssuedSession(session, bearer)
 
@@ -455,6 +470,8 @@ def test_subsecond_remaining_session_is_revoked_instead_of_emitting_deleted_cook
     revoked = []
 
     class ShortSessionService:
+        audience = "web"
+
         def issue(self, _user_id):
             return IssuedSession(session, bearer)
 
