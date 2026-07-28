@@ -225,6 +225,65 @@ def test_successful_installation_remembers_provider(monkeypatch, tmp_path) -> No
     ).read_text(encoding="utf-8") == "docker"
 
 
+def test_resume_intent_is_atomic_validated_and_removable(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    from installer.resume import (
+        clear_intent,
+        load_intent,
+        resume_path,
+        save_intent,
+    )
+
+    monkeypatch.setattr("installer.resume.Path.home", lambda: tmp_path)
+
+    save_intent(Provider.DOCKER, "awaiting_restart")
+    assert load_intent() == (Provider.DOCKER, "awaiting_restart")
+    assert not resume_path().with_suffix(".tmp").exists()
+
+    resume_path().write_text('{"schema_version":"sbagliato"}', encoding="utf-8")
+    assert load_intent() is None
+
+    clear_intent()
+    clear_intent()
+    assert not resume_path().exists()
+
+
+def test_restart_result_preserves_resume_intent(monkeypatch, tmp_path) -> None:
+    pytest.importorskip("utui")
+    from queue import Queue
+
+    from installer.executor import StepResult
+    from installer.resume import load_intent
+    from installer.tui import State, poll_installation
+
+    monkeypatch.setattr("installer.resume.Path.home", lambda: tmp_path)
+    updates = Queue()
+    updates.put(
+        (
+            "result",
+            (
+                StepResult(
+                    "wsl",
+                    "Prepara WSL 2",
+                    "restart_required",
+                    "riavvio",
+                ),
+            ),
+        )
+    )
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER,),
+        installing=True,
+        install_updates=updates,
+    )
+
+    assert poll_installation(state) is True
+    assert load_intent() == (Provider.DOCKER, "awaiting_restart")
+
+
 def test_tui_marks_first_low_memory_choice_as_recommended() -> None:
     pytest.importorskip("utui")
     from installer.tui import State, frame

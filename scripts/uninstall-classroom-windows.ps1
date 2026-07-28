@@ -152,6 +152,62 @@ function Test-WslInstalledByClassroom {
     return $false
 }
 
+function Test-PackageStillInstalled {
+    param([string]$PackageId)
+
+    $DisplayNamePattern = switch ($PackageId) {
+        "Docker.DockerDesktop" { "^Docker Desktop(?: |$)" }
+        "Git.Git" { "^Git(?: |$)" }
+        "Hashicorp.Vagrant" { "^Vagrant(?: |$)" }
+        "Oracle.VirtualBox" { "^(?:Oracle VM )?VirtualBox(?: |$)" }
+        default { return $false }
+    }
+    $UninstallRoots = @(
+        "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+        "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+    foreach ($Root in $UninstallRoots) {
+        $Match = Get-ItemProperty $Root -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.DisplayName -match $DisplayNamePattern
+            } |
+            Select-Object -First 1
+        if ($Match) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Get-ClassroomShortcutPaths {
+    $Candidates = [System.Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase
+    )
+    foreach ($DesktopDir in @(
+        [Environment]::GetFolderPath("Desktop")
+        (Join-Path $HOME "Desktop")
+        $(if ($env:OneDrive) { Join-Path $env:OneDrive "Desktop" })
+        $(if ($env:OneDriveConsumer) {
+            Join-Path $env:OneDriveConsumer "Desktop"
+        })
+        $(if ($env:OneDriveCommercial) {
+            Join-Path $env:OneDriveCommercial "Desktop"
+        })
+    )) {
+        if ($DesktopDir) {
+            [void]$Candidates.Add(
+                (Join-Path $DesktopDir "Ambiente 2cornot2c.lnk")
+            )
+        }
+    }
+    [void]$Candidates.Add(
+        (Join-Path $env:APPDATA `
+            "Microsoft\Windows\Start Menu\Programs\Ambiente 2cornot2c.lnk")
+    )
+    return @($Candidates)
+}
+
 function Backup-StudentWork {
     param([string]$Source)
     if (-not (Test-Path $Source)) {
@@ -267,20 +323,34 @@ if ($ImageReference -and (Get-Command docker -ErrorAction SilentlyContinue)) {
     }
 }
 
-if (Test-Path $SafeInstallDir) {
-    Remove-Item -LiteralPath $SafeInstallDir -Recurse -Force
-}
-
 if ($OwnedPackages.Count -gt 0 -and -not (Get-Command winget -ErrorAction SilentlyContinue)) {
-    Write-Warning "winget non è disponibile: i prerequisiti gestiti non verranno disinstallati."
-    Write-Warning "Pacchetti ancora presenti: $($OwnedPackages -join ', ')"
+    Stop-WithMessage "E31" "Non posso rimuovere i programmi installati" `
+        "Windows Package Manager non è disponibile. Conservo il registro e il collegamento per permetterti di riprovare." `
+        @(
+            "Non cancellare manualmente le cartelle."
+            "Riavvia Windows e scegli di nuovo Disinstalla l'ambiente."
+            "Se ricompare, comunica E31 al docente."
+        ) "Pacchetti ancora presenti: $($OwnedPackages -join ', ')"
 }
 elseif ($OwnedPackages.Count -gt 0) {
+    $PackageFailures = [System.Collections.Generic.List[string]]::new()
     foreach ($PackageId in $OwnedPackages | Sort-Object) {
         winget uninstall --id $PackageId --exact --silent
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Disinstallazione non riuscita o già eseguita: $PackageId"
+        $ExitCode = $LASTEXITCODE
+        Start-Sleep -Seconds 2
+        if (Test-PackageStillInstalled $PackageId) {
+            $PackageFailures.Add("$PackageId (codice $ExitCode)")
         }
+    }
+    if ($PackageFailures.Count -gt 0) {
+        Stop-WithMessage "E31" "Uno o più programmi non sono stati rimossi" `
+            "La disinstallazione si è fermata senza cancellare il registro, così puoi riprovare in sicurezza." `
+            @(
+                "Chiudi Docker Desktop e gli altri programmi dell'ambiente."
+                "Riavvia Windows."
+                "Scegli di nuovo Disinstalla l'ambiente."
+                "Se ricompare, comunica E31 al docente."
+            ) ($PackageFailures -join ", ")
     }
 }
 
@@ -300,12 +370,24 @@ if ($OwnedWsl) {
         -Verb RunAs `
         -Wait `
         -PassThru
-    if ($Cleanup.ExitCode -ne 0) {
+    if ($Cleanup.ExitCode -eq 2) {
         Write-Warning (
             "WSL non è stato rimosso per proteggere eventuali dati personali. " +
             "Comunica E30 al docente."
         )
+    } elseif ($Cleanup.ExitCode -ne 0) {
+        Stop-WithMessage "E32" "Windows non ha completato la rimozione di WSL" `
+            "La verifica finale rileva ancora uno o più componenti di WSL. Il registro è stato conservato per permetterti di riprovare." `
+            @(
+                "Riavvia Windows."
+                "Scegli di nuovo Disinstalla l'ambiente."
+                "Se ricompare, comunica E32 al docente."
+            ) "remove-wsl-windows.ps1 exit code $($Cleanup.ExitCode)"
     }
+}
+
+if (Test-Path $SafeInstallDir) {
+    Remove-Item -LiteralPath $SafeInstallDir -Recurse -Force
 }
 
 if (Test-Path $StateDir) {
@@ -318,10 +400,7 @@ Remove-ItemProperty `
     -Name "2cornot2c-resume" `
     -ErrorAction SilentlyContinue
 
-foreach ($ShortcutPath in @(
-    (Join-Path ([Environment]::GetFolderPath("Desktop")) "Ambiente 2cornot2c.lnk")
-    (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Ambiente 2cornot2c.lnk")
-)) {
+foreach ($ShortcutPath in Get-ClassroomShortcutPaths) {
     if (Test-Path $ShortcutPath) {
         Remove-Item -LiteralPath $ShortcutPath -Force
     }

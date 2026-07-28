@@ -445,6 +445,14 @@ barra basata sui passaggi realmente completati, un indicatore di attività e il
 tempo trascorso. Non presenta percentuali di download stimate e ignora i
 comandi di uscita finché l'operazione non termina.
 
+Se Windows deve essere riavviato per completare WSL 2, il launcher viene
+riaperto automaticamente al nuovo accesso. Conserva la scelta tra Docker e
+VirtualBox, ripete i controlli e riparte dal primo componente mancante senza
+chiedere allo studente di selezionare o confermare nuovamente l'ambiente. Non
+forza il riavvio e non ripete l'installazione quando il launcher viene aperto
+manualmente. Lo stato temporaneo viene cancellato al termine, in caso di errore
+o dopo un annullamento.
+
 Prima di installare, la procedura controlla RAM, spazio libero, architettura,
 virtualizzazione hardware e connessione. Docker richiede almeno 4 GiB di RAM e
 8 GiB liberi; una VM richiede almeno 8 GiB di RAM e 20 GiB liberi. Se una
@@ -574,9 +582,10 @@ quando il computer ha al massimo 8 GiB, propone per primo **Docker leggero**.
 Installa e avvia Docker Desktop, attende automaticamente che sia pronto e
 scarica l'immagine pubblica adatta al processore. Se WSL 2 non è presente, lo
 prepara automaticamente senza installare una seconda distribuzione Ubuntu,
-richiede un riavvio e riapre il launcher al nuovo accesso. Al primo utilizzo
-resta necessario confermare soltanto le finestre di sicurezza e licenza
-mostrate direttamente da Windows.
+richiede un riavvio e riapre il launcher al nuovo accesso, riprendendo da solo
+il percorso Docker dal primo passaggio mancante. Al primo utilizzo resta
+necessario confermare soltanto le finestre di sicurezza e licenza mostrate
+direttamente da Windows.
 
 Dopo la preparazione, su Windows apri **Ambiente 2cornot2c** e scegli
 **Avvia l'ambiente**. La console Ubuntu viene aperta automaticamente senza
