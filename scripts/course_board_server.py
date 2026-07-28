@@ -27,6 +27,7 @@ import os
 import re
 import secrets
 import shutil
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -60,6 +61,7 @@ from scripts import (
     student_help_service,
     student_lab_service,
     thebitlab_grading_artifacts,
+    thebitlab_google_oidc_http,
     thebitlab_services,
     thebitlab_storage,
     thebitlab_tracking_reports,
@@ -3267,6 +3269,53 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
+    def __getattr__(self, name):
+        if type(name) is str and name.startswith("do_"):
+            return self.do_unsupported_auth_method
+        raise AttributeError(name)
+
+    def _is_google_auth_request_line(self) -> bool:
+        path = str(getattr(self, "path", ""))
+        requestline = str(getattr(self, "requestline", ""))
+        return "/auth/google/" in path or "/auth/google/" in requestline
+
+    def log_error(self, format, *args) -> None:
+        """Redact even malformed OAuth request lines before parser completion."""
+
+        if self._is_google_auth_request_line() or any(
+            "/auth/google/" in str(argument) for argument in args
+        ):
+            self.log_message("Google auth request non valida")
+            return
+        super().log_error(format, *args)
+
+    def log_request(self, code="-", size="-") -> None:
+        """Never write OAuth callback queries or codes to access logs."""
+
+        path = str(getattr(self, "path", ""))
+        requestline = str(getattr(self, "requestline", ""))
+        if self._is_google_auth_request_line():
+            combined = path + " " + requestline
+            if "/auth/google/callback" in combined:
+                safe_path = "/auth/google/callback"
+            elif "/auth/google/login" in combined:
+                safe_path = "/auth/google/login"
+            else:
+                safe_path = "/auth/google/invalid"
+            safe_line = f"AUTH {safe_path} HTTP"
+            self.log_message('"%s" %s %s', safe_line, str(code), str(size))
+            return
+        super().log_request(code, size)
+
+    def send_error(self, code, message=None, explain=None) -> None:
+        """Never reflect malformed OAuth request-lines in HTML error bodies."""
+
+        if self._is_google_auth_request_line():
+            self.close_connection = True
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return
+        super().send_error(code, message, explain)
+
     def end_headers(self) -> None:
         """Add browser hardening headers to every server response."""
 
@@ -3384,8 +3433,135 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return None
         return payload
 
+    def dispatch_google_oidc(self, parsed) -> bool:
+        """Delegate exact Google auth routes to the injected secure router."""
+
+        routes = getattr(self.server, "google_oidc_http_routes", None)
+        request_parts = str(getattr(self, "requestline", "")).split()
+        if (
+            routes is not None
+            and routes.handles(parsed.path)
+            and len(request_parts) != 3
+        ):
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        if routes is not None and len(request_parts) == 3:
+            raw_target = request_parts[1]
+            raw_parsed = urlparse(raw_target)
+            if routes.handles(raw_parsed.path):
+                parsed = raw_parsed
+            elif routes.handles(parsed.path) and not (
+                raw_target == parsed.path
+                or raw_target.startswith(parsed.path + "?")
+                or raw_target.startswith(parsed.path + "#")
+                or raw_target.startswith(parsed.path + ";")
+            ):
+                self.write_oidc_transport_error(400, "bad_auth_request")
+                return True
+        request_parts = None
+        raw_target = None
+        if routes is None or not routes.handles(parsed.path):
+            return False
+        if parsed.scheme or parsed.netloc or parsed.params:
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        try:
+            edge = thebitlab_google_oidc_http.EdgeRequestMetadata(
+                str(self.client_address[0]), tuple(self.headers.raw_items())
+            )
+            raw_query = parsed.query
+            if parsed.fragment:
+                raw_query += "#" + parsed.fragment
+            request = thebitlab_google_oidc_http.GoogleOidcHttpRequest(
+                self.command,
+                parsed.path,
+                raw_query,
+                edge,
+                is_tls=isinstance(self.connection, ssl.SSLSocket),
+            )
+        except (
+            ValueError,
+            thebitlab_google_oidc_http.EdgeClientAttributionError,
+        ):
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        try:
+            response = routes.dispatch(request)
+            if response is None:
+                raise RuntimeError("Router OIDC senza risposta.")
+        except Exception:  # noqa: BLE001
+            self.write_oidc_transport_error(503, "authentication_unavailable")
+            return True
+        finally:
+            edge = None
+            request = None
+            raw_query = None
+        self.write_google_oidc_response(response)
+        return True
+
+    def write_google_oidc_response(self, response) -> None:
+        guard = getattr(response, "delivery_guard", None)
+        try:
+            self.send_response(response.status_code)
+            for name, value in response.headers:
+                self.send_header(name, value)
+            self.end_headers()
+            if response.body and self.command != "HEAD":
+                self.wfile.write(response.body)
+        except Exception:  # noqa: BLE001
+            if guard is not None:
+                guard.failed()
+            return
+        if guard is not None:
+            guard.delivered()
+
+    def write_oidc_transport_error(self, status_code: int, error_code: str) -> None:
+        body = json.dumps(
+            {"error": error_code}, separators=(",", ":")
+        ).encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def do_unsupported_auth_method(self) -> None:
+        parsed = urlparse(self.path)
+        if self.dispatch_google_oidc(parsed):
+            return
+        self.send_error(501)
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if self.dispatch_google_oidc(parsed):
+            return
+        self.send_error(501)
+
+    def do_PUT(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_PATCH(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_TRACE(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
+    def do_CONNECT(self) -> None:  # noqa: N802
+        self.do_unsupported_auth_method()
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.dispatch_google_oidc(parsed):
+            return
         if self.reject_unauthenticated_teacher_api("GET", parsed.path):
             return
         if parsed.path in {"/api/student-lab/assignments", "/api/student-lab/help-history"}:
@@ -3475,6 +3651,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.dispatch_google_oidc(parsed):
+            return
         if self.reject_unauthenticated_teacher_api("POST", parsed.path):
             return
         if self.reject_unsafe_teacher_post(parsed.path):

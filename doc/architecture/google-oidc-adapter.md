@@ -2,7 +2,7 @@
 
 ## Scopo
 
-`thebitlab_google_oidc.py` implementa il login Google tramite Authorization Code Flow sopra `FederatedIdentityService` e `HttpSessionAuthBoundary`. Non introduce route nel Course Board: il futuro adapter HTTP tradurrà `/auth/google/login` e `/auth/google/callback` nei contratti qui descritti.
+`thebitlab_google_oidc.py` implementa il login Google tramite Authorization Code Flow sopra `FederatedIdentityService` e `HttpSessionAuthBoundary`. Le route Course Board che traducono `/auth/google/login` e `/auth/google/callback` sono descritte in [google-oidc-http-routes.md](google-oidc-http-routes.md); questo modulo resta il service provider-independent sottostante.
 
 ## Configurazione
 
@@ -91,7 +91,8 @@ I messaggi non includono valori OAuth raw o dettagli backend.
 ## Fuori scope
 
 - credenziali reali nel repository o CI;
-- route concrete, UI e browser E2E Google;
+- UI e browser E2E Google;
+- composizione runtime da environment delle route concrete;
 - protezione dashboard;
 - persistenza flow multi-process;
 - GitHub linking;
