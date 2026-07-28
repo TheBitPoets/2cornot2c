@@ -221,6 +221,16 @@ def test_wrong_cookie_or_session_does_not_consume_flow(tmp_path) -> None:
     assert transport.exchange_calls == []
 
 
+def test_non_ascii_callback_state_is_a_client_error(tmp_path) -> None:
+    service, _storage, _flows, _transport, established, _clock = make_service(tmp_path)
+    with pytest.raises(GitHubLinkCallbackError):
+        service.complete_link(
+            {"code": ["authorization-code"], "state": ["é" * 32]},
+            cookie_header="invalid=cookie",
+            context=established.context,
+        )
+
+
 def test_callback_replay_provider_cancel_and_expiry_are_terminal(tmp_path) -> None:
     service, _storage, flows, transport, established, clock = make_service(tmp_path)
     state, cookie, _started = start(service, established.context)

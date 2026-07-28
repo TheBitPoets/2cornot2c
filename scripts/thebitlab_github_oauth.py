@@ -494,7 +494,12 @@ class GitHubAccountLinkService:
         state = normalized.get("state")
         provider_error = "error" in normalized
         code = normalized.get("code")
-        if type(state) is not str or not state or (not provider_error and (type(code) is not str or not code)):
+        if (
+            type(state) is not str
+            or not 32 <= len(state) <= 256
+            or _UNRESERVED_RE.fullmatch(state) is None
+            or (not provider_error and (type(code) is not str or not code))
+        ):
             raise GitHubLinkCallbackError("Callback GitHub non valido.")
         return code or "", state, provider_error
 
