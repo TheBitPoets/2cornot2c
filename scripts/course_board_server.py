@@ -27,6 +27,7 @@ import os
 import re
 import secrets
 import shutil
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -60,6 +61,7 @@ from scripts import (
     student_help_service,
     student_lab_service,
     thebitlab_grading_artifacts,
+    thebitlab_google_oidc_http,
     thebitlab_services,
     thebitlab_storage,
     thebitlab_tracking_reports,
@@ -3267,6 +3269,16 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
+    def log_request(self, code="-", size="-") -> None:
+        """Never write OAuth callback queries or codes to access logs."""
+
+        parsed = urlparse(self.path)
+        if parsed.path in {"/auth/google/login", "/auth/google/callback"}:
+            safe_line = f"{self.command} {parsed.path} {self.request_version}"
+            self.log_message('"%s" %s %s', safe_line, str(code), str(size))
+            return
+        super().log_request(code, size)
+
     def end_headers(self) -> None:
         """Add browser hardening headers to every server response."""
 
@@ -3384,8 +3396,53 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return None
         return payload
 
+    def dispatch_google_oidc(self, parsed) -> bool:
+        """Delegate exact Google auth routes to the injected secure router."""
+
+        routes = getattr(self.server, "google_oidc_http_routes", None)
+        if routes is None or not routes.handles(parsed.path):
+            return False
+        try:
+            edge = thebitlab_google_oidc_http.EdgeRequestMetadata(
+                str(self.client_address[0]), tuple(self.headers.raw_items())
+            )
+            request = thebitlab_google_oidc_http.GoogleOidcHttpRequest(
+                self.command,
+                parsed.path,
+                parsed.query,
+                edge,
+                is_tls=isinstance(self.connection, ssl.SSLSocket),
+            )
+            response = routes.dispatch(request)
+            if response is None:
+                raise RuntimeError("Router OIDC senza risposta.")
+        except Exception:  # noqa: BLE001
+            body = b'{"error":"authentication_unavailable"}'
+            self.send_response(503)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return True
+        self.send_response(response.status_code)
+        for name, value in response.headers:
+            self.send_header(name, value)
+        self.end_headers()
+        if response.body and self.command != "HEAD":
+            self.wfile.write(response.body)
+        return True
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if self.dispatch_google_oidc(parsed):
+            return
+        self.send_error(501)
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.dispatch_google_oidc(parsed):
+            return
         if self.reject_unauthenticated_teacher_api("GET", parsed.path):
             return
         if parsed.path in {"/api/student-lab/assignments", "/api/student-lab/help-history"}:
@@ -3475,6 +3532,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.dispatch_google_oidc(parsed):
+            return
         if self.reject_unauthenticated_teacher_api("POST", parsed.path):
             return
         if self.reject_unsafe_teacher_post(parsed.path):

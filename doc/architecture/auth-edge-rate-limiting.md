@@ -55,7 +55,7 @@ Test concorrenti verificano che, con più worker, il numero degli ammessi sia es
 
 ## Ordine nella route concreta
 
-La futura `/auth/google/login` deve costruire `EdgeRequestMetadata` dal peer reale e dagli header originali, poi chiamare esclusivamente:
+La route `/auth/google/login`, implementata dal router descritto in [google-oidc-http-routes.md](google-oidc-http-routes.md), costruisce `EdgeRequestMetadata` dal peer reale e dagli header originali, poi chiama esclusivamente:
 
 ```python
 admission.begin_login(metadata)
@@ -67,7 +67,7 @@ Il reverse proxy può applicare limiti aggiuntivi, ma non sostituisce questo bou
 
 ## Fuori scope
 
-- route concrete e serializzazione della risposta HTTP 302;
+- composizione runtime/deployment della route concreta;
 - limiti del callback Google e delle route GitHub;
 - limiti specifici per begin/authorize/consume del pairing TUI;
 - store multi-host concreto;

@@ -174,6 +174,11 @@ class TrustedProxyClientResolver:
         self.max_proxy_hops = max_proxy_hops
         self.max_forwarded_header_bytes = max_forwarded_header_bytes
 
+    def is_trusted_peer(self, request: EdgeRequestMetadata) -> bool:
+        if type(request) is not EdgeRequestMetadata:
+            raise EdgeClientAttributionError()
+        return self._trusted(self._address(request.peer_ip))
+
     def resolve(self, request: EdgeRequestMetadata) -> str:
         if type(request) is not EdgeRequestMetadata:
             raise EdgeClientAttributionError()
