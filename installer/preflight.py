@@ -56,9 +56,10 @@ def virtualization_available(host: Host) -> bool | None:
                 "-NoProfile",
                 "-NonInteractive",
                 "-Command",
-                "(Get-CimInstance Win32_Processor | "
-                "Select-Object -First 1 -ExpandProperty "
-                "VirtualizationFirmwareEnabled)",
+                "$computer = Get-CimInstance Win32_ComputerSystem; "
+                "if ($computer.HypervisorPresent) { 'true' } else { "
+                "(Get-CimInstance Win32_Processor | Select-Object -First 1 "
+                "-ExpandProperty VirtualizationFirmwareEnabled) }",
             ),
             check=False,
             capture_output=True,
@@ -141,8 +142,11 @@ def evaluate(
         results.append(
             ResourceResult(
                 "virtualization",
-                "blocked",
-                "virtualizzazione hardware disabilitata nel firmware",
+                "warning",
+                (
+                    "stato virtualizzazione incerto: controlla Gestione "
+                    "attività, Prestazioni, CPU"
+                ),
             )
         )
     elif measured.virtualization is None:

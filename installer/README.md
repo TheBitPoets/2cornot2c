@@ -33,7 +33,9 @@ Gli errori mostrati dalla procedura usano un catalogo stabile:
 Il catalogo Python è in `installer/student_errors.py`. Gli script PowerShell
 usano la stessa convenzione durante bootstrap, aggiornamento e disinstallazione.
 Gli studenti non vengono invitati a disattivare protezioni o modificare da soli
-il BIOS; il caso `E03` chiede espressamente l'aiuto di un adulto o del docente.
+il BIOS. Poiché alcuni PC restituiscono un valore WMI errato, un contrasto con
+lo stato mostrato da Gestione attività produce l'avviso `W03` e non blocca
+l'installazione; sarà WSL a eseguire la verifica reale.
 
 ## Bootstrap monocomando
 

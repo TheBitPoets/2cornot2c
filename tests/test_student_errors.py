@@ -120,10 +120,8 @@ def test_windows_scripts_render_error_and_explanation_colors() -> None:
     bootstrap = (
         root / "scripts" / "bootstrap-classroom-windows.ps1"
     ).read_text(encoding="utf-8")
-    assert "$Processor.Manufacturer" in bootstrap
-    assert "Intel Virtualization Technology" in bootstrap
-    assert "SVM Mode, AMD-V" in bootstrap
-    assert "Non modificare Secure Boot, TPM" in bootstrap
+    assert "AVVISO W03" in bootstrap
+    assert "indicazioni contrastanti" in bootstrap
 
 
 def test_student_facing_messages_use_italian_accents() -> None:

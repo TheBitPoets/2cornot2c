@@ -161,30 +161,21 @@ function Test-HostResources {
     try {
         $Processor = Get-CimInstance Win32_Processor | Select-Object -First 1
         $Virtualization = $Processor.VirtualizationFirmwareEnabled
-        if ($Virtualization -eq $false) {
-            $VirtualizationSetting = switch -Regex ($Processor.Manufacturer) {
-                "Intel" {
-                    "Intel Virtualization Technology oppure Intel VT-x"
-                    break
-                }
-                "AMD" {
-                    "SVM Mode, AMD-V oppure Secure Virtual Machine"
-                    break
-                }
-                default {
-                    "Intel Virtualization Technology, Intel VT-x, SVM Mode oppure AMD-V"
-                }
-            }
-            $ComputerModel = "$($Computer.Manufacturer) $($Computer.Model)".Trim()
-            Stop-WithMessage "E03" "La virtualizzazione del computer è disabilitata" `
-                "Docker e le macchine virtuali hanno bisogno di questa funzione. Il computer probabilmente la possiede, ma è spenta. Non hai rotto nulla." `
-                @(
-                    "Premi Ctrl+Maiusc+Esc, apri Prestazioni e poi CPU."
-                    "Controlla se accanto a Virtualizzazione compare Disabilitata."
-                    "Nel BIOS/UEFI cerca soltanto: $VirtualizationSetting."
-                    "Fatti aiutare da un adulto. Attiva soltanto questa voce, salva e riavvia Windows."
-                    "Non modificare Secure Boot, TPM o altre impostazioni. Se non trovi la voce, fermati e comunica E03 al docente."
-                ) "CPU: $($Processor.Name); computer: $ComputerModel"
+        if ($Computer.HypervisorPresent -eq $true) {
+            Write-Host "Virtualizzazione: disponibile (hypervisor Windows attivo)."
+        } elseif ($Virtualization -eq $false) {
+            Write-Host (
+                "AVVISO W03 - Windows fornisce indicazioni contrastanti " +
+                "sulla virtualizzazione."
+            ) -ForegroundColor Yellow
+            Write-Host (
+                "Il controllo automatico non è abbastanza affidabile per " +
+                "fermare l'installazione."
+            ) -ForegroundColor Yellow
+            Write-Host (
+                "Se Gestione attività, Prestazioni, CPU mostra Abilitata, " +
+                "puoi continuare."
+            ) -ForegroundColor Yellow
         }
     } catch {
         Write-Host "AVVISO W04 - Virtualizzazione non verificabile automaticamente." `
