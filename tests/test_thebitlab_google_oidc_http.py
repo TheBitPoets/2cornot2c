@@ -513,7 +513,7 @@ def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
             method: exchange(method, "/auth/google/login")
             for method in (
                 "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE", "CONNECT",
-                "PROPFIND",
+                "PROPFIND", "LONGEXTENSIONMETHOD",
             )
         }
     finally:
@@ -527,7 +527,7 @@ def test_course_board_transport_maps_oversized_fragment_and_methods() -> None:
         method: (405, "GET")
         for method in (
             "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE", "CONNECT",
-            "PROPFIND",
+            "PROPFIND", "LONGEXTENSIONMETHOD",
         )
     }
     assert callback.calls == 0

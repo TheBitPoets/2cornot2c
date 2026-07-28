@@ -53,7 +53,12 @@ class GoogleOidcHttpRequest:
     is_tls: bool = False
 
     def __post_init__(self) -> None:
-        if type(self.method) is not str or not self.method or len(self.method) > 16:
+        if (
+            type(self.method) is not str
+            or not self.method
+            or len(self.method) > 65_535
+            or _HEADER_NAME_RE.fullmatch(self.method) is None
+        ):
             raise ValueError("Metodo HTTP non valido.")
         if type(self.path) is not str or not self.path.startswith("/") or len(self.path) > 256:
             raise ValueError("Path HTTP non valido.")
