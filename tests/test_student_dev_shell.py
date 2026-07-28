@@ -5,12 +5,12 @@ import pytest
 from scripts import build_student_dev, student_dev_shell
 
 
-def test_image_reference_is_versioned() -> None:
+def test_image_reference_is_immutable() -> None:
     manifest = build_student_dev.load_manifest()
+    reference = student_dev_shell.image_reference()
 
-    assert student_dev_shell.image_reference() == (
-        f"{manifest['image_repository']}:{manifest['version']}"
-    )
+    assert reference.startswith(f"{manifest['image_repository']}@sha256:")
+    assert ":latest" not in reference
 
 
 def test_docker_command_is_lightweight_non_root_image(tmp_path: Path) -> None:

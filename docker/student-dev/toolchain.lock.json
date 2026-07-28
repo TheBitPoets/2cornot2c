@@ -1,0 +1,10 @@
+{
+  "schema_version": "2cornot2c.student-dev-lock.v1",
+  "version": "2026.07.1",
+  "image_repository": "ghcr.io/thebitpoets/2cornot2c-student-dev",
+  "digest": "sha256:4a0bc77ac44df156a277963c51ba9ea1930fd5cfc3077c84ff97c92c4776e19a",
+  "platforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ]
+}

@@ -8,16 +8,18 @@ import shlex
 import subprocess
 
 try:
-    from scripts import build_student_dev
+    from installer import student_dev
 except ModuleNotFoundError:  # Esecuzione diretta: python scripts/student_dev_shell.py
-    import build_student_dev
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from installer import student_dev
 
 
 def image_reference() -> str:
-    """Restituisce il tag versionato dichiarato nel manifest controllato."""
+    """Restituisce il riferimento GHCR immutabile verificato."""
 
-    manifest = build_student_dev.load_manifest()
-    return f"{manifest['image_repository']}:{manifest['version']}"
+    return student_dev.immutable_reference()
 
 
 def docker_command(
@@ -77,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
         command = docker_command(workspace=args.workspace, memory=args.memory)
-    except (OSError, ValueError, build_student_dev.StudentDevBuildError) as error:
+    except (OSError, ValueError, student_dev.StudentDevLockError) as error:
         print(f"Ambiente student-dev non disponibile: {error}")
         return 1
     if args.print_command:

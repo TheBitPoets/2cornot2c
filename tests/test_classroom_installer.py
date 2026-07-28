@@ -8,6 +8,8 @@ from installer.model import Check
 from installer.model import Host, Provider
 from installer.platforms import detect_host
 from installer.plans import install_plan, supported_providers
+from installer.resources import LOW_MEMORY_LIMIT_BYTES, order_by_recommendation
+from installer.student_dev import immutable_reference, load_lock
 
 
 def test_detects_supported_hosts() -> None:
@@ -20,12 +22,16 @@ def test_rejects_unsupported_host() -> None:
         detect_host("Linux", "x86_64")
 
 
-def test_mac_supports_choice_but_windows_has_one_path() -> None:
+def test_hosts_support_vm_and_lightweight_docker_paths() -> None:
     assert supported_providers(Host.MACOS_ARM64) == (
         Provider.VMWARE,
         Provider.VIRTUALBOX,
+        Provider.DOCKER,
     )
-    assert supported_providers(Host.WINDOWS_AMD64) == (Provider.VIRTUALBOX,)
+    assert supported_providers(Host.WINDOWS_AMD64) == (
+        Provider.VIRTUALBOX,
+        Provider.DOCKER,
+    )
 
 
 def test_windows_rejects_vmware() -> None:
@@ -40,6 +46,36 @@ def test_plans_are_provider_specific() -> None:
     assert any(step.key == "fusion" for step in vmware.steps)
     assert not any(step.key == "virtualbox" for step in vmware.steps)
     assert any(step.key == "virtualbox" for step in virtualbox.steps)
+
+
+def test_low_memory_recommends_docker_without_removing_vm_choices() -> None:
+    providers = supported_providers(Host.WINDOWS_AMD64)
+
+    assert order_by_recommendation(providers, LOW_MEMORY_LIMIT_BYTES)[0] is (
+        Provider.DOCKER
+    )
+    assert order_by_recommendation(providers, LOW_MEMORY_LIMIT_BYTES + 1) == providers
+    assert order_by_recommendation(providers, None) == providers
+
+
+def test_docker_plans_install_desktop_and_pull_immutable_image() -> None:
+    image = immutable_reference()
+    mac = install_plan(Host.MACOS_ARM64, Provider.DOCKER)
+    windows = install_plan(Host.WINDOWS_AMD64, Provider.DOCKER)
+
+    assert ("brew", "install", "--cask", "docker-desktop") in {
+        step.command for step in mac.steps
+    }
+    assert any(
+        step.command
+        and step.command[:5]
+        == ("winget", "install", "--id", "Docker.DockerDesktop", "--exact")
+        for step in windows.steps
+    )
+    assert ("docker", "pull", image) in {step.command for step in mac.steps}
+    assert ("docker", "pull", image) in {step.command for step in windows.steps}
+    assert "@sha256:" in image
+    assert load_lock()["platforms"] == ["linux/amd64", "linux/arm64"]
 
 
 def test_check_can_require_semantic_output() -> None:
@@ -70,6 +106,21 @@ def test_tui_frame_lists_supported_provider() -> None:
     rendered = "\n".join(rows)
     assert "VirtualBox" in rendered
     assert "VMware Fusion" not in rendered
+
+
+def test_tui_marks_first_low_memory_choice_as_recommended() -> None:
+    pytest.importorskip("utui")
+    from installer.tui import State, frame
+
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER, Provider.VIRTUALBOX),
+        8 * 1024**3,
+    )
+    rendered = "\n".join(frame(state, 180, 12, color=False))
+
+    assert "Docker leggero - 512 MB (raccomandato)" in rendered
+    assert "RAM 8.0 GiB" in rendered
 
 
 def test_tui_confirmation_is_explicit_and_cancellable() -> None:
@@ -121,6 +172,30 @@ def test_executor_blocks_manual_prerequisite_before_writes() -> None:
     assert [result.key for result in results] == ["fusion"]
     assert results[0].status == "blocked"
     assert calls == []
+
+
+def test_docker_install_runs_before_deferred_first_start() -> None:
+    plan = install_plan(Host.WINDOWS_AMD64, Provider.DOCKER)
+    calls = []
+
+    results = execute_plan(
+        plan,
+        check_results(
+            plan,
+            missing={"docker", "docker-engine", "student-image"},
+        ),
+        runner=lambda command: (calls.append(command) or (0, "installato")),
+    )
+
+    assert [result.key for result in results] == ["docker", "docker-engine"]
+    assert [result.status for result in results] == ["succeeded", "blocked"]
+    assert calls[0][:5] == (
+        "winget",
+        "install",
+        "--id",
+        "Docker.DockerDesktop",
+        "--exact",
+    )
 
 
 def test_executor_stops_on_first_failed_command() -> None:

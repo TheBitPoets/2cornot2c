@@ -9,6 +9,7 @@ from installer.migration import (
     MachineState,
     parse_machine_state,
     recreate_machine,
+    state_directory,
     validate_shared_folders,
 )
 from installer.model import Provider
@@ -32,6 +33,11 @@ def test_parse_provider_specific_machine_state() -> None:
 
     assert machine.exists is True
     assert machine.running is False
+
+
+def test_docker_is_not_a_vagrant_migration_provider() -> None:
+    with pytest.raises(ValueError, match="non VM"):
+        state_directory(Provider.DOCKER)
 
 
 def test_recreate_requires_exact_confirmation_before_commands(tmp_path: Path) -> None:
