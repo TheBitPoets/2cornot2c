@@ -189,6 +189,31 @@ def test_transport_enforces_overall_wall_clock_timeout(monkeypatch) -> None:
     assert time.monotonic() - started < 0.15
 
 
+def test_transport_does_not_spawn_without_reserved_cleanup_capacity(monkeypatch) -> None:
+    transport = UrllibGitHubOAuthTransport()
+    calls = []
+    monkeypatch.setattr(
+        transport,
+        "_process_factory",
+        lambda *_args, **_kwargs: calls.append(True),
+    )
+    acquired = []
+    try:
+        for _attempt in range(8):
+            assert transport._termination_slots.acquire(blocking=False) is True
+            acquired.append(True)
+        with pytest.raises(GitHubLinkProviderUnavailableError):
+            transport._request(
+                urllib.request.Request("https://api.github.com/user"),
+                timeout_seconds=0.01,
+                max_response_bytes=1024,
+            )
+        assert calls == []
+    finally:
+        for _acquired in acquired:
+            transport._termination_slots.release()
+
+
 def test_transport_start_thread_failure_releases_capacity(monkeypatch) -> None:
     transport = UrllibGitHubOAuthTransport()
     original_start = __import__("threading").Thread.start
