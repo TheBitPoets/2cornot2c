@@ -45,7 +45,7 @@ Una risposta persa dopo il commit può lasciare una sessione non consegnata fino
 
 `authenticate_bearer()` accetta un unico header `Authorization: Bearer`, applica limiti di lunghezza e grammatica base64url, usa `SessionService` per scadenza/revoca/account/revisione e autorizza soltanto il ruolo corrente `student`. Cambio ruolo o disabilitazione diventano effettivi alla richiesta successiva.
 
-Le sessioni TUI usano per ora il registro applicativo delle sessioni web e hanno gli stessi controlli/revoca. La separazione futura per audience può essere aggiunta senza cambiare gli ID utente.
+Le sessioni TUI usano lo stesso registro transazionale ma hanno audience persistita `tui`; le sessioni cookie hanno audience `web`. `SessionService` richiede l'audience configurata durante autenticazione e revoca: un bearer web non è accettato dal boundary TUI e un bearer TUI non autentica il cookie web.
 
 ## Errori pubblici
 

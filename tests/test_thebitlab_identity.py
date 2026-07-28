@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError, fields
+from dataclasses import FrozenInstanceError, fields, replace
 from datetime import datetime, timedelta, timezone, tzinfo
 
 import pytest
@@ -190,6 +190,8 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
     )
 
     assert session.token_digest == DIGEST
+    assert session.audience == "web"
+    assert replace(session, audience="tui").audience == "tui"
     assert "token" not in {field.name for field in fields(UserSession)}
     assert "token_digest" in {field.name for field in fields(UserSession)}
 
@@ -212,6 +214,7 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
         ),
         ({"revoked_at": LATER}, "durata della sessione"),
         ({"revoked_at": LATER + timedelta(seconds=1)}, "durata della sessione"),
+        ({"audience": "provider-token"}, "Audience sessione"),
     ],
 )
 def test_session_rejects_unsafe_digest_and_invalid_times(overrides, match) -> None:

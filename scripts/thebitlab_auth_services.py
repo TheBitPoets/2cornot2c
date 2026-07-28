@@ -24,6 +24,7 @@ from scripts.thebitlab_identity_ports import (
     IdentityStorageConflictError,
     IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
+    IdentityStoragePairingExpiredError,
 )
 
 
@@ -837,10 +838,15 @@ class SessionService:
         ttl: timedelta = timedelta(hours=8),
         token_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32),
         session_id_factory: Callable[[], str] = lambda: str(uuid.uuid4()),
+        audience: str = "web",
     ) -> None:
         self.storage = storage
         self.clock = clock
         self.ttl = _positive_ttl(ttl, "ttl sessione")
+        normalized_audience = _required_text(audience, "audience", lowercase=True)
+        if normalized_audience not in {"web", "tui"}:
+            raise AuthApplicationError("Audience sessione non valida.")
+        self.audience = normalized_audience
         self.token_factory = token_factory
         self.session_id_factory = session_id_factory
 
@@ -870,6 +876,7 @@ class SessionService:
                     created_at=now,
                     expires_at=now + self.ttl,
                     last_seen_at=now,
+                    audience=self.audience,
                 )
                 try:
                     self.storage.create_session_for_active_user(
@@ -918,7 +925,11 @@ class SessionService:
         digest: str,
         now: datetime,
     ) -> tuple[UserSession, UserAccount]:
-        if session is None or not hmac.compare_digest(session.token_digest, digest):
+        if (
+            session is None
+            or session.audience != self.audience
+            or not hmac.compare_digest(session.token_digest, digest)
+        ):
             raise InvalidCredentialError("Sessione non valida.")
         if now < session.last_seen_at:
             raise ConcurrentStateChangeError("Clock anteriore all'ultimo utilizzo della sessione.")
@@ -937,8 +948,11 @@ class SessionService:
             bearer_token = None
         session = self.storage.read_session_by_token_digest(digest)
         now = _utc(self.clock())
-        if session is None or session.revoked_at is not None or not hmac.compare_digest(
-            session.token_digest, digest
+        if (
+            session is None
+            or session.audience != self.audience
+            or session.revoked_at is not None
+            or not hmac.compare_digest(session.token_digest, digest)
         ):
             return False
         if now < session.created_at or now >= session.expires_at:
@@ -1215,6 +1229,7 @@ class TuiPairingSessionService:
                     created_at=consumed.consumed_at,
                     expires_at=consumed.consumed_at + self.session_ttl,
                     last_seen_at=consumed.consumed_at,
+                    audience="tui",
                 )
                 try:
                     self.storage.consume_pairing_and_create_session(
@@ -1223,6 +1238,8 @@ class TuiPairingSessionService:
                         expected_user_updated_at=account.updated_at,
                         expected_user_role="student",
                     )
+                except IdentityStoragePairingExpiredError:
+                    raise PairingExpiredError("Pairing scaduto.") from None
                 except IdentityStorageConflictError:
                     current_pairing = self.storage.read_pairing(pairing.pairing_id)
                     current_account = self.storage.read_user(account.user_id)

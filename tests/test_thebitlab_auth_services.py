@@ -1243,9 +1243,9 @@ def test_tui_pairing_consumption_atomically_issues_student_session(
 
     assert credential.bearer_token not in repr(credential)
     assert storage.read_pairing("pairing-01").status == "consumed"
-    authenticated = SessionService(storage, clock=clock).authenticate(
-        credential.bearer_token
-    )
+    authenticated = SessionService(
+        storage, clock=clock, audience="tui"
+    ).authenticate(credential.bearer_token)
     assert authenticated.user.user_id == "user-01"
     with sqlite3.connect(database_path) as connection:
         persisted = connection.execute(

@@ -24,6 +24,7 @@ from scripts.thebitlab_identity_sqlite import (
     IdentityStorageError,
     IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
+    IdentityStoragePairingExpiredError,
     SCHEMA_VERSION,
     SqliteIdentityStorage,
 )
@@ -206,6 +207,17 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
+def test_migration_v6_backfills_existing_sessions_as_web(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_user(account())
+    storage.create_session(session())
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DELETE FROM schema_migrations WHERE version = 6")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_session("session-01").audience == "web"
+
+
 def test_migration_v5_backfills_mapping_revision(database_path) -> None:
     storage = SqliteIdentityStorage(database_path)
     storage.create_class(class_group())
@@ -217,7 +229,7 @@ def test_migration_v5_backfills_mapping_revision(database_path) -> None:
         connection.execute(
             "UPDATE external_group_mappings SET updated_at = NULL"
         )
-        connection.execute("DELETE FROM schema_migrations WHERE version = 5")
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 5")
 
     upgraded = SqliteIdentityStorage(database_path)
     assert upgraded.read_external_group_mapping(
@@ -466,7 +478,7 @@ def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
     with sqlite3.connect(database_path) as connection:
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     "session-last-seen-boundary",
                     "user-01",
@@ -475,11 +487,12 @@ def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
                     expires_at,
                     expires_at,
                     None,
+                    "web",
                 ),
             )
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     "session-revocation-boundary",
                     "user-01",
@@ -488,6 +501,7 @@ def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
                     expires_at,
                     before_expiration,
                     expires_at,
+                    "web",
                 ),
             )
 
@@ -593,6 +607,7 @@ def test_pairing_session_creation_is_atomic_with_consumption(storage) -> None:
         created_at=consumed.consumed_at,
         last_seen_at=consumed.consumed_at,
         expires_at=consumed.consumed_at + timedelta(hours=8),
+        audience="tui",
     )
 
     storage.consume_pairing_and_create_session(
@@ -617,17 +632,20 @@ def test_pairing_session_creation_rechecks_expiry_at_transaction_time(storage) -
         created_at=consumed.consumed_at,
         last_seen_at=consumed.consumed_at,
         expires_at=consumed.consumed_at + timedelta(hours=8),
+        audience="tui",
     )
     storage._clock = lambda: LATER
 
-    with pytest.raises(IdentityStorageConflictError):
+    with pytest.raises(IdentityStoragePairingExpiredError):
         storage.consume_pairing_and_create_session(
             consumed,
             issued_session,
             expected_user_updated_at=NOW,
             expected_user_role="student",
         )
-    assert storage.read_pairing("pairing-01") == authorized
+    expired = storage.read_pairing("pairing-01")
+    assert expired.status == "expired"
+    assert expired.expired_at == LATER
     assert storage.read_session("session-01") is None
 
 
@@ -642,6 +660,7 @@ def test_pairing_session_creation_rolls_back_on_role_or_session_conflict(storage
         created_at=consumed.consumed_at,
         last_seen_at=consumed.consumed_at,
         expires_at=consumed.consumed_at + timedelta(hours=8),
+        audience="tui",
     )
 
     with pytest.raises(IdentityStorageConflictError):

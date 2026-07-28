@@ -152,6 +152,12 @@ class TuiBrowserPairingBoundary:
         *,
         verification_path: str = "/auth/tui/pair",
     ) -> None:
+        if (
+            type(tui_sessions) is not SessionService
+            or tui_sessions.audience != "tui"
+            or getattr(http_sessions.sessions, "audience", None) != "web"
+        ):
+            raise ValueError("Audience sessioni pairing non configurate correttamente.")
         self.pairings = pairings
         self.http_sessions = http_sessions
         self.tui_sessions = tui_sessions
@@ -184,39 +190,42 @@ class TuiBrowserPairingBoundary:
         return result
 
     def authorize_browser(self, request: HttpAuthRequest, code: str) -> None:
-        context = self.http_sessions.authorize_application(
-            request, allowed_roles={"student"}
-        )
-        invalid = False
-        expired = False
-        conflict = False
-        unavailable = False
-        result = None
+        context = None
         try:
-            result = self.pairings.authorize(code, context.user.user_id)
-        except InvalidCredentialError:
-            invalid = True
-        except PairingExpiredError:
-            expired = True
-        except (PairingStateError, ConcurrentStateChangeError):
-            conflict = True
-        except Exception:
-            unavailable = True
+            context = self.http_sessions.authorize_application(
+                request, allowed_roles={"student"}
+            )
+            invalid = False
+            expired = False
+            conflict = False
+            unavailable = False
+            result = None
+            try:
+                result = self.pairings.authorize(code, context.user.user_id)
+            except InvalidCredentialError:
+                invalid = True
+            except PairingExpiredError:
+                expired = True
+            except (PairingStateError, ConcurrentStateChangeError):
+                conflict = True
+            except Exception:
+                unavailable = True
+            if invalid:
+                raise TuiPairingBadRequestError()
+            if expired:
+                raise TuiPairingExpiredHttpError()
+            if conflict:
+                raise TuiPairingConflictError()
+            if (
+                unavailable
+                or type(result) is not TuiPairing
+                or result.status != "authorized"
+            ):
+                raise TuiPairingUnavailableError()
         finally:
+            request = None
             code = None
             context = None
-        if invalid:
-            raise TuiPairingBadRequestError()
-        if expired:
-            raise TuiPairingExpiredHttpError()
-        if conflict:
-            raise TuiPairingConflictError()
-        if (
-            unavailable
-            or type(result) is not TuiPairing
-            or result.status != "authorized"
-        ):
-            raise TuiPairingUnavailableError()
 
     def consume(self, pairing_id: str, code: str) -> IssuedTuiCredential:
         issued = None

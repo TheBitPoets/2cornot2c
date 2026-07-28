@@ -76,7 +76,7 @@ def setup(tmp_path):
         cookie_policy=SessionCookiePolicy.loopback_development(),
         clock=clock,
     )
-    tui_sessions = SessionService(storage, clock=clock)
+    tui_sessions = SessionService(storage, clock=clock, audience="tui")
     boundary = TuiBrowserPairingBoundary(
         pairing_sessions,
         http,
@@ -192,6 +192,12 @@ def test_wrong_code_and_malformed_bearer_are_generic_and_secret_free(setup) -> N
     _storage, _clock, boundary, http = setup
     started = boundary.begin()
     wrong = "WRONGCODE9"
+    missing_csrf = browser_request(http, "student-01", csrf=False)
+    with pytest.raises(HttpCsrfRejectedError) as csrf_error:
+        boundary.authorize_browser(missing_csrf, started.user_code)
+    csrf_locals = traceback_locals_repr(csrf_error.value, "authorize_browser")
+    assert started.user_code not in csrf_locals
+    assert missing_csrf.cookie_header not in csrf_locals
 
     with pytest.raises(TuiPairingBadRequestError) as bad_code:
         boundary.authorize_browser(browser_request(http, "student-01"), wrong)
@@ -224,6 +230,37 @@ def test_expired_pairing_never_issues_session(setup) -> None:
         session.session_id.startswith("web-session-")
         for session in storage.list_user_sessions("student-01")
     )
+
+
+def test_transaction_time_expiry_is_reported_as_gone(setup) -> None:
+    storage, clock, boundary, http = setup
+    started = boundary.begin()
+    clock.value += timedelta(minutes=1)
+    boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
+    storage._clock = lambda: started.expires_at
+
+    with pytest.raises(TuiPairingExpiredHttpError):
+        boundary.consume(started.pairing_id, started.user_code)
+    assert storage.read_pairing(started.pairing_id).status == "expired"
+    assert all(
+        session.audience == "web"
+        for session in storage.list_user_sessions("student-01")
+    )
+
+
+def test_web_and_tui_session_audiences_are_not_interchangeable(setup) -> None:
+    _storage, clock, boundary, http = setup
+    started = boundary.begin()
+    clock.value += timedelta(minutes=1)
+    boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
+    credential = boundary.consume(started.pairing_id, started.user_code)
+
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.authenticate_bearer("Bearer " + "A" * 40)
+    with pytest.raises(HttpAuthenticationRequiredError):
+        http.authenticate(
+            HttpAuthRequest("GET", "thebitlab_session=" + credential.bearer_token)
+        )
 
 
 def test_role_change_invalidates_issued_tui_bearer(setup) -> None:

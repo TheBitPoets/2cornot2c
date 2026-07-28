@@ -24,10 +24,11 @@ from scripts.thebitlab_identity_ports import (
     IdentityStorageGenerationConflictError,
     IdentityStorageMappingGenerationConflictError,
     IdentityStorageNotFoundError,
+    IdentityStoragePairingExpiredError,
 )
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 _T = TypeVar("_T")
 
 
@@ -196,6 +197,11 @@ _MIGRATION_5 = (
     "UPDATE external_group_mappings SET updated_at = created_at",
 )
 
+_MIGRATION_6 = (
+    "ALTER TABLE sessions ADD COLUMN audience TEXT NOT NULL DEFAULT 'web' "
+    "CHECK (audience IN ('web', 'tui'))",
+)
+
 _MIGRATION_4 = (
     """
     CREATE TABLE external_group_mapping_generations (
@@ -311,19 +317,22 @@ class SqliteIdentityStorage:
                 (3, _MIGRATION_3),
                 (4, _MIGRATION_4),
                 (5, _MIGRATION_5),
+                (6, _MIGRATION_6),
             )
             for version, statements in migrations:
                 if version in versions:
                     continue
                 for statement in statements:
-                    if version == 5 and statement.startswith("ALTER TABLE"):
+                    if version in {5, 6} and statement.startswith("ALTER TABLE"):
+                        table = (
+                            "external_group_mappings" if version == 5 else "sessions"
+                        )
+                        expected_column = "updated_at" if version == 5 else "audience"
                         columns = {
                             row["name"]
-                            for row in connection.execute(
-                                "PRAGMA table_info(external_group_mappings)"
-                            )
+                            for row in connection.execute(f"PRAGMA table_info({table})")
                         }
-                        if "updated_at" in columns:
+                        if expected_column in columns:
                             continue
                     connection.execute(statement)
                 connection.execute(
@@ -473,6 +482,7 @@ class SqliteIdentityStorage:
             expires_at=_decode_datetime(row["expires_at"]),
             last_seen_at=_decode_datetime(row["last_seen_at"]),
             revoked_at=_decode_datetime(row["revoked_at"]),
+            audience=row["audience"],
         )
 
     @classmethod
@@ -1795,7 +1805,12 @@ class SqliteIdentityStorage:
     def create_session(self, session: UserSession) -> None:
         with self._transaction("create_session") as connection:
             connection.execute(
-                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                """
+                INSERT INTO sessions
+                    (session_id, user_id, token_digest, created_at, expires_at,
+                     last_seen_at, revoked_at, audience)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
                 (
                     session.session_id,
                     session.user_id,
@@ -1806,6 +1821,7 @@ class SqliteIdentityStorage:
                     None
                     if session.revoked_at is None
                     else _encode_datetime(session.revoked_at, "revoked_at"),
+                    session.audience,
                 ),
             )
 
@@ -1819,7 +1835,9 @@ class SqliteIdentityStorage:
             cursor = connection.execute(
                 """
                 INSERT INTO sessions
-                SELECT ?, ?, ?, ?, ?, ?, ?
+                    (session_id, user_id, token_digest, created_at, expires_at,
+                     last_seen_at, revoked_at, audience)
+                SELECT ?, ?, ?, ?, ?, ?, ?, ?
                 FROM users
                 WHERE user_id = ? AND active = 1 AND updated_at = ?
                 """,
@@ -1833,6 +1851,7 @@ class SqliteIdentityStorage:
                     None
                     if session.revoked_at is None
                     else _encode_datetime(session.revoked_at, "revoked_at"),
+                    session.audience,
                     session.user_id,
                     expected_user_revision,
                 ),
@@ -1860,6 +1879,7 @@ class SqliteIdentityStorage:
             session.token_digest,
             created_at,
             expires_at,
+            session.audience,
         )
         with self._transaction("save_session") as connection:
             if session.revoked_at is None:
@@ -1867,7 +1887,7 @@ class SqliteIdentityStorage:
                     """
                     UPDATE sessions SET last_seen_at = ?
                     WHERE session_id = ? AND user_id = ? AND token_digest = ?
-                        AND created_at = ? AND expires_at = ?
+                        AND created_at = ? AND expires_at = ? AND audience = ?
                         AND revoked_at IS NULL AND last_seen_at <= ?
                     """,
                     (last_seen_at,) + immutable + (last_seen_at,),
@@ -1882,7 +1902,7 @@ class SqliteIdentityStorage:
                         END,
                         revoked_at = ?
                     WHERE session_id = ? AND user_id = ? AND token_digest = ?
-                        AND created_at = ? AND expires_at = ?
+                        AND created_at = ? AND expires_at = ? AND audience = ?
                         AND revoked_at IS NULL AND last_seen_at <= ?
                     """,
                     (last_seen_at, last_seen_at, revoked_at)
@@ -1917,7 +1937,7 @@ class SqliteIdentityStorage:
                 """
                 UPDATE sessions SET last_seen_at = ?
                 WHERE session_id = ? AND user_id = ? AND token_digest = ?
-                    AND created_at = ? AND expires_at = ?
+                    AND created_at = ? AND expires_at = ? AND audience = ?
                     AND revoked_at IS NULL AND last_seen_at <= ?
                     AND EXISTS (
                         SELECT 1 FROM users
@@ -1932,6 +1952,7 @@ class SqliteIdentityStorage:
                     session.token_digest,
                     created_at,
                     expires_at,
+                    session.audience,
                     last_seen_at,
                     expected_user_revision,
                 ),
@@ -2054,6 +2075,7 @@ class SqliteIdentityStorage:
             or session.created_at != pairing.consumed_at
             or session.last_seen_at != session.created_at
             or session.revoked_at is not None
+            or session.audience != "tui"
             or expected_user_role != "student"
         ):
             raise IdentityStorageConflictError(
@@ -2068,62 +2090,93 @@ class SqliteIdentityStorage:
             pairing.authorized_at, "pairing_authorized_at"
         )
         consumed_at = _encode_datetime(pairing.consumed_at, "pairing_consumed_at")
+        expired = False
         with self._transaction(
             "consume_pairing_and_create_session"
         ) as connection:
-            transaction_time = _encode_datetime(
-                max(pairing.consumed_at, self._clock()), "storage_clock"
-            )
-            cursor = connection.execute(
-                """
-                UPDATE tui_pairings
-                SET status = 'consumed', consumed_at = ?
-                WHERE pairing_id = ? AND code_digest = ? AND status = 'authorized'
-                    AND created_at = ? AND expires_at = ? AND user_id = ?
-                    AND authorized_at = ? AND consumed_at IS NULL
-                    AND expired_at IS NULL AND revoked_at IS NULL
-                    AND created_at <= ? AND authorized_at <= ? AND expires_at > ?
-                    AND EXISTS (
-                        SELECT 1 FROM users
-                        WHERE users.user_id = tui_pairings.user_id
-                            AND users.active = 1 AND users.role = ?
-                            AND users.updated_at = ?
-                    )
-                """,
-                (
-                    consumed_at,
-                    pairing.pairing_id,
-                    pairing.code_digest,
-                    created_at,
-                    expires_at,
-                    pairing.user_id,
-                    authorized_at,
-                    transaction_time,
-                    transaction_time,
-                    transaction_time,
-                    expected_user_role,
-                    expected_revision,
-                ),
-            )
-            if cursor.rowcount != 1:
-                raise IdentityStorageConflictError(
-                    "Pairing o utente modificati durante il consumo."
+            transaction_instant = max(pairing.consumed_at, self._clock())
+            transaction_time = _encode_datetime(transaction_instant, "storage_clock")
+            if transaction_instant >= pairing.expires_at:
+                cursor = connection.execute(
+                    """
+                    UPDATE tui_pairings
+                    SET status = 'expired', expired_at = ?
+                    WHERE pairing_id = ? AND code_digest = ? AND status = 'authorized'
+                        AND created_at = ? AND expires_at = ? AND user_id = ?
+                        AND authorized_at = ? AND consumed_at IS NULL
+                        AND expired_at IS NULL AND revoked_at IS NULL
+                    """,
+                    (
+                        transaction_time,
+                        pairing.pairing_id,
+                        pairing.code_digest,
+                        created_at,
+                        expires_at,
+                        pairing.user_id,
+                        authorized_at,
+                    ),
                 )
-            connection.execute(
-                """
-                INSERT INTO sessions
-                    (session_id, user_id, token_digest, created_at, expires_at,
-                     last_seen_at, revoked_at)
-                VALUES (?, ?, ?, ?, ?, ?, NULL)
-                """,
-                (
-                    session.session_id,
-                    session.user_id,
-                    session.token_digest,
-                    _encode_datetime(session.created_at, "session_created_at"),
-                    _encode_datetime(session.expires_at, "session_expires_at"),
-                    _encode_datetime(session.last_seen_at, "session_last_seen_at"),
-                ),
+                if cursor.rowcount != 1:
+                    raise IdentityStorageConflictError(
+                        "Pairing modificato durante la scadenza."
+                    )
+                expired = True
+            else:
+                cursor = connection.execute(
+                    """
+                    UPDATE tui_pairings
+                    SET status = 'consumed', consumed_at = ?
+                    WHERE pairing_id = ? AND code_digest = ? AND status = 'authorized'
+                        AND created_at = ? AND expires_at = ? AND user_id = ?
+                        AND authorized_at = ? AND consumed_at IS NULL
+                        AND expired_at IS NULL AND revoked_at IS NULL
+                        AND created_at <= ? AND authorized_at <= ? AND expires_at > ?
+                        AND EXISTS (
+                            SELECT 1 FROM users
+                            WHERE users.user_id = tui_pairings.user_id
+                                AND users.active = 1 AND users.role = ?
+                                AND users.updated_at = ?
+                        )
+                    """,
+                    (
+                        consumed_at,
+                        pairing.pairing_id,
+                        pairing.code_digest,
+                        created_at,
+                        expires_at,
+                        pairing.user_id,
+                        authorized_at,
+                        transaction_time,
+                        transaction_time,
+                        transaction_time,
+                        expected_user_role,
+                        expected_revision,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    raise IdentityStorageConflictError(
+                        "Pairing o utente modificati durante il consumo."
+                    )
+                connection.execute(
+                    """
+                    INSERT INTO sessions
+                        (session_id, user_id, token_digest, created_at, expires_at,
+                         last_seen_at, revoked_at, audience)
+                    VALUES (?, ?, ?, ?, ?, ?, NULL, ?)
+                    """,
+                    (
+                        session.session_id,
+                        session.user_id,
+                        session.token_digest,
+                        _encode_datetime(session.created_at, "session_created_at"),
+                        _encode_datetime(session.expires_at, "session_expires_at"),
+                        _encode_datetime(session.last_seen_at, "session_last_seen_at"),
+                        session.audience,
+                    ),
+                )
+        if expired:
+            raise IdentityStoragePairingExpiredError(
+                "Pairing scaduto durante il consumo."
             )
 
     def _save_pairing_transition(

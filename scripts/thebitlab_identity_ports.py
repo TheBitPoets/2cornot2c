@@ -30,6 +30,10 @@ class IdentityStorageMappingGenerationConflictError(IdentityStorageConflictError
     """Raised when an immutable external-group mapping generation was already used."""
 
 
+class IdentityStoragePairingExpiredError(IdentityStorageConflictError):
+    """Raised after atomically expiring a pairing at transaction time."""
+
+
 class IdentityStorageNotFoundError(IdentityStorageError):
     """Raised when an update targets a missing identity record."""
 
