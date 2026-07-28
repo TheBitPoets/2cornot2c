@@ -1518,6 +1518,13 @@ def test_invalid_pairing_generator_fails_before_persistence(storage) -> None:
     assert storage.read_pairing("pairing-01") is None
 
 
+def test_provider_display_name_allows_valid_emoji_joiners() -> None:
+    assertion = FederatedIdentityAssertion(
+        "google", "google-emoji", "Utente 👩‍💻"
+    )
+    assert assertion.display_name == "Utente 👩‍💻"
+
+
 @pytest.mark.parametrize(
     "generated",
     ("AAAA\u009b31mBBBB", "pair\u202eid"),

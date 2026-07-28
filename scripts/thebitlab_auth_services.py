@@ -89,12 +89,12 @@ def _required_text(value: str, field_name: str, *, lowercase: bool = False) -> s
     if not normalized or len(normalized) > 512:
         raise ProviderProtocolError(f"{field_name} non valido.")
     if any(
-        unicodedata.category(character).startswith("C")
+        ord(character) < 32
+        or ord(character) == 127
+        or unicodedata.category(character) == "Cs"
         for character in normalized
     ):
-        raise ProviderProtocolError(
-            f"{field_name} contiene caratteri Unicode non sicuri."
-        )
+        raise ProviderProtocolError(f"{field_name} contiene caratteri non validi.")
     return normalized
 
 
@@ -121,7 +121,14 @@ def _generated_text(value: str, field_name: str, *, minimum_length: int = 1) -> 
         normalized = _required_text(value, field_name)
     except ProviderProtocolError as error:
         raise CredentialGenerationError(f"{field_name} generato non valido.") from error
-    if normalized != value or len(normalized) < minimum_length:
+    if (
+        normalized != value
+        or len(normalized) < minimum_length
+        or any(
+            unicodedata.category(character).startswith("C")
+            for character in normalized
+        )
+    ):
         raise CredentialGenerationError(f"{field_name} generato non valido.")
     return normalized
 
