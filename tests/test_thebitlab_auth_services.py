@@ -28,6 +28,7 @@ from scripts.thebitlab_auth_services import (
     ProviderAuthenticationError,
     ProviderProtocolError,
     SessionService,
+    TuiPairingSessionService,
 )
 from scripts.thebitlab_identity import AccountDisabledError, ExternalIdentity, UserAccount
 from scripts.thebitlab_identity_sqlite import (
@@ -1214,6 +1215,134 @@ def test_pairing_concurrent_consumption_has_one_winner(storage) -> None:
         outcomes = list(executor.map(lambda _index: consume_once(), range(2)))
 
     assert sorted(outcomes) == ["consumed", "rejected"]
+    assert storage.read_pairing("pairing-01").status == "consumed"
+
+
+def test_tui_pairing_consumption_atomically_issues_student_session(
+    storage, database_path
+) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value = NOW + timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+
+    credential = service.consume(issued.pairing.pairing_id, issued.code)
+
+    assert credential.bearer_token not in repr(credential)
+    assert storage.read_pairing("pairing-01").status == "consumed"
+    authenticated = SessionService(storage, clock=clock).authenticate(
+        credential.bearer_token
+    )
+    assert authenticated.user.user_id == "user-01"
+    with sqlite3.connect(database_path) as connection:
+        persisted = connection.execute(
+            "SELECT token_digest FROM sessions WHERE session_id = 'tui-session-01'"
+        ).fetchone()[0]
+    assert credential.bearer_token not in persisted
+
+
+def test_tui_pairing_rejects_non_student_without_consuming(storage) -> None:
+    storage.create_user(account(role="teacher"))
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(pairings)
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    with pytest.raises(InvalidCredentialError):
+        service.authorize(issued.code, "user-01")
+
+    assert storage.read_pairing("pairing-01").status == "pending"
+    assert storage.list_user_sessions("user-01") == []
+
+
+def test_tui_pairing_role_race_rolls_back_consumption(storage, monkeypatch) -> None:
+    original_account = account()
+    storage.create_user(original_account)
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+    original = storage.consume_pairing_and_create_session
+
+    def change_role_then_consume(*args, **kwargs):
+        current = storage.read_user("user-01")
+        storage.save_user(
+            replace(current, role="teacher", updated_at=NOW + timedelta(minutes=2)),
+            expected_updated_at=current.updated_at,
+        )
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "consume_pairing_and_create_session", change_role_then_consume
+    )
+    with pytest.raises(InvalidCredentialError):
+        service.consume("pairing-01", issued.code)
+    assert storage.read_pairing("pairing-01").status == "authorized"
+    assert storage.list_user_sessions("user-01") == []
+
+
+def test_tui_pairing_concurrent_consumption_issues_exactly_one_session(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+
+    def consume_once():
+        try:
+            service.consume("pairing-01", issued.code)
+            return "issued"
+        except (PairingStateError, ConcurrentStateChangeError):
+            return "rejected"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(lambda _index: consume_once(), range(2)))
+
+    assert sorted(outcomes) == ["issued", "rejected"]
+    assert len(storage.list_user_sessions("user-01")) == 1
     assert storage.read_pairing("pairing-01").status == "consumed"
 
 

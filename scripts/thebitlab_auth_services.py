@@ -344,6 +344,15 @@ class PairingApplicationStorage(Protocol):
         self, pairing: TuiPairing, *, expected_user_updated_at: datetime
     ) -> None: ...
 
+    def consume_pairing_and_create_session(
+        self,
+        pairing: TuiPairing,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_user_role: str,
+    ) -> None: ...
+
 
 @dataclass(frozen=True)
 class IssuedSession:
@@ -1025,7 +1034,9 @@ class PairingService:
                 code = None
         raise CredentialGenerationError("Impossibile generare un pairing univoco.")
 
-    def authorize(self, code: str, user_id: str) -> TuiPairing:
+    def authorize(
+        self, code: str, user_id: str, *, required_role: str | None = None
+    ) -> TuiPairing:
         try:
             digest = _pairing_digest_for_verification(code, self.pepper)
         finally:
@@ -1040,6 +1051,8 @@ class PairingService:
         if account is None:
             raise InvalidCredentialError("Utente non disponibile.")
         require_active_account(account)
+        if required_role is not None and account.role != required_role:
+            raise InvalidCredentialError("Utente pairing non disponibile.")
         authorized = authorize_pairing(pairing, account.user_id, now)
         self._save_transition(
             authorized,
@@ -1049,6 +1062,17 @@ class PairingService:
         return authorized
 
     def consume(self, pairing_id: str, code: str) -> TuiPairing:
+        _pairing, account, consumed = self._prepare_consumption(pairing_id, code)
+        self._save_transition(
+            consumed,
+            require_active_user=True,
+            expected_user_updated_at=account.updated_at,
+        )
+        return consumed
+
+    def _prepare_consumption(
+        self, pairing_id: str, code: str
+    ) -> tuple[TuiPairing, UserAccount, TuiPairing]:
         try:
             digest = _pairing_digest_for_verification(code, self.pepper)
         finally:
@@ -1063,13 +1087,7 @@ class PairingService:
         if account is None:
             raise InvalidCredentialError("Utente pairing non disponibile.")
         require_active_account(account)
-        consumed = consume_pairing(pairing, now)
-        self._save_transition(
-            consumed,
-            require_active_user=True,
-            expected_user_updated_at=account.updated_at,
-        )
-        return consumed
+        return pairing, account, consume_pairing(pairing, now)
 
     def revoke(self, pairing_id: str) -> TuiPairing:
         pairing = self.storage.read_pairing(pairing_id)
@@ -1128,3 +1146,107 @@ class PairingService:
             raise ConcurrentStateChangeError(
                 "Pairing modificato da un'altra operazione."
             ) from error
+
+
+class TuiPairingSessionService:
+    """Issue a student bearer atomically with one authorized pairing consumption."""
+
+    def __init__(
+        self,
+        pairings: PairingService,
+        *,
+        session_ttl: timedelta = timedelta(hours=8),
+        token_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32),
+        session_id_factory: Callable[[], str] = lambda: str(uuid.uuid4()),
+    ) -> None:
+        if type(pairings) is not PairingService:
+            raise AuthApplicationError("Servizio pairing non valido.")
+        self.pairings = pairings
+        self.storage = pairings.storage
+        self.session_ttl = _positive_ttl(session_ttl, "ttl sessione TUI")
+        self.token_factory = token_factory
+        self.session_id_factory = session_id_factory
+
+    def issue(self) -> IssuedPairing:
+        return self.pairings.issue()
+
+    def authorize(self, code: str, user_id: str) -> TuiPairing:
+        try:
+            return self.pairings.authorize(
+                code, user_id, required_role="student"
+            )
+        finally:
+            code = None
+
+    def revoke(self, pairing_id: str) -> TuiPairing:
+        return self.pairings.revoke(pairing_id)
+
+    def consume(self, pairing_id: str, code: str) -> IssuedSession:
+        try:
+            pairing, account, consumed = self.pairings._prepare_consumption(
+                pairing_id, code
+            )
+        finally:
+            code = None
+        if account.role != "student":
+            pairing = None
+            consumed = None
+            account = None
+            raise InvalidCredentialError("Utente pairing non disponibile.")
+        for _attempt in range(_MAX_ATTEMPTS):
+            raw_token = self.token_factory()
+            try:
+                digest_failed = False
+                try:
+                    digest = session_token_digest(raw_token)
+                except AuthApplicationError:
+                    digest_failed = True
+                    digest = ""
+                if digest_failed:
+                    raise CredentialGenerationError(
+                        "Token di sessione TUI generato non valido."
+                    )
+                session = UserSession(
+                    session_id=_generated_text(
+                        self.session_id_factory(), "session_id TUI"
+                    ),
+                    user_id=account.user_id,
+                    token_digest=digest,
+                    created_at=consumed.consumed_at,
+                    expires_at=consumed.consumed_at + self.session_ttl,
+                    last_seen_at=consumed.consumed_at,
+                )
+                try:
+                    self.storage.consume_pairing_and_create_session(
+                        consumed,
+                        session,
+                        expected_user_updated_at=account.updated_at,
+                        expected_user_role="student",
+                    )
+                except IdentityStorageConflictError:
+                    current_pairing = self.storage.read_pairing(pairing.pairing_id)
+                    current_account = self.storage.read_user(account.user_id)
+                    if current_pairing != pairing:
+                        raise ConcurrentStateChangeError(
+                            "Pairing modificato durante il consumo."
+                        ) from None
+                    if current_account is None:
+                        raise InvalidCredentialError(
+                            "Utente pairing non disponibile."
+                        ) from None
+                    require_active_account(current_account)
+                    if current_account.role != "student":
+                        raise InvalidCredentialError(
+                            "Utente pairing non disponibile."
+                        ) from None
+                    if current_account.updated_at != account.updated_at:
+                        raise ConcurrentStateChangeError(
+                            "Utente modificato durante il consumo pairing."
+                        ) from None
+                    continue
+                return IssuedSession(session, raw_token)
+            finally:
+                raw_token = None
+        raise CredentialGenerationError(
+            "Impossibile generare una sessione TUI univoca."
+        )

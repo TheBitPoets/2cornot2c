@@ -285,6 +285,17 @@ class TuiPairingStorage(Protocol):
         """Transition a pairing only while its active user revision remains unchanged."""
         ...
 
+    def consume_pairing_and_create_session(
+        self,
+        pairing: TuiPairing,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_user_role: str,
+    ) -> None:
+        """Atomically consume an authorized pairing and create its user session."""
+        ...
+
     def delete_expired_pairings(self, expired_before: datetime) -> int:
         """Delete pairings expiring at or before an explicit retention cutoff."""
         ...

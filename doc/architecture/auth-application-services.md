@@ -61,6 +61,8 @@ Il ruolo `pending` puo possedere una sessione per completare onboarding, ma `Htt
 
 Il codice raw compare soltanto in `IssuedPairing`, con `repr` oscurato; codice e pepper vengono rimossi dai frame locali prima di propagare errori. Il costruttore conserva temporaneamente il pepper in un contenitore che viene svuotato prima di rilanciare errori di configurazione. Autorizzazione e consumo richiedono il codice; il consumo richiede inoltre il `pairing_id`. Controllo account attivo, revisione `users.updated_at` e transizione di autorizzazione/consumo sono atomici, impedendo ABA di disabilitazione/riabilitazione. Le transizioni vengono salvate tramite CAS, quindi una sola operazione concorrente puo autorizzare, consumare, scadere o revocare il record. Un clock anteriore all'autorizzazione viene rifiutato prima della transizione.
 
+Il boundary di emissione sessione TUI è descritto in [tui-browser-pairing.md](tui-browser-pairing.md). Consumo pairing e creazione della sessione studente sono ora una singola transazione SQLite con ricontrollo di ruolo, revisione, scadenza e clock storage.
+
 La limitazione dei tentativi sul codice appartiene al futuro adapter HTTP e rimane obbligatoria prima dell'esposizione in rete.
 
 ## Errori
@@ -81,5 +83,5 @@ I messaggi non includono credenziali raw. Gli errori storage condivisi sono defi
 - route/browser E2E Google OIDC e GitHub OAuth (l'adapter Google è descritto in `google-oidc-adapter.md`);
 - integrazione del boundary HTTP nelle route e nelle dashboard concrete;
 - rate limiting distribuito;
-- emissione atomica di una sessione TUI dopo il consumo;
-- UI e browser E2E.
+- route concrete, UI e browser E2E del pairing TUI;
+- apertura browser, polling e persistenza locale del bearer nella CLI.

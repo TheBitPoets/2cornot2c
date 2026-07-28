@@ -2037,6 +2037,95 @@ class SqliteIdentityStorage:
             expected_user_updated_at=expected_user_updated_at,
         )
 
+    def consume_pairing_and_create_session(
+        self,
+        pairing: TuiPairing,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_user_role: str,
+    ) -> None:
+        if (
+            pairing.status != "consumed"
+            or pairing.user_id is None
+            or pairing.authorized_at is None
+            or pairing.consumed_at is None
+            or session.user_id != pairing.user_id
+            or session.created_at != pairing.consumed_at
+            or session.last_seen_at != session.created_at
+            or session.revoked_at is not None
+            or expected_user_role != "student"
+        ):
+            raise IdentityStorageConflictError(
+                "Contratto emissione sessione pairing non valido."
+            )
+        expected_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        created_at = _encode_datetime(pairing.created_at, "pairing_created_at")
+        expires_at = _encode_datetime(pairing.expires_at, "pairing_expires_at")
+        authorized_at = _encode_datetime(
+            pairing.authorized_at, "pairing_authorized_at"
+        )
+        consumed_at = _encode_datetime(pairing.consumed_at, "pairing_consumed_at")
+        with self._transaction(
+            "consume_pairing_and_create_session"
+        ) as connection:
+            transaction_time = _encode_datetime(
+                max(pairing.consumed_at, self._clock()), "storage_clock"
+            )
+            cursor = connection.execute(
+                """
+                UPDATE tui_pairings
+                SET status = 'consumed', consumed_at = ?
+                WHERE pairing_id = ? AND code_digest = ? AND status = 'authorized'
+                    AND created_at = ? AND expires_at = ? AND user_id = ?
+                    AND authorized_at = ? AND consumed_at IS NULL
+                    AND expired_at IS NULL AND revoked_at IS NULL
+                    AND created_at <= ? AND authorized_at <= ? AND expires_at > ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE users.user_id = tui_pairings.user_id
+                            AND users.active = 1 AND users.role = ?
+                            AND users.updated_at = ?
+                    )
+                """,
+                (
+                    consumed_at,
+                    pairing.pairing_id,
+                    pairing.code_digest,
+                    created_at,
+                    expires_at,
+                    pairing.user_id,
+                    authorized_at,
+                    transaction_time,
+                    transaction_time,
+                    transaction_time,
+                    expected_user_role,
+                    expected_revision,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise IdentityStorageConflictError(
+                    "Pairing o utente modificati durante il consumo."
+                )
+            connection.execute(
+                """
+                INSERT INTO sessions
+                    (session_id, user_id, token_digest, created_at, expires_at,
+                     last_seen_at, revoked_at)
+                VALUES (?, ?, ?, ?, ?, ?, NULL)
+                """,
+                (
+                    session.session_id,
+                    session.user_id,
+                    session.token_digest,
+                    _encode_datetime(session.created_at, "session_created_at"),
+                    _encode_datetime(session.expires_at, "session_expires_at"),
+                    _encode_datetime(session.last_seen_at, "session_last_seen_at"),
+                ),
+            )
+
     def _save_pairing_transition(
         self,
         pairing: TuiPairing,

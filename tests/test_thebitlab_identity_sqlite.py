@@ -582,6 +582,95 @@ def test_active_pairing_transition_requires_matching_user_revision(storage) -> N
     assert storage.read_pairing("pairing-01") == pending
 
 
+def test_pairing_session_creation_is_atomic_with_consumption(storage) -> None:
+    storage.create_user(account())
+    pending = pairing()
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=6))
+    issued_session = session(
+        created_at=consumed.consumed_at,
+        last_seen_at=consumed.consumed_at,
+        expires_at=consumed.consumed_at + timedelta(hours=8),
+    )
+
+    storage.consume_pairing_and_create_session(
+        consumed,
+        issued_session,
+        expected_user_updated_at=NOW,
+        expected_user_role="student",
+    )
+
+    assert storage.read_pairing("pairing-01") == consumed
+    assert storage.read_session("session-01") == issued_session
+
+
+def test_pairing_session_creation_rechecks_expiry_at_transaction_time(storage) -> None:
+    storage.create_user(account())
+    pending = pairing()
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=6))
+    issued_session = session(
+        created_at=consumed.consumed_at,
+        last_seen_at=consumed.consumed_at,
+        expires_at=consumed.consumed_at + timedelta(hours=8),
+    )
+    storage._clock = lambda: LATER
+
+    with pytest.raises(IdentityStorageConflictError):
+        storage.consume_pairing_and_create_session(
+            consumed,
+            issued_session,
+            expected_user_updated_at=NOW,
+            expected_user_role="student",
+        )
+    assert storage.read_pairing("pairing-01") == authorized
+    assert storage.read_session("session-01") is None
+
+
+def test_pairing_session_creation_rolls_back_on_role_or_session_conflict(storage) -> None:
+    storage.create_user(account(role="teacher"))
+    pending = pairing()
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "user-01", NOW + timedelta(minutes=5))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=6))
+    issued_session = session(
+        created_at=consumed.consumed_at,
+        last_seen_at=consumed.consumed_at,
+        expires_at=consumed.consumed_at + timedelta(hours=8),
+    )
+
+    with pytest.raises(IdentityStorageConflictError):
+        storage.consume_pairing_and_create_session(
+            consumed,
+            issued_session,
+            expected_user_updated_at=NOW,
+            expected_user_role="student",
+        )
+    assert storage.read_pairing("pairing-01") == authorized
+    assert storage.read_session("session-01") is None
+
+    current = storage.read_user("user-01")
+    storage.save_user(
+        replace(current, role="student", updated_at=NOW + timedelta(minutes=7)),
+        expected_updated_at=current.updated_at,
+    )
+    storage.create_session(issued_session)
+    with pytest.raises(IdentityStorageConflictError):
+        storage.consume_pairing_and_create_session(
+            consumed,
+            replace(issued_session, session_id="session-02"),
+            expected_user_updated_at=NOW + timedelta(minutes=7),
+            expected_user_role="student",
+        )
+    assert storage.read_pairing("pairing-01") == authorized
+    assert storage.read_session("session-02") is None
+
+
 def test_pairing_consumption_is_atomic_and_terminal(storage) -> None:
     storage.create_user(account())
     storage.create_user(account("user-02"))
