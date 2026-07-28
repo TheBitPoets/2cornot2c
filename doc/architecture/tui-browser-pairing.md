@@ -12,7 +12,7 @@ Questo incremento implementa boundary e transazione applicativa. Le route concre
 2. L'utente apre il browser, possiede già una sessione web e invia il codice con `POST` e CSRF.
 3. `HttpSessionAuthBoundary` richiede ruolo interno `student`; `PairingService` ricontrolla account attivo, ruolo e revisione durante il CAS `pending -> authorized`.
 4. La TUI presenta `pairing_id + codice` a `consume()`.
-5. `TuiPairingSessionService` prepara la transizione `authorized -> consumed`, genera un bearer ad alta entropia e chiama una singola operazione SQLite.
+5. `TuiPairingSessionService` prepara la transizione `authorized -> consumed`, genera e valida un bearer base64url ad alta entropia entro limiti HTTP e chiama una singola operazione SQLite.
 6. SQLite ricontrolla digest/generazione/stato pairing, scadenza al tempo della transazione, utente attivo, ruolo `student` e revisione; poi aggiorna il pairing e inserisce la sessione nella stessa transazione.
 7. La TUI riceve il bearer una sola volta e lo userà come `Authorization: Bearer` nelle future route concrete.
 
@@ -39,7 +39,7 @@ Una risposta persa dopo il commit può lasciare una sessione non consegnata fino
 - il cookie web non viene restituito alla TUI;
 - il bearer TUI non viene inserito in URL, query string o log.
 
-`IssuedTuiCredential` è una risposta one-shot. La futura CLI dovrà conservarla con permessi filesystem restrittivi oppure soltanto in memoria; questa decisione resta fuori dal boundary.
+`IssuedTuiCredential` è una risposta one-shot. Prima di esporla, il boundary ricontrolla audience `tui`, correlazione digest/sessione/utente e autenticabilità tramite il service TUI; un risultato adapter web o malformato produce 503 e non viene divulgato. La futura CLI dovrà conservare la credenziale con permessi filesystem restrittivi oppure soltanto in memoria; questa decisione resta fuori dal boundary.
 
 ## Autenticazione TUI
 

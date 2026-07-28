@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import re
 import secrets
 import string
 import uuid
@@ -30,6 +31,7 @@ from scripts.thebitlab_identity_ports import (
 
 _MAX_ATTEMPTS = 5
 _PAIRING_ALPHABET = string.ascii_uppercase + string.digits
+_SESSION_BEARER_RE = re.compile(r"^[A-Za-z0-9_-]{32,1024}$")
 
 
 class AuthApplicationError(RuntimeError):
@@ -115,6 +117,11 @@ def _generated_text(value: str, field_name: str, *, minimum_length: int = 1) -> 
     if normalized != value or len(normalized) < minimum_length:
         raise CredentialGenerationError(f"{field_name} generato non valido.")
     return normalized
+
+
+def valid_session_bearer(raw_token: object) -> bool:
+    """Return whether a generated bearer is safe for HTTP cookie/header transport."""
+    return type(raw_token) is str and _SESSION_BEARER_RE.fullmatch(raw_token) is not None
 
 
 def session_token_digest(raw_token: str) -> str:
@@ -1210,6 +1217,10 @@ class TuiPairingSessionService:
         for _attempt in range(_MAX_ATTEMPTS):
             raw_token = self.token_factory()
             try:
+                if not valid_session_bearer(raw_token):
+                    raise CredentialGenerationError(
+                        "Token di sessione TUI generato non valido."
+                    )
                 digest_failed = False
                 try:
                     digest = session_token_digest(raw_token)

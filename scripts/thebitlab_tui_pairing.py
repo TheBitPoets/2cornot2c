@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hmac
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -20,6 +19,7 @@ from scripts.thebitlab_auth_services import (
     SessionService,
     TuiPairingSessionService,
     session_token_digest,
+    valid_session_bearer,
 )
 from scripts.thebitlab_http_auth import (
     HttpAuthError,
@@ -29,9 +29,6 @@ from scripts.thebitlab_http_auth import (
     HttpSessionAuthBoundary,
 )
 from scripts.thebitlab_identity import TuiPairing, UserAccount, UserSession
-
-_BEARER_RE = re.compile(r"^[A-Za-z0-9_-]{32,1024}$")
-
 
 class TuiPairingBadRequestError(HttpAuthError):
     status_code = 400
@@ -122,9 +119,7 @@ class IssuedTuiCredential:
         object.__setattr__(self, "session_id", _identifier(self.session_id, "session_id"))
         object.__setattr__(self, "user_id", _identifier(self.user_id, "user_id"))
         object.__setattr__(self, "expires_at", _utc(self.expires_at, "expires_at"))
-        if type(self.bearer_token) is not str or not _BEARER_RE.fullmatch(
-            self.bearer_token
-        ):
+        if not valid_session_bearer(self.bearer_token):
             raise ValueError("bearer_token non valido.")
 
 
@@ -257,6 +252,22 @@ class TuiBrowserPairingBoundary:
         if unavailable or type(issued) is not IssuedSession:
             issued = None
             raise TuiPairingUnavailableError()
+        if not self._issued_is_valid(issued):
+            revoke_bearer = None
+            try:
+                if (
+                    type(issued.session) is UserSession
+                    and issued.session.audience == "tui"
+                    and valid_session_bearer(issued.bearer_token)
+                ):
+                    revoke_bearer = issued.bearer_token
+            except Exception:
+                revoke_bearer = None
+            issued = None
+            if revoke_bearer is not None:
+                self._best_effort_revoke(revoke_bearer)
+            revoke_bearer = None
+            raise TuiPairingUnavailableError()
         malformed = False
         credential = None
         revoke_bearer = None
@@ -329,7 +340,7 @@ class TuiBrowserPairingBoundary:
             invalid = (
                 separator != " "
                 or scheme.lower() != "bearer"
-                or not _BEARER_RE.fullmatch(bearer)
+                or not valid_session_bearer(bearer)
             )
         value = None
         if invalid:
@@ -338,6 +349,43 @@ class TuiBrowserPairingBoundary:
             bearer = None
             raise HttpAuthenticationRequiredError()
         return bearer
+
+    def _issued_is_valid(self, issued: IssuedSession) -> bool:
+        bearer = None
+        authenticated = None
+        try:
+            if (
+                type(issued.session) is not UserSession
+                or issued.session.audience != "tui"
+                or not valid_session_bearer(issued.bearer_token)
+            ):
+                return False
+            bearer = issued.bearer_token
+            if not hmac.compare_digest(
+                issued.session.token_digest, session_token_digest(bearer)
+            ):
+                return False
+            authenticated = self.tui_sessions.authenticate(bearer)
+            return (
+                type(authenticated) is AuthenticatedSession
+                and type(authenticated.session) is UserSession
+                and type(authenticated.user) is UserAccount
+                and authenticated.user.active
+                and authenticated.user.role == "student"
+                and authenticated.user.user_id == issued.session.user_id
+                and authenticated.session.session_id == issued.session.session_id
+                and authenticated.session.user_id == issued.session.user_id
+                and authenticated.session.token_digest == issued.session.token_digest
+                and authenticated.session.created_at == issued.session.created_at
+                and authenticated.session.expires_at == issued.session.expires_at
+                and authenticated.session.audience == "tui"
+                and authenticated.session.revoked_at is None
+            )
+        except Exception:
+            return False
+        finally:
+            bearer = None
+            authenticated = None
 
     @staticmethod
     def _valid_authenticated(
