@@ -71,6 +71,7 @@ class UserDirectoryStorage(Protocol):
         expected_user_updated_at: datetime,
         expected_session_id: str,
         expected_session_token_digest: str,
+        expected_session_created_at: datetime,
         expected_session_valid_at: datetime,
     ) -> None:
         """Atomically link while both active user and session still match."""
@@ -94,6 +95,7 @@ class UserDirectoryStorage(Protocol):
         expected_user_updated_at: datetime,
         expected_session_id: str,
         expected_session_token_digest: str,
+        expected_session_created_at: datetime,
         expected_session_valid_at: datetime,
     ) -> None:
         """Refresh a link while active user and session still match."""
@@ -131,6 +133,7 @@ class UserDirectoryStorage(Protocol):
         expected_user_updated_at: datetime,
         expected_session_id: str,
         expected_session_token_digest: str,
+        expected_session_created_at: datetime,
         expected_session_valid_at: datetime,
     ) -> bool:
         """Atomically unlink while identity, active owner, and live session match."""

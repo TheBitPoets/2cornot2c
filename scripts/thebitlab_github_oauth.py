@@ -7,11 +7,11 @@ import hashlib
 import hmac
 import json
 import math
-import queue
 import re
 import secrets
+import subprocess
+import sys
 import threading
-import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
@@ -225,77 +225,117 @@ def _strict_json_object(data: bytes) -> dict[str, object]:
     return decoded
 
 
+_URLLIB_WORKER = r'''
+import base64
+import json
+import sys
+import urllib.error
+import urllib.request
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
+
+try:
+    payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+    data = base64.b64decode(payload["data"]) if payload["data"] is not None else None
+    request = urllib.request.Request(
+        payload["url"],
+        data=data,
+        headers=payload["headers"],
+        method=payload["method"],
+    )
+    opener = urllib.request.build_opener(NoRedirect())
+    with opener.open(request, timeout=payload["timeout"]) as response:
+        if response.status != 200:
+            raise RuntimeError
+        body = response.read(payload["maximum"] + 1)
+    if len(body) > payload["maximum"]:
+        raise RuntimeError
+    sys.stdout.buffer.write(body)
+except urllib.error.HTTPError as error:
+    raise SystemExit(10 if 400 <= error.code < 500 else 11)
+except Exception:
+    raise SystemExit(11)
+'''
+
+
 class UrllibGitHubOAuthTransport:
     _network_slots = threading.BoundedSemaphore(8)
 
-    class _NoRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, request, fp, code, msg, headers, newurl):
-            return None
-
     def __init__(self) -> None:
-        self._opener = urllib.request.build_opener(self._NoRedirect())
+        self._process_factory = subprocess.Popen
 
     def _request(self, request: urllib.request.Request, timeout_seconds: float, max_response_bytes: int) -> Mapping[str, object]:
-        outcomes: queue.Queue[tuple[str, Mapping[str, object] | None]] = queue.Queue(maxsize=1)
+        serialized = None
+        output = None
+        process = None
+        timed_out = False
         if not self._network_slots.acquire(blocking=False):
             request = None
             raise GitHubLinkProviderUnavailableError("GitHub non disponibile.")
-
-        def perform(bounded_request: urllib.request.Request) -> None:
-            data = None
-            result = None
-            status = "unavailable"
-            try:
-                with self._opener.open(
-                    bounded_request, timeout=timeout_seconds
-                ) as response:
-                    if response.status == 200:
-                        data = response.read(max_response_bytes + 1)
-                if data is not None and len(data) <= max_response_bytes:
-                    result = _strict_json_object(data)
-                    status = "ok"
-            except urllib.error.HTTPError as error:
-                if 400 <= error.code < 500:
-                    status = "rejected"
-                error = None
-            except Exception:
-                pass
-            finally:
-                data = None
-                bounded_request = None
-                outcomes.put((status, result))
-                self._network_slots.release()
-
         try:
-            worker = threading.Thread(
-                target=perform,
-                args=(request,),
-                name="thebitlab-github-oauth",
-                daemon=True,
-            )
-            worker.start()
-        except Exception:
-            self._network_slots.release()
+            serialized = json.dumps(
+                {
+                    "url": request.full_url,
+                    "method": request.get_method(),
+                    "headers": dict(request.header_items()),
+                    "data": (
+                        base64.b64encode(request.data).decode("ascii")
+                        if request.data is not None
+                        else None
+                    ),
+                    "timeout": timeout_seconds,
+                    "maximum": max_response_bytes,
+                },
+                separators=(",", ":"),
+            ).encode("utf-8")
             request = None
+            process = self._process_factory(
+                [sys.executable, "-I", "-c", _URLLIB_WORKER],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+            try:
+                output, _stderr = process.communicate(
+                    input=serialized, timeout=timeout_seconds
+                )
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                process.kill()
+                output, _stderr = process.communicate()
+            serialized = None
+            if timed_out or process.returncode not in {0, 10}:
+                raise GitHubLinkProviderUnavailableError(
+                    "GitHub non disponibile."
+                )
+            if process.returncode == 10:
+                raise GitHubLinkProviderRejectedError(
+                    "Richiesta OAuth GitHub rifiutata."
+                )
+            if output is None or len(output) > max_response_bytes:
+                raise GitHubLinkProviderUnavailableError(
+                    "GitHub non disponibile."
+                )
+            try:
+                return _strict_json_object(output)
+            except Exception:
+                raise GitHubLinkProviderUnavailableError(
+                    "GitHub non disponibile."
+                ) from None
+        except GitHubLinkError:
+            raise
+        except Exception:
             raise GitHubLinkProviderUnavailableError(
                 "GitHub non disponibile."
             ) from None
-        request = None
-        try:
-            status, result = outcomes.get(timeout=timeout_seconds)
-        except queue.Empty:
-            raise GitHubLinkProviderUnavailableError(
-                "GitHub non disponibile."
-            ) from None
-        if status == "rejected":
-            raise GitHubLinkProviderRejectedError(
-                "Richiesta OAuth GitHub rifiutata."
-            )
-        if status != "ok" or result is None:
-            raise GitHubLinkProviderUnavailableError(
-                "GitHub non disponibile."
-            )
-        return result
+        finally:
+            serialized = None
+            output = None
+            request = None
+            process = None
+            self._network_slots.release()
 
     def exchange_code(self, *, form: Mapping[str, str], timeout_seconds: float, max_response_bytes: int) -> Mapping[str, object]:
         payload = None
@@ -489,7 +529,6 @@ class GitHubAccountLinkService:
                 {
                     "client_id": self.config.client_id,
                     "redirect_uri": self.config.redirect_uri,
-                    "scope": "read:user user:email",
                     "state": state,
                     "code_challenge": challenge,
                     "code_challenge_method": "S256",

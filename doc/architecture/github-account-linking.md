@@ -11,9 +11,9 @@
 - State e browser binding sono conservati solo come SHA-256; il verifier PKCE resta soltanto nella memoria bounded del processo.
 - Cookie transazionali `__Host-`, `Secure`, `HttpOnly`, `SameSite=Lax` hanno nomi distinti per state, permettendo più schede.
 - Il callback consuma il flow prima del token exchange; binding/sessione errati non consumano il flow. Revisione utente e sessione persistita vengono ricontrollate atomicamente al link.
-- Authorization, token e user endpoint sono fissati ai valori GitHub canonici; il transport HTTPS è no-redirect, limita risposta e concorrenza e applica una deadline wall-clock complessiva.
+- Authorization, token e user endpoint sono fissati ai valori GitHub canonici; il transport HTTPS è no-redirect, limita risposta e concorrenza e applica una deadline wall-clock complessiva tramite worker terminabile isolato.
 - Access token, authorization code, client secret e verifier non vengono persistiti.
-- La risposta token deve dichiarare `token_type=bearer` e l'identità canonica è l'ID numerico signed-64 restituito da `GET /user`; login, nome ed email sono attributi aggiornabili.
+- Non vengono richiesti scope OAuth aggiuntivi: bastano i dati pubblici minimi di `/user`. La risposta token deve dichiarare `token_type=bearer` e l'identità canonica è l'ID numerico signed-64; login, nome ed email pubblica sono attributi aggiornabili.
 
 ## Transazioni identity
 

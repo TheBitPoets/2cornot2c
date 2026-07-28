@@ -268,6 +268,7 @@ class ExternalIdentityLinkApplicationStorage(Protocol):
         expected_user_updated_at: datetime,
         expected_session_id: str,
         expected_session_token_digest: str,
+        expected_session_created_at: datetime,
         expected_session_valid_at: datetime,
     ) -> None: ...
 
@@ -287,6 +288,7 @@ class ExternalIdentityLinkApplicationStorage(Protocol):
         expected_user_updated_at: datetime,
         expected_session_id: str,
         expected_session_token_digest: str,
+        expected_session_created_at: datetime,
         expected_session_valid_at: datetime,
     ) -> None: ...
 
@@ -300,6 +302,7 @@ class ExternalIdentityLinkApplicationStorage(Protocol):
         expected_user_updated_at: datetime,
         expected_session_id: str,
         expected_session_token_digest: str,
+        expected_session_created_at: datetime,
         expected_session_valid_at: datetime,
     ) -> bool: ...
 
@@ -672,6 +675,7 @@ class ExternalIdentityLinkService:
                         expected_user_updated_at=expected_revision,
                         expected_session_id=expected_session.session_id,
                         expected_session_token_digest=expected_session.token_digest,
+                        expected_session_created_at=expected_session.created_at,
                         expected_session_valid_at=operation_now,
                     )
             except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
@@ -712,6 +716,7 @@ class ExternalIdentityLinkService:
                         expected_user_updated_at=expected_revision,
                         expected_session_id=expected_session.session_id,
                         expected_session_token_digest=expected_session.token_digest,
+                        expected_session_created_at=expected_session.created_at,
                         expected_session_valid_at=operation_now,
                     )
                 return identity
@@ -798,6 +803,7 @@ class ExternalIdentityLinkService:
                 expected_user_updated_at=account.updated_at,
                 expected_session_id=expected_session.session_id,
                 expected_session_token_digest=expected_session.token_digest,
+                expected_session_created_at=expected_session.created_at,
                 expected_session_valid_at=operation_now,
             )
         except IdentityStorageConflictError as error:

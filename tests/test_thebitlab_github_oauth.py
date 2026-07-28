@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import subprocess
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -157,13 +158,22 @@ def test_config_pins_endpoints_and_scrubs_secret() -> None:
 
 
 def test_transport_enforces_overall_wall_clock_timeout(monkeypatch) -> None:
+    class BlockedProcess:
+        returncode = -9
+        killed = False
+
+        def communicate(self, *, input=None, timeout=None):
+            if not self.killed:
+                time.sleep(0.02)
+                raise subprocess.TimeoutExpired("worker", timeout)
+            return b"", b""
+
+        def kill(self):
+            self.killed = True
+
     transport = UrllibGitHubOAuthTransport()
-
-    def blocked_open(*_args, **_kwargs):
-        time.sleep(0.2)
-        raise OSError("blocked")
-
-    monkeypatch.setattr(transport._opener, "open", blocked_open)
+    process = BlockedProcess()
+    monkeypatch.setattr(transport, "_process_factory", lambda *_args, **_kwargs: process)
     started = time.monotonic()
     with pytest.raises(GitHubLinkProviderUnavailableError):
         transport._request(
@@ -171,6 +181,7 @@ def test_transport_enforces_overall_wall_clock_timeout(monkeypatch) -> None:
             timeout_seconds=0.02,
             max_response_bytes=1024,
         )
+    assert process.killed is True
     assert time.monotonic() - started < 0.15
 
 
@@ -181,7 +192,7 @@ def test_begin_link_builds_browser_bound_state_and_pkce(tmp_path) -> None:
 
     assert state == STATE
     assert query["code_challenge_method"] == ["S256"]
-    assert query["scope"] == ["read:user user:email"]
+    assert "scope" not in query
     assert result.set_cookie.startswith("__Host-thebitlab_github_link-")
     assert "Secure" in result.set_cookie
     assert "HttpOnly" in result.set_cookie
@@ -306,6 +317,26 @@ def test_flow_rejects_reused_token_in_new_session_generation(tmp_path) -> None:
         )
     assert flows.pending_count() == 1
     assert transport.exchange_calls == []
+
+
+def test_persisted_session_generation_change_cannot_persist_link(tmp_path) -> None:
+    service, storage, flows, _transport, established, _clock = make_service(tmp_path)
+    state, cookie, _started = start(service, established.context)
+    with sqlite3.connect(tmp_path / "identity.sqlite3") as connection:
+        connection.execute(
+            "UPDATE sessions SET created_at = ? WHERE session_id = ?",
+            (
+                (NOW - timedelta(seconds=1)).isoformat().replace("+00:00", "Z"),
+                established.context.session.session_id,
+            ),
+        )
+
+    with pytest.raises(GitHubLinkIdentityConflictError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
+    assert flows.pending_count() == 0
+    assert storage.read_external_identity("github", "123456") is None
 
 
 def test_revoked_session_race_cannot_persist_link(tmp_path) -> None:
