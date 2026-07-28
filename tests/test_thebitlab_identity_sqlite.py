@@ -649,6 +649,10 @@ def test_pairing_session_creation_is_atomic_with_consumption(storage) -> None:
 
     assert storage.read_pairing("pairing-01") == consumed
     assert storage.read_session("session-01") == issued_session
+    assert storage.delete_expired_pairings(LATER + timedelta(minutes=1)) == 0
+    assert storage.read_pairing("pairing-01") == consumed
+    assert storage.delete_expired_sessions(issued_session.expires_at) == 1
+    assert storage.delete_expired_pairings(issued_session.expires_at) == 1
 
 
 def test_pairing_session_creation_rechecks_expiry_at_transaction_time(storage) -> None:

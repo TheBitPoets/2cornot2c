@@ -2277,5 +2277,15 @@ class SqliteIdentityStorage:
     def delete_expired_pairings(self, expired_before: datetime) -> int:
         encoded = _encode_datetime(expired_before, "expired_before")
         with self._transaction("delete_expired_pairings") as connection:
-            cursor = connection.execute("DELETE FROM tui_pairings WHERE expires_at <= ?", (encoded,))
+            cursor = connection.execute(
+                """
+                DELETE FROM tui_pairings
+                WHERE expires_at <= ?
+                    AND NOT EXISTS (
+                        SELECT 1 FROM sessions
+                        WHERE sessions.source_pairing_id = tui_pairings.pairing_id
+                    )
+                """,
+                (encoded,),
+            )
             return cursor.rowcount

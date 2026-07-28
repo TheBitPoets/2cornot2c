@@ -29,7 +29,7 @@ Consumo e sessione sono all-or-nothing:
 - il clock storage viene ricontrollato nella transazione e la scadenza è esclusiva (`now < expires_at`);
 - una sessione non viene emessa per ruoli `teacher`, `admin` o `pending`.
 
-Una risposta persa dopo il commit può lasciare una sessione non consegnata fino alla scadenza, ma non permette replay del codice né recupero del bearer dal database. La TUI deve avviare un nuovo pairing.
+Una risposta persa dopo il commit può lasciare una sessione non consegnata fino alla scadenza, ma non permette replay del codice né recupero del bearer dal database. La TUI deve avviare un nuovo pairing. Il cleanup pairing esclude i record ancora referenziati da sessioni TUI; dopo il cleanup/scadenza della sessione, il pairing può essere rimosso senza bloccare il resto del batch.
 
 ## Segreti
 
