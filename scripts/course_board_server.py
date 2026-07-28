@@ -3462,16 +3462,22 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if routes is not None and len(request_parts) == 3:
             raw_target = request_parts[1]
             raw_parsed = urlparse(raw_target)
-            if routes.handles(raw_parsed.path):
-                parsed = raw_parsed
-            elif routes.handles(parsed.path) and not (
-                raw_target == parsed.path
-                or raw_target.startswith(parsed.path + "?")
-                or raw_target.startswith(parsed.path + "#")
-                or raw_target.startswith(parsed.path + ";")
+            candidate_path = (
+                raw_parsed.path
+                if routes.handles(raw_parsed.path)
+                else parsed.path
+            )
+            if routes.handles(candidate_path) and not (
+                raw_target == candidate_path
+                or raw_target.startswith(candidate_path + "?")
+                or raw_target.startswith(candidate_path + "#")
+                or raw_target.startswith(candidate_path + ";")
             ):
                 self.write_oidc_transport_error(400, "bad_auth_request")
                 return True
+            if routes.handles(raw_parsed.path):
+                parsed = raw_parsed
+            candidate_path = None
         request_parts = None
         raw_target = None
         if routes is None or not routes.handles(parsed.path):
@@ -3539,16 +3545,22 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if routes is not None and len(request_parts) == 3:
             raw_target = request_parts[1]
             raw_parsed = urlparse(raw_target)
-            if routes.handles(raw_parsed.path):
-                parsed = raw_parsed
-            elif routes.handles(parsed.path) and not (
-                raw_target == parsed.path
-                or raw_target.startswith(parsed.path + "?")
-                or raw_target.startswith(parsed.path + "#")
-                or raw_target.startswith(parsed.path + ";")
+            candidate_path = (
+                raw_parsed.path
+                if routes.handles(raw_parsed.path)
+                else parsed.path
+            )
+            if routes.handles(candidate_path) and not (
+                raw_target == candidate_path
+                or raw_target.startswith(candidate_path + "?")
+                or raw_target.startswith(candidate_path + "#")
+                or raw_target.startswith(candidate_path + ";")
             ):
                 self.write_oidc_transport_error(400, "bad_auth_request")
                 return True
+            if routes.handles(raw_parsed.path):
+                parsed = raw_parsed
+            candidate_path = None
         request_parts = None
         raw_target = None
         if routes is None or not routes.handles(parsed.path):

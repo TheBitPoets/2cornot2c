@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import socket
 import threading
 from datetime import datetime, timezone
 
@@ -271,6 +272,19 @@ def test_course_board_socket_serves_status_and_logout_without_basic_auth(graph) 
         )
         after = exchange("GET", "/auth/session", common)
         malformed = exchange("GET", "//auth/session", common)
+        raw = socket.create_connection(server.server_address, timeout=5)
+        try:
+            raw.sendall(
+                (
+                    "GET ///auth/session HTTP/1.1\r\n"
+                    "Host: localhost\r\n"
+                    "X-Forwarded-Proto: https\r\n"
+                    f"Cookie: {browser_cookie}\r\n\r\n"
+                ).encode("ascii")
+            )
+            triple_slash = raw.recv(4096)
+        finally:
+            raw.close()
     finally:
         server.shutdown()
         server.server_close()
@@ -282,3 +296,4 @@ def test_course_board_socket_serves_status_and_logout_without_basic_auth(graph) 
     assert "Max-Age=0" in logout[1]["Set-Cookie"]
     assert after[0] == 401
     assert malformed[0] == 400
+    assert b"400" in triple_slash
