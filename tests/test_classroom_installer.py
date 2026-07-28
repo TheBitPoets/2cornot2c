@@ -136,6 +136,42 @@ def test_tui_confirmation_is_explicit_and_cancellable() -> None:
     assert "Saranno installati solo i componenti mancanti." in state.report
 
 
+def test_tui_wraps_diagnosis_and_gives_it_more_space() -> None:
+    pytest.importorskip("utui")
+    from installer.tui import State, frame
+
+    message = (
+        "COSA SIGNIFICA: questa spiegazione deve restare completamente leggibile "
+        "anche quando supera la larghezza originaria del pannello centrale."
+    )
+    state = State(Host.WINDOWS_AMD64, (Provider.DOCKER,), report=(message,))
+    rendered = "\n".join(frame(state, 140, 14, color=False))
+
+    assert "questa spiegazione deve restare" in rendered
+    assert "completamente leggibile anche quando supera la larghezza" in rendered
+    assert "originaria del pannello centrale." in rendered
+    assert "…" not in rendered
+
+
+def test_tui_stacks_panels_when_terminal_is_narrow_and_tall() -> None:
+    pytest.importorskip("utui")
+    from installer.tui import State, frame
+
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER, Provider.VIRTUALBOX),
+        report=("Diagnosi leggibile",),
+    )
+    rows = frame(state, 100, 30, color=False)
+    positions = {
+        title: next(index for index, row in enumerate(rows) if title in row)
+        for title in ("Ambiente 2cornot2c", "Diagnosi", "Comandi")
+    }
+
+    assert positions["Ambiente 2cornot2c"] < positions["Diagnosi"]
+    assert positions["Diagnosi"] < positions["Comandi"]
+
+
 def check_results(plan, *, missing: set[str] = set()):
     return tuple(
         CheckResult(check, check.key not in missing, "manca")

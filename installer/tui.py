@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 
 from utui import (
+    Column,
     Key,
     KeyReader,
     Label,
@@ -15,6 +16,7 @@ from utui import (
     Panel,
     ResizeWatcher,
     Row,
+    Size,
     get_terminal_size,
     render_lines,
     supports_color,
@@ -42,7 +44,12 @@ class State:
     running: bool = True
 
 
-def build_screen(state: State):
+def build_screen(
+    state: State,
+    *,
+    width: int | None = None,
+    height: int | None = None,
+):
     """Costruisce la schermata senza I/O o mutazioni."""
 
     names = {
@@ -65,9 +72,9 @@ def build_screen(state: State):
         min_width=38,
     )
     report = Panel(
-        Label("\n".join(state.report)),
+        Label("\n".join(state.report), wrap=True),
         title="Diagnosi",
-        min_width=38,
+        min_width=50,
     )
     command_text = (
         "s: conferma installazione\nn/Esc: annulla"
@@ -79,13 +86,37 @@ def build_screen(state: State):
         title="Comandi",
         min_width=28,
     )
-    return Row((choices, report, commands), gap=1)
+    panels = (choices, report, commands)
+    if width is not None and height is not None and width < 120 and height >= 24:
+        return Column(
+            panels,
+            sizes=(
+                Size.flexible(2, minimum=6, maximum=8),
+                Size.flexible(5, minimum=10),
+                Size.flexible(2, minimum=6, maximum=8),
+            ),
+            gap=1,
+        )
+    return Row(
+        panels,
+        sizes=(
+            Size.flexible(3, minimum=38),
+            Size.flexible(5, minimum=50),
+            Size.flexible(2, minimum=28),
+        ),
+        gap=1,
+    )
 
 
 def frame(state: State, width: int, height: int, *, color: bool) -> list[str]:
     """Renderizza un frame deterministico."""
 
-    rows = render_lines(build_screen(state), width, height, color=color)
+    rows = render_lines(
+        build_screen(state, width=width, height=height),
+        width,
+        height,
+        color=color,
+    )
     if not color:
         return rows
     return [_paint_guidance(row) for row in rows]
