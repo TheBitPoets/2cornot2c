@@ -11,6 +11,7 @@ from scripts.thebitlab_auth_services import (
     PairingService,
     SessionService,
     TuiPairingSessionService,
+    session_token_digest,
 )
 from scripts.thebitlab_http_auth import (
     HttpAuthRequest,
@@ -20,7 +21,13 @@ from scripts.thebitlab_http_auth import (
     HttpSessionAuthBoundary,
     SessionCookiePolicy,
 )
-from scripts.thebitlab_identity import UserAccount
+from scripts.thebitlab_identity import (
+    TuiPairing,
+    UserAccount,
+    UserSession,
+    authorize_pairing,
+    consume_pairing,
+)
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 from scripts.thebitlab_tui_pairing import (
     TuiBrowserPairingBoundary,
@@ -284,6 +291,26 @@ def test_malformed_auth_adapter_cannot_bypass_tui_audience(
     with pytest.raises(TuiPairingUnavailableError):
         boundary.authenticate_bearer("Bearer " + web_issued.bearer_token)
 
+    ghost_bearer = "Z" * 40
+    ghost = UserSession(
+        "ghost",
+        "student-01",
+        session_token_digest(ghost_bearer),
+        NOW,
+        NOW + timedelta(hours=8),
+        NOW,
+        audience="tui",
+        source_pairing_id="ghost-pairing",
+    )
+    monkeypatch.setattr(
+        boundary.tui_sessions,
+        "authenticate",
+        lambda _bearer: AuthenticatedSession(ghost, web_user),
+    )
+    with pytest.raises(TuiPairingUnavailableError):
+        boundary.authenticate_bearer("Bearer " + ghost_bearer)
+    assert storage.read_session("ghost") is None
+
 
 def test_role_change_invalidates_issued_tui_bearer(setup) -> None:
     storage, clock, boundary, http = setup
@@ -350,20 +377,44 @@ def test_malformed_adapter_cannot_return_web_session_as_tui_credential(
     assert web_context.user.user_id == "student-01"
 
 
-def test_malformed_issued_pair_cannot_revoke_unrelated_tui_session(
+def test_malformed_issued_pair_cannot_disclose_or_revoke_foreign_tui_session(
     setup, monkeypatch
 ) -> None:
-    _storage, _clock, boundary, _http = setup
-    first = boundary.tui_sessions.issue("student-01")
-    second = boundary.tui_sessions.issue("student-01")
-    malformed = IssuedSession(second.session, first.bearer_token)
-    monkeypatch.setattr(
-        boundary.pairings, "consume", lambda _pairing_id, _code: malformed
+    storage, clock, boundary, _http = setup
+    pending = TuiPairing(
+        "foreign-pairing",
+        "hmac-sha256:" + "f" * 64,
+        "pending",
+        NOW,
+        NOW + timedelta(minutes=10),
     )
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(pending, "student-01", NOW + timedelta(minutes=1))
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, NOW + timedelta(minutes=2))
+    storage.save_pairing(consumed)
+    raw_bearer = "F" * 40
+    foreign_session = UserSession(
+        "foreign-session",
+        "student-01",
+        session_token_digest(raw_bearer),
+        consumed.consumed_at,
+        consumed.consumed_at + timedelta(hours=8),
+        consumed.consumed_at,
+        audience="tui",
+        source_pairing_id="foreign-pairing",
+    )
+    storage.create_session(foreign_session)
+    monkeypatch.setattr(
+        boundary.pairings,
+        "consume",
+        lambda _pairing_id, _code: IssuedSession(foreign_session, raw_bearer),
+    )
+    clock.value = consumed.consumed_at
 
     with pytest.raises(TuiPairingUnavailableError):
         boundary.consume("pairing-01", "PAIRCODE42")
-    assert boundary.tui_sessions.authenticate(first.bearer_token).user.user_id == "student-01"
+    assert boundary.tui_sessions.authenticate(raw_bearer).user.user_id == "student-01"
 
 
 def test_unexpected_pairing_failure_is_sanitized(setup, monkeypatch) -> None:

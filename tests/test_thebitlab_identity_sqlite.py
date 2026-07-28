@@ -207,12 +207,39 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
+def test_migration_v7_removes_uncorrelated_legacy_tui_sessions(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_user(account())
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP INDEX uq_sessions_source_pairing")
+        connection.execute(
+            """
+            INSERT INTO sessions
+                (session_id, user_id, token_digest, created_at, expires_at,
+                 last_seen_at, revoked_at, audience, source_pairing_id)
+            VALUES (?, ?, ?, ?, ?, ?, NULL, 'tui', NULL)
+            """,
+            (
+                "legacy-tui",
+                "user-01",
+                "sha256:" + "9" * 64,
+                NOW.isoformat().replace("+00:00", "Z"),
+                LATER.isoformat().replace("+00:00", "Z"),
+                NOW.isoformat().replace("+00:00", "Z"),
+            ),
+        )
+        connection.execute("DELETE FROM schema_migrations WHERE version = 7")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_session("legacy-tui") is None
+
+
 def test_migration_v6_backfills_existing_sessions_as_web(database_path) -> None:
     storage = SqliteIdentityStorage(database_path)
     storage.create_user(account())
     storage.create_session(session())
     with sqlite3.connect(database_path) as connection:
-        connection.execute("DELETE FROM schema_migrations WHERE version = 6")
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 6")
 
     upgraded = SqliteIdentityStorage(database_path)
     assert upgraded.read_session("session-01").audience == "web"
@@ -478,7 +505,7 @@ def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
     with sqlite3.connect(database_path) as connection:
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     "session-last-seen-boundary",
                     "user-01",
@@ -488,11 +515,12 @@ def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
                     expires_at,
                     None,
                     "web",
+                    None,
                 ),
             )
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
-                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     "session-revocation-boundary",
                     "user-01",
@@ -502,6 +530,7 @@ def test_session_sql_checks_reject_activity_or_revocation_at_expiration(
                     before_expiration,
                     expires_at,
                     "web",
+                    None,
                 ),
             )
 
@@ -608,6 +637,7 @@ def test_pairing_session_creation_is_atomic_with_consumption(storage) -> None:
         last_seen_at=consumed.consumed_at,
         expires_at=consumed.consumed_at + timedelta(hours=8),
         audience="tui",
+        source_pairing_id="pairing-01",
     )
 
     storage.consume_pairing_and_create_session(
@@ -633,6 +663,7 @@ def test_pairing_session_creation_rechecks_expiry_at_transaction_time(storage) -
         last_seen_at=consumed.consumed_at,
         expires_at=consumed.consumed_at + timedelta(hours=8),
         audience="tui",
+        source_pairing_id="pairing-01",
     )
     storage._clock = lambda: LATER
 
@@ -661,6 +692,7 @@ def test_pairing_session_creation_rolls_back_on_role_or_session_conflict(storage
         last_seen_at=consumed.consumed_at,
         expires_at=consumed.consumed_at + timedelta(hours=8),
         audience="tui",
+        source_pairing_id="pairing-01",
     )
 
     with pytest.raises(IdentityStorageConflictError):

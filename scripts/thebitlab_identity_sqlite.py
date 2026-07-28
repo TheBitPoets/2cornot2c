@@ -28,7 +28,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 _T = TypeVar("_T")
 
 
@@ -202,6 +202,14 @@ _MIGRATION_6 = (
     "CHECK (audience IN ('web', 'tui'))",
 )
 
+_MIGRATION_7 = (
+    "ALTER TABLE sessions ADD COLUMN source_pairing_id TEXT "
+    "REFERENCES tui_pairings(pairing_id)",
+    "DELETE FROM sessions WHERE audience = 'tui' AND source_pairing_id IS NULL",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_sessions_source_pairing "
+    "ON sessions(source_pairing_id) WHERE source_pairing_id IS NOT NULL",
+)
+
 _MIGRATION_4 = (
     """
     CREATE TABLE external_group_mapping_generations (
@@ -318,16 +326,21 @@ class SqliteIdentityStorage:
                 (4, _MIGRATION_4),
                 (5, _MIGRATION_5),
                 (6, _MIGRATION_6),
+                (7, _MIGRATION_7),
             )
             for version, statements in migrations:
                 if version in versions:
                     continue
                 for statement in statements:
-                    if version in {5, 6} and statement.startswith("ALTER TABLE"):
+                    if version in {5, 6, 7} and statement.startswith("ALTER TABLE"):
                         table = (
                             "external_group_mappings" if version == 5 else "sessions"
                         )
-                        expected_column = "updated_at" if version == 5 else "audience"
+                        expected_column = {
+                            5: "updated_at",
+                            6: "audience",
+                            7: "source_pairing_id",
+                        }[version]
                         columns = {
                             row["name"]
                             for row in connection.execute(f"PRAGMA table_info({table})")
@@ -483,6 +496,7 @@ class SqliteIdentityStorage:
             last_seen_at=_decode_datetime(row["last_seen_at"]),
             revoked_at=_decode_datetime(row["revoked_at"]),
             audience=row["audience"],
+            source_pairing_id=row["source_pairing_id"],
         )
 
     @classmethod
@@ -1808,8 +1822,8 @@ class SqliteIdentityStorage:
                 """
                 INSERT INTO sessions
                     (session_id, user_id, token_digest, created_at, expires_at,
-                     last_seen_at, revoked_at, audience)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     last_seen_at, revoked_at, audience, source_pairing_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session.session_id,
@@ -1822,6 +1836,7 @@ class SqliteIdentityStorage:
                     if session.revoked_at is None
                     else _encode_datetime(session.revoked_at, "revoked_at"),
                     session.audience,
+                    session.source_pairing_id,
                 ),
             )
 
@@ -1836,8 +1851,8 @@ class SqliteIdentityStorage:
                 """
                 INSERT INTO sessions
                     (session_id, user_id, token_digest, created_at, expires_at,
-                     last_seen_at, revoked_at, audience)
-                SELECT ?, ?, ?, ?, ?, ?, ?, ?
+                     last_seen_at, revoked_at, audience, source_pairing_id)
+                SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
                 FROM users
                 WHERE user_id = ? AND active = 1 AND updated_at = ?
                 """,
@@ -1852,6 +1867,7 @@ class SqliteIdentityStorage:
                     if session.revoked_at is None
                     else _encode_datetime(session.revoked_at, "revoked_at"),
                     session.audience,
+                    session.source_pairing_id,
                     session.user_id,
                     expected_user_revision,
                 ),
@@ -1880,6 +1896,7 @@ class SqliteIdentityStorage:
             created_at,
             expires_at,
             session.audience,
+            session.source_pairing_id,
         )
         with self._transaction("save_session") as connection:
             if session.revoked_at is None:
@@ -1888,6 +1905,7 @@ class SqliteIdentityStorage:
                     UPDATE sessions SET last_seen_at = ?
                     WHERE session_id = ? AND user_id = ? AND token_digest = ?
                         AND created_at = ? AND expires_at = ? AND audience = ?
+                        AND source_pairing_id IS ?
                         AND revoked_at IS NULL AND last_seen_at <= ?
                     """,
                     (last_seen_at,) + immutable + (last_seen_at,),
@@ -1903,6 +1921,7 @@ class SqliteIdentityStorage:
                         revoked_at = ?
                     WHERE session_id = ? AND user_id = ? AND token_digest = ?
                         AND created_at = ? AND expires_at = ? AND audience = ?
+                        AND source_pairing_id IS ?
                         AND revoked_at IS NULL AND last_seen_at <= ?
                     """,
                     (last_seen_at, last_seen_at, revoked_at)
@@ -1938,6 +1957,7 @@ class SqliteIdentityStorage:
                 UPDATE sessions SET last_seen_at = ?
                 WHERE session_id = ? AND user_id = ? AND token_digest = ?
                     AND created_at = ? AND expires_at = ? AND audience = ?
+                    AND source_pairing_id IS ?
                     AND revoked_at IS NULL AND last_seen_at <= ?
                     AND EXISTS (
                         SELECT 1 FROM users
@@ -1953,6 +1973,7 @@ class SqliteIdentityStorage:
                     created_at,
                     expires_at,
                     session.audience,
+                    session.source_pairing_id,
                     last_seen_at,
                     expected_user_revision,
                 ),
@@ -2076,6 +2097,7 @@ class SqliteIdentityStorage:
             or session.last_seen_at != session.created_at
             or session.revoked_at is not None
             or session.audience != "tui"
+            or session.source_pairing_id != pairing.pairing_id
             or expected_user_role != "student"
         ):
             raise IdentityStorageConflictError(
@@ -2161,8 +2183,8 @@ class SqliteIdentityStorage:
                     """
                     INSERT INTO sessions
                         (session_id, user_id, token_digest, created_at, expires_at,
-                         last_seen_at, revoked_at, audience)
-                    VALUES (?, ?, ?, ?, ?, ?, NULL, ?)
+                         last_seen_at, revoked_at, audience, source_pairing_id)
+                    VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)
                     """,
                     (
                         session.session_id,
@@ -2172,6 +2194,7 @@ class SqliteIdentityStorage:
                         _encode_datetime(session.expires_at, "session_expires_at"),
                         _encode_datetime(session.last_seen_at, "session_last_seen_at"),
                         session.audience,
+                        session.source_pairing_id,
                     ),
                 )
         if expired:

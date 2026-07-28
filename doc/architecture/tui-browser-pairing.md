@@ -13,7 +13,7 @@ Questo incremento implementa boundary e transazione applicativa. Le route concre
 3. `HttpSessionAuthBoundary` richiede ruolo interno `student`; `PairingService` ricontrolla account attivo, ruolo e revisione durante il CAS `pending -> authorized`.
 4. La TUI presenta `pairing_id + codice` a `consume()`.
 5. `TuiPairingSessionService` prepara la transizione `authorized -> consumed`, genera e valida un bearer base64url ad alta entropia entro limiti HTTP e chiama una singola operazione SQLite.
-6. SQLite ricontrolla digest/generazione/stato pairing, scadenza al tempo della transazione, utente attivo, ruolo `student` e revisione; poi aggiorna il pairing e inserisce la sessione nella stessa transazione.
+6. SQLite ricontrolla digest/generazione/stato pairing, scadenza al tempo della transazione, utente attivo, ruolo `student` e revisione; poi aggiorna il pairing e inserisce la sessione nella stessa transazione, registrando `source_pairing_id` univoco.
 7. La TUI riceve il bearer una sola volta e lo userà come `Authorization: Bearer` nelle future route concrete.
 
 Il path di verifica è soltanto path assoluto locale, senza schema, host, query o fragment: il boundary non costruisce redirect arbitrari che possano ricevere il codice.
@@ -39,13 +39,13 @@ Una risposta persa dopo il commit può lasciare una sessione non consegnata fino
 - il cookie web non viene restituito alla TUI;
 - il bearer TUI non viene inserito in URL, query string o log.
 
-`IssuedTuiCredential` è una risposta one-shot. Prima di esporla, il boundary ricontrolla audience `tui`, correlazione digest/sessione/utente e autenticabilità tramite il service TUI; un risultato adapter web o malformato produce 503 e non viene divulgato. Il cleanup revoca soltanto quando bearer, digest, metadati restituiti e record persistito coincidono, evitando la revoca di sessioni estranee in una risposta adapter incoerente. La futura CLI dovrà conservare la credenziale con permessi filesystem restrittivi oppure soltanto in memoria; questa decisione resta fuori dal boundary.
+`IssuedTuiCredential` è una risposta one-shot. Prima di esporla, il boundary ricontrolla audience `tui`, `source_pairing_id` richiesto, stato pairing consumato, correlazione digest/sessione/utente e autenticabilità tramite il service TUI; un risultato adapter web, estraneo o malformato produce 503 e non viene divulgato. Il cleanup revoca soltanto quando pairing richiesto, bearer, digest, metadati restituiti e record persistiti coincidono, evitando la revoca di sessioni estranee in una risposta adapter incoerente. La futura CLI dovrà conservare la credenziale con permessi filesystem restrittivi oppure soltanto in memoria; questa decisione resta fuori dal boundary.
 
 ## Autenticazione TUI
 
 `authenticate_bearer()` accetta un unico header canonico `Authorization: Bearer` senza whitespace esterno o controlli, applica limiti di lunghezza e grammatica base64url, usa `SessionService` per scadenza/revoca/account/revisione e ricontrolla esplicitamente audience `tui` e ruolo corrente `student` anche su risultati adapter fault-injected. Cambio ruolo o disabilitazione diventano effettivi alla richiesta successiva.
 
-Le sessioni TUI usano lo stesso registro transazionale ma hanno audience persistita `tui`; le sessioni cookie hanno audience `web`. `SessionService` richiede l'audience configurata durante autenticazione e revoca: un bearer web non è accettato dal boundary TUI e un bearer TUI non autentica il cookie web.
+Le sessioni TUI usano lo stesso registro transazionale ma hanno audience persistita `tui` e un `source_pairing_id` non nullo e univoco; le sessioni cookie hanno audience `web` e nessuna sorgente pairing. `SessionService` richiede l'audience configurata durante autenticazione e revoca: un bearer web non è accettato dal boundary TUI e un bearer TUI non autentica il cookie web.
 
 ## Errori pubblici
 

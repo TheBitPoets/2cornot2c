@@ -191,7 +191,11 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
 
     assert session.token_digest == DIGEST
     assert session.audience == "web"
-    assert replace(session, audience="tui").audience == "tui"
+    tui_session = replace(
+        session, audience="tui", source_pairing_id="pairing-01"
+    )
+    assert tui_session.audience == "tui"
+    assert tui_session.source_pairing_id == "pairing-01"
     assert "token" not in {field.name for field in fields(UserSession)}
     assert "token_digest" in {field.name for field in fields(UserSession)}
 
@@ -215,6 +219,8 @@ def test_session_persists_only_digest_and_valid_lifetime() -> None:
         ({"revoked_at": LATER}, "durata della sessione"),
         ({"revoked_at": LATER + timedelta(seconds=1)}, "durata della sessione"),
         ({"audience": "provider-token"}, "Audience sessione"),
+        ({"source_pairing_id": "pairing-01"}, "Solo una sessione TUI"),
+        ({"audience": "tui"}, "source_pairing_id"),
     ],
 )
 def test_session_rejects_unsafe_digest_and_invalid_times(overrides, match) -> None:

@@ -858,6 +858,10 @@ class SessionService:
         self.session_id_factory = session_id_factory
 
     def issue(self, user_id: str) -> IssuedSession:
+        if self.audience != "web":
+            raise AuthApplicationError(
+                "Le sessioni TUI possono essere emesse soltanto dal pairing atomico."
+            )
         account = self.storage.read_user(user_id)
         if account is None:
             raise InvalidCredentialError("Utente non disponibile.")
@@ -1245,6 +1249,7 @@ class TuiPairingSessionService:
                     expires_at=consumed.consumed_at + self.session_ttl,
                     last_seen_at=consumed.consumed_at,
                     audience="tui",
+                    source_pairing_id=pairing.pairing_id,
                 )
                 try:
                     self.storage.consume_pairing_and_create_session(

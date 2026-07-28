@@ -224,13 +224,15 @@ class TuiBrowserPairingBoundary:
 
     def consume(self, pairing_id: str, code: str) -> IssuedTuiCredential:
         issued = None
+        expected_pairing_id = None
         invalid = False
         expired = False
         conflict = False
         unavailable = False
         try:
-            issued = self.pairings.consume(pairing_id, code)
-        except InvalidCredentialError:
+            expected_pairing_id = _identifier(pairing_id, "pairing_id")
+            issued = self.pairings.consume(expected_pairing_id, code)
+        except (InvalidCredentialError, ValueError):
             invalid = True
         except PairingExpiredError:
             expired = True
@@ -252,8 +254,8 @@ class TuiBrowserPairingBoundary:
         if unavailable or type(issued) is not IssuedSession:
             issued = None
             raise TuiPairingUnavailableError()
-        if not self._issued_is_valid(issued):
-            self._best_effort_revoke_issued(issued)
+        if not self._issued_is_valid(issued, expected_pairing_id):
+            self._best_effort_revoke_issued(issued, expected_pairing_id)
             issued = None
             raise TuiPairingUnavailableError()
         malformed = False
@@ -343,13 +345,16 @@ class TuiBrowserPairingBoundary:
             raise HttpAuthenticationRequiredError()
         return bearer
 
-    def _issued_is_valid(self, issued: IssuedSession) -> bool:
+    def _issued_is_valid(
+        self, issued: IssuedSession, expected_pairing_id: str
+    ) -> bool:
         bearer = None
         authenticated = None
         try:
             if (
                 type(issued.session) is not UserSession
                 or issued.session.audience != "tui"
+                or issued.session.source_pairing_id != expected_pairing_id
                 or not valid_session_bearer(issued.bearer_token)
             ):
                 return False
@@ -359,6 +364,9 @@ class TuiBrowserPairingBoundary:
             ):
                 return False
             authenticated = self.tui_sessions.authenticate(bearer)
+            persisted_pairing = self.pairings.storage.read_pairing(
+                expected_pairing_id
+            )
             return (
                 type(authenticated) is AuthenticatedSession
                 and type(authenticated.session) is UserSession
@@ -372,7 +380,12 @@ class TuiBrowserPairingBoundary:
                 and authenticated.session.created_at == issued.session.created_at
                 and authenticated.session.expires_at == issued.session.expires_at
                 and authenticated.session.audience == "tui"
+                and authenticated.session.source_pairing_id == expected_pairing_id
                 and authenticated.session.revoked_at is None
+                and type(persisted_pairing) is TuiPairing
+                and persisted_pairing.status == "consumed"
+                and persisted_pairing.user_id == issued.session.user_id
+                and persisted_pairing.consumed_at == issued.session.created_at
             )
         except Exception:
             return False
@@ -380,9 +393,8 @@ class TuiBrowserPairingBoundary:
             bearer = None
             authenticated = None
 
-    @staticmethod
     def _valid_authenticated(
-        authenticated: AuthenticatedSession | None, bearer: str
+        self, authenticated: AuthenticatedSession | None, bearer: str
     ) -> bool:
         if type(authenticated) is not AuthenticatedSession:
             return False
@@ -391,22 +403,45 @@ class TuiBrowserPairingBoundary:
             or type(authenticated.user) is not UserAccount
             or authenticated.session.user_id != authenticated.user.user_id
             or authenticated.session.audience != "tui"
+            or authenticated.session.source_pairing_id is None
             or not authenticated.user.active
         ):
             return False
         try:
             digest = session_token_digest(bearer)
+            persisted = self.tui_sessions.storage.read_session_by_token_digest(digest)
+            persisted_user = self.tui_sessions.storage.read_user(
+                authenticated.user.user_id
+            )
+            persisted_pairing = self.pairings.storage.read_pairing(
+                authenticated.session.source_pairing_id
+            )
+            now = _utc(self.tui_sessions.clock(), "session_clock")
         except Exception:
             return False
-        return hmac.compare_digest(authenticated.session.token_digest, digest)
+        return (
+            hmac.compare_digest(authenticated.session.token_digest, digest)
+            and persisted == authenticated.session
+            and persisted_user == authenticated.user
+            and authenticated.session.revoked_at is None
+            and authenticated.session.created_at <= now < authenticated.session.expires_at
+            and authenticated.session.last_seen_at <= now
+            and type(persisted_pairing) is TuiPairing
+            and persisted_pairing.status == "consumed"
+            and persisted_pairing.user_id == authenticated.user.user_id
+            and persisted_pairing.consumed_at == authenticated.session.created_at
+        )
 
-    def _best_effort_revoke_issued(self, issued: IssuedSession) -> None:
+    def _best_effort_revoke_issued(
+        self, issued: IssuedSession, expected_pairing_id: str
+    ) -> None:
         bearer = None
         try:
             if (
                 type(issued) is not IssuedSession
                 or type(issued.session) is not UserSession
                 or issued.session.audience != "tui"
+                or issued.session.source_pairing_id != expected_pairing_id
                 or not valid_session_bearer(issued.bearer_token)
             ):
                 return
@@ -415,6 +450,9 @@ class TuiBrowserPairingBoundary:
             if not hmac.compare_digest(issued.session.token_digest, digest):
                 return
             persisted = self.tui_sessions.storage.read_session_by_token_digest(digest)
+            persisted_pairing = self.pairings.storage.read_pairing(
+                expected_pairing_id
+            )
             if (
                 type(persisted) is not UserSession
                 or persisted.session_id != issued.session.session_id
@@ -423,6 +461,11 @@ class TuiBrowserPairingBoundary:
                 or persisted.created_at != issued.session.created_at
                 or persisted.expires_at != issued.session.expires_at
                 or persisted.audience != "tui"
+                or persisted.source_pairing_id != expected_pairing_id
+                or type(persisted_pairing) is not TuiPairing
+                or persisted_pairing.status != "consumed"
+                or persisted_pairing.user_id != persisted.user_id
+                or persisted_pairing.consumed_at != persisted.created_at
             ):
                 return
             self.tui_sessions.revoke(bearer)

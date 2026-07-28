@@ -48,7 +48,7 @@ Una sessione revocata o appartenente a un account disabilitato fallisce chiusa. 
 
 La disabilitazione di un account revoca atomicamente le sue sessioni e rimuove pairing ancora autorizzati, impedendo che una successiva riabilitazione faccia rivivere credenziali precedenti. Gli aggiornamenti utente richiedono `created_at` immutabile, un nuovo `updated_at` strettamente successivo e l'`expected_updated_at` della revisione letta. Il compare-and-swap impedisce a uno snapshot stale di riattivare l'account anche se prova a presentare un timestamp futuro.
 
-Ogni sessione persiste inoltre l'audience `web` o `tui`. `SessionService` emette, autentica e revoca soltanto la propria audience, impedendo che bearer conservati nel terminale vengano riutilizzati come cookie browser o viceversa.
+Ogni sessione persiste inoltre l'audience `web` o `tui`. `SessionService` emette, autentica e revoca soltanto la propria audience, impedendo che bearer conservati nel terminale vengano riutilizzati come cookie browser o viceversa. Una sessione TUI può essere emessa soltanto dalla transazione pairing e conserva il `source_pairing_id` univoco verificato a ogni boundary.
 
 Il ruolo `pending` puo possedere una sessione web per completare onboarding, ma `HttpSessionAuthBoundary.authorize_application` lo esclude dalle policy sui dati applicativi.
 
