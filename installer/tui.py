@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import UnsupportedOperation
 from pathlib import Path
+from queue import Empty, Queue
 import sys
+from threading import Thread
+from time import monotonic
+from typing import Any
 
 from utui import (
     Column,
@@ -24,7 +28,7 @@ from utui import (
 )
 
 from installer.diagnostics import diagnose
-from installer.executor import execute_plan
+from installer.executor import StepResult, execute_plan
 from installer.model import Host, Provider
 from installer.platforms import detect_host
 from installer.plans import install_plan, supported_providers
@@ -42,6 +46,16 @@ class State:
     active_index: int = 0
     report: tuple[str, ...] = ("Premi Invio per eseguire la diagnosi.",)
     confirmation_pending: bool = False
+    installing: bool = False
+    install_current: int = 0
+    install_completed: int = 0
+    install_total: int = 0
+    install_label: str = ""
+    install_elapsed: int = 0
+    install_started_at: float = 0.0
+    install_tick: int = 0
+    install_updates: Queue[tuple[str, Any]] | None = None
+    install_thread: Thread | None = None
     running: bool = True
 
 
@@ -72,16 +86,29 @@ def build_screen(
         title=f"Ambiente 2cornot2c - {state.host.value}{memory_label}",
         min_width=38,
     )
+    visible_report = (
+        _installation_report(state) if state.installing else state.report
+    )
     report = Panel(
-        Label("\n".join(state.report), wrap=True),
+        Label("\n".join(visible_report), wrap=True),
         title="Diagnosi",
         min_width=50,
     )
-    command_text = (
-        "s: conferma installazione\nn/Esc: annulla"
-        if state.confirmation_pending
-        else "Su/Giu oppure k/j: scegli\nInvio: controlla\na: installa\nq/Esc: esci"
-    )
+    if state.installing:
+        command_text = (
+            "Installazione in corso\n"
+            "Attendi il completamento\n"
+            "Non chiudere la finestra"
+        )
+    elif state.confirmation_pending:
+        command_text = "s: conferma installazione\nn/Esc: annulla"
+    else:
+        command_text = (
+            "Su/Giu oppure k/j: scegli\n"
+            "Invio: controlla\n"
+            "a: installa\n"
+            "q/Esc: esci"
+        )
     commands = Panel(
         Label(command_text),
         title="Comandi",
@@ -237,17 +264,10 @@ def request_confirmation(state: State) -> None:
     )
 
 
-def apply_selected(state: State) -> None:
-    """Applica il piano selezionato e mostra un riepilogo compatto."""
-
-    provider = state.providers[state.active_index]
-    plan = install_plan(state.host, provider)
-    results = execute_plan(
-        plan,
-        diagnose(plan),
-        log_path=Path.home() / ".2cornot2c" / "installer.jsonl",
-    )
-    state.confirmation_pending = False
+def _format_results(
+    provider: Provider,
+    results: tuple[StepResult, ...],
+) -> tuple[str, ...]:
     report: list[str] = []
     for result in results:
         if result.status in {"failed", "blocked"}:
@@ -261,16 +281,132 @@ def apply_selected(state: State) -> None:
             report.append(
                 f"[{result.status.upper()}] {result.label}: {result.detail}"
             )
-    state.report = tuple(report) or ("Nessun passo necessario.",)
+    formatted = tuple(report) or ("Nessun passo necessario.",)
     if (
         provider is Provider.DOCKER
         and results
         and all(result.status in {"skipped", "succeeded"} for result in results)
     ):
-        state.report += (
+        formatted += (
             "Pronto. Esci con q, poi avvia:",
             "python scripts/student_dev_shell.py",
         )
+    return formatted
+
+
+def apply_selected(state: State) -> None:
+    """Applica il piano selezionato e mostra un riepilogo compatto."""
+
+    provider = state.providers[state.active_index]
+    plan = install_plan(state.host, provider)
+    results = execute_plan(
+        plan,
+        diagnose(plan),
+        log_path=Path.home() / ".2cornot2c" / "installer.jsonl",
+    )
+    state.confirmation_pending = False
+    state.report = _format_results(provider, results)
+
+
+def _installation_report(state: State) -> tuple[str, ...]:
+    """Crea una barra onesta: passi completati più attività indeterminata."""
+
+    width = 24
+    total = max(1, state.install_total)
+    filled = min(width, int(width * state.install_completed / total))
+    cells = ["█" if index < filled else "░" for index in range(width)]
+    if filled < width:
+        pulse = filled + state.install_tick % max(1, width - filled)
+        cells[min(width - 1, pulse)] = "▓"
+    minutes, seconds = divmod(state.install_elapsed, 60)
+    current = min(max(1, state.install_current), total)
+    return (
+        "INSTALLAZIONE IN CORSO",
+        f"Passo {current} di {total} - {state.install_label}",
+        f"[{''.join(cells)}] {state.install_completed}/{total}",
+        f"Attività in corso - tempo trascorso {minutes:02d}:{seconds:02d}",
+        "Non chiudere questa finestra.",
+        "Controlla con Alt+Tab eventuali richieste di Windows.",
+    )
+
+
+def start_selected(state: State) -> None:
+    """Avvia il lavoro in background lasciando reattivo il rendering."""
+
+    if state.installing:
+        return
+    provider = state.providers[state.active_index]
+    plan = install_plan(state.host, provider)
+    updates: Queue[tuple[str, Any]] = Queue()
+    state.confirmation_pending = False
+    state.installing = True
+    state.install_current = 0
+    state.install_completed = 0
+    state.install_total = len(plan.steps)
+    state.install_label = "Controllo dei prerequisiti"
+    state.install_elapsed = 0
+    state.install_started_at = monotonic()
+    state.install_tick = 0
+    state.install_updates = updates
+
+    def publish(
+        phase: str,
+        index: int,
+        total: int,
+        label: str,
+    ) -> None:
+        updates.put(("progress", (phase, index, total, label)))
+
+    def worker() -> None:
+        try:
+            results = execute_plan(
+                plan,
+                diagnose(plan),
+                log_path=Path.home() / ".2cornot2c" / "installer.jsonl",
+                progress=publish,
+            )
+            updates.put(("result", results))
+        except Exception as error:
+            updates.put(("error", error))
+
+    state.install_thread = Thread(
+        target=worker,
+        name="2cornot2c-installer",
+        daemon=True,
+    )
+    state.install_thread.start()
+
+
+def poll_installation(state: State) -> bool:
+    """Consuma aggiornamenti prodotti dal worker senza bloccare il terminale."""
+
+    if not state.installing or state.install_updates is None:
+        return False
+    changed = False
+    while True:
+        try:
+            kind, payload = state.install_updates.get_nowait()
+        except Empty:
+            break
+        changed = True
+        if kind == "progress":
+            phase, index, total, label = payload
+            state.install_current = index
+            state.install_total = total
+            state.install_label = label
+            if phase in {"succeeded", "skipped"}:
+                state.install_completed = index
+        elif kind == "result":
+            provider = state.providers[state.active_index]
+            state.report = _format_results(provider, payload)
+            state.installing = False
+            state.install_thread = None
+        else:
+            error = for_check("installer", str(payload))
+            state.report = error.lines(str(payload))
+            state.installing = False
+            state.install_thread = None
+    return changed
 
 
 def present(rows: list[str]) -> None:
@@ -293,6 +429,7 @@ def main() -> int:
     )
     watcher = ResizeWatcher()
     color = supports_color()
+    progress_refreshed_at = monotonic()
 
     try:
         with KeyReader() as reader:
@@ -302,11 +439,21 @@ def main() -> int:
                 event = reader.read(timeout=0.05)
                 resized = watcher.poll()
                 changed = resized is not None
+                if poll_installation(state):
+                    changed = True
+                now = monotonic()
+                if state.installing and now - progress_refreshed_at >= 0.15:
+                    state.install_tick += 1
+                    state.install_elapsed = int(now - state.install_started_at)
+                    progress_refreshed_at = now
+                    changed = True
                 if resized is not None:
                     size = resized
                 if event is not None:
                     character = event.character if event.key is Key.CHARACTER else ""
-                    if event.key is Key.UP or character == "k":
+                    if state.installing:
+                        changed = True
+                    elif event.key is Key.UP or character == "k":
                         state.active_index = max(0, state.active_index - 1)
                     elif event.key is Key.DOWN or character == "j":
                         state.active_index = min(
@@ -317,7 +464,8 @@ def main() -> int:
                     elif character == "a" and not state.confirmation_pending:
                         request_confirmation(state)
                     elif character == "s" and state.confirmation_pending:
-                        apply_selected(state)
+                        start_selected(state)
+                        progress_refreshed_at = monotonic()
                     elif (
                         character == "n" or event.key is Key.ESCAPE
                     ) and state.confirmation_pending:

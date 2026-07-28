@@ -24,6 +24,7 @@ class StepResult:
 
 
 CommandRunner = Callable[[tuple[str, ...]], tuple[int, str]]
+ProgressCallback = Callable[[str, int, int, str], None]
 
 
 def subprocess_runner(command: tuple[str, ...]) -> tuple[int, str]:
@@ -63,6 +64,7 @@ def execute_plan(
     *,
     runner: CommandRunner = subprocess_runner,
     log_path: Path | None = None,
+    progress: ProgressCallback | None = None,
 ) -> tuple[StepResult, ...]:
     """Applica i soli passi mancanti, fermandosi al primo errore.
 
@@ -100,10 +102,15 @@ def execute_plan(
         )
         for result in results:
             _append_log(log_path, plan, result)
+        if progress is not None:
+            progress("blocked", 0, len(plan.steps), results[0].label)
         return results
 
     applied: list[StepResult] = []
-    for step in plan.steps:
+    total = len(plan.steps)
+    for index, step in enumerate(plan.steps, 1):
+        if progress is not None:
+            progress("started", index, total, step.label)
         if step.key not in missing:
             result = StepResult(step.key, step.label, "skipped", "già presente")
         elif step.command is None:
@@ -119,6 +126,8 @@ def execute_plan(
             )
         applied.append(result)
         _append_log(log_path, plan, result)
+        if progress is not None:
+            progress(result.status, index, total, step.label)
         if result.status in {"failed", "blocked"}:
             break
     return tuple(applied)

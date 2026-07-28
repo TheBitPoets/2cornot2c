@@ -195,6 +195,94 @@ def test_executor_skips_present_steps_and_applies_only_missing(tmp_path) -> None
     assert (tmp_path / "installer.jsonl").read_text(encoding="utf-8").count("\n") == 3
 
 
+def test_executor_reports_step_progress_without_inventing_percentages() -> None:
+    plan = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
+    events = []
+
+    execute_plan(
+        plan,
+        check_results(plan, missing={"virtualbox"}),
+        runner=lambda command: (0, "installato"),
+        progress=lambda *event: events.append(event),
+    )
+
+    assert events == [
+        ("started", 1, 3, "Installa Git"),
+        ("skipped", 1, 3, "Installa Git"),
+        ("started", 2, 3, "Installa Vagrant"),
+        ("skipped", 2, 3, "Installa Vagrant"),
+        ("started", 3, 3, "Installa VirtualBox"),
+        ("succeeded", 3, 3, "Installa VirtualBox"),
+    ]
+
+
+def test_tui_installation_report_shows_step_bar_and_elapsed_time() -> None:
+    pytest.importorskip("utui")
+    from installer.tui import State, _installation_report
+
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER,),
+        installing=True,
+        install_current=1,
+        install_completed=0,
+        install_total=2,
+        install_label="Installa Docker Desktop",
+        install_elapsed=135,
+        install_tick=3,
+    )
+    report = "\n".join(_installation_report(state))
+
+    assert "INSTALLAZIONE IN CORSO" in report
+    assert "Passo 1 di 2 - Installa Docker Desktop" in report
+    assert "0/2" in report
+    assert "02:15" in report
+    assert "Non chiudere questa finestra." in report
+    assert "▓" in report
+
+
+def test_tui_poll_updates_progress_and_finishes_installation() -> None:
+    pytest.importorskip("utui")
+    from queue import Queue
+
+    from installer.executor import StepResult
+    from installer.tui import State, poll_installation
+
+    updates = Queue()
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER,),
+        installing=True,
+        install_updates=updates,
+    )
+    updates.put(("progress", ("started", 1, 2, "Installa Docker Desktop")))
+    updates.put(("progress", ("succeeded", 1, 2, "Installa Docker Desktop")))
+
+    assert poll_installation(state) is True
+    assert state.installing is True
+    assert state.install_current == 1
+    assert state.install_completed == 1
+    assert state.install_label == "Installa Docker Desktop"
+
+    updates.put(
+        (
+            "result",
+            (
+                StepResult(
+                    "docker",
+                    "Installa Docker Desktop",
+                    "succeeded",
+                    "installato",
+                ),
+            ),
+        )
+    )
+
+    assert poll_installation(state) is True
+    assert state.installing is False
+    assert "SUCCEEDED" in "\n".join(state.report)
+
+
 def test_executor_blocks_manual_prerequisite_before_writes() -> None:
     plan = install_plan(Host.MACOS_ARM64, Provider.VMWARE)
     calls = []

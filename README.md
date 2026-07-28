@@ -440,6 +440,11 @@ per installare. Su computer con al massimo 8 GiB viene mostrato per primo
 **Docker leggero - 512 MB**; tutte le alternative compatibili restano
 selezionabili.
 
+Durante l'installazione la TUI resta reattiva e mostra il passo corrente, una
+barra basata sui passaggi realmente completati, un indicatore di attività e il
+tempo trascorso. Non presenta percentuali di download stimate e ignora i
+comandi di uscita finché l'operazione non termina.
+
 Prima di installare, la procedura controlla RAM, spazio libero, architettura,
 virtualizzazione hardware e connessione. Docker richiede almeno 4 GiB di RAM e
 8 GiB liberi; una VM richiede almeno 8 GiB di RAM e 20 GiB liberi. Se una
