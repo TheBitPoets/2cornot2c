@@ -461,8 +461,10 @@ adulto e vieta esplicitamente di modificare Secure Boot, TPM o altre opzioni.
 
 #### Aggiornare su Windows
 
-Lo stesso bootstrap può essere rilanciato in sicurezza. È disponibile anche il
-comando esplicito:
+Apri **Ambiente 2cornot2c** dal desktop o dal menu Start e scegli
+**Aggiorna l'ambiente**. Non occorre aprire PowerShell. Lo stesso bootstrap può
+comunque essere rilanciato in sicurezza; il comando esplicito resta disponibile
+per il supporto tecnico:
 
 ```powershell
 irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/update-classroom-windows.ps1 | iex
@@ -473,6 +475,12 @@ digest. Le modifiche locali non vengono sovrascritte: un `git pull` non sicuro
 interrompe la procedura.
 
 #### Disinstallare da Windows
+
+Apri **Ambiente 2cornot2c** dal desktop o dal menu Start e scegli
+**Disinstalla l'ambiente**. La TUI mostra il piano, chiede conferma e apre la
+procedura protetta in una finestra separata.
+
+Il comando seguente resta disponibile per il supporto tecnico:
 
 ```powershell
 irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/uninstall-classroom-windows.ps1 | iex
@@ -555,8 +563,10 @@ predefinita al massimo 512 MB di RAM e una CPU.
 
 Il bootstrap monocomando descritto in `installer/README.md` misura la RAM e,
 quando il computer ha al massimo 8 GiB, propone per primo **Docker leggero**.
-Installa Docker Desktop, richiede di avviarlo una volta e scarica l'immagine
-pubblica adatta al processore.
+Installa e avvia Docker Desktop, attende automaticamente che sia pronto e
+scarica l'immagine pubblica adatta al processore. Al primo utilizzo resta
+necessario confermare soltanto le eventuali finestre di sicurezza, licenza o
+riavvio mostrate direttamente da Windows.
 
 Dopo la preparazione, dalla cartella del progetto esegui:
 

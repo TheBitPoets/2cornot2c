@@ -84,6 +84,38 @@ function Save-BootstrapState {
     Move-Item -Force $TemporaryPath $StatePath
 }
 
+function Install-ClassroomLauncher {
+    $LauncherDir = Join-Path $env:LOCALAPPDATA "2cornot2c"
+    New-Item -ItemType Directory -Force -Path $LauncherDir | Out-Null
+    foreach ($ScriptName in @(
+        "manage-classroom-windows.ps1"
+        "update-classroom-windows.ps1"
+        "uninstall-classroom-windows.ps1"
+    )) {
+        Copy-Item -Force `
+            (Join-Path $InstallDir "scripts\$ScriptName") `
+            (Join-Path $LauncherDir $ScriptName)
+    }
+
+    $PowerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+    $Manager = Join-Path $LauncherDir "manage-classroom-windows.ps1"
+    $ShortcutTargets = @(
+        (Join-Path ([Environment]::GetFolderPath("Desktop")) "Ambiente 2cornot2c.lnk")
+        (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Ambiente 2cornot2c.lnk")
+    )
+    $Shell = New-Object -ComObject WScript.Shell
+    foreach ($ShortcutPath in $ShortcutTargets) {
+        $Shortcut = $Shell.CreateShortcut($ShortcutPath)
+        $Shortcut.TargetPath = $PowerShell
+        $Shortcut.Arguments = (
+            "-NoProfile -ExecutionPolicy Bypass -File `"$Manager`""
+        )
+        $Shortcut.WorkingDirectory = $LauncherDir
+        $Shortcut.Description = "Installa e gestisci l'ambiente 2cornot2c"
+        $Shortcut.Save()
+    }
+}
+
 function Test-HostResources {
     try {
         $Computer = Get-CimInstance Win32_ComputerSystem
@@ -262,6 +294,8 @@ if (Test-Path (Join-Path $InstallDir ".git")) {
             ) "git clone exit code $LASTEXITCODE"
     }
 }
+
+Install-ClassroomLauncher
 
 Write-Host "[3/4] Preparazione interfaccia guidata..."
 $VenvDir = Join-Path $InstallDir ".installer-venv"

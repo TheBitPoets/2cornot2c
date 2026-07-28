@@ -107,6 +107,7 @@ def test_windows_scripts_render_error_and_explanation_colors() -> None:
     root = Path(__file__).resolve().parents[1]
     for name in (
         "bootstrap-classroom-windows.ps1",
+        "manage-classroom-windows.ps1",
         "update-classroom-windows.ps1",
         "uninstall-classroom-windows.ps1",
     ):
@@ -131,6 +132,7 @@ def test_student_facing_messages_use_italian_accents() -> None:
     paths = (
         root / "installer" / "student_errors.py",
         root / "scripts" / "bootstrap-classroom-windows.ps1",
+        root / "scripts" / "manage-classroom-windows.ps1",
         root / "scripts" / "update-classroom-windows.ps1",
         root / "scripts" / "uninstall-classroom-windows.ps1",
     )

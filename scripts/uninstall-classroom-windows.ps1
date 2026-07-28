@@ -1,9 +1,14 @@
+param(
+    [switch]$ConfirmedFromTui
+)
+
 $ErrorActionPreference = "Stop"
 
 $StateDir = Join-Path $HOME ".2cornot2c"
 $StatePath = Join-Path $StateDir "bootstrap-state.json"
 $LogPath = Join-Path $StateDir "installer.jsonl"
 $DefaultInstallDir = Join-Path $HOME "2cornot2c"
+$LauncherDir = Join-Path $env:LOCALAPPDATA "2cornot2c"
 $InstallDir = if ($env:CLASSROOM_INSTALL_DIR) {
     $env:CLASSROOM_INSTALL_DIR
 } elseif (Test-Path $StatePath) {
@@ -197,12 +202,17 @@ if ($OwnedPackages.Count -gt 0) {
 } else {
     Write-Host "Nessun programma esterno attribuito a 2cornot2c."
 }
-Write-Host ""
-Write-Host "lab, lab2 e modifiche locali verranno salvati prima della rimozione."
-$Confirmation = Read-Host "Digita esattamente DISINSTALLA"
-if ($Confirmation -ne "DISINSTALLA") {
-    Write-Host "Disinstallazione annullata senza modifiche."
-    exit 2
+if (-not $ConfirmedFromTui) {
+    Write-Host ""
+    Write-Host "lab, lab2 e modifiche locali verranno salvati prima della rimozione."
+    $Confirmation = Read-Host "Digita esattamente DISINSTALLA"
+    if ($Confirmation -ne "DISINSTALLA") {
+        Write-Host "Disinstallazione annullata senza modifiche."
+        exit 2
+    }
+} else {
+    Write-Host ""
+    Write-Host "Conferma ricevuta dal menu guidato."
 }
 
 try {
@@ -246,6 +256,18 @@ elseif ($OwnedPackages.Count -gt 0) {
 
 if (Test-Path $StateDir) {
     Remove-Item -LiteralPath $StateDir -Recurse -Force
+}
+
+foreach ($ShortcutPath in @(
+    (Join-Path ([Environment]::GetFolderPath("Desktop")) "Ambiente 2cornot2c.lnk")
+    (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Ambiente 2cornot2c.lnk")
+)) {
+    if (Test-Path $ShortcutPath) {
+        Remove-Item -LiteralPath $ShortcutPath -Force
+    }
+}
+if (Test-Path $LauncherDir) {
+    Remove-Item -LiteralPath $LauncherDir -Recurse -Force
 }
 
 Write-Host "Disinstallazione completata."

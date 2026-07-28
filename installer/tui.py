@@ -29,6 +29,7 @@ from utui import (
 
 from installer.diagnostics import diagnose
 from installer.executor import StepResult, execute_plan
+from installer.lifecycle import launch_windows_action
 from installer.model import Host, Provider
 from installer.platforms import detect_host
 from installer.plans import install_plan, supported_providers
@@ -43,6 +44,8 @@ class State:
     host: Host
     providers: tuple[Provider, ...]
     memory_bytes: int | None = None
+    screen: str = "providers"
+    action_index: int = 0
     active_index: int = 0
     report: tuple[str, ...] = ("Premi Invio per eseguire la diagnosi.",)
     confirmation_pending: bool = False
@@ -59,6 +62,14 @@ class State:
     running: bool = True
 
 
+ACTION_LABELS = (
+    "Installa, completa o ripara",
+    "Aggiorna l'ambiente",
+    "Disinstalla l'ambiente",
+    "Esci",
+)
+
+
 def build_screen(
     state: State,
     *,
@@ -67,48 +78,75 @@ def build_screen(
 ):
     """Costruisce la schermata senza I/O o mutazioni."""
 
-    names = {
+    if state.screen == "home":
+        choices = Panel(
+            ListView(
+                ACTION_LABELS,
+                active_index=state.action_index,
+                focused=True,
+            ),
+            title="Gestisci ambiente 2cornot2c",
+            min_width=38,
+        )
+        visible_report = state.report
+        report_title = "Informazioni"
+        if state.confirmation_pending:
+            command_text = "s: conferma\nn/Esc: annulla"
+        else:
+            command_text = (
+                "Su/Giu oppure k/j: scegli\n"
+                "Invio: apri\n"
+                "q/Esc: esci"
+            )
+    else:
+        names = {
         Provider.VMWARE: "VM completa - VMware Fusion",
         Provider.VIRTUALBOX: "VM completa - VirtualBox",
         Provider.DOCKER: "Docker leggero - 512 MB",
-    }
-    provider_labels = tuple(
-        f"{names[provider]}{' (raccomandato)' if index == 0 else ''}"
-        for index, provider in enumerate(state.providers)
-    )
-    memory_label = (
-        f", RAM {state.memory_bytes / 1024**3:.1f} GiB"
-        if state.memory_bytes is not None
-        else ""
-    )
-    choices = Panel(
-        ListView(provider_labels, active_index=state.active_index, focused=True),
-        title=f"Ambiente 2cornot2c - {state.host.value}{memory_label}",
-        min_width=38,
-    )
-    visible_report = (
-        _installation_report(state) if state.installing else state.report
-    )
+        }
+        provider_labels = tuple(
+            f"{names[provider]}{' (raccomandato)' if index == 0 else ''}"
+            for index, provider in enumerate(state.providers)
+        )
+        memory_label = (
+            f", RAM {state.memory_bytes / 1024**3:.1f} GiB"
+            if state.memory_bytes is not None
+            else ""
+        )
+        choices = Panel(
+            ListView(
+                provider_labels,
+                active_index=state.active_index,
+                focused=True,
+            ),
+            title=f"Ambiente 2cornot2c - {state.host.value}{memory_label}",
+            min_width=38,
+        )
+        visible_report = (
+            _installation_report(state) if state.installing else state.report
+        )
+        report_title = "Diagnosi"
+        if state.installing:
+            command_text = (
+                "Installazione in corso\n"
+                "Attendi il completamento\n"
+                "Non chiudere la finestra"
+            )
+        elif state.confirmation_pending:
+            command_text = "s: conferma installazione\nn/Esc: annulla"
+        else:
+            command_text = (
+                "Su/Giu oppure k/j: scegli\n"
+                "Invio: controlla\n"
+                "a: installa\n"
+                "m: menu principale\n"
+                "q/Esc: esci"
+            )
     report = Panel(
         Label("\n".join(visible_report), wrap=True),
-        title="Diagnosi",
+        title=report_title,
         min_width=50,
     )
-    if state.installing:
-        command_text = (
-            "Installazione in corso\n"
-            "Attendi il completamento\n"
-            "Non chiudere la finestra"
-        )
-    elif state.confirmation_pending:
-        command_text = "s: conferma installazione\nn/Esc: annulla"
-    else:
-        command_text = (
-            "Su/Giu oppure k/j: scegli\n"
-            "Invio: controlla\n"
-            "a: installa\n"
-            "q/Esc: esci"
-        )
     commands = Panel(
         Label(command_text),
         title="Comandi",
@@ -262,6 +300,41 @@ def request_confirmation(state: State) -> None:
         "Saranno installati solo i componenti mancanti.",
         "Premi s per confermare oppure n per annullare.",
     )
+
+
+def open_home_action(state: State) -> None:
+    """Apre la funzione selezionata oppure ne richiede conferma."""
+
+    if state.action_index == 0:
+        state.screen = "providers"
+        state.confirmation_pending = False
+        state.report = ("Premi Invio per eseguire la diagnosi.",)
+    elif state.action_index == 1:
+        state.confirmation_pending = True
+        state.report = (
+            "Aggiornamento dell'ambiente",
+            "Gli esercizi e le impostazioni personali saranno conservati.",
+            "Premi s per continuare oppure n per annullare.",
+        )
+    elif state.action_index == 2:
+        state.confirmation_pending = True
+        state.report = (
+            "Disinstallazione protetta",
+            "Prima della rimozione verrà creato un backup degli esercizi.",
+            "Verranno rimossi solo i componenti installati da 2cornot2c.",
+            "Premi s per continuare oppure n per annullare.",
+        )
+    else:
+        state.running = False
+
+
+def confirm_home_action(state: State) -> None:
+    """Passa l'operazione a una console separata e termina la TUI."""
+
+    action = "update" if state.action_index == 1 else "uninstall"
+    launch_windows_action(action)
+    state.confirmation_pending = False
+    state.running = False
 
 
 def _format_results(
@@ -426,6 +499,15 @@ def main() -> int:
         host,
         order_by_recommendation(supported_providers(host), memory_bytes),
         memory_bytes,
+        screen="home" if host is Host.WINDOWS_AMD64 else "providers",
+        report=(
+            (
+                "Scegli cosa vuoi fare.",
+                "Puoi riprendere in sicurezza anche un'installazione incompleta.",
+            )
+            if host is Host.WINDOWS_AMD64
+            else ("Premi Invio per eseguire la diagnosi.",)
+        ),
     )
     watcher = ResizeWatcher()
     color = supports_color()
@@ -453,6 +535,42 @@ def main() -> int:
                     character = event.character if event.key is Key.CHARACTER else ""
                     if state.installing:
                         changed = True
+                    elif state.screen == "home":
+                        if character == "s" and state.confirmation_pending:
+                            try:
+                                confirm_home_action(state)
+                            except Exception as error:
+                                state.confirmation_pending = False
+                                message = for_check("installer", str(error))
+                                state.report = message.lines(str(error))
+                        elif (
+                            character == "n" or event.key is Key.ESCAPE
+                        ) and state.confirmation_pending:
+                            state.confirmation_pending = False
+                            state.report = ("Operazione annullata senza modifiche.",)
+                        elif state.confirmation_pending:
+                            changed = True
+                        elif event.key is Key.UP or character == "k":
+                            state.action_index = max(0, state.action_index - 1)
+                        elif event.key is Key.DOWN or character == "j":
+                            state.action_index = min(
+                                len(ACTION_LABELS) - 1,
+                                state.action_index + 1,
+                            )
+                        elif event.key is Key.ENTER and not state.confirmation_pending:
+                            open_home_action(state)
+                        elif event.key is Key.ESCAPE or character == "q":
+                            state.running = False
+                    elif character == "s" and state.confirmation_pending:
+                        start_selected(state)
+                        progress_refreshed_at = monotonic()
+                    elif (
+                        character == "n" or event.key is Key.ESCAPE
+                    ) and state.confirmation_pending:
+                        state.confirmation_pending = False
+                        state.report = ("Installazione annullata senza modifiche.",)
+                    elif state.confirmation_pending:
+                        changed = True
                     elif event.key is Key.UP or character == "k":
                         state.active_index = max(0, state.active_index - 1)
                     elif event.key is Key.DOWN or character == "j":
@@ -463,14 +581,10 @@ def main() -> int:
                         refresh_report(state)
                     elif character == "a" and not state.confirmation_pending:
                         request_confirmation(state)
-                    elif character == "s" and state.confirmation_pending:
-                        start_selected(state)
-                        progress_refreshed_at = monotonic()
-                    elif (
-                        character == "n" or event.key is Key.ESCAPE
-                    ) and state.confirmation_pending:
+                    elif character == "m":
+                        state.screen = "home"
                         state.confirmation_pending = False
-                        state.report = ("Installazione annullata senza modifiche.",)
+                        state.report = ("Scegli cosa vuoi fare.",)
                     elif event.key is Key.ESCAPE or character == "q":
                         state.running = False
                     changed = True
