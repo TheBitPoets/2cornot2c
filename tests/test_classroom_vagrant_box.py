@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
+import pytest
+
 from installer.artifacts import BoxArtifact
 from installer.model import Host, Provider
 from installer.vagrant_box import (
@@ -106,3 +108,5 @@ def test_launch_commands_are_host_specific(tmp_path: Path) -> None:
     assert launch_command(
         tmp_path, Host.WINDOWS_AMD64, Provider.VIRTUALBOX
     )[0] == "powershell.exe"
+    with pytest.raises(ValueError, match="non VM"):
+        launch_command(tmp_path, Host.MACOS_ARM64, Provider.DOCKER)

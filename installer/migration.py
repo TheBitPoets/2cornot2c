@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from installer.model import Provider
+from installer.model import Provider, VM_PROVIDERS
 
 
 CONFIRMATION = "RICREA VM"
@@ -76,6 +76,8 @@ def subprocess_runner(
 def state_directory(provider: Provider) -> str:
     """Mantiene isolati gli stati Vagrant dei due provider."""
 
+    if provider not in VM_PROVIDERS:
+        raise ValueError(f"Provider non VM: {provider.value}")
     return ".vagrant-vmware" if provider is Provider.VMWARE else ".vagrant"
 
 
@@ -171,7 +173,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument(
         "--provider",
         required=True,
-        choices=[provider.value for provider in Provider],
+        choices=[provider.value for provider in VM_PROVIDERS],
     )
     result.add_argument("--project", type=Path, default=Path.cwd())
     return result

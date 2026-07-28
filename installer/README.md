@@ -5,7 +5,8 @@ l'ambiente didattico:
 
 - macOS Apple Silicon: VMware Fusion raccomandato, VirtualBox opzionale;
 - Windows amd64: VirtualBox;
-- modalità Docker: verrà proposta separatamente dopo la diagnosi della RAM.
+- modalità Docker leggera: disponibile su entrambi e raccomandata
+  automaticamente fino a 8 GiB di RAM.
 
 La logica di rilevamento, i controlli e i piani non dipendono dalla UI.
 `utui` si occupa esclusivamente di rendering e input da terminale.
@@ -28,7 +29,15 @@ irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/bootstr
 
 Il bootstrap installa soltanto Git e Python 3.12, prepara il repository in
 `~/2cornot2c`, crea `.installer-venv` e avvia uTUI. La procedura guidata
-diagnostica e installa poi Vagrant e il provider selezionato.
+diagnostica e installa poi l'ambiente selezionato:
+
+- VMware Fusion o VirtualBox per una VM grafica completa;
+- Docker Desktop e l'immagine pubblica `student-dev` per il percorso da 512 MB.
+
+Docker Desktop richiede un primo avvio manuale per autorizzazioni, condizioni
+d'uso ed eventuale configurazione WSL 2. La procedura si ferma senza saltare il
+passaggio; dopo aver completato Docker Desktop basta rilanciare lo stesso
+bootstrap, che riprende dal primo componente mancante.
 
 ## Diagnosi
 
@@ -67,9 +76,24 @@ python -m installer.tui
 Nel menu premi `a`, controlla il provider mostrato e premi `s` per confermare.
 `n` o `Esc` annullano senza modifiche.
 
-Questa fase non scarica ancora il repository o la box Packer e non avvia la
-VM. Il bootstrap monocomando aggiungerà questi passi dopo aver fissato URL,
-versione e checksum degli artefatti pubblicati.
+Il percorso Docker scarica già l'immagine Ubuntu multiarch da GHCR usando il
+digest immutabile in `docker/student-dev/toolchain.lock.json`. Al termine:
+
+```bash
+cd ~/2cornot2c
+.installer-venv/bin/python scripts/student_dev_shell.py
+```
+
+Su Windows:
+
+```powershell
+cd "$HOME\2cornot2c"
+& .installer-venv\Scripts\python.exe scripts\student_dev_shell.py
+```
+
+La parte VM non scarica ancora la box Packer reale e non avvia la VM. Questi
+passi verranno attivati dopo aver fissato URL, versione e checksum degli
+artefatti che superano il collaudo VirtualBox AMD64.
 
 Il contratto e il downloader verificato sono implementati in
 `installer/artifacts.py`; manca intenzionalmente il manifest reale finché la

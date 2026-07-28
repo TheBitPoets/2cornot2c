@@ -392,7 +392,7 @@ Riferimento principale: README.md, sezione "Introduzione" (../README.md#introduz
 Il corso è fondamentalmente pratico, non è richiesto alcun prerequisito e nulla è dato per scontato.
 </p>
 
-Per preparare l'ambiente servono sempre:
+Per la macchina virtuale servono:
 
 - [Git](https://git-scm.com/downloads);
 - [Vagrant](https://developer.hashicorp.com/vagrant/install) 2.4 o successivo.
@@ -408,14 +408,37 @@ La stessa configurazione supporta Windows su processori Intel/AMD e macOS su
 Apple Silicon. La macchina virtuale usa Ubuntu 24.04 e contiene già compilatore,
 debugger e interfaccia grafica.
 
-È inoltre in preparazione `student-dev`, l'alternativa Docker leggera per i
-computer con poca RAM. Usa la stessa Ubuntu 24.04 delle VM ed è costruita
+È disponibile anche `student-dev`, l'alternativa Docker leggera per i computer
+con poca RAM. Usa la stessa Ubuntu 24.04 delle VM ed è costruita
 nativamente per `linux/amd64` (Windows e Mac Intel) e `linux/arm64` (Mac Apple
-Silicon). Il runner di grading resta per ora separato e basato su Debian: verrà
-allineato solo dopo i test di compatibilità, così gli esiti delle consegne non
-cambiano durante la sperimentazione.
+Silicon).
 
 ## Installare l'ambiente di sviluppo
+
+### Procedura guidata consigliata
+
+La procedura misura la RAM e propone VM completa oppure Docker leggero. Installa
+soltanto i componenti mancanti e può essere rilanciata dopo un riavvio o un
+passaggio manuale.
+
+Su macOS Apple Silicon:
+
+```bash
+curl --fail --location \
+  https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/bootstrap-classroom-macos.sh \
+  | bash
+```
+
+Su Windows apri PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/bootstrap-classroom-windows.ps1 | iex
+```
+
+Nel menu usa le frecce per scegliere, `Invio` per controllare e `a`, poi `s`,
+per installare. Su computer con al massimo 8 GiB viene mostrato per primo
+**Docker leggero - 512 MB**; tutte le alternative compatibili restano
+selezionabili.
 
 ### Preparazione automatica del Mac
 
@@ -487,10 +510,15 @@ se richiesta, è `vagrant`.
 senza avviare una VM completa. Richiede Docker Desktop e usa per impostazione
 predefinita al massimo 512 MB di RAM e una CPU.
 
-Dalla cartella in cui vuoi conservare gli esercizi esegui:
+Il bootstrap monocomando descritto in `installer/README.md` misura la RAM e,
+quando il computer ha al massimo 8 GiB, propone per primo **Docker leggero**.
+Installa Docker Desktop, richiede di avviarlo una volta e scarica l'immagine
+pubblica adatta al processore.
+
+Dopo la preparazione, dalla cartella del progetto esegui:
 
 ```bash
-python3 /percorso/di/2cornot2c/scripts/student_dev_shell.py
+python3 scripts/student_dev_shell.py
 ```
 
 Al primo avvio Docker scarica automaticamente da GHCR l'immagine adatta al
@@ -504,9 +532,9 @@ Per scegliere un'altra cartella o aumentare il limite di memoria:
 python3 scripts/student_dev_shell.py --workspace ./lab --memory 768m
 ```
 
-L'immagine pubblica è versionata: lo script non usa implicitamente `latest`,
-quindi una nuova pubblicazione non cambia l'ambiente degli studenti finché non
-aggiorniamo esplicitamente il manifest del progetto.
+Lo script usa il digest immutabile registrato nel progetto, non `latest`: una
+nuova pubblicazione non cambia l'ambiente degli studenti finché non aggiorniamo
+esplicitamente il lock verificato.
 
 ### Cartelle condivise
 

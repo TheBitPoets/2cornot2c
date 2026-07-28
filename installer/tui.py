@@ -25,6 +25,7 @@ from installer.executor import execute_plan
 from installer.model import Host, Provider
 from installer.platforms import detect_host
 from installer.plans import install_plan, supported_providers
+from installer.resources import order_by_recommendation, total_memory_bytes
 
 
 @dataclass(slots=True)
@@ -33,6 +34,7 @@ class State:
 
     host: Host
     providers: tuple[Provider, ...]
+    memory_bytes: int | None = None
     active_index: int = 0
     report: tuple[str, ...] = ("Premi Invio per eseguire la diagnosi.",)
     confirmation_pending: bool = False
@@ -42,15 +44,23 @@ class State:
 def build_screen(state: State):
     """Costruisce la schermata senza I/O o mutazioni."""
 
+    names = {
+        Provider.VMWARE: "VM completa - VMware Fusion",
+        Provider.VIRTUALBOX: "VM completa - VirtualBox",
+        Provider.DOCKER: "Docker leggero - 512 MB",
+    }
     provider_labels = tuple(
-        "VMware Fusion (raccomandato)"
-        if provider is Provider.VMWARE
-        else "VirtualBox"
-        for provider in state.providers
+        f"{names[provider]}{' (raccomandato)' if index == 0 else ''}"
+        for index, provider in enumerate(state.providers)
+    )
+    memory_label = (
+        f", RAM {state.memory_bytes / 1024**3:.1f} GiB"
+        if state.memory_bytes is not None
+        else ""
     )
     choices = Panel(
         ListView(provider_labels, active_index=state.active_index, focused=True),
-        title=f"Ambiente 2cornot2c - {state.host.value}",
+        title=f"Ambiente 2cornot2c - {state.host.value}{memory_label}",
         min_width=38,
     )
     report = Panel(
@@ -94,7 +104,7 @@ def request_confirmation(state: State) -> None:
     provider = state.providers[state.active_index]
     state.confirmation_pending = True
     state.report = (
-        f"Provider: {provider.value}",
+        f"Ambiente: {provider.value}",
         "Saranno installati solo i componenti mancanti.",
         "Premi s per confermare oppure n per annullare.",
     )
@@ -115,6 +125,15 @@ def apply_selected(state: State) -> None:
         f"[{result.status.upper()}] {result.label}: {result.detail}"
         for result in results
     ) or ("Nessun passo necessario.",)
+    if (
+        provider is Provider.DOCKER
+        and results
+        and all(result.status in {"skipped", "succeeded"} for result in results)
+    ):
+        state.report += (
+            "Pronto. Esci con q, poi avvia:",
+            "python scripts/student_dev_shell.py",
+        )
 
 
 def present(rows: list[str]) -> None:
@@ -129,7 +148,12 @@ def main() -> int:
     """Esegue il menu interattivo mantenendo l'event loop nel consumer."""
 
     host = detect_host()
-    state = State(host, supported_providers(host))
+    memory_bytes = total_memory_bytes(host)
+    state = State(
+        host,
+        order_by_recommendation(supported_providers(host), memory_bytes),
+        memory_bytes,
+    )
     watcher = ResizeWatcher()
     color = supports_color()
 

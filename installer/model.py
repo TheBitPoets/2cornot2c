@@ -14,10 +14,14 @@ class Host(str, Enum):
 
 
 class Provider(str, Enum):
-    """Provider VM selezionabili."""
+    """Ambienti selezionabili dall'installer."""
 
     VMWARE = "vmware_desktop"
     VIRTUALBOX = "virtualbox"
+    DOCKER = "docker"
+
+
+VM_PROVIDERS = (Provider.VMWARE, Provider.VIRTUALBOX)
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +43,7 @@ class Step:
     command: tuple[str, ...] | None
     manual: bool = False
     detail: str = ""
+    deferred: bool = False
 
 
 @dataclass(frozen=True, slots=True)

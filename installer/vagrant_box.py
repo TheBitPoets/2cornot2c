@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 
 from installer.artifacts import BoxArtifact, verify_box
-from installer.model import Host, Provider
+from installer.model import Host, Provider, VM_PROVIDERS
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,6 +122,8 @@ def configure_project(project: Path, artifact: BoxArtifact) -> None:
 def launch_command(project: Path, host: Host, provider: Provider) -> tuple[str, ...]:
     """Restituisce il comando supportato per il primo avvio e health check."""
 
+    if provider not in VM_PROVIDERS:
+        raise ValueError(f"Provider non VM: {provider.value}")
     if host is Host.MACOS_ARM64:
         option = "--vmware" if provider is Provider.VMWARE else "--virtualbox"
         return ("bash", str(project / "scripts" / "setup-vm.sh"), option)

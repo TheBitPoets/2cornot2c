@@ -79,7 +79,10 @@ def execute_plan(
         result
         for key, result in check_by_key.items()
         if key in missing
-        and (key not in step_by_key or step_by_key[key].manual)
+        and (
+            key not in step_by_key
+            or (step_by_key[key].manual and not step_by_key[key].deferred)
+        )
     ]
     if blockers:
         results = tuple(

@@ -10,6 +10,7 @@ from installer.executor import execute_plan
 from installer.model import Provider
 from installer.platforms import detect_host
 from installer.plans import install_plan, supported_providers
+from installer.resources import order_by_recommendation, total_memory_bytes
 
 
 def parser() -> argparse.ArgumentParser:
@@ -19,7 +20,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument(
         "--provider",
         choices=[provider.value for provider in Provider],
-        help="provider desiderato; se omesso usa quello raccomandato",
+        help="ambiente desiderato; se omesso usa quello raccomandato",
     )
     result.add_argument(
         "--apply",
@@ -47,12 +48,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.yes and not args.apply:
         parser().error("--yes richiede --apply")
     host = detect_host()
-    providers = supported_providers(host)
+    memory_bytes = total_memory_bytes(host)
+    providers = order_by_recommendation(supported_providers(host), memory_bytes)
     provider = Provider(args.provider) if args.provider else providers[0]
     plan = install_plan(host, provider)
 
     print(f"Host: {host.value}")
-    print(f"Provider: {provider.value}")
+    if memory_bytes is not None:
+        print(f"RAM: {memory_bytes / 1024**3:.1f} GiB")
+    print(f"Ambiente: {provider.value}")
     print("\nDiagnosi:")
     results = diagnose(plan)
     for result in results:
