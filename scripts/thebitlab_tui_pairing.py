@@ -156,10 +156,22 @@ class TuiBrowserPairingBoundary:
             or http_sessions.sessions.storage is not tui_sessions.storage
         ):
             raise ValueError("Audience sessioni pairing non configurate correttamente.")
-        self.pairings = pairings
-        self.http_sessions = http_sessions
-        self.tui_sessions = tui_sessions
+        self._pairings = pairings
+        self._http_sessions = http_sessions
+        self._tui_sessions = tui_sessions
         self.verification_path = _verification_path(verification_path)
+
+    @property
+    def pairings(self) -> TuiPairingSessionService:
+        return self._pairings
+
+    @property
+    def http_sessions(self) -> HttpSessionAuthBoundary:
+        return self._http_sessions
+
+    @property
+    def tui_sessions(self) -> SessionService:
+        return self._tui_sessions
 
     def begin(self) -> TuiPairingStart:
         self._require_shared_registry()

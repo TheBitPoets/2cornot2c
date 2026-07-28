@@ -1202,10 +1202,14 @@ class TuiPairingSessionService:
     ) -> None:
         if type(pairings) is not PairingService:
             raise AuthApplicationError("Servizio pairing non valido.")
-        self.pairings = pairings
+        self._pairings = pairings
         self.session_ttl = _positive_ttl(session_ttl, "ttl sessione TUI")
         self.token_factory = token_factory
         self.session_id_factory = session_id_factory
+
+    @property
+    def pairings(self) -> PairingService:
+        return self._pairings
 
     @property
     def storage(self) -> PairingApplicationStorage:

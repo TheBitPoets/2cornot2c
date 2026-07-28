@@ -176,11 +176,15 @@ class HttpSessionAuthBoundary:
         if invalid_secret:
             candidate_secret = None
             raise ValueError("Il secret CSRF deve contenere almeno 32 byte.")
-        self.sessions = sessions
+        self._sessions = sessions
         self.cookie_policy = cookie_policy
         self.clock = clock
         self._csrf_secret = candidate_secret
         candidate_secret = None
+
+    @property
+    def sessions(self) -> SessionService:
+        return self._sessions
 
     def establish_session(
         self, user_id: str, *, existing_cookie_header: str | None = None

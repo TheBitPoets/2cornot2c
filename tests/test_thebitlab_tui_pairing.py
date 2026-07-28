@@ -160,12 +160,16 @@ def test_boundary_rejects_distinct_identity_registries(setup, tmp_path) -> None:
     with pytest.raises(AttributeError):
         boundary.http_sessions.sessions.storage = other
 
-    boundary.pairings.pairings = PairingService(
-        other, pepper=b"r" * 32, clock=clock
-    )
-    boundary.tui_sessions = other_tui_sessions
-    with pytest.raises(TuiPairingUnavailableError):
-        boundary.begin()
+    with pytest.raises(AttributeError):
+        boundary.pairings.pairings = PairingService(
+            other, pepper=b"r" * 32, clock=clock
+        )
+    with pytest.raises(AttributeError):
+        boundary.tui_sessions = other_tui_sessions
+    with pytest.raises(AttributeError):
+        boundary.pairings = other_pairings
+    with pytest.raises(AttributeError):
+        boundary.http_sessions = boundary.http_sessions
 
 
 def test_registry_is_rechecked_after_mutating_service_callback(
@@ -189,7 +193,7 @@ def test_registry_is_rechecked_after_mutating_service_callback(
     monkeypatch.setattr(boundary.pairings, "issue", mutate_then_issue)
     with pytest.raises(TuiPairingUnavailableError):
         boundary.begin()
-    assert other.read_pairing("other-pairing") is not None
+    assert other.read_pairing("other-pairing") is None
 
 
 def test_student_browser_authorizes_and_tui_consumes_once(setup) -> None:
