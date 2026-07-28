@@ -3,6 +3,7 @@ from __future__ import annotations
 import http.client as http_client
 import json
 import threading
+import time
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
@@ -286,6 +287,7 @@ def test_unknown_path_is_not_claimed(graph) -> None:
 
 def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) -> None:
     _storage, http, boundary, routes = graph
+    monkeypatch.setattr(course_board_server, "PAIRING_BODY_DEADLINE_SECONDS", 0.1)
     monkeypatch.setenv(
         "THEBITLAB_STUDENT_HELP_SECRET",
         "legacy-secret-that-must-not-downgrade-production",
@@ -390,6 +392,20 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
             page_body = page_response.read()
         finally:
             page_connection.close()
+        slow_connection = http_client.HTTPConnection(
+            "127.0.0.1", server.server_address[1], timeout=5
+        )
+        try:
+            slow_connection.putrequest("POST", "/auth/tui/pairings")
+            slow_connection.putheader("X-Forwarded-Proto", "https")
+            slow_connection.putheader("Content-Length", "10")
+            slow_connection.endheaders(b"x")
+            time.sleep(0.15)
+            slow_response = slow_connection.getresponse()
+            slow_body_status = slow_response.status
+            slow_response.read()
+        finally:
+            slow_connection.close()
         wrong_method, _ = exchange("/auth/tui/pairings", method="GET")
         network_path, _ = exchange("//auth/tui/pairings")
     finally:
@@ -408,6 +424,7 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
     assert duplicate_auth_status == 401
     assert bearer.encode() not in duplicate_auth_body
     assert page_status == 200 and b"Collega il terminale" in page_body
+    assert slow_body_status == 400
     assert wrong_method == 405
     assert network_path == 400
     assert boundary.authenticate_bearer("Bearer " + bearer).user.user_id == "student-01"

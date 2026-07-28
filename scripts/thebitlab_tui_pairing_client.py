@@ -28,6 +28,7 @@ _MAX_PAIRING_LIFETIME = timedelta(minutes=15)
 _DEFAULT_POLL_SECONDS = 2.0
 _MAX_TRANSPORT_WORKERS = 4
 _TRANSPORT_WORKER_SLOTS = threading.BoundedSemaphore(_MAX_TRANSPORT_WORKERS)
+_SUBPROCESS_LAUNCH_SLOTS = threading.BoundedSemaphore(_MAX_TRANSPORT_WORKERS)
 
 
 class TuiPairingClientError(ValueError):
@@ -339,6 +340,103 @@ class _PairingRateLimitedError(RuntimeError):
         super().__init__("Pairing temporaneamente limitato.")
 
 
+def _kill_and_reap_async(process) -> None:
+    def cleanup() -> None:
+        try:
+            process.kill()
+        except Exception:
+            pass
+        try:
+            process.communicate()
+        except Exception:
+            pass
+
+    threading.Thread(
+        target=cleanup,
+        name="thebitlab-subprocess-cleanup",
+        daemon=True,
+    ).start()
+
+
+def _run_killable_subprocess(
+    command: list[str],
+    input_bytes: bytes,
+    *,
+    environment: dict[str, str],
+    timeout: float,
+) -> tuple[int, bytes]:
+    deadline = time.monotonic() + timeout
+    if not _SUBPROCESS_LAUNCH_SLOTS.acquire(blocking=False):
+        raise TimeoutError("subprocess capacity")
+    launched: queue.Queue = queue.Queue(maxsize=1)
+
+    def launch() -> None:
+        process = None
+        try:
+            process = subprocess.Popen(
+                command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                env=environment,
+            )
+            launched.put(process)
+            process = None
+        except Exception as error:
+            launched.put(error)
+        finally:
+            _SUBPROCESS_LAUNCH_SLOTS.release()
+            if process is not None:
+                _kill_and_reap_async(process)
+
+    threading.Thread(
+        target=launch,
+        name="thebitlab-subprocess-launch",
+        daemon=True,
+    ).start()
+    process = None
+    stdout = None
+    try:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise queue.Empty()
+        candidate = launched.get(timeout=remaining)
+        if isinstance(candidate, Exception):
+            raise OSError("subprocess launch") from None
+        process = candidate
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired(command, timeout)
+        try:
+            stdout, _ = process.communicate(input=input_bytes, timeout=remaining)
+        except subprocess.TimeoutExpired:
+            raise TimeoutError("subprocess deadline") from None
+        return process.returncode, stdout
+    except queue.Empty:
+        def cleanup_late_launch() -> None:
+            try:
+                candidate = launched.get()
+                if not isinstance(candidate, Exception):
+                    _kill_and_reap_async(candidate)
+            except Exception:
+                pass
+
+        threading.Thread(
+            target=cleanup_late_launch,
+            name="thebitlab-late-subprocess-cleanup",
+            daemon=True,
+        ).start()
+        raise TimeoutError("subprocess deadline") from None
+    finally:
+        if process is not None and process.poll() is None:
+            _kill_and_reap_async(process)
+        process = None
+        input_bytes = None
+        stdout = None
+        command = None
+        environment = None
+
+
 def _request_json_in_killable_process(
     request: urllib.request.Request,
     *,
@@ -356,25 +454,17 @@ def _request_json_in_killable_process(
         },
         separators=(",", ":"),
     ).encode("utf-8")
-    process = None
     stdout = None
     failure = None
     try:
-        process = subprocess.Popen(
+        returncode, stdout = _run_killable_subprocess(
             [sys.executable, str(__file__), "--transport-worker"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            env=_transport_environment(),
+            specification,
+            environment=_transport_environment(),
+            timeout=timeout,
         )
-        try:
-            stdout, _ = process.communicate(input=specification, timeout=timeout)
-        except subprocess.TimeoutExpired:
-            failure = "Il server pairing non è raggiungibile."
-            process.kill()
-            process.communicate(timeout=1)
-        if failure is None and (
-            process.returncode != 0
+        if (
+            returncode != 0
             or type(stdout) is not bytes
             or len(stdout) > _MAX_RESPONSE_BYTES * 2
         ):
@@ -382,13 +472,6 @@ def _request_json_in_killable_process(
     except Exception:
         failure = "Il server pairing non è raggiungibile."
     finally:
-        if process is not None and process.poll() is None:
-            try:
-                process.kill()
-                process.communicate(timeout=1)
-            except Exception:
-                pass
-        process = None
         request = None
         specification = None
     if failure is not None:

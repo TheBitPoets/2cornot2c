@@ -1166,25 +1166,17 @@ def _student_api_json_subprocess(request: urllib.request.Request, *, timeout: fl
         },
         separators=(",", ":"),
     ).encode("utf-8")
-    process = None
     stdout = None
     failure = False
     try:
-        process = subprocess.Popen(
+        returncode, stdout = thebitlab_tui_pairing_client._run_killable_subprocess(
             [sys.executable, str(Path(__file__).resolve()), "--student-api-worker"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            env=thebitlab_tui_pairing_client._transport_environment(),
+            specification,
+            environment=thebitlab_tui_pairing_client._transport_environment(),
+            timeout=timeout,
         )
-        try:
-            stdout, _ = process.communicate(input=specification, timeout=timeout)
-        except subprocess.TimeoutExpired:
-            failure = True
-            process.kill()
-            process.communicate(timeout=1)
-        if not failure and (
-            process.returncode != 0
+        if (
+            returncode != 0
             or type(stdout) is not bytes
             or len(stdout) > MAX_STUDENT_API_RESPONSE_BYTES * 2 + 4096
         ):
@@ -1192,13 +1184,6 @@ def _student_api_json_subprocess(request: urllib.request.Request, *, timeout: fl
     except Exception:
         failure = True
     finally:
-        if process is not None and process.poll() is None:
-            try:
-                process.kill()
-                process.communicate(timeout=1)
-            except Exception:
-                pass
-        process = None
         request = None
         specification = None
     if failure:

@@ -32,6 +32,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -95,6 +96,7 @@ ACTIVE_AI_MODEL = os.environ.get("AI_MODEL", "").strip()
 MAX_HTTP_WORKERS = 64
 MAX_HTTP_WORKERS_PER_CLIENT = 8
 HTTP_CLIENT_TIMEOUT_SECONDS = 15
+PAIRING_BODY_DEADLINE_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
@@ -3631,9 +3633,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             )
             if readable:
                 expected = 0 if safe_get_without_body else int(lengths[0])
-                body = self.rfile.read(expected) if expected else b""
-                if len(body) != expected:
-                    self.close_connection = True
+                body = self._read_pairing_body_with_deadline(expected)
+                if body is None:
+                    raise ValueError("pairing body timeout")
             else:
                 self.close_connection = True
             raw_query = parsed.query
@@ -3667,6 +3669,35 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             transfers = None
         self.write_tui_pairing_response(response)
         return True
+
+    def _read_pairing_body_with_deadline(self, expected: int) -> bytes | None:
+        if expected == 0:
+            return b""
+        deadline = time.monotonic() + PAIRING_BODY_DEADLINE_SECONDS
+        chunks: list[bytes] = []
+        received = 0
+        try:
+            while received < expected:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return None
+                self.connection.settimeout(max(0.001, remaining))
+                chunk = self.rfile.read1(min(65536, expected - received))
+                if not chunk:
+                    return None
+                chunks.append(chunk)
+                received += len(chunk)
+            return b"".join(chunks)
+        except (OSError, TimeoutError):
+            return None
+        finally:
+            try:
+                self.connection.settimeout(HTTP_CLIENT_TIMEOUT_SECONDS)
+            except OSError:
+                self.close_connection = True
+            if received != expected:
+                self.close_connection = True
+            chunks = []
 
     def write_tui_pairing_response(self, response) -> None:
         guard = getattr(response, "delivery_guard", None)

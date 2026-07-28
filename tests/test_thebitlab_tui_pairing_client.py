@@ -152,6 +152,36 @@ def test_poll_honors_bounded_retry_after() -> None:
     assert sleeps == [3.0]
 
 
+def test_subprocess_deadline_includes_slow_process_launch(monkeypatch) -> None:
+    class FakeProcess:
+        returncode = None
+
+        def kill(self):
+            self.returncode = -9
+
+        def communicate(self, input=None, timeout=None):
+            self.returncode = self.returncode or 0
+            return b"", b""
+
+        def poll(self):
+            return self.returncode
+
+    def slow_launch(*args, **kwargs):
+        time.sleep(0.5)
+        return FakeProcess()
+
+    monkeypatch.setattr(pairing_client_module.subprocess, "Popen", slow_launch)
+    started_at = time.monotonic()
+    with pytest.raises(TimeoutError):
+        pairing_client_module._run_killable_subprocess(
+            ["python", "worker"],
+            b"secret-over-pipe",
+            environment={},
+            timeout=0.05,
+        )
+    assert time.monotonic() - started_at < 0.2
+
+
 def test_production_transport_uses_killable_minimal_environment(monkeypatch) -> None:
     monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN", "must-not-reach-child-env")
     monkeypatch.setenv("HTTPS_PROXY", "https://proxy.test")
