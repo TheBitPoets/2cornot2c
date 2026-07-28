@@ -73,7 +73,12 @@ def test_docker_plans_install_desktop_and_pull_immutable_image() -> None:
         for step in windows.steps
     )
     assert ("docker", "pull", image) in {step.command for step in mac.steps}
-    assert ("docker", "pull", image) in {step.command for step in windows.steps}
+    windows_image_step = next(
+        step for step in windows.steps if step.key == "student-image"
+    )
+    assert windows_image_step.command is not None
+    assert " pull " in windows_image_step.command[-1]
+    assert image in windows_image_step.command[-1]
     assert "@sha256:" in image
     assert load_lock()["platforms"] == ["linux/amd64", "linux/arm64"]
 
@@ -106,6 +111,80 @@ def test_tui_frame_lists_supported_provider() -> None:
     rendered = "\n".join(rows)
     assert "VirtualBox" in rendered
     assert "VMware Fusion" not in rendered
+
+
+def test_tui_home_exposes_the_complete_lifecycle() -> None:
+    pytest.importorskip("utui")
+    from installer.tui import State, frame
+
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER, Provider.VIRTUALBOX),
+        screen="home",
+    )
+    rendered = "\n".join(frame(state, 150, 14, color=False))
+
+    assert "Gestisci ambiente 2cornot2c" in rendered
+    assert "Installa, completa o ripara" in rendered
+    assert "Aggiorna l'ambiente" in rendered
+    assert "Disinstalla l'ambiente" in rendered
+
+
+def test_tui_uninstall_requires_confirmation_and_launches_separately(
+    monkeypatch,
+) -> None:
+    pytest.importorskip("utui")
+    from installer.tui import (
+        State,
+        confirm_home_action,
+        open_home_action,
+    )
+
+    launched = []
+    monkeypatch.setattr(
+        "installer.tui.launch_windows_action",
+        lambda action: launched.append(action),
+    )
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER,),
+        screen="home",
+        action_index=2,
+    )
+
+    open_home_action(state)
+    assert state.confirmation_pending is True
+    assert "backup" in " ".join(state.report)
+
+    confirm_home_action(state)
+    assert launched == ["uninstall"]
+    assert state.running is False
+
+
+def test_windows_lifecycle_uses_only_persistent_known_scripts(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    from installer.lifecycle import powershell_action_command
+
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    launcher = tmp_path / "2cornot2c"
+    launcher.mkdir()
+    (launcher / "uninstall-classroom-windows.ps1").touch()
+
+    command = powershell_action_command("uninstall")
+
+    assert command[:6] == (
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        str(launcher / "uninstall-classroom-windows.ps1"),
+    )
+    assert command[-1] == "-ConfirmedFromTui"
+    with pytest.raises(ValueError, match="non supportata"):
+        powershell_action_command("qualcosa")
 
 
 def test_tui_marks_first_low_memory_choice_as_recommended() -> None:
@@ -298,7 +377,7 @@ def test_executor_blocks_manual_prerequisite_before_writes() -> None:
     assert calls == []
 
 
-def test_docker_install_runs_before_deferred_first_start() -> None:
+def test_windows_docker_install_starts_desktop_and_continues_automatically() -> None:
     plan = install_plan(Host.WINDOWS_AMD64, Provider.DOCKER)
     calls = []
 
@@ -311,8 +390,16 @@ def test_docker_install_runs_before_deferred_first_start() -> None:
         runner=lambda command: (calls.append(command) or (0, "installato")),
     )
 
-    assert [result.key for result in results] == ["docker", "docker-engine"]
-    assert [result.status for result in results] == ["succeeded", "blocked"]
+    assert [result.key for result in results] == [
+        "docker",
+        "docker-engine",
+        "student-image",
+    ]
+    assert [result.status for result in results] == [
+        "succeeded",
+        "succeeded",
+        "succeeded",
+    ]
     assert calls[0][:5] == (
         "winget",
         "install",
@@ -320,6 +407,21 @@ def test_docker_install_runs_before_deferred_first_start() -> None:
         "Docker.DockerDesktop",
         "--exact",
     )
+    assert calls[1][:4] == (
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+    )
+    assert "Start-Process" in calls[1][-1]
+    assert "docker.exe" in calls[1][-1]
+    assert calls[2][:4] == (
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+    )
+    assert " pull " in calls[2][-1]
 
 
 def test_executor_stops_on_first_failed_command() -> None:

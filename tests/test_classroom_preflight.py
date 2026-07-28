@@ -53,13 +53,21 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     uninstall = (ROOT / "scripts" / "uninstall-classroom-windows.ps1").read_text(
         encoding="utf-8"
     )
+    manager = (ROOT / "scripts" / "manage-classroom-windows.ps1").read_text(
+        encoding="utf-8"
+    )
 
     assert "Test-HostResources" in bootstrap
     assert "installed_by_bootstrap" in bootstrap
+    assert "Install-ClassroomLauncher" in bootstrap
+    assert "Ambiente 2cornot2c.lnk" in bootstrap
     assert "bootstrap-classroom-windows.ps1" in update
+    assert ".installer-venv\\Scripts\\python.exe" in manager
+    assert "bootstrap-classroom-windows.ps1" in manager
     assert 'if ($Confirmation -ne "DISINSTALLA")' in uninstall
     assert "Remove-Item -LiteralPath $SafeInstallDir" in uninstall
     assert "TheBitPoets/2cornot2c" in uninstall
     assert "vagrant destroy" not in uninstall
     assert "docker image rm $ImageReference" in uninstall
     assert "docker image rm --force" not in uninstall
+    assert "Ambiente 2cornot2c.lnk" in uninstall

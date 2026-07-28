@@ -238,15 +238,53 @@ def _docker_plan(host: Host) -> InstallPlan:
             ),
             Step(
                 "docker-engine",
-                "Avvia Docker Desktop",
-                None,
-                manual=True,
-                detail=(
-                    "Avvia Docker Desktop, completa la configurazione WSL 2 e "
-                    "riavvia Windows se richiesto; poi rilancia l'installer."
+                "Avvia e prepara Docker Desktop",
+                (
+                    "powershell.exe",
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    (
+                        "$app = Join-Path $env:ProgramFiles "
+                        "'Docker\\Docker\\Docker Desktop.exe'; "
+                        "$cli = Join-Path $env:ProgramFiles "
+                        "'Docker\\Docker\\resources\\bin\\docker.exe'; "
+                        "if (-not (Test-Path $app)) { "
+                        "Write-Error 'Docker Desktop non trovato'; exit 17 }; "
+                        "Start-Process -FilePath $app; "
+                        "Write-Output "
+                        "'Docker Desktop avviato: attendo che sia pronto...'; "
+                        "for ($i = 0; $i -lt 120; $i++) { "
+                        "& $cli info *> $null; "
+                        "if ($LASTEXITCODE -eq 0) { "
+                        "Write-Output 'Docker Desktop è pronto'; exit 0 }; "
+                        "Start-Sleep -Seconds 5 }; "
+                        "Write-Error "
+                        "'Docker Desktop non è diventato pronto in 10 minuti'; "
+                        "exit 19"
+                    ),
                 ),
-                deferred=True,
+                detail=(
+                    "Docker Desktop viene aperto automaticamente e il setup "
+                    "attende che sia pronto."
+                ),
             ),
-            Step("student-image", "Scarica student-dev", ("docker", "pull", image)),
+            Step(
+                "student-image",
+                "Scarica student-dev",
+                (
+                    "powershell.exe",
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    (
+                        "$cli = Join-Path $env:ProgramFiles "
+                        "'Docker\\Docker\\resources\\bin\\docker.exe'; "
+                        f"& $cli pull '{image}'; exit $LASTEXITCODE"
+                    ),
+                ),
+            ),
         ),
     )

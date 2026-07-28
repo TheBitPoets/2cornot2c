@@ -58,10 +58,18 @@ diagnostica e installa poi l'ambiente selezionato:
 - VMware Fusion o VirtualBox per una VM grafica completa;
 - Docker Desktop e l'immagine pubblica `student-dev` per il percorso da 512 MB.
 
-Docker Desktop richiede un primo avvio manuale per autorizzazioni, condizioni
-d'uso ed eventuale configurazione WSL 2. La procedura si ferma senza saltare il
-passaggio; dopo aver completato Docker Desktop basta rilanciare lo stesso
-bootstrap, che riprende dal primo componente mancante.
+Il bootstrap crea il collegamento **Ambiente 2cornot2c** sul desktop e nel
+menu Start. Da quel momento non servono altri comandi: lo stesso menu permette
+di completare o riparare l'installazione, aggiornarla e disinstallarla. Il
+launcher è conservato separatamente dal repository, quindi può riprendere anche
+una preparazione interrotta.
+
+La procedura avvia automaticamente Docker Desktop e attende che sia pronto
+prima di scaricare l'ambiente. Soltanto al primo utilizzo Windows può mostrare
+una finestra che richiede di accettare le condizioni, autorizzare WSL 2 o
+riavviare il computer. In quel caso basta seguire l'unica richiesta mostrata e,
+dopo un eventuale riavvio, rilanciare lo stesso comando: la procedura riprende
+dal primo componente mancante senza reinstallare ciò che è già presente.
 
 ## Diagnosi
 
@@ -121,6 +129,10 @@ cd "$HOME\2cornot2c"
 ```
 
 ## Aggiornamento e disinstallazione Windows
+
+Il percorso raccomandato è aprire **Ambiente 2cornot2c** dal desktop o dal menu
+Start e scegliere l'operazione desiderata. I comandi seguenti restano
+disponibili per il supporto tecnico.
 
 Aggiornamento idempotente:
 

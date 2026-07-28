@@ -89,12 +89,16 @@ ERRORS = {
     ),
     "docker-engine": StudentError(
         "E19",
-        "Docker Desktop è installato ma non è acceso",
-        "Il programma è presente, ma il suo motore non è ancora pronto.",
+        "Docker Desktop non è riuscito a diventare pronto",
         (
-            "Avvia Docker Desktop dal menu Start.",
-            "Completa WSL 2, accetta le condizioni e riavvia se richiesto.",
-            "Attendi che Docker sia pronto e rilancia l'installer.",
+            "Il setup lo ha già avviato e ha atteso automaticamente. "
+            "Windows sta chiedendo un intervento che non può essere confermato "
+            "al posto tuo."
+        ),
+        (
+            "Guarda la finestra di Docker Desktop e premi Accetta o Continua.",
+            "Se Windows chiede di riavviare, fallo.",
+            "Dopo il riavvio rilancia lo stesso comando: riprenderà da solo.",
         ),
     ),
     "student-image": StudentError(
