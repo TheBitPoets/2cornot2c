@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Protocol
 
 from scripts.thebitlab_identity import (
@@ -195,6 +195,7 @@ class ClassDirectoryStorage(Protocol):
         admin_user_id: str,
         expected_admin_updated_at: datetime,
         expected_class_updated_at: datetime,
+        expected_mapping_created_at: datetime | None,
     ) -> None: ...
 
     def delete_external_group_mapping_for_admin(
@@ -215,6 +216,9 @@ class ClassDirectoryStorage(Protocol):
         expected_identity_linked_at: datetime,
         expected_mapping: ExternalGroupMapping,
         expected_snapshot_group_keys: tuple[tuple[str, str], ...],
+        expected_snapshot_captured_at: datetime,
+        max_snapshot_age: timedelta,
+        future_skew: timedelta,
         expected_class_updated_at: datetime,
     ) -> None: ...
 

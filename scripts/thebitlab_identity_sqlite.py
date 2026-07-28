@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Iterator, TypeVar
 
@@ -1243,8 +1243,16 @@ class SqliteIdentityStorage:
         admin_user_id: str,
         expected_admin_updated_at: datetime,
         expected_class_updated_at: datetime,
+        expected_mapping_created_at: datetime | None,
     ) -> None:
         created_at = _encode_datetime(mapping.created_at, "created_at")
+        expected_mapping_generation = (
+            None
+            if expected_mapping_created_at is None
+            else _encode_datetime(
+                expected_mapping_created_at, "expected_mapping_created_at"
+            )
+        )
         admin_revision = _encode_datetime(
             expected_admin_updated_at, "expected_admin_updated_at"
         )
@@ -1261,7 +1269,11 @@ class SqliteIdentityStorage:
                 """,
                 mapping.provider_key,
             ).fetchone()
-            if existing is None:
+            if expected_mapping_generation is None:
+                if existing is not None:
+                    raise IdentityStorageMappingGenerationConflictError(
+                        "Mapping creato da un'altra operazione."
+                    )
                 self._reserve_external_group_mapping_generation(
                     connection, mapping, created_at
                 )
@@ -1292,6 +1304,13 @@ class SqliteIdentityStorage:
                     ),
                 )
             else:
+                if (
+                    existing is None
+                    or existing["created_at"] != expected_mapping_generation
+                ):
+                    raise IdentityStorageMappingGenerationConflictError(
+                        "Mapping rimosso o ricreato da un'altra operazione."
+                    )
                 cursor = connection.execute(
                     """
                     UPDATE external_group_mappings SET display_name = ?
@@ -1390,6 +1409,9 @@ class SqliteIdentityStorage:
         expected_identity_linked_at: datetime,
         expected_mapping: ExternalGroupMapping,
         expected_snapshot_group_keys: tuple[tuple[str, str], ...],
+        expected_snapshot_captured_at: datetime,
+        max_snapshot_age: timedelta,
+        future_skew: timedelta,
         expected_class_updated_at: datetime,
     ) -> None:
         if (
@@ -1406,8 +1428,17 @@ class SqliteIdentityStorage:
             or membership.source_provider != "github"
             or membership.class_id != expected_mapping.class_id
             or membership.source_group_subject != expected_mapping.group_subject
+            or type(max_snapshot_age) is not timedelta
+            or max_snapshot_age <= timedelta(0)
+            or type(future_skew) is not timedelta
+            or future_skew < timedelta(0)
         ):
             raise IdentityStorageError("Snapshot gruppi onboarding non valido.")
+        snapshot_captured_at = _decode_datetime(
+            _encode_datetime(
+                expected_snapshot_captured_at, "expected_snapshot_captured_at"
+            )
+        )
         joined_at = _encode_datetime(membership.joined_at, "joined_at")
         user_revision = _encode_datetime(
             expected_user_updated_at, "expected_user_updated_at"
@@ -1424,6 +1455,21 @@ class SqliteIdentityStorage:
         with self._transaction(
             "onboard_pending_user_from_external_group"
         ) as connection:
+            transaction_now = self._clock()
+            if (
+                not isinstance(transaction_now, datetime)
+                or transaction_now.tzinfo is None
+                or transaction_now.utcoffset() is None
+            ):
+                raise IdentityStorageError("Clock storage onboarding non valido.")
+            transaction_now = transaction_now.astimezone(timezone.utc)
+            if (
+                snapshot_captured_at <= transaction_now - max_snapshot_age
+                or snapshot_captured_at > transaction_now + future_skew
+            ):
+                raise IdentityStorageConflictError(
+                    "Snapshot GitHub scaduto durante onboarding."
+                )
             connection.execute(
                 """
                 CREATE TEMP TABLE onboarding_expected_groups (

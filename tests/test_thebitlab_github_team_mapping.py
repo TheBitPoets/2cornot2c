@@ -121,6 +121,31 @@ def test_legacy_mapping_writes_also_reserve_aba_tombstone(setup) -> None:
     assert relinked.created_at == NOW + timedelta(microseconds=1)
 
 
+def test_concurrent_create_cannot_be_misread_as_mapping_rename(
+    setup, monkeypatch
+) -> None:
+    storage, service, _clock = setup
+    original = storage.save_external_group_mapping_for_admin
+    injected = False
+
+    def create_other_then_save(mapping, **kwargs):
+        nonlocal injected
+        if not injected:
+            injected = True
+            original(replace(mapping, display_name="winner"), **kwargs)
+        return original(mapping, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "save_external_group_mapping_for_admin", create_other_then_save
+    )
+    with pytest.raises(GitHubTeamMappingConflictError):
+        service.save_mapping(
+            "admin-01", "class-01", "1001", "2002", display_name="stale"
+        )
+    persisted = storage.read_external_group_mapping("github", "1001", "2002")
+    assert persisted.display_name == "winner"
+
+
 def test_admin_revision_race_cannot_create_mapping(setup, monkeypatch) -> None:
     storage, service, _clock = setup
     original = storage.save_external_group_mapping_for_admin
@@ -204,6 +229,29 @@ def test_stale_snapshot_never_onboards_pending_user(setup) -> None:
             "pending-01"
         )
     assert storage.read_user("pending-01").role == "pending"
+
+
+def test_snapshot_expiring_before_storage_commit_cannot_onboard(
+    setup, monkeypatch
+) -> None:
+    storage, mappings, clock = setup
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    directory = FakeGitHubTeamDirectory(
+        {"123456": snapshot("123456", GitHubTeamMembership("1001", "2002"))}
+    )
+    original = storage.onboard_pending_user_from_external_group
+
+    def delay_then_onboard(*args, **kwargs):
+        clock.value += timedelta(minutes=3)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(storage, "onboard_pending_user_from_external_group", delay_then_onboard)
+    with pytest.raises(GitHubTeamMappingConflictError):
+        GitHubPendingOnboardingService(storage, directory, clock=clock).reconcile(
+            "pending-01"
+        )
+    assert storage.read_user("pending-01").role == "pending"
+    assert storage.list_user_memberships("pending-01") == []
 
 
 def test_provider_unavailable_or_mismatched_snapshot_never_mutates_user(setup) -> None:

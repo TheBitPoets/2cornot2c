@@ -182,6 +182,7 @@ class GitHubTeamMappingStorage(Protocol):
         admin_user_id: str,
         expected_admin_updated_at: datetime,
         expected_class_updated_at: datetime,
+        expected_mapping_created_at: datetime | None,
     ) -> None: ...
     def delete_external_group_mapping_for_admin(
         self,
@@ -200,6 +201,9 @@ class GitHubTeamMappingStorage(Protocol):
         expected_identity_linked_at: datetime,
         expected_mapping: ExternalGroupMapping,
         expected_snapshot_group_keys: tuple[tuple[str, str], ...],
+        expected_snapshot_captured_at: datetime,
+        max_snapshot_age: timedelta,
+        future_skew: timedelta,
         expected_class_updated_at: datetime,
     ) -> None: ...
 
@@ -256,6 +260,7 @@ class GitHubTeamClassMappingService:
                     admin_user_id=actor.user_id,
                     expected_admin_updated_at=actor.updated_at,
                     expected_class_updated_at=class_group.updated_at,
+                    expected_mapping_created_at=existing.created_at,
                 )
             except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
                 raise GitHubTeamMappingConflictError(
@@ -281,9 +286,15 @@ class GitHubTeamClassMappingService:
                     admin_user_id=actor.user_id,
                     expected_admin_updated_at=actor.updated_at,
                     expected_class_updated_at=class_group.updated_at,
+                    expected_mapping_created_at=None,
                 )
                 return mapping
-            except IdentityStorageMappingGenerationConflictError:
+            except IdentityStorageMappingGenerationConflictError as error:
+                current = self.storage.read_external_group_mapping(*team.provider_key)
+                if current is not None:
+                    raise GitHubTeamMappingConflictError(
+                        "Mapping creato da un'altra operazione."
+                    ) from error
                 candidate = _next_generation(created_at, created_at)
             except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
                 raise GitHubTeamMappingConflictError(
@@ -415,6 +426,9 @@ class GitHubPendingOnboardingService:
                     (team.organization_subject, team.team_subject)
                     for team in snapshot.teams
                 ),
+                expected_snapshot_captured_at=snapshot.captured_at,
+                max_snapshot_age=self.max_snapshot_age,
+                future_skew=self.future_skew,
                 expected_class_updated_at=class_group.updated_at,
             )
         except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
