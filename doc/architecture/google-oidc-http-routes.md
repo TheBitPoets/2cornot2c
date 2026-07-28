@@ -60,14 +60,14 @@ Authorization code, state, cookie transazionale e cookie sessione:
 - non compaiono nei body JSON di errore;
 - sono esclusi dal `repr` di request/response;
 - vengono rimossi dai frame route prima di propagare o tradurre errori;
-- non vengono scritti nell'access log: `CourseBoardHandler.log_request()` registra soltanto metodo e path per le route Google, mai la query; anche `log_error()` redige request-line OAuth malformate prima che `BaseHTTPRequestHandler` abbia popolato `self.path`;
+- non vengono scritti nell'access log: `CourseBoardHandler.log_request()` registra soltanto metodo e path per le route Google, mai la query; anche `log_error()` redige request-line OAuth malformate prima che `BaseHTTPRequestHandler` abbia popolato `self.path`, e l'override `send_error()` restituisce JSON generico senza riflettere la request-line nel body HTML;
 - non vengono propagati come `Referer`, grazie a `Referrer-Policy: no-referrer` su redirect e errori.
 
 Redirect e cookie adapter sono bounded e rifiutano controlli/header injection. Il login accetta soltanto redirect assoluto HTTPS senza fragment; il callback soltanto path locale assoluto senza scheme, authority, query o fragment.
 
 ## Integrazione Course Board
 
-`CourseBoardHandler` costruisce `EdgeRequestMetadata` dal peer TCP e da `HTTPMessage.raw_items()`, preservando header duplicati. La delega avviene prima dell'autenticazione Basic legacy, così le route pubbliche non vengono scambiate per API docente. Qualunque metodo verso path Google esatti passa dallo stesso router: oltre ai metodi comuni, un fallback dinamico `do_*` copre estensioni come WebDAV `PROPFIND`. Ogni metodo diverso da GET riceve 405 e `Allow: GET`. Query/fragments sovradimensionati o malformati vengono classificati 400 già durante la costruzione della request transport, non 503.
+`CourseBoardHandler` costruisce `EdgeRequestMetadata` dal peer TCP e da `HTTPMessage.raw_items()`, preservando header duplicati. La delega avviene prima dell'autenticazione Basic legacy, così le route pubbliche non vengono scambiate per API docente. Qualunque metodo verso path Google esatti passa dallo stesso router: oltre ai metodi comuni, un fallback dinamico `do_*` copre estensioni come WebDAV `PROPFIND`. Ogni metodo diverso da GET riceve 405 e `Allow: GET`. Query/fragments sovradimensionati o malformati vengono classificati 400 già durante la costruzione della request transport, non 503. Sono ammesse soltanto request-target origin-form esatte: scheme, authority/network-path e path params (`;...`) sono rifiutati prima del router per evitare discrepanze con proxy o ACL upstream.
 
 La composizione runtime deve costruire e iniettare:
 

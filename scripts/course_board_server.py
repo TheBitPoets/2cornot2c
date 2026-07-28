@@ -3303,6 +3303,18 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         super().log_request(code, size)
 
+    def send_error(self, code, message=None, explain=None) -> None:
+        """Never reflect malformed OAuth request-lines in HTML error bodies."""
+
+        if self._is_google_auth_request_line():
+            self.close_connection = True
+            self.write_oidc_transport_error(
+                int(code) if isinstance(code, int) else 400,
+                "bad_auth_request",
+            )
+            return
+        super().send_error(code, message, explain)
+
     def end_headers(self) -> None:
         """Add browser hardening headers to every server response."""
 
@@ -3424,8 +3436,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         """Delegate exact Google auth routes to the injected secure router."""
 
         routes = getattr(self.server, "google_oidc_http_routes", None)
+        request_parts = str(getattr(self, "requestline", "")).split()
+        if routes is not None and len(request_parts) == 3:
+            raw_parsed = urlparse(request_parts[1])
+            if routes.handles(raw_parsed.path):
+                parsed = raw_parsed
+        request_parts = None
         if routes is None or not routes.handles(parsed.path):
             return False
+        if parsed.scheme or parsed.netloc or parsed.params:
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
         try:
             edge = thebitlab_google_oidc_http.EdgeRequestMetadata(
                 str(self.client_address[0]), tuple(self.headers.raw_items())
