@@ -149,6 +149,7 @@ def test_config_pins_endpoints_and_scrubs_secret() -> None:
     for overrides in (
         {"redirect_uri": "http://lab.test/callback"},
         {"redirect_uri": "https://lab.test:0/callback"},
+        {"redirect_uri": "https://example.test/callback?" + "&" * 482},
         {"token_endpoint": "https://evil.test/token"},
         {"user_endpoint": "https://evil.test/user"},
         {"post_link_path": "//evil.test"},

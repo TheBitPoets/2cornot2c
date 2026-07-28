@@ -178,6 +178,32 @@ class GitHubOAuthConfig:
             raise ValueError
         if type(self.max_response_bytes) is not int or not 1024 <= self.max_response_bytes <= 1024 * 1024:
             raise ValueError
+        worst_case_form = urllib.parse.urlencode(
+            {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "code": "x" * 512,
+                "redirect_uri": self.redirect_uri,
+                "code_verifier": "v" * 128,
+            }
+        ).encode("ascii")
+        worst_case_request = urllib.request.Request(
+            _GITHUB_TOKEN_ENDPOINT,
+            data=worst_case_form,
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            method="POST",
+        )
+        if len(
+            _serialize_worker_request(
+                worst_case_request,
+                float(self.timeout_seconds),
+                self.max_response_bytes,
+            )
+        ) > _MAX_WORKER_INPUT_BYTES:
+            raise ValueError
 
 
 @dataclass(frozen=True)
@@ -206,6 +232,28 @@ class GitHubLinkResult:
     identity: ExternalIdentity
     redirect_path: str
     clear_transaction_cookie: str = field(repr=False, compare=False)
+
+
+def _serialize_worker_request(
+    request: urllib.request.Request,
+    timeout_seconds: float,
+    max_response_bytes: int,
+) -> bytes:
+    return json.dumps(
+        {
+            "url": request.full_url,
+            "method": request.get_method(),
+            "headers": dict(request.header_items()),
+            "data": (
+                base64.b64encode(request.data).decode("ascii")
+                if request.data is not None
+                else None
+            ),
+            "timeout": timeout_seconds,
+            "maximum": max_response_bytes,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
 
 
 class GitHubOAuthTransport(Protocol):
@@ -407,21 +455,9 @@ class UrllibGitHubOAuthTransport:
                 raise GitHubLinkProviderUnavailableError(
                     "GitHub non disponibile."
                 )
-            serialized = json.dumps(
-                {
-                    "url": request.full_url,
-                    "method": request.get_method(),
-                    "headers": dict(request.header_items()),
-                    "data": (
-                        base64.b64encode(request.data).decode("ascii")
-                        if request.data is not None
-                        else None
-                    ),
-                    "timeout": timeout_seconds,
-                    "maximum": max_response_bytes,
-                },
-                separators=(",", ":"),
-            ).encode("utf-8")
+            serialized = _serialize_worker_request(
+                request, timeout_seconds, max_response_bytes
+            )
             request = None
             if len(serialized) > _MAX_WORKER_INPUT_BYTES:
                 raise GitHubLinkProviderUnavailableError(
