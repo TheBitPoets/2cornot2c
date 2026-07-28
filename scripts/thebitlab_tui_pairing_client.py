@@ -167,8 +167,10 @@ class TuiPairingClient:
             path = f"/auth/tui/pairings/{start.pairing_id}/token"
             body = json.dumps({"code": start.user_code}, separators=(",", ":")).encode("utf-8")
             while True:
-                if self._monotonic_now() >= deadline:
+                deadline_remaining = deadline - self._monotonic_now()
+                if deadline_remaining <= 0:
                     raise TuiPairingClientError("Il codice pairing è scaduto. Avvia un nuovo accesso.")
+                request_timeout = min(timeout, max(0.001, deadline_remaining))
                 request = urllib.request.Request(
                     self.server_url + path,
                     data=body,
@@ -176,7 +178,11 @@ class TuiPairingClient:
                     method="POST",
                 )
                 try:
-                    payload = self._request_json(request, timeout=timeout, expected_status=200)
+                    payload = self._request_json(
+                        request,
+                        timeout=request_timeout,
+                        expected_status=200,
+                    )
                 except _PairingPendingError:
                     request = None
                     self._sleep_bounded(self.poll_seconds, deadline)
@@ -364,7 +370,9 @@ def _request_timeout(value: float) -> float:
 
 def _bounded_read(response) -> bytes:
     body = response.read(_MAX_RESPONSE_BYTES + 1)
-    if type(body) is not bytes or len(body) > _MAX_RESPONSE_BYTES:
+    invalid = type(body) is not bytes or len(body) > _MAX_RESPONSE_BYTES
+    if invalid:
+        body = None
         raise TuiPairingClientError("Il server pairing ha restituito una risposta troppo grande.")
     return body
 
@@ -377,10 +385,22 @@ def _bounded_error_read(error: urllib.error.HTTPError) -> bytes:
 
 
 def _decode_json(body: bytes):
+    decoded = None
+    result = _INVALID_JSON
     try:
-        return json.loads(body.decode("utf-8"), object_pairs_hook=_unique_object)
+        decoded = body.decode("utf-8")
+        result = json.loads(decoded, object_pairs_hook=_unique_object)
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
-        raise TuiPairingClientError("Il server pairing ha restituito JSON non valido.") from None
+        pass
+    finally:
+        body = None
+        decoded = None
+    if result is _INVALID_JSON:
+        raise TuiPairingClientError("Il server pairing ha restituito JSON non valido.")
+    return result
+
+
+_INVALID_JSON = object()
 
 
 def _unique_object(pairs):

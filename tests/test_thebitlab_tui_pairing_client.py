@@ -185,6 +185,29 @@ def test_client_rejects_redirects_and_malformed_contracts() -> None:
             ).begin()
 
 
+def test_poll_caps_each_network_timeout_at_pairing_deadline() -> None:
+    monotonic_values = iter([10.0, 19.75])
+    observed = []
+    client = TuiPairingClient(
+        "https://school.test",
+        urlopen=lambda request, timeout: observed.append(timeout)
+        or Response(200, credential_payload()),
+        clock=lambda: NOW,
+        monotonic=lambda: next(monotonic_values),
+    )
+    start = TuiPairingStart(
+        "pairing_abc123",
+        "PAIRCODE123",
+        "https://school.test/auth/tui/pair",
+        NOW + timedelta(seconds=10),
+    )
+
+    credential = client.poll(start, timeout=60)
+
+    assert credential.bearer_token == "T" * 48
+    assert observed == [pytest.approx(0.25)]
+
+
 def test_poll_expires_against_monotonic_deadline_without_more_requests() -> None:
     monotonic_values = iter([10.0, 11.0])
     requests = []
@@ -206,6 +229,53 @@ def test_poll_expires_against_monotonic_deadline_without_more_requests() -> None
         client.poll(start)
 
     assert requests == []
+
+
+def test_truncated_json_clears_bearer_from_exception_traceback_locals() -> None:
+    secret = "R" * 48
+
+    class TruncatedResponse(Response):
+        def __init__(self):
+            super().__init__(200, {})
+            self._body = (
+                '{"token_type":"Bearer","bearer_token":"' + secret + '",'
+            ).encode()
+
+    client = TuiPairingClient(
+        "https://school.test",
+        urlopen=lambda *args, **kwargs: TruncatedResponse(),
+        clock=lambda: NOW,
+        monotonic=lambda: 1.0,
+    )
+    start = TuiPairingStart(
+        "pairing_abc123",
+        "PAIRCODE123",
+        "https://school.test/auth/tui/pair",
+        NOW + timedelta(minutes=10),
+    )
+
+    with pytest.raises(TuiPairingClientError) as captured:
+        client.poll(start)
+
+    fragments = [str(captured.value), repr(captured.value)]
+    pending = [captured.value]
+    seen = set()
+    while pending:
+        error = pending.pop()
+        if id(error) in seen:
+            continue
+        seen.add(id(error))
+        traceback = error.__traceback__
+        while traceback is not None:
+            filename = traceback.tb_frame.f_code.co_filename.replace("\\", "/")
+            if filename.endswith("/scripts/thebitlab_tui_pairing_client.py"):
+                fragments.extend(repr(value) for value in traceback.tb_frame.f_locals.values())
+            traceback = traceback.tb_next
+        if error.__context__ is not None:
+            pending.append(error.__context__)
+        if error.__cause__ is not None:
+            pending.append(error.__cause__)
+    assert secret not in "\n".join(fragments)
 
 
 def test_malformed_credential_is_absent_from_exception_and_traceback_locals() -> None:

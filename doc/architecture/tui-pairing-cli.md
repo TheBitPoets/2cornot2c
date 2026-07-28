@@ -21,7 +21,7 @@ attiva il pairing browser. `--server-url` deve essere una origin HTTPS canonica 
 6. valida schema esatto, tipo Bearer, grammatica e scadenza della credenziale;
 7. passa il bearer in memoria alle chiamate API della stessa esecuzione.
 
-Il deadline deriva una volta dalla scadenza server e da un clock monotono non decrescente. Redirect HTTP non vengono seguiti. Risposte oltre 16 KiB, JSON con chiavi duplicate, Content-Type inatteso, Content-Encoding eccessivo, timestamp naïve o contratti con campi extra falliscono chiusi. Errori mostrati all'utente non includono pairing ID, codice o bearer.
+Il deadline deriva una volta dalla scadenza server e da un clock monotono non decrescente; il timeout di ogni singola richiesta è ridotto al tempo monotono ancora disponibile. Redirect HTTP non vengono seguiti. Risposte oltre 16 KiB, JSON con chiavi duplicate, Content-Type inatteso, Content-Encoding eccessivo, timestamp naïve o contratti con campi extra falliscono chiusi. Errori mostrati all'utente non includono pairing ID, codice o bearer.
 
 ## Pagina browser
 
