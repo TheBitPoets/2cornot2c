@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Protocol
 
 from scripts.thebitlab_identity import (
@@ -24,6 +24,10 @@ class IdentityStorageConflictError(IdentityStorageError):
 
 class IdentityStorageGenerationConflictError(IdentityStorageConflictError):
     """Raised when an immutable external-identity generation was already used."""
+
+
+class IdentityStorageMappingGenerationConflictError(IdentityStorageConflictError):
+    """Raised when an immutable external-group mapping generation was already used."""
 
 
 class IdentityStorageNotFoundError(IdentityStorageError):
@@ -147,7 +151,9 @@ class ClassDirectoryStorage(Protocol):
 
     def read_class(self, class_id: str) -> ClassGroup | None: ...
 
-    def save_class(self, class_group: ClassGroup) -> None: ...
+    def save_class(
+        self, class_group: ClassGroup, *, expected_updated_at: datetime
+    ) -> None: ...
 
     def list_classes(self, *, active_only: bool = False) -> list[ClassGroup]: ...
 
@@ -159,7 +165,12 @@ class ClassDirectoryStorage(Protocol):
 
     def delete_membership(self, user_id: str, class_id: str, role: str) -> bool: ...
 
-    def save_external_group_mapping(self, mapping: ExternalGroupMapping) -> None: ...
+    def save_external_group_mapping(
+        self,
+        mapping: ExternalGroupMapping,
+        *,
+        expected_updated_at: datetime | None,
+    ) -> None: ...
 
     def read_external_group_mapping(
         self,
@@ -175,7 +186,52 @@ class ClassDirectoryStorage(Protocol):
         provider: str,
         organization_subject: str,
         group_subject: str,
+        *,
+        expected_created_at: datetime,
+        expected_updated_at: datetime,
     ) -> bool: ...
+
+    def read_latest_external_group_mapping_generation(
+        self,
+        provider: str,
+        organization_subject: str,
+        group_subject: str,
+    ) -> datetime | None: ...
+
+    def save_external_group_mapping_for_admin(
+        self,
+        mapping: ExternalGroupMapping,
+        *,
+        admin_user_id: str,
+        expected_admin_updated_at: datetime,
+        expected_class_updated_at: datetime,
+        expected_mapping_created_at: datetime | None,
+        expected_mapping_updated_at: datetime | None,
+    ) -> None: ...
+
+    def delete_external_group_mapping_for_admin(
+        self,
+        mapping: ExternalGroupMapping,
+        *,
+        admin_user_id: str,
+        expected_admin_updated_at: datetime,
+        expected_class_updated_at: datetime,
+    ) -> bool: ...
+
+    def onboard_pending_user_from_external_group(
+        self,
+        membership: ClassMembership,
+        *,
+        expected_user_updated_at: datetime,
+        expected_identity_subject: str,
+        expected_identity_linked_at: datetime,
+        expected_mapping: ExternalGroupMapping,
+        expected_snapshot_group_keys: tuple[tuple[str, str], ...],
+        expected_snapshot_captured_at: datetime,
+        max_snapshot_age: timedelta,
+        future_skew: timedelta,
+        expected_class_updated_at: datetime,
+    ) -> None: ...
 
 
 class SessionStorage(Protocol):

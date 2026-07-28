@@ -146,6 +146,7 @@ def test_migration_v2_upgrades_and_backfills_existing_v1_identity(database_path)
         connection.execute("DROP INDEX uq_external_identities_user_provider")
         connection.execute("DROP TABLE external_identity_link_conflicts")
         connection.execute("DROP TABLE external_identity_generations")
+        connection.execute("DROP TABLE external_group_mapping_generations")
         connection.execute("DELETE FROM schema_migrations WHERE version >= 2")
 
     upgraded = SqliteIdentityStorage(database_path)
@@ -205,6 +206,42 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
+def test_migration_v5_backfills_mapping_revision(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_class(class_group())
+    mapping = ExternalGroupMapping(
+        "github", "1001", "2002", "class-01", NOW, "3A"
+    )
+    storage.save_external_group_mapping(mapping, expected_updated_at=None)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            "UPDATE external_group_mappings SET updated_at = NULL"
+        )
+        connection.execute("DELETE FROM schema_migrations WHERE version = 5")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_external_group_mapping(
+        "github", "1001", "2002"
+    ) == mapping
+
+
+def test_migration_v4_backfills_external_group_mapping_generations(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_class(class_group())
+    mapping = ExternalGroupMapping(
+        "github", "1001", "2002", "class-01", NOW, "3A"
+    )
+    storage.save_external_group_mapping(mapping, expected_updated_at=None)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP TABLE external_group_mapping_generations")
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 4")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_latest_external_group_mapping_generation(
+        "github", "1001", "2002"
+    ) == NOW
+
+
 def test_migration_v3_quarantines_ambiguous_provider_links(database_path) -> None:
     storage = SqliteIdentityStorage(database_path)
     storage.create_user(account())
@@ -214,7 +251,8 @@ def test_migration_v3_quarantines_ambiguous_provider_links(database_path) -> Non
     with sqlite3.connect(database_path) as connection:
         connection.execute("DROP INDEX uq_external_identities_user_provider")
         connection.execute("DROP TABLE external_identity_link_conflicts")
-        connection.execute("DELETE FROM schema_migrations WHERE version = 3")
+        connection.execute("DROP TABLE external_group_mapping_generations")
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 3")
         connection.execute(
             """
             INSERT INTO external_identities
@@ -281,6 +319,28 @@ def test_user_updates_are_monotonic_and_stale_snapshot_cannot_reactivate(storage
     assert storage.read_user("user-01") == disabled
 
 
+def test_class_updates_require_monotonic_compare_and_swap(storage) -> None:
+    original = class_group()
+    storage.create_class(original)
+    with pytest.raises(IdentityStorageConflictError, match="successivo"):
+        storage.save_class(
+            replace(original, label="changed"),
+            expected_updated_at=original.updated_at,
+        )
+    updated = replace(
+        original,
+        label="changed",
+        updated_at=original.updated_at + timedelta(seconds=1),
+    )
+    storage.save_class(updated, expected_updated_at=original.updated_at)
+    with pytest.raises(IdentityStorageConflictError):
+        storage.save_class(
+            replace(updated, label="stale", updated_at=updated.updated_at + timedelta(seconds=1)),
+            expected_updated_at=original.updated_at,
+        )
+    assert storage.read_class(original.class_id) == updated
+
+
 def test_missing_foreign_key_rolls_back_without_partial_state(storage) -> None:
     identity = ExternalIdentity("missing-user", "google", "subject-01", NOW)
 
@@ -313,17 +373,32 @@ def test_classes_memberships_and_group_mapping_crud(storage) -> None:
     assert storage.list_classes(active_only=True) == [first_class]
 
     mapping = ExternalGroupMapping("github", "org-7", "team-42", "class-01", NOW, "3A")
-    storage.save_external_group_mapping(mapping)
-    renamed = replace(mapping, created_at=LATER, display_name="3A Informatica")
-    storage.save_external_group_mapping(renamed)
-    expected_mapping = replace(renamed, created_at=mapping.created_at)
+    storage.save_external_group_mapping(mapping, expected_updated_at=None)
+    renamed = replace(mapping, display_name="3A Informatica", updated_at=LATER)
+    storage.save_external_group_mapping(
+        renamed, expected_updated_at=mapping.updated_at
+    )
+    expected_mapping = renamed
     assert storage.read_external_group_mapping("GITHUB", "org-7", "team-42") == expected_mapping
     assert storage.list_external_group_mappings("class-01") == [expected_mapping]
 
     with pytest.raises(IdentityStorageConflictError, match="classe diversa"):
-        storage.save_external_group_mapping(replace(mapping, class_id="class-02"))
+        storage.save_external_group_mapping(
+            replace(
+                renamed,
+                class_id="class-02",
+                updated_at=LATER + timedelta(microseconds=1),
+            ),
+            expected_updated_at=renamed.updated_at,
+        )
     assert storage.read_external_group_mapping("github", "org-7", "team-42") == expected_mapping
-    assert storage.delete_external_group_mapping("github", "org-7", "team-42") is True
+    assert storage.delete_external_group_mapping(
+        "github",
+        "org-7",
+        "team-42",
+        expected_created_at=renamed.created_at,
+        expected_updated_at=renamed.updated_at,
+    ) is True
     assert storage.delete_membership("user-01", "class-01", "STUDENT") is True
 
 
@@ -594,7 +669,9 @@ def test_save_requires_existing_primary_record(storage) -> None:
     with pytest.raises(IdentityStorageNotFoundError):
         storage.save_user(account(), expected_updated_at=NOW - timedelta(seconds=1))
     with pytest.raises(IdentityStorageNotFoundError):
-        storage.save_class(class_group())
+        storage.save_class(
+            class_group(), expected_updated_at=NOW - timedelta(seconds=1)
+        )
     with pytest.raises(IdentityStorageNotFoundError):
         storage.save_session(session())
     with pytest.raises(IdentityStorageNotFoundError):
