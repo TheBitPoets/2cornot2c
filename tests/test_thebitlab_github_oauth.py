@@ -94,7 +94,7 @@ def user(user_id="user-01"):
 
 def make_service(tmp_path, *, transport=None):
     clock = Clock()
-    storage = SqliteIdentityStorage(tmp_path / "identity.sqlite3")
+    storage = SqliteIdentityStorage(tmp_path / "identity.sqlite3", clock=clock)
     storage.create_user(user())
     sessions = SessionService(
         storage,
@@ -181,8 +181,33 @@ def test_transport_enforces_overall_wall_clock_timeout(monkeypatch) -> None:
             timeout_seconds=0.02,
             max_response_bytes=1024,
         )
+    for _attempt in range(50):
+        if process.killed:
+            break
+        time.sleep(0.002)
     assert process.killed is True
     assert time.monotonic() - started < 0.15
+
+
+def test_transport_start_thread_failure_releases_capacity(monkeypatch) -> None:
+    transport = UrllibGitHubOAuthTransport()
+    original_start = __import__("threading").Thread.start
+    with monkeypatch.context() as scoped:
+        scoped.setattr(
+            __import__("threading").Thread,
+            "start",
+            lambda _thread: (_ for _ in ()).throw(RuntimeError("start failed")),
+        )
+        for _attempt in range(10):
+            with pytest.raises(GitHubLinkProviderUnavailableError):
+                transport._request(
+                    urllib.request.Request("https://api.github.com/user"),
+                    timeout_seconds=0.01,
+                    max_response_bytes=1024,
+                )
+    assert __import__("threading").Thread.start is original_start
+    assert transport._process_start_slots.acquire(blocking=False) is True
+    transport._process_start_slots.release()
 
 
 def test_transport_deadline_includes_process_startup(monkeypatch) -> None:
@@ -418,6 +443,27 @@ def test_session_expiring_during_provider_calls_cannot_persist_link(tmp_path) ->
     transport.clock = clock
     state, cookie, _started = start(service, established.context)
 
+    with pytest.raises(GitHubLinkIdentityConflictError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
+    assert storage.read_external_identity("github", "123456") is None
+
+
+def test_session_expiry_while_waiting_for_storage_lock_cannot_link(
+    tmp_path, monkeypatch
+) -> None:
+    service, storage, _flows, _transport, established, clock = make_service(tmp_path)
+    state, cookie, _started = start(service, established.context)
+    original = storage.link_external_identity_for_active_session
+
+    def delayed_link(*args, **kwargs):
+        clock.value += timedelta(hours=9)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "link_external_identity_for_active_session", delayed_link
+    )
     with pytest.raises(GitHubLinkIdentityConflictError):
         service.complete_link(
             callback(state), cookie_header=cookie, context=established.context

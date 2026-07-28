@@ -224,12 +224,18 @@ def _decode_datetime(value: str | None) -> datetime | None:
 class SqliteIdentityStorage:
     """SQLite source-of-truth adapter for identity, class, session and pairing ports."""
 
-    def __init__(self, database_path: Path | str) -> None:
+    def __init__(
+        self,
+        database_path: Path | str,
+        *,
+        clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+    ) -> None:
         if str(database_path) == ":memory:":
             raise IdentityStorageError(
                 "Usare un file temporaneo: connessioni isolate non supportano SQLite :memory:."
             )
         self.database_path = Path(database_path)
+        self._clock = clock
         try:
             self.database_path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as error:
@@ -659,6 +665,10 @@ class SqliteIdentityStorage:
         with self._transaction(
             "link_external_identity_for_active_session"
         ) as connection:
+            transaction_valid_at = max(
+                expected_valid_at,
+                _encode_datetime(self._clock(), "storage_clock"),
+            )
             self._reserve_external_identity_generation(
                 connection, identity.provider, identity.subject, linked_at
             )
@@ -692,9 +702,9 @@ class SqliteIdentityStorage:
                     expected_session_id,
                     expected_session_token_digest,
                     expected_created_at,
-                    expected_valid_at,
-                    expected_valid_at,
-                    expected_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
                 ),
             )
             if cursor.rowcount != 1:
@@ -776,6 +786,10 @@ class SqliteIdentityStorage:
         with self._transaction(
             "refresh_external_identity_for_active_session"
         ) as connection:
+            transaction_valid_at = max(
+                expected_valid_at,
+                _encode_datetime(self._clock(), "storage_clock"),
+            )
             cursor = connection.execute(
                 """
                 UPDATE external_identities SET email = ?, username = ?
@@ -808,9 +822,9 @@ class SqliteIdentityStorage:
                     expected_session_id,
                     expected_session_token_digest,
                     expected_created_at,
-                    expected_valid_at,
-                    expected_valid_at,
-                    expected_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
                 ),
             )
             if cursor.rowcount != 1:
@@ -934,6 +948,10 @@ class SqliteIdentityStorage:
         with self._transaction(
             "unlink_external_identity_for_active_session"
         ) as connection:
+            transaction_valid_at = max(
+                expected_valid_at,
+                _encode_datetime(self._clock(), "storage_clock"),
+            )
             cursor = connection.execute(
                 """
                 DELETE FROM external_identities
@@ -964,9 +982,9 @@ class SqliteIdentityStorage:
                     expected_session_id,
                     expected_session_token_digest,
                     expected_created_at,
-                    expected_valid_at,
-                    expected_valid_at,
-                    expected_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
                 ),
             )
             if cursor.rowcount == 1:
