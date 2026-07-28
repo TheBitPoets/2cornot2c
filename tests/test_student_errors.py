@@ -70,6 +70,19 @@ def test_tui_paints_error_red_and_explanation_yellow_after_layout() -> None:
     )
 
 
+def test_tui_resets_guidance_color_at_diagnosis_panel_boundary() -> None:
+    row = (
+        "│ Ambiente │ │ ERRORE E03 - Virtualizzazione disabilitata │ "
+        "│ Comandi │"
+    )
+
+    painted = _paint_guidance(row)
+
+    assert "\x1b[31mERRORE E03 - Virtualizzazione disabilitata " in painted
+    assert "\x1b[0m│ │ Comandi │" in painted
+    assert painted.index("\x1b[0m") < painted.index("Comandi")
+
+
 def test_windows_scripts_render_error_and_explanation_colors() -> None:
     from pathlib import Path
 
