@@ -197,6 +197,26 @@ def test_registry_is_rechecked_after_mutating_service_callback(
     assert other.read_pairing("other-pairing") is None
 
 
+def test_registry_swap_after_issue_clears_code_from_traceback(
+    setup, tmp_path, monkeypatch
+) -> None:
+    _storage, clock, boundary, _http = setup
+    other = SqliteIdentityStorage(tmp_path / "swap-issue.sqlite3", clock=clock)
+    original = boundary.pairings.issue
+
+    def issue_then_swap():
+        issued = original()
+        boundary.pairings._pairings = PairingService(
+            other, pepper=b"w" * 32, clock=clock
+        )
+        return issued
+
+    monkeypatch.setattr(boundary.pairings, "issue", issue_then_swap)
+    with pytest.raises(TuiPairingUnavailableError) as captured:
+        boundary.begin()
+    assert "PAIRCODE42" not in traceback_locals_repr(captured.value, "begin")
+
+
 def test_student_browser_authorizes_and_tui_consumes_once(setup) -> None:
     storage, clock, boundary, http = setup
     started = boundary.begin()
@@ -218,6 +238,29 @@ def test_student_browser_authorizes_and_tui_consumes_once(setup) -> None:
     assert context.user.role == "student"
     with pytest.raises(TuiPairingConflictError):
         boundary.consume(started.pairing_id, started.user_code)
+
+
+def test_browser_role_race_returns_authorization_denied(setup, monkeypatch) -> None:
+    storage, clock, boundary, http = setup
+    started = boundary.begin()
+    request = browser_request(http, "student-01")
+    original = boundary.pairings.authorize
+
+    def change_role_then_authorize(code, user_id):
+        current = storage.read_user(user_id)
+        clock.value += timedelta(seconds=1)
+        storage.save_user(
+            replace(current, role="teacher", updated_at=clock.value),
+            expected_updated_at=current.updated_at,
+        )
+        return original(code, user_id)
+
+    monkeypatch.setattr(
+        boundary.pairings, "authorize", change_role_then_authorize
+    )
+    with pytest.raises(HttpAuthorizationDeniedError):
+        boundary.authorize_browser(request, started.user_code)
+    assert storage.read_pairing(started.pairing_id).status == "pending"
 
 
 def test_browser_authorization_requires_csrf_and_student_role(setup) -> None:
@@ -267,7 +310,7 @@ def test_browser_role_race_cannot_authorize_student_pairing(
         return original(*args, **kwargs)
 
     monkeypatch.setattr(boundary.pairings, "authorize", change_role_then_authorize)
-    with pytest.raises(TuiPairingBadRequestError):
+    with pytest.raises(HttpAuthorizationDeniedError):
         boundary.authorize_browser(request, started.user_code)
     assert storage.read_pairing(started.pairing_id).status == "pending"
 
@@ -296,6 +339,29 @@ def test_wrong_code_and_malformed_bearer_are_generic_and_secret_free(setup) -> N
     assert raw_header not in traceback_locals_repr(
         bad_bearer.value, "authenticate_bearer", "_bearer"
     )
+
+
+def test_registry_swap_after_consume_clears_bearer_from_traceback(
+    setup, tmp_path, monkeypatch
+) -> None:
+    _storage, clock, boundary, http = setup
+    started = boundary.begin()
+    clock.value += timedelta(minutes=1)
+    boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
+    other = SqliteIdentityStorage(tmp_path / "swap-consume.sqlite3", clock=clock)
+    original = boundary.pairings.consume
+
+    def consume_then_swap(pairing_id, code):
+        issued = original(pairing_id, code)
+        boundary.pairings._pairings = PairingService(
+            other, pepper=b"x" * 32, clock=clock
+        )
+        return issued
+
+    monkeypatch.setattr(boundary.pairings, "consume", consume_then_swap)
+    with pytest.raises(TuiPairingUnavailableError) as captured:
+        boundary.consume(started.pairing_id, started.user_code)
+    assert "T" * 40 not in traceback_locals_repr(captured.value, "consume")
 
 
 def test_expired_pairing_never_issues_session(setup) -> None:

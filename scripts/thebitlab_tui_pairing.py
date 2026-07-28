@@ -186,7 +186,11 @@ class TuiBrowserPairingBoundary:
             issued = self.pairings.issue()
         except Exception:
             unavailable = True
-        self._require_shared_registry()
+        try:
+            self._require_shared_registry()
+        except Exception:
+            issued = None
+            raise
         if unavailable or type(issued) is not IssuedPairing:
             issued = None
             raise TuiPairingUnavailableError()
@@ -218,6 +222,7 @@ class TuiBrowserPairingBoundary:
             )
             self._require_shared_registry()
             invalid = False
+            denied = False
             expired = False
             conflict = False
             unavailable = False
@@ -225,7 +230,18 @@ class TuiBrowserPairingBoundary:
             try:
                 result = self.pairings.authorize(code, context.user.user_id)
             except (InvalidCredentialError, AccountDisabledError):
-                invalid = True
+                try:
+                    current_user = self.pairings.storage.read_user(
+                        context.user.user_id
+                    )
+                    denied = (
+                        type(current_user) is UserAccount
+                        and current_user.active
+                        and current_user.role != "student"
+                    )
+                    invalid = not denied
+                except Exception:
+                    unavailable = True
             except PairingExpiredError:
                 expired = True
             except (PairingStateError, ConcurrentStateChangeError):
@@ -235,6 +251,8 @@ class TuiBrowserPairingBoundary:
             self._require_shared_registry()
             if invalid:
                 raise TuiPairingBadRequestError()
+            if denied:
+                raise HttpAuthorizationDeniedError()
             if expired:
                 raise TuiPairingExpiredHttpError()
             if conflict:
@@ -275,7 +293,11 @@ class TuiBrowserPairingBoundary:
         finally:
             pairing_id = None
             code = None
-        self._require_shared_registry()
+        try:
+            self._require_shared_registry()
+        except Exception:
+            issued = None
+            raise
         if invalid:
             raise TuiPairingBadRequestError()
         if expired:
