@@ -168,6 +168,30 @@ def test_boundary_rejects_distinct_identity_registries(setup, tmp_path) -> None:
         boundary.begin()
 
 
+def test_registry_is_rechecked_after_mutating_service_callback(
+    setup, tmp_path, monkeypatch
+) -> None:
+    _storage, clock, boundary, _http = setup
+    other = SqliteIdentityStorage(tmp_path / "callback-identity.sqlite3", clock=clock)
+    other.create_user(account())
+    other_pairing = PairingService(
+        other,
+        pepper=b"s" * 32,
+        clock=clock,
+        code_factory=lambda: "OTHERCODE9",
+        pairing_id_factory=lambda: "other-pairing",
+    )
+
+    def mutate_then_issue():
+        boundary.pairings.pairings = other_pairing
+        return other_pairing.issue()
+
+    monkeypatch.setattr(boundary.pairings, "issue", mutate_then_issue)
+    with pytest.raises(TuiPairingUnavailableError):
+        boundary.begin()
+    assert other.read_pairing("other-pairing") is not None
+
+
 def test_student_browser_authorizes_and_tui_consumes_once(setup) -> None:
     storage, clock, boundary, http = setup
     started = boundary.begin()

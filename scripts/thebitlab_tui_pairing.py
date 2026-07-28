@@ -169,6 +169,7 @@ class TuiBrowserPairingBoundary:
             issued = self.pairings.issue()
         except Exception:
             unavailable = True
+        self._require_shared_registry()
         if unavailable or type(issued) is not IssuedPairing:
             issued = None
             raise TuiPairingUnavailableError()
@@ -196,6 +197,7 @@ class TuiBrowserPairingBoundary:
             context = self.http_sessions.authorize_application(
                 request, allowed_roles={"student"}
             )
+            self._require_shared_registry()
             invalid = False
             expired = False
             conflict = False
@@ -211,6 +213,7 @@ class TuiBrowserPairingBoundary:
                 conflict = True
             except Exception:
                 unavailable = True
+            self._require_shared_registry()
             if invalid:
                 raise TuiPairingBadRequestError()
             if expired:
@@ -253,6 +256,7 @@ class TuiBrowserPairingBoundary:
         finally:
             pairing_id = None
             code = None
+        self._require_shared_registry()
         if invalid:
             raise TuiPairingBadRequestError()
         if expired:
@@ -306,6 +310,7 @@ class TuiBrowserPairingBoundary:
                 invalid = True
             except Exception:
                 unavailable = True
+            self._require_shared_registry()
             if not invalid and not unavailable:
                 try:
                     structurally_valid = self._valid_authenticated(
@@ -392,6 +397,7 @@ class TuiBrowserPairingBoundary:
             persisted_pairing = self.pairings.storage.read_pairing(
                 expected_pairing_id
             )
+            self._require_shared_registry()
             return (
                 type(authenticated) is AuthenticatedSession
                 and type(authenticated.session) is UserSession
@@ -442,6 +448,7 @@ class TuiBrowserPairingBoundary:
                 authenticated.session.source_pairing_id
             )
             now = _utc(self.tui_sessions.clock(), "session_clock")
+            self._require_shared_registry()
         except Exception:
             return False
         return (
