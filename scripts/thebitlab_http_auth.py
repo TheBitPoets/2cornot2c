@@ -461,6 +461,8 @@ class HttpSessionAuthBoundary:
         )
         return (
             cookie_pair_bytes <= self.cookie_policy.max_cookie_header_bytes
+            and session.audience == "web"
+            and session.source_pairing_id is None
             and session.revoked_at is None
             and duration.total_seconds() > 0
             and duration <= timedelta(seconds=self.cookie_policy.max_session_age_seconds)
@@ -475,6 +477,8 @@ class HttpSessionAuthBoundary:
             or type(authenticated.session) is not UserSession
             or type(authenticated.user) is not UserAccount
             or authenticated.session.user_id != authenticated.user.user_id
+            or authenticated.session.audience != "web"
+            or authenticated.session.source_pairing_id is not None
             or not authenticated.user.active
             or authenticated.session.revoked_at is not None
             or now < authenticated.session.created_at

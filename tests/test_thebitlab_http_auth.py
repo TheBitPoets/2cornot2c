@@ -152,6 +152,9 @@ def test_cookie_policy_is_secure_by_default_and_loopback_is_explicit() -> None:
 
 
 def test_http_boundary_rejects_non_web_session_audience(storage, clock) -> None:
+    web_sessions = SessionService(storage, clock=clock, audience="web")
+    with pytest.raises(AttributeError):
+        web_sessions.audience = "tui"
     with pytest.raises(ValueError, match="audience web"):
         HttpSessionAuthBoundary(
             SessionService(storage, clock=clock, audience="tui"),
@@ -416,6 +419,36 @@ def test_issued_and_authenticated_sessions_must_match_and_respect_max_age(clock)
     )
     with pytest.raises(HttpAuthUnavailableError):
         wrong_owner.establish_session("requested-user")
+
+
+def test_http_boundary_rejects_tui_session_from_nominal_web_adapter(clock) -> None:
+    bearer = "A" * 40
+    user = account()
+    tui_session = UserSession(
+        "tui-session",
+        user.user_id,
+        session_token_digest(bearer),
+        NOW,
+        NOW + timedelta(hours=8),
+        NOW,
+        audience="tui",
+        source_pairing_id="pairing-01",
+    )
+
+    class MalformedWebAdapter:
+        audience = "web"
+
+        def authenticate(self, _bearer):
+            return AuthenticatedSession(tui_session, user)
+
+    boundary = HttpSessionAuthBoundary(
+        MalformedWebAdapter(), csrf_secret=CSRF_SECRET, clock=clock
+    )
+    request = HttpAuthRequest(
+        "GET", f"__Host-thebitlab_session={bearer}"
+    )
+    with pytest.raises(HttpAuthUnavailableError):
+        boundary.authenticate(request)
 
 
 def test_set_cookie_max_age_uses_response_time(clock) -> None:

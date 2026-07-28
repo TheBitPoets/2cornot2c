@@ -1210,6 +1210,34 @@ def test_pairing_authorization_rechecks_storage_clock_after_lock(storage) -> Non
     assert storage.read_pairing("pairing-01").status == "expired"
 
 
+def test_pairing_authorization_observes_concurrent_expiry(storage, monkeypatch) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    original = storage.save_pairing_for_active_user
+
+    def expire_then_authorize(pairing, **kwargs):
+        current = storage.read_pairing(pairing.pairing_id)
+        storage.save_pairing(
+            replace(current, status="expired", expired_at=current.expires_at)
+        )
+        return original(pairing, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "save_pairing_for_active_user", expire_then_authorize
+    )
+    with pytest.raises(PairingExpiredError):
+        service.authorize(issued.code, "user-01")
+
+
 def test_pairing_concurrent_consumption_has_one_winner(storage) -> None:
     storage.create_user(account())
     clock = MutableClock()

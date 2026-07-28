@@ -863,13 +863,17 @@ class SessionService:
         normalized_audience = _required_text(audience, "audience", lowercase=True)
         if normalized_audience not in {"web", "tui"}:
             raise AuthApplicationError("Audience sessione non valida.")
-        self.audience = normalized_audience
+        self._audience = normalized_audience
         self.token_factory = token_factory
         self.session_id_factory = session_id_factory
 
     @property
     def storage(self) -> SessionApplicationStorage:
         return self._storage
+
+    @property
+    def audience(self) -> str:
+        return self._audience
 
     def issue(self, user_id: str) -> IssuedSession:
         if self.audience != "web":
@@ -1189,6 +1193,12 @@ class PairingService:
         except IdentityStoragePairingExpiredError:
             raise PairingExpiredError("Pairing scaduto.") from None
         except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
+            current_pairing = self.storage.read_pairing(pairing.pairing_id)
+            if (
+                type(current_pairing) is TuiPairing
+                and current_pairing.status == "expired"
+            ):
+                raise PairingExpiredError("Pairing scaduto.") from None
             if require_active_user and pairing.user_id is not None:
                 account = self.storage.read_user(pairing.user_id)
                 if account is None:
