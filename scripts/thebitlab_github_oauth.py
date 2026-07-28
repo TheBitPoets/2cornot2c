@@ -322,24 +322,30 @@ class UrllibGitHubOAuthTransport:
     _network_slots = threading.BoundedSemaphore(8)
     _process_start_slots = threading.BoundedSemaphore(8)
     _termination_slots = threading.BoundedSemaphore(8)
+    _cleanup_queue: queue.Queue[object] = queue.Queue(maxsize=8)
+    _cleanup_lock = threading.Lock()
+    _cleanup_ready = False
 
     def __init__(self) -> None:
         self._process_factory = subprocess.Popen
-        self._cleanup_queue: queue.Queue[object] = queue.Queue(maxsize=8)
-        self._cleanup_ready = False
-        try:
-            threading.Thread(
-                target=self._cleanup_worker,
-                name="thebitlab-github-oauth-cleanup",
-                daemon=True,
-            ).start()
-            self._cleanup_ready = True
-        except Exception:
-            self._cleanup_ready = False
+        cleanup_type = type(self)
+        with cleanup_type._cleanup_lock:
+            if not cleanup_type._cleanup_ready:
+                try:
+                    threading.Thread(
+                        target=cleanup_type._cleanup_worker,
+                        name="thebitlab-github-oauth-cleanup",
+                        daemon=True,
+                    ).start()
+                    cleanup_type._cleanup_ready = True
+                except Exception:
+                    cleanup_type._cleanup_ready = False
+        self._cleanup_ready = cleanup_type._cleanup_ready
 
-    def _cleanup_worker(self) -> None:
+    @classmethod
+    def _cleanup_worker(cls) -> None:
         while True:
-            candidate = self._cleanup_queue.get()
+            candidate = cls._cleanup_queue.get()
             cleaned = False
             try:
                 candidate.kill()
@@ -349,14 +355,14 @@ class UrllibGitHubOAuthTransport:
                 pass
             finally:
                 if cleaned:
-                    self._termination_slots.release()
-                    self._network_slots.release()
+                    cls._termination_slots.release()
+                    cls._network_slots.release()
                 candidate = None
-                self._cleanup_queue.task_done()
+                cls._cleanup_queue.task_done()
 
     def _schedule_cleanup(self, candidate) -> None:
         try:
-            self._cleanup_queue.put_nowait(candidate)
+            type(self)._cleanup_queue.put_nowait(candidate)
         except queue.Full:
             # Reserved slots remain held fail-closed if cleanup cannot be scheduled.
             pass

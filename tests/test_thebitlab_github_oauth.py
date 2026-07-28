@@ -318,6 +318,11 @@ def test_transport_start_thread_failure_releases_capacity(monkeypatch) -> None:
 def test_transport_fails_before_spawn_if_cleanup_worker_cannot_start(
     monkeypatch,
 ) -> None:
+    class IsolatedTransport(UrllibGitHubOAuthTransport):
+        _cleanup_queue = __import__("queue").Queue(maxsize=8)
+        _cleanup_lock = __import__("threading").Lock()
+        _cleanup_ready = False
+
     thread_class = __import__("threading").Thread
     original_start = thread_class.start
 
@@ -328,7 +333,7 @@ def test_transport_fails_before_spawn_if_cleanup_worker_cannot_start(
 
     with monkeypatch.context() as scoped:
         scoped.setattr(thread_class, "start", selective_start)
-        transport = UrllibGitHubOAuthTransport()
+        transport = IsolatedTransport()
     calls = []
     monkeypatch.setattr(
         transport,
@@ -342,6 +347,22 @@ def test_transport_fails_before_spawn_if_cleanup_worker_cannot_start(
             max_response_bytes=1024,
         )
     assert calls == []
+
+
+def test_transport_instances_share_one_cleanup_worker() -> None:
+    threading = __import__("threading")
+    UrllibGitHubOAuthTransport()
+    before = sum(
+        thread.name == "thebitlab-github-oauth-cleanup"
+        for thread in threading.enumerate()
+    )
+    transports = [UrllibGitHubOAuthTransport() for _attempt in range(20)]
+    assert transports
+    after = sum(
+        thread.name == "thebitlab-github-oauth-cleanup"
+        for thread in threading.enumerate()
+    )
+    assert after == before
 
 
 def test_transport_deadline_includes_process_startup(monkeypatch) -> None:
