@@ -5,6 +5,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -12,8 +13,33 @@ import pytest
 
 from scripts.thebitlab_auth_runtime import (
     AuthRuntimeConfigurationError,
-    compose_google_oidc_runtime,
+    compose_google_oidc_runtime as _compose_google_oidc_runtime,
 )
+
+_TEST_ROOTS: dict[str, Path] = {}
+
+
+def _test_data_root(candidate: Path) -> Path:
+    if os.name != "nt":
+        return candidate
+    key = str(candidate)
+    existing = _TEST_ROOTS.get(key)
+    if existing is not None:
+        return existing
+    root = (
+        Path(os.environ["LOCALAPPDATA"])
+        / "TheBitLabAuthTests"
+        / (candidate.name + "-" + uuid.uuid4().hex)
+    )
+    root.mkdir(parents=True)
+    _TEST_ROOTS[key] = root
+    return root
+
+
+def compose_google_oidc_runtime(environment, *, data_root):
+    return _compose_google_oidc_runtime(
+        environment, data_root=_test_data_root(data_root)
+    )
 
 
 def encoded_secret(byte: int) -> str:
@@ -50,7 +76,7 @@ def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> Non
     assert login.config.post_login_path == "/tools/course_board.html"
     assert repr(runtime) == "GoogleOidcRuntime(configured=True)"
 
-    database = tmp_path / ".thebitlab-auth" / "auth.sqlite3"
+    database = _test_data_root(tmp_path) / ".thebitlab-auth" / "auth.sqlite3"
     with sqlite3.connect(database) as connection:
         tables = {
             row[0]
@@ -71,7 +97,7 @@ def test_composition_accepts_relative_database_and_local_post_login(tmp_path: Pa
     runtime = compose_google_oidc_runtime(environment, data_root=tmp_path)
 
     assert runtime.routes.callback.config.post_login_path == "/welcome/%E2%9C%93"
-    assert (tmp_path / "state" / "auth.sqlite3").is_file()
+    assert (_test_data_root(tmp_path) / "state" / "auth.sqlite3").is_file()
 
 
 @pytest.mark.parametrize(
@@ -143,12 +169,45 @@ def test_windows_composition_rejects_preexisting_everyone_acl_without_repair(tmp
         compose_google_oidc_runtime(environment, data_root=tmp_path)
 
 
+def test_windows_composition_rejects_null_dacl_and_unsafe_ancestor(tmp_path: Path) -> None:
+    if os.name != "nt":
+        pytest.skip("ACL Windows non disponibili")
+    system_root = os.environ["SystemRoot"]
+    icacls = str(Path(system_root) / "System32" / "icacls.exe")
+    null_dacl = tmp_path / "null-dacl"
+    null_dacl.mkdir()
+    subprocess.run(
+        (icacls, str(null_dacl), "/inheritance:r"),
+        check=True,
+        capture_output=True,
+        timeout=10,
+    )
+    environment = valid_environment()
+    environment["THEBITLAB_AUTH_DB_PATH"] = str(null_dacl / "auth.sqlite3")
+    with pytest.raises(AuthRuntimeConfigurationError, match="ACL database"):
+        compose_google_oidc_runtime(environment, data_root=tmp_path)
+
+    unsafe_ancestor = tmp_path / "unsafe-ancestor"
+    unsafe_ancestor.mkdir()
+    subprocess.run(
+        (icacls, str(unsafe_ancestor), "/grant", "*S-1-1-0:(OI)(CI)F"),
+        check=True,
+        capture_output=True,
+        timeout=10,
+    )
+    environment["THEBITLAB_AUTH_DB_PATH"] = str(
+        unsafe_ancestor / "dedicated" / "auth.sqlite3"
+    )
+    with pytest.raises(AuthRuntimeConfigurationError, match="ACL database"):
+        compose_google_oidc_runtime(environment, data_root=tmp_path)
+
+
 def test_windows_composition_allows_sqlite_rollback_journal_recovery(tmp_path: Path) -> None:
     if os.name != "nt":
         pytest.skip("ACL Windows non disponibili")
     environment = valid_environment()
     compose_google_oidc_runtime(environment, data_root=tmp_path)
-    journal = tmp_path / ".thebitlab-auth" / "auth.sqlite3-journal"
+    journal = _test_data_root(tmp_path) / ".thebitlab-auth" / "auth.sqlite3-journal"
     journal.write_bytes(b"")
 
     runtime = compose_google_oidc_runtime(environment, data_root=tmp_path)
@@ -190,7 +249,7 @@ def test_composition_rejects_missing_values_and_unavailable_storage(tmp_path: Pa
     blocked_root = tmp_path / "not-a-directory"
     blocked_root.write_text("blocked", encoding="utf-8")
     with pytest.raises(AuthRuntimeConfigurationError, match="database") as captured:
-        compose_google_oidc_runtime(valid_environment(), data_root=blocked_root)
+        _compose_google_oidc_runtime(valid_environment(), data_root=blocked_root)
     assert "google-client-secret-value" not in repr(captured.value)
 
 

@@ -327,7 +327,7 @@ def _verify_posix_database_ancestors(directory: Path) -> None:
             and child.stat(follow_symlinks=False).st_uid == process_uid
         ):
             raise OSError("antenato database scrivibile da altri")
-        if metadata.st_uid not in {0, process_uid} and metadata.st_mode & 0o200:
+        if metadata.st_uid not in {0, process_uid}:
             raise OSError("antenato database controllato da altro utente")
         parent = current.parent
         if parent == current:
@@ -359,6 +359,7 @@ def _prepare_windows_database_file(path: Path) -> None:
         sid_process = None
         if _SID_RE.fullmatch(sid) is None:
             raise OSError("SID Windows non valido")
+        _verify_windows_ancestor_chain(path.parent.parent, sid)
         parent_existed = path.parent.exists() or path.parent.is_symlink()
         if not parent_existed:
             _create_windows_database_directory(path.parent, sid)
@@ -500,11 +501,54 @@ def _verify_windows_acl(path: Path, sid: str, *, require_protected: bool) -> Non
         "$allowed=@($env:THEBITLAB_ACL_SID,'S-1-5-18');"
         "$bad=@($rules|Where-Object{$_.AccessControlType -eq 'Allow' -and "
         "$allowed -notcontains $_.IdentityReference.Value});"
+        "$full=[System.Security.AccessControl.FileSystemRights]::FullControl;"
+        "$currentFull=@($rules|Where-Object{$_.AccessControlType -eq 'Allow' -and "
+        "$_.IdentityReference.Value -eq $env:THEBITLAB_ACL_SID -and "
+        "($_.FileSystemRights -band $full) -eq $full}).Count -gt 0;"
+        "$systemFull=@($rules|Where-Object{$_.AccessControlType -eq 'Allow' -and "
+        "$_.IdentityReference.Value -eq 'S-1-5-18' -and "
+        "($_.FileSystemRights -band $full) -eq $full}).Count -gt 0;"
         "$owner=$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value;"
         "$badProtection=($env:THEBITLAB_ACL_REQUIRE_PROTECTED -eq '1' -and "
         "-not $acl.AreAccessRulesProtected);"
-        "if($badProtection -or $owner -ne $env:THEBITLAB_ACL_SID -or "
-        "$bad.Count -ne 0){exit 1}"
+        "if($badProtection -or -not $currentFull -or -not $systemFull -or "
+        "$owner -ne $env:THEBITLAB_ACL_SID -or $bad.Count -ne 0){exit 1}"
+    )
+    subprocess.run(
+        (powershell, "-NoProfile", "-NonInteractive", "-Command", verification_script),
+        check=True,
+        capture_output=True,
+        timeout=10,
+        env=tool_environment,
+    )
+
+
+def _verify_windows_ancestor_chain(path: Path, sid: str) -> None:
+    powershell, _icacls, tool_environment = _windows_acl_tools(
+        acl_path=path, acl_sid=sid
+    )
+    verification_script = (
+        "$ErrorActionPreference='Stop';"
+        "$current=Get-Item -LiteralPath $env:THEBITLAB_ACL_PATH;"
+        "$trusted=@($env:THEBITLAB_ACL_SID,'S-1-5-18','S-1-5-32-544');"
+        "$danger=[System.Security.AccessControl.FileSystemRights]::Write -bor "
+        "[System.Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles "
+        "-bor [System.Security.AccessControl.FileSystemRights]::Delete -bor "
+        "[System.Security.AccessControl.FileSystemRights]::ChangePermissions -bor "
+        "[System.Security.AccessControl.FileSystemRights]::TakeOwnership;"
+        "while($null -ne $current){"
+        "if($null -eq $current.Parent){break};"
+        "if(($current.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){exit 1};"
+        "$acl=$current.GetAccessControl();"
+        "$rules=@($acl.GetAccessRules($true,$true,"
+        "[System.Security.Principal.SecurityIdentifier]));"
+        "$bad=@($rules|Where-Object{$_.AccessControlType -eq 'Allow' -and "
+        "$trusted -notcontains $_.IdentityReference.Value -and "
+        "($_.FileSystemRights -band $danger) -ne 0});"
+        "$owner=$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value;"
+        "if($rules.Count -eq 0 -or $bad.Count -ne 0 -or "
+        "($null -ne $current.Parent -and $trusted -notcontains $owner)){exit 1};"
+        "$current=$current.Parent}"
     )
     subprocess.run(
         (powershell, "-NoProfile", "-NonInteractive", "-Command", verification_script),
