@@ -132,6 +132,29 @@ def test_pairing_start_exposes_only_terminal_code_and_fixed_local_path(setup) ->
         )
 
 
+def test_boundary_rejects_distinct_identity_registries(setup, tmp_path) -> None:
+    _storage, clock, boundary, http = setup
+    other = SqliteIdentityStorage(tmp_path / "other-identity.sqlite3", clock=clock)
+    other.create_user(account())
+    other_pairings = TuiPairingSessionService(
+        PairingService(other, pepper=b"q" * 32, clock=clock)
+    )
+    other_tui_sessions = SessionService(other, clock=clock, audience="tui")
+
+    with pytest.raises(ValueError, match="configurate correttamente"):
+        TuiBrowserPairingBoundary(
+            other_pairings,
+            http,
+            other_tui_sessions,
+        )
+    with pytest.raises(ValueError, match="configurate correttamente"):
+        TuiBrowserPairingBoundary(
+            boundary.pairings,
+            boundary.http_sessions,
+            other_tui_sessions,
+        )
+
+
 def test_student_browser_authorizes_and_tui_consumes_once(setup) -> None:
     storage, clock, boundary, http = setup
     started = boundary.begin()

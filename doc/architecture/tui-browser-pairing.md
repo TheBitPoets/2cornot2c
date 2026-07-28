@@ -4,7 +4,7 @@
 
 `scripts/thebitlab_tui_pairing.py` completa il protocollo provider-independent tra una TUI non autenticata e una sessione web TheBitLab già autenticata. Il terminale non riceve password, cookie, authorization code, access token Google/GitHub o altri segreti del provider.
 
-Questo incremento implementa boundary e transazione applicativa. Le route concrete Course Board, l'apertura automatica del browser e la conservazione locale del bearer restano adapter successivi.
+Questo incremento implementa boundary e transazione applicativa. Il costruttore richiede che sessioni web, pairing e sessioni TUI condividano la stessa istanza del registro identity, impedendo confusione tra utenti omonimi di database distinti. Le route concrete Course Board, l'apertura automatica del browser e la conservazione locale del bearer restano adapter successivi.
 
 ## Flusso
 
