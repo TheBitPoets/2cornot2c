@@ -72,6 +72,15 @@ function Install-WingetPackage {
     Save-BootstrapState
 }
 
+function Test-Python312 {
+    if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
+        return $false
+    }
+    & py -3.12 -c "import sys; raise SystemExit(sys.version_info[:2] != (3, 12))" `
+        *> $null
+    return $LASTEXITCODE -eq 0
+}
+
 function Save-BootstrapState {
     New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
     $TemporaryPath = "$StatePath.tmp"
@@ -235,7 +244,7 @@ Write-Host "[1/4] Preparazione Git e Python 3.12..."
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Install-WingetPackage "Git.Git"
 }
-if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
+if (-not (Test-Python312)) {
     Install-WingetPackage "Python.Python.3.12"
 }
 
@@ -252,10 +261,14 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
         "A volte Windows riconosce un nuovo programma solamente dopo un riavvio." `
         @("Riavvia Windows."; "Riapri PowerShell e rilancia lo stesso comando.")
 }
-if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
-    Stop-WithMessage "E10" "Python è installato ma Windows non riesce ancora a trovarlo" `
-        "A volte Windows riconosce un nuovo programma solamente dopo un riavvio." `
-        @("Riavvia Windows."; "Riapri PowerShell e rilancia lo stesso comando.")
+if (-not (Test-Python312)) {
+    Stop-WithMessage "E10" "Python 3.12 non è disponibile" `
+        "Il comando Python esiste, ma non riesce ad avviare la versione 3.12 necessaria al menu guidato." `
+        @(
+            "Chiudi PowerShell."
+            "Riapri PowerShell e rilancia lo stesso comando."
+            "Se ricompare, comunica E10 al docente."
+        )
 }
 
 Write-Host "[2/4] Preparazione repository..."
@@ -293,12 +306,16 @@ Install-ClassroomLauncher
 
 Write-Host "[3/4] Preparazione interfaccia guidata..."
 $VenvDir = Join-Path $InstallDir ".installer-venv"
-& py -3.12 -m venv $VenvDir
+$VenvOutput = @(& py -3.12 -m venv --clear $VenvDir 2>&1)
 if ($LASTEXITCODE -ne 0) {
     Stop-WithMessage "E14" "Non sono riuscito a preparare l'interfaccia guidata" `
-        "Il progetto è stato scaricato, ma Python non ha preparato il menu. Il lavoro già svolto non è andato perso." `
-        @("Riavvia Windows."; "Rilancia lo stesso comando."; "Se ricompare, comunica E14 al docente.") `
-        "venv exit code $LASTEXITCODE"
+        "Python 3.12 è presente, ma Windows non ha permesso di creare il menu. Il progetto e gli esercizi non sono stati cancellati." `
+        @(
+            "Chiudi eventuali finestre Ambiente 2cornot2c ancora aperte."
+            "Rilancia lo stesso comando."
+            "Se ricompare, comunica E14 al docente."
+        ) `
+        "venv exit code $LASTEXITCODE; $($VenvOutput -join ' ')"
 }
 $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 & $VenvPython -m pip install --disable-pip-version-check `
