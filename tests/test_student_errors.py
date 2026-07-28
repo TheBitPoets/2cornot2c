@@ -79,8 +79,11 @@ def test_tui_resets_guidance_color_at_diagnosis_panel_boundary() -> None:
 
     painted = _paint_guidance(row)
 
-    assert "\x1b[31mERRORE E03 - Virtualizzazione disabilitata " in painted
-    assert "\x1b[0m│ │ Comandi │" in painted
+    assert (
+        "\x1b[31mERRORE E03 - Virtualizzazione disabilitata\x1b[0m "
+        in painted
+    )
+    assert " │ │ Comandi │" in painted
     assert painted.index("\x1b[0m") < painted.index("Comandi")
 
 
@@ -97,8 +100,10 @@ def test_tui_keeps_guidance_color_on_wrapped_rows_only() -> None:
 
     assert "\x1b[31m computer è disabilitata" in painted[1]
     assert "\x1b[33m della virtualizzazione." in painted[3]
-    assert "\x1b[0m│ │ bianco" in painted[1]
-    assert "\x1b[0m│ │ bianco" in painted[3]
+    assert "\x1b[0m " in painted[1]
+    assert "\x1b[0m " in painted[3]
+    assert "│ │ bianco" in painted[1]
+    assert "│ │ bianco" in painted[3]
     assert "\x1b[" not in painted[4]
 
 

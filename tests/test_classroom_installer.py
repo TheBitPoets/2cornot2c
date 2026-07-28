@@ -399,6 +399,35 @@ def test_tui_stacks_panels_when_terminal_is_narrow_and_tall() -> None:
     assert positions["Diagnosi"] < positions["Comandi"]
 
 
+def test_colored_diagnostics_leave_panel_padding_unstyled() -> None:
+    pytest.importorskip("utui")
+    from utui import strip_ansi
+
+    from installer.student_errors import ERRORS
+    from installer.tui import State, frame
+
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER, Provider.VIRTUALBOX),
+        report=ERRORS["resources"].lines("dettaglio"),
+    )
+    rows = frame(state, 150, 20, color=True)
+    command_row = next(row for row in rows if "q/Esc: esci" in row)
+    plain = strip_ansi(command_row)
+
+    assert len(plain) == 150
+    assert [index for index, char in enumerate(plain) if char == "|"] == [
+        0,
+        47,
+        49,
+        114,
+        116,
+        149,
+    ]
+    assert "\x1b[0m " in command_row
+    assert "\x1b[33mCOSA FARE" in command_row
+
+
 def check_results(plan, *, missing: set[str] = set()):
     return tuple(
         CheckResult(check, check.key not in missing, "manca")
