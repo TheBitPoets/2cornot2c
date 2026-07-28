@@ -340,8 +340,16 @@ def _docker_plan(host: Host) -> InstallPlan:
                     "Bypass",
                     "-Command",
                     (
-                        "$cli = Join-Path $env:ProgramFiles "
-                        "'Docker\\Docker\\resources\\bin\\docker.exe'; "
+                        "$dockerBin = Join-Path $env:ProgramFiles "
+                        "'Docker\\Docker\\resources\\bin'; "
+                        "$env:Path = $dockerBin + ';' + $env:Path; "
+                        "$cli = Join-Path $dockerBin 'docker.exe'; "
+                        "$credential = Join-Path $dockerBin "
+                        "'docker-credential-desktop.exe'; "
+                        "if (-not (Test-Path $credential)) { "
+                        "Write-Error "
+                        "'Helper credenziali Docker Desktop non trovato'; "
+                        "exit 20 }; "
                         f"& $cli pull '{image}'; exit $LASTEXITCODE"
                     ),
                 ),
