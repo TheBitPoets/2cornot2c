@@ -79,6 +79,8 @@ def test_docker_plans_install_desktop_and_pull_immutable_image() -> None:
     )
     assert windows_image_step.command is not None
     assert " pull " in windows_image_step.command[-1]
+    assert "$env:Path = $dockerBin" in windows_image_step.command[-1]
+    assert "docker-credential-desktop.exe" in windows_image_step.command[-1]
     assert image in windows_image_step.command[-1]
     assert "@sha256:" in image
     assert load_lock()["platforms"] == ["linux/amd64", "linux/arm64"]
