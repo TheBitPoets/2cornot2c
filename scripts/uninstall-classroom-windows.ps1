@@ -414,9 +414,27 @@ Remove-ItemProperty `
     -Name "2cornot2c-resume" `
     -ErrorAction SilentlyContinue
 
-foreach ($ShortcutPath in Get-ClassroomShortcutPaths) {
-    if (Test-Path $ShortcutPath) {
-        Remove-Item -LiteralPath $ShortcutPath -Force
+$ShortcutCleanup = Join-Path `
+    $LauncherDir "remove-classroom-shortcuts-windows.ps1"
+$ShortcutCleanupSucceeded = $false
+if (Test-Path $ShortcutCleanup) {
+    $CleanupPowerShell = Join-Path `
+        $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+    & $CleanupPowerShell `
+        -NoProfile `
+        -ExecutionPolicy Bypass `
+        -File $ShortcutCleanup
+    $ShortcutCleanupSucceeded = $LASTEXITCODE -eq 0
+}
+if (-not $ShortcutCleanupSucceeded) {
+    Write-Warning (
+        "Uso la pulizia collegamenti integrata perché lo script dedicato " +
+        "non è disponibile."
+    )
+    foreach ($ShortcutPath in Get-ClassroomShortcutPaths) {
+        if (Test-Path $ShortcutPath) {
+            Remove-Item -LiteralPath $ShortcutPath -Force
+        }
     }
 }
 if (Test-Path $LauncherDir) {

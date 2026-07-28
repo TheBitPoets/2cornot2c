@@ -142,6 +142,7 @@ function Install-ClassroomLauncher {
         "manage-classroom-windows.ps1"
         "launch-classroom-windows.ps1"
         "prepare-wsl-windows.ps1"
+        "remove-classroom-shortcuts-windows.ps1"
         "remove-wsl-windows.ps1"
         "update-classroom-windows.ps1"
         "uninstall-classroom-windows.ps1"
