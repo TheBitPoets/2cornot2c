@@ -323,11 +323,19 @@ class UrllibGitHubOAuthTransport:
                         daemon=True,
                     ).start()
                 except Exception:
+                    cleaned = False
                     try:
                         candidate.kill()
+                        candidate.communicate(
+                            timeout=max(0.01, min(timeout_seconds, 0.25))
+                        )
+                        cleaned = True
                     except Exception:
                         pass
-                    # Keep both bounded slots reserved: cleanup could not be proven.
+                    if cleaned:
+                        self._termination_slots.release()
+                        self._network_slots.release()
+                    # If cleanup cannot be proven, both slots stay reserved fail-closed.
 
             def start_process() -> None:
                 candidate = None
