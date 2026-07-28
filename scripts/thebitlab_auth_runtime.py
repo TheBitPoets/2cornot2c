@@ -286,18 +286,14 @@ def _database_path(environment: Mapping[str, str], data_root: Path) -> Path:
 def _prepare_database_file(path: Path) -> None:
     descriptor = None
     try:
-        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         if os.name == "nt":
             _prepare_windows_database_file(path)
             return
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        _verify_posix_database_ancestors(path.parent)
         parent_metadata = path.parent.stat(follow_symlinks=False)
-        if (
-            not stat.S_ISDIR(parent_metadata.st_mode)
-            or stat.S_ISLNK(parent_metadata.st_mode)
-            or parent_metadata.st_uid != os.geteuid()
-            or parent_metadata.st_mode & 0o022
-        ):
-            raise OSError("directory database non privata")
+        if parent_metadata.st_uid != os.geteuid():
+            raise OSError("directory database non posseduta")
         flags = os.O_RDWR | os.O_CREAT
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
@@ -315,18 +311,36 @@ def _prepare_database_file(path: Path) -> None:
             os.close(descriptor)
 
 
+def _verify_posix_database_ancestors(directory: Path) -> None:
+    current = directory
+    child = None
+    process_uid = os.geteuid()
+    while True:
+        metadata = current.stat(follow_symlinks=False)
+        if not stat.S_ISDIR(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
+            raise OSError("antenato database non valido")
+        writable_by_others = bool(metadata.st_mode & 0o022)
+        sticky_boundary = bool(metadata.st_mode & stat.S_ISVTX)
+        if writable_by_others and not (
+            sticky_boundary
+            and child is not None
+            and child.stat(follow_symlinks=False).st_uid == process_uid
+        ):
+            raise OSError("antenato database scrivibile da altri")
+        if metadata.st_uid not in {0, process_uid} and metadata.st_mode & 0o200:
+            raise OSError("antenato database controllato da altro utente")
+        parent = current.parent
+        if parent == current:
+            return
+        child = current
+        current = parent
+
+
 def _prepare_windows_database_file(path: Path) -> None:
     descriptor = None
     sid = None
     sid_process = None
     try:
-        parent_before = path.parent.lstat()
-        if (
-            not stat.S_ISDIR(parent_before.st_mode)
-            or getattr(parent_before, "st_file_attributes", 0)
-            & _WINDOWS_REPARSE_POINT
-        ):
-            raise OSError("directory database Windows non valida")
         powershell, _icacls, tool_environment = _windows_acl_tools()
         sid_process = subprocess.run(
             (
@@ -345,9 +359,24 @@ def _prepare_windows_database_file(path: Path) -> None:
         sid_process = None
         if _SID_RE.fullmatch(sid) is None:
             raise OSError("SID Windows non valido")
-        _replace_windows_acl(path.parent, sid, directory=True)
-        allowed_names = {path.name, path.name + "-wal", path.name + "-shm"}
-        for child in path.parent.iterdir():
+        parent_existed = path.parent.exists() or path.parent.is_symlink()
+        if not parent_existed:
+            _create_windows_database_directory(path.parent, sid)
+        parent_before = path.parent.lstat()
+        if (
+            not stat.S_ISDIR(parent_before.st_mode)
+            or getattr(parent_before, "st_file_attributes", 0)
+            & _WINDOWS_REPARSE_POINT
+        ):
+            raise OSError("directory database Windows non valida")
+        allowed_names = {
+            path.name,
+            path.name + "-wal",
+            path.name + "-shm",
+            path.name + "-journal",
+        }
+        children = tuple(path.parent.iterdir())
+        for child in children:
             child_metadata = child.lstat()
             if (
                 child.name not in allowed_names
@@ -356,7 +385,10 @@ def _prepare_windows_database_file(path: Path) -> None:
                 & _WINDOWS_REPARSE_POINT
             ):
                 raise OSError("directory database Windows non dedicata")
+        _verify_windows_acl(path.parent, sid, require_protected=True)
+        for child in children:
             _replace_windows_acl(child, sid, directory=False)
+        children = None
         child = None
         child_metadata = None
         parent_after = path.parent.lstat()
@@ -391,8 +423,42 @@ def _prepare_windows_database_file(path: Path) -> None:
             os.close(descriptor)
 
 
+def _create_windows_database_directory(path: Path, sid: str) -> None:
+    import ctypes
+    from ctypes import wintypes
+
+    class SecurityAttributes(ctypes.Structure):
+        _fields_ = (
+            ("nLength", wintypes.DWORD),
+            ("lpSecurityDescriptor", wintypes.LPVOID),
+            ("bInheritHandle", wintypes.BOOL),
+        )
+
+    descriptor = wintypes.LPVOID()
+    sddl = f"O:{sid}G:{sid}D:P(A;OICI;FA;;;{sid})(A;OICI;FA;;;SY)"
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    converted = advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW(
+        sddl,
+        1,
+        ctypes.byref(descriptor),
+        None,
+    )
+    if not converted:
+        raise OSError("DACL Windows non costruibile")
+    try:
+        attributes = SecurityAttributes(
+            ctypes.sizeof(SecurityAttributes), descriptor, False
+        )
+        created = kernel32.CreateDirectoryW(str(path), ctypes.byref(attributes))
+        if not created:
+            raise OSError("directory database Windows non creabile")
+    finally:
+        kernel32.LocalFree(descriptor)
+
+
 def _replace_windows_acl(path: Path, sid: str, *, directory: bool) -> None:
-    powershell, icacls, tool_environment = _windows_acl_tools(
+    _powershell, icacls, tool_environment = _windows_acl_tools(
         acl_path=path, acl_sid=sid
     )
     inheritance = "(OI)(CI)F" if directory else "F"
@@ -413,7 +479,18 @@ def _replace_windows_acl(path: Path, sid: str, *, directory: bool) -> None:
             timeout=10,
             env=tool_environment,
         )
+    _verify_windows_acl(path, sid, require_protected=True)
+
+
+def _verify_windows_acl(path: Path, sid: str, *, require_protected: bool) -> None:
+    powershell, _icacls, tool_environment = _windows_acl_tools(
+        acl_path=path, acl_sid=sid
+    )
+    tool_environment["THEBITLAB_ACL_REQUIRE_PROTECTED"] = (
+        "1" if require_protected else "0"
+    )
     verification_script = (
+        "$ErrorActionPreference='Stop';"
         "$item=Get-Item -LiteralPath $env:THEBITLAB_ACL_PATH;"
         "$sections=[System.Security.AccessControl.AccessControlSections]::Access "
         "-bor [System.Security.AccessControl.AccessControlSections]::Owner;"
@@ -424,17 +501,13 @@ def _replace_windows_acl(path: Path, sid: str, *, directory: bool) -> None:
         "$bad=@($rules|Where-Object{$_.AccessControlType -eq 'Allow' -and "
         "$allowed -notcontains $_.IdentityReference.Value});"
         "$owner=$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value;"
-        "if(-not $acl.AreAccessRulesProtected -or "
-        "$owner -ne $env:THEBITLAB_ACL_SID -or $bad.Count -ne 0){exit 1}"
+        "$badProtection=($env:THEBITLAB_ACL_REQUIRE_PROTECTED -eq '1' -and "
+        "-not $acl.AreAccessRulesProtected);"
+        "if($badProtection -or $owner -ne $env:THEBITLAB_ACL_SID -or "
+        "$bad.Count -ne 0){exit 1}"
     )
     subprocess.run(
-        (
-            powershell,
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            verification_script,
-        ),
+        (powershell, "-NoProfile", "-NonInteractive", "-Command", verification_script),
         check=True,
         capture_output=True,
         timeout=10,

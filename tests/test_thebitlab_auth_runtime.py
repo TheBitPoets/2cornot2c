@@ -117,7 +117,7 @@ def test_composition_rejects_unsafe_configuration_without_echoing_values(
         assert environment[secret_name] not in serialized
 
 
-def test_windows_composition_removes_preexisting_everyone_acl(tmp_path: Path) -> None:
+def test_windows_composition_rejects_preexisting_everyone_acl_without_repair(tmp_path: Path) -> None:
     if os.name != "nt":
         pytest.skip("ACL Windows non disponibili")
     database_directory = tmp_path / "windows-auth"
@@ -139,11 +139,21 @@ def test_windows_composition_removes_preexisting_everyone_acl(tmp_path: Path) ->
         database_directory / "auth.sqlite3"
     )
 
+    with pytest.raises(AuthRuntimeConfigurationError, match="ACL database"):
+        compose_google_oidc_runtime(environment, data_root=tmp_path)
+
+
+def test_windows_composition_allows_sqlite_rollback_journal_recovery(tmp_path: Path) -> None:
+    if os.name != "nt":
+        pytest.skip("ACL Windows non disponibili")
+    environment = valid_environment()
+    compose_google_oidc_runtime(environment, data_root=tmp_path)
+    journal = tmp_path / ".thebitlab-auth" / "auth.sqlite3-journal"
+    journal.write_bytes(b"")
+
     runtime = compose_google_oidc_runtime(environment, data_root=tmp_path)
 
-    assert runtime.routes.callback.config.client_id.endswith(
-        ".apps.googleusercontent.com"
-    )
+    assert runtime.routes.callback.http_sessions.sessions.audience == "web"
 
 
 def test_composition_rejects_group_writable_database_directory(tmp_path: Path) -> None:
