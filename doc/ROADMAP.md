@@ -580,6 +580,45 @@ Questa priorita attraversa tutte le altre.
    - impatto sugli schemi;
    - eventuali migrazioni.
 
+## Priorità 7.5 - Distribuzione dell'ambiente nel laboratorio scolastico
+
+Da affrontare dopo il collaudo completo dell'installazione su un singolo PC
+Windows e su un singolo Mac.
+
+Decisione:
+
+1. Mantenere un solo motore di installazione:
+   - a casa scarica da Internet e GitHub;
+   - nel laboratorio usa una sorgente alternativa nella LAN.
+2. Un PC del docente prepara una cache locale e avvia temporaneamente un
+   piccolo server HTTP.
+3. La cache può distribuire repository, immagine Docker `student-dev`, box
+   Packer e altri artefatti verificati, evitando che ogni PC scarichi gli stessi
+   file da Internet.
+4. Ogni PC avvia autonomamente lo stesso installer monocomando. Il PC docente
+   non esegue comandi remoti e non raccoglie credenziali amministrative.
+5. Ogni artefatto ricevuto dalla LAN deve superare gli stessi controlli di
+   versione, dimensione, origine e checksum della sorgente Internet.
+6. Una fase successiva può aggiungere un cruscotto docente con soli stati
+   operativi, per esempio:
+   - pronto;
+   - installazione in corso;
+   - riavvio necessario;
+   - errore studente `E03`, `E05` o altro codice.
+7. La procedura deve gestire firewall Windows, isolamento tra client Wi-Fi,
+   proxy scolastici, ripresa dei download e indisponibilità temporanea del PC
+   docente.
+
+Fuori dal perimetro iniziale:
+
+- PowerShell Remoting o controllo remoto dei PC;
+- distribuzione di password o credenziali amministrative;
+- una seconda procedura di installazione specifica per la scuola;
+- ridistribuzione di installer non consentita dalle rispettive licenze.
+
+Prima versione stimata: cache HTTP locale, manifest firmato o verificato,
+checksum, comando monoriga LAN e fallback esplicito alla sorgente Internet.
+
 ## Priorita 8 - Knowledge Lab dopo MVP
 
 Quando il flusso scolastico minimo sara stabile, TheBitLab potra diventare un vero playground per il piano Learning Lab.
