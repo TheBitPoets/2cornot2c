@@ -60,6 +60,7 @@ from scripts import (
     student_help_codex_adapter,
     student_help_service,
     student_lab_service,
+    thebitlab_auth_runtime,
     thebitlab_grading_artifacts,
     thebitlab_google_oidc_http,
     thebitlab_services,
@@ -4080,6 +4081,11 @@ def main() -> int:
         action="store_true",
         help="Consente esplicitamente HTTP su un indirizzo non loopback; usare solo dietro protezioni di rete.",
     )
+    parser.add_argument(
+        "--enable-google-auth",
+        action="store_true",
+        help="Abilita Google OIDC usando la configurazione sicura da environment.",
+    )
     args = parser.parse_args()
     teacher_token_is_configured = bool(os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip())
     try:
@@ -4095,8 +4101,20 @@ def main() -> int:
     server = None
     try:
         data_root = configure_data_root(args.root)
+        auth_runtime = None
+        if args.enable_google_auth:
+            try:
+                auth_runtime = thebitlab_auth_runtime.compose_google_oidc_runtime(
+                    os.environ,
+                    data_root=data_root,
+                )
+            except thebitlab_auth_runtime.AuthRuntimeConfigurationError as error:
+                parser.error(str(error))
         server = BoundedThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
         server.teacher_token = configured_teacher_token
+        if auth_runtime is not None:
+            server.google_oidc_runtime = auth_runtime
+            server.google_oidc_http_routes = auth_runtime.routes
         if not is_loopback_bind_host(args.host):
             print("ATTENZIONE: dashboard e credenziali Basic sono esposte su HTTP non cifrato.")
             print("Preferisci loopback con tunnel SSH oppure un reverse proxy HTTPS.")
@@ -4104,6 +4122,11 @@ def main() -> int:
         print(f"Root dati: {data_root}")
         print("Credenziali dashboard: utente teacher")
         print(teacher_dashboard_token_console_line(server.teacher_token, teacher_token_is_configured))
+        print(
+            "Google OIDC: abilitato (HTTPS tramite proxy trusted)."
+            if auth_runtime is not None
+            else "Google OIDC: disabilitato."
+        )
         print("Premi Ctrl+C per fermare il server.")
         try:
             server.serve_forever()
