@@ -87,6 +87,13 @@ al termine, in caso di errore e quando l'installazione viene annullata.
 Soltanto al primo utilizzo Docker Desktop può ancora chiedere di accettare le
 proprie condizioni d'uso.
 
+Su Windows la diagnosi distingue software assente, compatibile e troppo
+vecchio. Le soglie supportate sono Git 2.30, Vagrant 2.4, VirtualBox 7.1 e
+Docker CLI 24. Una versione più recente viene conservata; una versione più
+vecchia viene aggiornata con `winget`. Gli aggiornamenti di programmi già
+presenti sono registrati come `updated` e non diventano proprietà di
+2cornot2c: la successiva disinstallazione dell'ambiente li conserva.
+
 ## Diagnosi
 
 La prima fetta implementa rilevamento, scelta provider e diagnosi read-only:

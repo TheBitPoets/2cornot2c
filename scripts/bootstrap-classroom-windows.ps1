@@ -54,7 +54,10 @@ function Stop-WithMessage {
 }
 
 function Install-WingetPackage {
-    param([string]$Id)
+    param(
+        [string]$Id,
+        [bool]$TrackOwnership = $true
+    )
     winget install --id $Id --exact --silent `
         --accept-package-agreements --accept-source-agreements
     if ($LASTEXITCODE -ne 0) {
@@ -66,10 +69,37 @@ function Install-WingetPackage {
                 "Se ricompare, comunica E09 al docente."
             ) "winget exit code $LASTEXITCODE"
     }
-    if (-not $InstalledByBootstrap.Contains($Id)) {
+    if ($TrackOwnership -and -not $InstalledByBootstrap.Contains($Id)) {
         $InstalledByBootstrap.Add($Id)
     }
     Save-BootstrapState
+}
+
+function Update-WingetPackage {
+    param([string]$Id)
+    winget upgrade --id $Id --exact --silent `
+        --accept-package-agreements --accept-source-agreements
+    if ($LASTEXITCODE -ne 0) {
+        Stop-WithMessage "E09" "Aggiornamento di $Id non riuscito" `
+            "Il programma è presente, ma è troppo vecchio e Windows non è riuscito ad aggiornarlo." `
+            @(
+                "Chiudi il programma da aggiornare."
+                "Rilancia lo stesso comando."
+                "Se ricompare, comunica E09 al docente."
+            ) "winget exit code $LASTEXITCODE"
+    }
+    Save-BootstrapState
+}
+
+function Test-GitMinimumVersion {
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        return $false
+    }
+    $Output = [string](& git --version)
+    if ($Output -notmatch "(\d+\.\d+(?:\.\d+)?)") {
+        return $false
+    }
+    return [version]$Matches[1] -ge [version]"2.30.0"
 }
 
 function Test-Python312 {
@@ -255,6 +285,9 @@ Test-HostResources
 Write-Host "[1/4] Preparazione Git e Python 3.12..."
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Install-WingetPackage "Git.Git"
+} elseif (-not (Test-GitMinimumVersion)) {
+    Write-Host "Git è presente ma troppo vecchio: provo ad aggiornarlo."
+    Update-WingetPackage "Git.Git"
 }
 if (-not (Test-Python312)) {
     Install-WingetPackage "Python.Python.3.12"
@@ -268,10 +301,14 @@ $env:Path = @(
     $env:Path
 ) -join [IO.Path]::PathSeparator
 
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Stop-WithMessage "E10" "Git è installato ma Windows non riesce ancora a trovarlo" `
-        "A volte Windows riconosce un nuovo programma solamente dopo un riavvio." `
-        @("Riavvia Windows."; "Riapri PowerShell e rilancia lo stesso comando.")
+if (-not (Test-GitMinimumVersion)) {
+    Stop-WithMessage "E10" "Git non è disponibile in una versione compatibile" `
+        "Serve Git 2.30 o successivo per aggiornare il progetto in sicurezza." `
+        @(
+            "Chiudi PowerShell."
+            "Riapri PowerShell e rilancia lo stesso comando."
+            "Se ricompare, comunica E10 al docente."
+        )
 }
 if (-not (Test-Python312)) {
     Stop-WithMessage "E10" "Python 3.12 non è disponibile" `

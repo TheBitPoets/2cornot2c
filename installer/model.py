@@ -32,6 +32,7 @@ class Check:
     label: str
     command: tuple[str, ...]
     expected_text: str = ""
+    minimum_version: str = ""
 
 
 @dataclass(frozen=True, slots=True)

@@ -68,8 +68,9 @@ def test_docker_plans_install_desktop_and_pull_immutable_image() -> None:
     }
     assert any(
         step.command
-        and step.command[:5]
-        == ("winget", "install", "--id", "Docker.DockerDesktop", "--exact")
+        and "Docker.DockerDesktop" in " ".join(step.command)
+        and "winget upgrade" in step.command[-1]
+        and "winget install" in step.command[-1]
         for step in windows.steps
     )
     assert ("docker", "pull", image) in {step.command for step in mac.steps}
@@ -95,6 +96,33 @@ def test_check_can_require_semantic_output() -> None:
 
     assert result.ok is False
     assert result.detail == "non trovato: vagrant-vmware-desktop"
+
+
+def test_check_rejects_an_old_but_present_version(monkeypatch) -> None:
+    from subprocess import CompletedProcess
+
+    monkeypatch.setattr(
+        "installer.diagnostics.subprocess.run",
+        lambda *args, **kwargs: CompletedProcess(
+            args[0],
+            0,
+            "Vagrant 2.3.7\n",
+            "",
+        ),
+    )
+
+    result = run_check(
+        Check(
+            "vagrant",
+            "Vagrant",
+            ("vagrant", "--version"),
+            minimum_version="2.4.0",
+        )
+    )
+
+    assert result.ok is False
+    assert result.present is True
+    assert result.detail == "versione 2.3.7; serve almeno 2.4.0"
 
 
 def test_tui_frame_lists_supported_provider() -> None:
@@ -388,7 +416,10 @@ def test_executor_skips_present_steps_and_applies_only_missing(tmp_path) -> None
     )
 
     assert [result.status for result in results] == ["skipped", "skipped", "succeeded"]
-    assert calls == [("winget", "install", "--id", "Oracle.VirtualBox", "--exact")]
+    assert len(calls) == 1
+    assert "Oracle.VirtualBox" in calls[0][-1]
+    assert "winget upgrade" in calls[0][-1]
+    assert "winget install" in calls[0][-1]
     assert (tmp_path / "installer.jsonl").read_text(encoding="utf-8").count("\n") == 3
 
 
@@ -404,13 +435,42 @@ def test_executor_reports_step_progress_without_inventing_percentages() -> None:
     )
 
     assert events == [
-        ("started", 1, 3, "Installa Git"),
-        ("skipped", 1, 3, "Installa Git"),
-        ("started", 2, 3, "Installa Vagrant"),
-        ("skipped", 2, 3, "Installa Vagrant"),
-        ("started", 3, 3, "Installa VirtualBox"),
-        ("succeeded", 3, 3, "Installa VirtualBox"),
+        ("started", 1, 3, "Installa o aggiorna Git"),
+        ("skipped", 1, 3, "Installa o aggiorna Git"),
+        ("started", 2, 3, "Installa o aggiorna Vagrant"),
+        ("skipped", 2, 3, "Installa o aggiorna Vagrant"),
+        ("started", 3, 3, "Installa o aggiorna VirtualBox"),
+        ("succeeded", 3, 3, "Installa o aggiorna VirtualBox"),
     ]
+
+
+def test_executor_marks_preexisting_old_software_as_updated(tmp_path) -> None:
+    plan = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
+    checks = tuple(
+        CheckResult(
+            check,
+            check.key != "vagrant",
+            "versione 2.3.7; serve almeno 2.4.0",
+            check.key == "vagrant",
+        )
+        for check in plan.checks
+    )
+
+    results = execute_plan(
+        plan,
+        checks,
+        runner=lambda command: (0, "aggiornato"),
+        log_path=tmp_path / "installer.jsonl",
+    )
+
+    assert [result.status for result in results] == [
+        "skipped",
+        "updated",
+        "skipped",
+    ]
+    assert '"status": "updated"' in (
+        tmp_path / "installer.jsonl"
+    ).read_text(encoding="utf-8")
 
 
 def test_tui_installation_report_shows_step_bar_and_elapsed_time() -> None:
@@ -524,13 +584,9 @@ def test_windows_docker_install_starts_desktop_and_continues_automatically() -> 
         "succeeded",
         "succeeded",
     ]
-    assert calls[0][:5] == (
-        "winget",
-        "install",
-        "--id",
-        "Docker.DockerDesktop",
-        "--exact",
-    )
+    assert "Docker.DockerDesktop" in calls[0][-1]
+    assert "winget upgrade" in calls[0][-1]
+    assert "winget install" in calls[0][-1]
     assert calls[1][:4] == (
         "powershell.exe",
         "-NoProfile",

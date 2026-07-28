@@ -65,6 +65,10 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     )
 
     assert "Test-HostResources" in bootstrap
+    assert "function Test-GitMinimumVersion" in bootstrap
+    assert '[version]"2.30.0"' in bootstrap
+    assert "function Update-WingetPackage" in bootstrap
+    assert 'Update-WingetPackage "Git.Git"' in bootstrap
     assert "function Test-Python312" in bootstrap
     assert "sys.version_info[:2] != (3, 12)" in bootstrap
     assert '$ErrorActionPreference = "SilentlyContinue"' in bootstrap
@@ -90,6 +94,7 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "docker image rm --force" not in uninstall
     assert "Ambiente 2cornot2c.lnk" in uninstall
     assert "Test-PackageStillInstalled" in uninstall
+    assert '$Record.status -ne "succeeded"' in uninstall
     assert "Get-ClassroomShortcutPaths" in uninstall
     assert "OneDriveConsumer" in uninstall
     assert "CommonDesktopDirectory" in uninstall

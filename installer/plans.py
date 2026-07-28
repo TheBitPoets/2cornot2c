@@ -6,6 +6,29 @@ import sys
 
 from installer.model import Check, Host, InstallPlan, Provider, Step
 from installer.student_dev import immutable_reference
+from installer.tool_versions import MINIMUM_TOOL_VERSIONS
+
+
+def _winget_ensure(package_id: str) -> tuple[str, ...]:
+    """Aggiorna un pacchetto esistente oppure lo installa se assente."""
+
+    agreements = (
+        "--accept-package-agreements --accept-source-agreements"
+    )
+    command = (
+        f"winget upgrade --id '{package_id}' --exact --silent {agreements}; "
+        "if ($LASTEXITCODE -eq 0) { exit 0 }; "
+        f"winget install --id '{package_id}' --exact --silent {agreements}; "
+        "exit $LASTEXITCODE"
+    )
+    return (
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        command,
+    )
 
 
 def supported_providers(host: Host) -> tuple[Provider, ...]:
@@ -151,25 +174,40 @@ def _windows_plan() -> InstallPlan:
         Provider.VIRTUALBOX,
         (
             Check("winget", "Windows Package Manager", ("winget", "--version")),
-            Check("git", "Git", ("git", "--version")),
-            Check("vagrant", "Vagrant", ("vagrant", "--version")),
-            Check("virtualbox", "VirtualBox", ("VBoxManage.exe", "--version")),
+            Check(
+                "git",
+                "Git",
+                ("git", "--version"),
+                minimum_version=MINIMUM_TOOL_VERSIONS["git"],
+            ),
+            Check(
+                "vagrant",
+                "Vagrant",
+                ("vagrant", "--version"),
+                minimum_version=MINIMUM_TOOL_VERSIONS["vagrant"],
+            ),
+            Check(
+                "virtualbox",
+                "VirtualBox",
+                ("VBoxManage.exe", "--version"),
+                minimum_version=MINIMUM_TOOL_VERSIONS["virtualbox"],
+            ),
         ),
         (
             Step(
                 "git",
-                "Installa Git",
-                ("winget", "install", "--id", "Git.Git", "--exact"),
+                "Installa o aggiorna Git",
+                _winget_ensure("Git.Git"),
             ),
             Step(
                 "vagrant",
-                "Installa Vagrant",
-                ("winget", "install", "--id", "Hashicorp.Vagrant", "--exact"),
+                "Installa o aggiorna Vagrant",
+                _winget_ensure("Hashicorp.Vagrant"),
             ),
             Step(
                 "virtualbox",
-                "Installa VirtualBox",
-                ("winget", "install", "--id", "Oracle.VirtualBox", "--exact"),
+                "Installa o aggiorna VirtualBox",
+                _winget_ensure("Oracle.VirtualBox"),
             ),
         ),
     )
@@ -178,7 +216,16 @@ def _windows_plan() -> InstallPlan:
 def _docker_plan(host: Host) -> InstallPlan:
     image = immutable_reference()
     common_checks = (
-        Check("docker", "Docker Desktop", ("docker", "--version")),
+        Check(
+            "docker",
+            "Docker CLI",
+            ("docker", "--version"),
+            minimum_version=(
+                MINIMUM_TOOL_VERSIONS["docker"]
+                if host is Host.WINDOWS_AMD64
+                else ""
+            ),
+        ),
         Check("docker-engine", "Motore Docker avviato", ("docker", "info")),
         Check(
             "student-image",
@@ -246,16 +293,8 @@ def _docker_plan(host: Host) -> InstallPlan:
             ),
             Step(
                 "docker",
-                "Installa Docker Desktop",
-                (
-                    "winget",
-                    "install",
-                    "--id",
-                    "Docker.DockerDesktop",
-                    "--exact",
-                    "--accept-package-agreements",
-                    "--accept-source-agreements",
-                ),
+                "Installa o aggiorna Docker Desktop",
+                _winget_ensure("Docker.DockerDesktop"),
             ),
             Step(
                 "docker-engine",
