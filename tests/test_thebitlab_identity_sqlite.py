@@ -210,6 +210,7 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
 def test_migration_v8_removes_uncorrelated_legacy_tui_sessions(database_path) -> None:
     storage = SqliteIdentityStorage(database_path)
     storage.create_user(account())
+    storage.create_pairing(pairing())
     with sqlite3.connect(database_path) as connection:
         connection.execute("DROP TRIGGER trg_sessions_validate_pairing_insert")
         connection.execute("DROP TRIGGER trg_sessions_immutable_audience_update")
@@ -230,10 +231,27 @@ def test_migration_v8_removes_uncorrelated_legacy_tui_sessions(database_path) ->
                 NOW.isoformat().replace("+00:00", "Z"),
             ),
         )
+        connection.execute(
+            """
+            INSERT INTO sessions
+                (session_id, user_id, token_digest, created_at, expires_at,
+                 last_seen_at, revoked_at, audience, source_pairing_id)
+            VALUES (?, ?, ?, ?, ?, ?, NULL, 'web', 'pairing-01')
+            """,
+            (
+                "legacy-web-with-pairing",
+                "user-01",
+                "sha256:" + "8" * 64,
+                NOW.isoformat().replace("+00:00", "Z"),
+                LATER.isoformat().replace("+00:00", "Z"),
+                NOW.isoformat().replace("+00:00", "Z"),
+            ),
+        )
         connection.execute("DELETE FROM schema_migrations WHERE version >= 7")
 
     upgraded = SqliteIdentityStorage(database_path)
     assert upgraded.read_session("legacy-tui") is None
+    assert upgraded.read_session("legacy-web-with-pairing") is None
 
 
 def test_migration_v6_backfills_existing_sessions_as_web(database_path) -> None:
@@ -627,7 +645,9 @@ def test_active_pairing_transition_requires_matching_user_revision(storage) -> N
     assert storage.read_pairing("pairing-01") == pending
 
 
-def test_pairing_session_creation_is_atomic_with_consumption(storage) -> None:
+def test_pairing_session_creation_is_atomic_with_consumption(
+    storage, database_path
+) -> None:
     storage.create_user(account())
     pending = pairing()
     storage.create_pairing(pending)
@@ -651,6 +671,22 @@ def test_pairing_session_creation_is_atomic_with_consumption(storage) -> None:
 
     assert storage.read_pairing("pairing-01") == consumed
     assert storage.read_session("session-01") == issued_session
+    with sqlite3.connect(database_path) as connection:
+        with pytest.raises(sqlite3.IntegrityError, match="immutable session"):
+            connection.execute(
+                """
+                UPDATE sessions SET created_at = ?, last_seen_at = ?
+                WHERE session_id = 'session-01'
+                """,
+                (
+                    (consumed.consumed_at + timedelta(seconds=1))
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                    (consumed.consumed_at + timedelta(seconds=1))
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                ),
+            )
     assert storage.delete_expired_pairings(LATER + timedelta(minutes=1)) == 0
     assert storage.read_pairing("pairing-01") == consumed
     assert storage.delete_expired_sessions(issued_session.expires_at) == 1

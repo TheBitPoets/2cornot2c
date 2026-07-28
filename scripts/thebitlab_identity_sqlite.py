@@ -28,7 +28,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 _T = TypeVar("_T")
 
 
@@ -213,13 +213,14 @@ _MIGRATION_7 = (
 _MIGRATION_8 = (
     """
     DELETE FROM sessions
-    WHERE audience = 'tui' AND NOT EXISTS (
-        SELECT 1 FROM tui_pairings
-        WHERE tui_pairings.pairing_id = sessions.source_pairing_id
-            AND tui_pairings.status = 'consumed'
-            AND tui_pairings.user_id = sessions.user_id
-            AND tui_pairings.consumed_at = sessions.created_at
-    )
+    WHERE (audience = 'web' AND source_pairing_id IS NOT NULL)
+        OR (audience = 'tui' AND NOT EXISTS (
+            SELECT 1 FROM tui_pairings
+            WHERE tui_pairings.pairing_id = sessions.source_pairing_id
+                AND tui_pairings.status = 'consumed'
+                AND tui_pairings.user_id = sessions.user_id
+                AND tui_pairings.consumed_at = sessions.created_at
+        ))
     """,
     """
     CREATE TRIGGER IF NOT EXISTS trg_sessions_validate_pairing_insert
@@ -240,13 +241,26 @@ _MIGRATION_8 = (
     """,
     """
     CREATE TRIGGER IF NOT EXISTS trg_sessions_immutable_audience_update
-    BEFORE UPDATE OF audience, source_pairing_id ON sessions
+    BEFORE UPDATE OF session_id, user_id, token_digest, created_at, expires_at,
+        audience, source_pairing_id ON sessions
     WHEN NEW.audience != OLD.audience
         OR NEW.source_pairing_id IS NOT OLD.source_pairing_id
+        OR (OLD.audience = 'tui' AND (
+            NEW.session_id != OLD.session_id
+            OR NEW.user_id != OLD.user_id
+            OR NEW.token_digest != OLD.token_digest
+            OR NEW.created_at != OLD.created_at
+            OR NEW.expires_at != OLD.expires_at
+        ))
     BEGIN
         SELECT RAISE(ABORT, 'immutable session audience');
     END
     """,
+)
+
+_MIGRATION_9 = (
+    "DROP TRIGGER IF EXISTS trg_sessions_immutable_audience_update",
+    _MIGRATION_8[2],
 )
 
 _MIGRATION_4 = (
@@ -367,6 +381,7 @@ class SqliteIdentityStorage:
                 (6, _MIGRATION_6),
                 (7, _MIGRATION_7),
                 (8, _MIGRATION_8),
+                (9, _MIGRATION_9),
             )
             for version, statements in migrations:
                 if version in versions:
