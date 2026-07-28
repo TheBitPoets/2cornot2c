@@ -128,21 +128,56 @@ def valid_session_bearer(raw_token: object) -> bool:
 def session_token_digest(raw_token: str) -> str:
     """Digest one high-entropy bearer token without retaining the raw value."""
 
-    token = _required_text(raw_token, "raw_token")
-    if token != raw_token or len(token) < 32:
-        raise CredentialGenerationError("Il token di sessione generato non e valido.")
-    return "sha256:" + hashlib.sha256(token.encode("utf-8")).hexdigest()
+    token = None
+    encoded = None
+    try:
+        token = _required_text(raw_token, "raw_token")
+        if token != raw_token or len(token) < 32:
+            raise CredentialGenerationError(
+                "Il token di sessione generato non e valido."
+            )
+        try:
+            encoded = token.encode("utf-8")
+        except UnicodeError:
+            raise CredentialGenerationError(
+                "Il token di sessione generato non e valido."
+            ) from None
+        return "sha256:" + hashlib.sha256(encoded).hexdigest()
+    finally:
+        raw_token = None
+        token = None
+        encoded = None
 
 
 def pairing_code_digest(raw_code: str, pepper: bytes) -> str:
     """Key one low-entropy pairing code with a server-side pepper."""
 
-    code = _required_text(raw_code, "raw_code")
-    if code != raw_code:
-        raise CredentialGenerationError("Il codice pairing generato non e valido.")
-    if type(pepper) is not bytes or len(pepper) < 32:
-        raise AuthApplicationError("Il pepper pairing deve contenere almeno 32 byte.")
-    return "hmac-sha256:" + hmac.new(pepper, code.encode("utf-8"), hashlib.sha256).hexdigest()
+    code = None
+    encoded = None
+    try:
+        code = _required_text(raw_code, "raw_code")
+        if code != raw_code:
+            raise CredentialGenerationError(
+                "Il codice pairing generato non e valido."
+            )
+        if type(pepper) is not bytes or len(pepper) < 32:
+            raise AuthApplicationError(
+                "Il pepper pairing deve contenere almeno 32 byte."
+            )
+        try:
+            encoded = code.encode("utf-8")
+        except UnicodeError:
+            raise CredentialGenerationError(
+                "Il codice pairing generato non e valido."
+            ) from None
+        return "hmac-sha256:" + hmac.new(
+            pepper, encoded, hashlib.sha256
+        ).hexdigest()
+    finally:
+        raw_code = None
+        code = None
+        encoded = None
+        pepper = None
 
 
 def _session_digest_for_verification(raw_token: str) -> str:

@@ -25,9 +25,11 @@ from scripts.thebitlab_auth_services import (
     PairingExpiredError,
     PairingService,
     PairingStateError,
+    pairing_code_digest,
     ProviderAuthenticationError,
     ProviderProtocolError,
     SessionService,
+    session_token_digest,
     TuiPairingSessionService,
 )
 from scripts.thebitlab_identity import AccountDisabledError, ExternalIdentity, UserAccount
@@ -1164,6 +1166,22 @@ def test_pairing_consume_and_revoke_reject_clock_rollback(storage) -> None:
         service.consume("pairing-01", issued.code)
     with pytest.raises(ConcurrentStateChangeError, match="Clock"):
         service.revoke("pairing-01")
+
+
+def test_surrogate_credentials_are_rejected_without_traceback_leaks() -> None:
+    pairing_secret = "PAIRCODE42\ud800"
+    with pytest.raises(CredentialGenerationError) as pairing_error:
+        pairing_code_digest(pairing_secret, PEPPER)
+    assert pairing_secret not in traceback_locals(
+        pairing_error.value, "pairing_code_digest"
+    )
+
+    bearer_secret = "T" * 40 + "\ud800"
+    with pytest.raises(CredentialGenerationError) as bearer_error:
+        session_token_digest(bearer_secret)
+    assert bearer_secret not in traceback_locals(
+        bearer_error.value, "session_token_digest"
+    )
 
 
 def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> None:
