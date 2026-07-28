@@ -136,9 +136,12 @@ def _paint_guidance(row: str) -> str:
         start = row.find(marker)
         if start < 0:
             continue
-        end = row.rfind("│")
-        if end <= start:
-            end = len(row)
+        boundaries = tuple(
+            position
+            for border in ("│", "|")
+            if (position := row.find(border, start)) > start
+        )
+        end = min(boundaries, default=len(row))
         return f"{row[:start]}{escape}{row[start:end]}\x1b[0m{row[end:]}"
     return row
 
