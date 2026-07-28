@@ -87,41 +87,64 @@ class DashboardAuthorizationSnapshot:
         )
 
 
-@dataclass(frozen=True)
-class DashboardAccessScope:
-    """Minimal internal identifiers a dashboard query is allowed to expose."""
+class DashboardAccessScope(tuple):
+    """Immutable minimal capability for one dashboard data query."""
 
-    dashboard: DashboardKind
-    actor_user_id: str
-    class_ids: tuple[str, ...]
-    student_user_id: str | None = None
-    all_classes: bool = False
+    __slots__ = ()
 
-    def __post_init__(self) -> None:
-        if self.dashboard not in {"student", "teacher"}:
+    def __new__(
+        cls,
+        dashboard: DashboardKind,
+        actor_user_id: str,
+        actor_role: str,
+        class_ids: tuple[str, ...],
+        student_user_id: str | None = None,
+        all_classes: bool = False,
+    ) -> "DashboardAccessScope":
+        if dashboard not in {"student", "teacher"}:
             raise ValueError("Dashboard non valida.")
-        object.__setattr__(
-            self,
-            "actor_user_id",
-            dashboard_identifier(self.actor_user_id, "actor_user_id"),
-        )
-        object.__setattr__(self, "class_ids", _class_ids(self.class_ids, "class_ids"))
-        if type(self.all_classes) is not bool:
+        actor_user_id = dashboard_identifier(actor_user_id, "actor_user_id")
+        if type(actor_role) is not str or actor_role not in {"admin", "teacher", "student"}:
+            raise ValueError("actor_role scope non valido.")
+        class_ids = _class_ids(class_ids, "class_ids")
+        if type(all_classes) is not bool:
             raise ValueError("all_classes deve essere booleano.")
-        if self.all_classes and self.dashboard != "teacher":
-            raise ValueError("Solo la dashboard docente supporta uno scope globale.")
-        if self.all_classes and self.class_ids:
-            raise ValueError("Uno scope globale non elenca classi parziali.")
-        if self.student_user_id is not None:
-            object.__setattr__(
-                self,
-                "student_user_id",
-                dashboard_identifier(self.student_user_id, "student_user_id"),
-            )
-        if self.dashboard == "teacher" and self.student_user_id is not None:
-            raise ValueError("La dashboard docente non accetta student_user_id.")
-        if self.dashboard == "student" and self.student_user_id is None:
-            raise ValueError("La dashboard studente richiede student_user_id.")
+        if dashboard == "teacher":
+            if student_user_id is not None:
+                raise ValueError("La dashboard docente non accetta student_user_id.")
+            if actor_role == "admin":
+                if not all_classes or class_ids:
+                    raise ValueError("Lo scope admin docente deve essere globale.")
+            elif actor_role != "teacher" or all_classes or not class_ids:
+                raise ValueError("Lo scope docente richiede classi teacher limitate.")
+        else:
+            if all_classes:
+                raise ValueError("La dashboard studente non supporta scope globale.")
+            if student_user_id is None:
+                raise ValueError("La dashboard studente richiede student_user_id.")
+            student_user_id = dashboard_identifier(student_user_id, "student_user_id")
+            if not class_ids:
+                raise ValueError("La dashboard studente richiede classi visibili.")
+            if actor_role == "student" and student_user_id != actor_user_id:
+                raise ValueError("Lo scope studente deve appartenere all'attore.")
+        return tuple.__new__(
+            cls,
+            (
+                dashboard,
+                actor_user_id,
+                actor_role,
+                class_ids,
+                student_user_id,
+                all_classes,
+            ),
+        )
+
+    dashboard = property(lambda self: self[0])
+    actor_user_id = property(lambda self: self[1])
+    actor_role = property(lambda self: self[2])
+    class_ids = property(lambda self: self[3])
+    student_user_id = property(lambda self: self[4])
+    all_classes = property(lambda self: self[5])
 
 
 class DashboardAuthorizationStorage(Protocol):

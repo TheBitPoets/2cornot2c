@@ -48,12 +48,19 @@ class DashboardAuthorizationBoundary:
         snapshot = self._snapshot(context)
         if snapshot.actor_role == "admin":
             return DashboardAccessScope(
-                "teacher", snapshot.actor_user_id, (), all_classes=True
+                "teacher",
+                snapshot.actor_user_id,
+                snapshot.actor_role,
+                (),
+                all_classes=True,
             )
         if snapshot.actor_role != "teacher" or not snapshot.actor_class_ids:
             raise HttpAuthorizationDeniedError()
         return DashboardAccessScope(
-            "teacher", snapshot.actor_user_id, snapshot.actor_class_ids
+            "teacher",
+            snapshot.actor_user_id,
+            snapshot.actor_role,
+            snapshot.actor_class_ids,
         )
 
     def authorize_student_dashboard(
@@ -99,6 +106,7 @@ class DashboardAuthorizationBoundary:
         return DashboardAccessScope(
             "student",
             snapshot.actor_user_id,
+            snapshot.actor_role,
             visible,
             student_user_id=target_user_id,
         )

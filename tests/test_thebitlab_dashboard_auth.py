@@ -240,15 +240,25 @@ def test_actor_revision_race_after_http_authentication_fails_closed(
         boundary.authorize_teacher_dashboard(request)
 
 
-def test_student_scope_can_never_be_global() -> None:
-    with pytest.raises(ValueError, match="Solo la dashboard docente"):
+def test_scope_global_capability_is_admin_only_and_structurally_immutable() -> None:
+    with pytest.raises(ValueError, match="non supporta scope globale"):
         DashboardAccessScope(
             "student",
             "admin-01",
-            (),
+            "admin",
+            ("class-a",),
             student_user_id="student-01",
             all_classes=True,
         )
+    with pytest.raises(ValueError, match="classi teacher limitate"):
+        DashboardAccessScope(
+            "teacher", "teacher-01", "teacher", (), all_classes=True
+        )
+    global_scope = DashboardAccessScope(
+        "teacher", "admin-01", "admin", (), all_classes=True
+    )
+    with pytest.raises(AttributeError):
+        object.__setattr__(global_scope, "dashboard", "student")
 
 
 def test_storage_failure_and_malformed_snapshot_are_sanitized(setup, monkeypatch) -> None:

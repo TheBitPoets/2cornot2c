@@ -39,7 +39,7 @@ Lo scope del dettaglio contiene l'intersezione visibile, non tutte le classi del
 
 SQLite fornisce uno snapshot coerente di utente, target, membership e stato classi. Membership e classi cambiate prima dello snapshot sono osservate immediatamente. Come in una normale autorizzazione request-scoped, una revoca successiva alla decisione vale dalla richiesta seguente; l'adapter non deve conservare o riutilizzare uno scope tra richieste.
 
-`DashboardAccessScope` contiene solo identificatori interni, è immutabile e valida ordinamento/unicità. Soltanto uno scope della dashboard docente può essere globale; uno scope globale non può contenere contemporaneamente classi parziali. Lo snapshot ricevuto dal port storage viene ricostruito e rivalidato integralmente, quindi anche istanze mutate o adapter malformati falliscono con il 503 sanitizzato.
+`DashboardAccessScope` contiene solo identificatori interni e il ruolo interno corrente dell'attore. È una capability strutturalmente immutabile basata su tupla, valida ordinamento/unicità e non è alterabile neppure tramite `object.__setattr__`. Soltanto un attore `admin` può ottenere uno scope globale della dashboard docente; lo scope `teacher` richiede classi limitate e ogni scope studente richiede classi visibili. Lo snapshot ricevuto dal port storage viene ricostruito e rivalidato integralmente, quindi anche istanze snapshot mutate o adapter malformati falliscono con il 503 sanitizzato.
 
 ## Errori pubblici
 
