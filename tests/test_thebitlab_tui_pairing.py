@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from scripts.thebitlab_auth_services import (
+    AuthenticatedSession,
+    IssuedSession,
     PairingService,
     SessionService,
     TuiPairingSessionService,
@@ -225,6 +227,10 @@ def test_expired_pairing_never_issues_session(setup) -> None:
         )
 
     assert storage.read_pairing(started.pairing_id).status == "expired"
+    with pytest.raises(TuiPairingExpiredHttpError):
+        boundary.authorize_browser(
+            browser_request(http, "student-01"), started.user_code
+        )
     assert storage.list_user_sessions("student-01")
     assert all(
         session.session_id.startswith("web-session-")
@@ -263,6 +269,22 @@ def test_web_and_tui_session_audiences_are_not_interchangeable(setup) -> None:
         )
 
 
+def test_malformed_auth_adapter_cannot_bypass_tui_audience(
+    setup, monkeypatch
+) -> None:
+    storage, _clock, boundary, http = setup
+    web_issued = http.sessions.issue("student-01")
+    web_user = storage.read_user("student-01")
+    monkeypatch.setattr(
+        boundary.tui_sessions,
+        "authenticate",
+        lambda _bearer: AuthenticatedSession(web_issued.session, web_user),
+    )
+
+    with pytest.raises(TuiPairingUnavailableError):
+        boundary.authenticate_bearer("Bearer " + web_issued.bearer_token)
+
+
 def test_role_change_invalidates_issued_tui_bearer(setup) -> None:
     storage, clock, boundary, http = setup
     started = boundary.begin()
@@ -278,6 +300,17 @@ def test_role_change_invalidates_issued_tui_bearer(setup) -> None:
 
     with pytest.raises(HttpAuthorizationDeniedError):
         boundary.authenticate_bearer(f"Bearer {credential.bearer_token}")
+
+
+def test_bearer_header_must_use_canonical_whitespace(setup) -> None:
+    _storage, _clock, boundary, _http = setup
+    for value in (
+        " Bearer " + "A" * 40,
+        "Bearer " + "A" * 40 + " ",
+        "\r\nBearer " + "A" * 40,
+    ):
+        with pytest.raises(HttpAuthenticationRequiredError):
+            boundary.authenticate_bearer(value)
 
 
 def test_malformed_generated_bearer_does_not_consume_pairing(
@@ -315,6 +348,22 @@ def test_malformed_adapter_cannot_return_web_session_as_tui_credential(
         )
     )
     assert web_context.user.user_id == "student-01"
+
+
+def test_malformed_issued_pair_cannot_revoke_unrelated_tui_session(
+    setup, monkeypatch
+) -> None:
+    _storage, _clock, boundary, _http = setup
+    first = boundary.tui_sessions.issue("student-01")
+    second = boundary.tui_sessions.issue("student-01")
+    malformed = IssuedSession(second.session, first.bearer_token)
+    monkeypatch.setattr(
+        boundary.pairings, "consume", lambda _pairing_id, _code: malformed
+    )
+
+    with pytest.raises(TuiPairingUnavailableError):
+        boundary.consume("pairing-01", "PAIRCODE42")
+    assert boundary.tui_sessions.authenticate(first.bearer_token).user.user_id == "student-01"
 
 
 def test_unexpected_pairing_failure_is_sanitized(setup, monkeypatch) -> None:

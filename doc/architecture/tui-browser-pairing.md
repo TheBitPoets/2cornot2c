@@ -39,11 +39,11 @@ Una risposta persa dopo il commit può lasciare una sessione non consegnata fino
 - il cookie web non viene restituito alla TUI;
 - il bearer TUI non viene inserito in URL, query string o log.
 
-`IssuedTuiCredential` è una risposta one-shot. Prima di esporla, il boundary ricontrolla audience `tui`, correlazione digest/sessione/utente e autenticabilità tramite il service TUI; un risultato adapter web o malformato produce 503 e non viene divulgato. La futura CLI dovrà conservare la credenziale con permessi filesystem restrittivi oppure soltanto in memoria; questa decisione resta fuori dal boundary.
+`IssuedTuiCredential` è una risposta one-shot. Prima di esporla, il boundary ricontrolla audience `tui`, correlazione digest/sessione/utente e autenticabilità tramite il service TUI; un risultato adapter web o malformato produce 503 e non viene divulgato. Il cleanup revoca soltanto quando bearer, digest, metadati restituiti e record persistito coincidono, evitando la revoca di sessioni estranee in una risposta adapter incoerente. La futura CLI dovrà conservare la credenziale con permessi filesystem restrittivi oppure soltanto in memoria; questa decisione resta fuori dal boundary.
 
 ## Autenticazione TUI
 
-`authenticate_bearer()` accetta un unico header `Authorization: Bearer`, applica limiti di lunghezza e grammatica base64url, usa `SessionService` per scadenza/revoca/account/revisione e autorizza soltanto il ruolo corrente `student`. Cambio ruolo o disabilitazione diventano effettivi alla richiesta successiva.
+`authenticate_bearer()` accetta un unico header canonico `Authorization: Bearer` senza whitespace esterno o controlli, applica limiti di lunghezza e grammatica base64url, usa `SessionService` per scadenza/revoca/account/revisione e ricontrolla esplicitamente audience `tui` e ruolo corrente `student` anche su risultati adapter fault-injected. Cambio ruolo o disabilitazione diventano effettivi alla richiesta successiva.
 
 Le sessioni TUI usano lo stesso registro transazionale ma hanno audience persistita `tui`; le sessioni cookie hanno audience `web`. `SessionService` richiede l'audience configurata durante autenticazione e revoca: un bearer web non è accettato dal boundary TUI e un bearer TUI non autentica il cookie web.
 

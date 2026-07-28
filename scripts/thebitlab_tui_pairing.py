@@ -253,20 +253,8 @@ class TuiBrowserPairingBoundary:
             issued = None
             raise TuiPairingUnavailableError()
         if not self._issued_is_valid(issued):
-            revoke_bearer = None
-            try:
-                if (
-                    type(issued.session) is UserSession
-                    and issued.session.audience == "tui"
-                    and valid_session_bearer(issued.bearer_token)
-                ):
-                    revoke_bearer = issued.bearer_token
-            except Exception:
-                revoke_bearer = None
+            self._best_effort_revoke_issued(issued)
             issued = None
-            if revoke_bearer is not None:
-                self._best_effort_revoke(revoke_bearer)
-            revoke_bearer = None
             raise TuiPairingUnavailableError()
         malformed = False
         credential = None
@@ -330,7 +318,12 @@ class TuiBrowserPairingBoundary:
     @staticmethod
     def _bearer(value: str) -> str:
         invalid = type(value) is not str or (
-            type(value) is str and len(value) > 2048
+            type(value) is str
+            and (
+                len(value) > 2048
+                or value != value.strip()
+                or any(ord(character) < 32 or ord(character) == 127 for character in value)
+            )
         )
         scheme = None
         separator = None
@@ -397,6 +390,7 @@ class TuiBrowserPairingBoundary:
             type(authenticated.session) is not UserSession
             or type(authenticated.user) is not UserAccount
             or authenticated.session.user_id != authenticated.user.user_id
+            or authenticated.session.audience != "tui"
             or not authenticated.user.active
         ):
             return False
@@ -405,6 +399,37 @@ class TuiBrowserPairingBoundary:
         except Exception:
             return False
         return hmac.compare_digest(authenticated.session.token_digest, digest)
+
+    def _best_effort_revoke_issued(self, issued: IssuedSession) -> None:
+        bearer = None
+        try:
+            if (
+                type(issued) is not IssuedSession
+                or type(issued.session) is not UserSession
+                or issued.session.audience != "tui"
+                or not valid_session_bearer(issued.bearer_token)
+            ):
+                return
+            bearer = issued.bearer_token
+            digest = session_token_digest(bearer)
+            if not hmac.compare_digest(issued.session.token_digest, digest):
+                return
+            persisted = self.tui_sessions.storage.read_session_by_token_digest(digest)
+            if (
+                type(persisted) is not UserSession
+                or persisted.session_id != issued.session.session_id
+                or persisted.user_id != issued.session.user_id
+                or persisted.token_digest != issued.session.token_digest
+                or persisted.created_at != issued.session.created_at
+                or persisted.expires_at != issued.session.expires_at
+                or persisted.audience != "tui"
+            ):
+                return
+            self.tui_sessions.revoke(bearer)
+        except Exception:
+            pass
+        finally:
+            bearer = None
 
     def _best_effort_revoke(self, bearer: str) -> None:
         try:

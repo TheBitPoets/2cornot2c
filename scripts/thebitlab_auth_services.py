@@ -1065,6 +1065,8 @@ class PairingService:
         pairing = self.storage.read_pairing_by_code_digest(digest)
         now = _utc(self.clock())
         pairing = self._require_secret(pairing, digest)
+        if pairing.status == "expired":
+            raise PairingExpiredError("Pairing scaduto.")
         if pairing.status != "pending":
             raise PairingStateError("Pairing non disponibile per l'autorizzazione.")
         self._require_current(pairing, now)
@@ -1101,6 +1103,8 @@ class PairingService:
         pairing = self.storage.read_pairing(pairing_id)
         now = _utc(self.clock())
         pairing = self._require_secret(pairing, digest)
+        if pairing.status == "expired":
+            raise PairingExpiredError("Pairing scaduto.")
         if pairing.status != "authorized":
             raise PairingStateError("Pairing non disponibile per il consumo.")
         self._require_current(pairing, now)
