@@ -4,7 +4,7 @@ import re
 import unicodedata
 
 from installer.student_errors import ERRORS, for_check, for_step, resource_error
-from installer.tui import _paint_guidance
+from installer.tui import _paint_guidance, _paint_guidance_rows
 
 
 def test_every_student_error_has_actionable_structure_and_unique_code() -> None:
@@ -81,6 +81,24 @@ def test_tui_resets_guidance_color_at_diagnosis_panel_boundary() -> None:
     assert "\x1b[31mERRORE E03 - Virtualizzazione disabilitata " in painted
     assert "\x1b[0m│ │ Comandi │" in painted
     assert painted.index("\x1b[0m") < painted.index("Comandi")
+
+
+def test_tui_keeps_guidance_color_on_wrapped_rows_only() -> None:
+    rows = [
+        "│ Ambiente │ │ ERRORE E03 - La virtualizzazione del │ │ Comandi │",
+        "│          │ │ computer è disabilitata              │ │ bianco  │",
+        "│          │ │ COSA SIGNIFICA: Docker ha bisogno     │ │ bianco  │",
+        "│          │ │ della virtualizzazione.               │ │ bianco  │",
+        "│          │ │ [OK] Connessione disponibile          │ │ bianco  │",
+    ]
+
+    painted = _paint_guidance_rows(rows)
+
+    assert "\x1b[31m computer è disabilitata" in painted[1]
+    assert "\x1b[33m della virtualizzazione." in painted[3]
+    assert "\x1b[0m│ │ bianco" in painted[1]
+    assert "\x1b[0m│ │ bianco" in painted[3]
+    assert "\x1b[" not in painted[4]
 
 
 def test_windows_scripts_render_error_and_explanation_colors() -> None:

@@ -19,6 +19,7 @@ from utui import (
     Size,
     get_terminal_size,
     render_lines,
+    strip_ansi,
     supports_color,
 )
 
@@ -119,11 +120,24 @@ def frame(state: State, width: int, height: int, *, color: bool) -> list[str]:
     )
     if not color:
         return rows
-    return [_paint_guidance(row) for row in rows]
+    return _paint_guidance_rows(rows)
 
 
 def _paint_guidance(row: str) -> str:
-    """Colora dopo il layout, senza alterare i calcoli di larghezza uTUI."""
+    """Compatibilità per la colorazione di una singola riga."""
+
+    return _paint_guidance_rows([row])[0]
+
+
+def _border_positions(row: str) -> tuple[int, ...]:
+    """Trova i bordi del layout senza confonderne gli stili ANSI."""
+
+    border = "│" if "│" in row else "|"
+    return tuple(index for index, character in enumerate(row) if character == border)
+
+
+def _paint_guidance_rows(rows: list[str]) -> list[str]:
+    """Propaga il colore sulle righe visuali prodotte dal wrapping."""
 
     markers = (
         ("ERRORE E", "\x1b[31m"),
@@ -131,19 +145,67 @@ def _paint_guidance(row: str) -> str:
         ("COSA DEVI FARE:", "\x1b[33m"),
         ("COSA FARE ", "\x1b[33m"),
         ("CODICE DA COMUNICARE", "\x1b[33m"),
+        ("Dettagli tecnici:", "\x1b[90m"),
     )
-    for marker, escape in markers:
-        start = row.find(marker)
-        if start < 0:
-            continue
-        boundaries = tuple(
-            position
-            for border in ("│", "|")
-            if (position := row.find(border, start)) > start
+    result: list[str] = []
+    active_escape: str | None = None
+    active_right_border: int | None = None
+    new_report_prefixes = (
+        "[",
+        "Ambiente:",
+        "Saranno ",
+        "Premi ",
+        "Pronto.",
+        "Nessun ",
+    )
+    for row in rows:
+        match = next(
+            (
+                (row.find(marker), escape)
+                for marker, escape in markers
+                if marker in row
+            ),
+            None,
         )
-        end = min(boundaries, default=len(row))
-        return f"{row[:start]}{escape}{row[start:end]}\x1b[0m{row[end:]}"
-    return row
+        borders = _border_positions(row)
+        if match is not None:
+            start, active_escape = match
+            right_indices = [
+                index for index, position in enumerate(borders) if position > start
+            ]
+            if not right_indices:
+                active_right_border = None
+                result.append(
+                    f"{row[:start]}{active_escape}{row[start:]}\x1b[0m"
+                )
+                continue
+            active_right_border = right_indices[0]
+            end = borders[active_right_border]
+            result.append(
+                f"{row[:start]}{active_escape}{row[start:end]}"
+                f"\x1b[0m{row[end:]}"
+            )
+            continue
+        if (
+            active_escape is None
+            or active_right_border is None
+            or active_right_border == 0
+            or active_right_border >= len(borders)
+        ):
+            result.append(row)
+            continue
+        start = borders[active_right_border - 1] + 1
+        end = borders[active_right_border]
+        content = strip_ansi(row[start:end]).strip()
+        if not content or content.startswith(new_report_prefixes):
+            active_escape = None
+            active_right_border = None
+            result.append(row)
+            continue
+        result.append(
+            f"{row[:start]}{active_escape}{row[start:end]}\x1b[0m{row[end:]}"
+        )
+    return result
 
 
 def refresh_report(state: State) -> None:
