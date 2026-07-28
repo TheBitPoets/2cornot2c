@@ -348,6 +348,15 @@ def test_transport_fails_before_spawn_if_cleanup_worker_cannot_start(
         )
     assert calls == []
 
+    IsolatedTransport()
+    with pytest.raises(GitHubLinkProviderUnavailableError):
+        transport._request(
+            urllib.request.Request("https://api.github.com/user"),
+            timeout_seconds=0.01,
+            max_response_bytes=1024,
+        )
+    assert calls == [True]
+
 
 def test_transport_instances_share_one_cleanup_worker() -> None:
     threading = __import__("threading")

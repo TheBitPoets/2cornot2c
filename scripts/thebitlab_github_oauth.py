@@ -340,7 +340,6 @@ class UrllibGitHubOAuthTransport:
                     cleanup_type._cleanup_ready = True
                 except Exception:
                     cleanup_type._cleanup_ready = False
-        self._cleanup_ready = cleanup_type._cleanup_ready
 
     @classmethod
     def _cleanup_worker(cls) -> None:
@@ -375,7 +374,7 @@ class UrllibGitHubOAuthTransport:
         release_network_slot = False
         release_termination_slot = False
         deadline = time.monotonic() + timeout_seconds
-        if not self._cleanup_ready:
+        if not type(self)._cleanup_ready:
             request = None
             raise GitHubLinkProviderUnavailableError("GitHub non disponibile.")
         if not self._network_slots.acquire(blocking=False):
