@@ -65,6 +65,7 @@ def execute_plan(
     runner: CommandRunner = subprocess_runner,
     log_path: Path | None = None,
     progress: ProgressCallback | None = None,
+    cancel_requested: Callable[[], bool] | None = None,
 ) -> tuple[StepResult, ...]:
     """Applica i soli passi mancanti, fermandosi al primo errore.
 
@@ -109,6 +110,8 @@ def execute_plan(
     applied: list[StepResult] = []
     total = len(plan.steps)
     for index, step in enumerate(plan.steps, 1):
+        if cancel_requested is not None and cancel_requested():
+            break
         if progress is not None:
             progress("started", index, total, step.label)
         if step.key not in missing:

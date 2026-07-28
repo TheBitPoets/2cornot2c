@@ -64,6 +64,13 @@ di completare o riparare l'installazione, aggiornarla e disinstallarla. Il
 launcher è conservato separatamente dal repository, quindi può riprendere anche
 una preparazione interrotta.
 
+Durante l'installazione `c` apre una conferma di annullamento. Per non lasciare
+un installer di Windows a metà, il comando attivo viene lasciato terminare;
+subito dopo parte automaticamente la disinstallazione protetta. Vengono rimossi
+soltanto i componenti registrati come installati da 2cornot2c, compreso WSL
+quando era assente prima della procedura. Se WSL contiene una distribuzione
+personale, viene conservato e la rimozione si ferma per proteggere i dati.
+
 La procedura avvia automaticamente Docker Desktop e attende che sia pronto
 prima di scaricare l'ambiente. Se WSL 2 non è presente, lo installa senza
 aggiungere una distribuzione Linux duplicata: Windows mostra soltanto la

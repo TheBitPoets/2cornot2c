@@ -21,6 +21,12 @@ $InstallDir = if ($env:CLASSROOM_INSTALL_DIR) {
     $DefaultInstallDir
 }
 
+if ($ConfirmedFromTui) {
+    # Python è avviato dalla cartella che verrà rimossa: la TUI deve avere il
+    # tempo di chiudersi prima che inizi il rollback.
+    Start-Sleep -Seconds 2
+}
+
 function Stop-WithMessage {
     param(
         [string]$Code,
@@ -127,6 +133,25 @@ function Get-OwnedPackages {
     return @($Owned | ForEach-Object { $_ })
 }
 
+function Test-WslInstalledByClassroom {
+    if (-not (Test-Path $LogPath)) {
+        return $false
+    }
+    foreach ($Line in Get-Content $LogPath) {
+        try {
+            $Record = $Line | ConvertFrom-Json
+            if ($Record.host -eq "windows-amd64" -and
+                $Record.key -eq "wsl" -and
+                $Record.status -in @("restart_required", "succeeded")) {
+                return $true
+            }
+        } catch {
+            continue
+        }
+    }
+    return $false
+}
+
 function Backup-StudentWork {
     param([string]$Source)
     if (-not (Test-Path $Source)) {
@@ -180,6 +205,7 @@ function Backup-StudentWork {
 
 $SafeInstallDir = Test-SafeInstallDirectory
 $OwnedPackages = Get-OwnedPackages
+$OwnedWsl = Test-WslInstalledByClassroom
 $ImageReference = $null
 $LockPath = Join-Path $SafeInstallDir "docker\student-dev\toolchain.lock.json"
 if (Test-Path $LockPath) {
@@ -201,6 +227,10 @@ if ($OwnedPackages.Count -gt 0) {
     $OwnedPackages | Sort-Object | ForEach-Object { Write-Host "  - $_" }
 } else {
     Write-Host "Nessun programma esterno attribuito a 2cornot2c."
+}
+if ($OwnedWsl) {
+    Write-Host "Componente Windows installato da 2cornot2c:"
+    Write-Host "  - WSL 2 e Virtual Machine Platform"
 }
 if (-not $ConfirmedFromTui) {
     Write-Host ""
@@ -251,6 +281,30 @@ elseif ($OwnedPackages.Count -gt 0) {
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Disinstallazione non riuscita o già eseguita: $PackageId"
         }
+    }
+}
+
+if ($OwnedWsl) {
+    $WslCleanup = Join-Path $LauncherDir "remove-wsl-windows.ps1"
+    $PowerShell = Join-Path `
+        $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+    $Cleanup = Start-Process `
+        -FilePath $PowerShell `
+        -ArgumentList @(
+            "-NoProfile"
+            "-ExecutionPolicy"
+            "Bypass"
+            "-File"
+            "`"$WslCleanup`""
+        ) `
+        -Verb RunAs `
+        -Wait `
+        -PassThru
+    if ($Cleanup.ExitCode -ne 0) {
+        Write-Warning (
+            "WSL non è stato rimosso per proteggere eventuali dati personali. " +
+            "Comunica E30 al docente."
+        )
     }
 }
 

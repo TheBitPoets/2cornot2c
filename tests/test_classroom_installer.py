@@ -468,6 +468,90 @@ def test_tui_shows_wsl_restart_as_yellow_action_not_error() -> None:
     assert "ERRORE" not in rendered
 
 
+def test_executor_cancels_between_system_installers() -> None:
+    from threading import Event
+
+    plan = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
+    cancellation = Event()
+    calls = []
+
+    def runner(command):
+        calls.append(command)
+        cancellation.set()
+        return 0, "installato"
+
+    results = execute_plan(
+        plan,
+        check_results(plan, missing={"git", "vagrant", "virtualbox"}),
+        runner=runner,
+        cancel_requested=cancellation.is_set,
+    )
+
+    assert [result.key for result in results] == ["git"]
+    assert results[0].status == "succeeded"
+    assert len(calls) == 1
+
+
+def test_tui_cancel_requires_confirmation_and_signals_worker() -> None:
+    pytest.importorskip("utui")
+    from threading import Event
+
+    from installer.tui import (
+        State,
+        _cancel_confirmation_report,
+        confirm_installation_cancel,
+        request_installation_cancel,
+    )
+
+    cancellation = Event()
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER,),
+        installing=True,
+        install_label="Installa Docker Desktop",
+        install_cancel=cancellation,
+    )
+
+    request_installation_cancel(state)
+    assert state.cancel_confirmation_pending is True
+    assert "terminerà in sicurezza" in " ".join(
+        _cancel_confirmation_report(state)
+    )
+    assert cancellation.is_set() is False
+
+    confirm_installation_cancel(state)
+    assert cancellation.is_set() is True
+    assert state.cancellation_requested is True
+
+
+def test_tui_cancelled_installation_launches_automatic_rollback(
+    monkeypatch,
+) -> None:
+    pytest.importorskip("utui")
+    from queue import Queue
+
+    from installer.tui import State, poll_installation
+
+    launched = []
+    monkeypatch.setattr(
+        "installer.tui.launch_windows_action",
+        lambda action: launched.append(action),
+    )
+    updates = Queue()
+    updates.put(("cancelled", ()))
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER,),
+        installing=True,
+        install_updates=updates,
+    )
+
+    assert poll_installation(state) is True
+    assert launched == ["uninstall"]
+    assert state.installing is False
+    assert state.running is False
+
+
 def test_executor_stops_on_first_failed_command() -> None:
     plan = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
     calls = []
