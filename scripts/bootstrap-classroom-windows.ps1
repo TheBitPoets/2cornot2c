@@ -76,9 +76,21 @@ function Test-Python312 {
     if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
         return $false
     }
-    & py -3.12 -c "import sys; raise SystemExit(sys.version_info[:2] != (3, 12))" `
-        *> $null
-    return $LASTEXITCODE -eq 0
+    $PreviousErrorAction = $ErrorActionPreference
+    try {
+        # Il launcher scrive su stderr quando la versione non è installata.
+        # È un esito atteso della diagnosi e non deve interrompere il bootstrap.
+        $ErrorActionPreference = "SilentlyContinue"
+        & py -3.12 -c `
+            "import sys; raise SystemExit(sys.version_info[:2] != (3, 12))" `
+            *> $null
+        $ProbeExitCode = $LASTEXITCODE
+    } catch {
+        $ProbeExitCode = 1
+    } finally {
+        $ErrorActionPreference = $PreviousErrorAction
+    }
+    return $ProbeExitCode -eq 0
 }
 
 function Save-BootstrapState {
@@ -306,8 +318,18 @@ Install-ClassroomLauncher
 
 Write-Host "[3/4] Preparazione interfaccia guidata..."
 $VenvDir = Join-Path $InstallDir ".installer-venv"
-$VenvOutput = @(& py -3.12 -m venv --clear $VenvDir 2>&1)
-if ($LASTEXITCODE -ne 0) {
+$PreviousErrorAction = $ErrorActionPreference
+try {
+    $ErrorActionPreference = "Continue"
+    $VenvOutput = @(& py -3.12 -m venv --clear $VenvDir 2>&1)
+    $VenvExitCode = $LASTEXITCODE
+} catch {
+    $VenvOutput = @($_.Exception.Message)
+    $VenvExitCode = 1
+} finally {
+    $ErrorActionPreference = $PreviousErrorAction
+}
+if ($VenvExitCode -ne 0) {
     Stop-WithMessage "E14" "Non sono riuscito a preparare l'interfaccia guidata" `
         "Python 3.12 è presente, ma Windows non ha permesso di creare il menu. Il progetto e gli esercizi non sono stati cancellati." `
         @(
@@ -315,7 +337,7 @@ if ($LASTEXITCODE -ne 0) {
             "Rilancia lo stesso comando."
             "Se ricompare, comunica E14 al docente."
         ) `
-        "venv exit code $LASTEXITCODE; $($VenvOutput -join ' ')"
+        "venv exit code $VenvExitCode; $($VenvOutput -join ' ')"
 }
 $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 & $VenvPython -m pip install --disable-pip-version-check `
