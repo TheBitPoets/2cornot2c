@@ -181,7 +181,7 @@ class GitHubOAuthConfig:
         worst_case_form = urllib.parse.urlencode(
             {
                 "client_id": self.client_id,
-                "client_secret": self.client_secret,
+                "client_secret": "x" * len(self.client_secret),
                 "code": "x" * 512,
                 "redirect_uri": self.redirect_uri,
                 "code_verifier": "v" * 128,

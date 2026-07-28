@@ -157,6 +157,19 @@ def test_config_pins_endpoints_and_scrubs_secret() -> None:
         with pytest.raises(GitHubLinkConfigurationError):
             config(**overrides)
 
+    raw_secret = "trace-secret-" + "x" * 20
+    with pytest.raises(GitHubLinkConfigurationError) as captured:
+        config(
+            client_secret=raw_secret,
+            redirect_uri="https://example.test/callback?" + "&" * 482,
+        )
+    retained = []
+    current = captured.value.__context__.__traceback__
+    while current is not None:
+        retained.extend(current.tb_frame.f_locals.values())
+        current = current.tb_next
+    assert raw_secret not in repr(retained)
+
 
 def test_transport_enforces_overall_wall_clock_timeout(monkeypatch) -> None:
     class BlockedProcess:
