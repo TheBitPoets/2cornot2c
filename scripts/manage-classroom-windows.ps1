@@ -1,4 +1,12 @@
+param(
+    [switch]$Resume
+)
+
 $ErrorActionPreference = "Stop"
+
+if ($Resume) {
+    $env:CLASSROOM_AUTO_RESUME = "1"
+}
 
 $StatePath = Join-Path $HOME ".2cornot2c\bootstrap-state.json"
 $DefaultInstallDir = Join-Path $HOME "2cornot2c"

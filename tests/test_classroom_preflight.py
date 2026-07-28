@@ -81,6 +81,13 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "docker image rm $ImageReference" in uninstall
     assert "docker image rm --force" not in uninstall
     assert "Ambiente 2cornot2c.lnk" in uninstall
+    assert "Test-PackageStillInstalled" in uninstall
+    assert "Get-ClassroomShortcutPaths" in uninstall
+    assert "OneDriveConsumer" in uninstall
+    assert '"E31"' in uninstall
+    assert uninstall.index("winget uninstall") < uninstall.index(
+        "Remove-Item -LiteralPath $SafeInstallDir"
+    )
 
 
 def test_windows_launcher_hides_technical_start_commands() -> None:
@@ -107,6 +114,13 @@ def test_wsl_preparation_is_elevated_and_resumes_after_restart() -> None:
     assert "-Verb RunAs" in source
     assert "2cornot2c-resume" in source
     assert "RunOnce" in source
+    assert '-File `"$Manager`" -Resume' in source
+
+    manager = (ROOT / "scripts" / "manage-classroom-windows.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "[switch]$Resume" in manager
+    assert 'CLASSROOM_AUTO_RESUME = "1"' in manager
 
 
 def test_wsl_rollback_refuses_to_remove_personal_distributions() -> None:
@@ -121,6 +135,9 @@ def test_wsl_rollback_refuses_to_remove_personal_distributions() -> None:
     assert "docker-desktop" in cleanup
     assert "dati personali" in cleanup
     assert "wsl.exe --uninstall" in cleanup
+    assert "Get-WindowsOptionalFeature" in cleanup
+    assert "$RemainingFeatures" in cleanup
     assert "Test-WslInstalledByClassroom" in uninstall
     assert '"restart_required", "succeeded"' in uninstall
     assert "Start-Sleep -Seconds 2" in uninstall
+    assert '"E32"' in uninstall

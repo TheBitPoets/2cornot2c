@@ -42,7 +42,7 @@ $Manager = Join-Path $env:LOCALAPPDATA `
 $RunOncePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
 $RunOnceCommand = (
     "`"$PowerShell`" -NoProfile -ExecutionPolicy Bypass " +
-    "-File `"$Manager`""
+    "-File `"$Manager`" -Resume"
 )
 New-ItemProperty `
     -Path $RunOncePath `

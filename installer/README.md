@@ -78,7 +78,11 @@ prima di scaricare l'ambiente. Se WSL 2 non è presente, lo installa senza
 aggiungere una distribuzione Linux duplicata: Windows mostra soltanto la
 richiesta di autorizzazione. La TUI chiede poi di riavviare con un messaggio
 giallo, non con un errore. Dopo il riavvio il launcher si riapre
-automaticamente e la procedura riprende dal primo componente mancante.
+automaticamente, mantiene la scelta tra Docker e VirtualBox, ripete la diagnosi
+e riprende dal primo componente mancante: lo studente non deve scegliere di
+nuovo il provider né confermare una seconda installazione. I passaggi già
+completati vengono riconosciuti e saltati. Lo stato di ripresa viene eliminato
+al termine, in caso di errore e quando l'installazione viene annullata.
 
 Soltanto al primo utilizzo Docker Desktop può ancora chiedere di accettare le
 proprie condizioni d'uso.

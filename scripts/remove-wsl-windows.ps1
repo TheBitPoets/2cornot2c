@@ -35,4 +35,29 @@ foreach ($Feature in @(
         /featurename:$Feature /norestart | Out-Null
 }
 
+$RemainingApp = Get-AppxPackage `
+    "MicrosoftCorporationII.WindowsSubsystemForLinux" `
+    -ErrorAction SilentlyContinue
+$RemainingFeatures = @(
+    foreach ($Feature in @(
+        "VirtualMachinePlatform"
+        "Microsoft-Windows-Subsystem-Linux"
+    )) {
+        $FeatureState = Get-WindowsOptionalFeature `
+            -Online `
+            -FeatureName $Feature `
+            -ErrorAction SilentlyContinue
+        if ($FeatureState -and $FeatureState.State -ne "Disabled") {
+            $Feature
+        }
+    }
+)
+if ($RemainingApp -or $RemainingFeatures.Count -gt 0) {
+    Write-Error (
+        "La verifica finale rileva ancora WSL: " +
+        ($RemainingFeatures -join ", ")
+    )
+    exit 3
+}
+
 Write-Host "WSL installato da 2cornot2c è stato rimosso."

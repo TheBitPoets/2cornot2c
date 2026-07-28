@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from io import UnsupportedOperation
+import os
 from pathlib import Path
 from queue import Empty, Queue
 import sys
@@ -34,6 +35,7 @@ from installer.model import Host, Provider
 from installer.platforms import detect_host
 from installer.plans import install_plan, supported_providers
 from installer.resources import order_by_recommendation, total_memory_bytes
+from installer.resume import clear_intent, load_intent, save_intent
 from installer.student_errors import ERRORS, for_check, for_step
 
 
@@ -494,12 +496,14 @@ def confirm_installation_cancel(state: State) -> None:
     state.install_cancel.set()
 
 
-def start_selected(state: State) -> None:
+def start_selected(state: State, *, persist_intent: bool = True) -> None:
     """Avvia il lavoro in background lasciando reattivo il rendering."""
 
     if state.installing:
         return
     provider = state.providers[state.active_index]
+    if persist_intent and state.host is Host.WINDOWS_AMD64:
+        save_intent(provider, "installing")
     plan = install_plan(state.host, provider)
     updates: Queue[tuple[str, Any]] = Queue()
     cancellation = Event()
@@ -571,15 +575,24 @@ def poll_installation(state: State) -> bool:
                 state.install_completed = index
         elif kind == "result":
             provider = state.providers[state.active_index]
-            if payload and all(
+            completed = payload and all(
                 result.status in {"skipped", "succeeded"}
                 for result in payload
-            ):
+            )
+            if completed:
                 _remember_provider(provider)
+                clear_intent()
+            elif any(
+                result.status == "restart_required" for result in payload
+            ):
+                save_intent(provider, "awaiting_restart")
+            else:
+                clear_intent()
             state.report = _format_results(provider, payload)
             state.installing = False
             state.install_thread = None
         elif kind == "cancelled":
+            clear_intent()
             state.installing = False
             state.install_thread = None
             try:
@@ -589,6 +602,7 @@ def poll_installation(state: State) -> bool:
                 message = for_check("installer", str(error))
                 state.report = message.lines(str(error))
         else:
+            clear_intent()
             error = for_check("installer", str(payload))
             state.report = error.lines(str(payload))
             state.installing = False
@@ -623,6 +637,22 @@ def main() -> int:
             else ("Premi Invio per eseguire la diagnosi.",)
         ),
     )
+    if (
+        host is Host.WINDOWS_AMD64
+        and os.environ.get("CLASSROOM_AUTO_RESUME") == "1"
+    ):
+        intent = load_intent()
+        if intent is not None:
+            provider, _status = intent
+            if provider in state.providers:
+                state.screen = "providers"
+                state.active_index = state.providers.index(provider)
+                state.report = (
+                    "RIPRESA AUTOMATICA DELL'INSTALLAZIONE",
+                    f"Ambiente: {provider.value}",
+                    "Controllo i componenti già presenti.",
+                )
+                start_selected(state, persist_intent=False)
     watcher = ResizeWatcher()
     color = supports_color()
     progress_refreshed_at = monotonic()
