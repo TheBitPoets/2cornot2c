@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -74,9 +75,7 @@ def _identifier(value: str, field_name: str) -> str:
         or normalized != value
         or len(normalized) > 512
         or any(
-            ord(character) < 32
-            or ord(character) == 127
-            or 0xD800 <= ord(character) <= 0xDFFF
+            unicodedata.category(character).startswith("C")
             for character in normalized
         )
     ):

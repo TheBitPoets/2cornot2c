@@ -356,6 +356,10 @@ def test_wrong_code_and_malformed_bearer_are_generic_and_secret_free(setup) -> N
         bad_code.value, "authorize_browser", "authorize", "_pairing_digest_for_verification"
     )
 
+    for unsafe_pairing_id in ("pair\u009bid", "pair\u202eid"):
+        with pytest.raises(TuiPairingBadRequestError):
+            boundary.consume(unsafe_pairing_id, wrong)
+
     raw_header = "secret-without-a-scheme"
     with pytest.raises(HttpAuthenticationRequiredError) as bad_bearer:
         boundary.authenticate_bearer(raw_header)

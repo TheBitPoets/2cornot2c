@@ -5,6 +5,7 @@ import hmac
 import re
 import secrets
 import string
+import unicodedata
 import uuid
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
@@ -87,8 +88,13 @@ def _required_text(value: str, field_name: str, *, lowercase: bool = False) -> s
         normalized = normalized.lower()
     if not normalized or len(normalized) > 512:
         raise ProviderProtocolError(f"{field_name} non valido.")
-    if any(ord(character) < 32 or ord(character) == 127 for character in normalized):
-        raise ProviderProtocolError(f"{field_name} contiene caratteri di controllo.")
+    if any(
+        unicodedata.category(character).startswith("C")
+        for character in normalized
+    ):
+        raise ProviderProtocolError(
+            f"{field_name} contiene caratteri Unicode non sicuri."
+        )
     return normalized
 
 

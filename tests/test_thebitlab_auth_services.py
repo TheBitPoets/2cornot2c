@@ -1518,6 +1518,23 @@ def test_invalid_pairing_generator_fails_before_persistence(storage) -> None:
     assert storage.read_pairing("pairing-01") is None
 
 
+@pytest.mark.parametrize(
+    "generated",
+    ("AAAA\u009b31mBBBB", "pair\u202eid"),
+)
+def test_generated_pairing_text_rejects_unsafe_unicode(storage, generated) -> None:
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=MutableClock(),
+        code_factory=lambda: generated,
+        pairing_id_factory=lambda: generated,
+    )
+    with pytest.raises(CredentialGenerationError):
+        service.issue()
+    assert storage.read_pairing(generated) is None
+
+
 def test_invalid_pairing_id_does_not_remain_in_frame_with_generated_code(storage) -> None:
     service = PairingService(
         storage,
