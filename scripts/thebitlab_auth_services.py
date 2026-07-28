@@ -1290,6 +1290,11 @@ class TuiPairingSessionService:
                 except IdentityStorageConflictError:
                     current_pairing = self.storage.read_pairing(pairing.pairing_id)
                     current_account = self.storage.read_user(account.user_id)
+                    if (
+                        type(current_pairing) is TuiPairing
+                        and current_pairing.status == "expired"
+                    ):
+                        raise PairingExpiredError("Pairing scaduto.") from None
                     if current_pairing != pairing:
                         raise ConcurrentStateChangeError(
                             "Pairing modificato durante il consumo."

@@ -514,10 +514,12 @@ class TuiBrowserPairingBoundary:
                     digest, authenticated.session.source_pairing_id
                 )
             )
-            if type(persisted) is not UserSession:
-                return "unavailable"
             now = _utc(self.tui_sessions.clock(), "session_clock")
             self._require_shared_registry()
+            if type(persisted) is not UserSession:
+                if now >= authenticated.session.expires_at:
+                    return "invalid"
+                return "unavailable"
             if (
                 persisted.revoked_at is not None
                 or not persisted.created_at <= now < persisted.expires_at

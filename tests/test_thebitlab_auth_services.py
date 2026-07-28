@@ -1346,6 +1346,49 @@ def test_tui_pairing_concurrent_consumption_issues_exactly_one_session(storage) 
     assert storage.read_pairing("pairing-01").status == "consumed"
 
 
+def test_concurrent_consumers_both_observe_expiry(storage, monkeypatch) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    pairings = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: "PAIRCODE42",
+        pairing_id_factory=lambda: "pairing-01",
+    )
+    service = TuiPairingSessionService(
+        pairings,
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "tui-session-01",
+    )
+    issued = service.issue()
+    clock.value += timedelta(minutes=1)
+    service.authorize(issued.code, "user-01")
+    original = storage.consume_pairing_and_create_session
+    storage._clock = clock
+    barrier = threading.Barrier(
+        2, action=lambda: setattr(clock, "value", NOW + timedelta(minutes=10))
+    )
+
+    def expire_then_consume(*args, **kwargs):
+        barrier.wait(timeout=5)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "consume_pairing_and_create_session", expire_then_consume
+    )
+
+    def consume_once():
+        with pytest.raises(PairingExpiredError):
+            service.consume("pairing-01", issued.code)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        list(executor.map(lambda _index: consume_once(), range(2)))
+
+    assert storage.read_pairing("pairing-01").status == "expired"
+    assert storage.list_user_sessions("user-01") == []
+
+
 def test_invalid_pairing_generator_fails_before_persistence(storage) -> None:
     service = PairingService(
         storage,

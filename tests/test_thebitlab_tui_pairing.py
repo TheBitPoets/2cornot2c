@@ -462,6 +462,41 @@ def test_role_change_race_after_session_authentication_returns_403(
         boundary.authenticate_bearer("Bearer " + credential.bearer_token)
 
 
+def test_session_removed_at_expiry_invalidates_tui_bearer(
+    setup, monkeypatch
+) -> None:
+    storage, clock, boundary, http = setup
+    started = boundary.begin()
+    clock.value += timedelta(minutes=1)
+    boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
+    credential = boundary.consume(started.pairing_id, started.user_code)
+    original = boundary.tui_sessions.authenticate
+    original_status = boundary._credential_current_status
+    statuses = []
+
+    def record_status(authenticated, bearer):
+        status = original_status(authenticated, bearer)
+        statuses.append(status)
+        return status
+
+    monkeypatch.setattr(boundary, "_credential_current_status", record_status)
+
+    def authenticate_then_expire_and_remove(bearer):
+        authenticated = original(bearer)
+        clock.value = authenticated.session.expires_at
+        assert storage.delete_expired_sessions(clock.value) >= 1
+        return authenticated
+
+    monkeypatch.setattr(
+        boundary.tui_sessions,
+        "authenticate",
+        authenticate_then_expire_and_remove,
+    )
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.authenticate_bearer("Bearer " + credential.bearer_token)
+    assert statuses == ["invalid"]
+
+
 def test_disabled_account_error_invalidates_tui_bearer(
     setup, monkeypatch
 ) -> None:
