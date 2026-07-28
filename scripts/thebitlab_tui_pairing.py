@@ -211,6 +211,8 @@ class TuiBrowserPairingBoundary:
         context = None
         try:
             self._require_shared_registry()
+            if type(request) is not HttpAuthRequest or request.method != "POST":
+                raise TuiPairingBadRequestError()
             context = self.http_sessions.authorize_application(
                 request, allowed_roles={"student"}
             )

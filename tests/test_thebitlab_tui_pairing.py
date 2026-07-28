@@ -223,10 +223,20 @@ def test_student_browser_authorizes_and_tui_consumes_once(setup) -> None:
 def test_browser_authorization_requires_csrf_and_student_role(setup) -> None:
     storage, _clock, boundary, http = setup
     started = boundary.begin()
+    established = http.establish_session("student-01")
+    get_request = HttpAuthRequest(
+        "GET", established.set_cookie.split(";", 1)[0]
+    )
+    with pytest.raises(TuiPairingBadRequestError):
+        boundary.authorize_browser(get_request, started.user_code)
+    assert storage.read_pairing(started.pairing_id).status == "pending"
 
     with pytest.raises(HttpCsrfRejectedError):
         boundary.authorize_browser(
-            browser_request(http, "student-01", csrf=False), started.user_code
+            HttpAuthRequest(
+                "POST", established.set_cookie.split(";", 1)[0]
+            ),
+            started.user_code,
         )
     for user_id in ("teacher-01", "pending-01"):
         with pytest.raises(HttpAuthorizationDeniedError):
