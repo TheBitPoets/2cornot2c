@@ -33,7 +33,7 @@ from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 
 _SECRET_RE = re.compile(r"^[A-Za-z0-9_-]{43,86}$")
 _CALLBACK_PATH = "/auth/google/callback"
-_DEFAULT_DATABASE_NAME = ".thebitlab-auth.sqlite3"
+_DEFAULT_DATABASE_NAME = ".thebitlab-auth/auth.sqlite3"
 _WINDOWS_REPARSE_POINT = 0x400
 _SID_RE = re.compile(r"^S-1-(?:[0-9]+-)+[0-9]+$")
 
@@ -327,9 +327,10 @@ def _prepare_windows_database_file(path: Path) -> None:
             & _WINDOWS_REPARSE_POINT
         ):
             raise OSError("directory database Windows non valida")
+        powershell, _icacls, tool_environment = _windows_acl_tools()
         sid_process = subprocess.run(
             (
-                "powershell.exe",
+                powershell,
                 "-NoProfile",
                 "-NonInteractive",
                 "-Command",
@@ -338,12 +339,26 @@ def _prepare_windows_database_file(path: Path) -> None:
             check=True,
             capture_output=True,
             timeout=10,
+            env=tool_environment,
         )
         sid = sid_process.stdout.decode("ascii", errors="strict").strip()
         sid_process = None
         if _SID_RE.fullmatch(sid) is None:
             raise OSError("SID Windows non valido")
         _replace_windows_acl(path.parent, sid, directory=True)
+        allowed_names = {path.name, path.name + "-wal", path.name + "-shm"}
+        for child in path.parent.iterdir():
+            child_metadata = child.lstat()
+            if (
+                child.name not in allowed_names
+                or not stat.S_ISREG(child_metadata.st_mode)
+                or getattr(child_metadata, "st_file_attributes", 0)
+                & _WINDOWS_REPARSE_POINT
+            ):
+                raise OSError("directory database Windows non dedicata")
+            _replace_windows_acl(child, sid, directory=False)
+        child = None
+        child_metadata = None
         parent_after = path.parent.lstat()
         if (
             parent_after.st_dev != parent_before.st_dev
@@ -377,17 +392,68 @@ def _prepare_windows_database_file(path: Path) -> None:
 
 
 def _replace_windows_acl(path: Path, sid: str, *, directory: bool) -> None:
+    powershell, icacls, tool_environment = _windows_acl_tools(
+        acl_path=path, acl_sid=sid
+    )
     inheritance = "(OI)(CI)F" if directory else "F"
-    subprocess.run(
+    for arguments in (
+        ("/reset",),
+        ("/setowner", f"*{sid}"),
         (
-            "icacls.exe",
-            str(path),
             "/inheritance:r",
             "/grant:r",
             f"*{sid}:{inheritance}",
             f"*S-1-5-18:{inheritance}",
         ),
+    ):
+        subprocess.run(
+            (icacls, str(path), *arguments),
+            check=True,
+            capture_output=True,
+            timeout=10,
+            env=tool_environment,
+        )
+    verification_script = (
+        "$item=Get-Item -LiteralPath $env:THEBITLAB_ACL_PATH;"
+        "$sections=[System.Security.AccessControl.AccessControlSections]::Access "
+        "-bor [System.Security.AccessControl.AccessControlSections]::Owner;"
+        "$acl=$item.GetAccessControl($sections);"
+        "$rules=@($acl.GetAccessRules($true,$true,"
+        "[System.Security.Principal.SecurityIdentifier]));"
+        "$allowed=@($env:THEBITLAB_ACL_SID,'S-1-5-18');"
+        "$bad=@($rules|Where-Object{$_.AccessControlType -eq 'Allow' -and "
+        "$allowed -notcontains $_.IdentityReference.Value});"
+        "$owner=$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value;"
+        "if(-not $acl.AreAccessRulesProtected -or "
+        "$owner -ne $env:THEBITLAB_ACL_SID -or $bad.Count -ne 0){exit 1}"
+    )
+    subprocess.run(
+        (
+            powershell,
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            verification_script,
+        ),
         check=True,
         capture_output=True,
         timeout=10,
+        env=tool_environment,
     )
+
+
+def _windows_acl_tools(
+    *, acl_path: Path | None = None, acl_sid: str | None = None
+) -> tuple[str, str, dict[str, str]]:
+    system_root = os.environ.get("SystemRoot", "")
+    if not system_root or "\x00" in system_root:
+        raise OSError("SystemRoot Windows non valido")
+    powershell = str(
+        Path(system_root) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+    )
+    icacls = str(Path(system_root) / "System32" / "icacls.exe")
+    environment = {"SystemRoot": system_root, "WINDIR": system_root}
+    if acl_path is not None and acl_sid is not None:
+        environment["THEBITLAB_ACL_PATH"] = str(acl_path)
+        environment["THEBITLAB_ACL_SID"] = acl_sid
+    return powershell, icacls, environment

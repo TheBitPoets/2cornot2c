@@ -23,7 +23,7 @@ La configurazione avviene prima della creazione del server HTTP. Qualunque valor
 
 Opzionali:
 
-- `THEBITLAB_AUTH_DB_PATH`: file SQLite assoluto o relativo al data root; default `.thebitlab-auth.sqlite3`;
+- `THEBITLAB_AUTH_DB_PATH`: file SQLite assoluto o relativo al data root; default `.thebitlab-auth/auth.sqlite3` in una directory dedicata;
 - `THEBITLAB_GOOGLE_POST_LOGIN_PATH`: path locale successivo al login; default `/tools/course_board.html`.
 
 I due segreti binari devono essere indipendenti. Per generarli:
@@ -68,4 +68,4 @@ Non esiste un fallback HTTP di sviluppo per queste route: per un test browser re
 
 ## Segreti e backup
 
-I segreti provengono solo dall'environment/secret store. Errori e `repr(GoogleOidcRuntime)` non contengono valori sensibili. Su POSIX la composizione richiede una directory database posseduta dal processo e non scrivibile da gruppo/altri, crea o restringe il file SQLite a modalità `0600` e rifiuta target non regolari/symlink. La directory privata elimina la sostituzione del pathname fra il controllo iniziale e le successive connessioni SQLite; su Windows la composizione rimuove l'ereditarietà ACL dalla directory e dal file, concede controllo soltanto al SID del processo e a `SYSTEM`, e rifiuta reparse point o cambi di file identity durante la preparazione. Se PowerShell/`icacls.exe` o l'hardening ACL non sono disponibili, lo startup fallisce. Il database contiene digest di sessione e dati identità, ma resta materiale sensibile: backup, retention e cifratura del volume sono responsabilità del deployment.
+I segreti provengono solo dall'environment/secret store. Errori e `repr(GoogleOidcRuntime)` non contengono valori sensibili. Su POSIX la composizione richiede una directory database posseduta dal processo e non scrivibile da gruppo/altri, crea o restringe il file SQLite a modalità `0600` e rifiuta target non regolari/symlink. La directory privata elimina la sostituzione del pathname fra il controllo iniziale e le successive connessioni SQLite; su Windows la composizione rimuove l'ereditarietà ACL dalla directory e dal file, concede controllo soltanto al SID del processo e a `SYSTEM`, e rifiuta reparse point o cambi di file identity durante la preparazione. Gli ACE espliciti preesistenti vengono prima azzerati e la DACL finale viene riletta come SID per verificare owner, protezione dall'ereditarietà e assenza di grant estranei. PowerShell e `icacls.exe` ricevono un environment minimale che non include le credenziali OAuth. Se gli strumenti o l'hardening ACL non sono disponibili, lo startup fallisce. Il database contiene digest di sessione e dati identità, ma resta materiale sensibile: backup, retention e cifratura del volume sono responsabilità del deployment.

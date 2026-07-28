@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import os
 import sqlite3
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -49,7 +50,7 @@ def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> Non
     assert login.config.post_login_path == "/tools/course_board.html"
     assert repr(runtime) == "GoogleOidcRuntime(configured=True)"
 
-    database = tmp_path / ".thebitlab-auth.sqlite3"
+    database = tmp_path / ".thebitlab-auth" / "auth.sqlite3"
     with sqlite3.connect(database) as connection:
         tables = {
             row[0]
@@ -114,6 +115,35 @@ def test_composition_rejects_unsafe_configuration_without_echoing_values(
         "THEBITLAB_RATE_LIMIT_PEPPER_B64",
     ):
         assert environment[secret_name] not in serialized
+
+
+def test_windows_composition_removes_preexisting_everyone_acl(tmp_path: Path) -> None:
+    if os.name != "nt":
+        pytest.skip("ACL Windows non disponibili")
+    database_directory = tmp_path / "windows-auth"
+    database_directory.mkdir()
+    system_root = os.environ["SystemRoot"]
+    subprocess.run(
+        (
+            str(Path(system_root) / "System32" / "icacls.exe"),
+            str(database_directory),
+            "/grant",
+            "*S-1-1-0:(OI)(CI)F",
+        ),
+        check=True,
+        capture_output=True,
+        timeout=10,
+    )
+    environment = valid_environment()
+    environment["THEBITLAB_AUTH_DB_PATH"] = str(
+        database_directory / "auth.sqlite3"
+    )
+
+    runtime = compose_google_oidc_runtime(environment, data_root=tmp_path)
+
+    assert runtime.routes.callback.config.client_id.endswith(
+        ".apps.googleusercontent.com"
+    )
 
 
 def test_composition_rejects_group_writable_database_directory(tmp_path: Path) -> None:
