@@ -89,6 +89,7 @@ function Install-ClassroomLauncher {
     New-Item -ItemType Directory -Force -Path $LauncherDir | Out-Null
     foreach ($ScriptName in @(
         "manage-classroom-windows.ps1"
+        "prepare-wsl-windows.ps1"
         "update-classroom-windows.ps1"
         "uninstall-classroom-windows.ps1"
     )) {

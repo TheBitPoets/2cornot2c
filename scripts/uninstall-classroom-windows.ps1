@@ -258,6 +258,12 @@ if (Test-Path $StateDir) {
     Remove-Item -LiteralPath $StateDir -Recurse -Force
 }
 
+$RunOncePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
+Remove-ItemProperty `
+    -Path $RunOncePath `
+    -Name "2cornot2c-resume" `
+    -ErrorAction SilentlyContinue
+
 foreach ($ShortcutPath in @(
     (Join-Path ([Environment]::GetFolderPath("Desktop")) "Ambiente 2cornot2c.lnk")
     (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Ambiente 2cornot2c.lnk")

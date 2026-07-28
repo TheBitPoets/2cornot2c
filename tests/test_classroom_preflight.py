@@ -60,6 +60,7 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "Test-HostResources" in bootstrap
     assert "installed_by_bootstrap" in bootstrap
     assert "Install-ClassroomLauncher" in bootstrap
+    assert "prepare-wsl-windows.ps1" in bootstrap
     assert "Ambiente 2cornot2c.lnk" in bootstrap
     assert "bootstrap-classroom-windows.ps1" in update
     assert ".installer-venv\\Scripts\\python.exe" in manager
@@ -71,3 +72,14 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "docker image rm $ImageReference" in uninstall
     assert "docker image rm --force" not in uninstall
     assert "Ambiente 2cornot2c.lnk" in uninstall
+
+
+def test_wsl_preparation_is_elevated_and_resumes_after_restart() -> None:
+    source = (ROOT / "scripts" / "prepare-wsl-windows.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert "wsl.exe --install --no-distribution" in source
+    assert "-Verb RunAs" in source
+    assert "2cornot2c-resume" in source
+    assert "RunOnce" in source

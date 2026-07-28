@@ -87,6 +87,19 @@ ERRORS = {
         "Docker avvia l'ambiente Linux leggero.",
         ("Conferma l'installazione dal menu.", "Accetta la richiesta di Windows."),
     ),
+    "wsl": StudentError(
+        "E20",
+        "Windows non è riuscito a preparare WSL 2",
+        (
+            "WSL 2 è il componente di Windows che permette a Docker "
+            "di avviare Linux."
+        ),
+        (
+            "Controlla se Windows aspetta una richiesta di autorizzazione.",
+            "Scegli Sì e riprova.",
+            "Se ricompare, comunica E20 al docente.",
+        ),
+    ),
     "docker-engine": StudentError(
         "E19",
         "Docker Desktop non è riuscito a diventare pronto",

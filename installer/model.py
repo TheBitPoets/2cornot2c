@@ -44,6 +44,7 @@ class Step:
     manual: bool = False
     detail: str = ""
     deferred: bool = False
+    restart_after_success: bool = False
 
 
 @dataclass(frozen=True, slots=True)

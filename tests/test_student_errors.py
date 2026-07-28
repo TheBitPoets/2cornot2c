@@ -46,6 +46,7 @@ def test_resource_error_uses_only_blocked_measurement() -> None:
 
 def test_docker_errors_are_specific() -> None:
     assert for_check("network", "").code == "E07"
+    assert for_step("wsl").code == "E20"
     assert for_check("docker-engine", "").code == "E19"
     assert for_check("student-image", "").code == "E21"
     assert for_step("docker").code == "E18"

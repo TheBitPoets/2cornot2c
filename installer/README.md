@@ -65,11 +65,14 @@ launcher è conservato separatamente dal repository, quindi può riprendere anch
 una preparazione interrotta.
 
 La procedura avvia automaticamente Docker Desktop e attende che sia pronto
-prima di scaricare l'ambiente. Soltanto al primo utilizzo Windows può mostrare
-una finestra che richiede di accettare le condizioni, autorizzare WSL 2 o
-riavviare il computer. In quel caso basta seguire l'unica richiesta mostrata e,
-dopo un eventuale riavvio, rilanciare lo stesso comando: la procedura riprende
-dal primo componente mancante senza reinstallare ciò che è già presente.
+prima di scaricare l'ambiente. Se WSL 2 non è presente, lo installa senza
+aggiungere una distribuzione Linux duplicata: Windows mostra soltanto la
+richiesta di autorizzazione. La TUI chiede poi di riavviare con un messaggio
+giallo, non con un errore. Dopo il riavvio il launcher si riapre
+automaticamente e la procedura riprende dal primo componente mancante.
+
+Soltanto al primo utilizzo Docker Desktop può ancora chiedere di accettare le
+proprie condizioni d'uso.
 
 ## Diagnosi
 

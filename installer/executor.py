@@ -121,13 +121,19 @@ def execute_plan(
             result = StepResult(
                 step.key,
                 step.label,
-                "succeeded" if returncode == 0 else "failed",
+                (
+                    "restart_required"
+                    if returncode == 0 and step.restart_after_success
+                    else "succeeded"
+                    if returncode == 0
+                    else "failed"
+                ),
                 detail or f"exit code {returncode}",
             )
         applied.append(result)
         _append_log(log_path, plan, result)
         if progress is not None:
             progress(result.status, index, total, step.label)
-        if result.status in {"failed", "blocked"}:
+        if result.status in {"failed", "blocked", "restart_required"}:
             break
     return tuple(applied)

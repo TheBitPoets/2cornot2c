@@ -83,6 +83,9 @@ def main(argv: list[str] | None = None) -> int:
     applied = execute_plan(plan, results, log_path=args.log)
     for result in applied:
         print(f"[{result.status.upper():9}] {result.label}: {result.detail}")
+    if any(result.status == "restart_required" for result in applied):
+        print("\nRiavvia Windows per continuare. L'installer riprenderà automaticamente.")
+        return 3
     if any(result.status in {"failed", "blocked"} for result in applied):
         print(f"\nInstallazione incompleta. Log: {args.log}")
         return 1

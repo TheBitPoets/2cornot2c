@@ -564,9 +564,11 @@ predefinita al massimo 512 MB di RAM e una CPU.
 Il bootstrap monocomando descritto in `installer/README.md` misura la RAM e,
 quando il computer ha al massimo 8 GiB, propone per primo **Docker leggero**.
 Installa e avvia Docker Desktop, attende automaticamente che sia pronto e
-scarica l'immagine pubblica adatta al processore. Al primo utilizzo resta
-necessario confermare soltanto le eventuali finestre di sicurezza, licenza o
-riavvio mostrate direttamente da Windows.
+scarica l'immagine pubblica adatta al processore. Se WSL 2 non è presente, lo
+prepara automaticamente senza installare una seconda distribuzione Ubuntu,
+richiede un riavvio e riapre il launcher al nuovo accesso. Al primo utilizzo
+resta necessario confermare soltanto le finestre di sicurezza e licenza
+mostrate direttamente da Windows.
 
 Dopo la preparazione, dalla cartella del progetto esegui:
 
