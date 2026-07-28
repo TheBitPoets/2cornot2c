@@ -160,6 +160,13 @@ def test_boundary_rejects_distinct_identity_registries(setup, tmp_path) -> None:
     with pytest.raises(AttributeError):
         boundary.http_sessions.sessions.storage = other
 
+    boundary.pairings.pairings = PairingService(
+        other, pepper=b"r" * 32, clock=clock
+    )
+    boundary.tui_sessions = other_tui_sessions
+    with pytest.raises(TuiPairingUnavailableError):
+        boundary.begin()
+
 
 def test_student_browser_authorizes_and_tui_consumes_once(setup) -> None:
     storage, clock, boundary, http = setup

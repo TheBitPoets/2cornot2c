@@ -162,6 +162,7 @@ class TuiBrowserPairingBoundary:
         self.verification_path = _verification_path(verification_path)
 
     def begin(self) -> TuiPairingStart:
+        self._require_shared_registry()
         issued = None
         unavailable = False
         try:
@@ -191,6 +192,7 @@ class TuiBrowserPairingBoundary:
     def authorize_browser(self, request: HttpAuthRequest, code: str) -> None:
         context = None
         try:
+            self._require_shared_registry()
             context = self.http_sessions.authorize_application(
                 request, allowed_roles={"student"}
             )
@@ -235,6 +237,7 @@ class TuiBrowserPairingBoundary:
         conflict = False
         unavailable = False
         try:
+            self._require_shared_registry()
             expected_pairing_id = _identifier(pairing_id, "pairing_id")
             issued = self.pairings.consume(expected_pairing_id, code)
         except (InvalidCredentialError, ValueError):
@@ -294,6 +297,7 @@ class TuiBrowserPairingBoundary:
         unavailable = False
         authenticated = None
         try:
+            self._require_shared_registry()
             bearer = self._bearer(authorization_header)
             authorization_header = None
             try:
@@ -322,6 +326,21 @@ class TuiBrowserPairingBoundary:
         if authenticated.user.role != "student":
             raise HttpAuthorizationDeniedError()
         return TuiAuthenticatedContext(authenticated)
+
+    def _require_shared_registry(self) -> None:
+        try:
+            shared = self.tui_sessions.storage
+            valid = (
+                self.tui_sessions.audience == "tui"
+                and self.http_sessions.sessions.audience == "web"
+                and self.pairings.storage is shared
+                and self.pairings.pairings.storage is shared
+                and self.http_sessions.sessions.storage is shared
+            )
+        except Exception:
+            valid = False
+        if not valid:
+            raise TuiPairingUnavailableError()
 
     @staticmethod
     def _bearer(value: str) -> str:
