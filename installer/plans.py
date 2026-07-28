@@ -220,9 +220,30 @@ def _docker_plan(host: Host) -> InstallPlan:
         Provider.DOCKER,
         (
             Check("winget", "Windows Package Manager", ("winget", "--version")),
+            Check("wsl", "WSL 2", ("wsl.exe", "--status")),
             *common_checks,
         ),
         (
+            Step(
+                "wsl",
+                "Prepara WSL 2",
+                (
+                    "powershell.exe",
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    (
+                        "& (Join-Path $env:LOCALAPPDATA "
+                        "'2cornot2c\\prepare-wsl-windows.ps1')"
+                    ),
+                ),
+                detail=(
+                    "WSL 2 e Virtual Machine Platform vengono installati "
+                    "automaticamente."
+                ),
+                restart_after_success=True,
+            ),
             Step(
                 "docker",
                 "Installa Docker Desktop",

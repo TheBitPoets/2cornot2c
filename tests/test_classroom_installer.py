@@ -391,11 +391,13 @@ def test_windows_docker_install_starts_desktop_and_continues_automatically() -> 
     )
 
     assert [result.key for result in results] == [
+        "wsl",
         "docker",
         "docker-engine",
         "student-image",
     ]
     assert [result.status for result in results] == [
+        "skipped",
         "succeeded",
         "succeeded",
         "succeeded",
@@ -422,6 +424,48 @@ def test_windows_docker_install_starts_desktop_and_continues_automatically() -> 
         "Bypass",
     )
     assert " pull " in calls[2][-1]
+
+
+def test_windows_docker_prepares_wsl_then_stops_for_restart() -> None:
+    plan = install_plan(Host.WINDOWS_AMD64, Provider.DOCKER)
+    calls = []
+
+    results = execute_plan(
+        plan,
+        check_results(
+            plan,
+            missing={"wsl", "docker", "docker-engine", "student-image"},
+        ),
+        runner=lambda command: (calls.append(command) or (0, "WSL 2 preparato")),
+    )
+
+    assert [result.key for result in results] == ["wsl"]
+    assert results[0].status == "restart_required"
+    assert len(calls) == 1
+    assert "prepare-wsl-windows.ps1" in calls[0][-1]
+
+
+def test_tui_shows_wsl_restart_as_yellow_action_not_error() -> None:
+    pytest.importorskip("utui")
+    from installer.executor import StepResult
+    from installer.tui import _format_results
+
+    report = _format_results(
+        Provider.DOCKER,
+        (
+            StepResult(
+                "wsl",
+                "Prepara WSL 2",
+                "restart_required",
+                "WSL 2 preparato",
+            ),
+        ),
+    )
+
+    rendered = "\n".join(report)
+    assert "AZIONE RICHIESTA - RIAVVIA WINDOWS" in rendered
+    assert "si riaprirà" in rendered
+    assert "ERRORE" not in rendered
 
 
 def test_executor_stops_on_first_failed_command() -> None:

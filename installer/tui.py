@@ -206,6 +206,7 @@ def _paint_guidance_rows(rows: list[str]) -> list[str]:
 
     markers = (
         ("ERRORE E", "\x1b[31m"),
+        ("AZIONE RICHIESTA", "\x1b[33m"),
         ("COSA SIGNIFICA:", "\x1b[33m"),
         ("COSA DEVI FARE:", "\x1b[33m"),
         ("COSA FARE ", "\x1b[33m"),
@@ -343,7 +344,19 @@ def _format_results(
 ) -> tuple[str, ...]:
     report: list[str] = []
     for result in results:
-        if result.status in {"failed", "blocked"}:
+        if result.status == "restart_required":
+            report.extend(
+                (
+                    "AZIONE RICHIESTA - RIAVVIA WINDOWS",
+                    "WSL 2 è stato preparato correttamente.",
+                    "Salva il tuo lavoro e riavvia il computer.",
+                    (
+                        "Dopo il riavvio Ambiente 2cornot2c si riaprirà "
+                        "e potrai continuare."
+                    ),
+                )
+            )
+        elif result.status in {"failed", "blocked"}:
             error = (
                 for_step(result.key)
                 if result.status == "failed"
