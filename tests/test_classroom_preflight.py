@@ -84,10 +84,21 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "Test-PackageStillInstalled" in uninstall
     assert "Get-ClassroomShortcutPaths" in uninstall
     assert "OneDriveConsumer" in uninstall
+    assert "CommonDesktopDirectory" in uninstall
+    assert "CommonPrograms" in uninstall
     assert '"E31"' in uninstall
     assert uninstall.index("winget uninstall") < uninstall.index(
         "Remove-Item -LiteralPath $SafeInstallDir"
     )
+
+    shortcut_cleanup = (
+        ROOT / "scripts" / "remove-classroom-shortcuts-windows.ps1"
+    ).read_text(encoding="utf-8")
+    assert "Ambiente 2cornot2c.lnk" in shortcut_cleanup
+    assert "CommonDesktopDirectory" in shortcut_cleanup
+    assert "CommonPrograms" in shortcut_cleanup
+    assert "OneDriveConsumer" in shortcut_cleanup
+    assert "ie4uinit.exe" in shortcut_cleanup
 
 
 def test_windows_launcher_hides_technical_start_commands() -> None:

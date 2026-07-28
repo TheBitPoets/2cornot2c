@@ -163,6 +163,12 @@ Disinstallazione protetta:
 irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/uninstall-classroom-windows.ps1 | iex
 ```
 
+Pulizia dei soli collegamenti residui lasciati da versioni precedenti:
+
+```powershell
+irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/remove-classroom-shortcuts-windows.ps1 | iex
+```
+
 Il bootstrap registra in `~/.2cornot2c/bootstrap-state.json` soltanto Git e
 Python installati da lui. L'executor registra separatamente i passi riusciti.
 La disinstallazione usa entrambi i registri, crea un backup del lavoro, richiede
