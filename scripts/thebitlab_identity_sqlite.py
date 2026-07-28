@@ -1040,24 +1040,46 @@ class SqliteIdentityStorage:
         row = self._query_one("SELECT * FROM classes WHERE class_id = ?", (class_id,))
         return None if row is None else self._class_group(row)
 
-    def save_class(self, class_group: ClassGroup) -> None:
+    def save_class(
+        self, class_group: ClassGroup, *, expected_updated_at: datetime
+    ) -> None:
+        created_at = _encode_datetime(class_group.created_at, "created_at")
+        updated_at = _encode_datetime(class_group.updated_at, "updated_at")
+        expected_revision = _encode_datetime(
+            expected_updated_at, "expected_updated_at"
+        )
+        if updated_at <= expected_revision:
+            raise IdentityStorageConflictError(
+                "Il nuovo updated_at classe deve essere successivo alla revisione attesa."
+            )
         with self._transaction("save_class") as connection:
             cursor = connection.execute(
                 """
-                UPDATE classes SET label = ?, school_year = ?, active = ?, created_at = ?,
-                    updated_at = ? WHERE class_id = ?
+                UPDATE classes SET label = ?, school_year = ?, active = ?, updated_at = ?
+                WHERE class_id = ? AND created_at = ? AND updated_at = ?
                 """,
                 (
                     class_group.label,
                     class_group.school_year,
                     int(class_group.active),
-                    _encode_datetime(class_group.created_at, "created_at"),
-                    _encode_datetime(class_group.updated_at, "updated_at"),
+                    updated_at,
                     class_group.class_id,
+                    created_at,
+                    expected_revision,
                 ),
             )
             if cursor.rowcount != 1:
-                raise IdentityStorageNotFoundError("Classe da aggiornare non trovata.")
+                exists = connection.execute(
+                    "SELECT 1 FROM classes WHERE class_id = ?",
+                    (class_group.class_id,),
+                ).fetchone()
+                if exists is None:
+                    raise IdentityStorageNotFoundError(
+                        "Classe da aggiornare non trovata."
+                    )
+                raise IdentityStorageConflictError(
+                    "Classe modificata da un'altra operazione."
+                )
 
     def list_classes(self, *, active_only: bool = False) -> list[ClassGroup]:
         where = " WHERE active = 1" if active_only else ""
@@ -1132,6 +1154,10 @@ class SqliteIdentityStorage:
                     ),
                 )
             else:
+                if existing["created_at"] != created_at:
+                    raise IdentityStorageMappingGenerationConflictError(
+                        "Mapping rimosso o ricreato da un'altra operazione."
+                    )
                 cursor = connection.execute(
                     """
                     UPDATE external_group_mappings SET display_name = ?
@@ -1142,7 +1168,7 @@ class SqliteIdentityStorage:
                         mapping.display_name,
                         *mapping.provider_key,
                         mapping.class_id,
-                        existing["created_at"],
+                        created_at,
                     ),
                 )
             if cursor.rowcount != 1:
@@ -1187,16 +1213,40 @@ class SqliteIdentityStorage:
         provider: str,
         organization_subject: str,
         group_subject: str,
+        *,
+        expected_created_at: datetime,
     ) -> bool:
+        expected_generation = _encode_datetime(
+            expected_created_at, "expected_created_at"
+        )
         with self._transaction("delete_external_group_mapping") as connection:
             cursor = connection.execute(
                 """
                 DELETE FROM external_group_mappings
                 WHERE provider = ? AND organization_subject = ? AND group_subject = ?
+                    AND created_at = ?
+                """,
+                (
+                    provider.lower(),
+                    organization_subject,
+                    group_subject,
+                    expected_generation,
+                ),
+            )
+            if cursor.rowcount == 1:
+                return True
+            exists = connection.execute(
+                """
+                SELECT 1 FROM external_group_mappings
+                WHERE provider = ? AND organization_subject = ? AND group_subject = ?
                 """,
                 (provider.lower(), organization_subject, group_subject),
+            ).fetchone()
+            if exists is None:
+                return False
+            raise IdentityStorageMappingGenerationConflictError(
+                "Mapping rimosso o ricreato da un'altra operazione."
             )
-            return cursor.rowcount == 1
 
     def read_latest_external_group_mapping_generation(
         self,

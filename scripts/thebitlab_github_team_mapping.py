@@ -78,7 +78,13 @@ def _numeric_subject(value: object, name: str) -> str:
 
 def _utc(value: datetime, name: str = "clock") -> datetime:
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
-        raise GitHubTeamDirectoryUnavailableError(f"{name} non valido.")
+        raise GitHubTeamMappingConflictError(f"{name} locale non valido.")
+    return value.astimezone(timezone.utc)
+
+
+def _provider_timestamp(value: datetime, name: str) -> datetime:
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise GitHubTeamDirectoryRejectedError(f"{name} provider non valido.")
     return value.astimezone(timezone.utc)
 
 
@@ -136,7 +142,11 @@ class GitHubTeamMembershipSnapshot:
             raise GitHubTeamDirectoryRejectedError("Snapshot team GitHub contiene duplicati.")
         if self.complete is not True:
             raise GitHubTeamDirectoryRejectedError("Snapshot team GitHub non completo.")
-        object.__setattr__(self, "captured_at", _utc(self.captured_at, "captured_at"))
+        object.__setattr__(
+            self,
+            "captured_at",
+            _provider_timestamp(self.captured_at, "captured_at"),
+        )
 
 
 class GitHubTeamDirectory(Protocol):

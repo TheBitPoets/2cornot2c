@@ -300,6 +300,28 @@ def test_user_updates_are_monotonic_and_stale_snapshot_cannot_reactivate(storage
     assert storage.read_user("user-01") == disabled
 
 
+def test_class_updates_require_monotonic_compare_and_swap(storage) -> None:
+    original = class_group()
+    storage.create_class(original)
+    with pytest.raises(IdentityStorageConflictError, match="successivo"):
+        storage.save_class(
+            replace(original, label="changed"),
+            expected_updated_at=original.updated_at,
+        )
+    updated = replace(
+        original,
+        label="changed",
+        updated_at=original.updated_at + timedelta(seconds=1),
+    )
+    storage.save_class(updated, expected_updated_at=original.updated_at)
+    with pytest.raises(IdentityStorageConflictError):
+        storage.save_class(
+            replace(updated, label="stale", updated_at=updated.updated_at + timedelta(seconds=1)),
+            expected_updated_at=original.updated_at,
+        )
+    assert storage.read_class(original.class_id) == updated
+
+
 def test_missing_foreign_key_rolls_back_without_partial_state(storage) -> None:
     identity = ExternalIdentity("missing-user", "google", "subject-01", NOW)
 
@@ -333,16 +355,18 @@ def test_classes_memberships_and_group_mapping_crud(storage) -> None:
 
     mapping = ExternalGroupMapping("github", "org-7", "team-42", "class-01", NOW, "3A")
     storage.save_external_group_mapping(mapping)
-    renamed = replace(mapping, created_at=LATER, display_name="3A Informatica")
+    renamed = replace(mapping, display_name="3A Informatica")
     storage.save_external_group_mapping(renamed)
-    expected_mapping = replace(renamed, created_at=mapping.created_at)
+    expected_mapping = renamed
     assert storage.read_external_group_mapping("GITHUB", "org-7", "team-42") == expected_mapping
     assert storage.list_external_group_mappings("class-01") == [expected_mapping]
 
     with pytest.raises(IdentityStorageConflictError, match="classe diversa"):
         storage.save_external_group_mapping(replace(mapping, class_id="class-02"))
     assert storage.read_external_group_mapping("github", "org-7", "team-42") == expected_mapping
-    assert storage.delete_external_group_mapping("github", "org-7", "team-42") is True
+    assert storage.delete_external_group_mapping(
+        "github", "org-7", "team-42", expected_created_at=mapping.created_at
+    ) is True
     assert storage.delete_membership("user-01", "class-01", "STUDENT") is True
 
 
@@ -613,7 +637,9 @@ def test_save_requires_existing_primary_record(storage) -> None:
     with pytest.raises(IdentityStorageNotFoundError):
         storage.save_user(account(), expected_updated_at=NOW - timedelta(seconds=1))
     with pytest.raises(IdentityStorageNotFoundError):
-        storage.save_class(class_group())
+        storage.save_class(
+            class_group(), expected_updated_at=NOW - timedelta(seconds=1)
+        )
     with pytest.raises(IdentityStorageNotFoundError):
         storage.save_session(session())
     with pytest.raises(IdentityStorageNotFoundError):

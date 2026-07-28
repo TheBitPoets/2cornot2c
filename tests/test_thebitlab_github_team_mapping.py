@@ -23,6 +23,7 @@ from scripts.thebitlab_identity import (
     ExternalIdentity,
     UserAccount,
 )
+from scripts.thebitlab_identity_ports import IdentityStorageConflictError
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 
 NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
@@ -81,6 +82,8 @@ def test_snapshot_requires_complete_unique_correlated_team_set() -> None:
         GitHubTeamMembershipSnapshot("123456", (team, team), NOW)
     with pytest.raises(GitHubTeamDirectoryRejectedError):
         GitHubTeamMembershipSnapshot("123456", (team,), NOW, complete=False)
+    with pytest.raises(GitHubTeamDirectoryRejectedError):
+        GitHubTeamMembershipSnapshot("123456", (team,), datetime(2026, 9, 1))
 
 
 def test_admin_can_create_rename_delete_and_relink_mapping_monotonically(setup) -> None:
@@ -96,6 +99,15 @@ def test_admin_can_create_rename_delete_and_relink_mapping_monotonically(setup) 
     assert relinked.created_at == first.created_at + timedelta(microseconds=1)
 
 
+def test_mapping_rejects_naive_local_clock(setup) -> None:
+    storage, _service, _clock = setup
+    service = GitHubTeamClassMappingService(
+        storage, clock=lambda: datetime(2026, 9, 1)
+    )
+    with pytest.raises(GitHubTeamMappingConflictError):
+        service.save_mapping("admin-01", "class-01", "1001", "2002")
+
+
 def test_mapping_rejects_non_admin_inactive_class_and_reassignment(setup) -> None:
     storage, service, _clock = setup
     with pytest.raises(GitHubTeamMappingDeniedError):
@@ -107,7 +119,10 @@ def test_mapping_rejects_non_admin_inactive_class_and_reassignment(setup) -> Non
         service.save_mapping("admin-01", "class-02", "1001", "2002")
 
     current = storage.read_class("class-02")
-    storage.save_class(replace(current, active=False, updated_at=NOW + timedelta(seconds=1)))
+    storage.save_class(
+        replace(current, active=False, updated_at=NOW + timedelta(seconds=1)),
+        expected_updated_at=current.updated_at,
+    )
     with pytest.raises(GitHubTeamMappingConflictError):
         service.save_mapping("admin-01", "class-02", "1001", "3003")
 
@@ -116,9 +131,17 @@ def test_legacy_mapping_writes_also_reserve_aba_tombstone(setup) -> None:
     storage, service, _clock = setup
     legacy = ExternalGroupMapping("github", "1001", "2002", "class-01", NOW)
     storage.save_external_group_mapping(legacy)
-    storage.delete_external_group_mapping("github", "1001", "2002")
+    storage.delete_external_group_mapping(
+        "github", "1001", "2002", expected_created_at=legacy.created_at
+    )
     relinked = service.save_mapping("admin-01", "class-01", "1001", "2002")
     assert relinked.created_at == NOW + timedelta(microseconds=1)
+    with pytest.raises(IdentityStorageConflictError):
+        storage.save_external_group_mapping(replace(legacy, display_name="stale"))
+    with pytest.raises(IdentityStorageConflictError):
+        storage.delete_external_group_mapping(
+            "github", "1001", "2002", expected_created_at=legacy.created_at
+        )
 
 
 def test_concurrent_create_cannot_be_misread_as_mapping_rename(

@@ -151,7 +151,9 @@ class ClassDirectoryStorage(Protocol):
 
     def read_class(self, class_id: str) -> ClassGroup | None: ...
 
-    def save_class(self, class_group: ClassGroup) -> None: ...
+    def save_class(
+        self, class_group: ClassGroup, *, expected_updated_at: datetime
+    ) -> None: ...
 
     def list_classes(self, *, active_only: bool = False) -> list[ClassGroup]: ...
 
@@ -179,6 +181,8 @@ class ClassDirectoryStorage(Protocol):
         provider: str,
         organization_subject: str,
         group_subject: str,
+        *,
+        expected_created_at: datetime,
     ) -> bool: ...
 
     def read_latest_external_group_mapping_generation(

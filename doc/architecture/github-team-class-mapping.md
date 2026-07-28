@@ -11,11 +11,11 @@ Questo incremento usa una porta e un fake. Il futuro adapter GitHub App dovrà p
 Solo un account persistito, attivo e con ruolo `admin` può creare, rinominare o eliminare un mapping. La transazione SQLite ricontrolla:
 
 - revisione e ruolo dell'admin;
-- classe attiva e sua revisione;
+- classe attiva e sua revisione monotona CAS (anche ogni aggiornamento classe richiede la revisione attesa);
 - chiave numerica `(github, organization_subject, team_subject)`;
 - classe e generazione `created_at` del mapping.
 
-Le generazioni sono conservate in `external_group_mapping_generations` da ogni percorso di scrittura, inclusa la compatibilità storage preesistente. Delete/relink con clock costante o arretrato produce una generazione monotona e impedisce ABA. Un team non viene mai riassegnato implicitamente a un'altra classe.
+Le generazioni sono conservate in `external_group_mapping_generations` da ogni percorso di scrittura, inclusa la compatibilità storage preesistente; anche rename e delete legacy richiedono la generazione attesa. Delete/relink con clock costante o arretrato produce una generazione monotona e impedisce ABA. Un team non viene mai riassegnato implicitamente a un'altra classe.
 
 ## Onboarding pending
 
