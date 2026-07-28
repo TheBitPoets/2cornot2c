@@ -1035,7 +1035,7 @@ def test_student_api_401_scrubs_bearer_from_recursive_traceback(monkeypatch) -> 
             401,
             "Unauthorized",
             {},
-            io.BytesIO(b'{"error":"Autenticazione richiesta."}'),
+            io.BytesIO(json.dumps({"error": bearer}).encode()),
         )
 
     monkeypatch.setattr(student_lab_cli, "student_api_urlopen", rejected)
@@ -1066,6 +1066,7 @@ def test_student_api_401_scrubs_bearer_from_recursive_traceback(monkeypatch) -> 
             pending.append(error.__cause__)
 
     assert bearer not in "\n".join(fragments)
+    assert str(captured.value) == "Server consegne: richiesta rifiutata (HTTP 401)."
     assert captured.value.__context__ is None
     assert captured.value.__cause__ is None
 

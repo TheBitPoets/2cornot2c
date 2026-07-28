@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import time
+import threading
 import urllib.error
 from datetime import datetime, timedelta, timezone
 from email.message import Message
@@ -231,6 +232,42 @@ def test_poll_watchdog_bounds_a_stalled_transport_by_deadline() -> None:
         client.poll(start)
 
     assert time.monotonic() - started_at < 0.5
+
+
+def test_stalled_transport_workers_are_globally_bounded() -> None:
+    release = threading.Event()
+    started = []
+    completed = []
+
+    def blocked(request, timeout):
+        started.append(request.full_url)
+        try:
+            release.wait(2)
+            return Response(200, credential_payload())
+        finally:
+            completed.append(request.full_url)
+
+    try:
+        for _ in range(8):
+            client = TuiPairingClient(
+                "https://school.test",
+                urlopen=blocked,
+                clock=lambda: NOW,
+            )
+            start = TuiPairingStart(
+                "pairing_abc123",
+                "PAIRCODE123",
+                "https://school.test/auth/tui/pair",
+                NOW + timedelta(seconds=0.03),
+            )
+            with pytest.raises(TuiPairingClientError, match="non è raggiungibile"):
+                client.poll(start)
+        assert 1 <= len(started) <= 4
+    finally:
+        release.set()
+        cleanup_deadline = time.monotonic() + 1
+        while len(completed) < len(started) and time.monotonic() < cleanup_deadline:
+            time.sleep(0.01)
 
 
 def test_poll_expires_against_monotonic_deadline_without_more_requests() -> None:

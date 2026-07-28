@@ -22,6 +22,8 @@ _BEARER_RE = re.compile(r"^[A-Za-z0-9_-]{32,512}$")
 _MAX_RESPONSE_BYTES = 16 * 1024
 _MAX_PAIRING_LIFETIME = timedelta(minutes=15)
 _DEFAULT_POLL_SECONDS = 2.0
+_MAX_TRANSPORT_WORKERS = 4
+_TRANSPORT_WORKER_SLOTS = threading.BoundedSemaphore(_MAX_TRANSPORT_WORKERS)
 
 
 class TuiPairingClientError(ValueError):
@@ -249,31 +251,38 @@ class TuiPairingClient:
         expected_status: int,
     ):
         outcomes: queue.Queue = queue.Queue(maxsize=1)
+        if not _TRANSPORT_WORKER_SLOTS.acquire(blocking=False):
+            raise TuiPairingClientError("Il server pairing non è raggiungibile.")
+        slot_owned_by_worker = False
 
         def worker() -> None:
             worker_request = request
+            outcome = None
             try:
-                payload = self._request_json(
-                    worker_request,
-                    timeout=timeout,
-                    expected_status=expected_status,
-                )
-                outcome = ("ok", payload)
-            except _PairingPendingError:
-                outcome = ("pending", None)
-            except _PairingRateLimitedError as error:
-                outcome = ("rate", error.retry_after)
-            except TuiPairingClientError as error:
-                outcome = ("error", str(error))
-            except Exception:
-                outcome = ("error", "Il server pairing non è raggiungibile.")
+                try:
+                    payload = self._request_json(
+                        worker_request,
+                        timeout=timeout,
+                        expected_status=expected_status,
+                    )
+                    outcome = ("ok", payload)
+                except _PairingPendingError:
+                    outcome = ("pending", None)
+                except _PairingRateLimitedError as error:
+                    outcome = ("rate", error.retry_after)
+                except TuiPairingClientError as error:
+                    outcome = ("error", str(error))
+                except Exception:
+                    outcome = ("error", "Il server pairing non è raggiungibile.")
+                if outcome is not None:
+                    try:
+                        outcomes.put_nowait(outcome)
+                    except queue.Full:
+                        pass
             finally:
                 worker_request = None
-            try:
-                outcomes.put_nowait(outcome)
-            except queue.Full:
-                pass
-            outcome = None
+                outcome = None
+                _TRANSPORT_WORKER_SLOTS.release()
 
         thread = threading.Thread(
             target=worker,
@@ -282,8 +291,13 @@ class TuiPairingClient:
         )
         try:
             thread.start()
+            slot_owned_by_worker = True
             kind, value = outcomes.get(timeout=timeout)
-        except (RuntimeError, queue.Empty):
+        except RuntimeError:
+            if not slot_owned_by_worker:
+                _TRANSPORT_WORKER_SLOTS.release()
+            raise TuiPairingClientError("Il server pairing non è raggiungibile.") from None
+        except queue.Empty:
             raise TuiPairingClientError("Il server pairing non è raggiungibile.") from None
         finally:
             request = None

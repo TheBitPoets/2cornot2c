@@ -952,12 +952,11 @@ def record_help_from_tui(
         with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = _server_error_detail(error.read())
         pending_failure = error.code == 409
         failure = (
-            f"Server aiuti: {detail or 'richiesta gia salvata e ancora in elaborazione'}"
+            "Server aiuti: richiesta gia salvata e ancora in elaborazione"
             if pending_failure
-            else f"Server aiuti: {detail or error.reason}"
+            else f"Server aiuti: richiesta rifiutata (HTTP {error.code})."
         )
     except urllib.error.URLError:
         failure = (
@@ -1010,8 +1009,7 @@ def fetch_help_history_from_server(
         with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = _server_error_detail(error.read())
-        failure = f"Server aiuti: {detail or error.reason}"
+        failure = f"Server aiuti: richiesta rifiutata (HTTP {error.code})."
     except urllib.error.URLError:
         failure = f"Server non raggiungibile su {server_url}."
     except TimeoutError:
@@ -1068,8 +1066,7 @@ def select_final_attempt_from_server(
         with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = _server_error_detail(error.read())
-        failure = f"Server tentativi: {detail or error.reason}"
+        failure = f"Server tentativi: richiesta rifiutata (HTTP {error.code})."
     except urllib.error.URLError:
         failure = f"Server non raggiungibile su {server_url}."
     except TimeoutError:
@@ -1085,14 +1082,6 @@ def select_final_attempt_from_server(
     if not isinstance(selected, dict):
         raise ValueError("Il server tentativi non ha restituito la consegna aggiornata.")
     return selected
-
-
-def _server_error_detail(body: bytes) -> str:
-    try:
-        payload = json.loads(body.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return "richiesta rifiutata"
-    return clean_text(payload.get("error"), "richiesta rifiutata") if isinstance(payload, dict) else "richiesta rifiutata"
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -1272,8 +1261,7 @@ def fetch_student_lab_payload(
         with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = _server_error_detail(error.read())
-        failure = f"Server consegne: {detail or error.reason}"
+        failure = f"Server consegne: richiesta rifiutata (HTTP {error.code})."
     except urllib.error.URLError:
         failure = f"Server non raggiungibile su {server_url}."
     except TimeoutError:
