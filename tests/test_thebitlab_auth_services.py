@@ -153,6 +153,32 @@ def test_authenticated_external_account_link_unlink_and_relink(storage) -> None:
     assert generations == sorted(set(generations))
 
 
+def test_external_account_relink_generation_survives_clock_rollback(storage) -> None:
+    user = account()
+    storage.create_user(user)
+    clock = MutableClock()
+    issued = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "r" * 32,
+        session_id_factory=lambda: "rollback-session",
+    ).issue(user.user_id)
+    service = ExternalIdentityLinkService(
+        storage, expected_provider="github", clock=clock
+    )
+    clock.value = NOW + timedelta(seconds=10)
+    first = service.link(
+        user.user_id, github_assertion(), expected_session=issued.session
+    )
+    service.unlink(user.user_id, expected_session=issued.session)
+
+    clock.value = NOW + timedelta(seconds=5)
+    second = service.link(
+        user.user_id, github_assertion(), expected_session=issued.session
+    )
+    assert second.linked_at == first.linked_at + timedelta(microseconds=1)
+
+
 def test_external_account_unlink_requires_persisted_live_session(storage) -> None:
     user = account()
     storage.create_user(user)

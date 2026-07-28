@@ -681,6 +681,16 @@ class ExternalIdentityLinkService:
             return refreshed
 
         linked_at = operation_now
+        latest_generation = self.storage.read_latest_external_identity_generation(
+            self.expected_provider, normalized.subject
+        )
+        try:
+            if latest_generation is not None and latest_generation >= linked_at:
+                linked_at = latest_generation + timedelta(microseconds=1)
+        except OverflowError as error:
+            raise ConcurrentStateChangeError(
+                "Generazione link provider esaurita."
+            ) from error
         for _attempt in range(_MAX_ATTEMPTS):
             identity = ExternalIdentity(
                 user_id=account.user_id,
