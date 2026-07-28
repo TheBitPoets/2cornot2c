@@ -1182,6 +1182,11 @@ def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> N
     with pytest.raises(InvalidCredentialError, match="non valido") as wrong:
         service.authorize("WRONGCODE9", "user-01")
     assert "WRONGCODE9" not in traceback_locals(wrong.value, "authorize")
+    with pytest.raises(InvalidCredentialError, match="non valido") as wrong_consume:
+        service.consume(issued.pairing.pairing_id, "WRONGCODE9")
+    assert "WRONGCODE9" not in traceback_locals(
+        wrong_consume.value, "consume"
+    )
     with pytest.raises(InvalidCredentialError, match="non valido"):
         service.authorize("", "user-01")
     clock.value = NOW + timedelta(minutes=2)

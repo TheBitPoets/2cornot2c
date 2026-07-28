@@ -263,6 +263,29 @@ def test_browser_role_race_returns_authorization_denied(setup, monkeypatch) -> N
     assert storage.read_pairing(started.pairing_id).status == "pending"
 
 
+def test_browser_disable_race_returns_authentication_required(
+    setup, monkeypatch
+) -> None:
+    storage, clock, boundary, http = setup
+    started = boundary.begin()
+    request = browser_request(http, "student-01")
+    original = boundary.pairings.authorize
+
+    def disable_then_authorize(code, user_id):
+        current = storage.read_user(user_id)
+        clock.value += timedelta(seconds=1)
+        storage.save_user(
+            replace(current, active=False, updated_at=clock.value),
+            expected_updated_at=current.updated_at,
+        )
+        return original(code, user_id)
+
+    monkeypatch.setattr(boundary.pairings, "authorize", disable_then_authorize)
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.authorize_browser(request, started.user_code)
+    assert storage.read_pairing(started.pairing_id).status == "pending"
+
+
 def test_browser_authorization_requires_csrf_and_student_role(setup) -> None:
     storage, _clock, boundary, http = setup
     started = boundary.begin()

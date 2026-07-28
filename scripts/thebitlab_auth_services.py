@@ -1114,13 +1114,18 @@ class PairingService:
         return authorized
 
     def consume(self, pairing_id: str, code: str) -> TuiPairing:
-        _pairing, account, consumed = self._prepare_consumption(pairing_id, code)
-        self._save_transition(
-            consumed,
-            require_active_user=True,
-            expected_user_updated_at=account.updated_at,
-        )
-        return consumed
+        try:
+            _pairing, account, consumed = self._prepare_consumption(
+                pairing_id, code
+            )
+            self._save_transition(
+                consumed,
+                require_active_user=True,
+                expected_user_updated_at=account.updated_at,
+            )
+            return consumed
+        finally:
+            code = None
 
     def _prepare_consumption(
         self, pairing_id: str, code: str

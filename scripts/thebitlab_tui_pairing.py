@@ -222,6 +222,7 @@ class TuiBrowserPairingBoundary:
             )
             self._require_shared_registry()
             invalid = False
+            authentication_required = False
             denied = False
             expired = False
             conflict = False
@@ -234,12 +235,19 @@ class TuiBrowserPairingBoundary:
                     current_user = self.pairings.storage.read_user(
                         context.user.user_id
                     )
+                    authentication_required = (
+                        current_user is None
+                        or (
+                            type(current_user) is UserAccount
+                            and not current_user.active
+                        )
+                    )
                     denied = (
                         type(current_user) is UserAccount
                         and current_user.active
                         and current_user.role != "student"
                     )
-                    invalid = not denied
+                    invalid = not authentication_required and not denied
                 except Exception:
                     unavailable = True
             except PairingExpiredError:
@@ -251,6 +259,8 @@ class TuiBrowserPairingBoundary:
             self._require_shared_registry()
             if invalid:
                 raise TuiPairingBadRequestError()
+            if authentication_required:
+                raise HttpAuthenticationRequiredError()
             if denied:
                 raise HttpAuthorizationDeniedError()
             if expired:
