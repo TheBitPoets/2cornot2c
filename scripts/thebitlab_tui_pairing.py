@@ -336,7 +336,12 @@ class TuiBrowserPairingBoundary:
                 except Exception:
                     structurally_valid = False
                 if not structurally_valid:
-                    unavailable = True
+                    if self._credential_is_currently_invalid(
+                        authenticated, bearer
+                    ):
+                        invalid = True
+                    else:
+                        unavailable = True
         finally:
             bearer = None
             authorization_header = None
@@ -470,16 +475,52 @@ class TuiBrowserPairingBoundary:
             return False
         return (
             hmac.compare_digest(authenticated.session.token_digest, digest)
-            and persisted == authenticated.session
+            and type(persisted) is UserSession
+            and persisted.session_id == authenticated.session.session_id
+            and persisted.user_id == authenticated.session.user_id
+            and persisted.token_digest == authenticated.session.token_digest
+            and persisted.created_at == authenticated.session.created_at
+            and persisted.expires_at == authenticated.session.expires_at
+            and persisted.audience == authenticated.session.audience
+            and persisted.source_pairing_id == authenticated.session.source_pairing_id
+            and persisted.last_seen_at >= authenticated.session.last_seen_at
             and persisted_user == authenticated.user
-            and authenticated.session.revoked_at is None
-            and authenticated.session.created_at <= now < authenticated.session.expires_at
-            and authenticated.session.last_seen_at <= now
+            and persisted.revoked_at is None
+            and persisted.created_at <= now < persisted.expires_at
+            and persisted.last_seen_at <= now
             and type(persisted_pairing) is TuiPairing
             and persisted_pairing.status == "consumed"
             and persisted_pairing.user_id == authenticated.user.user_id
             and persisted_pairing.consumed_at == authenticated.session.created_at
         )
+
+    def _credential_is_currently_invalid(
+        self,
+        authenticated: AuthenticatedSession | None,
+        bearer: str,
+    ) -> bool:
+        if (
+            type(authenticated) is not AuthenticatedSession
+            or type(authenticated.session) is not UserSession
+            or authenticated.session.audience != "tui"
+        ):
+            return False
+        try:
+            digest = session_token_digest(bearer)
+            persisted = self.tui_sessions.storage.read_session_by_token_digest(digest)
+            if type(persisted) is not UserSession:
+                return False
+            user = self.tui_sessions.storage.read_user(persisted.user_id)
+            now = _utc(self.tui_sessions.clock(), "session_clock")
+            self._require_shared_registry()
+            return (
+                persisted.revoked_at is not None
+                or not persisted.created_at <= now < persisted.expires_at
+                or user is None
+                or not user.active
+            )
+        except Exception:
+            return False
 
     def _best_effort_revoke_issued(
         self, issued: IssuedSession, expected_pairing_id: str

@@ -385,6 +385,56 @@ def test_malformed_auth_adapter_cannot_bypass_tui_audience(
     assert storage.read_session("ghost") is None
 
 
+def test_concurrent_last_seen_advance_does_not_reject_valid_tui_bearer(
+    setup, monkeypatch
+) -> None:
+    _storage, clock, boundary, http = setup
+    started = boundary.begin()
+    clock.value += timedelta(minutes=1)
+    boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
+    credential = boundary.consume(started.pairing_id, started.user_code)
+    original = boundary.tui_sessions.authenticate
+
+    def authenticate_then_advance(bearer):
+        first = original(bearer)
+        clock.value += timedelta(seconds=1)
+        original(bearer)
+        return first
+
+    monkeypatch.setattr(
+        boundary.tui_sessions, "authenticate", authenticate_then_advance
+    )
+    context = boundary.authenticate_bearer("Bearer " + credential.bearer_token)
+    assert context.user.user_id == "student-01"
+
+
+def test_disable_race_after_session_authentication_returns_401(
+    setup, monkeypatch
+) -> None:
+    storage, clock, boundary, http = setup
+    started = boundary.begin()
+    clock.value += timedelta(minutes=1)
+    boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
+    credential = boundary.consume(started.pairing_id, started.user_code)
+    original = boundary.tui_sessions.authenticate
+
+    def authenticate_then_disable(bearer):
+        authenticated = original(bearer)
+        current = storage.read_user("student-01")
+        clock.value += timedelta(seconds=1)
+        storage.save_user(
+            replace(current, active=False, updated_at=clock.value),
+            expected_updated_at=current.updated_at,
+        )
+        return authenticated
+
+    monkeypatch.setattr(
+        boundary.tui_sessions, "authenticate", authenticate_then_disable
+    )
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.authenticate_bearer("Bearer " + credential.bearer_token)
+
+
 def test_disabled_account_error_invalidates_tui_bearer(
     setup, monkeypatch
 ) -> None:
