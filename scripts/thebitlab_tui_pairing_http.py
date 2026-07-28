@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import re
+import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
@@ -193,8 +194,12 @@ class TuiPairingHttpRoutes:
         started = None
         try:
             self._require_https_and_query(request)
+            if request.path == _AUTHORIZE_PATH and request.method == "GET":
+                self._require_safe_method_framing(request)
+                return self._browser_page()
             if request.method != "POST":
-                return self._error(405, "auth_method_not_allowed", "Metodo non consentito.", (("Allow", "POST"),))
+                allow = "GET, POST" if request.path == _AUTHORIZE_PATH else "POST"
+                return self._error(405, "auth_method_not_allowed", "Metodo non consentito.", (("Allow", allow),))
             self._require_framing(request)
             if request.path == _BEGIN_PATH:
                 self._require_empty_body(request)
@@ -255,13 +260,18 @@ class TuiPairingHttpRoutes:
     def _require_https_and_query(self, request: TuiPairingHttpRequest) -> None:
         if request.raw_query:
             raise TuiPairingBadRequestError()
-        if request.is_tls:
-            return
-        if not self.proxy_resolver.is_trusted_peer(request.edge):
-            raise _HttpsRequiredError()
-        forwarded = [value.lower() for value in _header_values(request.edge, "x-forwarded-proto")]
-        if forwarded != ["https"]:
-            raise _HttpsRequiredError()
+        require_tui_https_transport(
+            self.proxy_resolver,
+            request.edge,
+            is_tls=request.is_tls,
+        )
+
+    @staticmethod
+    def _require_safe_method_framing(request: TuiPairingHttpRequest) -> None:
+        transfers = _header_values(request.edge, "transfer-encoding")
+        lengths = _header_values(request.edge, "content-length")
+        if transfers or request.body or lengths not in ([], ["0"]):
+            raise TuiPairingBadRequestError()
 
     @staticmethod
     def _require_framing(request: TuiPairingHttpRequest) -> None:
@@ -297,6 +307,18 @@ class TuiPairingHttpRoutes:
     def _base_headers() -> tuple[tuple[str, str], ...]:
         return (("Cache-Control", "no-store"), ("Pragma", "no-cache"), ("Referrer-Policy", "no-referrer"))
 
+    def _browser_page(self) -> TuiPairingHttpResponse:
+        nonce = secrets.token_urlsafe(24)
+        html = _PAIRING_PAGE.replace("__CSP_NONCE__", nonce).encode("utf-8")
+        headers = self._base_headers() + (
+            ("Content-Type", "text/html; charset=utf-8"),
+            ("Content-Security-Policy", f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'nonce-{nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"),
+            ("X-Content-Type-Options", "nosniff"),
+            ("X-Frame-Options", "DENY"),
+            ("Content-Length", str(len(html))),
+        )
+        return TuiPairingHttpResponse(200, headers, html)
+
     def _json(self, status: int, payload: dict, *, guard=None) -> TuiPairingHttpResponse:
         body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         return TuiPairingHttpResponse(status, self._base_headers() + (("Content-Type", "application/json; charset=utf-8"), ("Content-Length", str(len(body)))), body, guard)
@@ -310,6 +332,29 @@ class _PairingRateLimitError(RuntimeError):
     def __init__(self, retry_after: int):
         self.retry_after = retry_after
         super().__init__("Troppe richieste.")
+
+
+def require_tui_https_transport(
+    resolver: TrustedProxyClientResolver,
+    edge: EdgeRequestMetadata,
+    *,
+    is_tls: bool,
+) -> None:
+    """Require direct TLS or one unambiguous trusted proxy assertion."""
+
+    if (
+        type(resolver) is not TrustedProxyClientResolver
+        or type(edge) is not EdgeRequestMetadata
+        or type(is_tls) is not bool
+    ):
+        raise EdgeClientAttributionError("Trasporto pairing non valido.")
+    if is_tls:
+        return
+    if not resolver.is_trusted_peer(edge):
+        raise _HttpsRequiredError()
+    forwarded = [value.lower() for value in _header_values(edge, "x-forwarded-proto")]
+    if forwarded != ["https"]:
+        raise _HttpsRequiredError()
 
 
 class _HttpsRequiredError(HttpAuthError):
@@ -359,6 +404,16 @@ def _unique_object(pairs):
             raise ValueError("duplicate")
         result[key] = value
     return result
+
+
+_PAIRING_PAGE = """<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Collega terminale · TheBitLab</title>
+<style nonce="__CSP_NONCE__">body{font-family:system-ui,sans-serif;max-width:34rem;margin:4rem auto;padding:0 1rem;color:#172033}label,input,button{display:block;width:100%;box-sizing:border-box}input,button{font:inherit;padding:.75rem;margin:.5rem 0 1rem}button{cursor:pointer}#status{min-height:1.5rem}.error{color:#a00}.ok{color:#075}</style>
+</head><body><main><h1>Collega il terminale</h1><p>Accedi come studente, poi inserisci il codice mostrato nel terminale. Il browser non riceverà la credenziale TUI.</p>
+<label for="code">Codice terminale</label><input id="code" name="code" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="128" pattern="[A-Za-z0-9_-]{8,128}">
+<button id="pair" type="button">Autorizza terminale</button><p id="status" role="status" aria-live="polite"></p><p><a id="login" href="/auth/google/login" hidden>Accedi con Google</a></p></main>
+<script nonce="__CSP_NONCE__">(()=>{'use strict';const code=document.getElementById('code'),button=document.getElementById('pair'),status=document.getElementById('status'),login=document.getElementById('login');const message=(text,kind)=>{status.textContent=text;status.className=kind||''};button.addEventListener('click',async()=>{button.disabled=true;login.hidden=true;message('Verifica in corso…','');try{const session=await fetch('/auth/session',{credentials:'same-origin',cache:'no-store',redirect:'error'});if(session.status===401){login.hidden=false;throw new Error('Accedi prima di autorizzare il terminale.')}if(!session.ok)throw new Error('Sessione non disponibile. Riprova.');const snapshot=await session.json();if(typeof snapshot.csrf_token!=='string')throw new Error('Sessione non valida.');const response=await fetch('/auth/tui/pair',{method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',headers:{'Content-Type':'application/json','X-CSRF-Token':snapshot.csrf_token},body:JSON.stringify({code:code.value.trim()})});if(!response.ok)throw new Error(response.status===403?'Accesso studente richiesto.':'Codice non valido, scaduto o già usato.');code.value='';message('Terminale autorizzato. Puoi tornare alla TUI.','ok')}catch(error){message(error instanceof Error?error.message:'Autorizzazione non disponibile.','error')}finally{button.disabled=false}})})();</script></body></html>"""
 
 
 def _utc_z(value: datetime) -> str:

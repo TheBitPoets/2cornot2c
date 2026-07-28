@@ -5,7 +5,8 @@
 Il runtime espone esclusivamente con opt-in auth:
 
 - `POST /auth/tui/pairings`: crea un pairing pending e restituisce `pairing_id`, `user_code`, path fisso di verifica e scadenza;
-- `POST /auth/tui/pair`: riceve `{"code":"..."}` dal browser, con cookie web e `X-CSRF-Token`, e autorizza soltanto uno student corrente;
+- `GET /auth/tui/pair`: serve la pagina statica CSP/no-store per inserire manualmente il codice;
+- `POST /auth/tui/pair`: riceve `{"code":"..."}` dalla pagina, con cookie web e `X-CSRF-Token`, e autorizza soltanto uno student corrente;
 - `POST /auth/tui/pairings/{pairing_id}/token`: riceve lo stesso codice dalla TUI e tenta il consumo atomico. Un pairing ancora pending o già terminale produce 409; la CLI potrà trattare 409 come polling bounded fino alla scadenza.
 
 Codice e bearer sono accettati soltanto nel body JSON, mai in URL/query. Il browser non riceve il bearer TUI; il terminale non riceve cookie, CSRF o credenziali provider.
@@ -41,4 +42,4 @@ Body, request e response escludono codice e bearer dai `repr`; gli access log us
 
 ## Limiti
 
-La pagina UI che raccoglie manualmente il codice, l'apertura browser, il polling CLI, la persistenza sicura del bearer e l'uso nelle API student-help restano incrementi successivi.
+Pagina browser, apertura/polling CLI e uso memory-only nelle API student-lab sono descritti in `tui-pairing-cli.md`. Persistenza opzionale sicura, refresh e revoca esplicita al logout TUI restano incrementi successivi.

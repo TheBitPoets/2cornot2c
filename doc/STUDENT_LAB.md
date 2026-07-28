@@ -139,10 +139,22 @@ export THEBITLAB_STUDENT_HELP_TOKEN="<token stampato dal comando precedente>"
 python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario --server-url http://127.0.0.1:8765
 ```
 
-Il token puo viaggiare su HTTP solo quando il server e in loopback (`localhost` o `127.0.0.1`).
+Il flusso precedente è la compatibilità demo/legacy per un server avviato senza runtime federato. In produzione,
+con Google auth abilitata e una origin HTTPS, non distribuire token manuali né configurare il secret nella TUI:
+
+```powershell
+python scripts/student_lab_cli.py --student-id <id-locale> --server-url https://school.example --pair-browser
+```
+
+La CLI mostra un codice, apre la pagina browser fissa e attende l'autorizzazione dello studente. Il bearer TUI
+risultante resta soltanto nella memoria del processo. Quando il runtime federato è presente, le API student-lab
+accettano esclusivamente bearer TUI correlati al pairing e non effettuano fallback al secret legacy.
+
+Il token legacy puo viaggiare su HTTP solo quando il server e in loopback (`localhost` o `127.0.0.1`).
 Per collegare una macchina studente al server docente usa HTTPS, direttamente o tramite tunnel. Il tunnel non
-sostituisce l'autenticazione: la TUI usa sempre il bearer token studente, distinto dalle credenziali docente.
-L'opzione `--allow-insecure-http` e riservata a collaudi temporanei su una rete controllata.
+sostituisce l'autenticazione: la TUI usa sempre un bearer studente distinto dalle credenziali docente.
+L'opzione `--allow-insecure-http` e riservata ai collaudi legacy temporanei su una rete controllata; il pairing
+browser richiede sempre una origin HTTPS canonica.
 
 Anche la dashboard docente usa credenziali Basic, che HTTP non cifra. Per questo il server accetta per impostazione
 predefinita soltanto bind di loopback. La modalita raccomandata per l'accesso remoto e lasciare il server su
@@ -152,7 +164,7 @@ temporanei su una rete gia protetta.
 
 Il server usa `codex exec` con sessione effimera, directory temporanea vuota, shell e ricerca web disabilitate,
 sandbox `read-only`, output JSON validato e timeout. Non accetta dalla TUI identita, policy, contesto didattico o
-path: ricava lo studente dal token firmato e ricostruisce il resto usando `assignment_id`. Se Codex non e disponibile
+path: ricava lo studente dal bearer TUI corrente (o dal token firmato nella sola modalità legacy) e ricostruisce il resto usando `assignment_id`. Se Codex non e disponibile
 o non risponde correttamente, salva comunque la richiesta e restituisce
 la guida deterministica locale. La TUI rende visibile il provider effettivo con una delle etichette:
 

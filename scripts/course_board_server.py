@@ -41,7 +41,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, parse_qsl, unquote, urlparse
 
 APP_ROOT = Path(__file__).resolve().parents[1]
 ROOT = APP_ROOT
@@ -63,6 +63,7 @@ from scripts import (
     thebitlab_auth_runtime,
     thebitlab_grading_artifacts,
     thebitlab_google_oidc_http,
+    thebitlab_http_auth,
     thebitlab_services,
     thebitlab_session_http,
     thebitlab_storage,
@@ -3417,21 +3418,139 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         return False
 
     def authenticated_student_id(self) -> str | None:
-        """Authenticate one student request and write the HTTP error on failure."""
+        """Authenticate one student request without production downgrade fallback."""
 
+        routes = getattr(self.server, "tui_pairing_http_routes", None)
+        if routes is None:
+            try:
+                secret = student_help_auth.student_help_secret()
+            except ValueError:
+                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
+                return None
+            try:
+                return student_help_auth.student_id_from_authorization(
+                    self.headers.get("Authorization", ""),
+                    secret,
+                )
+            except ValueError as error:
+                self.write_error_json(401, str(error))
+                return None
+
+        edge = None
+        authorization = None
+        values = None
+        context = None
         try:
-            secret = student_help_auth.student_help_secret()
-        except ValueError:
-            self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
-            return None
-        try:
-            return student_help_auth.student_id_from_authorization(
-                self.headers.get("Authorization", ""),
-                secret,
+            if not self._has_exact_student_api_target():
+                raise thebitlab_http_auth.HttpBadRequestError()
+            edge = thebitlab_google_oidc_http.EdgeRequestMetadata(
+                str(self.client_address[0]), tuple(self.headers.raw_items())
             )
-        except ValueError as error:
-            self.write_error_json(401, str(error))
+            thebitlab_tui_pairing_http.require_tui_https_transport(
+                routes.proxy_resolver,
+                edge,
+                is_tls=isinstance(self.connection, ssl.SSLSocket),
+            )
+            self._validate_federated_student_api_request(edge)
+            values = [
+                value.strip()
+                for name, value in edge.headers
+                if name.lower() == "authorization"
+            ]
+            if len(values) != 1 or not values[0] or len(values[0]) > 1024:
+                raise thebitlab_http_auth.HttpAuthenticationRequiredError()
+            authorization = values[0]
+            context = routes.boundary.authenticate_bearer(authorization)
+            return student_help_auth.validate_student_id(context.user.user_id)
+        except thebitlab_http_auth.HttpAuthError as error:
+            if self.command == "POST":
+                self.close_connection = True
+            self.write_error_json(error.status_code, error.public_message)
             return None
+        except (ValueError, thebitlab_google_oidc_http.EdgeClientAttributionError):
+            if self.command == "POST":
+                self.close_connection = True
+            self.write_error_json(401, "Credenziale TUI non valida.")
+            return None
+        except Exception:  # noqa: BLE001
+            if self.command == "POST":
+                self.close_connection = True
+            self.write_error_json(503, STUDENT_HELP_SERVER_ERROR)
+            return None
+        finally:
+            edge = None
+            authorization = None
+            values = None
+            context = None
+
+    def _validate_federated_student_api_request(self, edge) -> None:
+        headers = edge.headers
+        transfers = [value for name, value in headers if name.lower() == "transfer-encoding"]
+        lengths = [value.strip() for name, value in headers if name.lower() == "content-length"]
+        if transfers:
+            self.close_connection = True
+            raise thebitlab_http_auth.HttpBadRequestError()
+        if self.command == "GET":
+            if lengths not in ([], ["0"]):
+                self.close_connection = True
+                raise thebitlab_http_auth.HttpBadRequestError()
+            parsed = urlparse(str(getattr(self, "requestline", "")).split()[1])
+            if len(parsed.query) > 2048:
+                raise thebitlab_http_auth.HttpBadRequestError()
+            try:
+                pairs = parse_qsl(
+                    parsed.query,
+                    keep_blank_values=True,
+                    strict_parsing=True,
+                    max_num_fields=2,
+                ) if parsed.query else []
+            except ValueError:
+                raise thebitlab_http_auth.HttpBadRequestError() from None
+            if parsed.path == "/api/student-lab/assignments":
+                valid = len(pairs) <= 1 and all(
+                    key == "now" and 0 < len(value) <= 128 for key, value in pairs
+                )
+            else:
+                valid = (
+                    len(pairs) == 1
+                    and pairs[0][0] == "assignment_id"
+                    and 0 < len(pairs[0][1]) <= 256
+                )
+            if not valid:
+                raise thebitlab_http_auth.HttpBadRequestError()
+            return
+        if len(lengths) != 1 or not lengths[0].isdigit():
+            self.close_connection = True
+            raise thebitlab_http_auth.HttpBadRequestError()
+        length = int(lengths[0])
+        if not 1 <= length <= MAX_STUDENT_HELP_REQUEST_BYTES:
+            self.close_connection = True
+            raise thebitlab_http_auth.HttpBadRequestError()
+        content_types = [
+            value.strip().lower()
+            for name, value in headers
+            if name.lower() == "content-type"
+        ]
+        if content_types not in (["application/json"], ["application/json; charset=utf-8"]):
+            raise thebitlab_http_auth.HttpBadRequestError()
+
+    def _has_exact_student_api_target(self) -> bool:
+        parts = str(getattr(self, "requestline", "")).split()
+        if len(parts) != 3:
+            return False
+        target = parts[1]
+        parsed = urlparse(target)
+        if (
+            parsed.scheme
+            or parsed.netloc
+            or parsed.params
+            or parsed.fragment
+            or (self.command == "POST" and parsed.query)
+            or (self.command, parsed.path) not in REMOTE_STUDENT_API_ROUTES
+        ):
+            return False
+        canonical = parsed.path + (("?" + parsed.query) if parsed.query else "")
+        return target == canonical
 
     def read_teacher_json(self) -> dict[str, Any] | None:
         """Read one bounded JSON object from an authenticated teacher request."""
@@ -3501,14 +3620,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 value for name, value in edge.headers
                 if name.lower() == "transfer-encoding"
             ]
-            readable = (
-                not transfers
-                and len(lengths) == 1
-                and lengths[0].isdigit()
-                and 0 <= int(lengths[0]) <= 2048
+            safe_get_without_body = self.command == "GET" and not lengths
+            readable = not transfers and (
+                safe_get_without_body
+                or (
+                    len(lengths) == 1
+                    and lengths[0].isdigit()
+                    and 0 <= int(lengths[0]) <= 2048
+                )
             )
             if readable:
-                expected = int(lengths[0])
+                expected = 0 if safe_get_without_body else int(lengths[0])
                 body = self.rfile.read(expected) if expected else b""
                 if len(body) != expected:
                     self.close_connection = True

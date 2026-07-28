@@ -144,6 +144,55 @@ def test_main_reads_student_token_only_from_environment(monkeypatch, tmp_path) -
         student_lab_cli.parse_args()
 
 
+def test_main_pairs_in_browser_and_passes_bearer_only_in_memory(monkeypatch, tmp_path) -> None:
+    captured = {}
+    bearer = "B" * 48
+    monkeypatch.delenv("THEBITLAB_STUDENT_HELP_TOKEN", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "student_lab_cli.py",
+            "--student-id",
+            "rossi-mario",
+            "--root",
+            str(tmp_path),
+            "--server-url",
+            "https://school.test",
+            "--pair-browser",
+        ],
+    )
+    monkeypatch.setattr(
+        student_lab_cli.thebitlab_tui_pairing_client,
+        "acquire_tui_bearer",
+        lambda url: SimpleNamespace(bearer_token=bearer),
+    )
+    monkeypatch.setattr(student_lab_cli, "run_tui", lambda **kwargs: captured.update(kwargs) or 0)
+
+    assert student_lab_cli.main() == 0
+    assert captured["server_token"] == bearer
+    assert captured["server_url"] == "https://school.test"
+
+
+def test_main_rejects_pairing_with_legacy_environment_token(monkeypatch, capsys) -> None:
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN", "legacy-token")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "student_lab_cli.py",
+            "--student-id",
+            "rossi-mario",
+            "--server-url",
+            "https://school.test",
+            "--pair-browser",
+        ],
+    )
+
+    assert student_lab_cli.main() == 1
+    assert "Rimuovi THEBITLAB_STUDENT_HELP_TOKEN" in capsys.readouterr().err
+
+
 def test_renderer_selection_preserves_legacy_for_non_interactive_output(
     monkeypatch,
 ) -> None:

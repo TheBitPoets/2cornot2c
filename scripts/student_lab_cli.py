@@ -28,6 +28,7 @@ from scripts import (
     student_lab_runner,
     student_lab_service,
     student_lab_utui,
+    thebitlab_tui_pairing_client,
 )
 
 
@@ -1645,7 +1646,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--allow-insecure-http",
         action="store_true",
-        help="Consenti HTTP remoto solo per un collaudo su rete controllata; il default richiede HTTPS.",
+        help="Consenti HTTP remoto solo per un collaudo legacy controllato; il pairing richiede sempre HTTPS.",
+    )
+    parser.add_argument(
+        "--pair-browser",
+        action="store_true",
+        help="Autentica questa esecuzione nel browser e conserva il bearer TUI soltanto in memoria.",
     )
     return parser.parse_args()
 
@@ -1654,7 +1660,16 @@ def main() -> int:
     """Run the student lab TUI from the command line."""
 
     args = parse_args()
+    server_token = os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", "")
+    credential = None
     try:
+        if args.pair_browser:
+            if server_token.strip():
+                raise ValueError(
+                    "Rimuovi THEBITLAB_STUDENT_HELP_TOKEN quando usi --pair-browser."
+                )
+            credential = thebitlab_tui_pairing_client.acquire_tui_bearer(args.server_url)
+            server_token = credential.bearer_token
         return run_tui(
             student_id=args.student_id,
             root=args.root.resolve(strict=False),
@@ -1662,7 +1677,7 @@ def main() -> int:
             clear=not args.no_clear,
             use_color=supports_color(args.no_color),
             server_url=args.server_url,
-            server_token=os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", ""),
+            server_token=server_token,
             allow_insecure_http=args.allow_insecure_http,
             backend=args.backend,
             timeout_seconds=args.timeout,
@@ -1672,6 +1687,9 @@ def main() -> int:
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)
         return 1
+    finally:
+        server_token = ""
+        credential = None
 
 
 if __name__ == "__main__":
