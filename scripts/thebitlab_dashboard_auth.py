@@ -122,10 +122,26 @@ class DashboardAuthorizationBoundary:
             raise HttpAuthorizationDeniedError()
         if type(snapshot) is not DashboardAuthorizationSnapshot:
             raise DashboardAuthorizationUnavailableError()
+        malformed = False
+        canonical = None
+        try:
+            canonical = DashboardAuthorizationSnapshot(
+                actor_user_id=snapshot.actor_user_id,
+                actor_role=snapshot.actor_role,
+                actor_updated_at=snapshot.actor_updated_at,
+                actor_class_ids=snapshot.actor_class_ids,
+                target_user_id=snapshot.target_user_id,
+                target_role=snapshot.target_role,
+                target_class_ids=snapshot.target_class_ids,
+            )
+        except Exception:
+            malformed = True
+        if malformed or canonical is None:
+            raise DashboardAuthorizationUnavailableError()
         if (
-            snapshot.actor_user_id != context.user.user_id
-            or snapshot.actor_role != context.user.role
-            or snapshot.actor_updated_at != context.user.updated_at
+            canonical.actor_user_id != context.user.user_id
+            or canonical.actor_role != context.user.role
+            or canonical.actor_updated_at != context.user.updated_at
         ):
             raise DashboardAuthorizationUnavailableError()
-        return snapshot
+        return canonical

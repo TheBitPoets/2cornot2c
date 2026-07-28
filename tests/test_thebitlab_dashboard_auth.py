@@ -7,6 +7,7 @@ import pytest
 
 from scripts.thebitlab_auth_services import SessionService
 from scripts.thebitlab_dashboard_auth import (
+    DashboardAccessScope,
     DashboardAuthorizationBoundary,
     DashboardAuthorizationSnapshot,
     DashboardAuthorizationUnavailableError,
@@ -239,6 +240,17 @@ def test_actor_revision_race_after_http_authentication_fails_closed(
         boundary.authorize_teacher_dashboard(request)
 
 
+def test_student_scope_can_never_be_global() -> None:
+    with pytest.raises(ValueError, match="Solo la dashboard docente"):
+        DashboardAccessScope(
+            "student",
+            "admin-01",
+            (),
+            student_user_id="student-01",
+            all_classes=True,
+        )
+
+
 def test_storage_failure_and_malformed_snapshot_are_sanitized(setup, monkeypatch) -> None:
     storage, boundary, http = setup
     request = established_request(http, "teacher-01")
@@ -261,6 +273,20 @@ def test_storage_failure_and_malformed_snapshot_are_sanitized(setup, monkeypatch
     )
     with pytest.raises(DashboardAuthorizationUnavailableError):
         boundary.authorize_teacher_dashboard(request)
+
+    malformed = DashboardAuthorizationSnapshot(
+        "teacher-01", "teacher", NOW, ("class-a",)
+    )
+    object.__setattr__(malformed, "actor_class_ids", ["class-a"])
+    monkeypatch.setattr(
+        storage,
+        "read_dashboard_authorization_snapshot",
+        lambda *_args, **_kwargs: malformed,
+    )
+    with pytest.raises(DashboardAuthorizationUnavailableError) as invalid_contract:
+        boundary.authorize_teacher_dashboard(request)
+    assert invalid_contract.value.__cause__ is None
+    assert invalid_contract.value.__context__ is None
 
 
 def test_snapshot_must_match_fresh_http_principal(setup, monkeypatch) -> None:

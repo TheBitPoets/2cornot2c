@@ -108,6 +108,8 @@ class DashboardAccessScope:
         object.__setattr__(self, "class_ids", _class_ids(self.class_ids, "class_ids"))
         if type(self.all_classes) is not bool:
             raise ValueError("all_classes deve essere booleano.")
+        if self.all_classes and self.dashboard != "teacher":
+            raise ValueError("Solo la dashboard docente supporta uno scope globale.")
         if self.all_classes and self.class_ids:
             raise ValueError("Uno scope globale non elenca classi parziali.")
         if self.student_user_id is not None:
