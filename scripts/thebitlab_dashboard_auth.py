@@ -82,7 +82,12 @@ class DashboardAuthorizationBoundary:
             raise HttpAuthorizationDeniedError()
         snapshot = self._snapshot(context, target_user_id=target_user_id)
         if (
-            snapshot.target_user_id != target_user_id
+            snapshot.target_user_id is not None
+            and snapshot.target_user_id != target_user_id
+        ):
+            raise DashboardAuthorizationUnavailableError()
+        if (
+            snapshot.target_user_id is None
             or snapshot.target_role != "student"
             or not snapshot.target_class_ids
         ):

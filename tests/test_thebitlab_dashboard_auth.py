@@ -161,6 +161,11 @@ def test_student_cannot_select_another_or_malformed_identifier(setup) -> None:
             established_request(http, "student-01"),
             requested_student_user_id="\n",
         )
+    with pytest.raises(HttpAuthorizationDeniedError):
+        boundary.authorize_student_dashboard(
+            established_request(http, "student-01"),
+            requested_student_user_id="\ud800",
+        )
 
 
 def test_teacher_student_detail_requires_active_shared_class(setup) -> None:
@@ -297,6 +302,29 @@ def test_storage_failure_and_malformed_snapshot_are_sanitized(setup, monkeypatch
         boundary.authorize_teacher_dashboard(request)
     assert invalid_contract.value.__cause__ is None
     assert invalid_contract.value.__context__ is None
+
+
+def test_storage_target_mismatch_is_adapter_failure(setup, monkeypatch) -> None:
+    storage, boundary, http = setup
+    request = established_request(http, "teacher-01")
+    mismatch = DashboardAuthorizationSnapshot(
+        "teacher-01",
+        "teacher",
+        NOW,
+        ("class-a",),
+        target_user_id="student-02",
+        target_role="student",
+        target_class_ids=("class-a",),
+    )
+    monkeypatch.setattr(
+        storage,
+        "read_dashboard_authorization_snapshot",
+        lambda *_args, **_kwargs: mismatch,
+    )
+    with pytest.raises(DashboardAuthorizationUnavailableError):
+        boundary.authorize_student_dashboard(
+            request, requested_student_user_id="student-01"
+        )
 
 
 def test_snapshot_must_match_fresh_http_principal(setup, monkeypatch) -> None:

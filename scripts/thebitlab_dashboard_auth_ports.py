@@ -20,7 +20,12 @@ def dashboard_identifier(value: str, field_name: str) -> str:
     if (
         not normalized
         or len(normalized) > _MAX_IDENTIFIER_CHARS
-        or any(ord(character) < 32 or ord(character) == 127 for character in normalized)
+        or any(
+            ord(character) < 32
+            or ord(character) == 127
+            or 0xD800 <= ord(character) <= 0xDFFF
+            for character in normalized
+        )
     ):
         raise ValueError(f"{field_name} non valido.")
     return normalized

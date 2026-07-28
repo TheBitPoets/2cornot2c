@@ -31,7 +31,7 @@ Un cambio ruolo/disabilitazione tra autenticazione e lettura produce quindi dini
 - `teacher`: può richiedere uno studente attivo soltanto se esiste almeno una classe attiva condivisa tra membership `teacher` e `student`;
 - `admin`: può richiedere uno studente attivo con almeno una membership di classe attiva;
 - target `pending`, docente, disabilitato, inesistente o senza classe attiva: diniego;
-- ID vuoti, sovradimensionati o con controlli: diniego senza distinguere esistenza e formato.
+- ID vuoti, sovradimensionati, con controlli o surrogate Unicode non codificabili: diniego senza distinguere esistenza e formato.
 
 Lo scope del dettaglio contiene l'intersezione visibile, non tutte le classi del target. L'adapter dati deve usare `class_ids` per filtrare ogni record prima della serializzazione e `student_user_id` come unico target ammesso. Non deve rileggere `student_id` o `class_id` dal client dopo l'autorizzazione.
 
@@ -48,7 +48,7 @@ Il boundary conserva gli errori HTTP esistenti:
 - `401 authentication_required` per sessione assente/non valida;
 - `403 csrf_rejected` per metodi unsafe senza token corretto;
 - `403 authorization_denied` per ruolo, membership, classe o target non autorizzati;
-- `503 dashboard_authorization_unavailable` per storage, corruzione o contratti adapter malformati.
+- `503 dashboard_authorization_unavailable` per storage, corruzione o contratti adapter malformati, incluso uno snapshot che restituisce un target diverso da quello richiesto.
 
 ## Fuori scope
 
