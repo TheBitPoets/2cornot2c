@@ -1,0 +1,44 @@
+# Route HTTPS pairing browser–TUI
+
+## Protocollo
+
+Il runtime espone esclusivamente con opt-in auth:
+
+- `POST /auth/tui/pairings`: crea un pairing pending e restituisce `pairing_id`, `user_code`, path fisso di verifica e scadenza;
+- `POST /auth/tui/pair`: riceve `{"code":"..."}` dal browser, con cookie web e `X-CSRF-Token`, e autorizza soltanto uno student corrente;
+- `POST /auth/tui/pairings/{pairing_id}/token`: riceve lo stesso codice dalla TUI e tenta il consumo atomico. Un pairing ancora pending o già terminale produce 409; la CLI potrà trattare 409 come polling bounded fino alla scadenza.
+
+Codice e bearer sono accettati soltanto nel body JSON, mai in URL/query. Il browser non riceve il bearer TUI; il terminale non riceve cookie, CSRF o credenziali provider.
+
+## Trasporto
+
+Tutte le route richiedono HTTPS diretto o attestato dallo stesso trusted proxy resolver delle route Google/sessione. Sono accettati soltanto request-target origin-form canonici, `POST`, query vuota, Content-Length singolo e body massimo 2048 byte. Transfer-Encoding, JSON con chiavi duplicate, Content-Type diverso da `application/json`, campi extra e codici fuori grammatica falliscono chiusi.
+
+`/auth/tui/pairings` richiede body vuoto; autorizzazione e consumo richiedono un oggetto JSON con la sola chiave `code`. Il Course Board legge il body soltanto dopo avere validato framing e limite; framing invalido chiude la connessione per evitare request smuggling/desincronizzazione.
+
+## Rate limit e retention
+
+Un unico store SQLite atomico, condiviso col login Google, applica bucket globali e per-client distinti a begin, authorize e consume. Consume aggiunge un bucket HMAC per pairing, impedendo tentativi distribuiti eccessivi sullo stesso identificatore. IP, pairing e codici non vengono persistiti nei bucket in chiaro.
+
+Prima di ogni begin ammesso viene eseguito cleanup fail-closed dei pairing scaduti non referenziati da sessioni TUI. La combinazione tra TTL, limiti globali/client e cleanup impedisce crescita persistente incontrollata da parte dell'ingresso pubblico.
+
+## Consegna one-shot
+
+Il consumo SQLite autorizzato crea pairing `consumed` e sessione audience `tui` nella stessa transazione. La risposta 200 contiene bearer e scadenza una sola volta ed è associata a un delivery guard. Se serializzazione o scrittura socket falliscono, il guard verifica correlazione session ID/utente/scadenza e revoca best-effort quella specifica sessione TUI. Il pairing non torna pending e il terminale deve iniziare un nuovo flusso.
+
+Body, request e response escludono codice e bearer dai `repr`; gli access log usano il path fisso redatto `/auth/tui`. Tutte le risposte sono `no-store`, `no-cache` e `no-referrer`.
+
+## Errori
+
+- 400: richiesta/codice/formato non valido o HTTPS assente;
+- 401: sessione browser assente/invalida;
+- 403: CSRF o ruolo browser non consentito;
+- 405: metodo diverso da POST;
+- 409: pairing pending, già autorizzato/consumato/revocato o race;
+- 410: pairing scaduto;
+- 429: limite atomico superato, con `Retry-After`;
+- 503: storage, cleanup, clock, generatore o contratto adapter non disponibile.
+
+## Limiti
+
+La pagina UI che raccoglie manualmente il codice, l'apertura browser, il polling CLI, la persistenza sicura del bearer e l'uso nelle API student-help restano incrementi successivi.

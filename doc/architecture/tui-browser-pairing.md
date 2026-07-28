@@ -4,7 +4,7 @@
 
 `scripts/thebitlab_tui_pairing.py` completa il protocollo provider-independent tra una TUI non autenticata e una sessione web TheBitLab già autenticata. Il terminale non riceve password, cookie, authorization code, access token Google/GitHub o altri segreti del provider.
 
-Questo incremento implementa boundary e transazione applicativa. Il costruttore richiede che sessioni web, servizio pairing interno e sessioni TUI condividano la stessa istanza del registro identity, impedendo confusione tra utenti omonimi di database distinti. I riferimenti storage e l'intero grafo `HttpSessionAuthBoundary`/`TuiPairingSessionService`/`PairingService` sono proprietà read-only; il service TUI deriva sempre il registro dal `PairingService`, senza conservarne una copia divergente. Ogni operazione pubblica ripete inoltre il controllo dell'intero grafo web/pairing/TUI prima e dopo ogni callback mutabile e prima di restituire risultati, quindi anche una sostituzione fault-injected successiva alla costruzione o durante una chiamata fallisce con 503. Le route concrete Course Board, l'apertura automatica del browser e la conservazione locale del bearer restano adapter successivi.
+Questo incremento implementa boundary e transazione applicativa. Il costruttore richiede che sessioni web, servizio pairing interno e sessioni TUI condividano la stessa istanza del registro identity, impedendo confusione tra utenti omonimi di database distinti. I riferimenti storage e l'intero grafo `HttpSessionAuthBoundary`/`TuiPairingSessionService`/`PairingService` sono proprietà read-only; il service TUI deriva sempre il registro dal `PairingService`, senza conservarne una copia divergente. Ogni operazione pubblica ripete inoltre il controllo dell'intero grafo web/pairing/TUI prima e dopo ogni callback mutabile e prima di restituire risultati, quindi anche una sostituzione fault-injected successiva alla costruzione o durante una chiamata fallisce con 503. Le route concrete Course Board sono ora descritte in `tui-pairing-http-routes.md`; l'apertura automatica del browser e la conservazione locale del bearer restano adapter successivi.
 
 ## Flusso
 
@@ -60,11 +60,11 @@ I dettagli storage e le credenziali non sono concatenati agli errori pubblici.
 
 ## Limiti prima dell'esposizione Internet
 
-Le route di `begin`, autorizzazione e consumo devono avere limiti globali/per-client e limiti specifici sui tentativi di codice. La policy trusted-proxy e il rate limiting sono tracciati in #549. Sono inoltre obbligatori HTTPS, header cache-control appropriati e nessun logging dei body/codici.
+Le route concrete applicano limiti atomici globali/per-client e un bucket per pairing sul consumo, condividendo store e trusted-proxy policy con il runtime auth. Sono obbligatori HTTPS, header cache-control appropriati e nessun logging dei body/codici.
 
 ## Fuori scope
 
-- wiring HTTP concreto e browser E2E;
+- browser E2E con pagina UI completa;
 - apertura browser e polling nella CLI/TUI;
 - persistenza locale del bearer;
 - sostituzione immediata dei token HMAC della demo;

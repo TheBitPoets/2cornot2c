@@ -345,6 +345,41 @@ class TuiBrowserPairingBoundary:
             raise TuiPairingUnavailableError()
         return credential
 
+    def discard_issued_credential(self, credential: IssuedTuiCredential) -> bool:
+        """Best-effort revoke a bearer that could not be delivered to its TUI."""
+
+        bearer = None
+        session = None
+        digest = None
+        revoked = False
+        try:
+            self._require_shared_registry()
+            if type(credential) is not IssuedTuiCredential:
+                return False
+            bearer = credential.bearer_token
+            digest = session_token_digest(bearer)
+            session = self.tui_sessions.storage.read_session_by_token_digest(digest)
+            if (
+                type(session) is not UserSession
+                or session.audience != "tui"
+                or session.source_pairing_id is None
+                or session.session_id != credential.session_id
+                or session.user_id != credential.user_id
+                or session.expires_at != credential.expires_at
+                or not hmac.compare_digest(session.token_digest, digest)
+            ):
+                return False
+            revoked = self.tui_sessions.revoke(bearer) is True
+            self._require_shared_registry()
+        except Exception:
+            revoked = False
+        finally:
+            bearer = None
+            credential = None
+            session = None
+            digest = None
+        return revoked
+
     def authenticate_bearer(self, authorization_header: str) -> TuiAuthenticatedContext:
         bearer = None
         invalid = False

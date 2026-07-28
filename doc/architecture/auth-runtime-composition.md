@@ -19,6 +19,7 @@ La configurazione avviene prima della creazione del server HTTP. Qualunque valor
 | `THEBITLAB_GOOGLE_REDIRECT_URI` | URL HTTPS assoluto con path esatto `/auth/google/callback`, senza query o fragment |
 | `THEBITLAB_AUTH_CSRF_SECRET_B64` | 32–64 byte codificati base64url senza padding |
 | `THEBITLAB_RATE_LIMIT_PEPPER_B64` | 32–64 byte indipendenti, base64url senza padding |
+| `THEBITLAB_TUI_PAIRING_PEPPER_B64` | 32–64 byte indipendenti per il digest dei codici pairing, base64url senza padding |
 | `THEBITLAB_TRUSTED_PROXY_CIDRS` | da 1 a 16 reti CIDR canoniche bounded (massimo 4096 indirizzi IPv4 o 65536 IPv6 ciascuna), separate da virgola e senza spazi |
 
 Opzionali:
@@ -26,7 +27,7 @@ Opzionali:
 - `THEBITLAB_AUTH_DB_PATH`: file SQLite assoluto o relativo al data root; default `.thebitlab-auth/auth.sqlite3` in una directory dedicata;
 - `THEBITLAB_GOOGLE_POST_LOGIN_PATH`: path locale successivo al login; default `/tools/course_board.html`.
 
-I due segreti binari devono essere indipendenti. Per generarli:
+I tre segreti binari (CSRF, rate limit e pairing) devono essere indipendenti. Per generarli:
 
 ```bash
 python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b'=').decode())"
@@ -44,7 +45,8 @@ python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_b
 6. `SqliteAtomicRateLimitStore` sullo stesso file, condivisibile fra processi dello stesso host;
 7. un solo `TrustedProxyClientResolver`, condiviso fra attribuzione client e verifica HTTPS;
 8. `GoogleOidcHttpRoutes` con lo stesso boundary sessione usato dal callback e dal delivery cleanup;
-9. `SessionHttpRoutes` per session status/logout, vincolato allo stesso boundary web e allo stesso resolver proxy.
+9. `SessionHttpRoutes` per session status/logout, vincolato allo stesso boundary web e allo stesso resolver proxy;
+10. servizi pairing e sessioni con audience `tui`, più `TuiPairingHttpRoutes`, sullo stesso storage e resolver.
 
 Il flow OIDC resta volutamente in memoria: un callback deve raggiungere lo stesso processo che ha iniziato il login. Un deployment multi-replica richiede sticky routing oppure un futuro flow store condiviso.
 
