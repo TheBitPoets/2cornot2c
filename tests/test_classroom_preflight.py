@@ -92,6 +92,10 @@ def test_windows_launcher_hides_technical_start_commands() -> None:
     assert "student_dev_shell.py" in launcher
     assert "vagrant up --provider=virtualbox" in launcher
     assert "AMBIENTE NON ANCORA PRONTO" in launcher
+    assert "Find-ExistingProvider" in launcher
+    assert 'Record.key -eq "student-image"' in launcher
+    assert "image inspect" in launcher
+    assert "Ambiente precedente riconosciuto" in launcher
 
 
 def test_wsl_preparation_is_elevated_and_resumes_after_restart() -> None:
