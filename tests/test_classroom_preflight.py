@@ -67,6 +67,7 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "Test-HostResources" in bootstrap
     assert "installed_by_bootstrap" in bootstrap
     assert "Install-ClassroomLauncher" in bootstrap
+    assert "launch-classroom-windows.ps1" in bootstrap
     assert "prepare-wsl-windows.ps1" in bootstrap
     assert "remove-wsl-windows.ps1" in bootstrap
     assert "Ambiente 2cornot2c.lnk" in bootstrap
@@ -80,6 +81,17 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "docker image rm $ImageReference" in uninstall
     assert "docker image rm --force" not in uninstall
     assert "Ambiente 2cornot2c.lnk" in uninstall
+
+
+def test_windows_launcher_hides_technical_start_commands() -> None:
+    launcher = (ROOT / "scripts" / "launch-classroom-windows.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert "selected-provider.txt" in launcher
+    assert "student_dev_shell.py" in launcher
+    assert "vagrant up --provider=virtualbox" in launcher
+    assert "AMBIENTE NON ANCORA PRONTO" in launcher
 
 
 def test_wsl_preparation_is_elevated_and_resumes_after_restart() -> None:

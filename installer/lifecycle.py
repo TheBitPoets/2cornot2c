@@ -8,6 +8,7 @@ import subprocess
 
 
 WINDOWS_ACTION_SCRIPTS = {
+    "launch": "launch-classroom-windows.ps1",
     "update": "update-classroom-windows.ps1",
     "uninstall": "uninstall-classroom-windows.ps1",
 }

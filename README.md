@@ -578,7 +578,11 @@ richiede un riavvio e riapre il launcher al nuovo accesso. Al primo utilizzo
 resta necessario confermare soltanto le finestre di sicurezza e licenza
 mostrate direttamente da Windows.
 
-Dopo la preparazione, dalla cartella del progetto esegui:
+Dopo la preparazione, su Windows apri **Ambiente 2cornot2c** e scegli
+**Avvia l'ambiente**. La console Ubuntu viene aperta automaticamente senza
+mostrare comandi Python.
+
+Su macOS, dalla cartella del progetto esegui:
 
 ```bash
 python3 scripts/student_dev_shell.py

@@ -125,6 +125,7 @@ def test_tui_home_exposes_the_complete_lifecycle() -> None:
     rendered = "\n".join(frame(state, 150, 14, color=False))
 
     assert "Gestisci ambiente 2cornot2c" in rendered
+    assert "Avvia l'ambiente" in rendered
     assert "Installa, completa o ripara" in rendered
     assert "Aggiorna l'ambiente" in rendered
     assert "Disinstalla l'ambiente" in rendered
@@ -149,7 +150,7 @@ def test_tui_uninstall_requires_confirmation_and_launches_separately(
         Host.WINDOWS_AMD64,
         (Provider.DOCKER,),
         screen="home",
-        action_index=2,
+        action_index=3,
     )
 
     open_home_action(state)
@@ -185,6 +186,43 @@ def test_windows_lifecycle_uses_only_persistent_known_scripts(
     assert command[-1] == "-ConfirmedFromTui"
     with pytest.raises(ValueError, match="non supportata"):
         powershell_action_command("qualcosa")
+
+
+def test_tui_launches_environment_without_showing_python_commands(
+    monkeypatch,
+) -> None:
+    pytest.importorskip("utui")
+    from installer.tui import State, open_home_action
+
+    launched = []
+    monkeypatch.setattr(
+        "installer.tui.launch_windows_action",
+        lambda action: launched.append(action),
+    )
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.DOCKER,),
+        screen="home",
+        action_index=0,
+    )
+
+    open_home_action(state)
+
+    assert launched == ["launch"]
+    assert state.running is False
+
+
+def test_successful_installation_remembers_provider(monkeypatch, tmp_path) -> None:
+    pytest.importorskip("utui")
+    from installer.tui import _remember_provider
+
+    monkeypatch.setattr("installer.tui.Path.home", lambda: tmp_path)
+
+    _remember_provider(Provider.DOCKER)
+
+    assert (
+        tmp_path / ".2cornot2c" / "selected-provider.txt"
+    ).read_text(encoding="utf-8") == "docker"
 
 
 def test_tui_marks_first_low_memory_choice_as_recommended() -> None:
@@ -320,13 +358,17 @@ def test_tui_installation_report_shows_step_bar_and_elapsed_time() -> None:
     assert "▓" in report
 
 
-def test_tui_poll_updates_progress_and_finishes_installation() -> None:
+def test_tui_poll_updates_progress_and_finishes_installation(
+    monkeypatch,
+    tmp_path,
+) -> None:
     pytest.importorskip("utui")
     from queue import Queue
 
     from installer.executor import StepResult
     from installer.tui import State, poll_installation
 
+    monkeypatch.setattr("installer.tui.Path.home", lambda: tmp_path)
     updates = Queue()
     state = State(
         Host.WINDOWS_AMD64,
