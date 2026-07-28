@@ -14,7 +14,7 @@ L'incremento chiude il requisito #549 per `/auth/google/login`. Il wiring `BaseH
 - Se il peer è trusted, è accettato al massimo un `X-Forwarded-For` bounded.
 - La catena viene percorsa da destra rimuovendo soltanto proxy trusted; il primo hop non trusted è il client attribuito.
 - `Forwarded`, combinazioni `Forwarded` + `X-Forwarded-For`, header duplicati, hop vuoti, host con porta, zone ID IPv6, catene eccessive e valori non IP falliscono con `400 invalid_client_address`.
-- IPv4 e IPv6 sono canonicalizzati con `ipaddress`.
+- IPv4 e IPv6 sono canonicalizzati con `ipaddress`; gli IPv4-mapped IPv6 vengono normalizzati all'IPv4 equivalente prima sia del trust check sia della derivazione bucket.
 
 La configurazione dei CIDR deve corrispondere esattamente ai reverse proxy controllati dal deployment. Non è sicuro fidarsi indiscriminatamente di reti LAN o degli header provenienti da Internet.
 
@@ -38,7 +38,7 @@ Sono inclusi:
 - `InMemoryAtomicRateLimitStore`: bounded e thread-safe, soltanto per test o processo singolo;
 - `SqliteAtomicRateLimitStore`: transazione `BEGIN IMMEDIATE`, WAL e busy timeout, condivisibile da più worker/processi sullo stesso host.
 
-Lo store SQLite elimina finestre concluse durante l'ammissione. Poiché ogni richiesta ammessa consuma anche il bucket globale, il numero di contatori client creati in una finestra è limitato dal limite globale. Le richieste già negate non creano nuove righe.
+Lo store SQLite elimina finestre concluse durante l'ammissione e applica anche un cap esplicito `max_counters` nella stessa transazione. Poiché ogni richiesta ammessa consuma anche il bucket globale, il numero di contatori client creati in una finestra è inoltre limitato dal limite globale. Le richieste già negate non creano nuove righe.
 
 Un deployment multi-host deve iniettare un'implementazione realmente condivisa di `AtomicRateLimitStore` con la stessa semantica atomica (per esempio uno script transazionale nel data store scelto). Non sono ammesse istanze in-memory indipendenti per replica né sticky session come sostituto del limite globale.
 
@@ -47,8 +47,9 @@ Un deployment multi-host deve iniettare un'implementazione realmente condivisa d
 Le finestre usano UTC aware e scadenza esclusiva. Ogni store conserva un high-water mark del clock:
 
 - avanzamento o uguaglianza sono ammessi;
-- rollback, timestamp naive/non finiti o anteriori all'epoch falliscono chiusi;
-- su SQLite il controllo, cleanup, decisione e incremento avvengono nella stessa transazione.
+- timestamp concorrenti fuori ordine e rollback vengono clampati al massimo già osservato: non producono falsi 503 e non possono riaprire finestre precedenti;
+- timestamp naive/non finiti o anteriori all'epoch falliscono chiusi;
+- su SQLite high-water mark, cap, cleanup, decisione e incremento avvengono nella stessa transazione.
 
 Test concorrenti verificano che, con più worker, il numero degli ammessi sia esattamente il limite e che una negazione per-client non consumi capacità globale.
 

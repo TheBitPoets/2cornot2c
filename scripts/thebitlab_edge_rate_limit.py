@@ -68,10 +68,6 @@ class EdgeRateLimitStoreError(RuntimeError):
     """Raised when an atomic admission store cannot decide safely."""
 
 
-class EdgeRateLimitClockRollbackError(EdgeRateLimitStoreError):
-    """Raised when a store observes time moving behind its high-water mark."""
-
-
 @dataclass(frozen=True)
 class EdgeRequestMetadata:
     """Minimal network metadata supplied by a concrete HTTP adapter."""
@@ -218,7 +214,12 @@ class TrustedProxyClientResolver:
         if type(value) is not str or not value or "%" in value:
             raise EdgeClientAttributionError()
         try:
-            return ipaddress.ip_address(value)
+            address = ipaddress.ip_address(value)
+            if isinstance(address, ipaddress.IPv6Address):
+                mapped = address.ipv4_mapped
+                if mapped is not None:
+                    return mapped
+            return address
         except ValueError:
             raise EdgeClientAttributionError() from None
 
@@ -239,8 +240,8 @@ class InMemoryAtomicRateLimitStore:
     ) -> int | None:
         validated, epoch = _admission_input(buckets, now)
         with self._lock:
-            if self._high_water_epoch is not None and epoch < self._high_water_epoch:
-                raise EdgeRateLimitClockRollbackError("Clock rate limit arretrato.")
+            if self._high_water_epoch is not None:
+                epoch = max(epoch, self._high_water_epoch)
             self._high_water_epoch = epoch
             active: dict[tuple[str, int, int], int] = {}
             for key, count in self._counters.items():
@@ -271,13 +272,17 @@ class SqliteAtomicRateLimitStore:
         database_path: Path | str,
         *,
         busy_timeout_seconds: float = 5.0,
+        max_counters: int = 10_000,
     ) -> None:
         if str(database_path) == ":memory:":
             raise ValueError("SQLite :memory: non supportato per rate limit condiviso.")
         if not isinstance(busy_timeout_seconds, (int, float)) or not 0.1 <= busy_timeout_seconds <= 30:
             raise ValueError("busy_timeout_seconds non valido.")
+        if type(max_counters) is not int or not 1 <= max_counters <= 1_000_000:
+            raise ValueError("max_counters non valido.")
         self.database_path = Path(database_path)
         self.busy_timeout_seconds = float(busy_timeout_seconds)
+        self.max_counters = max_counters
         try:
             self.database_path.parent.mkdir(parents=True, exist_ok=True)
             with self._connect() as connection:
@@ -320,8 +325,8 @@ class SqliteAtomicRateLimitStore:
             metadata = connection.execute(
                 "SELECT high_water_epoch FROM rate_limit_metadata WHERE singleton = 1"
             ).fetchone()
-            if metadata is not None and epoch < float(metadata[0]):
-                raise EdgeRateLimitClockRollbackError("Clock rate limit arretrato.")
+            if metadata is not None:
+                epoch = max(epoch, float(metadata[0]))
             connection.execute(
                 """
                 INSERT INTO rate_limit_metadata(singleton, high_water_epoch)
@@ -351,6 +356,16 @@ class SqliteAtomicRateLimitStore:
                     counts[key] = int(row[0])
             retry_after = _retry_after(validated, keys, counts, epoch)
             if retry_after is None:
+                total_counters = int(
+                    connection.execute(
+                        "SELECT COUNT(*) FROM rate_limit_counters"
+                    ).fetchone()[0]
+                )
+                new_counters = sum(1 for key in keys if key not in counts)
+                if total_counters + new_counters > self.max_counters:
+                    raise EdgeRateLimitStoreError(
+                        "Capacità rate limit esaurita."
+                    )
                 for key in keys:
                     connection.execute(
                         """

@@ -8,7 +8,6 @@ import pytest
 
 from scripts.thebitlab_edge_rate_limit import (
     EdgeClientAttributionError,
-    EdgeRateLimitClockRollbackError,
     EdgeRateLimitExceededError,
     EdgeRateLimitStoreError,
     EdgeRateLimitUnavailableError,
@@ -122,9 +121,16 @@ def test_trusted_proxy_rejects_ambiguous_or_malformed_forwarding() -> None:
             resolver.resolve(metadata)
 
 
-def test_resolver_canonicalizes_ipv6_and_rejects_zone_ids() -> None:
-    resolver = TrustedProxyClientResolver()
+def test_resolver_canonicalizes_ipv6_mapped_ipv4_and_rejects_zone_ids() -> None:
+    resolver = TrustedProxyClientResolver(("10.0.0.0/8",))
     assert resolver.resolve(request("2001:0db8:0:0::1")) == "2001:db8::1"
+    assert resolver.resolve(request("::ffff:203.0.113.7")) == "203.0.113.7"
+    assert resolver.resolve(
+        request(
+            "::ffff:10.0.0.5",
+            ("X-Forwarded-For", "::ffff:198.51.100.8"),
+        )
+    ) == "198.51.100.8"
     with pytest.raises(EdgeClientAttributionError):
         resolver.resolve(request("fe80::1%eth0"))
 
@@ -157,12 +163,13 @@ def test_memory_store_retry_after_and_window_boundary() -> None:
     assert store.admit((bucket,), now=NOW + timedelta(seconds=60)) is None
 
 
-def test_memory_store_clock_rollback_fails_closed() -> None:
+def test_memory_store_clamps_out_of_order_and_rollback_timestamps() -> None:
     store = InMemoryAtomicRateLimitStore()
     bucket = RateLimitBucket("global:test:global", 2, 60)
-    assert store.admit((bucket,), now=NOW + timedelta(seconds=1)) is None
-    with pytest.raises(EdgeRateLimitClockRollbackError):
-        store.admit((bucket,), now=NOW)
+    later = NOW + timedelta(seconds=1)
+    assert store.admit((bucket,), now=later) is None
+    assert store.admit((bucket,), now=NOW) is None
+    assert store.admit((bucket,), now=NOW) == 59
 
 
 def test_memory_store_capacity_is_bounded() -> None:
@@ -192,15 +199,32 @@ def test_sqlite_store_is_atomic_across_concurrent_workers(tmp_path) -> None:
     assert outcomes.count(60) == 43
 
 
-def test_sqlite_store_persists_limits_and_clock_high_water(tmp_path) -> None:
+def test_sqlite_store_persists_limits_and_clamps_clock_high_water(tmp_path) -> None:
     path = tmp_path / "rate-limit.sqlite3"
     bucket = RateLimitBucket("global:test:global", 1, 60)
     first = SqliteAtomicRateLimitStore(path)
-    assert first.admit((bucket,), now=NOW) is None
+    later = NOW + timedelta(seconds=1)
+    assert first.admit((bucket,), now=later) is None
     second = SqliteAtomicRateLimitStore(path)
-    assert second.admit((bucket,), now=NOW) == 60
-    with pytest.raises(EdgeRateLimitClockRollbackError):
-        second.admit((bucket,), now=NOW - timedelta(microseconds=1))
+    assert second.admit((bucket,), now=NOW) == 59
+    assert second.admit((bucket,), now=NOW - timedelta(days=1)) == 59
+
+
+def test_sqlite_store_capacity_is_bounded(tmp_path) -> None:
+    store = SqliteAtomicRateLimitStore(
+        tmp_path / "bounded.sqlite3", max_counters=2
+    )
+    first = RateLimitBucket("global:test:first", 2, 60)
+    second = RateLimitBucket("global:test:second", 2, 60)
+    third = RateLimitBucket("global:test:third", 2, 60)
+    assert store.admit((first, second), now=NOW) is None
+    with pytest.raises(EdgeRateLimitStoreError):
+        store.admit((third,), now=NOW)
+    assert store.admit((first,), now=NOW) is None
+    with sqlite3.connect(store.database_path) as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM rate_limit_counters"
+        ).fetchone()[0] == 2
 
 
 def test_sqlite_store_does_not_persist_raw_client_addresses(tmp_path) -> None:
@@ -366,6 +390,8 @@ def test_rule_and_store_configuration_validation(tmp_path) -> None:
         RateLimitRule("valid", 1, timedelta(milliseconds=1))
     with pytest.raises(ValueError):
         SqliteAtomicRateLimitStore(":memory:")
+    with pytest.raises(ValueError):
+        SqliteAtomicRateLimitStore(tmp_path / "rate.sqlite3", max_counters=0)
     with pytest.raises(ValueError):
         GoogleOidcLoginAdmissionBoundary(
             FakeLogin(),
