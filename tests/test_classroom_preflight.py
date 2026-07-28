@@ -19,7 +19,7 @@ def test_docker_preflight_accepts_minimum_resources() -> None:
     assert {result.status for result in results} == {"ok"}
 
 
-def test_vm_preflight_blocks_low_memory_disk_and_virtualization() -> None:
+def test_vm_preflight_blocks_resources_but_warns_on_unreliable_virtualization() -> None:
     results = evaluate(
         Host.WINDOWS_AMD64,
         Provider.VIRTUALBOX,
@@ -29,7 +29,7 @@ def test_vm_preflight_blocks_low_memory_disk_and_virtualization() -> None:
     assert [result.status for result in results] == [
         "blocked",
         "blocked",
-        "blocked",
+        "warning",
     ]
 
 
@@ -41,6 +41,13 @@ def test_unknown_measurements_warn_but_do_not_block_sufficient_disk() -> None:
     )
 
     assert [result.status for result in results] == ["warning", "ok", "warning"]
+
+
+def test_windows_virtualization_probe_accepts_an_active_hypervisor() -> None:
+    source = (ROOT / "installer" / "preflight.py").read_text(encoding="utf-8")
+
+    assert "HypervisorPresent" in source
+    assert "stato virtualizzazione incerto" in source
 
 
 def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:

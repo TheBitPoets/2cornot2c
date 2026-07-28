@@ -452,12 +452,14 @@ risorsa obbligatoria manca, nessun componente viene modificato.
 
 Gli errori destinati agli studenti hanno un codice stabile, un titolo rosso e
 istruzioni semplici in giallo. Ogni messaggio spiega cosa è successo, cosa fare
-e quale codice comunicare al docente, per esempio `E03` quando la
-virtualizzazione è disabilitata. I dettagli tecnici restano separati e non è
-mai richiesto a uno studente di modificare da solo BIOS, antivirus o file Git.
-Su Windows `E03` rileva automaticamente una CPU Intel o AMD e indica soltanto i
-nomi pertinenti della voce di virtualizzazione. Chiede comunque l'aiuto di un
-adulto e vieta esplicitamente di modificare Secure Boot, TPM o altre opzioni.
+e quale codice comunicare al docente. I dettagli tecnici restano separati e non
+è mai richiesto a uno studente di modificare da solo BIOS, antivirus o file
+Git. Il valore WMI usato da Windows per la virtualizzazione può essere errato
+anche quando Gestione attività mostra **Abilitata**: in questo caso il setup
+mostra `W03` e continua, lasciando a WSL la verifica reale. `E03` e le
+indicazioni Intel/AMD restano disponibili soltanto quando la disabilitazione è
+accertata; chiedono l'aiuto di un adulto e vietano di modificare Secure Boot,
+TPM o altre opzioni.
 
 #### Aggiornare su Windows
 
