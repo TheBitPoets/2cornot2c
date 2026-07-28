@@ -118,6 +118,9 @@ def test_browser_page_is_fixed_no_store_and_contains_no_pairing_secret(graph) ->
     assert "/auth/session" in html
     assert "/auth/tui/pair" in html
     assert "/auth/google/login" in html
+    assert 'target="_blank"' in html
+    assert 'rel="noopener noreferrer"' in html
+    assert "nuova scheda" in html
     assert "csrf_token" in html
     assert "user_code" not in html
     assert "bearer_token" not in html

@@ -98,7 +98,16 @@ class TuiPairingClient:
                 data=b"",
                 method="POST",
             )
-            payload = self._request_json(request, timeout=timeout, expected_status=201)
+            try:
+                payload = self._request_json(request, timeout=timeout, expected_status=201)
+            except _PairingRateLimitedError as error:
+                raise TuiPairingClientError(
+                    f"Troppe richieste pairing. Riprova tra {error.retry_after} secondi."
+                ) from None
+            except _PairingPendingError:
+                raise TuiPairingClientError(
+                    "Il server pairing ha restituito uno stato inatteso."
+                ) from None
             if type(payload) is not dict or set(payload) != {
                 "pairing_id",
                 "user_code",

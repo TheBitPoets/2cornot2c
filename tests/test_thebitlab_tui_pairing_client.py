@@ -105,6 +105,23 @@ def test_begin_and_poll_keep_code_and_bearer_out_of_repr() -> None:
     assert json.loads(requests[2].data) == {"code": "PAIRCODE123"}
 
 
+def test_begin_maps_rate_limit_to_sanitized_public_error() -> None:
+    headers = Message()
+    headers.add_header("Retry-After", "7")
+    error = http_error(429, headers=headers)
+    client = TuiPairingClient(
+        "https://school.test",
+        urlopen=lambda *args, **kwargs: (_ for _ in ()).throw(error),
+        clock=lambda: NOW,
+    )
+
+    with pytest.raises(TuiPairingClientError, match="Riprova tra 7 secondi") as captured:
+        client.begin()
+
+    assert isinstance(captured.value, ValueError)
+    assert "school.test" not in str(captured.value)
+
+
 def test_poll_honors_bounded_retry_after() -> None:
     headers = Message()
     headers.add_header("Retry-After", "3")

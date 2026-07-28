@@ -29,7 +29,7 @@ Il deadline deriva una volta dalla scadenza server e da un clock monotono non de
 
 - non riceve il codice in query o fragment;
 - legge la sessione corrente da `/auth/session`;
-- invita al login Google quando manca la sessione;
+- invita al login Google in una nuova scheda quando manca la sessione, mantenendo codice e pagina pairing nella scheda originale anche se il callback ha un post-login path diverso;
 - invia il codice con `POST` JSON e il CSRF associato al bearer web;
 - cancella il campo dopo il successo;
 - non riceve mai il bearer TUI.
