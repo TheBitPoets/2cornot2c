@@ -65,6 +65,11 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     )
 
     assert "Test-HostResources" in bootstrap
+    assert "function Test-Python312" in bootstrap
+    assert "sys.version_info[:2] != (3, 12)" in bootstrap
+    assert "if (-not (Test-Python312))" in bootstrap
+    assert "venv --clear" in bootstrap
+    assert "$VenvOutput" in bootstrap
     assert "installed_by_bootstrap" in bootstrap
     assert "Install-ClassroomLauncher" in bootstrap
     assert "launch-classroom-windows.ps1" in bootstrap
