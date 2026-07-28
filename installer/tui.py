@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from io import UnsupportedOperation
+from pathlib import Path
 import sys
 
 from utui import (
@@ -20,6 +21,7 @@ from utui import (
 )
 
 from installer.diagnostics import diagnose
+from installer.executor import execute_plan
 from installer.model import Host, Provider
 from installer.platforms import detect_host
 from installer.plans import install_plan, supported_providers
@@ -33,6 +35,7 @@ class State:
     providers: tuple[Provider, ...]
     active_index: int = 0
     report: tuple[str, ...] = ("Premi Invio per eseguire la diagnosi.",)
+    confirmation_pending: bool = False
     running: bool = True
 
 
@@ -55,8 +58,13 @@ def build_screen(state: State):
         title="Diagnosi",
         min_width=38,
     )
+    command_text = (
+        "s: conferma installazione\nn/Esc: annulla"
+        if state.confirmation_pending
+        else "Su/Giu oppure k/j: scegli\nInvio: controlla\na: installa\nq/Esc: esci"
+    )
     commands = Panel(
-        Label("Su/Giu oppure k/j: scegli\nInvio: controlla\nq/Esc: esci"),
+        Label(command_text),
         title="Comandi",
         min_width=28,
     )
@@ -75,9 +83,38 @@ def refresh_report(state: State) -> None:
     provider = state.providers[state.active_index]
     results = diagnose(install_plan(state.host, provider))
     state.report = tuple(
-        f"[{'OK' if result.ok else 'MANCA'}] {result.check.label}"
+        f"[{'OK' if result.ok else 'MANCA'}] {result.check.label}: {result.detail}"
         for result in results
     )
+
+
+def request_confirmation(state: State) -> None:
+    """Mostra la conferma senza eseguire modifiche."""
+
+    provider = state.providers[state.active_index]
+    state.confirmation_pending = True
+    state.report = (
+        f"Provider: {provider.value}",
+        "Saranno installati solo i componenti mancanti.",
+        "Premi s per confermare oppure n per annullare.",
+    )
+
+
+def apply_selected(state: State) -> None:
+    """Applica il piano selezionato e mostra un riepilogo compatto."""
+
+    provider = state.providers[state.active_index]
+    plan = install_plan(state.host, provider)
+    results = execute_plan(
+        plan,
+        diagnose(plan),
+        log_path=Path.home() / ".2cornot2c" / "installer.jsonl",
+    )
+    state.confirmation_pending = False
+    state.report = tuple(
+        f"[{result.status.upper()}] {result.label}: {result.detail}"
+        for result in results
+    ) or ("Nessun passo necessario.",)
 
 
 def present(rows: list[str]) -> None:
@@ -116,6 +153,15 @@ def main() -> int:
                         )
                     elif event.key is Key.ENTER:
                         refresh_report(state)
+                    elif character == "a" and not state.confirmation_pending:
+                        request_confirmation(state)
+                    elif character == "s" and state.confirmation_pending:
+                        apply_selected(state)
+                    elif (
+                        character == "n" or event.key is Key.ESCAPE
+                    ) and state.confirmation_pending:
+                        state.confirmation_pending = False
+                        state.report = ("Installazione annullata senza modifiche.",)
                     elif event.key is Key.ESCAPE or character == "q":
                         state.running = False
                     changed = True

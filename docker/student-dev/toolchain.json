@@ -1,0 +1,23 @@
+{
+  "schema_version": "2cornot2c.student-dev-build.v1",
+  "version": "2026.07.1",
+  "platforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "image_repository": "ghcr.io/thebitpoets/2cornot2c-student-dev",
+  "base_image": "ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90",
+  "ubuntu_snapshot": "20260713T000000Z",
+  "packages": {
+    "build-essential": "12.10ubuntu1",
+    "ca-certificates": "20260601~24.04.1",
+    "gcc": "4:13.2.0-7ubuntu1",
+    "gdb": "15.1-1ubuntu1~24.04.1",
+    "git": "1:2.43.0-1ubuntu7.3",
+    "make": "4.3-4.1build2",
+    "nodejs": "18.19.1+dfsg-6ubuntu5",
+    "python3": "3.12.3-0ubuntu2.1",
+    "sqlite3": "3.45.1-1ubuntu2.6",
+    "vim-tiny": "2:9.1.0016-1ubuntu7.17"
+  }
+}

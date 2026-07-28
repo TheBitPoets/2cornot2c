@@ -3,6 +3,18 @@
 
 require "rbconfig"
 
+box_file = File.join(__dir__, ".classroom-box")
+box_name = ENV["CLASSROOM_BOX_NAME"]
+box_name = File.read(box_file, encoding: "UTF-8").strip if box_name.to_s.empty? && File.file?(box_file)
+box_name = "bento/ubuntu-24.04" if box_name.to_s.empty?
+unless box_name.match?(/\A[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\z/)
+  raise "Nome box non valido in .classroom-box o CLASSROOM_BOX_NAME."
+end
+
+memory_mb = Integer(ENV.fetch("CLASSROOM_MEMORY_MB", "2048"), 10)
+raise "CLASSROOM_MEMORY_MB deve essere tra 1024 e 8192." unless (1024..8192).cover?(memory_mb)
+prebuilt_classroom_box = box_name != "bento/ubuntu-24.04"
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -16,7 +28,7 @@ Vagrant.configure("2") do |config|
   # boxes at https://vagrantcloud.com/search.
   # Bento publishes amd64 and arm64 variants for VirtualBox and VMware, so the
   # same Vagrantfile works on Windows and on Apple Silicon.
-  config.vm.box = "bento/ubuntu-24.04"
+  config.vm.box = box_name
   config.vm.hostname = "2cornot2c"
   config.vm.boot_timeout = 900
 
@@ -88,14 +100,14 @@ Vagrant.configure("2") do |config|
   #  vb.customize ["storageattach", :id, "--storagectl", "IDE Controller", "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "emptydrive"]
   #
   #   # Customize the amount of memory on the VM:
-    vb.memory = "4096"
+    vb.memory = memory_mb
     vb.cpus = 2
    end
 
    config.vm.provider "vmware_desktop" do |vmware|
      vmware.gui = true
      vmware.allowlist_verified = true
-     vmware.vmx["memsize"] = "4096"
+     vmware.vmx["memsize"] = memory_mb.to_s
      vmware.vmx["numvcpus"] = "2"
    end
   #
@@ -105,7 +117,8 @@ Vagrant.configure("2") do |config|
   # Enable provisioning with a shell script. Additional provisioners such as
   # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
   # documentation for more information about their specific syntax and use.
-   config.vm.provision "shell", inline: <<-SHELL
+   unless prebuilt_classroom_box
+     config.vm.provision "shell", inline: <<-SHELL
      export DEBIAN_FRONTEND=noninteractive
      apt-get update
      apt-get install -y gcc gdb vim make build-essential git xfce4 lightdm
@@ -138,9 +151,10 @@ Vagrant.configure("2") do |config|
      systemctl daemon-reload
      systemctl set-default graphical.target
    SHELL
-   config.vm.provision "shell", inline: <<-SHELL
-     if [ -f /etc/X11/Xwrapper.config ]; then
-       sed -i 's/allowed_users=.*$/allowed_users=anybody/' /etc/X11/Xwrapper.config
-     fi
-   SHELL
+     config.vm.provision "shell", inline: <<-SHELL
+       if [ -f /etc/X11/Xwrapper.config ]; then
+         sed -i 's/allowed_users=.*$/allowed_users=anybody/' /etc/X11/Xwrapper.config
+       fi
+     SHELL
+   end
 end
