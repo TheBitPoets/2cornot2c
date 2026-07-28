@@ -487,7 +487,7 @@ def test_digest_lookup_ports_do_not_require_raw_credentials() -> None:
         def list_user_sessions(self, user_id):
             return [item for item in self.records.values() if item.user_id == user_id]
 
-        def revoke_user_sessions(self, user_id, revoked_at):
+        def revoke_user_sessions(self, user_id, revoked_at, *, audience=None):
             return 0
 
         def delete_expired_sessions(self, expired_before):

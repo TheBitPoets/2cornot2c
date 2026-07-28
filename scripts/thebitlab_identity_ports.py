@@ -263,8 +263,14 @@ class SessionStorage(Protocol):
 
     def list_user_sessions(self, user_id: str) -> list[UserSession]: ...
 
-    def revoke_user_sessions(self, user_id: str, revoked_at: datetime) -> int:
-        """Atomically revoke active sessions, rejecting a stale revocation instant."""
+    def revoke_user_sessions(
+        self,
+        user_id: str,
+        revoked_at: datetime,
+        *,
+        audience: str | None = None,
+    ) -> int:
+        """Atomically revoke active sessions, optionally limited to one audience."""
         ...
 
     def delete_expired_sessions(self, expired_before: datetime) -> int:

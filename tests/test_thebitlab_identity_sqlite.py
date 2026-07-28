@@ -687,6 +687,18 @@ def test_pairing_session_creation_is_atomic_with_consumption(
                     .replace("+00:00", "Z"),
                 ),
             )
+        with pytest.raises(sqlite3.IntegrityError, match="pairing correlation"):
+            connection.execute(
+                """
+                UPDATE tui_pairings SET consumed_at = ?
+                WHERE pairing_id = 'pairing-01'
+                """,
+                (
+                    (consumed.consumed_at + timedelta(seconds=1))
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                ),
+            )
     assert storage.delete_expired_pairings(LATER + timedelta(minutes=1)) == 0
     assert storage.read_pairing("pairing-01") == consumed
     assert storage.delete_expired_sessions(issued_session.expires_at) == 1

@@ -332,7 +332,9 @@ class SessionApplicationStorage(Protocol):
         self, session: UserSession, *, expected_user_updated_at: datetime
     ) -> None: ...
 
-    def revoke_user_sessions(self, user_id: str, revoked_at: datetime) -> int: ...
+    def revoke_user_sessions(
+        self, user_id: str, revoked_at: datetime, *, audience: str | None = None
+    ) -> int: ...
 
 
 class PairingApplicationStorage(Protocol):
@@ -983,7 +985,9 @@ class SessionService:
 
     def revoke_all(self, user_id: str) -> int:
         try:
-            return self.storage.revoke_user_sessions(user_id, _utc(self.clock()))
+            return self.storage.revoke_user_sessions(
+                user_id, _utc(self.clock()), audience=self.audience
+            )
         except IdentityStorageConflictError as error:
             raise ConcurrentStateChangeError(
                 "Clock anteriore allo stato delle sessioni attive."

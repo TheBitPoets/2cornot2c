@@ -28,7 +28,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 _T = TypeVar("_T")
 
 
@@ -263,6 +263,31 @@ _MIGRATION_9 = (
     _MIGRATION_8[2],
 )
 
+_MIGRATION_10 = (
+    """
+    CREATE TRIGGER IF NOT EXISTS trg_consumed_pairing_session_immutable
+    BEFORE UPDATE ON tui_pairings
+    WHEN EXISTS (
+        SELECT 1 FROM sessions
+        WHERE sessions.source_pairing_id = OLD.pairing_id
+    ) AND (
+        NEW.pairing_id != OLD.pairing_id
+        OR NEW.code_digest != OLD.code_digest
+        OR NEW.status != OLD.status
+        OR NEW.created_at != OLD.created_at
+        OR NEW.expires_at != OLD.expires_at
+        OR NEW.user_id IS NOT OLD.user_id
+        OR NEW.authorized_at IS NOT OLD.authorized_at
+        OR NEW.consumed_at IS NOT OLD.consumed_at
+        OR NEW.expired_at IS NOT OLD.expired_at
+        OR NEW.revoked_at IS NOT OLD.revoked_at
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'immutable consumed pairing correlation');
+    END
+    """,
+)
+
 _MIGRATION_4 = (
     """
     CREATE TABLE external_group_mapping_generations (
@@ -382,6 +407,7 @@ class SqliteIdentityStorage:
                 (7, _MIGRATION_7),
                 (8, _MIGRATION_8),
                 (9, _MIGRATION_9),
+                (10, _MIGRATION_10),
             )
             for version, statements in migrations:
                 if version in versions:
@@ -2060,28 +2086,38 @@ class SqliteIdentityStorage:
         )
         return [self._session(row) for row in rows]
 
-    def revoke_user_sessions(self, user_id: str, revoked_at: datetime) -> int:
+    def revoke_user_sessions(
+        self,
+        user_id: str,
+        revoked_at: datetime,
+        *,
+        audience: str | None = None,
+    ) -> int:
         encoded = _encode_datetime(revoked_at, "revoked_at")
+        if audience is not None and audience not in {"web", "tui"}:
+            raise IdentityStorageConflictError("Audience revoca non valida.")
+        audience_sql = "" if audience is None else " AND audience = ?"
+        audience_values: tuple[object, ...] = () if audience is None else (audience,)
         with self._transaction("revoke_user_sessions") as connection:
             stale = connection.execute(
-                """
+                f"""
                 SELECT COUNT(*) FROM sessions
                 WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
-                    AND (created_at > ? OR last_seen_at > ?)
+                    AND (created_at > ? OR last_seen_at > ?){audience_sql}
                 """,
-                (user_id, encoded, encoded, encoded),
+                (user_id, encoded, encoded, encoded) + audience_values,
             ).fetchone()[0]
             if stale:
                 raise IdentityStorageConflictError(
                     "revoked_at precede la creazione o l'ultimo utilizzo di una sessione attiva."
                 )
             cursor = connection.execute(
-                """
+                f"""
                 UPDATE sessions SET revoked_at = ?
                 WHERE user_id = ? AND revoked_at IS NULL
-                    AND created_at <= ? AND expires_at > ?
+                    AND created_at <= ? AND expires_at > ?{audience_sql}
                 """,
-                (encoded, user_id, encoded, encoded),
+                (encoded, user_id, encoded, encoded) + audience_values,
             )
             return cursor.rowcount
 

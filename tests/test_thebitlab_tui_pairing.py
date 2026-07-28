@@ -268,6 +268,14 @@ def test_web_and_tui_session_audiences_are_not_interchangeable(setup) -> None:
     boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
     credential = boundary.consume(started.pairing_id, started.user_code)
 
+    assert http.sessions.revoke_all("student-01") == 1
+    assert boundary.authenticate_bearer(
+        "Bearer " + credential.bearer_token
+    ).user.user_id == "student-01"
+    with pytest.raises(HttpAuthenticationRequiredError):
+        http.authenticate(
+            HttpAuthRequest("GET", "thebitlab_session=" + "A" * 40)
+        )
     with pytest.raises(HttpAuthenticationRequiredError):
         boundary.authenticate_bearer("Bearer " + "A" * 40)
     with pytest.raises(HttpAuthenticationRequiredError):
