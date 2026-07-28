@@ -146,6 +146,7 @@ def test_migration_v2_upgrades_and_backfills_existing_v1_identity(database_path)
         connection.execute("DROP INDEX uq_external_identities_user_provider")
         connection.execute("DROP TABLE external_identity_link_conflicts")
         connection.execute("DROP TABLE external_identity_generations")
+        connection.execute("DROP TABLE external_group_mapping_generations")
         connection.execute("DELETE FROM schema_migrations WHERE version >= 2")
 
     upgraded = SqliteIdentityStorage(database_path)
@@ -205,6 +206,23 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
     assert storage.unlink_external_identity("github", "4242") is False
 
 
+def test_migration_v4_backfills_external_group_mapping_generations(database_path) -> None:
+    storage = SqliteIdentityStorage(database_path)
+    storage.create_class(class_group())
+    mapping = ExternalGroupMapping(
+        "github", "1001", "2002", "class-01", NOW, "3A"
+    )
+    storage.save_external_group_mapping(mapping)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP TABLE external_group_mapping_generations")
+        connection.execute("DELETE FROM schema_migrations WHERE version = 4")
+
+    upgraded = SqliteIdentityStorage(database_path)
+    assert upgraded.read_latest_external_group_mapping_generation(
+        "github", "1001", "2002"
+    ) == NOW
+
+
 def test_migration_v3_quarantines_ambiguous_provider_links(database_path) -> None:
     storage = SqliteIdentityStorage(database_path)
     storage.create_user(account())
@@ -214,7 +232,8 @@ def test_migration_v3_quarantines_ambiguous_provider_links(database_path) -> Non
     with sqlite3.connect(database_path) as connection:
         connection.execute("DROP INDEX uq_external_identities_user_provider")
         connection.execute("DROP TABLE external_identity_link_conflicts")
-        connection.execute("DELETE FROM schema_migrations WHERE version = 3")
+        connection.execute("DROP TABLE external_group_mapping_generations")
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 3")
         connection.execute(
             """
             INSERT INTO external_identities

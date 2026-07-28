@@ -26,6 +26,10 @@ class IdentityStorageGenerationConflictError(IdentityStorageConflictError):
     """Raised when an immutable external-identity generation was already used."""
 
 
+class IdentityStorageMappingGenerationConflictError(IdentityStorageConflictError):
+    """Raised when an immutable external-group mapping generation was already used."""
+
+
 class IdentityStorageNotFoundError(IdentityStorageError):
     """Raised when an update targets a missing identity record."""
 
@@ -176,6 +180,42 @@ class ClassDirectoryStorage(Protocol):
         organization_subject: str,
         group_subject: str,
     ) -> bool: ...
+
+    def read_latest_external_group_mapping_generation(
+        self,
+        provider: str,
+        organization_subject: str,
+        group_subject: str,
+    ) -> datetime | None: ...
+
+    def save_external_group_mapping_for_admin(
+        self,
+        mapping: ExternalGroupMapping,
+        *,
+        admin_user_id: str,
+        expected_admin_updated_at: datetime,
+        expected_class_updated_at: datetime,
+    ) -> None: ...
+
+    def delete_external_group_mapping_for_admin(
+        self,
+        mapping: ExternalGroupMapping,
+        *,
+        admin_user_id: str,
+        expected_admin_updated_at: datetime,
+        expected_class_updated_at: datetime,
+    ) -> bool: ...
+
+    def onboard_pending_user_from_external_group(
+        self,
+        membership: ClassMembership,
+        *,
+        expected_user_updated_at: datetime,
+        expected_identity_subject: str,
+        expected_identity_linked_at: datetime,
+        expected_mapping: ExternalGroupMapping,
+        expected_class_updated_at: datetime,
+    ) -> None: ...
 
 
 class SessionStorage(Protocol):

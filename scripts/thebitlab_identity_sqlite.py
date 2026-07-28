@@ -21,11 +21,12 @@ from scripts.thebitlab_identity_ports import (
     IdentityStorageCorruptionError,
     IdentityStorageError,
     IdentityStorageGenerationConflictError,
+    IdentityStorageMappingGenerationConflictError,
     IdentityStorageNotFoundError,
 )
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 _T = TypeVar("_T")
 
 
@@ -189,6 +190,24 @@ _MIGRATION_3 = (
     """,
 )
 
+_MIGRATION_4 = (
+    """
+    CREATE TABLE external_group_mapping_generations (
+        provider TEXT NOT NULL,
+        organization_subject TEXT NOT NULL,
+        group_subject TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (provider, organization_subject, group_subject, created_at)
+    )
+    """,
+    """
+    INSERT INTO external_group_mapping_generations
+        (provider, organization_subject, group_subject, created_at)
+    SELECT provider, organization_subject, group_subject, created_at
+    FROM external_group_mappings
+    """,
+)
+
 _MIGRATION_2 = (
     """
     CREATE TABLE external_identity_generations (
@@ -284,6 +303,7 @@ class SqliteIdentityStorage:
                 (1, _MIGRATION_1),
                 (2, _MIGRATION_2),
                 (3, _MIGRATION_3),
+                (4, _MIGRATION_4),
             )
             for version, statements in migrations:
                 if version in versions:
@@ -1156,6 +1176,269 @@ class SqliteIdentityStorage:
                 (provider.lower(), organization_subject, group_subject),
             )
             return cursor.rowcount == 1
+
+    def read_latest_external_group_mapping_generation(
+        self,
+        provider: str,
+        organization_subject: str,
+        group_subject: str,
+    ) -> datetime | None:
+        row = self._query_one(
+            """
+            SELECT MAX(created_at) AS created_at
+            FROM external_group_mapping_generations
+            WHERE provider = ? AND organization_subject = ? AND group_subject = ?
+            """,
+            (provider.lower(), organization_subject, group_subject),
+        )
+        if row is None or row["created_at"] is None:
+            return None
+        return _decode_datetime(row["created_at"])
+
+    @staticmethod
+    def _reserve_external_group_mapping_generation(
+        connection: sqlite3.Connection,
+        mapping: ExternalGroupMapping,
+        created_at: str,
+    ) -> None:
+        try:
+            connection.execute(
+                """
+                INSERT INTO external_group_mapping_generations
+                    (provider, organization_subject, group_subject, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (*mapping.provider_key, created_at),
+            )
+        except sqlite3.IntegrityError as error:
+            raise IdentityStorageMappingGenerationConflictError(
+                "Generazione mapping gruppo esterno gia utilizzata."
+            ) from error
+
+    def save_external_group_mapping_for_admin(
+        self,
+        mapping: ExternalGroupMapping,
+        *,
+        admin_user_id: str,
+        expected_admin_updated_at: datetime,
+        expected_class_updated_at: datetime,
+    ) -> None:
+        created_at = _encode_datetime(mapping.created_at, "created_at")
+        admin_revision = _encode_datetime(
+            expected_admin_updated_at, "expected_admin_updated_at"
+        )
+        class_revision = _encode_datetime(
+            expected_class_updated_at, "expected_class_updated_at"
+        )
+        with self._transaction(
+            "save_external_group_mapping_for_admin"
+        ) as connection:
+            existing = connection.execute(
+                """
+                SELECT class_id, created_at FROM external_group_mappings
+                WHERE provider = ? AND organization_subject = ? AND group_subject = ?
+                """,
+                mapping.provider_key,
+            ).fetchone()
+            if existing is None:
+                self._reserve_external_group_mapping_generation(
+                    connection, mapping, created_at
+                )
+                cursor = connection.execute(
+                    """
+                    INSERT INTO external_group_mappings
+                        (provider, organization_subject, group_subject, class_id,
+                         created_at, display_name)
+                    SELECT ?, ?, ?, ?, ?, ?
+                    WHERE EXISTS (
+                        SELECT 1 FROM users
+                        WHERE user_id = ? AND active = 1 AND role = 'admin'
+                            AND updated_at = ?
+                    ) AND EXISTS (
+                        SELECT 1 FROM classes
+                        WHERE class_id = ? AND active = 1 AND updated_at = ?
+                    )
+                    """,
+                    (
+                        *mapping.provider_key,
+                        mapping.class_id,
+                        created_at,
+                        mapping.display_name,
+                        admin_user_id,
+                        admin_revision,
+                        mapping.class_id,
+                        class_revision,
+                    ),
+                )
+            else:
+                cursor = connection.execute(
+                    """
+                    UPDATE external_group_mappings SET display_name = ?
+                    WHERE provider = ? AND organization_subject = ? AND group_subject = ?
+                        AND class_id = ? AND created_at = ?
+                        AND EXISTS (
+                            SELECT 1 FROM users
+                            WHERE user_id = ? AND active = 1 AND role = 'admin'
+                                AND updated_at = ?
+                        )
+                        AND EXISTS (
+                            SELECT 1 FROM classes
+                            WHERE class_id = ? AND active = 1 AND updated_at = ?
+                        )
+                    """,
+                    (
+                        mapping.display_name,
+                        *mapping.provider_key,
+                        mapping.class_id,
+                        created_at,
+                        admin_user_id,
+                        admin_revision,
+                        mapping.class_id,
+                        class_revision,
+                    ),
+                )
+            if cursor.rowcount != 1:
+                raise IdentityStorageConflictError(
+                    "Admin, classe o mapping modificati durante il salvataggio."
+                )
+
+    def delete_external_group_mapping_for_admin(
+        self,
+        mapping: ExternalGroupMapping,
+        *,
+        admin_user_id: str,
+        expected_admin_updated_at: datetime,
+        expected_class_updated_at: datetime,
+    ) -> bool:
+        created_at = _encode_datetime(mapping.created_at, "created_at")
+        admin_revision = _encode_datetime(
+            expected_admin_updated_at, "expected_admin_updated_at"
+        )
+        class_revision = _encode_datetime(
+            expected_class_updated_at, "expected_class_updated_at"
+        )
+        with self._transaction(
+            "delete_external_group_mapping_for_admin"
+        ) as connection:
+            cursor = connection.execute(
+                """
+                DELETE FROM external_group_mappings
+                WHERE provider = ? AND organization_subject = ? AND group_subject = ?
+                    AND class_id = ? AND created_at = ?
+                    AND EXISTS (
+                        SELECT 1 FROM users
+                        WHERE user_id = ? AND active = 1 AND role = 'admin'
+                            AND updated_at = ?
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM classes
+                        WHERE class_id = ? AND active = 1 AND updated_at = ?
+                    )
+                """,
+                (
+                    *mapping.provider_key,
+                    mapping.class_id,
+                    created_at,
+                    admin_user_id,
+                    admin_revision,
+                    mapping.class_id,
+                    class_revision,
+                ),
+            )
+            if cursor.rowcount == 1:
+                return True
+            exists = connection.execute(
+                """
+                SELECT 1 FROM external_group_mappings
+                WHERE provider = ? AND organization_subject = ? AND group_subject = ?
+                """,
+                mapping.provider_key,
+            ).fetchone()
+            if exists is None:
+                return False
+            raise IdentityStorageConflictError(
+                "Admin, classe o mapping modificati durante la rimozione."
+            )
+
+    def onboard_pending_user_from_external_group(
+        self,
+        membership: ClassMembership,
+        *,
+        expected_user_updated_at: datetime,
+        expected_identity_subject: str,
+        expected_identity_linked_at: datetime,
+        expected_mapping: ExternalGroupMapping,
+        expected_class_updated_at: datetime,
+    ) -> None:
+        joined_at = _encode_datetime(membership.joined_at, "joined_at")
+        user_revision = _encode_datetime(
+            expected_user_updated_at, "expected_user_updated_at"
+        )
+        identity_generation = _encode_datetime(
+            expected_identity_linked_at, "expected_identity_linked_at"
+        )
+        mapping_generation = _encode_datetime(
+            expected_mapping.created_at, "expected_mapping_created_at"
+        )
+        class_revision = _encode_datetime(
+            expected_class_updated_at, "expected_class_updated_at"
+        )
+        with self._transaction(
+            "onboard_pending_user_from_external_group"
+        ) as connection:
+            cursor = connection.execute(
+                """
+                UPDATE users SET role = 'student', updated_at = ?
+                WHERE user_id = ? AND active = 1 AND role = 'pending'
+                    AND updated_at = ?
+                    AND EXISTS (
+                        SELECT 1 FROM external_identities
+                        WHERE provider = 'github' AND subject = ?
+                            AND user_id = users.user_id AND linked_at = ?
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM external_group_mappings
+                        WHERE provider = ? AND organization_subject = ?
+                            AND group_subject = ? AND class_id = ? AND created_at = ?
+                    )
+                    AND EXISTS (
+                        SELECT 1 FROM classes
+                        WHERE class_id = ? AND active = 1 AND updated_at = ?
+                    )
+                """,
+                (
+                    joined_at,
+                    membership.user_id,
+                    user_revision,
+                    expected_identity_subject,
+                    identity_generation,
+                    *expected_mapping.provider_key,
+                    expected_mapping.class_id,
+                    mapping_generation,
+                    membership.class_id,
+                    class_revision,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise IdentityStorageConflictError(
+                    "Utente, identita, mapping o classe modificati durante onboarding."
+                )
+            connection.execute(
+                """
+                INSERT INTO class_memberships
+                    (user_id, class_id, role, joined_at, source_provider,
+                     source_group_subject)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    membership.user_id,
+                    membership.class_id,
+                    membership.role,
+                    joined_at,
+                    membership.source_provider,
+                    membership.source_group_subject,
+                ),
+            )
 
     def create_session(self, session: UserSession) -> None:
         with self._transaction("create_session") as connection:
