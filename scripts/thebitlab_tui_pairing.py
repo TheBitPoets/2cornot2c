@@ -462,12 +462,10 @@ class TuiBrowserPairingBoundary:
             return False
         try:
             digest = session_token_digest(bearer)
-            persisted = self.tui_sessions.storage.read_session_by_token_digest(digest)
-            persisted_user = self.tui_sessions.storage.read_user(
-                authenticated.user.user_id
-            )
-            persisted_pairing = self.pairings.storage.read_pairing(
-                authenticated.session.source_pairing_id
+            persisted, persisted_user, persisted_pairing = (
+                self.tui_sessions.storage.read_tui_authentication_snapshot(
+                    digest, authenticated.session.source_pairing_id
+                )
             )
             now = _utc(self.tui_sessions.clock(), "session_clock")
             self._require_shared_registry()
@@ -507,10 +505,13 @@ class TuiBrowserPairingBoundary:
             return False
         try:
             digest = session_token_digest(bearer)
-            persisted = self.tui_sessions.storage.read_session_by_token_digest(digest)
+            persisted, user, _pairing = (
+                self.tui_sessions.storage.read_tui_authentication_snapshot(
+                    digest, authenticated.session.source_pairing_id
+                )
+            )
             if type(persisted) is not UserSession:
                 return False
-            user = self.tui_sessions.storage.read_user(persisted.user_id)
             now = _utc(self.tui_sessions.clock(), "session_clock")
             self._require_shared_registry()
             return (

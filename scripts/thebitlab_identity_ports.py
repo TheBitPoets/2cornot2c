@@ -287,6 +287,12 @@ class TuiPairingStorage(Protocol):
 
     def read_pairing_by_code_digest(self, code_digest: str) -> TuiPairing | None: ...
 
+    def read_tui_authentication_snapshot(
+        self, token_digest: str, pairing_id: str
+    ) -> tuple[UserSession | None, UserAccount | None, TuiPairing | None]:
+        """Read correlated TUI session, owner, and pairing in one snapshot."""
+        ...
+
     def save_pairing(self, pairing: TuiPairing) -> None: ...
 
     def save_pairing_for_active_user(

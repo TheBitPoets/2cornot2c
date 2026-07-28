@@ -1982,6 +1982,39 @@ class SqliteIdentityStorage:
         row = self._query_one("SELECT * FROM sessions WHERE token_digest = ?", (token_digest.lower(),))
         return None if row is None else self._session(row)
 
+    def read_tui_authentication_snapshot(
+        self, token_digest: str, pairing_id: str
+    ) -> tuple[UserSession | None, UserAccount | None, TuiPairing | None]:
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN")
+            session_row = connection.execute(
+                "SELECT * FROM sessions WHERE token_digest = ?",
+                (token_digest.lower(),),
+            ).fetchone()
+            session = None if session_row is None else self._session(session_row)
+            user_row = (
+                None
+                if session is None
+                else connection.execute(
+                    "SELECT * FROM users WHERE user_id = ?", (session.user_id,)
+                ).fetchone()
+            )
+            pairing_row = connection.execute(
+                "SELECT * FROM tui_pairings WHERE pairing_id = ?", (pairing_id,)
+            ).fetchone()
+            connection.commit()
+            return (
+                session,
+                None if user_row is None else self._user(user_row),
+                None if pairing_row is None else self._pairing(pairing_row),
+            )
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
     def save_session(self, session: UserSession) -> None:
         created_at = _encode_datetime(session.created_at, "created_at")
         expires_at = _encode_datetime(session.expires_at, "expires_at")
