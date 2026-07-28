@@ -134,8 +134,23 @@ def test_authenticated_external_account_link_unlink_and_relink(storage) -> None:
     with pytest.raises(ExternalIdentityNotLinkedError):
         service.unlink(user.user_id, expected_session=issued.session)
 
-    relinked = service.link(user.user_id, github_assertion())
+    relinked = service.link(
+        user.user_id,
+        github_assertion(),
+        expected_session=issued.session,
+    )
     assert relinked.linked_at == linked.linked_at + timedelta(microseconds=1)
+
+    generations = [linked.linked_at, relinked.linked_at]
+    for _attempt in range(8):
+        service.unlink(user.user_id, expected_session=issued.session)
+        relinked = service.link(
+            user.user_id,
+            github_assertion(),
+            expected_session=issued.session,
+        )
+        generations.append(relinked.linked_at)
+    assert generations == sorted(set(generations))
 
 
 def test_external_account_unlink_requires_persisted_live_session(storage) -> None:

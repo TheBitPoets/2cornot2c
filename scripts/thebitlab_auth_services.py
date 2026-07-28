@@ -248,6 +248,10 @@ class ExternalIdentityLinkApplicationStorage(Protocol):
         self, provider: str, subject: str
     ) -> ExternalIdentity | None: ...
 
+    def read_latest_external_identity_generation(
+        self, provider: str, subject: str
+    ) -> datetime | None: ...
+
     def list_external_identities(self, user_id: str) -> list[ExternalIdentity]: ...
 
     def link_external_identity_for_active_user(
@@ -716,8 +720,14 @@ class ExternalIdentityLinkService:
                     raise ExternalIdentityLinkConflictError(
                         "Account provider gia collegato a un altro utente."
                     )
+                latest_generation = self.storage.read_latest_external_identity_generation(
+                    self.expected_provider, normalized.subject
+                )
                 try:
-                    linked_at += timedelta(microseconds=1)
+                    if latest_generation is not None and latest_generation >= linked_at:
+                        linked_at = latest_generation + timedelta(microseconds=1)
+                    else:
+                        linked_at += timedelta(microseconds=1)
                 except OverflowError as error:
                     raise ConcurrentStateChangeError(
                         "Generazione link provider esaurita."

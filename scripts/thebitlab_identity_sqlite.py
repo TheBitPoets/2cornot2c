@@ -813,6 +813,21 @@ class SqliteIdentityStorage:
         )
         return None if row is None else self._external_identity(row)
 
+    def read_latest_external_identity_generation(
+        self, provider: str, subject: str
+    ) -> datetime | None:
+        row = self._query_one(
+            """
+            SELECT MAX(linked_at) AS linked_at
+            FROM external_identity_generations
+            WHERE provider = ? AND subject = ?
+            """,
+            (provider.lower(), subject),
+        )
+        if row is None or row["linked_at"] is None:
+            return None
+        return _decode_datetime(row["linked_at"])
+
     def list_external_identities(self, user_id: str) -> list[ExternalIdentity]:
         rows = self._query_all(
             "SELECT * FROM external_identities WHERE user_id = ? ORDER BY provider, subject",
