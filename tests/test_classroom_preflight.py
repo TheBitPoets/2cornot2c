@@ -82,6 +82,7 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "launch-classroom-windows.ps1" in bootstrap
     assert "prepare-wsl-windows.ps1" in bootstrap
     assert "remove-wsl-windows.ps1" in bootstrap
+    assert "remove-classroom-shortcuts-windows.ps1" in bootstrap
     assert "Ambiente 2cornot2c.lnk" in bootstrap
     assert "bootstrap-classroom-windows.ps1" in update
     assert ".installer-venv\\Scripts\\python.exe" in manager
@@ -96,6 +97,8 @@ def test_windows_lifecycle_scripts_keep_destructive_actions_guarded() -> None:
     assert "Test-PackageStillInstalled" in uninstall
     assert '$Record.status -ne "succeeded"' in uninstall
     assert "Get-ClassroomShortcutPaths" in uninstall
+    assert '$LauncherDir "remove-classroom-shortcuts-windows.ps1"' in uninstall
+    assert "$ShortcutCleanupSucceeded" in uninstall
     assert "OneDriveConsumer" in uninstall
     assert "CommonDesktopDirectory" in uninstall
     assert "CommonPrograms" in uninstall
