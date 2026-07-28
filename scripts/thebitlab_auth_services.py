@@ -131,8 +131,21 @@ def session_token_digest(raw_token: str) -> str:
     token = None
     encoded = None
     try:
-        token = _required_text(raw_token, "raw_token")
-        if token != raw_token or len(token) < 32:
+        if (
+            type(raw_token) is not str
+            or not raw_token
+            or len(raw_token) > 512
+            or raw_token != raw_token.strip()
+            or any(
+                ord(character) < 32 or ord(character) == 127
+                for character in raw_token
+            )
+        ):
+            raise CredentialGenerationError(
+                "Il token di sessione generato non e valido."
+            )
+        token = raw_token
+        if len(token) < 32:
             raise CredentialGenerationError(
                 "Il token di sessione generato non e valido."
             )
@@ -155,11 +168,20 @@ def pairing_code_digest(raw_code: str, pepper: bytes) -> str:
     code = None
     encoded = None
     try:
-        code = _required_text(raw_code, "raw_code")
-        if code != raw_code:
+        if (
+            type(raw_code) is not str
+            or not raw_code
+            or len(raw_code) > 512
+            or raw_code != raw_code.strip()
+            or any(
+                ord(character) < 32 or ord(character) == 127
+                for character in raw_code
+            )
+        ):
             raise CredentialGenerationError(
                 "Il codice pairing generato non e valido."
             )
+        code = raw_code
         if type(pepper) is not bytes or len(pepper) < 32:
             raise AuthApplicationError(
                 "Il pepper pairing deve contenere almeno 32 byte."

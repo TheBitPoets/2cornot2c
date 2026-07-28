@@ -1183,6 +1183,21 @@ def test_surrogate_credentials_are_rejected_without_traceback_leaks() -> None:
         bearer_error.value, "session_token_digest"
     )
 
+    for digest_function, secret, function_name in (
+        (pairing_code_digest, "PAIRCODE42\nSECRET", "pairing_code_digest"),
+        (session_token_digest, "A" * 20 + "\n" + "B" * 20, "session_token_digest"),
+    ):
+        arguments = (secret, PEPPER) if digest_function is pairing_code_digest else (secret,)
+        with pytest.raises(CredentialGenerationError) as control_error:
+            digest_function(*arguments)
+        assert secret not in traceback_locals(
+            control_error.value, function_name
+        )
+        assert not any(
+            secret in repr(value)
+            for value in traceback_locals(control_error.value, "_required_text")
+        )
+
 
 def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> None:
     storage.create_user(account())
