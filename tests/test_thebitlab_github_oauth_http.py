@@ -4,13 +4,19 @@ from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlsplit
 
 from scripts.thebitlab_auth_services import ExternalIdentityLinkService, SessionService
-from scripts.thebitlab_edge_rate_limit import EdgeRequestMetadata, TrustedProxyClientResolver
+from scripts.thebitlab_edge_rate_limit import (
+    EdgeRateLimitExceededError,
+    EdgeRequestMetadata,
+    InMemoryAtomicRateLimitStore,
+    TrustedProxyClientResolver,
+)
 from scripts.thebitlab_github_oauth import (
     GitHubAccountLinkService,
     GitHubOAuthConfig,
     InMemoryGitHubLinkFlowStore,
 )
 from scripts.thebitlab_github_oauth_http import (
+    GitHubLinkHttpRateLimiter,
     GitHubOAuthHttpRequest,
     GitHubOAuthHttpRoutes,
 )
@@ -75,6 +81,11 @@ def setup_routes(tmp_path):
         service,
         http,
         TrustedProxyClientResolver(()),
+        GitHubLinkHttpRateLimiter(
+            InMemoryAtomicRateLimitStore(),
+            pepper=b"r" * 32,
+            clock=clock,
+        ),
     )
     session_cookie = established.set_cookie.split(";", 1)[0]
     return routes, storage, established, session_cookie
@@ -92,6 +103,24 @@ def request(path, *, method="GET", query="", headers=()):
 
 def header(response, name):
     return [value for key, value in response.headers if key.lower() == name.lower()]
+
+
+def test_flow_allocation_is_bounded_per_authenticated_session() -> None:
+    limiter = GitHubLinkHttpRateLimiter(
+        InMemoryAtomicRateLimitStore(),
+        pepper=b"r" * 32,
+        clock=Clock(),
+    )
+
+    for _attempt in range(20):
+        limiter.admit("user-01", "session-01")
+
+    try:
+        limiter.admit("user-01", "session-01")
+    except EdgeRateLimitExceededError as error:
+        assert 1 <= error.retry_after_seconds <= 600
+    else:
+        raise AssertionError("the 21st flow allocation must be rejected")
 
 
 def test_authenticated_link_callback_and_unlink_round_trip(tmp_path) -> None:

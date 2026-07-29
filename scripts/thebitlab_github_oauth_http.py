@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import re
 import urllib.parse
 from dataclasses import dataclass, field
-from typing import Mapping, Sequence
+from datetime import datetime, timezone
+from typing import Callable, Mapping, Sequence
 
 from scripts.thebitlab_edge_rate_limit import (
+    AtomicRateLimitStore,
     EdgeClientAttributionError,
+    EdgeRateLimitExceededError,
+    EdgeRateLimitStoreError,
     EdgeRequestMetadata,
+    RateLimitBucket,
     TrustedProxyClientResolver,
 )
 from scripts.thebitlab_github_oauth import (
@@ -103,6 +110,50 @@ class GitHubOAuthHttpResponse:
             raise ValueError("Risposta GitHub HTTP non valida.")
 
 
+class GitHubLinkHttpRateLimiter:
+    """Bound authenticated flow allocation globally and per web session."""
+
+    def __init__(
+        self,
+        store: AtomicRateLimitStore,
+        *,
+        pepper: bytes,
+        clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+    ) -> None:
+        if not callable(getattr(store, "admit", None)) or type(pepper) is not bytes or len(pepper) < 32:
+            raise ValueError("Rate limiter GitHub non valido.")
+        self.store = store
+        self.pepper = pepper
+        self.clock = clock
+
+    def admit(self, user_id: str, session_id: str) -> None:
+        if type(user_id) is not str or not user_id or type(session_id) is not str or not session_id:
+            raise EdgeRateLimitStoreError("Identità admission GitHub non valida.")
+        digest = hmac.new(
+            self.pepper,
+            b"thebitlab-github-link-rate-v1\0"
+            + user_id.encode("utf-8")
+            + b"\0"
+            + session_id.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        try:
+            now = self.clock()
+            retry_after = self.store.admit(
+                (
+                    RateLimitBucket("global:github-link", 1000, 600),
+                    RateLimitBucket(f"hmac-sha256:{digest}", 20, 600),
+                ),
+                now=now,
+            )
+        except EdgeRateLimitStoreError:
+            raise
+        except Exception as error:
+            raise EdgeRateLimitStoreError("Admission GitHub non disponibile.") from error
+        if retry_after is not None:
+            raise EdgeRateLimitExceededError(retry_after)
+
+
 class GitHubOAuthHttpRoutes:
     """Link, callback, and unlink routes bound to an authenticated web session."""
 
@@ -111,16 +162,19 @@ class GitHubOAuthHttpRoutes:
         service: GitHubAccountLinkService,
         http_sessions: HttpSessionAuthBoundary,
         proxy_resolver: TrustedProxyClientResolver,
+        rate_limiter: GitHubLinkHttpRateLimiter,
     ) -> None:
         if (
             type(service) is not GitHubAccountLinkService
             or type(http_sessions) is not HttpSessionAuthBoundary
             or type(proxy_resolver) is not TrustedProxyClientResolver
+            or type(rate_limiter) is not GitHubLinkHttpRateLimiter
         ):
             raise ValueError("Router GitHub non valido.")
         self.service = service
         self.http_sessions = http_sessions
         self.proxy_resolver = proxy_resolver
+        self.rate_limiter = rate_limiter
 
     def handles(self, path: str) -> bool:
         return path in {_LINK_PATH, _CALLBACK_PATH, _UNLINK_PATH}
@@ -149,6 +203,19 @@ class GitHubOAuthHttpRoutes:
             return self._unlink(request)
         except HttpAuthError as error:
             return self._error(error.status_code, error.error_code, error.public_message)
+        except EdgeRateLimitExceededError as error:
+            return self._error(
+                429,
+                error.error_code,
+                error.public_message,
+                (("Retry-After", str(error.retry_after_seconds)),),
+            )
+        except EdgeRateLimitStoreError:
+            return self._error(
+                503,
+                "auth_admission_unavailable",
+                "Servizio GitHub temporaneamente non disponibile.",
+            )
         except _GitHubHttpRequestError as error:
             return self._error(error.status_code, error.error_code, error.public_message)
         except GitHubLinkError as error:
@@ -189,7 +256,9 @@ class GitHubOAuthHttpRoutes:
     def _begin(self, request: GitHubOAuthHttpRequest) -> GitHubOAuthHttpResponse:
         if request.query:
             raise _GitHubHttpRequestError(400, "bad_auth_request", "Query non consentita.")
-        started = self.service.begin_link(self._context(request))
+        context = self._context(request)
+        self.rate_limiter.admit(context.user.user_id, context.session.session_id)
+        started = self.service.begin_link(context)
         if type(started) is not GitHubLinkAuthorizationRequest:
             raise GitHubLinkProviderUnavailableError("Avvio linking non valido.")
         location = _github_authorization_location(started.authorization_url)

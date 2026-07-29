@@ -40,7 +40,10 @@ from scripts.thebitlab_github_oauth import (
     InMemoryGitHubLinkFlowStore,
     UrllibGitHubOAuthTransport,
 )
-from scripts.thebitlab_github_oauth_http import GitHubOAuthHttpRoutes
+from scripts.thebitlab_github_oauth_http import (
+    GitHubLinkHttpRateLimiter,
+    GitHubOAuthHttpRoutes,
+)
 from scripts.thebitlab_http_auth import HttpSessionAuthBoundary, SessionCookiePolicy
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 from scripts.thebitlab_session_http import SessionHttpRoutes
@@ -249,15 +252,15 @@ def compose_google_oidc_runtime(
                 pepper=rate_limit_pepper,
             ),
         )
-        github_values = {
-            name: environment.get(name)
+        github_configured = any(
+            environment.get(name) is not None
             for name in (
                 "THEBITLAB_GITHUB_CLIENT_ID",
                 "THEBITLAB_GITHUB_CLIENT_SECRET",
                 "THEBITLAB_GITHUB_REDIRECT_URI",
             )
-        }
-        if any(value is not None for value in github_values.values()):
+        )
+        if github_configured:
             github_client_id = _required(environment, "THEBITLAB_GITHUB_CLIENT_ID")
             github_client_secret = _required(environment, "THEBITLAB_GITHUB_CLIENT_SECRET")
             github_redirect_uri = _required(environment, "THEBITLAB_GITHUB_REDIRECT_URI")
@@ -290,6 +293,10 @@ def compose_google_oidc_runtime(
                 github_service,
                 http_sessions,
                 proxy_resolver,
+                GitHubLinkHttpRateLimiter(
+                    rate_limit_store,
+                    pepper=rate_limit_pepper,
+                ),
             )
         return GoogleOidcRuntime(
             routes,

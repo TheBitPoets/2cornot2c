@@ -18,7 +18,7 @@ https://HOST-PUBBLICO/auth/github/callback
 
 ## Flusso
 
-`GET /auth/github/link` autentica il cookie web corrente, crea state, PKCE e browser binding one-time, quindi risponde `302` verso l'endpoint canonico GitHub. Il cookie transazionale è `__Host-`, `Secure`, `HttpOnly`, `SameSite=Lax`, bounded e distinto per state.
+`GET /auth/github/link` autentica il cookie web corrente, applica admission atomica globale e per-sessione prima dell'allocazione, crea state, PKCE e browser binding one-time, quindi risponde `302` verso l'endpoint canonico GitHub. Il cookie transazionale è `__Host-`, `Secure`, `HttpOnly`, `SameSite=Lax`, bounded e distinto per state.
 
 `GET /auth/github/callback` richiede ancora la stessa sessione web e lo stesso browser binding. Query duplicate, percent encoding invalido, replay, flow scaduti e session/user revision races falliscono chiusi. Il server scambia il code, legge esclusivamente il profilo pubblico `/user`, collega l'ID numerico GitHub e risponde `303` verso un path locale. Access token, code, verifier, state e secret non sono persistiti né restituiti al browser.
 
