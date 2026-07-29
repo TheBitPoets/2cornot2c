@@ -808,6 +808,29 @@ def test_archived_load_does_not_replace_edits_made_while_request_is_pending() ->
     )
 
 
+def test_unchanged_proofread_response_cannot_mark_newer_text_as_verified() -> None:
+    run_course_board_js(
+        """
+        let completeResponse;
+        api = async () => new Promise((resolve) => { completeResponse = resolve; });
+        const textarea = document.querySelector("#unchanged-proofread-textarea");
+        const output = document.querySelector("#unchanged-proofread-output");
+        textarea.value = "Original";
+        const item = { id: "item", frame: { context: "Original" }, frame_quality: {} };
+        state.design = { years: [{ id: "year", udas: [{ id: "uda", items: [item] }] }] };
+
+        const proofread = proofreadTextWithAi(textarea, output, item, "context", "Contesto");
+        item.frame.context = "Newer value";
+        completeResponse({ corrected_text: "Original", changes: [] });
+        proofread.then(() => {
+          assert.equal(item.frame.context, "Newer value");
+          assert.notEqual(item.frame_quality.context, "ai");
+          assert.match(output.textContent, /board o il testo sono cambiati/);
+        });
+        """
+    )
+
+
 def test_single_field_proofread_rejects_detached_or_changed_item() -> None:
     run_course_board_js(
         """
@@ -832,6 +855,33 @@ def test_single_field_proofread_rejects_detached_or_changed_item() -> None:
             assert.equal(textarea.value, "Original");
             assert.match(output.textContent, /board o il testo sono cambiati/);
           });
+        });
+        """
+    )
+
+
+def test_duplicate_single_frame_generation_is_serialized() -> None:
+    run_course_board_js(
+        """
+        let completeRequest;
+        let requests = 0;
+        api = async () => {
+          requests += 1;
+          return new Promise((resolve) => { completeRequest = resolve; });
+        };
+        renderCourse = () => {};
+        const item = { id: "item", title: "Item", frame: {} };
+        const uda = { id: "uda", items: [item] };
+        const year = { id: "year", udas: [uda] };
+        state.design = { years: [year] };
+
+        const first = fillSingleFrameWithAi(year, uda, item);
+        const second = fillSingleFrameWithAi(year, uda, item);
+        second.then((result) => {
+          assert.equal(result, false);
+          assert.equal(requests, 1);
+          completeRequest({ frame: { context: "Generated" } });
+          return first.then(() => assert.equal(item.frame.context, "Generated"));
         });
         """
     )
