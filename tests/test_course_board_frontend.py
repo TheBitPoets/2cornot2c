@@ -311,6 +311,7 @@ def test_generation_cancel_restores_owned_fields_and_preserves_manual_field() ->
           id: "item",
           title: "Item",
           frame: { context: "Original context", objectives: "Original objectives" },
+          frame_quality: { context: "ai", objectives: "ai" },
         };
         const uda = { id: "uda", items: [item] };
         const year = { id: "year", udas: [uda] };
@@ -319,9 +320,12 @@ def test_generation_cancel_restores_owned_fields_and_preserves_manual_field() ->
 
         generateNextFrameInBatch().then(() => {
           item.frame.context = "Manual context";
+          item.frame_quality.context = "none";
           cancelFrameBatch();
           assert.equal(item.frame.context, "Manual context");
+          assert.equal(item.frame_quality.context, "none");
           assert.equal(item.frame.objectives, "Original objectives");
+          assert.equal(item.frame_quality.objectives, "ai");
           assert.equal(frameBatch, null);
         });
         """

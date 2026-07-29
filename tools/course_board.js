@@ -2003,15 +2003,32 @@ function recordAppliedFrameSnapshot(snapshot) {
   snapshot.lastAppliedFrameQuality = JSON.parse(JSON.stringify(snapshot.item.frame_quality || {}));
 }
 
-function restoreQueueOwnedFields(current, lastApplied, original) {
-  if (!lastApplied) return 0;
+function restoreQueueOwnedFrameFields(
+  currentFrame,
+  currentQuality,
+  lastAppliedFrame,
+  lastAppliedQuality,
+  originalFrame,
+  originalQuality,
+) {
+  if (!lastAppliedFrame) return 0;
   let restored = 0;
-  for (const key of new Set([...Object.keys(lastApplied), ...Object.keys(original || {})])) {
-    if (JSON.stringify(current?.[key]) !== JSON.stringify(lastApplied[key])) continue;
-    if (Object.hasOwn(original || {}, key)) {
-      current[key] = JSON.parse(JSON.stringify(original[key]));
+  for (const key of new Set([...Object.keys(lastAppliedFrame), ...Object.keys(originalFrame || {})])) {
+    const textStillQueueOwned = (
+      JSON.stringify(currentFrame?.[key]) === JSON.stringify(lastAppliedFrame[key])
+    );
+    if (!textStillQueueOwned) continue;
+    if (Object.hasOwn(originalFrame || {}, key)) {
+      currentFrame[key] = JSON.parse(JSON.stringify(originalFrame[key]));
     } else {
-      delete current[key];
+      delete currentFrame[key];
+    }
+    restored += 1;
+    if (JSON.stringify(currentQuality?.[key]) !== JSON.stringify(lastAppliedQuality?.[key])) continue;
+    if (Object.hasOwn(originalQuality || {}, key)) {
+      currentQuality[key] = JSON.parse(JSON.stringify(originalQuality[key]));
+    } else {
+      delete currentQuality[key];
     }
     restored += 1;
   }
@@ -2020,17 +2037,14 @@ function restoreQueueOwnedFields(current, lastApplied, original) {
 
 function restoreFrameSnapshot(snapshot) {
   if (snapshot.lastAppliedFrame === null) return false;
-  const restoredFrame = restoreQueueOwnedFields(
+  return restoreQueueOwnedFrameFields(
     snapshot.item.frame,
-    snapshot.lastAppliedFrame,
-    snapshot.frame,
-  );
-  const restoredQuality = restoreQueueOwnedFields(
     snapshot.item.frame_quality,
+    snapshot.lastAppliedFrame,
     snapshot.lastAppliedFrameQuality,
+    snapshot.frame,
     snapshot.frameQuality,
-  );
-  return restoredFrame + restoredQuality > 0;
+  ) > 0;
 }
 
 async function generateFrameForEntry(entry, boardContext = captureBoardContext()) {
@@ -2649,17 +2663,14 @@ function recordAppliedFrameVerificationSnapshot() {
 
 function restoreFrameVerificationSnapshot() {
   if (!frameVerificationBatch || frameVerificationBatch.lastAppliedFrame === null) return false;
-  const restoredFrame = restoreQueueOwnedFields(
+  return restoreQueueOwnedFrameFields(
     frameVerificationBatch.item.frame,
-    frameVerificationBatch.lastAppliedFrame,
-    frameVerificationBatch.snapshots.frame,
-  );
-  const restoredQuality = restoreQueueOwnedFields(
     frameVerificationBatch.item.frame_quality,
+    frameVerificationBatch.lastAppliedFrame,
     frameVerificationBatch.lastAppliedFrameQuality,
+    frameVerificationBatch.snapshots.frame,
     frameVerificationBatch.snapshots.frameQuality,
-  );
-  return restoredFrame + restoredQuality > 0;
+  ) > 0;
 }
 
 function closeFrameVerification() {
