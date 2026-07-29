@@ -252,6 +252,37 @@ def test_staging_smoke_rejects_cookie_not_correlated_to_state() -> None:
         )
 
 
+def test_staging_smoke_rejects_public_state_reused_as_cookie_binding() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/google/login")]
+    location = next(
+        value for name, value in current.headers if name.lower() == "location"
+    )
+    state = urllib.parse.parse_qs(urllib.parse.urlsplit(location).query)["state"][0]
+
+    def reuse_state(value):
+        cookie_name = value.split("=", 1)[0]
+        attributes = value.split(";", 1)[1]
+        return f"{cookie_name}={state};{attributes}"
+
+    fixtures[("GET", "https://school.test/auth/google/login")] = smoke.ResponseSnapshot(
+        302,
+        tuple(
+            (name, reuse_state(value))
+            if name.lower() == "set-cookie"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        b"",
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
 def test_staging_smoke_rejects_short_pkce_challenge() -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/google/login")]
@@ -349,6 +380,28 @@ def test_staging_smoke_rejects_html_nonce_not_bound_to_csp() -> None:
             b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef",
             b"ZYXWVUTSRQPONMLKJIHGFEDCBAabcdef",
         ),
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+def test_staging_smoke_ignores_script_and_routes_inside_html_comments() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/tui/pair")]
+    commented_body = b"<!--" + current.body + b"-->"
+    fixtures[("GET", "https://school.test/auth/tui/pair")] = smoke.ResponseSnapshot(
+        200,
+        tuple(
+            (name, str(len(commented_body)))
+            if name.lower() == "content-length"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        commented_body,
     )
 
     with pytest.raises(smoke.StagingSmokeError):

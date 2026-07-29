@@ -16,6 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Callable
 
@@ -217,12 +218,22 @@ def _check_google_login(
         + hashlib.sha256(query["state"][0].encode("ascii")).hexdigest()[:24]
         + "="
     )
+    cookie_value = (
+        cookie_parts[0].split("=", 1)[1]
+        if cookie_parts and "=" in cookie_parts[0]
+        else None
+    )
     attributes = _cookie_attributes(cookie_parts[1:]) if cookie_parts else None
     max_age = None if attributes is None else attributes.get("max-age")
     if (
         not cookie_parts
         or _TRANSACTION_COOKIE_RE.fullmatch(cookie_parts[0]) is None
         or not cookie_parts[0].startswith(expected_cookie_prefix)
+        or cookie_value in {
+            query["state"][0],
+            query["nonce"][0],
+            query["code_challenge"][0],
+        }
         or attributes is None
         or set(attributes) != {"path", "max-age", "secure", "httponly", "samesite"}
         or attributes.get("path") != "/"
@@ -238,6 +249,7 @@ def _check_google_login(
     parsed = None
     query = None
     cookie_parts = None
+    cookie_value = None
     attributes = None
     max_age = None
     expected_cookie_prefix = None
@@ -261,16 +273,24 @@ def _check_pairing_page(response: ResponseSnapshot) -> None:
         html = response.body.decode("utf-8")
     except UnicodeDecodeError:
         html = ""
-    script_nonces = _element_nonces(html, "script")
-    style_nonces = _element_nonces(html, "style")
+    parser = _PairingPageParser()
+    try:
+        parser.feed(html)
+        parser.close()
+    except Exception:
+        parser.invalid = True
+    visible_source = "".join(parser.data)
     if (
         csp_nonce is None
-        or script_nonces != [csp_nonce]
-        or style_nonces != [csp_nonce]
+        or parser.invalid
+        or parser.script_nonces != [csp_nonce]
+        or parser.style_nonces != [csp_nonce]
+        or parser.script_ends != 1
+        or parser.style_ends != 1
         or _headers(response, "x-frame-options") != ["DENY"]
         or _headers(response, "x-content-type-options") != ["nosniff"]
-        or b"/auth/session" not in response.body
-        or b"/auth/tui/pair" not in response.body
+        or "/auth/session" not in visible_source
+        or "/auth/tui/pair" not in visible_source
     ):
         raise StagingSmokeError("Check staging pairing_page non valido.")
 
@@ -400,19 +420,37 @@ def _strict_query(raw_query: str) -> dict[str, list[str]]:
     return result
 
 
-def _element_nonces(html: str, element: str) -> list[str]:
-    tags = re.findall(rf"<{element}\b([^>]*)>", html, flags=re.IGNORECASE)
-    nonces: list[str] = []
-    for attributes in tags:
-        match = re.fullmatch(
-            r"\s*nonce\s*=\s*(['\"])([^'\"]+)\1\s*",
-            attributes,
-            flags=re.IGNORECASE,
-        )
-        if match is None:
-            return []
-        nonces.append(match.group(2))
-    return nonces
+class _PairingPageParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.script_nonces: list[str] = []
+        self.style_nonces: list[str] = []
+        self.script_ends = 0
+        self.style_ends = 0
+        self.data: list[str] = []
+        self.invalid = False
+
+    def handle_starttag(self, tag, attrs) -> None:
+        if tag not in {"script", "style"}:
+            return
+        if len(attrs) != 1 or attrs[0][0] != "nonce" or not attrs[0][1]:
+            self.invalid = True
+            return
+        target = self.script_nonces if tag == "script" else self.style_nonces
+        target.append(attrs[0][1])
+
+    def handle_endtag(self, tag) -> None:
+        if tag == "script":
+            self.script_ends += 1
+        elif tag == "style":
+            self.style_ends += 1
+
+    def handle_startendtag(self, tag, attrs) -> None:
+        if tag in {"script", "style"}:
+            self.invalid = True
+
+    def handle_data(self, data) -> None:
+        self.data.append(data)
 
 
 def _require_response_framing(response: ResponseSnapshot) -> None:
