@@ -105,6 +105,7 @@ PAIRING_BODY_DEADLINE_SECONDS = 15
 STUDENT_API_BODY_DEADLINE_SECONDS = 15
 HTTP_HEADER_DEADLINE_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+MARKDOWN_LINE_ENDING_RE = re.compile(r"\r\n|\r|\n")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
 SPACE_RE = re.compile(r"[\s_]+")
@@ -2083,23 +2084,11 @@ def iter_markdown_lines(source_text: str):
     """Yield LF, CRLF, or CR-delimited lines without materializing a list."""
 
     start = 0
-    text_length = len(source_text)
-    while start < text_length:
-        lf_index = source_text.find("\n", start)
-        cr_index = source_text.find("\r", start)
-        if lf_index < 0:
-            delimiter = cr_index
-        elif cr_index < 0:
-            delimiter = lf_index
-        else:
-            delimiter = min(lf_index, cr_index)
-        if delimiter < 0:
-            yield source_text[start:]
-            return
-        yield source_text[start:delimiter]
-        start = delimiter + 1
-        if source_text[delimiter] == "\r" and start < text_length and source_text[start] == "\n":
-            start += 1
+    for delimiter in MARKDOWN_LINE_ENDING_RE.finditer(source_text):
+        yield source_text[start:delimiter.start()]
+        start = delimiter.end()
+    if start < len(source_text):
+        yield source_text[start:]
 
 
 def headings_from_source_snapshot(

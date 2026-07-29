@@ -111,6 +111,9 @@ def test_markdown_line_iteration_is_streaming_and_preserves_line_endings() -> No
         def splitlines(self, *args, **kwargs):
             raise AssertionError("splitlines must not materialize all lines")
 
+        def find(self, *args, **kwargs):
+            raise AssertionError("each delimiter must be scanned only once")
+
     text = SplitlinesForbidden("# One\r\n## Two\r### Three\n")
 
     assert list(course_board_server.iter_markdown_lines(text)) == [
