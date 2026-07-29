@@ -365,17 +365,32 @@ async function responseErrorMessage(response) {
   return fallback;
 }
 
+function sourceDesignQuery(name = "") {
+  return name ? `?design=${encodeURIComponent(name)}` : "";
+}
+
+async function fetchSourceContext(name = "") {
+  const query = sourceDesignQuery(name);
+  const [headingsPayload, sourcesPayload] = await Promise.all([
+    api(`/api/headings${query}`),
+    api(`/api/course-sources${query}`),
+  ]);
+  return {
+    headings: headingsPayload.headings || [],
+    sources: sourcesPayload.sources || [],
+  };
+}
+
 async function loadAll() {
   setStatus("Caricamento...");
-  const [headingsPayload, sourcesPayload, design, aiConfig, savedDesigns] = await Promise.all([
-    api("/api/headings"),
-    api("/api/course-sources"),
+  const [sourceContext, design, aiConfig, savedDesigns] = await Promise.all([
+    fetchSourceContext(),
     api("/api/course-design"),
     api("/api/ai-config"),
     api("/api/saved-designs"),
   ]);
-  state.headings = headingsPayload.headings;
-  state.sources = sourcesPayload.sources || [];
+  state.headings = sourceContext.headings;
+  state.sources = sourceContext.sources;
   state.design = design;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
@@ -492,7 +507,13 @@ async function loadCurrentDesign() {
   });
   if (!confirmed) return;
   setStatus("Caricamento progetto corrente...");
-  state.design = await api("/api/course-design");
+  const [design, sourceContext] = await Promise.all([
+    api("/api/course-design"),
+    fetchSourceContext(),
+  ]);
+  state.design = design;
+  state.headings = sourceContext.headings;
+  state.sources = sourceContext.sources;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();
@@ -500,6 +521,8 @@ async function loadCurrentDesign() {
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   renderSavedDesigns();
   renderProjectTitle();
+  populateFilters();
+  renderSourceCatalogSummary();
   renderHeadings();
   renderCourse();
   renderCourseActions();
@@ -519,11 +542,16 @@ async function loadSavedDesignByName(name, options = {}) {
     if (!confirmed) return;
   }
   setStatus(`Caricamento progetto salvato "${name}"...`);
-  const payload = await api("/api/saved-designs/load", {
-    method: "POST",
-    body: JSON.stringify({ name }),
-  });
+  const [payload, sourceContext] = await Promise.all([
+    api("/api/saved-designs/load", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+    fetchSourceContext(name),
+  ]);
   state.design = payload.design;
+  state.headings = sourceContext.headings;
+  state.sources = sourceContext.sources;
   state.activeSavedDesign = name;
   state.isNewDesign = false;
   markDesignClean();
@@ -532,6 +560,8 @@ async function loadSavedDesignByName(name, options = {}) {
   if (render) {
     renderSavedDesigns();
     renderProjectTitle();
+    populateFilters();
+    renderSourceCatalogSummary();
     renderHeadings();
     renderCourse();
     renderCourseActions();
@@ -1539,7 +1569,10 @@ async function openParagraphPreview(paragraph) {
   els.paragraphSourceLink.hidden = true;
   els.paragraphDialog.showModal();
   try {
-    const payload = await api(`/api/heading-content?id=${encodeURIComponent(paragraph.id)}`);
+    const designQuery = state.activeSavedDesign
+      ? `&design=${encodeURIComponent(state.activeSavedDesign)}`
+      : "";
+    const payload = await api(`/api/heading-content?id=${encodeURIComponent(paragraph.id)}${designQuery}`);
     const heading = payload.heading || paragraph;
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
     els.paragraphDialogMeta.textContent = `${heading.source_label || heading.source || "Sorgente n/d"} (${heading.source_provider || "local"}) · riga ${heading.line || "?"} · H${heading.level || "?"}`;

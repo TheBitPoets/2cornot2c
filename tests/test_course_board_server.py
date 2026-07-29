@@ -185,6 +185,22 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         "read_design",
         lambda: {"source_files": ["lesson.md"]},
     )
+    monkeypatch.setattr(
+        course_board_server,
+        "read_saved_design",
+        lambda name: {
+            "sources": [
+                {
+                    "id": "archived-source",
+                    "label": f"Archivio {name}",
+                    "type": "markdown",
+                    "provider": "local",
+                    "files": ["lesson.md"],
+                    "indexing_status": "ready",
+                }
+            ]
+        },
+    )
     teacher_token = "teacher-dashboard-token-for-source-catalog"
     server = course_board_server.BoundedThreadingHTTPServer(
         ("127.0.0.1", 0), course_board_server.CourseBoardHandler
@@ -208,6 +224,16 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         assert payload["sources"][0]["provider"] == "local"
         assert payload["sources"][0]["legacy"] is True
         assert payload["sources"][0]["indexed_files"] == ["lesson.md"]
+
+        archived_request = urllib.request.Request(
+            "http://127.0.0.1:%s/api/course-sources?design=archive.json"
+            % server.server_address[1],
+            headers={"Authorization": authorization},
+        )
+        with urllib.request.urlopen(archived_request, timeout=5) as response:
+            archived = json.loads(response.read().decode("utf-8"))
+        assert archived["sources"][0]["id"] == "archived-source"
+        assert archived["sources"][0]["label"] == "Archivio archive.json"
     finally:
         server.shutdown()
         server.server_close()

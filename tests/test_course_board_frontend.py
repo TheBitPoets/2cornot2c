@@ -126,7 +126,7 @@ def test_course_board_declares_source_catalog_summary() -> None:
     html = Path("tools/course_board.html").read_text(encoding="utf-8")
 
     assert 'id="sourceCatalogSummary"' in html
-    assert 'api("/api/course-sources")' in Path("tools/course_board.js").read_text(encoding="utf-8")
+    assert "`/api/course-sources${query}`" in Path("tools/course_board.js").read_text(encoding="utf-8")
 
 
 def test_catalog_paragraph_preview_uses_keyboard_accessible_button() -> None:
@@ -610,6 +610,35 @@ def test_archive_save_response_does_not_relabel_a_newly_opened_project() -> None
           assert.equal(state.activeSavedDesign, "second.json");
           assert.match(els.status.textContent, /vista aperta non e stata cambiata/);
         });
+        """
+    )
+
+
+def test_loading_archived_design_refreshes_its_source_context() -> None:
+    run_course_board_js(
+        """
+        api = async (path) => {
+          if (path === "/api/saved-designs/load") {
+            return { design: { years: [{ id: "archived" }] } };
+          }
+          if (path === "/api/headings?design=archive%202026.json") {
+            return { headings: [{ id: "archived-heading" }] };
+          }
+          if (path === "/api/course-sources?design=archive%202026.json") {
+            return { sources: [{ id: "archived-source" }] };
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        state.headings = [{ id: "current-heading" }];
+        state.sources = [{ id: "current-source" }];
+
+        loadSavedDesignByName("archive 2026.json", { confirmFirst: false, render: false })
+          .then(() => {
+            assert.equal(state.design.years[0].id, "archived");
+            assert.equal(state.headings[0].id, "archived-heading");
+            assert.equal(state.sources[0].id, "archived-source");
+            assert.equal(state.activeSavedDesign, "archive 2026.json");
+          });
         """
     )
 

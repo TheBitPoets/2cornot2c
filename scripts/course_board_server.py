@@ -669,6 +669,18 @@ def read_saved_design(name: str) -> dict:
     return course_service().read_saved_design(name)
 
 
+def source_request_design(raw_query: str) -> dict:
+    """Resolve the current or one safely named archived design for source APIs."""
+
+    query = parse_qs(raw_query, keep_blank_values=True)
+    names = query.get("design", [])
+    if not names:
+        return read_design()
+    if len(names) != 1 or not names[0]:
+        raise ValueError("Parametro design non valido.")
+    return read_saved_design(names[0])
+
+
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
     """Persist a named course design in the archive folder."""
 
@@ -2024,10 +2036,10 @@ def default_ai_provider_config() -> dict:
     }
 
 
-def extract_headings() -> list[dict]:
+def extract_headings(design: dict | None = None) -> list[dict]:
     """Extract headings from configured Markdown sources."""
 
-    design = read_design()
+    design = read_design() if design is None else design
     source_files = course_source_catalog.local_markdown_source_files(
         design,
         ROOT,
@@ -2038,13 +2050,11 @@ def extract_headings() -> list[dict]:
         source = source_file.relative_path
         descriptor = source_file.source
         seen: dict[str, int] = {}
-        for lineno, line in enumerate(
-            source_file.resolved_path.read_text(
-                encoding="utf-8",
-                errors="replace",
-            ).splitlines(),
-            start=1,
-        ):
+        source_text = course_source_catalog.read_local_markdown_text(
+            source_file,
+            ROOT,
+        )
+        for lineno, line in enumerate(source_text.splitlines(), start=1):
             match = HEADING_RE.match(line)
             if not match:
                 continue
@@ -2084,7 +2094,12 @@ def github_blob_url(source: str, anchor: str = "") -> str:
     return f"{base}#{anchor}" if anchor else base
 
 
-def section_text(source: str, line: int | str, level: int | str) -> str:
+def section_text(
+    source: str,
+    line: int | str,
+    level: int | str,
+    design: dict | None = None,
+) -> str:
     """Extract local Markdown text for one heading section."""
 
     try:
@@ -2092,15 +2107,26 @@ def section_text(source: str, line: int | str, level: int | str) -> str:
         start_level = int(level)
     except (TypeError, ValueError):
         return ""
-    path = (ROOT / source).resolve()
-    try:
-        path.relative_to(ROOT)
-    except ValueError:
-        return ""
-    if not path.is_file():
+    selected_design = read_design() if design is None else design
+    source_file = next(
+        (
+            item
+            for item in course_source_catalog.local_markdown_source_files(
+                selected_design,
+                ROOT,
+                default_files=DEFAULT_SOURCES,
+            )
+            if item.relative_path == source
+        ),
+        None,
+    )
+    if source_file is None:
         return ""
 
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    lines = course_source_catalog.read_local_markdown_text(
+        source_file,
+        ROOT,
+    ).splitlines()
     if start_line < 1 or start_line > len(lines):
         return ""
 
@@ -4062,26 +4088,37 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/course-sources":
             try:
+                design = source_request_design(parsed.query)
                 self.write_json(
                     course_source_catalog.course_source_catalog_payload(
-                        read_design(),
+                        design,
                         ROOT,
                         default_files=DEFAULT_SOURCES,
                     )
                 )
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
             return
         if parsed.path == "/api/headings":
             try:
-                self.write_json({"headings": extract_headings()})
+                design = source_request_design(parsed.query)
+                self.write_json({"headings": extract_headings(design)})
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
             return
         if parsed.path == "/api/heading-content":
-            heading_id = parse_qs(parsed.query).get("id", [""])[0]
+            query = parse_qs(parsed.query)
+            heading_id = query.get("id", [""])[0]
             try:
-                headings = extract_headings()
+                design = source_request_design(parsed.query)
+                headings = extract_headings(design)
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
+                return
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
                 return
@@ -4089,12 +4126,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             if heading is None:
                 self.write_error_json(404, "Paragrafo non trovato.")
                 return
-            self.write_json({
-                "heading": {
-                    **heading,
-                    "content": section_text(heading["source"], heading["line"], heading["level"]),
-                }
-            })
+            try:
+                content = section_text(
+                    heading["source"],
+                    heading["line"],
+                    heading["level"],
+                    design,
+                )
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+                return
+            self.write_json({"heading": {**heading, "content": content}})
             return
         if parsed.path == "/api/course-design":
             self.write_json(read_design())

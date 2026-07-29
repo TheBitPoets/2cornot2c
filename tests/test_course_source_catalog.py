@@ -9,6 +9,7 @@ from scripts.course_source_catalog import (
     course_source_catalog_payload,
     local_markdown_source_files,
     normalize_course_sources,
+    read_local_markdown_text,
 )
 
 
@@ -107,6 +108,36 @@ def test_resolves_only_ready_local_existing_markdown_files(tmp_path) -> None:
     ]
 
 
+def test_reads_local_markdown_through_repository_verified_open_handle(tmp_path) -> None:
+    lesson = tmp_path / "lesson.md"
+    lesson.write_text("# Lesson\n", encoding="utf-8")
+    item = local_markdown_source_files(
+        {"source_files": ["lesson.md"]},
+        tmp_path,
+    )[0]
+
+    assert read_local_markdown_text(item, tmp_path).splitlines() == ["# Lesson"]
+
+
+def test_open_handle_verification_rejects_outside_file(tmp_path, monkeypatch) -> None:
+    repository = tmp_path / "repository"
+    outside = tmp_path / "outside.md"
+    repository.mkdir()
+    (repository / "lesson.md").write_text("# Inside\n", encoding="utf-8")
+    outside.write_text("# Outside\n", encoding="utf-8")
+    item = local_markdown_source_files(
+        {"source_files": ["lesson.md"]},
+        repository,
+    )[0]
+    monkeypatch.setattr(
+        "scripts.course_source_catalog._opened_file_path",
+        lambda _descriptor: outside,
+    )
+
+    with pytest.raises(CourseSourceCatalogError, match="fuori dal repository"):
+        read_local_markdown_text(item, repository)
+
+
 def test_catalog_payload_reports_only_files_actually_indexable(tmp_path) -> None:
     (tmp_path / "doc").mkdir()
     (tmp_path / "doc" / "intro.md").write_text("# Intro\n", encoding="utf-8")
@@ -133,6 +164,8 @@ def test_catalog_payload_reports_only_files_actually_indexable(tmp_path) -> None
         (lambda design: design["sources"][0].update(path="../doc"), "path relativo canonico"),
         (lambda design: design["sources"][0].update(repository="owner/repo"), "non accetta repository"),
         (lambda design: design["sources"][1].update(repository=None), "repository e ref"),
+        (lambda design: design["sources"][1].update(repository="../repo"), "repository non valido"),
+        (lambda design: design["sources"][2].update(repository="group/../repo"), "repository non valido"),
         (lambda design: design["sources"][1].update(path="doc"), "non accetta path locale"),
         (lambda design: design["sources"][1].update(ref="../main"), "ref non valido"),
         (lambda design: design["sources"][1].update(indexing_status="ready"), "senza adapter"),
@@ -161,6 +194,19 @@ def test_rejects_malformed_explicit_catalogs(mutate, message) -> None:
 def test_rejects_malformed_legacy_source_files(source_files) -> None:
     with pytest.raises(CourseSourceCatalogError):
         normalize_course_sources({"source_files": source_files})
+
+
+def test_rejects_two_local_paths_resolving_to_same_file(tmp_path) -> None:
+    lesson = tmp_path / "lesson.md"
+    lesson.write_text("# Lesson\n", encoding="utf-8")
+    try:
+        (tmp_path / "alias.md").symlink_to(lesson)
+    except OSError:
+        pytest.skip("Symlink non disponibile in questo ambiente.")
+    design = {"source_files": ["lesson.md", "alias.md"]}
+
+    with pytest.raises(CourseSourceCatalogError, match="duplicato dopo la risoluzione"):
+        local_markdown_source_files(design, tmp_path)
 
 
 def test_rejects_symlink_escape_even_for_canonical_declared_path(tmp_path) -> None:

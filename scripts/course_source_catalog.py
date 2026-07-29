@@ -3,14 +3,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import hashlib
+import os
 from pathlib import Path, PurePosixPath
 import re
+import stat
+import sys
 from typing import Any, Iterable
 
 
 MAX_SOURCES = 64
 MAX_FILES_PER_SOURCE = 64
 MAX_TEXT = 512
+MAX_LOCAL_MARKDOWN_BYTES = 8 * 1024 * 1024
 SOURCE_ID_RE = re.compile(r"^[a-z0-9](?:[a-z0-9._-]{0,63})$")
 GITHUB_REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 GITLAB_REPOSITORY_RE = re.compile(
@@ -111,6 +115,8 @@ def local_markdown_source_files(
     repository_root = root.resolve()
     files: list[LocalCourseSourceFile] = []
     seen_paths: set[str] = set()
+    seen_resolved_paths: set[str] = set()
+    seen_file_identities: set[tuple[int, int]] = set()
     for source in normalize_course_sources(design, default_files=default_files):
         if source.provider != "local" or source.indexing_status != "ready":
             continue
@@ -121,15 +127,39 @@ def local_markdown_source_files(
                     f"File fonte locale duplicato: {relative_path}."
                 )
             seen_paths.add(relative_path)
-            resolved = (repository_root / Path(relative_path)).resolve()
+            try:
+                resolved = (repository_root / Path(relative_path)).resolve()
+                metadata = resolved.stat() if resolved.exists() else None
+            except OSError as exc:
+                raise CourseSourceCatalogError(
+                    f"File fonte locale non verificabile: {relative_path}."
+                ) from exc
             try:
                 resolved.relative_to(repository_root)
             except ValueError as exc:
                 raise CourseSourceCatalogError(
                     f"File fonte fuori dal repository: {relative_path}."
                 ) from exc
-            if existing_only and not resolved.is_file():
+            if metadata is not None and not stat.S_ISREG(metadata.st_mode):
+                raise CourseSourceCatalogError(
+                    f"La fonte locale non è un file regolare: {relative_path}."
+                )
+            if existing_only and metadata is None:
                 continue
+            resolved_key = os.path.normcase(str(resolved))
+            if resolved_key in seen_resolved_paths:
+                raise CourseSourceCatalogError(
+                    f"File fonte locale duplicato dopo la risoluzione: {relative_path}."
+                )
+            seen_resolved_paths.add(resolved_key)
+            if metadata is not None:
+                identity = (metadata.st_dev, metadata.st_ino)
+                if metadata.st_ino and identity in seen_file_identities:
+                    raise CourseSourceCatalogError(
+                        f"File fonte locale duplicato dopo la risoluzione: {relative_path}."
+                    )
+                if metadata.st_ino:
+                    seen_file_identities.add(identity)
             files.append(
                 LocalCourseSourceFile(
                     source=source,
@@ -138,6 +168,40 @@ def local_markdown_source_files(
                 )
             )
     return tuple(files)
+
+
+def read_local_markdown_text(item: LocalCourseSourceFile, root: Path) -> str:
+    """Read one source through an opened handle verified against the repository."""
+
+    repository_root = root.resolve()
+    try:
+        with item.resolved_path.open("rb") as stream:
+            opened_path = _opened_file_path(stream.fileno()).resolve()
+            try:
+                opened_path.relative_to(repository_root)
+            except ValueError as exc:
+                raise CourseSourceCatalogError(
+                    f"File fonte fuori dal repository: {item.relative_path}."
+                ) from exc
+            metadata = os.fstat(stream.fileno())
+            if not stat.S_ISREG(metadata.st_mode):
+                raise CourseSourceCatalogError(
+                    f"La fonte locale non è un file regolare: {item.relative_path}."
+                )
+            if metadata.st_size > MAX_LOCAL_MARKDOWN_BYTES:
+                raise CourseSourceCatalogError(
+                    f"File fonte locale troppo grande: {item.relative_path}."
+                )
+            payload = stream.read(MAX_LOCAL_MARKDOWN_BYTES + 1)
+    except OSError as exc:
+        raise CourseSourceCatalogError(
+            f"File fonte locale non leggibile: {item.relative_path}."
+        ) from exc
+    if len(payload) > MAX_LOCAL_MARKDOWN_BYTES:
+        raise CourseSourceCatalogError(
+            f"File fonte locale troppo grande: {item.relative_path}."
+        )
+    return payload.decode("utf-8", errors="replace")
 
 
 def course_source_catalog_payload(
@@ -264,7 +328,11 @@ def _normalize_source(raw: Any, index: int) -> CourseSource:
         repository_re = (
             GITHUB_REPOSITORY_RE if provider == "github" else GITLAB_REPOSITORY_RE
         )
-        if repository_re.fullmatch(repository) is None:
+        repository_parts = repository.split("/")
+        if (
+            repository_re.fullmatch(repository) is None
+            or any(part in {".", ".."} for part in repository_parts)
+        ):
             raise CourseSourceCatalogError(f"{field}.repository non valido.")
         if (
             GIT_REF_RE.fullmatch(ref) is None
@@ -352,6 +420,45 @@ def _optional_text(value: Any, field: str) -> str | None:
     if value is None:
         return None
     return _text(value, field, required=True)
+
+
+def _opened_file_path(file_descriptor: int) -> Path:
+    if os.name == "nt":
+        import ctypes
+        import msvcrt
+
+        handle = msvcrt.get_osfhandle(file_descriptor)
+        buffer = ctypes.create_unicode_buffer(32768)
+        get_final_path = ctypes.windll.kernel32.GetFinalPathNameByHandleW
+        get_final_path.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_wchar_p,
+            ctypes.c_uint32,
+            ctypes.c_uint32,
+        ]
+        get_final_path.restype = ctypes.c_uint32
+        length = get_final_path(
+            ctypes.c_void_p(handle),
+            buffer,
+            len(buffer),
+            0,
+        )
+        if length == 0 or length >= len(buffer):
+            raise OSError("Impossibile risolvere il file aperto.")
+        value = buffer.value
+        if value.startswith("\\\\?\\UNC\\"):
+            value = "\\\\" + value[8:]
+        elif value.startswith("\\\\?\\"):
+            value = value[4:]
+        return Path(value)
+    if sys.platform.startswith("linux"):
+        return Path(os.readlink(f"/proc/self/fd/{file_descriptor}"))
+    if sys.platform == "darwin":
+        import fcntl
+
+        value = fcntl.fcntl(file_descriptor, 50, b"\0" * 4096)
+        return Path(value.split(b"\0", 1)[0].decode("utf-8"))
+    raise OSError("Piattaforma non supportata per la verifica del file aperto.")
 
 
 def _validate_utc_timestamp(value: str, field: str) -> None:

@@ -163,10 +163,17 @@ def render_design(design: dict[str, Any]) -> str:
             continue
         location = source.path or source.repository or "n/d"
         files = ", ".join(f"`{name}`" for name in source.files)
+        metadata = [
+            f"provider `{source.provider}`",
+            f"stato `{source.indexing_status}`",
+        ]
+        if source.ref:
+            metadata.append(f"ref `{source.ref}`")
+        if source.updated_at:
+            metadata.append(f"aggiornata `{source.updated_at}`")
         lines.append(
             f"- `{source.source_id}` — {source.label} "
-            f"(`{source.provider}`, `{source.indexing_status}`) · "
-            f"{location} · {files}"
+            f"({', '.join(metadata)}) · {location} · {files}"
         )
 
     lines.extend([

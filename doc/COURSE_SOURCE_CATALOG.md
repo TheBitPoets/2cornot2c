@@ -49,7 +49,7 @@ Campi:
 | `updated_at` | Timestamp UTC canonico opzionale |
 | `indexing_status` | `ready`, `pending`, `error` o `disabled` |
 
-Il server rifiuta ID duplicati, campi sconosciuti, path non canonici, file non Markdown e duplicati locali. La risoluzione usa il path reale e impedisce anche escape tramite link simbolici.
+Il server rifiuta ID duplicati, campi sconosciuti, path non canonici, repository con segmenti `.`/`..`, ref Git non sicure, file non Markdown e duplicati locali anche quando alias o hard link risolvono allo stesso file. La lettura apre prima il file e verifica il path reale dell'handle contro la root del repository, impedendo escape e sostituzioni concorrenti tramite link simbolici/junction. Ogni Markdown locale è limitato a 8 MiB.
 
 ## Compatibilità `source_files`
 
@@ -65,7 +65,7 @@ Se `sources` è presente, anche come array vuoto, è autorevole e `source_files`
 
 ## API e provenienza
 
-`GET /api/course-sources` restituisce il catalogo normalizzato e `indexed_files`, cioè i file locali `ready` realmente disponibili.
+`GET /api/course-sources` restituisce il catalogo normalizzato e `indexed_files`, cioè i file locali `ready` realmente disponibili. Per un progetto archiviato la Course Board usa `?design=<nome.json>` e ricarica atomicamente catalogo e heading del progetto selezionato.
 
 `GET /api/headings` aggiunge a ogni paragrafo:
 
@@ -81,5 +81,6 @@ Quando il docente inserisce un paragrafo in una UDA, questi campi vengono conser
 
 - Nessun clone, pull o fetch HTTP/Git.
 - Nessuna credenziale provider viene letta.
-- Le fonti remote restano catalogate ma hanno `indexed_files: []`.
+- Le fonti remote restano catalogate ma hanno `indexed_files: []`; senza adapter non possono dichiarare lo stato `ready`.
+- Il Markdown generato conserva repository, ref, stato e timestamp dichiarato della fonte.
 - Modifica GUI del catalogo, sincronizzazione, conflitti semantici e deduplicazione sono incrementi successivi di #290.
