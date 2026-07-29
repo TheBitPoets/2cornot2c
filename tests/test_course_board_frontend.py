@@ -808,6 +808,46 @@ def test_archived_load_does_not_replace_edits_made_while_request_is_pending() ->
     )
 
 
+def test_frame_generation_cannot_start_during_verification_queue() -> None:
+    run_course_board_js(
+        """
+        const item = { id: "item", title: "Item", frame: { context: "Text" } };
+        state.design = { years: [{ id: "year", udas: [{ id: "uda", items: [item] }] }] };
+        verifyEntireFrame(item);
+
+        openFrameBatchQueue(
+          "Item",
+          [{ year: state.design.years[0], uda: state.design.years[0].udas[0], item }],
+          "Ready",
+        );
+
+        assert.equal(frameBatch, null);
+        assert.notEqual(frameVerificationBatch, null);
+        assert.match(els.status.textContent, /coda AI e gia in esecuzione/);
+        """
+    )
+
+
+def test_frame_verification_is_bound_to_its_creation_board() -> None:
+    run_course_board_js(
+        """
+        let requests = 0;
+        api = async () => { requests += 1; return { corrected_text: "Wrong" }; };
+        renderCourse = () => {};
+        const item = { id: "item", title: "Item", frame: { context: "Original" } };
+        state.design = { years: [{ id: "year", udas: [{ id: "uda", items: [item] }] }] };
+        verifyEntireFrame(item);
+        state.design = { years: [{ id: "year", udas: [{ id: "uda", items: [] }] }] };
+
+        verifyNextFrameField().then(() => {
+          assert.equal(requests, 0);
+          assert.equal(item.frame.context, "Original");
+          assert.equal(frameVerificationBatch, null);
+        });
+        """
+    )
+
+
 def test_frame_batch_is_bound_to_the_board_where_it_was_created() -> None:
     run_course_board_js(
         """

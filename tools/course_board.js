@@ -1932,7 +1932,7 @@ function openFrameBatch(year, uda, item, entries) {
 }
 
 function openFrameBatchQueue(rootTitle, entries, message) {
-  if (frameBatch) {
+  if (frameBatch || frameVerificationBatch) {
     setStatus("Una coda AI e gia in esecuzione: chiudila o attendi il completamento prima di avviarne un'altra.");
     return;
   }
@@ -2378,12 +2378,18 @@ function frameFieldsWithContent(item) {
   return FRAME_FIELDS.filter((field) => String(frame[field.key] || "").trim());
 }
 
-async function proofreadFrameFieldForBatch(item, field) {
+async function proofreadFrameFieldForBatch(item, field, boardContext) {
+  if (!isBoardContextUnchanged(boardContext)) {
+    throw new Error("la board è cambiata dopo la creazione della coda; verifica AI annullata");
+  }
   const original = String(item.frame[field.key] || "");
   const payload = await api("/api/ai-proofread", {
     method: "POST",
     body: JSON.stringify({ text: original }),
   });
+  if (!isBoardContextUnchanged(boardContext)) {
+    throw new Error("la board è cambiata durante la verifica; risposta AI ignorata");
+  }
   const corrected = String(payload.corrected_text || "").trim();
   if (!corrected) throw new Error(`La AI non ha restituito testo per "${field.label}".`);
   item.frame[field.key] = corrected === original.trim() ? original : corrected;
@@ -2408,6 +2414,7 @@ function verifyEntireFrame(item) {
     running: true,
     cancelled: false,
     closeRequested: false,
+    boardContext: captureBoardContext(),
     snapshots: {
       frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(item.frame || {}) })),
       frameQuality: JSON.parse(JSON.stringify({ ...defaultFrameQuality(), ...(item.frame_quality || {}) })),
@@ -2432,7 +2439,12 @@ async function verifyNextFrameField() {
     renderCourse();
     showFrameVerificationProgress();
     setStatus(`Controllo locale: ${current.label} (${frameVerificationBatch.index + 1}/${total}).`);
-    await proofreadFrameFieldForBatch(frameVerificationBatch.item, current);
+    await proofreadFrameFieldForBatch(
+      frameVerificationBatch.item,
+      current,
+      frameVerificationBatch.boardContext,
+    );
+    frameVerificationBatch.boardContext = captureBoardContext();
     frameVerificationBatch.index += 1;
     renderCourse();
     if (frameVerificationBatch.cancelled) {
