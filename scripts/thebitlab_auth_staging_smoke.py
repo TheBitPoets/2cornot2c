@@ -182,7 +182,9 @@ def run_smoke(
                     or type(material) is not tuple
                     or len(material) != len(first_login_material)
                     or len(set(material)) != len(material)
-                    or not set(first_login_material).isdisjoint(material)
+                    or not _forbidden_followup_fingerprints(
+                        first_login_material
+                    ).isdisjoint(material)
                 ):
                     raise StagingSmokeError(
                         "Check staging google_login_repeat non valido."
@@ -470,6 +472,17 @@ def _strict_query(raw_query: str) -> dict[str, list[str]]:
     return result
 
 
+def _forbidden_followup_fingerprints(material: tuple[bytes, ...]) -> set[bytes]:
+    forbidden = set(material)
+    for fingerprint in material:
+        for derived in (
+            fingerprint.hex(),
+            base64.urlsafe_b64encode(fingerprint).rstrip(b"=").decode("ascii"),
+        ):
+            forbidden.add(hashlib.sha256(derived.encode("ascii")).digest())
+    return forbidden
+
+
 _INERT_HTML_CONTAINERS = {
     "template",
     "noscript",
@@ -478,6 +491,7 @@ _INERT_HTML_CONTAINERS = {
     "iframe",
     "noembed",
 }
+_FORBIDDEN_HTML_ELEMENTS = {"plaintext"}
 
 
 class _PairingPageParser(HTMLParser):
@@ -503,6 +517,9 @@ class _PairingPageParser(HTMLParser):
         )
 
     def handle_starttag(self, tag, attrs) -> None:
+        if tag in _FORBIDDEN_HTML_ELEMENTS:
+            self.invalid = True
+            return
         if tag in _INERT_HTML_CONTAINERS:
             self.inert_stack.append(tag)
             return
@@ -539,6 +556,9 @@ class _PairingPageParser(HTMLParser):
         self.stack.append(tag)
 
     def handle_endtag(self, tag) -> None:
+        if tag in _FORBIDDEN_HTML_ELEMENTS:
+            self.invalid = True
+            return
         if self.inert_stack:
             if tag in _INERT_HTML_CONTAINERS:
                 if self.inert_stack[-1] != tag:
@@ -561,7 +581,11 @@ class _PairingPageParser(HTMLParser):
             self.style_ends += 1
 
     def handle_startendtag(self, tag, attrs) -> None:
-        if tag in {"html", "head", "body", "script", "style"} | _INERT_HTML_CONTAINERS:
+        if tag in (
+            {"html", "head", "body", "script", "style"}
+            | _INERT_HTML_CONTAINERS
+            | _FORBIDDEN_HTML_ELEMENTS
+        ):
             self.invalid = True
 
     def handle_data(self, data) -> None:

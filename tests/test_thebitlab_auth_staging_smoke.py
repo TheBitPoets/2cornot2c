@@ -384,7 +384,8 @@ def test_staging_smoke_rejects_cookie_binding_derived_from_public_state() -> Non
         )
 
 
-def test_staging_smoke_rejects_cross_flow_public_material_as_binding() -> None:
+@pytest.mark.parametrize("derive", [False, True])
+def test_staging_smoke_rejects_cross_flow_public_material_as_binding(derive) -> None:
     fixtures = responses()
     first = fixtures[FreshResponses.LOGIN_KEY]
     second = fixtures[FreshResponses.LOGIN_KEY]
@@ -395,10 +396,16 @@ def test_staging_smoke_rejects_cross_flow_public_material_as_binding() -> None:
         urllib.parse.urlsplit(first_location).query
     )["state"][0]
 
+    previous_material = first_state
+    if derive:
+        previous_material = base64.urlsafe_b64encode(
+            hashlib.sha256(first_state.encode("ascii")).digest()
+        ).rstrip(b"=").decode("ascii")
+
     def reuse_previous_state(value):
         cookie_name = value.split("=", 1)[0]
         attributes = value.split(";", 1)[1]
-        return f"{cookie_name}={first_state};{attributes}"
+        return f"{cookie_name}={previous_material};{attributes}"
 
     second = smoke.ResponseSnapshot(
         second.status,
@@ -549,7 +556,10 @@ def test_staging_smoke_ignores_script_and_routes_inside_html_comments() -> None:
         )
 
 
-@pytest.mark.parametrize("container", ["template", "noscript", "textarea", "xmp"])
+@pytest.mark.parametrize(
+    "container",
+    ["template", "noscript", "textarea", "xmp", "plaintext"],
+)
 def test_staging_smoke_rejects_pairing_logic_inside_inert_container(container) -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/tui/pair")]
