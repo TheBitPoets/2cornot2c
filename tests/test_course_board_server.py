@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import http.client
+import io
 import json
 import os
 import subprocess
@@ -213,6 +214,13 @@ def test_write_design_rejects_unsafe_source_catalog_before_persistence(tmp_path,
                 ]
             }
         )
+
+
+def test_ai_provider_response_reader_is_strictly_bounded() -> None:
+    assert course_board_server.read_bounded_ai_provider_body(io.BytesIO(b"ok"), 2) == b"ok"
+
+    with pytest.raises(RuntimeError, match="supera il limite"):
+        course_board_server.read_bounded_ai_provider_body(io.BytesIO(b"too large"), 3)
 
 
 def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, monkeypatch) -> None:

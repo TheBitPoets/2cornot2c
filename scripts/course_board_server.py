@@ -126,6 +126,8 @@ MAX_TOTAL_HEADINGS = 50_000
 MAX_HEADING_TITLE_CHARS = 512
 AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
+MAX_AI_PROVIDER_RESPONSE_BYTES = 4 * 1024 * 1024
+MAX_AI_PROVIDER_ERROR_BYTES = 64 * 1024
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
@@ -2893,9 +2895,9 @@ def call_openai_didactic_frame(payload: dict) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore OpenAI API {error.code}: {detail}") from error
 
     output_text = data.get("output_text")
@@ -2945,9 +2947,9 @@ def call_gemini_didactic_frame(payload: dict) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore Gemini API {error.code}: {detail}") from error
 
     try:
@@ -2964,6 +2966,27 @@ def gemini_frame_payload(payload: dict) -> dict:
     if secret_value("GEMINI_COMPACT_TEXT_CHARS"):
         return compact_frame_payload(payload)
     return payload
+
+
+def read_bounded_ai_provider_body(stream, limit: int) -> bytes:
+    """Read one provider body with a strict allocation bound."""
+
+    body = stream.read(limit + 1)
+    if len(body) > limit:
+        raise RuntimeError("La risposta del provider AI supera il limite consentito.")
+    return body
+
+
+def read_ai_provider_error(error: urllib.error.HTTPError) -> str:
+    """Return bounded provider diagnostics without retaining oversized bodies."""
+
+    try:
+        return read_bounded_ai_provider_body(
+            error,
+            MAX_AI_PROVIDER_ERROR_BYTES,
+        ).decode("utf-8", errors="replace")
+    except RuntimeError:
+        return "[corpo errore omesso: supera il limite consentito]"
 
 
 def call_chat_completions_json(provider_name: str, url: str, api_key: str, model: str, system_prompt: str, payload: dict) -> dict:
@@ -2995,9 +3018,9 @@ def call_chat_completions_json(provider_name: str, url: str, api_key: str, model
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_COURSE_PLAN_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore {provider_name} API {error.code}: {detail}") from error
     try:
         return parse_json_object(data["choices"][0]["message"]["content"])
@@ -3159,9 +3182,9 @@ def call_openai_proofread(text: str) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore OpenAI API {error.code}: {detail}") from error
     output_text = data.get("output_text")
     if not output_text:
@@ -3196,9 +3219,9 @@ def call_gemini_proofread(text: str) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore Gemini API {error.code}: {detail}") from error
     try:
         output_text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -3293,9 +3316,9 @@ def call_openai_course_plan(payload: dict) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_COURSE_PLAN_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore OpenAI API {error.code}: {detail}") from error
     output_text = data.get("output_text")
     if not output_text:
@@ -3334,9 +3357,9 @@ def call_gemini_course_plan(payload: dict) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_COURSE_PLAN_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore Gemini API {error.code}: {detail}") from error
     try:
         output_text = data["candidates"][0]["content"]["parts"][0]["text"]

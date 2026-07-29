@@ -125,6 +125,7 @@ let paragraphPreviewRequestId = 0;
 let courseContextRequestId = 0;
 let courseContextRequestName = null;
 let courseAiRequestId = 0;
+let activeCourseAiRequestId = null;
 let courseAiDialogContext = null;
 let courseAiProposalContext = null;
 let courseAiProposalBriefSnapshot = "";
@@ -1773,6 +1774,10 @@ function readCourseBrief() {
 }
 
 async function generateCourseAiProposal() {
+  if (frameBatch || frameVerificationBatch || activeCourseAiRequestId !== null) {
+    setStatus("Una operazione AI è già in corso: attendi il completamento prima di generare il percorso.");
+    return;
+  }
   if (!courseAiDialogContext || !isBoardContextUnchanged(courseAiDialogContext)) {
     els.courseAiApplyBtn.disabled = true;
     setStatus("Generazione AI annullata: la board è cambiata; riapri il dialogo.");
@@ -1787,6 +1792,7 @@ async function generateCourseAiProposal() {
   courseAiDialogContext = boardContext;
   const requestYearId = state.courseAiYearId;
   const requestId = ++courseAiRequestId;
+  activeCourseAiRequestId = requestId;
   els.courseAiGenerateBtn.disabled = true;
   els.courseAiApplyBtn.disabled = true;
   els.courseAiPreview.innerHTML = '<p class="empty">Generazione proposta in corso...</p>';
@@ -1822,6 +1828,7 @@ async function generateCourseAiProposal() {
     setStatus(`AI assisted percorso non riuscito. Dettaglio provider/server: ${error.message}`);
     failAiProgress("Errore durante la generazione AI.");
   } finally {
+    if (activeCourseAiRequestId === requestId) activeCourseAiRequestId = null;
     if (requestId === courseAiRequestId) els.courseAiGenerateBtn.disabled = false;
   }
 }
@@ -1904,7 +1911,7 @@ async function fillFrameWithAi(year, uda, item) {
 }
 
 async function fillSingleFrameWithAi(year, uda, item) {
-  if (frameBatch || frameVerificationBatch) {
+  if (frameBatch || frameVerificationBatch || activeCourseAiRequestId !== null) {
     setStatus("Una coda AI e gia in esecuzione: attendi il completamento prima di generare una cornice singola.");
     return false;
   }
@@ -1936,7 +1943,7 @@ function openFrameBatch(year, uda, item, entries) {
 }
 
 function openFrameBatchQueue(rootTitle, entries, message) {
-  if (frameBatch || frameVerificationBatch) {
+  if (frameBatch || frameVerificationBatch || activeCourseAiRequestId !== null) {
     setStatus("Una coda AI e gia in esecuzione: chiudila o attendi il completamento prima di avviarne un'altra.");
     return;
   }
@@ -2325,6 +2332,8 @@ function applyLocalTextFixes(value) {
 
 async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
   const original = textarea.value;
+  const boardContext = captureBoardContext();
+  const originalItemText = String(item.frame?.[fieldKey] || "");
   if (!original.trim()) {
     showToolbarMessage(output, "Campo vuoto: niente da correggere con AI.", "neutral");
     return;
@@ -2363,8 +2372,12 @@ async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
       showToolbarMessage(output, "Correzione AI non applicata.", "neutral");
       return;
     }
-    if (textarea.value !== original) {
-      showToolbarMessage(output, "Il testo è cambiato durante la verifica AI: la proposta non è stata applicata.", "warn");
+    if (
+      textarea.value !== original
+      || String(item.frame?.[fieldKey] || "") !== originalItemText
+      || !isBoardContextUnchanged(boardContext)
+    ) {
+      showToolbarMessage(output, "La board o il testo sono cambiati durante la verifica AI: la proposta non è stata applicata.", "warn");
       return;
     }
     textarea.value = corrected;
@@ -2402,7 +2415,7 @@ async function proofreadFrameFieldForBatch(item, field, boardContext) {
 }
 
 function verifyEntireFrame(item) {
-  if (frameBatch || frameVerificationBatch) {
+  if (frameBatch || frameVerificationBatch || activeCourseAiRequestId !== null) {
     setStatus("Una coda AI e gia in esecuzione: attendi il completamento prima di avviare una nuova verifica.");
     return;
   }

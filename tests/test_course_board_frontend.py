@@ -808,6 +808,35 @@ def test_archived_load_does_not_replace_edits_made_while_request_is_pending() ->
     )
 
 
+def test_single_field_proofread_rejects_detached_or_changed_item() -> None:
+    run_course_board_js(
+        """
+        let completeConfirmation;
+        api = async () => ({ corrected_text: "Stale correction", changes: [] });
+        DashboardDialogs.confirm = async () => new Promise((resolve) => {
+          completeConfirmation = resolve;
+        });
+        const textarea = document.querySelector("#proofread-textarea");
+        const output = document.querySelector("#proofread-output");
+        textarea.value = "Original";
+        const item = { id: "item", frame: { context: "Original" }, frame_quality: {} };
+        state.design = { years: [{ id: "year", udas: [{ id: "uda", items: [item] }] }] };
+
+        const proofread = proofreadTextWithAi(textarea, output, item, "context", "Contesto");
+        Promise.resolve().then(async () => {
+          while (!completeConfirmation) await Promise.resolve();
+          item.frame.context = "Newer value";
+          completeConfirmation(true);
+          return proofread.then(() => {
+            assert.equal(item.frame.context, "Newer value");
+            assert.equal(textarea.value, "Original");
+            assert.match(output.textContent, /board o il testo sono cambiati/);
+          });
+        });
+        """
+    )
+
+
 def test_frame_generation_cannot_start_during_verification_queue() -> None:
     run_course_board_js(
         """
@@ -831,8 +860,11 @@ def test_frame_generation_cannot_start_during_verification_queue() -> None:
           item,
         ).then((result) => {
           assert.equal(result, false);
+          openCourseAiDialog(state.design.years[0]);
+          return generateCourseAiProposal();
+        }).then(() => {
           assert.equal(requests, 0);
-          assert.match(els.status.textContent, /coda AI e gia in esecuzione/);
+          assert.match(els.status.textContent, /operazione AI è già in corso/);
         });
         """
     )
