@@ -73,8 +73,6 @@ class LocalCourseSourceFile:
     resolved_path: Path
     expected_size: int | None
     expected_identity: tuple[int, int] | None
-    expected_mtime_ns: int | None
-    expected_ctime_ns: int | None
 
 
 def normalize_course_sources(
@@ -194,12 +192,6 @@ def local_markdown_source_files(
                         if metadata is None
                         else (metadata.st_dev, metadata.st_ino)
                     ),
-                    expected_mtime_ns=(
-                        None if metadata is None else metadata.st_mtime_ns
-                    ),
-                    expected_ctime_ns=(
-                        None if metadata is None else metadata.st_ctime_ns
-                    ),
                 )
             )
     return tuple(files)
@@ -229,12 +221,8 @@ def read_local_markdown_text(item: LocalCourseSourceFile, root: Path) -> str:
             if (
                 item.expected_size is None
                 or item.expected_identity is None
-                or item.expected_mtime_ns is None
-                or item.expected_ctime_ns is None
                 or metadata.st_size != item.expected_size
                 or opened_identity != item.expected_identity
-                or metadata.st_mtime_ns != item.expected_mtime_ns
-                or metadata.st_ctime_ns != item.expected_ctime_ns
             ):
                 raise CourseSourceCatalogError(
                     f"File fonte locale cambiato durante la lettura: {item.relative_path}."

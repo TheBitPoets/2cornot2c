@@ -679,6 +679,55 @@ def test_late_archived_load_cannot_replace_newer_project() -> None:
     )
 
 
+def test_archived_load_does_not_replace_edits_made_while_request_is_pending() -> None:
+    run_course_board_js(
+        """
+        let completeRequest;
+        api = async () => new Promise((resolve) => { completeRequest = resolve; });
+        state.design = { years: [{ id: "draft", title: "Before" }] };
+        state.activeSavedDesign = "draft.json";
+
+        const loading = loadSavedDesignByName("archive.json", { confirmFirst: false, render: false });
+        state.design.years[0].title = "Edited while loading";
+        completeRequest({ design: { years: [{ id: "archive" }] }, headings: [], sources: [] });
+
+        loading.then(() => {
+          assert.equal(state.design.years[0].title, "Edited while loading");
+          assert.equal(state.activeSavedDesign, "draft.json");
+          assert.match(els.status.textContent, /board è stata modificata/);
+        });
+        """
+    )
+
+
+def test_ai_frame_response_is_rejected_after_concurrent_board_edit() -> None:
+    run_course_board_js(
+        """
+        let completeRequest;
+        api = async () => new Promise((resolve) => { completeRequest = resolve; });
+        const entry = {
+          year: { id: "year" },
+          uda: { id: "uda" },
+          item: { id: "item", title: "Before", frame: {} },
+        };
+        state.design = { years: [{ id: "year", udas: [{ id: "uda", items: [entry.item] }] }] };
+
+        const generation = generateFrameForEntry(entry);
+        entry.item.title = "Edited while generating";
+        completeRequest({ frame: { why: "stale" } });
+
+        generation.then(
+          () => assert.fail("stale AI response unexpectedly applied"),
+          (error) => {
+            assert.match(error.message, /risposta AI ignorata/);
+            assert.equal(entry.item.title, "Edited while generating");
+            assert.equal(entry.item.frame.why, undefined);
+          },
+        );
+        """
+    )
+
+
 def test_new_project_loads_its_saved_source_context() -> None:
     run_course_board_js(
         """

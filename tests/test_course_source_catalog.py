@@ -188,14 +188,14 @@ def test_rejects_too_many_ready_local_files(tmp_path) -> None:
         )
 
 
-def test_rejects_same_length_in_place_change_after_catalog_snapshot(tmp_path) -> None:
+def test_rejects_size_change_after_catalog_snapshot(tmp_path) -> None:
     lesson = tmp_path / "lesson.md"
     lesson.write_bytes(b"# First\n")
     item = local_markdown_source_files(
         {"source_files": ["lesson.md"]},
         tmp_path,
     )[0]
-    lesson.write_bytes(b"# Other\n")
+    lesson.write_bytes(b"# A much longer replacement\n")
 
     with pytest.raises(CourseSourceCatalogError, match="cambiato durante la lettura"):
         read_local_markdown_text(item, tmp_path)

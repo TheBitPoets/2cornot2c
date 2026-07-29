@@ -280,6 +280,47 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         thread.join(timeout=5)
 
 
+def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lesson.md").write_text(
+        "## Before\n\nOne.\n\n## Target\n\nTwo.\n\n## After\n\nThree.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {
+        "source_files": ["lesson.md"],
+        "years": [{
+            "id": "year",
+            "udas": [{
+                "id": "uda",
+                "items": [
+                    {"id": "before", "title": "Before", "source": "lesson.md", "line": 1, "level": 2},
+                    {"id": "target", "title": "Target", "source": "lesson.md", "line": 5, "level": 2},
+                    {"id": "after", "title": "After", "source": "lesson.md", "line": 9, "level": 2},
+                ],
+            }],
+        }],
+    }
+    original_read = course_board_server.course_source_catalog.read_local_markdown_text
+    reads = []
+
+    def counted_read(item, root):
+        reads.append(item.relative_path)
+        return original_read(item, root)
+
+    monkeypatch.setattr(
+        course_board_server.course_source_catalog,
+        "read_local_markdown_text",
+        counted_read,
+    )
+
+    context = course_board_server.target_context(design, "year", "uda", "target")
+
+    assert context["previous_topics"][0]["text"] == "One."
+    assert context["target_topic"]["text"] == "Two."
+    assert context["next_topics"][0]["text"] == "Three."
+    assert reads == ["lesson.md"]
+
+
 def test_heading_catalog_never_nests_across_source_files(tmp_path, monkeypatch) -> None:
     (tmp_path / "first.md").write_text("## First\n", encoding="utf-8")
     (tmp_path / "second.md").write_text("### Second\n", encoding="utf-8")

@@ -506,9 +506,14 @@ async function loadCurrentDesign() {
   });
   if (!confirmed) return;
   setStatus("Caricamento progetto corrente...");
+  const boardContext = captureBoardContext();
   const requestId = ++courseContextRequestId;
   const courseContext = await fetchCourseContext();
   if (requestId !== courseContextRequestId) return;
+  if (!isBoardContextUnchanged(boardContext)) {
+    setStatus("Caricamento annullato: la board è stata modificata durante la richiesta.");
+    return;
+  }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.headings = courseContext.headings;
@@ -541,9 +546,14 @@ async function loadSavedDesignByName(name, options = {}) {
     if (!confirmed) return;
   }
   setStatus(`Caricamento progetto salvato "${name}"...`);
+  const boardContext = captureBoardContext();
   const requestId = ++courseContextRequestId;
   const courseContext = await fetchCourseContext(name);
   if (requestId !== courseContextRequestId) return;
+  if (!isBoardContextUnchanged(boardContext)) {
+    setStatus("Caricamento annullato: la board è stata modificata durante la richiesta.");
+    return;
+  }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.headings = courseContext.headings;
@@ -1839,6 +1849,7 @@ function restoreFrameSnapshot(snapshot) {
 }
 
 async function generateFrameForEntry(entry) {
+  const boardContext = captureBoardContext();
   const payload = await api("/api/ai-frame", {
     method: "POST",
     body: JSON.stringify({
@@ -1848,6 +1859,9 @@ async function generateFrameForEntry(entry) {
       item_id: entry.item.id,
     }),
   });
+  if (!isBoardContextUnchanged(boardContext)) {
+    throw new Error("la board è stata modificata durante la generazione; risposta AI ignorata");
+  }
   entry.item.frame = { ...defaultFrame(), ...(entry.item.frame || {}), ...payload.frame, status: "draft" };
   entry.item.frame_quality = defaultFrameQuality();
 }
