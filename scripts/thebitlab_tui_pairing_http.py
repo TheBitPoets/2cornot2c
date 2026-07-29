@@ -135,26 +135,20 @@ class TuiPairingHttpRateLimiter:
             "begin": (120, 8),
             "authorize": (300, 20),
             "consume": (600, 30),
+            "logout_invalid": (600, 30),
         }
-        if route_id == "logout":
-            if type(correlation) is not str or not correlation:
-                raise EdgeRateLimitStoreError("Correlazione logout non valida.")
-            buckets = [
-                RateLimitBucket(self._key(route_id, correlation), 20, 60),
-            ]
-        else:
-            if route_id not in limits:
-                raise EdgeRateLimitStoreError("Route pairing non valida.")
-            global_limit, client_limit = limits[route_id]
-            client_key = self._key(route_id, client)
-            buckets = [
-                RateLimitBucket(f"global:auth.tui.{route_id}", global_limit, 60),
-                RateLimitBucket(client_key, client_limit, 60),
-            ]
-            if correlation is not None:
-                buckets.append(
-                    RateLimitBucket(self._key(route_id, correlation), 20, 60)
-                )
+        if route_id not in limits:
+            raise EdgeRateLimitStoreError("Route pairing non valida.")
+        global_limit, client_limit = limits[route_id]
+        client_key = self._key(route_id, client)
+        buckets = [
+            RateLimitBucket(f"global:auth.tui.{route_id}", global_limit, 60),
+            RateLimitBucket(client_key, client_limit, 60),
+        ]
+        if correlation is not None:
+            buckets.append(
+                RateLimitBucket(self._key(route_id, correlation), 20, 60)
+            )
         retry_after = self.store.admit(tuple(buckets), now=now.astimezone(timezone.utc))
         if retry_after is not None:
             if type(retry_after) is not int or retry_after < 1:
@@ -226,12 +220,11 @@ class TuiPairingHttpRoutes:
             if request.path == _LOGOUT_PATH:
                 self._require_empty_body(request)
                 authorization_header = _authorization_header(request.edge)
-                self.rate_limiter.admit(
-                    "logout",
-                    request.edge,
-                    authorization_header,
-                )
-                self.boundary.revoke_bearer(authorization_header)
+                try:
+                    self.boundary.revoke_bearer(authorization_header)
+                except HttpAuthenticationRequiredError:
+                    self.rate_limiter.admit("logout_invalid", request.edge)
+                    raise
                 return TuiPairingHttpResponse(
                     204,
                     self._base_headers() + (("Content-Length", "0"),),

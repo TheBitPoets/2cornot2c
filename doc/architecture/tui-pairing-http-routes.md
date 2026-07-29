@@ -20,7 +20,7 @@ Tutte le route richiedono HTTPS diretto o attestato dallo stesso trusted proxy r
 
 ## Rate limit e retention
 
-Un unico store SQLite atomico, condiviso col login Google, applica bucket globali e per-client distinti a begin, authorize e consume. Consume aggiunge un bucket HMAC per pairing. Logout usa invece soltanto un bucket HMAC per credenziale presentata: richieste anonime o con bearer inventati non possono esaurire il budget del bearer legittimo dietro lo stesso NAT. IP, pairing, codici e bearer non vengono persistiti nei bucket in chiaro.
+Un unico store SQLite atomico, condiviso col login Google, applica bucket globali e per-client distinti a begin, authorize e consume. Consume aggiunge un bucket HMAC per pairing. Il logout valido revoca prima di qualsiasi admission, così nessun flood anonimo può impedirlo. Solo dopo un bearer non valido vengono incrementati bucket globali/per-client a cardinalità bounded; bearer casuali non creano contatori distinti e non possono esaurire lo store condiviso. IP, pairing e codici non vengono persistiti nei bucket in chiaro.
 
 Prima di ogni begin ammesso vengono eliminate fail-closed prima le sessioni scadute di entrambe le audience e poi i pairing scaduti non più referenziati. L'ordine libera le correlazioni TUI consumate senza violare i vincoli SQLite. La combinazione tra TTL, limiti globali/client e cleanup impedisce crescita persistente incontrollata da parte dell'ingresso pubblico.
 

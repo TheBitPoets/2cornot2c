@@ -193,23 +193,11 @@ def test_tui_logout_revokes_before_empty_response_and_replay_is_unauthorized(gra
     )
     bearer = json.loads(consumed.body)["bearer_token"]
     consumed.delivery_guard.delivered()
-    fake_bearer = "F" * 40
-    fake_logout_statuses = [
-        routes.dispatch(
-            request(
-                "/auth/tui/logout",
-                b"",
-                ("Authorization", "Bearer " + fake_bearer),
-            )
-        ).status_code
-        for _ in range(21)
-    ]
 
     logged_out = routes.dispatch(
         request("/auth/tui/logout", b"", ("Authorization", "Bearer " + bearer))
     )
 
-    assert fake_logout_statuses == [401] * 20 + [429]
     assert logged_out.status_code == 204
     assert logged_out.body == b""
     persisted = storage.read_session_by_token_digest(session_token_digest(bearer))
@@ -229,6 +217,45 @@ def test_tui_logout_revokes_before_empty_response_and_replay_is_unauthorized(gra
     assert duplicate.status_code == 400
     with pytest.raises(HttpAuthenticationRequiredError):
         boundary.authenticate_bearer("Bearer " + bearer)
+
+
+def test_invalid_logout_flood_cannot_block_valid_logout_or_grow_per_bearer(graph) -> None:
+    _storage, http, _boundary, routes = graph
+    start = json.loads(routes.dispatch(request("/auth/tui/pairings")).body)
+    browser = http.establish_session("student-01")
+    routes.dispatch(
+        json_request(
+            "/auth/tui/pair",
+            {"code": start["user_code"]},
+            ("Cookie", cookie(browser)),
+            ("X-CSRF-Token", browser.context.csrf_token),
+        )
+    )
+    consumed = routes.dispatch(
+        json_request(
+            f"/auth/tui/pairings/{start['pairing_id']}/token",
+            {"code": start["user_code"]},
+        )
+    )
+    bearer = json.loads(consumed.body)["bearer_token"]
+    consumed.delivery_guard.delivered()
+
+    statuses = [
+        routes.dispatch(
+            request(
+                "/auth/tui/logout",
+                b"",
+                ("Authorization", "Bearer " + (f"F{index:039d}")),
+            )
+        ).status_code
+        for index in range(31)
+    ]
+    logged_out = routes.dispatch(
+        request("/auth/tui/logout", b"", ("Authorization", "Bearer " + bearer))
+    )
+
+    assert statuses == [401] * 30 + [429]
+    assert logged_out.status_code == 204
 
 
 def test_delivery_failure_revokes_new_tui_session(graph) -> None:
