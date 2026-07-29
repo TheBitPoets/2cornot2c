@@ -72,6 +72,7 @@ ACTION_LABELS = (
     "Installa, completa o ripara",
     "Aggiorna l'ambiente",
     "Disinstalla l'ambiente",
+    "Ripristina il PC - elimina anche la VM",
     "Esci",
 )
 
@@ -369,6 +370,15 @@ def open_home_action(state: State) -> None:
             "Verranno rimossi solo i componenti installati da 2cornot2c.",
             "Premi s per continuare oppure n per annullare.",
         )
+    elif state.action_index == 4:
+        state.confirmation_pending = True
+        state.report = (
+            "RIPRISTINO COMPLETO DEL PC",
+            "Gli esercizi condivisi verranno salvati in un backup.",
+            "La VM 2cornot2c e il suo disco verranno eliminati definitivamente.",
+            "Le altre VM presenti sul computer non verranno toccate.",
+            "Premi s per confermare oppure n per annullare.",
+        )
     else:
         state.running = False
 
@@ -376,7 +386,13 @@ def open_home_action(state: State) -> None:
 def confirm_home_action(state: State) -> None:
     """Passa l'operazione a una console separata e termina la TUI."""
 
-    action = "update" if state.action_index == 2 else "uninstall"
+    action = (
+        "update"
+        if state.action_index == 2
+        else "reset"
+        if state.action_index == 4
+        else "uninstall"
+    )
     launch_windows_action(action)
     state.confirmation_pending = False
     state.running = False

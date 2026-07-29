@@ -11,6 +11,7 @@ WINDOWS_ACTION_SCRIPTS = {
     "launch": "launch-classroom-windows.ps1",
     "update": "update-classroom-windows.ps1",
     "uninstall": "uninstall-classroom-windows.ps1",
+    "reset": "uninstall-classroom-windows.ps1",
 }
 
 
@@ -41,8 +42,10 @@ def powershell_action_command(action: str) -> tuple[str, ...]:
         "-File",
         str(script),
     )
-    if action == "uninstall":
+    if action in {"uninstall", "reset"}:
         command += ("-ConfirmedFromTui",)
+    if action == "reset":
+        command += ("-DestroyClassroomVm",)
     return command
 
 

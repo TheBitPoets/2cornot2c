@@ -181,6 +181,13 @@ Python installati da lui. L'executor registra separatamente i passi riusciti.
 La disinstallazione usa entrambi i registri, crea un backup del lavoro, richiede
 `DISINSTALLA` e non esegue mai `vagrant destroy`. Se trova una VM, si ferma.
 
+Dal menu è disponibile anche **Ripristina il PC - elimina anche la VM**. Questa
+modalità crea prima lo stesso backup, poi esegue `vagrant destroy --force`
+soltanto nelle directory di stato del progetto e rimuove il relativo disco.
+Elimina dalla cache esclusivamente box con namespace `2cornot2c/`; non tocca
+altre VM, box Bento o software preesistente. Il comando diretto richiede la
+frase distinta `DISINSTALLA TUTTO`.
+
 La parte VM non scarica ancora la box Packer reale e non avvia la VM. Questi
 passi verranno attivati dopo aver fissato URL, versione e checksum degli
 artefatti che superano il collaudo VirtualBox AMD64.
