@@ -128,6 +128,7 @@ AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 MAX_AI_PROVIDER_RESPONSE_BYTES = 4 * 1024 * 1024
 MAX_AI_PROVIDER_ERROR_BYTES = 64 * 1024
+MAX_AI_PROOFREAD_CHARS = 20_000
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
@@ -3264,6 +3265,19 @@ def call_openrouter_proofread(text: str) -> dict:
     return normalize_proofread(result, text)
 
 
+def validated_ai_proofread_text(payload: dict) -> str:
+    """Validate a bounded teacher-supplied proofread field without coercion."""
+
+    text = payload.get("text")
+    if not isinstance(text, str):
+        raise ValueError("Il testo da correggere deve essere una stringa.")
+    if not text.strip():
+        raise ValueError("Testo vuoto: niente da correggere.")
+    if len(text) > MAX_AI_PROOFREAD_CHARS:
+        raise ValueError("Il testo da correggere supera il limite consentito.")
+    return text
+
+
 def call_ai_proofread(text: str) -> dict:
     """Route proofreading to the configured AI provider."""
 
@@ -4817,9 +4831,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/ai-proofread":
             try:
-                text = str(payload.get("text", ""))
-                if not text.strip():
-                    raise RuntimeError("Testo vuoto: niente da correggere.")
+                text = validated_ai_proofread_text(payload)
+            except ValueError as error:
+                self.write_error_json(400, str(error))
+                return
+            try:
                 self.write_json(call_ai_proofread(text))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)

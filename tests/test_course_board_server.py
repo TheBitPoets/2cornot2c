@@ -216,6 +216,18 @@ def test_write_design_rejects_unsafe_source_catalog_before_persistence(tmp_path,
         )
 
 
+def test_ai_proofread_text_requires_a_bounded_string() -> None:
+    assert course_board_server.validated_ai_proofread_text({"text": "Valid"}) == "Valid"
+
+    for payload in (
+        {"text": 123},
+        {"text": "   "},
+        {"text": "x" * (course_board_server.MAX_AI_PROOFREAD_CHARS + 1)},
+    ):
+        with pytest.raises(ValueError):
+            course_board_server.validated_ai_proofread_text(payload)
+
+
 def test_ai_provider_response_reader_is_strictly_bounded() -> None:
     assert course_board_server.read_bounded_ai_provider_body(io.BytesIO(b"ok"), 2) == b"ok"
 

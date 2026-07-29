@@ -256,12 +256,74 @@ def test_frame_snapshot_restores_content_and_quality() -> None:
 
         item.frame.context = "Generato";
         item.frame_quality.context = "none";
+        recordAppliedFrameSnapshot(snapshot);
         restoreFrameSnapshot(snapshot);
 
         assert.equal(item.frame.context, "Originale");
         assert.equal(item.frame_quality.context, "ai");
         assert.notEqual(item.frame, snapshot.frame);
         assert.notEqual(item.frame_quality, snapshot.frameQuality);
+        """
+    )
+
+
+def test_cancelled_generation_restores_prior_steps_even_if_pending_provider_fails() -> None:
+    run_course_board_js(
+        """
+        let rejectSecond;
+        let requests = 0;
+        api = async () => {
+          requests += 1;
+          if (requests === 1) return { frame: { context: "Generated first" } };
+          return new Promise((resolve, reject) => { rejectSecond = reject; });
+        };
+        renderCourse = () => {};
+        const firstItem = { id: "first", title: "First", frame: { context: "Original first" } };
+        const secondItem = { id: "second", title: "Second", frame: { context: "Original second" } };
+        const uda = { id: "uda", items: [firstItem, secondItem] };
+        const year = { id: "year", udas: [uda] };
+        state.design = { years: [year] };
+        openFrameBatchQueue("Batch", [
+          { year, uda, item: firstItem },
+          { year, uda, item: secondItem },
+        ], "Ready");
+
+        generateNextFrameInBatch().then(() => {
+          const pending = generateNextFrameInBatch();
+          cancelFrameBatch();
+          rejectSecond(new Error("provider failed after cancel"));
+          return pending.then(() => {
+            assert.equal(firstItem.frame.context, "Original first");
+            assert.equal(secondItem.frame.context, "Original second");
+            assert.equal(frameBatch, null);
+          });
+        });
+        """
+    )
+
+
+def test_verification_cancel_preserves_manual_edits_after_queue_progress() -> None:
+    run_course_board_js(
+        """
+        api = async (_path, options) => {
+          const text = JSON.parse(options.body).text;
+          return { corrected_text: text + " AI" };
+        };
+        renderCourse = () => {};
+        const item = {
+          id: "item",
+          title: "Item",
+          frame: { context: "Context", objectives: "Objectives" },
+        };
+        state.design = { years: [{ id: "year", udas: [{ id: "uda", items: [item] }] }] };
+        verifyEntireFrame(item);
+
+        verifyNextFrameField().then(() => {
+          item.frame.context = "Manual edit";
+          cancelFrameVerification();
+          assert.equal(item.frame.context, "Manual edit");
+          assert.equal(frameVerificationBatch, null);
+        });
         """
     )
 

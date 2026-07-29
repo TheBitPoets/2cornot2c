@@ -128,6 +128,8 @@ let courseAiRequestId = 0;
 let activeCourseAiRequestId = null;
 let singleFrameRequestId = 0;
 let activeSingleFrameRequestId = null;
+let proofreadRequestId = 0;
+let activeProofreadRequestId = null;
 let courseAiDialogContext = null;
 let courseAiProposalContext = null;
 let courseAiProposalBriefSnapshot = "";
@@ -1781,6 +1783,7 @@ async function generateCourseAiProposal() {
     || frameVerificationBatch
     || activeCourseAiRequestId !== null
     || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
   ) {
     setStatus("Una operazione AI è già in corso: attendi il completamento prima di generare il percorso.");
     return;
@@ -1923,6 +1926,7 @@ async function fillSingleFrameWithAi(year, uda, item) {
     || frameVerificationBatch
     || activeCourseAiRequestId !== null
     || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
   ) {
     setStatus("Una coda AI e gia in esecuzione: attendi il completamento prima di generare una cornice singola.");
     return false;
@@ -1964,6 +1968,7 @@ function openFrameBatchQueue(rootTitle, entries, message) {
     || frameVerificationBatch
     || activeCourseAiRequestId !== null
     || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
   ) {
     setStatus("Una coda AI e gia in esecuzione: chiudila o attendi il completamento prima di avviarne un'altra.");
     return;
@@ -1988,12 +1993,27 @@ function frameEntrySnapshot(entry) {
     item: entry.item,
     frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(entry.item.frame || {}) })),
     frameQuality: JSON.parse(JSON.stringify({ ...defaultFrameQuality(), ...(entry.item.frame_quality || {}) })),
+    lastAppliedFrame: null,
+    lastAppliedFrameQuality: null,
   };
 }
 
+function recordAppliedFrameSnapshot(snapshot) {
+  snapshot.lastAppliedFrame = JSON.parse(JSON.stringify(snapshot.item.frame || {}));
+  snapshot.lastAppliedFrameQuality = JSON.parse(JSON.stringify(snapshot.item.frame_quality || {}));
+}
+
 function restoreFrameSnapshot(snapshot) {
+  if (
+    snapshot.lastAppliedFrame === null
+    || JSON.stringify(snapshot.item.frame || {}) !== JSON.stringify(snapshot.lastAppliedFrame)
+    || JSON.stringify(snapshot.item.frame_quality || {}) !== JSON.stringify(snapshot.lastAppliedFrameQuality)
+  ) {
+    return false;
+  }
   snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
   snapshot.item.frame_quality = JSON.parse(JSON.stringify(snapshot.frameQuality));
+  return true;
 }
 
 async function generateFrameForEntry(entry, boardContext = captureBoardContext()) {
@@ -2025,11 +2045,17 @@ async function generateNextFrameInBatch() {
   setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
   try {
     await generateFrameForEntry(entry, frameBatch.boardContext);
+    recordAppliedFrameSnapshot(frameBatch.snapshots[frameBatch.index]);
     frameBatch.boardContext = captureBoardContext();
     frameBatch.index += 1;
     renderCourse();
     setStatus(`Cornice generata per "${entry.item.title}".`);
   } catch (error) {
+    if (frameBatch?.cancelled) {
+      frameBatch.running = false;
+      finishCancelledFrameBatch();
+      return;
+    }
     setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
     failAiProgress(`Errore provider/server: ${error.message}`);
     frameBatch = null;
@@ -2058,6 +2084,7 @@ async function generateAllFramesInBatch() {
       updateAiProgress(percent, `Genero ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
       setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
       await generateFrameForEntry(entry, frameBatch.boardContext);
+      recordAppliedFrameSnapshot(frameBatch.snapshots[frameBatch.index]);
       frameBatch.boardContext = captureBoardContext();
       frameBatch.index += 1;
       renderCourse();
@@ -2075,6 +2102,10 @@ async function generateAllFramesInBatch() {
     els.generateAllFramesBtn.disabled = false;
   } catch (error) {
     if (frameBatch) frameBatch.running = false;
+    if (frameBatch?.cancelled) {
+      finishCancelledFrameBatch();
+      return;
+    }
     setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
     failAiProgress(`Errore provider/server: ${error.message}`);
     frameBatch = null;
@@ -2353,13 +2384,25 @@ function applyLocalTextFixes(value) {
 }
 
 async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
+  if (
+    frameBatch
+    || frameVerificationBatch
+    || activeCourseAiRequestId !== null
+    || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
+  ) {
+    showToolbarMessage(output, "Una operazione AI è già in corso: attendi il completamento.", "neutral");
+    return false;
+  }
   const original = textarea.value;
-  const boardContext = captureBoardContext();
-  const originalItemText = String(item.frame?.[fieldKey] || "");
   if (!original.trim()) {
     showToolbarMessage(output, "Campo vuoto: niente da correggere con AI.", "neutral");
-    return;
+    return false;
   }
+  const requestId = ++proofreadRequestId;
+  activeProofreadRequestId = requestId;
+  const boardContext = captureBoardContext();
+  const originalItemText = String(item.frame?.[fieldKey] || "");
   showToolbarMessage(output, "AI grammatica in corso: invio il campo al provider configurato...", "neutral");
   try {
     const payload = await api("/api/ai-proofread", {
@@ -2417,6 +2460,8 @@ async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
     output.className = "textQuality textQualityOk";
   } catch (error) {
     showToolbarMessage(output, `AI grammatica non riuscita: ${error.message}`, "warn");
+  } finally {
+    if (activeProofreadRequestId === requestId) activeProofreadRequestId = null;
   }
 }
 
@@ -2450,6 +2495,7 @@ function verifyEntireFrame(item) {
     || frameVerificationBatch
     || activeCourseAiRequestId !== null
     || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
   ) {
     setStatus("Una coda AI e gia in esecuzione: attendi il completamento prima di avviare una nuova verifica.");
     return;
@@ -2475,6 +2521,8 @@ function verifyEntireFrame(item) {
       frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(item.frame || {}) })),
       frameQuality: JSON.parse(JSON.stringify({ ...defaultFrameQuality(), ...(item.frame_quality || {}) })),
     },
+    lastAppliedFrame: null,
+    lastAppliedFrameQuality: null,
   };
   frameVerificationBatch.running = false;
   showFrameVerificationProgress();
@@ -2495,6 +2543,7 @@ async function verifyNextFrameField() {
     const local = applyLocalTextFixes(String(frameVerificationBatch.item.frame[current.key] || ""));
     frameVerificationBatch.item.frame[current.key] = local.text;
     frameVerificationBatch.item.frame_quality[current.key] = "local";
+    recordAppliedFrameVerificationSnapshot();
     renderCourse();
     showFrameVerificationProgress();
     setStatus(`Controllo locale: ${current.label} (${frameVerificationBatch.index + 1}/${total}).`);
@@ -2504,6 +2553,7 @@ async function verifyNextFrameField() {
       current,
       frameVerificationBatch.boardContext,
     );
+    recordAppliedFrameVerificationSnapshot();
     frameVerificationBatch.boardContext = captureBoardContext();
     frameVerificationBatch.index += 1;
     renderCourse();
@@ -2537,6 +2587,15 @@ async function verifyNextFrameField() {
     setStatus(`Campo verificato: ${current.label}. Puoi passare al prossimo o verificare tutti i rimanenti.`);
     return true;
   } catch (error) {
+    if (frameVerificationBatch?.cancelled) {
+      restoreFrameVerificationSnapshot();
+      frameVerificationBatch = null;
+      els.aiBusyControls.hidden = true;
+      renderCourse();
+      setStatus("Verifica cornice annullata: ripristinate solo le modifiche della coda non sovrascritte.");
+      stopAiProgress("Verifica annullata.");
+      return false;
+    }
     frameVerificationBatch = null;
     els.aiBusyControls.hidden = true;
     els.aiBusyCloseBtn.disabled = false;
@@ -2561,10 +2620,28 @@ async function verifyAllFrameFields() {
   }
 }
 
-function restoreFrameVerificationSnapshot() {
+function recordAppliedFrameVerificationSnapshot() {
   if (!frameVerificationBatch) return;
+  frameVerificationBatch.lastAppliedFrame = JSON.parse(
+    JSON.stringify(frameVerificationBatch.item.frame || {}),
+  );
+  frameVerificationBatch.lastAppliedFrameQuality = JSON.parse(
+    JSON.stringify(frameVerificationBatch.item.frame_quality || {}),
+  );
+}
+
+function restoreFrameVerificationSnapshot() {
+  if (!frameVerificationBatch) return false;
+  if (
+    frameVerificationBatch.lastAppliedFrame === null
+    || JSON.stringify(frameVerificationBatch.item.frame || {}) !== JSON.stringify(frameVerificationBatch.lastAppliedFrame)
+    || JSON.stringify(frameVerificationBatch.item.frame_quality || {}) !== JSON.stringify(frameVerificationBatch.lastAppliedFrameQuality)
+  ) {
+    return false;
+  }
   frameVerificationBatch.item.frame = JSON.parse(JSON.stringify(frameVerificationBatch.snapshots.frame));
   frameVerificationBatch.item.frame_quality = JSON.parse(JSON.stringify(frameVerificationBatch.snapshots.frameQuality));
+  return true;
 }
 
 function closeFrameVerification() {
