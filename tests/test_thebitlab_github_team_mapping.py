@@ -64,6 +64,19 @@ def setup(tmp_path):
     return storage, mappings, clock
 
 
+def test_storage_prevents_multiple_github_identities_for_one_user(setup) -> None:
+    storage, _mappings, _clock = setup
+
+    with pytest.raises(IdentityStorageConflictError):
+        storage.link_external_identity(
+            ExternalIdentity("pending-01", "github", "654321", NOW + timedelta(microseconds=1))
+        )
+
+    assert [
+        identity.subject for identity in storage.list_external_identities("pending-01")
+    ] == ["123456"]
+
+
 def test_team_subjects_are_canonical_numeric_ids() -> None:
     team = GitHubTeamMembership("1001", "2002", "3A TPSI")
     assert team.provider_key == ("github", "1001", "2002")

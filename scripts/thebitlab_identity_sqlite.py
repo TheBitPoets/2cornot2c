@@ -1853,15 +1853,18 @@ class SqliteIdentityStorage:
             ).fetchone()
             if user_row is None or tuple(user_row) != (1, "student", user_revision):
                 raise IdentityStorageConflictError("Utente modificato durante sincronizzazione.")
-            identity_row = connection.execute(
-                """
-                SELECT user_id, linked_at FROM external_identities
-                WHERE provider = 'github' AND subject = ?
-                """,
-                (expected_identity_subject,),
-            ).fetchone()
-            if identity_row is None or tuple(identity_row) != (user_id, identity_generation):
-                raise IdentityStorageConflictError("Identita GitHub modificata durante sincronizzazione.")
+            identity_rows = [
+                tuple(row)
+                for row in connection.execute(
+                    """
+                    SELECT subject, linked_at FROM external_identities
+                    WHERE provider = 'github' AND user_id = ? ORDER BY subject
+                    """,
+                    (user_id,),
+                ).fetchall()
+            ]
+            if identity_rows != [(expected_identity_subject, identity_generation)]:
+                raise IdentityStorageConflictError("Identita GitHub modificate durante sincronizzazione.")
             membership_rows = [
                 tuple(row)
                 for row in connection.execute(
@@ -2041,6 +2044,10 @@ class SqliteIdentityStorage:
                         SELECT 1 FROM external_identities
                         WHERE provider = 'github' AND subject = ?
                             AND user_id = users.user_id AND linked_at = ?
+                    )
+                    AND 1 = (
+                        SELECT COUNT(*) FROM external_identities
+                        WHERE provider = 'github' AND user_id = users.user_id
                     )
                     AND EXISTS (
                         SELECT 1 FROM external_group_mappings
