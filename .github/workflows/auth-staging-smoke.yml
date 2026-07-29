@@ -1,0 +1,46 @@
+name: Auth staging smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: Canonical HTTPS staging origin, without path
+        required: true
+        type: string
+      google_client_id:
+        description: Expected public Google OAuth client ID
+        required: true
+        type: string
+      timeout_seconds:
+        description: Absolute smoke deadline (5-120 seconds)
+        required: false
+        default: "30"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auth-staging-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  public-auth-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      THEBITLAB_STAGING_ORIGIN: ${{ inputs.origin }}
+      THEBITLAB_GOOGLE_CLIENT_ID_EXPECTED: ${{ inputs.google_client_id }}
+      THEBITLAB_STAGING_TIMEOUT: ${{ inputs.timeout_seconds }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate public authentication routes
+        shell: bash
+        run: >-
+          python scripts/thebitlab_auth_staging_smoke.py
+          --origin "$THEBITLAB_STAGING_ORIGIN"
+          --google-client-id "$THEBITLAB_GOOGLE_CLIENT_ID_EXPECTED"
+          --timeout "$THEBITLAB_STAGING_TIMEOUT"

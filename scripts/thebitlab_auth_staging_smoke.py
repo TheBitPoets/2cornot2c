@@ -1,0 +1,844 @@
+#!/usr/bin/env python3
+"""Secret-safe public-route smoke test for an HTTPS TheBitLab staging deployment."""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import hashlib
+import itertools
+import json
+import math
+import os
+import re
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from dataclasses import dataclass, field
+from html.parser import HTMLParser
+from pathlib import Path
+from typing import Callable
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts import thebitlab_tui_pairing_client
+
+_MAX_BODY_BYTES = 32 * 1024
+_MAX_HEADER_BYTES = 32 * 1024
+_TRANSACTION_COOKIE_RE = re.compile(
+    r"^__Host-thebitlab_oidc_txn-[0-9a-f]{24}=[A-Za-z0-9_-]{32,512}$"
+)
+_UNRESERVED_32_256_RE = re.compile(r"^[A-Za-z0-9_-]{32,256}$")
+_PKCE_CHALLENGE_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
+_CSP_NONCE_RE = re.compile(r"^'nonce-([A-Za-z0-9_-]{32})'$")
+_GOOGLE_CLIENT_ID_RE = re.compile(
+    r"^[A-Za-z0-9_-]{6,256}\.apps\.googleusercontent\.com$"
+)
+_EXPECTED_GOOGLE_QUERY = {
+    "client_id",
+    "redirect_uri",
+    "response_type",
+    "scope",
+    "state",
+    "nonce",
+    "code_challenge",
+    "code_challenge_method",
+}
+
+
+class StagingSmokeError(ValueError):
+    """A sanitized staging failure safe for logs and workflow output."""
+
+
+@dataclass(frozen=True)
+class ResponseSnapshot:
+    status: int
+    headers: tuple[tuple[str, str], ...] = field(repr=False, compare=False)
+    body: bytes = field(repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        if (
+            type(self.status) is not int
+            or not 100 <= self.status <= 599
+            or type(self.headers) is not tuple
+            or any(
+                type(item) is not tuple
+                or len(item) != 2
+                or type(item[0]) is not str
+                or type(item[1]) is not str
+                for item in self.headers
+            )
+            or type(self.body) is not bytes
+            or len(self.body) > _MAX_BODY_BYTES
+        ):
+            raise ValueError("Snapshot HTTP staging non valido.")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, file_pointer, code, message, headers, new_url):
+        return None
+
+
+RequestFn = Callable[[str, str, float], ResponseSnapshot]
+
+
+def canonical_origin(value: str) -> str:
+    text = str(value or "").strip()
+    try:
+        parsed = urllib.parse.urlsplit(text)
+        port = parsed.port
+    except ValueError:
+        raise StagingSmokeError("Origin staging non valida.") from None
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise StagingSmokeError("È richiesta una origin staging HTTPS canonica.")
+    host = parsed.hostname.lower()
+    try:
+        host.encode("ascii")
+    except UnicodeEncodeError:
+        raise StagingSmokeError("Origin staging non valida.") from None
+    if "%" in host or any(character.isspace() for character in host):
+        raise StagingSmokeError("Origin staging non valida.")
+    authority = f"[{host}]" if ":" in host else host
+    if port is not None:
+        authority += f":{port}"
+    return f"https://{authority}"
+
+
+def run_smoke(
+    origin: str,
+    request_fn: RequestFn,
+    *,
+    google_client_id: str | None = None,
+    timeout: float = 30,
+    monotonic: Callable[[], float] = time.monotonic,
+) -> dict:
+    origin = canonical_origin(origin)
+    google_client_id = _validated_google_client_id(
+        google_client_id
+        if google_client_id is not None
+        else os.environ.get("THEBITLAB_EXPECTED_GOOGLE_CLIENT_ID", "")
+    )
+    timeout = _validated_timeout(timeout)
+    started = _monotonic(monotonic)
+    deadline = started + timeout
+    checks: list[dict] = []
+    specifications = (
+        (
+            "google_login",
+            "GET",
+            "/auth/google/login",
+            lambda response: _check_google_login(
+                response,
+                origin,
+                google_client_id,
+            ),
+        ),
+        (
+            "google_login_repeat",
+            "GET",
+            "/auth/google/login",
+            lambda response: _check_google_login(
+                response,
+                origin,
+                google_client_id,
+            ),
+        ),
+        ("anonymous_session", "GET", "/auth/session", _check_anonymous_session),
+        ("pairing_page", "GET", "/auth/tui/pair", _check_pairing_page),
+        ("pairing_method", "GET", "/auth/tui/pairings", _check_pairing_method),
+        ("anonymous_tui_logout", "POST", "/auth/tui/logout", _check_anonymous_logout),
+    )
+    snapshot = None
+    first_login_material = None
+    try:
+        for name, method, path, validator in specifications:
+            remaining = deadline - _monotonic(monotonic)
+            if remaining <= 0:
+                raise StagingSmokeError(f"Check staging {name} scaduto.")
+            try:
+                snapshot = request_fn(method, origin + path, remaining)
+                if type(snapshot) is not ResponseSnapshot:
+                    raise ValueError("snapshot")
+                _require_response_framing(snapshot)
+                material = validator(snapshot)
+                if name == "google_login":
+                    if type(material) is not tuple or len(set(material)) != len(material):
+                        raise StagingSmokeError(
+                            "Check staging google_login non valido."
+                        )
+                    first_login_material = material
+                elif name == "google_login_repeat" and (
+                    type(first_login_material) is not tuple
+                    or type(material) is not tuple
+                    or len(material) != len(first_login_material)
+                    or len(set(material)) != len(material)
+                    or not _forbidden_followup_fingerprints(
+                        first_login_material
+                    ).isdisjoint(material)
+                ):
+                    raise StagingSmokeError(
+                        "Check staging google_login_repeat non valido."
+                    )
+            except StagingSmokeError:
+                raise
+            except Exception:
+                raise StagingSmokeError(f"Check staging {name} non valido.") from None
+            checks.append({"name": name, "status": snapshot.status, "ok": True})
+            snapshot = None
+        return {"schema_version": "thebitlab.auth_staging_smoke.v1", "ok": True, "checks": checks}
+    finally:
+        origin = None
+        google_client_id = None
+        request_fn = None
+        snapshot = None
+        first_login_material = None
+        material = None
+        specifications = None
+
+
+def _check_google_login(
+    response: ResponseSnapshot,
+    expected_origin: str,
+    expected_client_id: str,
+) -> tuple[bytes, ...]:
+    _require_status(response, 302)
+    _require_no_store(response)
+    locations = _headers(response, "location")
+    cookies = _headers(response, "set-cookie")
+    if len(locations) != 1 or len(cookies) != 1 or response.body:
+        raise StagingSmokeError("Check staging google_login non valido.")
+    location = locations[0]
+    try:
+        parsed = urllib.parse.urlsplit(location)
+        query = _strict_query(parsed.query)
+    except (ValueError, UnicodeError):
+        raise StagingSmokeError("Check staging google_login non valido.") from None
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != "accounts.google.com"
+        or parsed.port is not None
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path != "/o/oauth2/v2/auth"
+        or parsed.fragment
+        or set(query) != _EXPECTED_GOOGLE_QUERY
+        or any(type(values) is not list or len(values) != 1 or not values[0] for values in query.values())
+        or query["client_id"] != [expected_client_id]
+        or query["redirect_uri"] != [expected_origin + "/auth/google/callback"]
+        or _UNRESERVED_32_256_RE.fullmatch(query["state"][0]) is None
+        or _UNRESERVED_32_256_RE.fullmatch(query["nonce"][0]) is None
+        or not _valid_pkce_challenge(query["code_challenge"][0])
+        or query["response_type"] != ["code"]
+        or query["code_challenge_method"] != ["S256"]
+        or query["scope"] != ["openid email profile"]
+    ):
+        raise StagingSmokeError("Check staging google_login non valido.")
+    cookie_parts = [part.strip() for part in cookies[0].split(";")]
+    expected_cookie_prefix = (
+        "__Host-thebitlab_oidc_txn-"
+        + hashlib.sha256(query["state"][0].encode("ascii")).hexdigest()[:24]
+        + "="
+    )
+    cookie_value = (
+        cookie_parts[0].split("=", 1)[1]
+        if cookie_parts and "=" in cookie_parts[0]
+        else None
+    )
+    public_values = {
+        query["state"][0],
+        query["nonce"][0],
+        query["code_challenge"][0],
+    }
+    predictable_bindings = _predictable_public_bindings(public_values)
+    attributes = _cookie_attributes(cookie_parts[1:]) if cookie_parts else None
+    max_age = None if attributes is None else attributes.get("max-age")
+    if (
+        not cookie_parts
+        or _TRANSACTION_COOKIE_RE.fullmatch(cookie_parts[0]) is None
+        or not cookie_parts[0].startswith(expected_cookie_prefix)
+        or cookie_value in predictable_bindings
+        or attributes is None
+        or set(attributes) != {"path", "max-age", "secure", "httponly", "samesite"}
+        or attributes.get("path") != "/"
+        or type(max_age) is not str
+        or not max_age.isdigit()
+        or not 1 <= int(max_age) <= 900
+        or attributes.get("secure") is not None
+        or attributes.get("httponly") is not None
+        or str(attributes.get("samesite", "")).lower() != "lax"
+    ):
+        raise StagingSmokeError("Check staging google_login non valido.")
+    actual_values = (
+        query["state"][0],
+        query["nonce"][0],
+        query["code_challenge"][0],
+        cookie_value,
+    )
+    if len(set(actual_values)) != len(actual_values):
+        raise StagingSmokeError("Check staging google_login non valido.")
+    material = tuple(
+        sorted(
+            {
+                hashlib.sha256(value.encode("ascii")).digest()
+                for value in predictable_bindings | set(actual_values)
+            }
+        )
+    )
+    location = None
+    parsed = None
+    query = None
+    cookie_parts = None
+    cookie_value = None
+    actual_values = None
+    public_values = None
+    predictable_bindings = None
+    digest = None
+    attributes = None
+    max_age = None
+    expected_cookie_prefix = None
+    return material
+
+
+def _check_anonymous_session(response: ResponseSnapshot) -> None:
+    _require_status(response, 401)
+    _require_no_store(response)
+    _require_json(response)
+
+
+def _check_pairing_page(response: ResponseSnapshot) -> None:
+    _require_status(response, 200)
+    _require_no_store(response)
+    if _headers(response, "content-type") != ["text/html; charset=utf-8"]:
+        raise StagingSmokeError("Check staging pairing_page non valido.")
+    csp_nonce = _pairing_csp_contract(
+        _headers(response, "content-security-policy")
+    )
+    try:
+        html = response.body.decode("utf-8")
+    except UnicodeDecodeError:
+        html = ""
+    parser = _PairingPageParser()
+    try:
+        parser.feed(html)
+        parser.close()
+    except Exception:
+        parser.invalid = True
+    visible_source = "".join(parser.data)
+    if (
+        csp_nonce is None
+        or not parser.complete
+        or parser.script_nonces != [csp_nonce]
+        or parser.style_nonces != [csp_nonce]
+        or parser.script_ends != 1
+        or parser.style_ends != 1
+        or not _repeated_header_is(response, "x-frame-options", "DENY")
+        or not _repeated_header_is(
+            response,
+            "x-content-type-options",
+            "nosniff",
+        )
+        or "/auth/session" not in visible_source
+        or "/auth/tui/pair" not in visible_source
+    ):
+        raise StagingSmokeError("Check staging pairing_page non valido.")
+
+
+def _check_pairing_method(response: ResponseSnapshot) -> None:
+    _require_status(response, 405)
+    _require_no_store(response)
+    _require_json(response)
+    if _headers(response, "allow") != ["POST"]:
+        raise StagingSmokeError("Check staging pairing_method non valido.")
+
+
+def _check_anonymous_logout(response: ResponseSnapshot) -> None:
+    _require_status(response, 401)
+    _require_no_store(response)
+    _require_json(response)
+
+
+def _require_status(response: ResponseSnapshot, expected: int) -> None:
+    if response.status != expected:
+        raise StagingSmokeError("Status staging inatteso.")
+
+
+def _require_no_store(response: ResponseSnapshot) -> None:
+    if (
+        _headers(response, "cache-control") != ["no-store"]
+        or _headers(response, "pragma") != ["no-cache"]
+        or _headers(response, "referrer-policy") != ["no-referrer"]
+    ):
+        raise StagingSmokeError("Policy cache staging non valida.")
+
+
+def _require_json(response: ResponseSnapshot) -> None:
+    if _headers(response, "content-type") != ["application/json; charset=utf-8"]:
+        raise StagingSmokeError("Content-Type staging non valido.")
+    try:
+        value = json.loads(response.body.decode("utf-8"), object_pairs_hook=_unique_object)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        raise StagingSmokeError("JSON staging non valido.") from None
+    if type(value) is not dict or not value:
+        raise StagingSmokeError("JSON staging non valido.")
+    value = None
+
+
+def _cookie_attributes(parts: list[str]) -> dict[str, str | None] | None:
+    attributes: dict[str, str | None] = {}
+    for part in parts:
+        if not part:
+            return None
+        name, separator, value = part.partition("=")
+        key = name.lower()
+        if not key or key in attributes:
+            return None
+        if separator:
+            if not value:
+                return None
+            attributes[key] = value
+        else:
+            attributes[key] = None
+    return attributes
+
+
+def _csp_directives(value: str) -> dict[str, list[str]] | None:
+    directives: dict[str, list[str]] = {}
+    for raw_directive in value.split(";"):
+        tokens = raw_directive.strip().split()
+        if not tokens:
+            continue
+        name = tokens[0].lower()
+        if name in directives or len(tokens) < 2:
+            return None
+        directives[name] = tokens[1:]
+    return directives
+
+
+def _pairing_csp_contract(values: list[str]) -> str | None:
+    if not 1 <= len(values) <= 2:
+        return None
+    nonce = None
+    for value in values:
+        directives = _csp_directives(value)
+        if directives is None:
+            return None
+        candidate = _pairing_csp_nonce(directives)
+        if candidate is not None:
+            if nonce is not None:
+                return None
+            nonce = candidate
+        elif directives != {"frame-ancestors": ["'none'"]}:
+            return None
+    return nonce
+
+
+def _pairing_csp_nonce(directives: dict[str, list[str]]) -> str | None:
+    if set(directives) != {
+        "default-src",
+        "script-src",
+        "style-src",
+        "connect-src",
+        "base-uri",
+        "form-action",
+        "frame-ancestors",
+    }:
+        return None
+    if (
+        directives["default-src"] != ["'none'"]
+        or directives["connect-src"] != ["'self'"]
+        or directives["base-uri"] != ["'none'"]
+        or directives["form-action"] != ["'none'"]
+        or directives["frame-ancestors"] != ["'none'"]
+        or len(directives["script-src"]) != 1
+        or len(directives["style-src"]) != 1
+    ):
+        return None
+    script_nonce = _CSP_NONCE_RE.fullmatch(directives["script-src"][0])
+    style_nonce = _CSP_NONCE_RE.fullmatch(directives["style-src"][0])
+    if (
+        script_nonce is None
+        or style_nonce is None
+        or script_nonce.group(1) != style_nonce.group(1)
+    ):
+        return None
+    return script_nonce.group(1)
+
+
+def _strict_query(raw_query: str) -> dict[str, list[str]]:
+    if (
+        type(raw_query) is not str
+        or not raw_query
+        or len(raw_query.encode("ascii")) > 8192
+        or re.search(r"%(?![0-9A-Fa-f]{2})", raw_query) is not None
+    ):
+        raise ValueError("query")
+    pairs = urllib.parse.parse_qsl(
+        raw_query,
+        keep_blank_values=True,
+        strict_parsing=True,
+        encoding="utf-8",
+        errors="strict",
+        max_num_fields=16,
+    )
+    result: dict[str, list[str]] = {}
+    for key, value in pairs:
+        result.setdefault(key, []).append(value)
+    return result
+
+
+def _predictable_public_bindings(public_values: set[str]) -> set[str]:
+    predictable = set(public_values)
+    ordered_values = tuple(public_values)
+    for length in (1, 2, 3):
+        for values in itertools.permutations(ordered_values, length):
+            for separator in ("", ":", ".", "|"):
+                combined = separator.join(values)
+                predictable.add(combined)
+                digest = hashlib.sha256(combined.encode("ascii")).digest()
+                predictable.add(digest.hex())
+                predictable.add(
+                    base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+                )
+    return predictable
+
+
+def _forbidden_followup_fingerprints(material: tuple[bytes, ...]) -> set[bytes]:
+    forbidden = set(material)
+    for fingerprint in material:
+        for derived in (
+            fingerprint.hex(),
+            base64.urlsafe_b64encode(fingerprint).rstrip(b"=").decode("ascii"),
+        ):
+            forbidden.add(hashlib.sha256(derived.encode("ascii")).digest())
+    return forbidden
+
+
+_INERT_HTML_CONTAINERS = {
+    "template",
+    "noscript",
+    "textarea",
+    "xmp",
+    "iframe",
+    "noembed",
+    "title",
+}
+_FORBIDDEN_HTML_ELEMENTS = {"plaintext"}
+
+
+class _PairingPageParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.script_nonces: list[str] = []
+        self.style_nonces: list[str] = []
+        self.script_ends = 0
+        self.style_ends = 0
+        self.data: list[str] = []
+        self.stack: list[str] = []
+        self.seen = {"html": 0, "head": 0, "body": 0}
+        self.inert_stack: list[str] = []
+        self.invalid = False
+
+    @property
+    def complete(self) -> bool:
+        return (
+            not self.invalid
+            and not self.inert_stack
+            and not self.stack
+            and self.seen == {"html": 1, "head": 1, "body": 1}
+        )
+
+    def handle_starttag(self, tag, attrs) -> None:
+        if tag in _FORBIDDEN_HTML_ELEMENTS:
+            self.invalid = True
+            return
+        if tag in _INERT_HTML_CONTAINERS:
+            self.inert_stack.append(tag)
+            return
+        if self.inert_stack:
+            return
+        if tag in {"html", "head", "body"}:
+            expected = {
+                "html": [],
+                "head": ["html"],
+                "body": ["html"],
+            }[tag]
+            if self.stack != expected or self.seen[tag] != 0:
+                self.invalid = True
+                return
+            if tag == "body" and self.seen["head"] != 1:
+                self.invalid = True
+                return
+            self.seen[tag] += 1
+            self.stack.append(tag)
+            return
+        if tag not in {"script", "style"}:
+            return
+        expected = ["html", "body"] if tag == "script" else ["html", "head"]
+        if (
+            self.stack != expected
+            or len(attrs) != 1
+            or attrs[0][0] != "nonce"
+            or not attrs[0][1]
+        ):
+            self.invalid = True
+            return
+        target = self.script_nonces if tag == "script" else self.style_nonces
+        target.append(attrs[0][1])
+        self.stack.append(tag)
+
+    def handle_endtag(self, tag) -> None:
+        if tag in _FORBIDDEN_HTML_ELEMENTS:
+            self.invalid = True
+            return
+        if self.inert_stack:
+            if tag in _INERT_HTML_CONTAINERS:
+                if self.inert_stack[-1] != tag:
+                    self.invalid = True
+                else:
+                    self.inert_stack.pop()
+            return
+        if tag in _INERT_HTML_CONTAINERS:
+            self.invalid = True
+            return
+        if tag not in {"html", "head", "body", "script", "style"}:
+            return
+        if not self.stack or self.stack[-1] != tag:
+            self.invalid = True
+            return
+        self.stack.pop()
+        if tag == "script":
+            self.script_ends += 1
+        elif tag == "style":
+            self.style_ends += 1
+
+    def handle_startendtag(self, tag, attrs) -> None:
+        if tag in (
+            {"html", "head", "body", "script", "style"}
+            | _INERT_HTML_CONTAINERS
+            | _FORBIDDEN_HTML_ELEMENTS
+        ):
+            self.invalid = True
+
+    def handle_data(self, data) -> None:
+        if not self.inert_stack and self.stack and self.stack[-1] == "script":
+            self.data.append(data)
+
+
+def _require_response_framing(response: ResponseSnapshot) -> None:
+    if (
+        _headers(response, "transfer-encoding")
+        or _headers(response, "content-length") != [str(len(response.body))]
+    ):
+        raise StagingSmokeError("Framing risposta staging non valido.")
+
+
+def _headers(response: ResponseSnapshot, name: str) -> list[str]:
+    return [value for key, value in response.headers if key.lower() == name]
+
+
+def _repeated_header_is(
+    response: ResponseSnapshot,
+    name: str,
+    expected: str,
+) -> bool:
+    values = _headers(response, name)
+    return 1 <= len(values) <= 2 and all(value == expected for value in values)
+
+
+def _valid_pkce_challenge(value: str) -> bool:
+    if type(value) is not str or _PKCE_CHALLENGE_RE.fullmatch(value) is None:
+        return False
+    try:
+        decoded = base64.urlsafe_b64decode(value + "=")
+        canonical = base64.urlsafe_b64encode(decoded).rstrip(b"=").decode("ascii")
+    except Exception:
+        return False
+    return len(decoded) == 32 and canonical == value
+
+
+def _validated_google_client_id(value: str) -> str:
+    if type(value) is not str or _GOOGLE_CLIENT_ID_RE.fullmatch(value) is None:
+        raise StagingSmokeError("Google client ID atteso non valido.")
+    return value
+
+
+def _validated_timeout(value: float) -> float:
+    if type(value) not in {int, float} or isinstance(value, bool) or not math.isfinite(value):
+        raise StagingSmokeError("Timeout staging non valido.")
+    timeout = float(value)
+    if not 5 <= timeout <= 120:
+        raise StagingSmokeError("Timeout staging non valido.")
+    return timeout
+
+
+def _monotonic(clock: Callable[[], float]) -> float:
+    value = clock()
+    if type(value) not in {int, float} or isinstance(value, bool) or not math.isfinite(value):
+        raise StagingSmokeError("Clock staging non valido.")
+    return float(value)
+
+
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if type(key) is not str or key in result:
+            raise ValueError("duplicate")
+        result[key] = value
+    return result
+
+
+def _request(method: str, url: str, timeout: float) -> ResponseSnapshot:
+    request = urllib.request.Request(url, data=b"" if method == "POST" else None, method=method)
+    opener = urllib.request.build_opener(_NoRedirect())
+    response = None
+    body = None
+    try:
+        try:
+            response = opener.open(request, timeout=timeout)
+        except urllib.error.HTTPError as error:
+            response = error
+        status = getattr(response, "status", getattr(response, "code", None))
+        raw_headers = tuple(response.headers.raw_items())
+        if sum(len(name.encode("latin-1")) + len(value.encode("latin-1")) + 4 for name, value in raw_headers) > _MAX_HEADER_BYTES:
+            raise StagingSmokeError("Header staging troppo grandi.")
+        body = response.read(_MAX_BODY_BYTES + 1)
+        if type(body) is not bytes or len(body) > _MAX_BODY_BYTES:
+            raise StagingSmokeError("Risposta staging troppo grande.")
+        return ResponseSnapshot(status, raw_headers, body)
+    except (urllib.error.URLError, TimeoutError, OSError):
+        raise StagingSmokeError("Staging non raggiungibile.") from None
+    finally:
+        if response is not None:
+            try:
+                response.close()
+            except Exception:
+                pass
+        request = None
+        response = None
+        body = None
+
+
+def _worker(specification: dict) -> dict:
+    if type(specification) is not dict or set(specification) != {
+        "origin",
+        "google_client_id",
+        "timeout",
+    }:
+        raise StagingSmokeError("Specifica staging non valida.")
+    return run_smoke(
+        specification["origin"],
+        _request,
+        google_client_id=specification["google_client_id"],
+        timeout=specification["timeout"],
+    )
+
+
+def run_production_smoke(
+    origin: str,
+    google_client_id: str,
+    *,
+    timeout: float = 30,
+) -> dict:
+    origin = canonical_origin(origin)
+    google_client_id = _validated_google_client_id(google_client_id)
+    timeout = _validated_timeout(timeout)
+    specification = json.dumps(
+        {
+            "origin": origin,
+            "google_client_id": google_client_id,
+            "timeout": timeout,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    stdout = None
+    try:
+        returncode, stdout = thebitlab_tui_pairing_client._run_killable_subprocess(
+            [sys.executable, str(Path(__file__).resolve()), "--worker"],
+            specification,
+            environment=thebitlab_tui_pairing_client._transport_environment(),
+            timeout=float(timeout),
+        )
+        if returncode != 0 or type(stdout) is not bytes or len(stdout) > 8192:
+            raise StagingSmokeError("Smoke staging non completato.")
+        result = json.loads(stdout.decode("utf-8"), object_pairs_hook=_unique_object)
+        if (
+            type(result) is not dict
+            or set(result) != {"schema_version", "ok", "checks"}
+            or result.get("schema_version") != "thebitlab.auth_staging_smoke.v1"
+            or result.get("ok") is not True
+            or type(result.get("checks")) is not list
+        ):
+            raise StagingSmokeError("Risultato smoke staging non valido.")
+        return result
+    except StagingSmokeError:
+        raise
+    except Exception:
+        raise StagingSmokeError("Smoke staging non completato.") from None
+    finally:
+        origin = None
+        google_client_id = None
+        specification = None
+        stdout = None
+
+
+def _run_worker() -> int:
+    raw = sys.stdin.buffer.read(4097)
+    result = None
+    try:
+        if len(raw) > 4096:
+            raise StagingSmokeError("Specifica staging non valida.")
+        specification = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_object)
+        result = _worker(specification)
+        encoded = json.dumps(result, separators=(",", ":")).encode("utf-8")
+        if len(encoded) > 8192:
+            return 1
+        sys.stdout.buffer.write(encoded)
+        sys.stdout.buffer.flush()
+        return 0
+    except Exception:
+        return 1
+    finally:
+        raw = None
+        result = None
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Verifica le route auth pubbliche di uno staging HTTPS.")
+    parser.add_argument("--origin", required=True, help="Origin HTTPS canonica dello staging.")
+    parser.add_argument(
+        "--google-client-id",
+        required=True,
+        help="Client ID Google pubblico atteso nel redirect staging.",
+    )
+    parser.add_argument("--timeout", type=float, default=30, help="Deadline assoluta, 5-120 secondi.")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    try:
+        result = run_production_smoke(
+            args.origin,
+            args.google_client_id,
+            timeout=args.timeout,
+        )
+    except StagingSmokeError as error:
+        print(json.dumps({"schema_version": "thebitlab.auth_staging_smoke.v1", "ok": False, "error": str(error)}, separators=(",", ":")))
+        return 1
+    print(json.dumps(result, separators=(",", ":")))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_run_worker() if sys.argv[1:] == ["--worker"] else main())

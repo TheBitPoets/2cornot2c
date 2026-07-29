@@ -67,7 +67,7 @@ Il proxy deve:
 
 Per proxy sullo stesso host usare tipicamente `127.0.0.1/32` e/o `::1/128`, non supernet ampie. La composizione rifiuta reti non bounded, incluso `0.0.0.0/0`: inserire una CIDR in trusted equivale ad autorizzare ogni peer in quella rete ad attestare HTTPS e indirizzo client.
 
-Non esiste un fallback HTTP di sviluppo per queste route: per un test browser reale occorre un proxy TLS locale o staging HTTPS.
+Non esiste un fallback HTTP di sviluppo per queste route: per un test browser reale occorre un proxy TLS locale o staging HTTPS. Prima del browser E2E eseguire il preflight pubblico secret-safe descritto in `doc/AUTH_STAGING_SMOKE.md`; il comando valida redirect, cookie e route senza seguire il provider o stampare materiale OAuth.
 
 ## Segreti e backup
 
