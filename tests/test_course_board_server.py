@@ -266,6 +266,32 @@ def test_write_design_rejects_unsafe_source_catalog_before_persistence(tmp_path,
         )
 
 
+def test_ai_config_uses_one_provider_model_snapshot(monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
+    monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")
+    providers = {
+        "openai": {
+            "id": "openai",
+            "model": "fallback-a",
+            "default_model": "default-a",
+            "api_key_configured": True,
+            "billing_note": "",
+        }
+    }
+    monkeypatch.setattr(course_board_server, "ai_providers", lambda: providers)
+    monkeypatch.setattr(course_board_server, "ai_secret_status", lambda current: {})
+    monkeypatch.setattr(
+        course_board_server,
+        "active_ai_model",
+        lambda: (_ for _ in ()).throw(AssertionError("must not take a second snapshot")),
+    )
+
+    config = course_board_server.ai_config()
+
+    assert config["provider"] == "openai"
+    assert config["model"] == "model-a"
+
+
 def test_ai_request_keeps_provider_and_model_snapshot_during_reconfiguration(monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")

@@ -3452,13 +3452,15 @@ def call_ai_course_plan(payload: dict) -> dict:
 def ai_config() -> dict:
     """Return safe AI provider configuration for the board UI."""
 
-    providers = ai_providers()
     with AI_CONFIG_LOCK:
+        providers = ai_providers()
         selected_provider = ACTIVE_AI_PROVIDER
-    active = providers.get(selected_provider) or providers["openai"]
+        selected_model = ACTIVE_AI_MODEL
+        active = providers.get(selected_provider) or providers["openai"]
+        model = selected_model or active.get("model") or active.get("default_model", "")
     return {
         "provider": active["id"],
-        "model": active_ai_model(),
+        "model": model,
         "api_key_configured": active["api_key_configured"],
         "billing_note": active["billing_note"],
         "providers": list(providers.values()),
