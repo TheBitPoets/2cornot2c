@@ -369,29 +369,26 @@ function sourceDesignQuery(name = "") {
   return name ? `?design=${encodeURIComponent(name)}` : "";
 }
 
-async function fetchSourceContext(name = "") {
+async function fetchCourseContext(name = "") {
   const query = sourceDesignQuery(name);
-  const [headingsPayload, sourcesPayload] = await Promise.all([
-    api(`/api/headings${query}`),
-    api(`/api/course-sources${query}`),
-  ]);
+  const payload = await api(`/api/course-source-context${query}`);
   return {
-    headings: headingsPayload.headings || [],
-    sources: sourcesPayload.sources || [],
+    design: payload.design,
+    headings: payload.headings || [],
+    sources: payload.sources || [],
   };
 }
 
 async function loadAll() {
   setStatus("Caricamento...");
-  const [sourceContext, design, aiConfig, savedDesigns] = await Promise.all([
-    fetchSourceContext(),
-    api("/api/course-design"),
+  const [courseContext, aiConfig, savedDesigns] = await Promise.all([
+    fetchCourseContext(),
     api("/api/ai-config"),
     api("/api/saved-designs"),
   ]);
-  state.headings = sourceContext.headings;
-  state.sources = sourceContext.sources;
-  state.design = design;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
+  state.design = courseContext.design;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   state.aiConfig = aiConfig;
@@ -507,13 +504,10 @@ async function loadCurrentDesign() {
   });
   if (!confirmed) return;
   setStatus("Caricamento progetto corrente...");
-  const [design, sourceContext] = await Promise.all([
-    api("/api/course-design"),
-    fetchSourceContext(),
-  ]);
-  state.design = design;
-  state.headings = sourceContext.headings;
-  state.sources = sourceContext.sources;
+  const courseContext = await fetchCourseContext();
+  state.design = courseContext.design;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();
@@ -542,16 +536,10 @@ async function loadSavedDesignByName(name, options = {}) {
     if (!confirmed) return;
   }
   setStatus(`Caricamento progetto salvato "${name}"...`);
-  const [payload, sourceContext] = await Promise.all([
-    api("/api/saved-designs/load", {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    }),
-    fetchSourceContext(name),
-  ]);
-  state.design = payload.design;
-  state.headings = sourceContext.headings;
-  state.sources = sourceContext.sources;
+  const courseContext = await fetchCourseContext(name);
+  state.design = courseContext.design;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
   state.activeSavedDesign = name;
   state.isNewDesign = false;
   markDesignClean();

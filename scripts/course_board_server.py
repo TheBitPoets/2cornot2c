@@ -2036,7 +2036,11 @@ def default_ai_provider_config() -> dict:
     }
 
 
-def extract_headings(design: dict | None = None) -> list[dict]:
+def extract_headings(
+    design: dict | None = None,
+    *,
+    include_source_text: bool = False,
+) -> list[dict]:
     """Extract headings from configured Markdown sources."""
 
     design = read_design() if design is None else design
@@ -2067,23 +2071,24 @@ def extract_headings(design: dict | None = None) -> list[dict]:
                 if descriptor.legacy
                 else f"{descriptor.source_id}:{source}#{anchor}"
             )
-            headings.append(
-                {
-                    "id": heading_id,
-                    "source": source,
-                    "source_id": descriptor.source_id,
-                    "source_label": descriptor.label,
-                    "source_provider": descriptor.provider,
-                    "source_repository": descriptor.repository,
-                    "source_ref": descriptor.ref,
-                    "level": len(match.group(1)),
-                    "title": TAG_RE.sub("", title).strip(),
-                    "anchor": anchor,
-                    "href": f"../{source}#{anchor}",
-                    "github_url": github_blob_url(source, anchor),
-                    "line": lineno,
-                }
-            )
+            heading = {
+                "id": heading_id,
+                "source": source,
+                "source_id": descriptor.source_id,
+                "source_label": descriptor.label,
+                "source_provider": descriptor.provider,
+                "source_repository": descriptor.repository,
+                "source_ref": descriptor.ref,
+                "level": len(match.group(1)),
+                "title": TAG_RE.sub("", title).strip(),
+                "anchor": anchor,
+                "href": f"../{source}#{anchor}",
+                "github_url": github_blob_url(source, anchor),
+                "line": lineno,
+            }
+            if include_source_text:
+                heading["_source_text"] = source_text
+            headings.append(heading)
     return headings
 
 
@@ -2123,13 +2128,19 @@ def section_text(
     if source_file is None:
         return ""
 
-    lines = course_source_catalog.read_local_markdown_text(
+    source_text = course_source_catalog.read_local_markdown_text(
         source_file,
         ROOT,
-    ).splitlines()
+    )
+    return section_text_from_source(source_text, start_line, start_level)
+
+
+def section_text_from_source(source_text: str, start_line: int, start_level: int) -> str:
+    """Extract one heading section from an already verified source snapshot."""
+
+    lines = source_text.splitlines()
     if start_line < 1 or start_line > len(lines):
         return ""
-
     section: list[str] = []
     for current in lines[start_line:]:
         match = HEADING_RE.match(current)
@@ -4086,6 +4097,26 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             except Exception:  # noqa: BLE001
                 self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
             return
+        if parsed.path == "/api/course-source-context":
+            try:
+                design = source_request_design(parsed.query)
+                catalog = course_source_catalog.course_source_catalog_payload(
+                    design,
+                    ROOT,
+                    default_files=DEFAULT_SOURCES,
+                )
+                self.write_json(
+                    {
+                        "design": design,
+                        "headings": extract_headings(design),
+                        "sources": catalog["sources"],
+                    }
+                )
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
+            return
         if parsed.path == "/api/course-sources":
             try:
                 design = source_request_design(parsed.query)
@@ -4096,46 +4127,43 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                         default_files=DEFAULT_SOURCES,
                     )
                 )
-            except (ValueError, FileNotFoundError):
-                self.write_error_json(404, "Progetto didattico non trovato.")
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
             return
         if parsed.path == "/api/headings":
             try:
                 design = source_request_design(parsed.query)
                 self.write_json({"headings": extract_headings(design)})
-            except (ValueError, FileNotFoundError):
-                self.write_error_json(404, "Progetto didattico non trovato.")
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
             return
         if parsed.path == "/api/heading-content":
             query = parse_qs(parsed.query)
             heading_id = query.get("id", [""])[0]
             try:
                 design = source_request_design(parsed.query)
-                headings = extract_headings(design)
-            except (ValueError, FileNotFoundError):
-                self.write_error_json(404, "Progetto didattico non trovato.")
-                return
+                headings = extract_headings(design, include_source_text=True)
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
+                return
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
                 return
             heading = next((item for item in headings if item["id"] == heading_id), None)
             if heading is None:
                 self.write_error_json(404, "Paragrafo non trovato.")
                 return
-            try:
-                content = section_text(
-                    heading["source"],
-                    heading["line"],
-                    heading["level"],
-                    design,
-                )
-            except course_source_catalog.CourseSourceCatalogError as error:
-                self.write_error_json(422, str(error))
-                return
+            source_text = heading.pop("_source_text")
+            content = section_text_from_source(
+                source_text,
+                heading["line"],
+                heading["level"],
+            )
+            source_text = None
             self.write_json({"heading": {**heading, "content": content}})
             return
         if parsed.path == "/api/course-design":

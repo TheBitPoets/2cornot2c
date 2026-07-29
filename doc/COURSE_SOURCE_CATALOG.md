@@ -65,7 +65,7 @@ Se `sources` è presente, anche come array vuoto, è autorevole e `source_files`
 
 ## API e provenienza
 
-`GET /api/course-sources` restituisce il catalogo normalizzato e `indexed_files`, cioè i file locali `ready` realmente disponibili. Per un progetto archiviato la Course Board usa `?design=<nome.json>` e ricarica atomicamente catalogo e heading del progetto selezionato.
+`GET /api/course-sources` restituisce il catalogo normalizzato e `indexed_files`, cioè i file locali `ready` realmente disponibili. La Course Board usa `GET /api/course-source-context`: il server legge una sola volta il progetto corrente o `?design=<nome.json>` e restituisce insieme design, catalogo e heading, evitando revisioni archiviate miste.
 
 `GET /api/headings` aggiunge a ogni paragrafo:
 
@@ -75,7 +75,7 @@ Se `sources` è presente, anche come array vuoto, è autorevole e `source_files`
 - `source_repository`;
 - `source_ref`.
 
-Quando il docente inserisce un paragrafo in una UDA, questi campi vengono conservati nell'item. Il generatore Markdown mostra catalogo e provenienza. I progetti legacy mantengono gli ID heading storici basati su `file#anchor`; i cataloghi espliciti usano `source-id:file#anchor`.
+Quando il docente inserisce un paragrafo in una UDA, questi campi vengono conservati nell'item. La preview deriva heading e sezione dalla stessa lettura verificata e bounded del Markdown, quindi non combina versioni concorrenti dello stesso file. Il generatore Markdown mostra catalogo e provenienza. I progetti legacy mantengono gli ID heading storici basati su `file#anchor`; i cataloghi espliciti usano `source-id:file#anchor`.
 
 ## Limiti attuali
 

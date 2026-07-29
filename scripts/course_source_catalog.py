@@ -334,11 +334,20 @@ def _normalize_source(raw: Any, index: int) -> CourseSource:
             or any(part in {".", ".."} for part in repository_parts)
         ):
             raise CourseSourceCatalogError(f"{field}.repository non valido.")
+        ref_parts = ref.split("/")
         if (
             GIT_REF_RE.fullmatch(ref) is None
+            or ref == "@"
             or ".." in ref
             or "//" in ref
+            or "@{" in ref
             or ref.endswith(("/", ".", ".lock"))
+            or any(
+                not part
+                or part.startswith(".")
+                or part.endswith((".", ".lock"))
+                for part in ref_parts
+            )
         ):
             raise CourseSourceCatalogError(f"{field}.ref non valido.")
         if status == "ready":
@@ -456,7 +465,10 @@ def _opened_file_path(file_descriptor: int) -> Path:
     if sys.platform == "darwin":
         import fcntl
 
-        value = fcntl.fcntl(file_descriptor, 50, b"\0" * 4096)
+        try:
+            value = fcntl.fcntl(file_descriptor, 50, b"\0" * 1024)
+        except ValueError as exc:
+            raise OSError("Impossibile risolvere il file aperto.") from exc
         return Path(value.split(b"\0", 1)[0].decode("utf-8"))
     raise OSError("Piattaforma non supportata per la verifica del file aperto.")
 

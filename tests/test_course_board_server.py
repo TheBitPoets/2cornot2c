@@ -226,14 +226,16 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         assert payload["sources"][0]["indexed_files"] == ["lesson.md"]
 
         archived_request = urllib.request.Request(
-            "http://127.0.0.1:%s/api/course-sources?design=archive.json"
+            "http://127.0.0.1:%s/api/course-source-context?design=archive.json"
             % server.server_address[1],
             headers={"Authorization": authorization},
         )
         with urllib.request.urlopen(archived_request, timeout=5) as response:
             archived = json.loads(response.read().decode("utf-8"))
+        assert archived["design"]["sources"][0]["id"] == "archived-source"
         assert archived["sources"][0]["id"] == "archived-source"
         assert archived["sources"][0]["label"] == "Archivio archive.json"
+        assert archived["headings"][0]["source_id"] == "archived-source"
     finally:
         server.shutdown()
         server.server_close()
@@ -254,6 +256,19 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
     thread.start()
     try:
         heading = next(item for item in course_board_server.extract_headings() if item["title"] == "Array")
+        original_read = course_board_server.course_source_catalog.read_local_markdown_text
+        reads = 0
+
+        def counted_read(item, root):
+            nonlocal reads
+            reads += 1
+            return original_read(item, root)
+
+        monkeypatch.setattr(
+            course_board_server.course_source_catalog,
+            "read_local_markdown_text",
+            counted_read,
+        )
         authorization = "Basic " + base64.b64encode(f"teacher:{teacher_token}".encode("utf-8")).decode("ascii")
         request = urllib.request.Request(
             "http://127.0.0.1:%s/api/heading-content?id=%s"
@@ -264,6 +279,7 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
             payload = json.loads(response.read().decode("utf-8"))
         assert payload["heading"]["title"] == "Array"
         assert payload["heading"]["content"] == "Testo leggibile."
+        assert reads == 1
     finally:
         server.shutdown()
         server.server_close()
