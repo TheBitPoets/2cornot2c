@@ -143,12 +143,23 @@ def run_smoke(
                 google_client_id,
             ),
         ),
+        (
+            "google_login_repeat",
+            "GET",
+            "/auth/google/login",
+            lambda response: _check_google_login(
+                response,
+                origin,
+                google_client_id,
+            ),
+        ),
         ("anonymous_session", "GET", "/auth/session", _check_anonymous_session),
         ("pairing_page", "GET", "/auth/tui/pair", _check_pairing_page),
         ("pairing_method", "GET", "/auth/tui/pairings", _check_pairing_method),
         ("anonymous_tui_logout", "POST", "/auth/tui/logout", _check_anonymous_logout),
     )
     snapshot = None
+    first_login_material = None
     try:
         for name, method, path, validator in specifications:
             remaining = deadline - _monotonic(monotonic)
@@ -159,7 +170,21 @@ def run_smoke(
                 if type(snapshot) is not ResponseSnapshot:
                     raise ValueError("snapshot")
                 _require_response_framing(snapshot)
-                validator(snapshot)
+                material = validator(snapshot)
+                if name == "google_login":
+                    first_login_material = material
+                elif name == "google_login_repeat" and (
+                    type(first_login_material) is not tuple
+                    or type(material) is not tuple
+                    or len(material) != len(first_login_material)
+                    or any(
+                        first == second
+                        for first, second in zip(first_login_material, material)
+                    )
+                ):
+                    raise StagingSmokeError(
+                        "Check staging google_login_repeat non valido."
+                    )
             except StagingSmokeError:
                 raise
             except Exception:
@@ -172,6 +197,8 @@ def run_smoke(
         google_client_id = None
         request_fn = None
         snapshot = None
+        first_login_material = None
+        material = None
         specifications = None
 
 
@@ -179,7 +206,7 @@ def _check_google_login(
     response: ResponseSnapshot,
     expected_origin: str,
     expected_client_id: str,
-) -> None:
+) -> tuple[bytes, bytes, bytes, bytes]:
     _require_status(response, 302)
     _require_no_store(response)
     locations = _headers(response, "location")
@@ -223,17 +250,25 @@ def _check_google_login(
         if cookie_parts and "=" in cookie_parts[0]
         else None
     )
+    public_values = {
+        query["state"][0],
+        query["nonce"][0],
+        query["code_challenge"][0],
+    }
+    predictable_bindings = set(public_values)
+    for value in public_values:
+        digest = hashlib.sha256(value.encode("ascii")).digest()
+        predictable_bindings.add(digest.hex())
+        predictable_bindings.add(
+            base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+        )
     attributes = _cookie_attributes(cookie_parts[1:]) if cookie_parts else None
     max_age = None if attributes is None else attributes.get("max-age")
     if (
         not cookie_parts
         or _TRANSACTION_COOKIE_RE.fullmatch(cookie_parts[0]) is None
         or not cookie_parts[0].startswith(expected_cookie_prefix)
-        or cookie_value in {
-            query["state"][0],
-            query["nonce"][0],
-            query["code_challenge"][0],
-        }
+        or cookie_value in predictable_bindings
         or attributes is None
         or set(attributes) != {"path", "max-age", "secure", "httponly", "samesite"}
         or attributes.get("path") != "/"
@@ -245,14 +280,27 @@ def _check_google_login(
         or str(attributes.get("samesite", "")).lower() != "lax"
     ):
         raise StagingSmokeError("Check staging google_login non valido.")
+    material = tuple(
+        hashlib.sha256(value.encode("ascii")).digest()
+        for value in (
+            query["state"][0],
+            query["nonce"][0],
+            query["code_challenge"][0],
+            cookie_value,
+        )
+    )
     location = None
     parsed = None
     query = None
     cookie_parts = None
     cookie_value = None
+    public_values = None
+    predictable_bindings = None
+    digest = None
     attributes = None
     max_age = None
     expected_cookie_prefix = None
+    return material
 
 
 def _check_anonymous_session(response: ResponseSnapshot) -> None:
@@ -282,7 +330,7 @@ def _check_pairing_page(response: ResponseSnapshot) -> None:
     visible_source = "".join(parser.data)
     if (
         csp_nonce is None
-        or parser.invalid
+        or not parser.complete
         or parser.script_nonces != [csp_nonce]
         or parser.style_nonces != [csp_nonce]
         or parser.script_ends != 1
@@ -428,29 +476,81 @@ class _PairingPageParser(HTMLParser):
         self.script_ends = 0
         self.style_ends = 0
         self.data: list[str] = []
+        self.stack: list[str] = []
+        self.seen = {"html": 0, "head": 0, "body": 0}
+        self.template_depth = 0
         self.invalid = False
 
+    @property
+    def complete(self) -> bool:
+        return (
+            not self.invalid
+            and self.template_depth == 0
+            and not self.stack
+            and self.seen == {"html": 1, "head": 1, "body": 1}
+        )
+
     def handle_starttag(self, tag, attrs) -> None:
+        if tag == "template":
+            self.template_depth += 1
+            return
+        if self.template_depth:
+            return
+        if tag in {"html", "head", "body"}:
+            expected = {
+                "html": [],
+                "head": ["html"],
+                "body": ["html"],
+            }[tag]
+            if self.stack != expected or self.seen[tag] != 0:
+                self.invalid = True
+                return
+            if tag == "body" and self.seen["head"] != 1:
+                self.invalid = True
+                return
+            self.seen[tag] += 1
+            self.stack.append(tag)
+            return
         if tag not in {"script", "style"}:
             return
-        if len(attrs) != 1 or attrs[0][0] != "nonce" or not attrs[0][1]:
+        expected = ["html", "body"] if tag == "script" else ["html", "head"]
+        if (
+            self.stack != expected
+            or len(attrs) != 1
+            or attrs[0][0] != "nonce"
+            or not attrs[0][1]
+        ):
             self.invalid = True
             return
         target = self.script_nonces if tag == "script" else self.style_nonces
         target.append(attrs[0][1])
+        self.stack.append(tag)
 
     def handle_endtag(self, tag) -> None:
+        if tag == "template":
+            if self.template_depth == 0:
+                self.invalid = True
+            else:
+                self.template_depth -= 1
+            return
+        if self.template_depth or tag not in {"html", "head", "body", "script", "style"}:
+            return
+        if not self.stack or self.stack[-1] != tag:
+            self.invalid = True
+            return
+        self.stack.pop()
         if tag == "script":
             self.script_ends += 1
         elif tag == "style":
             self.style_ends += 1
 
     def handle_startendtag(self, tag, attrs) -> None:
-        if tag in {"script", "style"}:
+        if tag in {"html", "head", "body", "script", "style", "template"}:
             self.invalid = True
 
     def handle_data(self, data) -> None:
-        self.data.append(data)
+        if self.template_depth == 0 and self.stack and self.stack[-1] == "script":
+            self.data.append(data)
 
 
 def _require_response_framing(response: ResponseSnapshot) -> None:

@@ -44,6 +44,63 @@ def google_location(**changes):
     return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(query)
 
 
+class FreshResponses(dict):
+    LOGIN_KEY = ("GET", "https://school.test/auth/google/login")
+
+    def __init__(self, values):
+        super().__init__(values)
+        self.login_reads = 0
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        if key == self.LOGIN_KEY:
+            self.login_reads = 0
+
+    def __getitem__(self, key):
+        response = super().__getitem__(key)
+        if key != self.LOGIN_KEY:
+            return response
+        self.login_reads += 1
+        if self.login_reads == 1:
+            return response
+        query = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(
+                next(value for name, value in response.headers if name.lower() == "location")
+            ).query
+        )
+        for field in ("state", "nonce"):
+            query[field] = [
+                base64.urlsafe_b64encode(
+                    hashlib.sha256(f"{field}-{self.login_reads}".encode()).digest()
+                ).rstrip(b"=").decode("ascii")
+            ]
+        query["code_challenge"] = [
+            base64.urlsafe_b64encode(
+                hashlib.sha256(f"challenge-{self.login_reads}".encode()).digest()
+            ).rstrip(b"=").decode("ascii")
+        ]
+        location = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(
+            {name: values[0] for name, values in query.items()}
+        )
+        suffix = hashlib.sha256(query["state"][0].encode("ascii")).hexdigest()[:24]
+        binding = base64.urlsafe_b64encode(
+            hashlib.sha256(f"binding-{self.login_reads}".encode()).digest()
+        ).rstrip(b"=").decode("ascii")
+        cookie = (
+            f"__Host-thebitlab_oidc_txn-{suffix}={binding}; Path=/; Max-Age=600; "
+            "Secure; HttpOnly; SameSite=Lax"
+        )
+        headers = tuple(
+            (name, location)
+            if name.lower() == "location"
+            else (name, cookie)
+            if name.lower() == "set-cookie"
+            else (name, value)
+            for name, value in response.headers
+        )
+        return smoke.ResponseSnapshot(response.status, headers, response.body)
+
+
 def responses():
     location = google_location()
     state = urllib.parse.parse_qs(urllib.parse.urlsplit(location).query)["state"][0]
@@ -53,7 +110,12 @@ def responses():
         "COOKIE_SECRET_ABCDEFGHIJKLMNOPQRST; Path=/; Max-Age=600; "
         "Secure; HttpOnly; SameSite=Lax"
     )
-    return {
+    pairing_body = (
+        b'<html><head><style nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
+        b'</style></head><body><script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
+        b'/auth/session /auth/tui/pair</script></body></html>'
+    )
+    return FreshResponses({
         ("GET", "https://school.test/auth/google/login"): smoke.ResponseSnapshot(
             302,
             no_store(
@@ -81,9 +143,9 @@ def responses():
                 ),
                 ("X-Frame-Options", "DENY"),
                 ("X-Content-Type-Options", "nosniff"),
-                ("Content-Length", "155"),
+                ("Content-Length", str(len(pairing_body))),
             ),
-            b"<html><style nonce=\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef\"></style>/auth/session /auth/tui/pair<script nonce=\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef\"></script></html>",
+            pairing_body,
         ),
         ("GET", "https://school.test/auth/tui/pairings"): smoke.ResponseSnapshot(
             405,
@@ -102,7 +164,7 @@ def responses():
             ),
             b'{"error":"authentication_required"}',
         ),
-    }
+    })
 
 
 def test_staging_smoke_validates_public_routes_without_exposing_secrets() -> None:
@@ -125,6 +187,7 @@ def test_staging_smoke_validates_public_routes_without_exposing_secrets() -> Non
         "ok": True,
         "checks": [
             {"name": "google_login", "status": 302, "ok": True},
+            {"name": "google_login_repeat", "status": 302, "ok": True},
             {"name": "anonymous_session", "status": 401, "ok": True},
             {"name": "pairing_page", "status": 200, "ok": True},
             {"name": "pairing_method", "status": 405, "ok": True},
@@ -135,7 +198,11 @@ def test_staging_smoke_validates_public_routes_without_exposing_secrets() -> Non
     assert "STATE_SECRET" not in encoded
     assert "NONCE_SECRET" not in encoded
     assert "COOKIE_SECRET" not in encoded
-    assert [call[:2] for call in calls] == list(fixtures)
+    assert [call[:2] for call in calls] == [
+        FreshResponses.LOGIN_KEY,
+        FreshResponses.LOGIN_KEY,
+        *(key for key in fixtures if key != FreshResponses.LOGIN_KEY),
+    ]
     assert all(call[2] == 30 for call in calls)
 
 
@@ -283,6 +350,40 @@ def test_staging_smoke_rejects_public_state_reused_as_cookie_binding() -> None:
         )
 
 
+def test_staging_smoke_rejects_cookie_binding_derived_from_public_state() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/google/login")]
+    location = next(
+        value for name, value in current.headers if name.lower() == "location"
+    )
+    state = urllib.parse.parse_qs(urllib.parse.urlsplit(location).query)["state"][0]
+    derived = base64.urlsafe_b64encode(
+        hashlib.sha256(state.encode("ascii")).digest()
+    ).rstrip(b"=").decode("ascii")
+
+    def derived_cookie(value):
+        cookie_name = value.split("=", 1)[0]
+        attributes = value.split(";", 1)[1]
+        return f"{cookie_name}={derived};{attributes}"
+
+    fixtures[("GET", "https://school.test/auth/google/login")] = smoke.ResponseSnapshot(
+        302,
+        tuple(
+            (name, derived_cookie(value))
+            if name.lower() == "set-cookie"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        b"",
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
 def test_staging_smoke_rejects_short_pkce_challenge() -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/google/login")]
@@ -402,6 +503,59 @@ def test_staging_smoke_ignores_script_and_routes_inside_html_comments() -> None:
             for name, value in current.headers
         ),
         commented_body,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+def test_staging_smoke_rejects_pairing_logic_inside_inert_template() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/tui/pair")]
+    inert_body = current.body.replace(
+        b"<body>",
+        b"<body><template>",
+    ).replace(
+        b"</body>",
+        b"</template></body>",
+    )
+    fixtures[("GET", "https://school.test/auth/tui/pair")] = smoke.ResponseSnapshot(
+        200,
+        tuple(
+            (name, str(len(inert_body)))
+            if name.lower() == "content-length"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        inert_body,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+def test_staging_smoke_rejects_misordered_executable_tags() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/tui/pair")]
+    malformed_body = current.body.replace(
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">',
+        b'</script><script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">',
+    )
+    fixtures[("GET", "https://school.test/auth/tui/pair")] = smoke.ResponseSnapshot(
+        200,
+        tuple(
+            (name, str(len(malformed_body)))
+            if name.lower() == "content-length"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        malformed_body,
     )
 
     with pytest.raises(smoke.StagingSmokeError):

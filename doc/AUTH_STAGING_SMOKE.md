@@ -1,6 +1,6 @@
 # Preflight autenticazione su staging HTTPS
 
-Questo runbook verifica il wiring pubblico del runtime auth prima del collaudo browser con provider reali. Non richiede credenziali Google, non completa callback OAuth e non modifica dati didattici. Il check login crea un solo flow OIDC effimero in memoria, destinato a scadere automaticamente.
+Questo runbook verifica il wiring pubblico del runtime auth prima del collaudo browser con provider reali. Non richiede credenziali Google, non completa callback OAuth e non modifica dati didattici. Il check login crea due flow OIDC effimeri in memoria, destinati a scadere automaticamente; il confronto verifica che state, nonce, PKCE e browser binding non vengano riutilizzati.
 
 ## Prerequisiti
 
@@ -27,7 +27,7 @@ L'origin deve essere HTTPS canonica, senza path, query, fragment o userinfo. Il 
 
 Il comando verifica:
 
-1. `GET /auth/google/login` → redirect 302 all'endpoint Google canonico, query OIDC/PKCE completa e cookie transazionale `__Host-` sicuro;
+1. due `GET /auth/google/login` → redirect 302 all'endpoint Google canonico, client ID atteso, query OIDC/PKCE completa, materiali one-time distinti e cookie transazionale `__Host-` sicuro;
 2. `GET /auth/session` anonimo → 401 JSON `no-store`;
 3. `GET /auth/tui/pair` → pagina 200 con CSP, anti-framing e `no-store`;
 4. `GET /auth/tui/pairings` → 405 con `Allow: POST`, senza allocare pairing;
