@@ -178,6 +178,7 @@ class FakeGitHubTeamDirectory:
 class GitHubTeamMappingStorage(Protocol):
     def read_user(self, user_id: str) -> UserAccount | None: ...
     def read_class(self, class_id: str) -> ClassGroup | None: ...
+    def list_user_memberships(self, user_id: str) -> list[ClassMembership]: ...
     def list_external_identities(self, user_id: str) -> list[ExternalIdentity]: ...
     def read_external_group_mapping(
         self, provider: str, organization_subject: str, group_subject: str
@@ -203,6 +204,22 @@ class GitHubTeamMappingStorage(Protocol):
         expected_admin_updated_at: datetime,
         expected_class_updated_at: datetime,
     ) -> bool: ...
+    def synchronize_github_memberships(
+        self,
+        user_id: str,
+        desired_memberships: tuple[ClassMembership, ...],
+        *,
+        expected_user_updated_at: datetime,
+        expected_identity_subject: str,
+        expected_identity_linked_at: datetime,
+        expected_memberships: tuple[ClassMembership, ...],
+        expected_mappings: tuple[ExternalGroupMapping, ...],
+        expected_snapshot_group_keys: tuple[tuple[str, str], ...],
+        expected_snapshot_captured_at: datetime,
+        max_snapshot_age: timedelta,
+        future_skew: timedelta,
+        expected_classes: tuple[ClassGroup, ...],
+    ) -> None: ...
     def onboard_pending_user_from_external_group(
         self,
         membership: ClassMembership,
@@ -450,3 +467,151 @@ class GitHubPendingOnboardingService:
                 "Stato modificato durante onboarding GitHub."
             ) from error
         return GitHubPendingOnboardingResult("onboarded", "single-mapped-team", membership)
+
+
+@dataclass(frozen=True)
+class GitHubMembershipSyncResult:
+    status: str
+    reason: str
+    added_class_ids: tuple[str, ...] = ()
+    removed_class_ids: tuple[str, ...] = ()
+
+
+class GitHubMembershipSyncService:
+    """Atomically reconcile provider-governed memberships for an existing student."""
+
+    def __init__(
+        self,
+        storage: GitHubTeamMappingStorage,
+        directory: GitHubTeamDirectory,
+        *,
+        clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+        max_snapshot_age: timedelta = timedelta(minutes=2),
+        future_skew: timedelta = timedelta(seconds=30),
+    ) -> None:
+        if (
+            type(max_snapshot_age) is not timedelta
+            or not timedelta(seconds=1) <= max_snapshot_age <= timedelta(minutes=10)
+            or type(future_skew) is not timedelta
+            or not timedelta(0) <= future_skew <= timedelta(minutes=2)
+        ):
+            raise GitHubTeamDirectoryRejectedError("Policy freschezza snapshot non valida.")
+        self.storage = storage
+        self.directory = directory
+        self.clock = clock
+        self.max_snapshot_age = max_snapshot_age
+        self.future_skew = future_skew
+
+    def reconcile(self, user_id: str) -> GitHubMembershipSyncResult:
+        account = self.storage.read_user(_text(user_id, "user_id"))
+        if account is None:
+            raise GitHubTeamMappingNotFoundError("Utente TheBitLab non trovato.")
+        if not account.active or account.role != "student":
+            return GitHubMembershipSyncResult("unchanged", "not-eligible")
+        github_identities = [
+            identity
+            for identity in self.storage.list_external_identities(account.user_id)
+            if identity.provider == "github"
+        ]
+        if len(github_identities) != 1:
+            return GitHubMembershipSyncResult("unchanged", "github-not-linked")
+        identity = github_identities[0]
+        try:
+            snapshot = self.directory.read_complete_memberships(identity.subject)
+        except (GitHubTeamDirectoryUnavailableError, GitHubTeamDirectoryRejectedError):
+            raise
+        except Exception as error:
+            raise GitHubTeamDirectoryUnavailableError(
+                "Directory team GitHub non disponibile."
+            ) from error
+        if type(snapshot) is not GitHubTeamMembershipSnapshot or snapshot.user_subject != identity.subject:
+            raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non correlato all'utente.")
+        validation_now = _utc(self.clock())
+        if (
+            snapshot.captured_at < identity.linked_at
+            or snapshot.captured_at <= validation_now - self.max_snapshot_age
+            or snapshot.captured_at > validation_now + self.future_skew
+        ):
+            raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non fresco.")
+
+        mappings = tuple(
+            sorted(
+                (
+                    mapping
+                    for team in snapshot.teams
+                    if (mapping := self.storage.read_external_group_mapping(*team.provider_key))
+                    is not None
+                ),
+                key=lambda item: item.provider_key,
+            )
+        )
+        classes_by_id: dict[str, ClassGroup] = {}
+        for mapping in mappings:
+            class_group = self.storage.read_class(mapping.class_id)
+            if class_group is None:
+                raise GitHubTeamMappingConflictError("Mapping GitHub riferisce una classe mancante.")
+            classes_by_id[class_group.class_id] = class_group
+        memberships = tuple(self.storage.list_user_memberships(account.user_id))
+        manual_student_classes = {
+            membership.class_id
+            for membership in memberships
+            if membership.role == "student" and membership.source_provider != "github"
+        }
+        current_github = {
+            membership.class_id: membership
+            for membership in memberships
+            if membership.role == "student" and membership.source_provider == "github"
+        }
+        selected_by_class: dict[str, ExternalGroupMapping] = {}
+        for mapping in mappings:
+            class_group = classes_by_id[mapping.class_id]
+            if class_group.active and mapping.class_id not in manual_student_classes:
+                selected_by_class.setdefault(mapping.class_id, mapping)
+        desired: list[ClassMembership] = []
+        for class_id, mapping in sorted(selected_by_class.items()):
+            existing = current_github.get(class_id)
+            if existing is not None and existing.source_group_subject == mapping.group_subject:
+                desired.append(existing)
+            else:
+                desired.append(
+                    ClassMembership(
+                        account.user_id,
+                        class_id,
+                        "student",
+                        _next_generation(_utc(self.clock()), account.updated_at),
+                        "github",
+                        mapping.group_subject,
+                    )
+                )
+        desired_tuple = tuple(desired)
+        current_ids = frozenset(current_github)
+        desired_ids = frozenset(membership.class_id for membership in desired_tuple)
+        if tuple(sorted(current_github.values(), key=lambda item: item.class_id)) == desired_tuple:
+            return GitHubMembershipSyncResult("unchanged", "already-current")
+        try:
+            self.storage.synchronize_github_memberships(
+                account.user_id,
+                desired_tuple,
+                expected_user_updated_at=account.updated_at,
+                expected_identity_subject=identity.subject,
+                expected_identity_linked_at=identity.linked_at,
+                expected_memberships=memberships,
+                expected_mappings=mappings,
+                expected_snapshot_group_keys=tuple(
+                    (team.organization_subject, team.team_subject) for team in snapshot.teams
+                ),
+                expected_snapshot_captured_at=snapshot.captured_at,
+                max_snapshot_age=self.max_snapshot_age,
+                future_skew=self.future_skew,
+                expected_classes=tuple(sorted(classes_by_id.values(), key=lambda item: item.class_id)),
+            )
+        except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
+            raise GitHubTeamMappingConflictError(
+                "Stato modificato durante sincronizzazione GitHub."
+            ) from error
+        return GitHubMembershipSyncResult(
+            "synchronized",
+            "complete-snapshot",
+            tuple(sorted(desired_ids - current_ids)),
+            tuple(sorted(current_ids - desired_ids)),
+        )

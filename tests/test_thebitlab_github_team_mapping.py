@@ -8,6 +8,7 @@ import pytest
 from scripts.thebitlab_github_team_mapping import (
     FakeGitHubTeamDirectory,
     GitHubPendingOnboardingService,
+    GitHubMembershipSyncService,
     GitHubTeamClassMappingService,
     GitHubTeamDirectoryRejectedError,
     GitHubTeamDirectoryUnavailableError,
@@ -384,6 +385,88 @@ def test_second_team_mapped_during_onboarding_blocks_promotion(
         )
     assert storage.read_user("pending-01").role == "pending"
     assert storage.list_user_memberships("pending-01") == []
+
+
+def test_existing_student_sync_replaces_github_membership_atomically(setup) -> None:
+    storage, mappings, clock = setup
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    onboard = GitHubPendingOnboardingService(
+        storage,
+        FakeGitHubTeamDirectory(
+            {"123456": snapshot("123456", GitHubTeamMembership("1001", "2002"))}
+        ),
+        clock=clock,
+    )
+    onboard.reconcile("pending-01")
+    storage.create_class(class_group("class-02"))
+    mappings.save_mapping("admin-01", "class-02", "1001", "3003")
+    service = GitHubMembershipSyncService(
+        storage,
+        FakeGitHubTeamDirectory(
+            {"123456": snapshot("123456", GitHubTeamMembership("1001", "3003"))}
+        ),
+        clock=clock,
+    )
+
+    result = service.reconcile("pending-01")
+
+    assert result.status == "synchronized"
+    assert result.added_class_ids == ("class-02",)
+    assert result.removed_class_ids == ("class-01",)
+    memberships = storage.list_user_memberships("pending-01")
+    assert [(item.class_id, item.source_provider, item.source_group_subject) for item in memberships] == [
+        ("class-02", "github", "3003")
+    ]
+
+
+def test_existing_student_sync_preserves_manual_memberships(setup) -> None:
+    storage, mappings, clock = setup
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    GitHubPendingOnboardingService(
+        storage,
+        FakeGitHubTeamDirectory(
+            {"123456": snapshot("123456", GitHubTeamMembership("1001", "2002"))}
+        ),
+        clock=clock,
+    ).reconcile("pending-01")
+    storage.create_class(class_group("manual-class"))
+    manual = ClassMembership("pending-01", "manual-class", "student", NOW)
+    storage.save_membership(manual)
+
+    result = GitHubMembershipSyncService(
+        storage,
+        FakeGitHubTeamDirectory({"123456": snapshot("123456")}),
+        clock=clock,
+    ).reconcile("pending-01")
+
+    assert result.removed_class_ids == ("class-01",)
+    assert storage.list_user_memberships("pending-01") == [manual]
+
+
+def test_existing_student_sync_rejects_stale_snapshot_without_revocation(setup) -> None:
+    storage, mappings, clock = setup
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    current = snapshot("123456", GitHubTeamMembership("1001", "2002"))
+    GitHubPendingOnboardingService(
+        storage,
+        FakeGitHubTeamDirectory({"123456": current}),
+        clock=clock,
+    ).reconcile("pending-01")
+    before = storage.list_user_memberships("pending-01")
+    stale = GitHubTeamMembershipSnapshot(
+        "123456",
+        (),
+        NOW - timedelta(minutes=2),
+    )
+
+    with pytest.raises(GitHubTeamDirectoryRejectedError, match="non fresco"):
+        GitHubMembershipSyncService(
+            storage,
+            FakeGitHubTeamDirectory({"123456": stale}),
+            clock=clock,
+        ).reconcile("pending-01")
+
+    assert storage.list_user_memberships("pending-01") == before
 
 
 def test_existing_membership_conflict_rolls_back_role_promotion(setup) -> None:

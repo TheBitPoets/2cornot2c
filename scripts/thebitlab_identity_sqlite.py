@@ -1745,6 +1745,188 @@ class SqliteIdentityStorage:
                 "Admin, classe o mapping modificati durante la rimozione."
             )
 
+    def synchronize_github_memberships(
+        self,
+        user_id: str,
+        desired_memberships: tuple[ClassMembership, ...],
+        *,
+        expected_user_updated_at: datetime,
+        expected_identity_subject: str,
+        expected_identity_linked_at: datetime,
+        expected_memberships: tuple[ClassMembership, ...],
+        expected_mappings: tuple[ExternalGroupMapping, ...],
+        expected_snapshot_group_keys: tuple[tuple[str, str], ...],
+        expected_snapshot_captured_at: datetime,
+        max_snapshot_age: timedelta,
+        future_skew: timedelta,
+        expected_classes: tuple[ClassGroup, ...],
+    ) -> None:
+        if (
+            type(user_id) is not str
+            or not user_id
+            or type(desired_memberships) is not tuple
+            or type(expected_memberships) is not tuple
+            or type(expected_mappings) is not tuple
+            or type(expected_snapshot_group_keys) is not tuple
+            or type(expected_classes) is not tuple
+            or len(expected_snapshot_group_keys) != len(set(expected_snapshot_group_keys))
+            or len({item.class_id for item in desired_memberships}) != len(desired_memberships)
+            or any(
+                type(item) is not ClassMembership
+                or item.user_id != user_id
+                or item.role != "student"
+                or item.source_provider != "github"
+                for item in desired_memberships
+            )
+            or any(type(item) is not ClassMembership or item.user_id != user_id for item in expected_memberships)
+            or any(type(item) is not ExternalGroupMapping or item.provider != "github" for item in expected_mappings)
+            or any(
+                type(key) is not tuple
+                or len(key) != 2
+                or any(type(value) is not str or not value for value in key)
+                for key in expected_snapshot_group_keys
+            )
+            or any(type(item) is not ClassGroup for item in expected_classes)
+            or len({item.class_id for item in expected_classes}) != len(expected_classes)
+            or type(max_snapshot_age) is not timedelta
+            or max_snapshot_age <= timedelta(0)
+            or type(future_skew) is not timedelta
+            or future_skew < timedelta(0)
+        ):
+            raise IdentityStorageError("Snapshot sincronizzazione GitHub non valido.")
+        snapshot_captured_at = _decode_datetime(
+            _encode_datetime(expected_snapshot_captured_at, "expected_snapshot_captured_at")
+        )
+        user_revision = _encode_datetime(expected_user_updated_at, "expected_user_updated_at")
+        identity_generation = _encode_datetime(expected_identity_linked_at, "expected_identity_linked_at")
+
+        def membership_row(item: ClassMembership) -> tuple[object, ...]:
+            return (
+                item.user_id,
+                item.class_id,
+                item.role,
+                _encode_datetime(item.joined_at, "joined_at"),
+                item.source_provider,
+                item.source_group_subject,
+            )
+
+        expected_membership_rows = sorted(membership_row(item) for item in expected_memberships)
+        desired_rows = [membership_row(item) for item in desired_memberships]
+        expected_mapping_rows = sorted(
+            (
+                item.organization_subject,
+                item.group_subject,
+                item.class_id,
+                _encode_datetime(item.created_at, "mapping_created_at"),
+                _encode_datetime(item.updated_at, "mapping_updated_at"),
+            )
+            for item in expected_mappings
+        )
+        if any(
+            not any(
+                mapping.class_id == membership.class_id
+                and mapping.group_subject == membership.source_group_subject
+                for mapping in expected_mappings
+            )
+            for membership in desired_memberships
+        ):
+            raise IdentityStorageError("Membership desiderata senza mapping GitHub correlato.")
+        if snapshot_captured_at < _decode_datetime(identity_generation):
+            raise IdentityStorageError("Snapshot GitHub precedente al collegamento identita.")
+        with self._transaction("synchronize_github_memberships") as connection:
+            transaction_now = self._clock()
+            if (
+                not isinstance(transaction_now, datetime)
+                or transaction_now.tzinfo is None
+                or transaction_now.utcoffset() is None
+            ):
+                raise IdentityStorageError("Clock storage sincronizzazione non valido.")
+            transaction_now = transaction_now.astimezone(timezone.utc)
+            if (
+                snapshot_captured_at <= transaction_now - max_snapshot_age
+                or snapshot_captured_at > transaction_now + future_skew
+            ):
+                raise IdentityStorageConflictError("Snapshot GitHub scaduto durante sincronizzazione.")
+            user_row = connection.execute(
+                "SELECT active, role, updated_at FROM users WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+            if user_row is None or tuple(user_row) != (1, "student", user_revision):
+                raise IdentityStorageConflictError("Utente modificato durante sincronizzazione.")
+            identity_row = connection.execute(
+                """
+                SELECT user_id, linked_at FROM external_identities
+                WHERE provider = 'github' AND subject = ?
+                """,
+                (expected_identity_subject,),
+            ).fetchone()
+            if identity_row is None or tuple(identity_row) != (user_id, identity_generation):
+                raise IdentityStorageConflictError("Identita GitHub modificata durante sincronizzazione.")
+            membership_rows = [
+                tuple(row)
+                for row in connection.execute(
+                    "SELECT * FROM class_memberships WHERE user_id = ? ORDER BY class_id, role",
+                    (user_id,),
+                ).fetchall()
+            ]
+            if membership_rows != expected_membership_rows:
+                raise IdentityStorageConflictError("Membership modificate durante sincronizzazione.")
+            connection.execute(
+                """
+                CREATE TEMP TABLE sync_expected_groups (
+                    organization_subject TEXT NOT NULL,
+                    group_subject TEXT NOT NULL,
+                    PRIMARY KEY (organization_subject, group_subject)
+                )
+                """
+            )
+            connection.executemany(
+                "INSERT INTO sync_expected_groups VALUES (?, ?)",
+                expected_snapshot_group_keys,
+            )
+            mapping_rows = sorted(
+                tuple(row)
+                for row in connection.execute(
+                    """
+                    SELECT mappings.organization_subject, mappings.group_subject,
+                           mappings.class_id, mappings.created_at, mappings.updated_at
+                    FROM external_group_mappings AS mappings
+                    INNER JOIN sync_expected_groups AS expected
+                        ON expected.organization_subject = mappings.organization_subject
+                        AND expected.group_subject = mappings.group_subject
+                    WHERE mappings.provider = 'github'
+                    """
+                ).fetchall()
+            )
+            if mapping_rows != expected_mapping_rows:
+                raise IdentityStorageConflictError("Mapping GitHub modificati durante sincronizzazione.")
+            expected_class_ids = {item.class_id for item in expected_classes}
+            if expected_class_ids != {item.class_id for item in expected_mappings}:
+                raise IdentityStorageError("Classi snapshot sincronizzazione incoerenti.")
+            for class_group in expected_classes:
+                class_row = connection.execute(
+                    "SELECT active, updated_at FROM classes WHERE class_id = ?",
+                    (class_group.class_id,),
+                ).fetchone()
+                if class_row is None or tuple(class_row) != (
+                    int(class_group.active),
+                    _encode_datetime(class_group.updated_at, "class_updated_at"),
+                ):
+                    raise IdentityStorageConflictError("Classe modificata durante sincronizzazione.")
+            if any(item.class_id not in expected_class_ids for item in desired_memberships):
+                raise IdentityStorageError("Membership desiderata senza mapping GitHub.")
+            connection.execute(
+                """
+                DELETE FROM class_memberships
+                WHERE user_id = ? AND role = 'student' AND source_provider = 'github'
+                """,
+                (user_id,),
+            )
+            connection.executemany(
+                "INSERT INTO class_memberships VALUES (?, ?, ?, ?, ?, ?)",
+                desired_rows,
+            )
+
     def onboard_pending_user_from_external_group(
         self,
         membership: ClassMembership,
