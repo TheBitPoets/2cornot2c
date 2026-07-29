@@ -929,6 +929,27 @@ def test_old_course_ai_request_cannot_populate_reopened_same_year_dialog() -> No
     )
 
 
+def test_course_ai_apply_rejects_changes_after_proposal_generation() -> None:
+    run_course_board_js(
+        """
+        const item = { id: "item", frame: { why: "before" } };
+        const year = { id: "year", title: "Year", udas: [{ id: "original", items: [item] }] };
+        state.design = { years: [year] };
+        state.courseAiYearId = "year";
+        state.courseAiProposal = { title: "Stale", udas: [{ id: "replacement", items: [] }] };
+        courseAiProposalContext = captureBoardContext();
+        item.frame.why = "generated later";
+
+        applyCourseAiProposal();
+
+        assert.equal(year.udas[0].id, "original");
+        assert.equal(item.frame.why, "generated later");
+        assert.equal(els.courseAiApplyBtn.disabled, true);
+        assert.match(els.status.textContent, /board è cambiata/);
+        """
+    )
+
+
 def test_new_project_save_does_not_discard_in_place_edits() -> None:
     run_course_board_js(
         """
@@ -952,6 +973,45 @@ def test_new_project_save_does_not_discard_in_place_edits() -> None:
           assert.equal(state.activeSavedDesign, "open.json");
           assert.equal(state.design.years[1].id, "edited-while-saving");
           assert.match(els.status.textContent, /vista aperta non e stata cambiata/);
+        });
+        """
+    )
+
+
+def test_duplicate_archive_delete_is_serialized() -> None:
+    run_course_board_js(
+        """
+        let completeDelete;
+        let deleteRequests = 0;
+        api = async (path) => {
+          if (path === "/api/school-calendars") return { calendars: [] };
+          if (path === "/api/saved-designs/delete") {
+            deleteRequests += 1;
+            return new Promise((resolve) => { completeDelete = resolve; });
+          }
+          if (path === "/api/course-source-context") {
+            return { design: { years: [] }, headings: [], sources: [] };
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        populateFilters = () => {};
+        renderSourceCatalogSummary = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [] };
+        state.activeSavedDesign = "archive.json";
+
+        const first = deleteArchiveDesign();
+        const second = deleteArchiveDesign();
+        second.then(async (result) => {
+          while (!completeDelete) await Promise.resolve();
+          assert.equal(result, false);
+          assert.equal(deleteRequests, 1);
+          completeDelete({ designs: [], deleted_calendars: [] });
+          return first;
         });
         """
     )

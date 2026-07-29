@@ -125,6 +125,8 @@ let paragraphPreviewRequestId = 0;
 let courseContextRequestId = 0;
 let courseContextRequestName = null;
 let courseAiRequestId = 0;
+let courseAiProposalContext = null;
+let deleteArchiveOperationInProgress = false;
 let frameBatch = null;
 let frameVerificationBatch = null;
 let cleanDesignSnapshot = "";
@@ -757,6 +759,19 @@ function reconcileDeletedArchive(name, payload) {
 }
 
 async function deleteArchiveDesign() {
+  if (deleteArchiveOperationInProgress) {
+    setStatus("Una cancellazione di archivio è già in corso.");
+    return false;
+  }
+  deleteArchiveOperationInProgress = true;
+  try {
+    return await deleteArchiveDesignOnce();
+  } finally {
+    deleteArchiveOperationInProgress = false;
+  }
+}
+
+async function deleteArchiveDesignOnce() {
   if (!state.activeSavedDesign) {
     setStatus("Il progetto corrente non si cancella: puoi sovrascriverlo o salvare un altro progetto come corrente.");
     renderCourseActions();
@@ -1699,6 +1714,7 @@ function defaultCourseBrief(year) {
 
 function openCourseAiDialog(year) {
   courseAiRequestId += 1;
+  courseAiProposalContext = null;
   els.courseAiGenerateBtn.disabled = false;
   const brief = { ...defaultCourseBrief(year), ...(year.ai_brief || {}) };
   state.courseAiYearId = year.id;
@@ -1762,6 +1778,7 @@ async function generateCourseAiProposal() {
       throw new Error("la board o l'anno sono cambiati durante la generazione; proposta AI ignorata");
     }
     state.courseAiProposal = payload.proposal;
+    courseAiProposalContext = boardContext;
     renderCourseAiPreview(payload.proposal);
     els.courseAiApplyBtn.disabled = false;
     setStatus(`Proposta percorso generata per ${year.title}.`);
@@ -1810,6 +1827,14 @@ function countItems(items) {
 function applyCourseAiProposal() {
   const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
   if (!year || !state.courseAiProposal) return;
+  if (
+    !courseAiProposalContext
+    || !isBoardContextUnchanged(courseAiProposalContext)
+  ) {
+    els.courseAiApplyBtn.disabled = true;
+    setStatus("Proposta AI non applicata: la board è cambiata dopo la generazione.");
+    return;
+  }
   const brief = readCourseBrief();
   year.title = state.courseAiProposal.title || year.title;
   year.description = state.courseAiProposal.description || year.description;
@@ -1820,6 +1845,7 @@ function applyCourseAiProposal() {
   year.ai_brief = brief;
   els.courseAiDialog.close();
   state.courseAiProposal = null;
+  courseAiProposalContext = null;
   renderCourse();
   renderHeadings();
   setStatus(`Proposta AI applicata a ${year.title}. Ricordati di salvare il JSON.`);
@@ -2674,8 +2700,11 @@ els.courseAiDialog.addEventListener("close", () => {
   courseAiRequestId += 1;
   clearInterval(aiProgressTimer);
   aiProgressTimer = null;
+  courseAiProposalContext = null;
+  state.courseAiProposal = null;
   els.aiBusy.hidden = true;
   els.courseAiGenerateBtn.disabled = false;
+  els.courseAiApplyBtn.disabled = true;
 });
 els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
 els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
