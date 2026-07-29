@@ -380,6 +380,26 @@ class TuiBrowserPairingBoundary:
             digest = None
         return revoked
 
+    def revoke_bearer(self, authorization_header: str) -> None:
+        bearer = None
+        revoked = False
+        try:
+            self._require_shared_registry()
+            bearer = self._bearer(authorization_header)
+            authorization_header = None
+            try:
+                revoked = self.tui_sessions.revoke(bearer) is True
+            except (InvalidCredentialError, AccountDisabledError):
+                revoked = False
+            except Exception:
+                raise TuiPairingUnavailableError() from None
+            self._require_shared_registry()
+        finally:
+            bearer = None
+            authorization_header = None
+        if not revoked:
+            raise HttpAuthenticationRequiredError()
+
     def authenticate_bearer(self, authorization_header: str) -> TuiAuthenticatedContext:
         bearer = None
         invalid = False

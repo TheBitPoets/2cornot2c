@@ -1882,6 +1882,7 @@ def main() -> int:
     args = parse_args()
     server_token = os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", "")
     credential = None
+    exit_code = 1
     try:
         if args.pair_browser:
             if server_token.strip():
@@ -1890,7 +1891,7 @@ def main() -> int:
                 )
             credential = thebitlab_tui_pairing_client.acquire_tui_bearer(args.server_url)
             server_token = credential.bearer_token
-        return run_tui(
+        exit_code = run_tui(
             student_id=args.student_id,
             root=args.root.resolve(strict=False),
             now=args.now,
@@ -1906,10 +1907,25 @@ def main() -> int:
         )
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)
-        return 1
+        exit_code = 1
     finally:
         server_token = ""
-        credential = None
+        if credential is not None:
+            try:
+                thebitlab_tui_pairing_client.revoke_tui_bearer(
+                    args.server_url,
+                    credential,
+                )
+            except ValueError as error:
+                print(
+                    "Attenzione: sessione TUI remota non revocata:\n"
+                    f"{error}",
+                    file=sys.stderr,
+                )
+                exit_code = 1
+            finally:
+                credential = None
+    return exit_code
 
 
 if __name__ == "__main__":

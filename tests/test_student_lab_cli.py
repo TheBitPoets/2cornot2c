@@ -167,11 +167,98 @@ def test_main_pairs_in_browser_and_passes_bearer_only_in_memory(monkeypatch, tmp
         "acquire_tui_bearer",
         lambda url: SimpleNamespace(bearer_token=bearer),
     )
+    monkeypatch.setattr(
+        student_lab_cli.thebitlab_tui_pairing_client,
+        "revoke_tui_bearer",
+        lambda url, credential: captured.update(
+            revoked_url=url,
+            revoked_credential=credential,
+        ),
+    )
     monkeypatch.setattr(student_lab_cli, "run_tui", lambda **kwargs: captured.update(kwargs) or 0)
 
     assert student_lab_cli.main() == 0
     assert captured["server_token"] == bearer
     assert captured["server_url"] == "https://school.test"
+    assert captured["revoked_url"] == "https://school.test"
+    assert captured["revoked_credential"].bearer_token == bearer
+
+
+def test_main_reports_unconfirmed_remote_logout(monkeypatch, tmp_path, capsys) -> None:
+    bearer = "B" * 48
+    monkeypatch.delenv("THEBITLAB_STUDENT_HELP_TOKEN", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "student_lab_cli.py",
+            "--student-id",
+            "rossi-mario",
+            "--root",
+            str(tmp_path),
+            "--server-url",
+            "https://school.test",
+            "--pair-browser",
+        ],
+    )
+    monkeypatch.setattr(
+        student_lab_cli.thebitlab_tui_pairing_client,
+        "acquire_tui_bearer",
+        lambda url: SimpleNamespace(bearer_token=bearer),
+    )
+    monkeypatch.setattr(
+        student_lab_cli.thebitlab_tui_pairing_client,
+        "revoke_tui_bearer",
+        lambda url, credential: (_ for _ in ()).throw(
+            ValueError("Logout TUI remoto non confermato.")
+        ),
+    )
+    monkeypatch.setattr(student_lab_cli, "run_tui", lambda **kwargs: 0)
+
+    assert student_lab_cli.main() == 1
+    error = capsys.readouterr().err
+    assert "sessione TUI remota non revocata" in error
+    assert bearer not in error
+
+
+def test_main_revokes_paired_session_during_terminal_interrupt(monkeypatch, tmp_path) -> None:
+    credential = SimpleNamespace(bearer_token="B" * 48)
+    revoked = []
+    monkeypatch.delenv("THEBITLAB_STUDENT_HELP_TOKEN", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "student_lab_cli.py",
+            "--student-id",
+            "rossi-mario",
+            "--root",
+            str(tmp_path),
+            "--server-url",
+            "https://school.test",
+            "--pair-browser",
+        ],
+    )
+    monkeypatch.setattr(
+        student_lab_cli.thebitlab_tui_pairing_client,
+        "acquire_tui_bearer",
+        lambda url: credential,
+    )
+    monkeypatch.setattr(
+        student_lab_cli.thebitlab_tui_pairing_client,
+        "revoke_tui_bearer",
+        lambda url, value: revoked.append((url, value)),
+    )
+    monkeypatch.setattr(
+        student_lab_cli,
+        "run_tui",
+        lambda **kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        student_lab_cli.main()
+
+    assert revoked == [("https://school.test", credential)]
 
 
 def test_main_rejects_pairing_with_legacy_environment_token(monkeypatch, capsys) -> None:

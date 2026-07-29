@@ -240,6 +240,49 @@ def test_student_browser_authorizes_and_tui_consumes_once(setup) -> None:
         boundary.consume(started.pairing_id, started.user_code)
 
 
+def test_tui_bearer_logout_revokes_exact_session_after_role_change(setup) -> None:
+    storage, clock, boundary, http = setup
+    started = boundary.begin()
+    boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
+    credential = boundary.consume(started.pairing_id, started.user_code)
+    current = storage.read_user("student-01")
+    clock.value += timedelta(seconds=1)
+    storage.save_user(
+        replace(current, role="teacher", updated_at=clock.value),
+        expected_updated_at=current.updated_at,
+    )
+
+    boundary.revoke_bearer("Bearer " + credential.bearer_token)
+
+    persisted = storage.read_session_by_token_digest(
+        session_token_digest(credential.bearer_token)
+    )
+    assert persisted.revoked_at == clock.value
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.revoke_bearer("Bearer " + credential.bearer_token)
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.authenticate_bearer("Bearer " + credential.bearer_token)
+
+
+def test_tui_logout_storage_failure_is_not_misreported_as_invalid_bearer(
+    setup, monkeypatch
+) -> None:
+    _storage, _clock, boundary, http = setup
+    started = boundary.begin()
+    boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
+    credential = boundary.consume(started.pairing_id, started.user_code)
+    monkeypatch.setattr(
+        boundary.tui_sessions,
+        "revoke",
+        lambda bearer: (_ for _ in ()).throw(RuntimeError("database offline")),
+    )
+
+    with pytest.raises(TuiPairingUnavailableError) as captured:
+        boundary.revoke_bearer("Bearer " + credential.bearer_token)
+
+    assert credential.bearer_token not in str(captured.value)
+
+
 def test_browser_role_race_returns_authorization_denied(setup, monkeypatch) -> None:
     storage, clock, boundary, http = setup
     started = boundary.begin()

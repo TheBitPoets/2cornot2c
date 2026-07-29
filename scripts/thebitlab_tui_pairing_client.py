@@ -159,6 +159,56 @@ class TuiPairingClient:
             verification_path = None
             result = None
 
+    def logout(
+        self,
+        credential: TuiBearerCredential,
+        *,
+        timeout: float = 15,
+    ) -> None:
+        request = None
+        authorization = None
+        try:
+            timeout = _request_timeout(timeout)
+            if type(credential) is not TuiBearerCredential:
+                raise TuiPairingClientError("Credenziale TUI locale non valida.")
+            deadline = self._monotonic_now() + timeout
+            authorization = "Bearer " + credential.bearer_token
+            while True:
+                remaining = deadline - self._monotonic_now()
+                if remaining <= 0:
+                    raise TuiPairingClientError(
+                        "Logout TUI remoto non confermato."
+                    )
+                request = urllib.request.Request(
+                    self.server_url + "/auth/tui/logout",
+                    data=b"",
+                    headers={"Authorization": authorization},
+                    method="POST",
+                )
+                try:
+                    payload = self._request_json_bounded(
+                        request,
+                        timeout=max(0.001, remaining),
+                        expected_status=204,
+                    )
+                except _PairingRateLimitedError as error:
+                    request = None
+                    self._sleep_bounded(float(error.retry_after), deadline)
+                    continue
+                except Exception:
+                    raise TuiPairingClientError(
+                        "Logout TUI remoto non confermato."
+                    ) from None
+                if payload is not None:
+                    raise TuiPairingClientError(
+                        "Logout TUI remoto non confermato."
+                    )
+                return
+        finally:
+            credential = None
+            request = None
+            authorization = None
+
     def poll(self, start: TuiPairingStart, *, timeout: float = 15) -> TuiBearerCredential:
         request = None
         payload = None
@@ -576,10 +626,16 @@ def _request_json_with_urlopen(urlopen, request, *, timeout: float, expected_sta
     try:
         response = urlopen(request, timeout=timeout)
         status = getattr(response, "status", None)
-        _require_json_response_headers(response)
-        body = _bounded_read(response)
         if status != expected_status:
             raise TuiPairingClientError("Il server pairing ha restituito uno stato inatteso.")
+        if expected_status == 204:
+            _require_empty_response_headers(response)
+            body = _bounded_read(response)
+            if body:
+                raise TuiPairingClientError("Il server pairing ha restituito una risposta non valida.")
+            return None
+        _require_json_response_headers(response)
+        body = _bounded_read(response)
         return _decode_json(body)
     except urllib.error.HTTPError as error:
         response = error
@@ -644,6 +700,22 @@ def acquire_tui_bearer(
         credential = None
 
 
+def revoke_tui_bearer(
+    server_url: str,
+    credential: TuiBearerCredential,
+    *,
+    client: TuiPairingClient | None = None,
+) -> None:
+    """Revoke one memory-only TUI credential before dropping local references."""
+
+    pairing_client = client or TuiPairingClient(server_url)
+    try:
+        pairing_client.logout(credential)
+    finally:
+        credential = None
+        pairing_client = None
+
+
 def _canonical_server_origin(value: str) -> str:
     text = str(value or "").strip()
     try:
@@ -681,6 +753,25 @@ def _require_json_response_headers(response) -> None:
     content_types = headers.get_all("Content-Type") if hasattr(headers, "get_all") else None
     encodings = headers.get_all("Content-Encoding") if hasattr(headers, "get_all") else None
     if content_types != ["application/json; charset=utf-8"] or encodings not in (None, []):
+        raise TuiPairingClientError("Il server pairing ha restituito header non validi.")
+
+
+def _require_empty_response_headers(response) -> None:
+    headers = getattr(response, "headers", None)
+    if headers is None:
+        return
+    if not hasattr(headers, "get_all"):
+        raise TuiPairingClientError("Il server pairing ha restituito header non validi.")
+    content_types = headers.get_all("Content-Type")
+    encodings = headers.get_all("Content-Encoding")
+    transfers = headers.get_all("Transfer-Encoding")
+    lengths = headers.get_all("Content-Length")
+    if (
+        content_types not in (None, [])
+        or encodings not in (None, [])
+        or transfers not in (None, [])
+        or lengths not in (None, [], ["0"])
+    ):
         raise TuiPairingClientError("Il server pairing ha restituito header non validi.")
 
 

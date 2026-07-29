@@ -22,6 +22,21 @@ from scripts.thebitlab_tui_pairing_client import (
 NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
 
 
+class EmptyResponse:
+    def __init__(self):
+        self.status = 204
+        self._body = b""
+        self.headers = Message()
+        self.headers.add_header("Content-Length", "0")
+        self.closed = False
+
+    def read(self, limit=-1):
+        return self._body
+
+    def close(self):
+        self.closed = True
+
+
 class Response:
     def __init__(self, status, payload, *, content_type="application/json; charset=utf-8"):
         self.status = status
@@ -106,6 +121,109 @@ def test_begin_and_poll_keep_code_and_bearer_out_of_repr() -> None:
     assert requests[0].method == "POST" and requests[0].data == b""
     assert json.loads(requests[1].data) == {"code": "PAIRCODE123"}
     assert json.loads(requests[2].data) == {"code": "PAIRCODE123"}
+
+
+def test_logout_sends_bearer_once_and_requires_empty_204_response() -> None:
+    captured = {}
+    response = EmptyResponse()
+
+    def open_request(request, timeout):
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return response
+
+    credential = TuiBearerCredential("T" * 48, NOW + timedelta(hours=8))
+    client = TuiPairingClient("https://school.test", urlopen=open_request)
+
+    client.logout(credential)
+
+    assert captured["request"].full_url == "https://school.test/auth/tui/logout"
+    assert captured["request"].method == "POST"
+    assert captured["request"].data == b""
+    assert captured["request"].get_header("Authorization") == "Bearer " + "T" * 48
+    assert response.closed is True
+
+
+def test_logout_retries_rate_limit_within_absolute_deadline() -> None:
+    headers = Message()
+    headers.add_header("Retry-After", "2")
+    responses = [http_error(429, headers=headers), EmptyResponse()]
+    sleeps = []
+
+    def open_request(*args, **kwargs):
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    client = TuiPairingClient(
+        "https://school.test",
+        urlopen=open_request,
+        monotonic=lambda: 100.0,
+        sleep=sleeps.append,
+    )
+
+    client.logout(TuiBearerCredential("T" * 48, NOW + timedelta(hours=8)))
+
+    assert sleeps == [2.0]
+    assert responses == []
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        Response(204, None),
+        http_error(401, {"error": "T" * 48}),
+    ],
+)
+def test_logout_rejects_nonempty_or_unauthorized_response_without_reflection(response) -> None:
+    def open_request(*args, **kwargs):
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    client = TuiPairingClient("https://school.test", urlopen=open_request)
+    credential = TuiBearerCredential("T" * 48, NOW + timedelta(hours=8))
+
+    with pytest.raises(TuiPairingClientError, match="Logout TUI remoto non confermato") as captured:
+        client.logout(credential)
+
+    assert "T" * 48 not in str(captured.value)
+
+
+def test_logout_failure_clears_bearer_from_recursive_tracebacks() -> None:
+    secret = "L" * 48
+    reflected = http_error(401, {"error": secret})
+    client = TuiPairingClient(
+        "https://school.test",
+        urlopen=lambda *args, **kwargs: (_ for _ in ()).throw(reflected),
+    )
+    credential = TuiBearerCredential(secret, NOW + timedelta(hours=8))
+
+    with pytest.raises(TuiPairingClientError) as captured:
+        client.logout(credential)
+
+    fragments = [str(captured.value), repr(captured.value)]
+    pending = [captured.value]
+    seen = set()
+    while pending:
+        error = pending.pop()
+        if id(error) in seen:
+            continue
+        seen.add(id(error))
+        traceback = error.__traceback__
+        while traceback is not None:
+            filename = traceback.tb_frame.f_code.co_filename.replace("\\", "/")
+            if filename.endswith("/scripts/thebitlab_tui_pairing_client.py"):
+                fragments.extend(
+                    repr(value) for value in traceback.tb_frame.f_locals.values()
+                )
+            traceback = traceback.tb_next
+        if error.__context__ is not None:
+            pending.append(error.__context__)
+        if error.__cause__ is not None:
+            pending.append(error.__cause__)
+    assert secret not in "\n".join(fragments)
 
 
 def test_begin_maps_rate_limit_to_sanitized_public_error() -> None:
