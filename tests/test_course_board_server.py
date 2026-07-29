@@ -106,6 +106,53 @@ def test_extract_headings_and_section_text_include_paragraph_content(tmp_path, m
     )
 
 
+def test_markdown_line_iteration_is_streaming_and_preserves_line_endings() -> None:
+    class SplitlinesForbidden(str):
+        def splitlines(self, *args, **kwargs):
+            raise AssertionError("splitlines must not materialize all lines")
+
+    text = SplitlinesForbidden("# One\r\n## Two\r### Three\n")
+
+    assert list(course_board_server.iter_markdown_lines(text)) == [
+        "# One",
+        "## Two",
+        "### Three",
+    ]
+
+
+def test_heading_extraction_rejects_excessive_line_count(tmp_path, monkeypatch) -> None:
+    descriptor = course_board_server.course_source_catalog.CourseSource(
+        source_id="local",
+        label="Local",
+        source_type="local_markdown",
+        provider="local",
+        path=".",
+        repository=None,
+        ref=None,
+        files=("lesson.md",),
+        updated_at=None,
+        indexing_status="current",
+    )
+    source_file = course_board_server.course_source_catalog.LocalCourseSourceFile(
+        source=descriptor,
+        relative_path="lesson.md",
+        resolved_path=tmp_path / "lesson.md",
+        expected_size=None,
+        expected_identity=None,
+        expected_sha256=None,
+    )
+    monkeypatch.setattr(course_board_server, "MAX_MARKDOWN_LINES_PER_SOURCE", 3)
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="troppe righe",
+    ):
+        course_board_server.headings_from_source_snapshot(
+            source_file,
+            "ordinary\nlines\nwithout headings\nstill fail",
+        )
+
+
 def test_extract_headings_rejects_oversized_heading_catalog(tmp_path, monkeypatch) -> None:
     (tmp_path / "headings.md").write_text(
         "\n".join("# topic" for _ in range(course_board_server.MAX_HEADINGS_PER_SOURCE + 1)),

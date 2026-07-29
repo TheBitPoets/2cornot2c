@@ -125,6 +125,7 @@ MAX_CATALOG_EXCERPT_CHARS = 400
 MAX_TOTAL_CATALOG_EXCERPT_CHARS = 1_000_000
 MAX_AI_CATALOG_HEADINGS = 5_000
 MAX_HEADINGS_PER_SOURCE = 10_000
+MAX_MARKDOWN_LINES_PER_SOURCE = 250_000
 MAX_TOTAL_HEADINGS = 50_000
 MAX_HEADING_TITLE_CHARS = 512
 AI_FRAME_TIMEOUT_SECONDS = 120
@@ -2078,17 +2079,44 @@ def extract_headings(
     return headings
 
 
+def iter_markdown_lines(source_text: str):
+    """Yield LF, CRLF, or CR-delimited lines without materializing a list."""
+
+    start = 0
+    text_length = len(source_text)
+    while start < text_length:
+        lf_index = source_text.find("\n", start)
+        cr_index = source_text.find("\r", start)
+        if lf_index < 0:
+            delimiter = cr_index
+        elif cr_index < 0:
+            delimiter = lf_index
+        else:
+            delimiter = min(lf_index, cr_index)
+        if delimiter < 0:
+            yield source_text[start:]
+            return
+        yield source_text[start:delimiter]
+        start = delimiter + 1
+        if source_text[delimiter] == "\r" and start < text_length and source_text[start] == "\n":
+            start += 1
+
+
 def headings_from_source_snapshot(
     source_file: course_source_catalog.LocalCourseSourceFile,
     source_text: str,
 ) -> list[dict]:
-    """Extract public heading metadata from one verified source snapshot."""
+    """Extract bounded public heading metadata from one verified source snapshot."""
 
     source = source_file.relative_path
     descriptor = source_file.source
     seen: dict[str, int] = {}
     headings: list[dict] = []
-    for lineno, line in enumerate(source_text.splitlines(), start=1):
+    for lineno, line in enumerate(iter_markdown_lines(source_text), start=1):
+        if lineno > MAX_MARKDOWN_LINES_PER_SOURCE:
+            raise course_source_catalog.CourseSourceCatalogError(
+                f"La fonte {source} contiene troppe righe Markdown."
+            )
         match = HEADING_RE.match(line)
         if not match:
             continue
