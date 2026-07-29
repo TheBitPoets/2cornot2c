@@ -806,6 +806,27 @@ def test_late_new_project_context_cannot_replace_newly_opened_archive() -> None:
     )
 
 
+def test_detached_draft_preview_posts_its_in_memory_design() -> None:
+    run_course_board_js(
+        """
+        state.design = { source_files: ["draft.md"], years: [] };
+        state.activeSavedDesign = "";
+        state.isNewDesign = true;
+        api = async (path, options) => {
+          assert.equal(path, "/api/heading-content");
+          assert.equal(options.method, "POST");
+          const body = JSON.parse(options.body);
+          assert.equal(body.id, "draft-heading");
+          assert.deepEqual(body.design, state.design);
+          return { heading: { title: "Draft", content: "Detached content" } };
+        };
+
+        openParagraphPreview({ id: "draft-heading", title: "Draft", source: "draft.md" })
+          .then(() => assert.match(els.paragraphContent.innerHTML, /Detached content/));
+        """
+    )
+
+
 def test_late_paragraph_preview_cannot_overwrite_newer_dialog() -> None:
     run_course_board_js(
         """
@@ -830,6 +851,28 @@ def test_late_paragraph_preview_cannot_overwrite_newer_dialog() -> None:
             assert.equal(els.paragraphDialogTitle.textContent, "Secondo");
             assert.match(els.paragraphContent.innerHTML, /Nuovo/);
           });
+        });
+        """
+    )
+
+
+def test_course_ai_proposal_is_ignored_after_concurrent_board_edit() -> None:
+    run_course_board_js(
+        """
+        let completeRequest;
+        api = async () => new Promise((resolve) => { completeRequest = resolve; });
+        const year = { id: "year", title: "Before", udas: [] };
+        state.design = { years: [year] };
+        state.courseAiYearId = "year";
+
+        const generating = generateCourseAiProposal();
+        year.title = "Edited while generating";
+        completeRequest({ proposal: { title: "Stale", stats: {}, udas: [] } });
+
+        generating.then(() => {
+          assert.equal(state.courseAiProposal, null);
+          assert.equal(els.courseAiApplyBtn.disabled, true);
+          assert.match(els.status.textContent, /proposta AI ignorata/);
         });
         """
     )

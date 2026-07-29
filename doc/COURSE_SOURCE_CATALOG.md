@@ -49,7 +49,7 @@ Campi:
 | `updated_at` | Timestamp UTC canonico opzionale |
 | `indexing_status` | `ready`, `pending`, `error` o `disabled` |
 
-Il server rifiuta ID duplicati, campi sconosciuti, path non canonici, repository con segmenti `.`/`..`, ref Git non sicure, file non Markdown e duplicati locali anche quando alias o hard link risolvono allo stesso file. La lettura apre prima il file e verifica il path reale dell'handle contro la root del repository, impedendo escape e sostituzioni concorrenti tramite link simbolici/junction. Ogni Markdown locale è limitato a 8 MiB; un catalogo può indicizzare al massimo 256 file, 64 MiB complessivi e 50.000 heading (massimo 10.000 per file).
+Il server rifiuta ID duplicati, campi sconosciuti, path non canonici, repository con segmenti `.`/`..`, ref Git non sicure, file non Markdown e duplicati locali anche quando alias o hard link risolvono allo stesso file. La lettura apre prima il file e verifica il path reale dell'handle contro la root del repository, l'identità, la dimensione, due letture stabili e il digest SHA-256 dello snapshot catalogato, impedendo escape e sostituzioni concorrenti tramite link simbolici/junction o riscritture in-place. Ogni Markdown locale è limitato a 8 MiB; un catalogo può indicizzare al massimo 256 file, 64 MiB complessivi e 50.000 heading (massimo 10.000 per file).
 
 ## Compatibilità `source_files`
 
@@ -65,7 +65,7 @@ Se `sources` è presente, anche come array vuoto, è autorevole e `source_files`
 
 ## API e provenienza
 
-`GET /api/course-sources` restituisce il catalogo normalizzato e `indexed_files`, cioè i file locali `ready` realmente disponibili. La Course Board usa `GET /api/course-source-context`: il server legge una sola volta il progetto corrente o `?design=<nome.json>` e restituisce insieme design, catalogo e heading, evitando revisioni archiviate miste.
+`GET /api/course-sources` restituisce il catalogo normalizzato e `indexed_files`, cioè i file locali `ready` realmente disponibili. La Course Board usa `GET /api/course-source-context`: il server legge una sola volta il progetto corrente o `?design=<nome.json>` e restituisce insieme design, catalogo e heading, evitando revisioni archiviate miste. Per una bozza nuova o separata da un archivio eliminato, `POST /api/heading-content` riceve il design in memoria e l'ID dell'heading, così la preview non ricade sul progetto corrente.
 
 `GET /api/headings` aggiunge a ogni paragrafo:
 

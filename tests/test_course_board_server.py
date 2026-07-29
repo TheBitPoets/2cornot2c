@@ -439,7 +439,22 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
             payload = json.loads(response.read().decode("utf-8"))
         assert payload["heading"]["title"] == "Array"
         assert payload["heading"]["content"] == "Testo leggibile."
-        assert reads == 1
+        detached_request = urllib.request.Request(
+            "http://127.0.0.1:%s/api/heading-content" % server.server_address[1],
+            data=json.dumps({
+                "id": heading["id"],
+                "design": {"source_files": ["lesson.md"]},
+            }).encode("utf-8"),
+            headers={
+                "Authorization": authorization,
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(detached_request, timeout=5) as response:
+            detached_payload = json.loads(response.read().decode("utf-8"))
+        assert detached_payload["heading"]["content"] == "Testo leggibile."
+        assert reads == 2
     finally:
         server.shutdown()
         server.server_close()

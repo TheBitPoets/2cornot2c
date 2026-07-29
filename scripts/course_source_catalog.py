@@ -73,6 +73,7 @@ class LocalCourseSourceFile:
     resolved_path: Path
     expected_size: int | None
     expected_identity: tuple[int, int] | None
+    expected_sha256: str | None
 
 
 def normalize_course_sources(
@@ -181,26 +182,46 @@ def local_markdown_source_files(
                     )
                 if metadata.st_ino:
                     seen_file_identities.add(identity)
-            files.append(
-                LocalCourseSourceFile(
-                    source=source,
-                    relative_path=relative_path,
-                    resolved_path=resolved,
-                    expected_size=None if metadata is None else metadata.st_size,
-                    expected_identity=(
-                        None
-                        if metadata is None
-                        else (metadata.st_dev, metadata.st_ino)
-                    ),
-                )
+            candidate = LocalCourseSourceFile(
+                source=source,
+                relative_path=relative_path,
+                resolved_path=resolved,
+                expected_size=None if metadata is None else metadata.st_size,
+                expected_identity=(
+                    None
+                    if metadata is None
+                    else (metadata.st_dev, metadata.st_ino)
+                ),
+                expected_sha256=None,
             )
+            if metadata is not None:
+                snapshot_digest = hashlib.sha256(
+                    _read_local_markdown_bytes(candidate, repository_root)
+                ).hexdigest()
+                candidate = LocalCourseSourceFile(
+                    source=candidate.source,
+                    relative_path=candidate.relative_path,
+                    resolved_path=candidate.resolved_path,
+                    expected_size=candidate.expected_size,
+                    expected_identity=candidate.expected_identity,
+                    expected_sha256=snapshot_digest,
+                )
+            files.append(candidate)
     return tuple(files)
 
 
 def read_local_markdown_text(item: LocalCourseSourceFile, root: Path) -> str:
-    """Read one source through an opened handle verified against the repository."""
+    """Read exactly the catalogued source snapshot through a verified handle."""
 
-    repository_root = root.resolve()
+    payload = _read_local_markdown_bytes(item, root.resolve())
+    return payload.decode("utf-8", errors="replace")
+
+
+def _read_local_markdown_bytes(
+    item: LocalCourseSourceFile,
+    repository_root: Path,
+) -> bytes:
+    """Return one stable handle snapshot, optionally matching its catalog digest."""
     try:
         with item.resolved_path.open("rb") as stream:
             opened_path = _opened_file_path(stream.fileno()).resolve()
@@ -257,7 +278,14 @@ def read_local_markdown_text(item: LocalCourseSourceFile, root: Path) -> str:
         raise CourseSourceCatalogError(
             f"File fonte locale troppo grande: {item.relative_path}."
         )
-    return payload.decode("utf-8", errors="replace")
+    if (
+        item.expected_sha256 is not None
+        and hashlib.sha256(payload).hexdigest() != item.expected_sha256
+    ):
+        raise CourseSourceCatalogError(
+            f"File fonte locale cambiato durante la lettura: {item.relative_path}."
+        )
+    return payload
 
 
 def course_source_catalog_payload(

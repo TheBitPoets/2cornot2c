@@ -4417,6 +4417,23 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         payload = self.read_teacher_json()
         if payload is None:
             return
+        if parsed.path == "/api/heading-content":
+            heading_id = payload.get("id", "")
+            design = payload.get("design")
+            if not isinstance(heading_id, str) or not isinstance(design, dict):
+                self.write_error_json(400, "Richiesta contenuto paragrafo non valida.")
+                return
+            try:
+                snapshot = heading_content_snapshot(design, heading_id)
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+                return
+            if snapshot is None:
+                self.write_error_json(404, "Paragrafo non trovato.")
+                return
+            heading, content = snapshot
+            self.write_json({"heading": {**heading, "content": content}})
+            return
         if parsed.path == "/api/course-design":
             try:
                 write_design(payload)

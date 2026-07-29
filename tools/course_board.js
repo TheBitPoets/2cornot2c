@@ -1603,10 +1603,16 @@ async function openParagraphPreview(paragraph) {
   els.paragraphSourceLink.hidden = true;
   els.paragraphDialog.showModal();
   try {
-    const designQuery = state.activeSavedDesign
-      ? `&design=${encodeURIComponent(state.activeSavedDesign)}`
-      : "";
-    const payload = await api(`/api/heading-content?id=${encodeURIComponent(paragraph.id)}${designQuery}`);
+    const payload = state.isNewDesign
+      ? await api("/api/heading-content", {
+          method: "POST",
+          body: JSON.stringify({ id: paragraph.id, design: state.design }),
+        })
+      : await api(
+          `/api/heading-content?id=${encodeURIComponent(paragraph.id)}${
+            state.activeSavedDesign ? `&design=${encodeURIComponent(state.activeSavedDesign)}` : ""
+          }`,
+        );
     if (requestId !== paragraphPreviewRequestId) return;
     const heading = payload.heading || paragraph;
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
@@ -1694,6 +1700,8 @@ async function generateCourseAiProposal() {
   if (!year) return;
   const brief = readCourseBrief();
   year.ai_brief = brief;
+  const boardContext = captureBoardContext();
+  const requestYearId = state.courseAiYearId;
   els.courseAiGenerateBtn.disabled = true;
   els.courseAiApplyBtn.disabled = true;
   els.courseAiPreview.innerHTML = '<p class="empty">Generazione proposta in corso...</p>';
@@ -1708,6 +1716,12 @@ async function generateCourseAiProposal() {
         brief,
       }),
     });
+    if (
+      !isBoardContextUnchanged(boardContext)
+      || state.courseAiYearId !== requestYearId
+    ) {
+      throw new Error("la board o l'anno sono cambiati durante la generazione; proposta AI ignorata");
+    }
     state.courseAiProposal = payload.proposal;
     renderCourseAiPreview(payload.proposal);
     els.courseAiApplyBtn.disabled = false;
