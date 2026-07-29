@@ -1013,11 +1013,24 @@ class SqliteIdentityStorage:
         return [self._external_identity(row) for row in rows]
 
     def unlink_external_identity(self, provider: str, subject: str) -> bool:
+        normalized_provider = provider.lower()
         with self._transaction("unlink_external_identity") as connection:
+            owner = connection.execute(
+                "SELECT user_id FROM external_identities WHERE provider = ? AND subject = ?",
+                (normalized_provider, subject),
+            ).fetchone()
             cursor = connection.execute(
                 "DELETE FROM external_identities WHERE provider = ? AND subject = ?",
-                (provider.lower(), subject),
+                (normalized_provider, subject),
             )
+            if cursor.rowcount == 1 and normalized_provider == "github":
+                connection.execute(
+                    """
+                    DELETE FROM class_memberships
+                    WHERE user_id = ? AND role = 'student' AND source_provider = 'github'
+                    """,
+                    (owner["user_id"],),
+                )
             return cursor.rowcount == 1
 
     def unlink_external_identity_for_active_user(
@@ -1057,6 +1070,14 @@ class SqliteIdentityStorage:
                 ),
             )
             if cursor.rowcount == 1:
+                if provider.lower() == "github":
+                    connection.execute(
+                        """
+                        DELETE FROM class_memberships
+                        WHERE user_id = ? AND role = 'student' AND source_provider = 'github'
+                        """,
+                        (user_id,),
+                    )
                 return True
             exists = connection.execute(
                 """
@@ -1139,6 +1160,14 @@ class SqliteIdentityStorage:
                 ),
             )
             if cursor.rowcount == 1:
+                if provider.lower() == "github":
+                    connection.execute(
+                        """
+                        DELETE FROM class_memberships
+                        WHERE user_id = ? AND role = 'student' AND source_provider = 'github'
+                        """,
+                        (user_id,),
+                    )
                 return True
             exists = connection.execute(
                 """

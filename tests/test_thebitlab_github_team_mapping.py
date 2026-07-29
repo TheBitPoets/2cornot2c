@@ -469,6 +469,7 @@ def test_unlinked_github_identity_revokes_only_github_memberships(setup) -> None
     manual = ClassMembership("pending-01", "manual-class", "student", NOW)
     storage.save_membership(manual)
     assert storage.unlink_external_identity("github", "123456") is True
+    assert storage.list_user_memberships("pending-01") == [manual]
 
     result = GitHubMembershipSyncService(
         storage,
@@ -476,9 +477,9 @@ def test_unlinked_github_identity_revokes_only_github_memberships(setup) -> None
         clock=clock,
     ).reconcile("pending-01")
 
-    assert result.status == "synchronized"
+    assert result.status == "unchanged"
     assert result.reason == "github-unlinked"
-    assert result.removed_class_ids == ("class-01",)
+    assert result.removed_class_ids == ()
     assert storage.list_user_memberships("pending-01") == [manual]
 
 

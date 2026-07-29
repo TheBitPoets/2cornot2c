@@ -32,7 +32,13 @@ from scripts.thebitlab_auth_services import (
     session_token_digest,
     TuiPairingSessionService,
 )
-from scripts.thebitlab_identity import AccountDisabledError, ExternalIdentity, UserAccount
+from scripts.thebitlab_identity import (
+    AccountDisabledError,
+    ClassGroup,
+    ClassMembership,
+    ExternalIdentity,
+    UserAccount,
+)
 from scripts.thebitlab_identity_sqlite import (
     IdentityStorageConflictError,
     IdentityStorageNotFoundError,
@@ -130,10 +136,18 @@ def test_authenticated_external_account_link_unlink_and_relink(storage) -> None:
     assert linked.provider_key == ("github", "123456")
     assert linked.user_id == user.user_id
     assert service.link(user.user_id, github_assertion()).linked_at == linked.linked_at
+    storage.create_class(ClassGroup("github-class", "GitHub", "2026/27", True, NOW, NOW))
+    storage.create_class(ClassGroup("manual-class", "Manual", "2026/27", True, NOW, NOW))
+    storage.save_membership(
+        ClassMembership(user.user_id, "github-class", "student", NOW, "github", "2002")
+    )
+    manual_membership = ClassMembership(user.user_id, "manual-class", "student", NOW)
+    storage.save_membership(manual_membership)
 
     removed = service.unlink(user.user_id, expected_session=issued.session)
     assert removed == linked
     assert storage.read_external_identity("github", "123456") is None
+    assert storage.list_user_memberships(user.user_id) == [manual_membership]
     with pytest.raises(ExternalIdentityNotLinkedError):
         service.unlink(user.user_id, expected_session=issued.session)
 
