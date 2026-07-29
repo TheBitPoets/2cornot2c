@@ -619,6 +619,33 @@ def test_archive_save_response_does_not_relabel_a_newly_opened_project() -> None
     )
 
 
+def test_late_initial_load_cannot_replace_a_newer_board_context() -> None:
+    run_course_board_js(
+        """
+        let completeContext;
+        api = async (path) => {
+          if (path === "/api/course-source-context") {
+            return new Promise((resolve) => { completeContext = resolve; });
+          }
+          if (path === "/api/ai-config") return { providers: [] };
+          if (path === "/api/saved-designs") return { designs: [] };
+          throw new Error("Unexpected request: " + path);
+        };
+        state.design = { years: [{ id: "initial" }] };
+        const loading = loadAll();
+        const newer = { years: [{ id: "newer" }] };
+        state.design = newer;
+        state.activeSavedDesign = "newer.json";
+        completeContext({ design: { years: [{ id: "current" }] }, headings: [], sources: [] });
+
+        loading.then(() => {
+          assert.equal(state.design, newer);
+          assert.equal(state.activeSavedDesign, "newer.json");
+        });
+        """
+    )
+
+
 def test_loading_archived_design_refreshes_its_source_context() -> None:
     run_course_board_js(
         """
@@ -878,6 +905,28 @@ def test_course_ai_proposal_is_ignored_after_concurrent_board_edit() -> None:
     )
 
 
+def test_old_course_ai_request_cannot_populate_reopened_same_year_dialog() -> None:
+    run_course_board_js(
+        """
+        let completeRequest;
+        api = async () => new Promise((resolve) => { completeRequest = resolve; });
+        const year = { id: "year", title: "Year", udas: [] };
+        state.design = { years: [year] };
+        openCourseAiDialog(year);
+        const generating = generateCourseAiProposal();
+        els.courseAiDialog.close();
+        openCourseAiDialog(year);
+        completeRequest({ proposal: { title: "Old proposal", stats: {}, udas: [] } });
+
+        generating.then(() => {
+          assert.equal(state.courseAiProposal, null);
+          assert.equal(els.courseAiApplyBtn.disabled, true);
+          assert.match(els.courseAiPreview.innerHTML, /Modifica il brief/);
+        });
+        """
+    )
+
+
 def test_new_project_save_does_not_discard_in_place_edits() -> None:
     run_course_board_js(
         """
@@ -1025,6 +1074,50 @@ def test_stale_delete_cannot_cancel_a_newer_archived_load() -> None:
             return loading.then(() => {
               assert.equal(state.activeSavedDesign, "second.json");
               assert.equal(state.design.years[0].id, "second");
+            });
+          });
+        });
+        """
+    )
+
+
+def test_delete_invalidates_newer_load_of_the_same_deleted_archive() -> None:
+    run_course_board_js(
+        """
+        let completeDelete;
+        let completeLoad;
+        api = async (path) => {
+          if (path === "/api/school-calendars") return { calendars: [] };
+          if (path === "/api/saved-designs/delete") {
+            return new Promise((resolve) => { completeDelete = resolve; });
+          }
+          if (path === "/api/course-source-context?design=first.json") {
+            return new Promise((resolve) => { completeLoad = resolve; });
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        populateFilters = () => {};
+        renderSourceCatalogSummary = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "first" }] };
+        state.activeSavedDesign = "first.json";
+        state.savedDesigns = [{ name: "first.json" }];
+
+        const deleting = deleteArchiveDesign();
+        Promise.resolve().then(() => Promise.resolve()).then(() => {
+          const loading = loadSavedDesignByName("first.json", { confirmFirst: false });
+          completeDelete({ designs: [], deleted_calendars: [] });
+          return deleting.then(() => {
+            assert.equal(state.activeSavedDesign, "");
+            assert.equal(state.isNewDesign, true);
+            completeLoad({ design: { years: [{ id: "deleted" }] }, headings: [], sources: [] });
+            return loading.then(() => {
+              assert.equal(state.activeSavedDesign, "");
+              assert.equal(state.design.years[0].id, "first");
             });
           });
         });

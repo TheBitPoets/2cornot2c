@@ -123,6 +123,8 @@ const AI_PROGRESS_STAGES = [
 let aiProgressTimer = null;
 let paragraphPreviewRequestId = 0;
 let courseContextRequestId = 0;
+let courseContextRequestName = null;
+let courseAiRequestId = 0;
 let frameBatch = null;
 let frameVerificationBatch = null;
 let cleanDesignSnapshot = "";
@@ -383,11 +385,15 @@ async function fetchCourseContext(name = "") {
 
 async function loadAll() {
   setStatus("Caricamento...");
+  const boardContext = captureBoardContext();
+  const requestId = ++courseContextRequestId;
+  courseContextRequestName = "";
   const [courseContext, aiConfig, savedDesigns] = await Promise.all([
     fetchCourseContext(),
     api("/api/ai-config"),
     api("/api/saved-designs"),
   ]);
+  if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) return;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.design = courseContext.design;
@@ -508,6 +514,7 @@ async function loadCurrentDesign() {
   setStatus("Caricamento progetto corrente...");
   const boardContext = captureBoardContext();
   const requestId = ++courseContextRequestId;
+  courseContextRequestName = "";
   const courseContext = await fetchCourseContext();
   if (requestId !== courseContextRequestId) return;
   if (!isBoardContextUnchanged(boardContext)) {
@@ -548,6 +555,7 @@ async function loadSavedDesignByName(name, options = {}) {
   setStatus(`Caricamento progetto salvato "${name}"...`);
   const boardContext = captureBoardContext();
   const requestId = ++courseContextRequestId;
+  courseContextRequestName = name;
   const courseContext = await fetchCourseContext(name);
   if (requestId !== courseContextRequestId) return;
   if (!isBoardContextUnchanged(boardContext)) {
@@ -716,6 +724,21 @@ async function persistCurrentProject() {
   return true;
 }
 
+function reconcileStaleArchiveDelete(name, payload) {
+  if (courseContextRequestName === name) {
+    courseContextRequestId += 1;
+    courseContextRequestName = null;
+    const detachedDraft = reconcileDeletedArchive(name, payload);
+    const preserved = detachedDraft ? " La bozza resta aperta senza nome archivio." : "";
+    setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
+    return;
+  }
+  state.savedDesigns = payload.designs || [];
+  renderSavedDesigns();
+  renderCourseActions();
+  setStatus(`Progetto archiviato eliminato: ${name}. Un caricamento più recente controlla la vista aperta.`);
+}
+
 function reconcileDeletedArchive(name, payload) {
   state.savedDesigns = payload.designs || [];
   const detachedDraft = state.activeSavedDesign === name;
@@ -782,6 +805,7 @@ async function deleteArchiveDesign() {
   }
   setStatus(`Cancellazione progetto "${name}"...`);
   const requestId = ++courseContextRequestId;
+  courseContextRequestName = null;
   const payload = await api("/api/saved-designs/delete", {
     method: "POST",
     body: JSON.stringify({
@@ -791,10 +815,7 @@ async function deleteArchiveDesign() {
     }),
   });
   if (requestId !== courseContextRequestId) {
-    state.savedDesigns = payload.designs || [];
-    renderSavedDesigns();
-    renderCourseActions();
-    setStatus(`Progetto archiviato eliminato: ${name}. Un caricamento più recente controlla la vista aperta.`);
+    reconcileStaleArchiveDelete(name, payload);
     return;
   }
   if (!isBoardContextUnchanged(boardContext)) {
@@ -805,10 +826,7 @@ async function deleteArchiveDesign() {
   }
   const courseContext = await fetchCourseContext();
   if (requestId !== courseContextRequestId) {
-    state.savedDesigns = payload.designs || [];
-    renderSavedDesigns();
-    renderCourseActions();
-    setStatus(`Progetto archiviato eliminato: ${name}. Un caricamento più recente controlla la vista aperta.`);
+    reconcileStaleArchiveDelete(name, payload);
     return;
   }
   if (!isBoardContextUnchanged(boardContext)) {
@@ -863,6 +881,7 @@ async function newCourseDesign() {
   if (!saved) return;
   const boardContext = captureBoardContext();
   const requestId = ++courseContextRequestId;
+  courseContextRequestName = name;
   const courseContext = await fetchCourseContext(name);
   if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) {
     setStatus(`Nuovo progetto "${name}" creato. La vista aperta non è stata cambiata.`);
@@ -1677,6 +1696,7 @@ function defaultCourseBrief(year) {
 }
 
 function openCourseAiDialog(year) {
+  courseAiRequestId += 1;
   const brief = { ...defaultCourseBrief(year), ...(year.ai_brief || {}) };
   state.courseAiYearId = year.id;
   state.courseAiProposal = null;
@@ -1716,6 +1736,7 @@ async function generateCourseAiProposal() {
   year.ai_brief = brief;
   const boardContext = captureBoardContext();
   const requestYearId = state.courseAiYearId;
+  const requestId = ++courseAiRequestId;
   els.courseAiGenerateBtn.disabled = true;
   els.courseAiApplyBtn.disabled = true;
   els.courseAiPreview.innerHTML = '<p class="empty">Generazione proposta in corso...</p>';
@@ -1733,6 +1754,7 @@ async function generateCourseAiProposal() {
     if (
       !isBoardContextUnchanged(boardContext)
       || state.courseAiYearId !== requestYearId
+      || requestId !== courseAiRequestId
     ) {
       throw new Error("la board o l'anno sono cambiati durante la generazione; proposta AI ignorata");
     }
@@ -1742,11 +1764,12 @@ async function generateCourseAiProposal() {
     setStatus(`Proposta percorso generata per ${year.title}.`);
     stopAiProgress("Proposta generata. Puoi controllarla e applicarla.");
   } catch (error) {
+    if (requestId !== courseAiRequestId) return;
     els.courseAiPreview.innerHTML = `<p class="empty">Errore: ${escapeHtml(error.message)}</p>`;
     setStatus(`AI assisted percorso non riuscito. Dettaglio provider/server: ${error.message}`);
     failAiProgress("Errore durante la generazione AI.");
   } finally {
-    els.courseAiGenerateBtn.disabled = false;
+    if (requestId === courseAiRequestId) els.courseAiGenerateBtn.disabled = false;
   }
 }
 
@@ -2644,6 +2667,7 @@ els.aiBusyCancelBtn.addEventListener("click", () => {
   cancelFrameBatch();
 });
 els.courseAiCloseBtn.addEventListener("click", () => els.courseAiDialog.close());
+els.courseAiDialog.addEventListener("close", () => { courseAiRequestId += 1; });
 els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
 els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
 els.sourceFilter.addEventListener("change", renderHeadings);

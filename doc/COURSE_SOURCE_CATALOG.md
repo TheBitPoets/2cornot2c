@@ -75,7 +75,7 @@ Se `sources` è presente, anche come array vuoto, è autorevole e `source_files`
 - `source_repository`;
 - `source_ref`.
 
-Quando il docente inserisce un paragrafo in una UDA, questi campi vengono conservati nell'item. La preview deriva heading e sezione dalla stessa lettura verificata e bounded del Markdown, quindi non combina versioni concorrenti dello stesso file. Il contesto AI richiede inoltre che `source_id` e path dell'item corrispondano alla fonte corrente: un item obsoleto non può acquisire silenziosamente il testo di una fonte sostitutiva. Gli excerpt del catalogo hanno un budget fisso di righe e caratteri per heading. Il generatore Markdown mostra catalogo e provenienza. I progetti legacy mantengono gli ID heading storici basati su `file#anchor`; i cataloghi espliciti usano `source-id:file#anchor`.
+Quando il docente inserisce un paragrafo in una UDA, questi campi vengono conservati nell'item. La preview deriva heading e sezione dalla stessa lettura verificata e bounded del Markdown, quindi non combina versioni concorrenti dello stesso file. Il contesto AI richiede inoltre che `source_id` e path dell'item corrispondano alla fonte corrente: un item obsoleto non può acquisire silenziosamente il testo di una fonte sostitutiva. Gli excerpt del catalogo hanno budget fissi per heading e complessivo; il contesto AI rifiuta cataloghi oltre 5.000 heading, mentre l'indice generale mantiene il limite di 50.000. Il generatore Markdown mostra catalogo e provenienza. I progetti legacy mantengono gli ID heading storici basati su `file#anchor`; i cataloghi espliciti usano `source-id:file#anchor`.
 
 ## Limiti attuali
 

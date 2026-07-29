@@ -367,6 +367,30 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
     assert context["target_topic"]["source_id"] == "source-a"
     assert context["target_topic"]["text"] == ""
 
+    design["years"][0]["udas"][0]["items"][0].pop("source_id")
+    missing_provenance = course_board_server.target_context(
+        design,
+        "year",
+        "uda",
+        "stale",
+    )
+    assert missing_provenance["target_topic"]["text"] == ""
+
+
+def test_ai_catalog_rejects_excessive_heading_count(tmp_path, monkeypatch) -> None:
+    source = tmp_path / "many.md"
+    source.write_text(
+        "".join(f"## Topic {index}\n" for index in range(course_board_server.MAX_AI_CATALOG_HEADINGS + 1)),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="Troppi heading per il catalogo di contesto AI",
+    ):
+        course_board_server.heading_catalog_tree({"source_files": ["many.md"]})
+
 
 def test_catalog_excerpt_scans_bounded_lines_per_heading() -> None:
     class CountingLines(list):

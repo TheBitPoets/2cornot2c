@@ -119,6 +119,8 @@ COURSE_PLAN_REQUIRED_FIELDS = ["year_id", "title", "description", "udas", "unpla
 MAX_SECTION_CHARS = 6000
 MAX_CHILDREN_WITH_TEXT = 8
 MAX_CATALOG_EXCERPT_CHARS = 400
+MAX_TOTAL_CATALOG_EXCERPT_CHARS = 1_000_000
+MAX_AI_CATALOG_HEADINGS = 5_000
 MAX_HEADINGS_PER_SOURCE = 10_000
 MAX_TOTAL_HEADINGS = 50_000
 MAX_HEADING_TITLE_CHARS = 512
@@ -2191,7 +2193,11 @@ def section_text(
                     else source_files
                 )
                 if item.relative_path == source
-                and (not source_id or item.source.source_id == source_id)
+                and (
+                    item.source.source_id == source_id
+                    if source_id
+                    else item.source.legacy
+                )
             ),
             None,
         )
@@ -2259,6 +2265,7 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
 
     selected_design = read_design() if design is None else design
     catalog_headings: list[dict] = []
+    total_excerpt_chars = 0
     for source_file in course_source_catalog.local_markdown_source_files(
         selected_design,
         ROOT,
@@ -2269,9 +2276,9 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
             ROOT,
         )
         source_headings = headings_from_source_snapshot(source_file, source_text)
-        if len(catalog_headings) + len(source_headings) > MAX_TOTAL_HEADINGS:
+        if len(catalog_headings) + len(source_headings) > MAX_AI_CATALOG_HEADINGS:
             raise course_source_catalog.CourseSourceCatalogError(
-                "Il catalogo contiene troppi heading Markdown."
+                "Troppi heading per il catalogo di contesto AI."
             )
         source_lines = source_text.splitlines()
         for heading in source_headings:
@@ -2280,11 +2287,16 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
                 heading["line"],
                 heading["level"],
             )
-            heading["excerpt"] = (
-                excerpt[:MAX_CATALOG_EXCERPT_CHARS].rstrip() + "..."
-                if len(excerpt) > MAX_CATALOG_EXCERPT_CHARS
-                else excerpt
-            )
+            remaining = MAX_TOTAL_CATALOG_EXCERPT_CHARS - total_excerpt_chars
+            excerpt_limit = min(MAX_CATALOG_EXCERPT_CHARS, max(0, remaining))
+            if len(excerpt) > excerpt_limit:
+                excerpt = (
+                    excerpt[: max(0, excerpt_limit - 3)].rstrip() + "..."
+                    if excerpt_limit >= 3
+                    else excerpt[:excerpt_limit]
+                )
+            heading["excerpt"] = excerpt
+            total_excerpt_chars += len(excerpt)
         catalog_headings.extend(source_headings)
         source_lines = None
         source_text = None
