@@ -252,16 +252,42 @@ def test_tui_bearer_logout_revokes_exact_session_after_role_change(setup) -> Non
         expected_updated_at=current.updated_at,
     )
 
-    boundary.revoke_bearer("Bearer " + credential.bearer_token)
+    boundary.revoke_bearer(
+        "Bearer " + credential.bearer_token,
+        credential.logout_proof,
+    )
 
     persisted = storage.read_session_by_token_digest(
         session_token_digest(credential.bearer_token)
     )
     assert persisted.revoked_at == clock.value
     with pytest.raises(HttpAuthenticationRequiredError):
-        boundary.revoke_bearer("Bearer " + credential.bearer_token)
+        boundary.revoke_bearer(
+            "Bearer " + credential.bearer_token,
+            credential.logout_proof,
+        )
     with pytest.raises(HttpAuthenticationRequiredError):
         boundary.authenticate_bearer("Bearer " + credential.bearer_token)
+
+
+def test_invalid_logout_proof_is_rejected_before_session_storage(
+    setup, monkeypatch
+) -> None:
+    _storage, _clock, boundary, http = setup
+    started = boundary.begin()
+    boundary.authorize_browser(browser_request(http, "student-01"), started.user_code)
+    credential = boundary.consume(started.pairing_id, started.user_code)
+    monkeypatch.setattr(
+        boundary.tui_sessions,
+        "revoke",
+        lambda bearer: (_ for _ in ()).throw(AssertionError("storage touched")),
+    )
+
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.revoke_bearer(
+            "Bearer " + credential.bearer_token,
+            "Q" * 43,
+        )
 
 
 def test_tui_logout_storage_failure_is_not_misreported_as_invalid_bearer(
@@ -278,7 +304,10 @@ def test_tui_logout_storage_failure_is_not_misreported_as_invalid_bearer(
     )
 
     with pytest.raises(TuiPairingUnavailableError) as captured:
-        boundary.revoke_bearer("Bearer " + credential.bearer_token)
+        boundary.revoke_bearer(
+            "Bearer " + credential.bearer_token,
+            credential.logout_proof,
+        )
 
     assert credential.bearer_token not in str(captured.value)
 

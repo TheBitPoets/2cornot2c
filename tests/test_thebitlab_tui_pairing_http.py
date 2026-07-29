@@ -191,11 +191,18 @@ def test_tui_logout_revokes_before_empty_response_and_replay_is_unauthorized(gra
             {"code": start["user_code"]},
         )
     )
-    bearer = json.loads(consumed.body)["bearer_token"]
+    credential = json.loads(consumed.body)
+    bearer = credential["bearer_token"]
+    proof = credential["logout_proof"]
     consumed.delivery_guard.delivered()
 
     logged_out = routes.dispatch(
-        request("/auth/tui/logout", b"", ("Authorization", "Bearer " + bearer))
+        request(
+            "/auth/tui/logout",
+            b"",
+            ("Authorization", "Bearer " + bearer),
+            ("X-TUI-Logout-Proof", proof),
+        )
     )
 
     assert logged_out.status_code == 204
@@ -203,7 +210,12 @@ def test_tui_logout_revokes_before_empty_response_and_replay_is_unauthorized(gra
     persisted = storage.read_session_by_token_digest(session_token_digest(bearer))
     assert persisted.revoked_at == NOW
     replay = routes.dispatch(
-        request("/auth/tui/logout", b"", ("Authorization", "Bearer " + bearer))
+        request(
+            "/auth/tui/logout",
+            b"",
+            ("Authorization", "Bearer " + bearer),
+            ("X-TUI-Logout-Proof", proof),
+        )
     )
     assert replay.status_code == 401
     duplicate = routes.dispatch(
@@ -212,6 +224,7 @@ def test_tui_logout_revokes_before_empty_response_and_replay_is_unauthorized(gra
             b"",
             ("Authorization", "Bearer " + bearer),
             ("Authorization", "Bearer " + bearer),
+            ("X-TUI-Logout-Proof", proof),
         )
     )
     assert duplicate.status_code == 400
@@ -237,7 +250,9 @@ def test_invalid_logout_flood_cannot_block_valid_logout_or_grow_per_bearer(graph
             {"code": start["user_code"]},
         )
     )
-    bearer = json.loads(consumed.body)["bearer_token"]
+    credential = json.loads(consumed.body)
+    bearer = credential["bearer_token"]
+    proof = credential["logout_proof"]
     consumed.delivery_guard.delivered()
 
     statuses = [
@@ -246,12 +261,18 @@ def test_invalid_logout_flood_cannot_block_valid_logout_or_grow_per_bearer(graph
                 "/auth/tui/logout",
                 b"",
                 ("Authorization", "Bearer " + (f"F{index:039d}")),
+                ("X-TUI-Logout-Proof", "Q" * 43),
             )
         ).status_code
         for index in range(31)
     ]
     logged_out = routes.dispatch(
-        request("/auth/tui/logout", b"", ("Authorization", "Bearer " + bearer))
+        request(
+            "/auth/tui/logout",
+            b"",
+            ("Authorization", "Bearer " + bearer),
+            ("X-TUI-Logout-Proof", proof),
+        )
     )
 
     assert statuses == [401] * 30 + [429]
@@ -424,7 +445,9 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
             f"/auth/tui/pairings/{start['pairing_id']}/token",
             {"code": start["user_code"]},
         )
-        bearer = json.loads(consume_body)["bearer_token"]
+        tui_credential = json.loads(consume_body)
+        bearer = tui_credential["bearer_token"]
+        logout_proof = tui_credential["logout_proof"]
         assignments_status, assignments_body = exchange(
             "/api/student-lab/assignments",
             headers={"Authorization": "Bearer " + bearer},
@@ -530,7 +553,10 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
         network_path, _ = exchange("//auth/tui/pairings")
         logout_status, logout_body = exchange(
             "/auth/tui/logout",
-            headers={"Authorization": "Bearer " + bearer},
+            headers={
+                "Authorization": "Bearer " + bearer,
+                "X-TUI-Logout-Proof": logout_proof,
+            },
         )
         after_logout_status, _ = exchange(
             "/api/student-lab/assignments",

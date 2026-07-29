@@ -196,6 +196,7 @@ class TuiPairingHttpRoutes:
         cookie_header = None
         csrf_token = None
         authorization_header = None
+        logout_proof = None
         started = None
         try:
             self._require_https_and_query(request)
@@ -220,8 +221,12 @@ class TuiPairingHttpRoutes:
             if request.path == _LOGOUT_PATH:
                 self._require_empty_body(request)
                 authorization_header = _authorization_header(request.edge)
+                logout_proof = _logout_proof_header(request.edge)
                 try:
-                    self.boundary.revoke_bearer(authorization_header)
+                    self.boundary.revoke_bearer(
+                        authorization_header,
+                        logout_proof,
+                    )
                 except HttpAuthenticationRequiredError:
                     self.rate_limiter.admit("logout_invalid", request.edge)
                     raise
@@ -250,6 +255,7 @@ class TuiPairingHttpRoutes:
             response = self._json(200, {
                 "token_type": "Bearer",
                 "bearer_token": credential.bearer_token,
+                "logout_proof": credential.logout_proof,
                 "expires_at": _utc_z(credential.expires_at),
             }, guard=TuiCredentialDeliveryGuard(self.boundary, credential))
             credential = None
@@ -273,6 +279,7 @@ class TuiPairingHttpRoutes:
             cookie_header = None
             csrf_token = None
             authorization_header = None
+            logout_proof = None
             started = None
 
     def _require_https_and_query(self, request: TuiPairingHttpRequest) -> None:
@@ -410,6 +417,13 @@ def _authorization_header(edge: EdgeRequestMetadata) -> str:
         values[0].encode("utf-8", errors="surrogatepass")
     ) > 2048:
         raise TuiPairingBadRequestError()
+    return values[0]
+
+
+def _logout_proof_header(edge: EdgeRequestMetadata) -> str:
+    values = _header_values(edge, "x-tui-logout-proof")
+    if len(values) != 1 or not values[0] or len(values[0]) > 128:
+        raise HttpAuthenticationRequiredError()
     return values[0]
 
 

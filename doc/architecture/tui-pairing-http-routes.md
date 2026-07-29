@@ -8,7 +8,7 @@ Il runtime espone esclusivamente con opt-in auth:
 - `GET /auth/tui/pair`: serve la pagina statica CSP/no-store per inserire manualmente il codice;
 - `POST /auth/tui/pair`: riceve `{"code":"..."}` dalla pagina, con cookie web e `X-CSRF-Token`, e autorizza soltanto uno student corrente;
 - `POST /auth/tui/pairings/{pairing_id}/token`: riceve lo stesso codice dalla TUI e tenta il consumo atomico. Un pairing ancora pending o già terminale produce 409;
-- `POST /auth/tui/logout`: richiede body vuoto e un solo `Authorization: Bearer ...`, quindi revoca la sola sessione audience `tui` prima di restituire 204.
+- `POST /auth/tui/logout`: richiede body vuoto, un solo `Authorization: Bearer ...` e il proof dedicato `X-TUI-Logout-Proof`, quindi revoca la sola sessione audience `tui` prima di restituire 204.
 
 Codice e bearer sono accettati soltanto nel body JSON, mai in URL/query. Il browser non riceve il bearer TUI; il terminale non riceve cookie, CSRF o credenziali provider.
 
@@ -20,19 +20,19 @@ Tutte le route richiedono HTTPS diretto o attestato dallo stesso trusted proxy r
 
 ## Rate limit e retention
 
-Un unico store SQLite atomico, condiviso col login Google, applica bucket globali e per-client distinti a begin, authorize e consume. Consume aggiunge un bucket HMAC per pairing. Il logout valido revoca prima di qualsiasi admission, così nessun flood anonimo può impedirlo. Solo dopo un bearer non valido vengono incrementati bucket globali/per-client a cardinalità bounded; bearer casuali non creano contatori distinti e non possono esaurire lo store condiviso. IP, pairing e codici non vengono persistiti nei bucket in chiaro.
+Un unico store SQLite atomico, condiviso col login Google, applica bucket globali e per-client distinti a begin, authorize e consume. Consume aggiunge un bucket HMAC per pairing. Il proof logout è verificabile in memoria con il pepper pairing e vincolato al bearer, senza lookup SQLite. Il logout con proof valido può quindi raggiungere la revoca senza admission; proof falsi vengono limitati prima di qualsiasi lookup di sessione tramite bucket globali/per-client a cardinalità bounded. Bearer casuali non creano contatori distinti, non caricano lo storage identità e non possono esaurire lo store condiviso. IP, pairing e codici non vengono persistiti nei bucket in chiaro.
 
 Prima di ogni begin ammesso vengono eliminate fail-closed prima le sessioni scadute di entrambe le audience e poi i pairing scaduti non più referenziati. L'ordine libera le correlazioni TUI consumate senza violare i vincoli SQLite. La combinazione tra TTL, limiti globali/client e cleanup impedisce crescita persistente incontrollata da parte dell'ingresso pubblico.
 
 ## Consegna one-shot
 
-Il consumo SQLite autorizzato crea pairing `consumed` e sessione audience `tui` nella stessa transazione. La risposta 200 contiene bearer e scadenza una sola volta ed è associata a un delivery guard. Se serializzazione o scrittura socket falliscono, il guard verifica correlazione session ID/utente/scadenza e revoca best-effort quella specifica sessione TUI. Il pairing non torna pending e il terminale deve iniziare un nuovo flusso.
+Il consumo SQLite autorizzato crea pairing `consumed` e sessione audience `tui` nella stessa transazione. La risposta 200 contiene bearer, proof logout HMAC domain-separated e scadenza una sola volta ed è associata a un delivery guard. Se serializzazione o scrittura socket falliscono, il guard verifica correlazione session ID/utente/scadenza e revoca best-effort quella specifica sessione TUI. Il pairing non torna pending e il terminale deve iniziare un nuovo flusso.
 
 Body, request e response escludono codice e bearer dai `repr`; gli access log usano il path fisso redatto `/auth/tui`. Tutte le risposte sono `no-store`, `no-cache` e `no-referrer`.
 
 ## Logout TUI
 
-La revoca non dipende dal ruolo corrente: un bearer TUI ancora attivo può revocare soltanto la sessione identificata dal proprio digest anche se l'account è stato disabilitato o promosso dopo l'emissione. Bearer assente, malformato, scaduto, già revocato o di audience diversa produce 401 senza rivelare quale caso si è verificato. La mutazione precede la risposta; un errore socket non ripristina mai la sessione.
+La revoca non dipende dal ruolo corrente: bearer TUI e proof logout correlato possono revocare soltanto la sessione identificata dal digest del bearer anche se l'account è stato disabilitato o promosso dopo l'emissione. Bearer/proof assente o malformato, sessione scaduta, già revocata o di audience diversa produce 401 senza rivelare quale caso si è verificato. La mutazione precede la risposta; un errore socket non ripristina mai la sessione.
 
 ## Errori
 

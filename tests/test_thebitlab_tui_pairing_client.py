@@ -20,6 +20,7 @@ from scripts.thebitlab_tui_pairing_client import (
 )
 
 NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
+LOGOUT_PROOF = "P" * 43
 
 
 class EmptyResponse:
@@ -67,6 +68,7 @@ def credential_payload(**changes):
     payload = {
         "token_type": "Bearer",
         "bearer_token": "T" * 48,
+        "logout_proof": LOGOUT_PROOF,
         "expires_at": "2026-09-01T16:00:00.000000Z",
     }
     payload.update(changes)
@@ -116,7 +118,12 @@ def test_begin_and_poll_keep_code_and_bearer_out_of_repr() -> None:
     assert start.verification_url == "https://school.test/auth/tui/pair"
     assert start.user_code not in repr(start)
     assert credential.bearer_token not in repr(credential)
-    assert credential == TuiBearerCredential("T" * 48, NOW + timedelta(hours=8))
+    assert credential.logout_proof not in repr(credential)
+    assert credential == TuiBearerCredential(
+        "T" * 48,
+        LOGOUT_PROOF,
+        NOW + timedelta(hours=8),
+    )
     assert sleeps == [0.5]
     assert requests[0].method == "POST" and requests[0].data == b""
     assert json.loads(requests[1].data) == {"code": "PAIRCODE123"}
@@ -132,7 +139,11 @@ def test_logout_sends_bearer_once_and_requires_empty_204_response() -> None:
         captured["timeout"] = timeout
         return response
 
-    credential = TuiBearerCredential("T" * 48, NOW + timedelta(hours=8))
+    credential = TuiBearerCredential(
+        "T" * 48,
+        LOGOUT_PROOF,
+        NOW + timedelta(hours=8),
+    )
     client = TuiPairingClient("https://school.test", urlopen=open_request)
 
     client.logout(credential)
@@ -141,6 +152,7 @@ def test_logout_sends_bearer_once_and_requires_empty_204_response() -> None:
     assert captured["request"].method == "POST"
     assert captured["request"].data == b""
     assert captured["request"].get_header("Authorization") == "Bearer " + "T" * 48
+    assert captured["request"].get_header("X-tui-logout-proof") == LOGOUT_PROOF
     assert response.closed is True
 
 
@@ -163,9 +175,36 @@ def test_logout_retries_rate_limit_within_absolute_deadline() -> None:
         sleep=sleeps.append,
     )
 
-    client.logout(TuiBearerCredential("T" * 48, NOW + timedelta(hours=8)))
+    client.logout(
+        TuiBearerCredential("T" * 48, LOGOUT_PROOF, NOW + timedelta(hours=8))
+    )
 
     assert sleeps == [2.0]
+    assert responses == []
+
+
+def test_logout_retries_transient_unavailability_with_bounded_backoff() -> None:
+    responses = [http_error(503), EmptyResponse()]
+    sleeps = []
+
+    def open_request(*args, **kwargs):
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    client = TuiPairingClient(
+        "https://school.test",
+        urlopen=open_request,
+        monotonic=lambda: 100.0,
+        sleep=sleeps.append,
+    )
+
+    client.logout(
+        TuiBearerCredential("T" * 48, LOGOUT_PROOF, NOW + timedelta(hours=8))
+    )
+
+    assert sleeps == [0.25]
     assert responses == []
 
 
@@ -183,12 +222,17 @@ def test_logout_rejects_nonempty_or_unauthorized_response_without_reflection(res
         return response
 
     client = TuiPairingClient("https://school.test", urlopen=open_request)
-    credential = TuiBearerCredential("T" * 48, NOW + timedelta(hours=8))
+    credential = TuiBearerCredential(
+        "T" * 48,
+        LOGOUT_PROOF,
+        NOW + timedelta(hours=8),
+    )
 
     with pytest.raises(TuiPairingClientError, match="Logout TUI remoto non confermato") as captured:
         client.logout(credential)
 
     assert "T" * 48 not in str(captured.value)
+    assert LOGOUT_PROOF not in str(captured.value)
 
 
 def test_logout_failure_clears_bearer_from_recursive_tracebacks() -> None:
@@ -198,7 +242,11 @@ def test_logout_failure_clears_bearer_from_recursive_tracebacks() -> None:
         "https://school.test",
         urlopen=lambda *args, **kwargs: (_ for _ in ()).throw(reflected),
     )
-    credential = TuiBearerCredential(secret, NOW + timedelta(hours=8))
+    credential = TuiBearerCredential(
+        secret,
+        LOGOUT_PROOF,
+        NOW + timedelta(hours=8),
+    )
 
     with pytest.raises(TuiPairingClientError) as captured:
         client.logout(credential)
@@ -223,7 +271,9 @@ def test_logout_failure_clears_bearer_from_recursive_tracebacks() -> None:
             pending.append(error.__context__)
         if error.__cause__ is not None:
             pending.append(error.__cause__)
-    assert secret not in "\n".join(fragments)
+    joined = "\n".join(fragments)
+    assert secret not in joined
+    assert LOGOUT_PROOF not in joined
 
 
 def test_begin_maps_rate_limit_to_sanitized_public_error() -> None:
@@ -554,7 +604,11 @@ def test_acquire_opens_only_fixed_url_and_returns_memory_credential() -> None:
 
         def poll(self, start):
             assert start.user_code == "PAIRCODE123"
-            return TuiBearerCredential("T" * 48, NOW + timedelta(hours=8))
+            return TuiBearerCredential(
+                "T" * 48,
+                LOGOUT_PROOF,
+                NOW + timedelta(hours=8),
+            )
 
     opened = []
     output = []
