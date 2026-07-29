@@ -4,11 +4,17 @@ import argparse
 import html
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts import course_source_catalog
 DEFAULT_INPUT = ROOT / "doc" / "course_design.json"
 DEFAULT_OUTPUT = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
+DEFAULT_SOURCES = ("README.md", "LINUX_PROGRAMMING.md")
 FRAME_FIELDS = [
     ("context", "Contesto"),
     ("prerequisites", "Prerequisiti"),
@@ -86,11 +92,18 @@ def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
         content_indent = "  " * (depth + 1)
         title = html_link(item.get("title", "Argomento senza titolo"), item.get("href"))
         source = item.get("source", "sorgente sconosciuta")
+        source_id = str(item.get("source_id", "")).strip()
+        source_provider = str(item.get("source_provider", "local")).strip()
+        source_badge = (
+            f"{source_provider}:{source_id} · {source}"
+            if source_id
+            else source
+        )
         level = item.get("level", "?")
         status = item.get("frame", {}).get("status", "todo")
         lines.extend([
             f"{indent}- <details>",
-            f"{content_indent}<summary>{title} <code>{source}</code> H{level} <code>{status}</code></summary>",
+            f"{content_indent}<summary>{title} <code>{source_badge}</code> H{level} <code>{status}</code></summary>",
             "",
         ])
         frame_lines = render_frame(item.get("frame", {}), depth + 1)
@@ -145,8 +158,27 @@ def render_design(design: dict[str, Any]) -> str:
         "",
     ]
 
-    for source in design.get("source_files", []):
-        lines.append(f"- `{source}`")
+    for source in course_source_catalog.normalize_course_sources(
+        design,
+        default_files=DEFAULT_SOURCES,
+    ):
+        if source.legacy:
+            lines.append(f"- `{source.files[0]}`")
+            continue
+        location = source.path or source.repository or "n/d"
+        files = ", ".join(f"`{name}`" for name in source.files)
+        metadata = [
+            f"provider `{source.provider}`",
+            f"stato `{source.indexing_status}`",
+        ]
+        if source.ref:
+            metadata.append(f"ref `{source.ref}`")
+        if source.updated_at:
+            metadata.append(f"aggiornata `{source.updated_at}`")
+        lines.append(
+            f"- `{source.source_id}` — {source.label} "
+            f"({', '.join(metadata)}) · {location} · {files}"
+        )
 
     lines.extend([
         "",

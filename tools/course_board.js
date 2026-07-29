@@ -1,5 +1,6 @@
 ﻿const state = {
   headings: [],
+  sources: [],
   design: null,
   savedDesigns: [],
   activeSavedDesign: "",
@@ -23,6 +24,7 @@ const els = {
   sourceFilter: document.querySelector("#sourceFilter"),
   levelFilter: document.querySelector("#levelFilter"),
   searchInput: document.querySelector("#searchInput"),
+  sourceCatalogSummary: document.querySelector("#sourceCatalogSummary"),
   courseTree: document.querySelector("#courseTree"),
   projectTitle: document.querySelector("#projectTitle"),
   status: document.querySelector("#status"),
@@ -119,6 +121,19 @@ const AI_PROGRESS_STAGES = [
 ];
 
 let aiProgressTimer = null;
+let paragraphPreviewRequestId = 0;
+let courseContextRequestId = 0;
+let courseContextRequestName = null;
+let courseAiRequestId = 0;
+let activeCourseAiRequestId = null;
+let singleFrameRequestId = 0;
+let activeSingleFrameRequestId = null;
+let proofreadRequestId = 0;
+let activeProofreadRequestId = null;
+let courseAiDialogContext = null;
+let courseAiProposalContext = null;
+let courseAiProposalBriefSnapshot = "";
+let deleteArchiveOperationInProgress = false;
 let frameBatch = null;
 let frameVerificationBatch = null;
 let cleanDesignSnapshot = "";
@@ -224,8 +239,8 @@ async function runAsyncAction(action, label) {
 }
 
 function startSaveOperation() {
-  if (saveOperationInProgress) {
-    setStatus("Salvataggio gia in corso. Attendi il completamento prima di avviarne un altro.");
+  if (saveOperationInProgress || deleteArchiveOperationInProgress) {
+    setStatus("Salvataggio o cancellazione gia in corso. Attendi il completamento prima di avviarne un altro.");
     return false;
   }
   saveOperationInProgress = true;
@@ -270,12 +285,22 @@ function updateAiProgress(percent, message) {
   els.aiBusyBarFill.style.width = `${percent}%`;
 }
 
+function hasActiveAiUiOperation() {
+  return Boolean(
+    frameBatch
+    || frameVerificationBatch
+    || activeCourseAiRequestId !== null
+    || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
+  );
+}
+
 function stopAiProgress(message = "Completato.") {
   clearInterval(aiProgressTimer);
   aiProgressTimer = null;
   updateAiProgress(100, message);
   setTimeout(() => {
-    if (!aiProgressTimer) els.aiBusy.hidden = true;
+    if (!aiProgressTimer && !hasActiveAiUiOperation()) els.aiBusy.hidden = true;
   }, 900);
 }
 
@@ -284,7 +309,7 @@ function failAiProgress(message = "Operazione non riuscita.") {
   aiProgressTimer = null;
   updateAiProgress(100, message);
   setTimeout(() => {
-    if (!aiProgressTimer) els.aiBusy.hidden = true;
+    if (!aiProgressTimer && !hasActiveAiUiOperation()) els.aiBusy.hidden = true;
   }, 8000);
 }
 
@@ -363,16 +388,34 @@ async function responseErrorMessage(response) {
   return fallback;
 }
 
+function sourceDesignQuery(name = "") {
+  return name ? `?design=${encodeURIComponent(name)}` : "";
+}
+
+async function fetchCourseContext(name = "") {
+  const query = sourceDesignQuery(name);
+  const payload = await api(`/api/course-source-context${query}`);
+  return {
+    design: payload.design,
+    headings: payload.headings || [],
+    sources: payload.sources || [],
+  };
+}
+
 async function loadAll() {
   setStatus("Caricamento...");
-  const [headingsPayload, design, aiConfig, savedDesigns] = await Promise.all([
-    api("/api/headings"),
-    api("/api/course-design"),
+  const boardContext = captureBoardContext();
+  const requestId = ++courseContextRequestId;
+  courseContextRequestName = "";
+  const [courseContext, aiConfig, savedDesigns] = await Promise.all([
+    fetchCourseContext(),
     api("/api/ai-config"),
     api("/api/saved-designs"),
   ]);
-  state.headings = headingsPayload.headings;
-  state.design = design;
+  if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) return;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
+  state.design = courseContext.design;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   state.aiConfig = aiConfig;
@@ -380,9 +423,11 @@ async function loadAll() {
   const keepActiveDesign = sessionStorage.getItem(ACTIVE_COURSE_SESSION_KEY) === "true";
   const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
   if (keepActiveDesign && activeDesign && state.savedDesigns.some((saved) => saved.name === activeDesign)) {
-    await loadSavedDesignByName(activeDesign, { confirmFirst: false, render: false });
+    const restored = await loadSavedDesignByName(activeDesign, { confirmFirst: false, render: false });
+    if (!restored) return;
   }
   populateFilters();
+  renderSourceCatalogSummary();
   renderAiConfig();
   renderSavedDesigns();
   renderProjectTitle();
@@ -440,15 +485,17 @@ function renderCourseActions() {
     els.saveArchiveBtn.title = "Salva il nuovo progetto nell'archivio dei progetti didattici.";
   }
   els.saveArchiveAsBtn.title = "Salva una copia del progetto con un nuovo nome nell'archivio; poi potrai impostarla come progetto corrente.";
-  els.saveArchiveBtn.disabled = saveOperationInProgress || !hasChanges;
+  els.saveArchiveBtn.disabled = saveOperationInProgress || deleteArchiveOperationInProgress || !hasChanges;
+  els.saveArchiveAsBtn.disabled = saveOperationInProgress || deleteArchiveOperationInProgress;
+  els.newDesignBtn.disabled = saveOperationInProgress || deleteArchiveOperationInProgress;
   if (!hasChanges) {
     els.saveArchiveBtn.title = "Nessuna modifica da salvare nel progetto attualmente caricato.";
   }
-  els.deleteArchiveBtn.disabled = isCurrent;
+  els.deleteArchiveBtn.disabled = isCurrent || saveOperationInProgress || deleteArchiveOperationInProgress;
   els.deleteArchiveBtn.title = isCurrent
     ? "Il progetto corrente doc/course_design.json non puo essere eliminato dalla board."
     : `Cancella il progetto archiviato ${state.activeSavedDesign}.`;
-  els.saveBtn.disabled = isCurrent;
+  els.saveBtn.disabled = isCurrent || saveOperationInProgress || deleteArchiveOperationInProgress;
   els.saveBtn.title = isCurrent
     ? "Il progetto corrente e gia caricato: non serve impostarlo di nuovo."
     : "Imposta il progetto caricato come progetto corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.";
@@ -487,7 +534,19 @@ async function loadCurrentDesign() {
   });
   if (!confirmed) return;
   setStatus("Caricamento progetto corrente...");
-  state.design = await api("/api/course-design");
+  const boardContext = captureBoardContext();
+  const requestId = ++courseContextRequestId;
+  courseContextRequestName = "";
+  const courseContext = await fetchCourseContext();
+  if (requestId !== courseContextRequestId) return;
+  if (!isBoardContextUnchanged(boardContext)) {
+    setStatus("Caricamento annullato: la board è stata modificata durante la richiesta.");
+    return;
+  }
+  invalidateParagraphPreview(true);
+  state.design = courseContext.design;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();
@@ -495,6 +554,8 @@ async function loadCurrentDesign() {
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   renderSavedDesigns();
   renderProjectTitle();
+  populateFilters();
+  renderSourceCatalogSummary();
   renderHeadings();
   renderCourse();
   renderCourseActions();
@@ -511,14 +572,22 @@ async function loadSavedDesignByName(name, options = {}) {
       cancelLabel: "Annulla",
       danger: true,
     });
-    if (!confirmed) return;
+    if (!confirmed) return false;
   }
   setStatus(`Caricamento progetto salvato "${name}"...`);
-  const payload = await api("/api/saved-designs/load", {
-    method: "POST",
-    body: JSON.stringify({ name }),
-  });
-  state.design = payload.design;
+  const boardContext = captureBoardContext();
+  const requestId = ++courseContextRequestId;
+  courseContextRequestName = name;
+  const courseContext = await fetchCourseContext(name);
+  if (requestId !== courseContextRequestId) return false;
+  if (!isBoardContextUnchanged(boardContext)) {
+    setStatus("Caricamento annullato: la board è stata modificata durante la richiesta.");
+    return false;
+  }
+  invalidateParagraphPreview(true);
+  state.design = courseContext.design;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
   state.activeSavedDesign = name;
   state.isNewDesign = false;
   markDesignClean();
@@ -527,11 +596,14 @@ async function loadSavedDesignByName(name, options = {}) {
   if (render) {
     renderSavedDesigns();
     renderProjectTitle();
+    populateFilters();
+    renderSourceCatalogSummary();
     renderHeadings();
     renderCourse();
     renderCourseActions();
   }
   setStatus(`Progetto "${name}" caricato. Usa "Salva progetto" per aggiornare l'archivio o "Imposta corrente" per sovrascrivere doc/course_design.json.`);
+  return true;
 }
 
 async function saveArchiveDesign() {
@@ -586,6 +658,7 @@ async function persistArchiveDesignWithName(name, options = {}) {
     design = state.design,
     opensSavedDesign = state.design !== design,
     boardContext = captureBoardContext(),
+    courseContextGeneration = courseContextRequestId,
   } = options;
   normalizeCourseDesignFrames(design);
   const designToSave = JSON.parse(JSON.stringify(design));
@@ -615,6 +688,7 @@ async function persistArchiveDesignWithName(name, options = {}) {
         overwrite: true,
         opensSavedDesign,
         boardContext,
+        courseContextGeneration,
       });
     }
     setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
@@ -623,7 +697,10 @@ async function persistArchiveDesignWithName(name, options = {}) {
   const contextStillValid = opensSavedDesign
     ? isBoardContextUnchanged(boardContext)
     : isBoardContextCurrent(boardContext);
-  if (!contextStillValid) {
+  if (
+    !contextStillValid
+    || courseContextGeneration !== courseContextRequestId
+  ) {
     setStatus(`Progetto salvato in archivio: ${payload.saved?.name || name}. La vista aperta non e stata cambiata.`);
     return !opensSavedDesign;
   }
@@ -654,12 +731,16 @@ async function persistCurrentProject() {
   normalizeCourseDesignFrames();
   const savedSnapshot = designSnapshot();
   const boardContext = captureBoardContext();
+  const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio progetto corrente in doc/course_design.json...");
   await api("/api/course-design", {
     method: "POST",
     body: savedSnapshot,
   });
-  if (!isBoardContextCurrent(boardContext)) {
+  if (
+    !isBoardContextCurrent(boardContext)
+    || courseContextGeneration !== courseContextRequestId
+  ) {
     setStatus("Progetto corrente salvato. La vista aperta non e stata cambiata.");
     return;
   }
@@ -673,6 +754,21 @@ async function persistCurrentProject() {
   renderCourseActions();
   setStatus("Progetto corrente salvato in doc/course_design.json.");
   return true;
+}
+
+function reconcileStaleArchiveDelete(name, payload) {
+  if (courseContextRequestName === name) {
+    courseContextRequestId += 1;
+    courseContextRequestName = null;
+    const detachedDraft = reconcileDeletedArchive(name, payload);
+    const preserved = detachedDraft ? " La bozza resta aperta senza nome archivio." : "";
+    setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
+    return;
+  }
+  state.savedDesigns = payload.designs || [];
+  renderSavedDesigns();
+  renderCourseActions();
+  setStatus(`Progetto archiviato eliminato: ${name}. Un caricamento più recente controlla la vista aperta.`);
 }
 
 function reconcileDeletedArchive(name, payload) {
@@ -691,12 +787,34 @@ function reconcileDeletedArchive(name, payload) {
 }
 
 async function deleteArchiveDesign() {
+  if (deleteArchiveOperationInProgress || saveOperationInProgress) {
+    setStatus("Una cancellazione di archivio è già in corso.");
+    return false;
+  }
+  deleteArchiveOperationInProgress = true;
+  els.newDesignBtn.disabled = true;
+  els.saveArchiveBtn.disabled = true;
+  els.saveArchiveAsBtn.disabled = true;
+  els.saveBtn.disabled = true;
+  els.deleteArchiveBtn.disabled = true;
+  try {
+    return await deleteArchiveDesignOnce();
+  } finally {
+    deleteArchiveOperationInProgress = false;
+    els.newDesignBtn.disabled = false;
+    els.saveArchiveAsBtn.disabled = false;
+    renderCourseActions();
+  }
+}
+
+async function deleteArchiveDesignOnce() {
   if (!state.activeSavedDesign) {
     setStatus("Il progetto corrente non si cancella: puoi sovrascriverlo o salvare un altro progetto come corrente.");
     renderCourseActions();
     return;
   }
   const boardContext = captureBoardContext();
+  const preserveUnsavedDraft = hasUnsavedChanges();
   const name = state.activeSavedDesign;
   const calendarsPayload = await api("/api/school-calendars");
   if (!isBoardContextUnchanged(boardContext)) {
@@ -740,6 +858,8 @@ async function deleteArchiveDesign() {
     if (!confirmed) return;
   }
   setStatus(`Cancellazione progetto "${name}"...`);
+  const requestId = ++courseContextRequestId;
+  courseContextRequestName = null;
   const payload = await api("/api/saved-designs/delete", {
     method: "POST",
     body: JSON.stringify({
@@ -748,13 +868,21 @@ async function deleteArchiveDesign() {
       calendars: linkedCalendars.map((calendar) => calendar.name),
     }),
   });
-  if (!isBoardContextUnchanged(boardContext)) {
+  if (requestId !== courseContextRequestId) {
+    reconcileStaleArchiveDelete(name, payload);
+    return;
+  }
+  if (!isBoardContextUnchanged(boardContext) || preserveUnsavedDraft) {
     const detachedDraft = reconcileDeletedArchive(name, payload);
     const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
     setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
     return;
   }
-  const currentDesign = await api("/api/course-design");
+  const courseContext = await fetchCourseContext();
+  if (requestId !== courseContextRequestId) {
+    reconcileStaleArchiveDelete(name, payload);
+    return;
+  }
   if (!isBoardContextUnchanged(boardContext)) {
     const detachedDraft = reconcileDeletedArchive(name, payload);
     const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
@@ -764,12 +892,17 @@ async function deleteArchiveDesign() {
   state.savedDesigns = payload.designs || [];
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
-  state.design = currentDesign;
+  invalidateParagraphPreview(true);
+  state.design = courseContext.design;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();
   renderSavedDesigns();
   renderProjectTitle();
+  populateFilters();
+  renderSourceCatalogSummary();
   renderHeadings();
   renderCourse();
   renderCourseActions();
@@ -800,8 +933,23 @@ async function newCourseDesign() {
   const design = emptyCourseDesign();
   const saved = await saveArchiveDesignWithName(name, { design, confirmOverwrite: true });
   if (!saved) return;
+  const boardContext = captureBoardContext();
+  const requestId = ++courseContextRequestId;
+  courseContextRequestName = name;
+  const courseContext = await fetchCourseContext(name);
+  if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) {
+    setStatus(`Nuovo progetto "${name}" creato. La vista aperta non è stata cambiata.`);
+    return;
+  }
+  invalidateParagraphPreview(true);
+  state.design = courseContext.design;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
+  markDesignClean();
   renderSavedDesigns();
   renderProjectTitle();
+  populateFilters();
+  renderSourceCatalogSummary();
   renderHeadings();
   renderCourse();
   renderCourseActions();
@@ -876,15 +1024,37 @@ async function switchAiModel() {
 
 function populateFilters() {
   const selected = els.sourceFilter.value;
-  const sources = [...new Set(state.headings.map((heading) => heading.source))];
+  const sources = new Map();
+  for (const heading of state.headings) {
+    if (!sources.has(heading.source)) {
+      sources.set(heading.source, {
+        label: heading.source_label || heading.source,
+        provider: heading.source_provider || "local",
+      });
+    }
+  }
   els.sourceFilter.innerHTML = '<option value="">Tutte le sorgenti</option>';
-  for (const source of sources) {
+  for (const [source, metadata] of sources) {
     const option = document.createElement("option");
     option.value = source;
-    option.textContent = source;
+    option.textContent = `${metadata.label} (${metadata.provider})`;
     els.sourceFilter.append(option);
   }
   els.sourceFilter.value = selected;
+}
+
+function renderSourceCatalogSummary() {
+  const sources = state.sources || [];
+  const indexed = sources.filter((source) => (source.indexed_files || []).length > 0).length;
+  const pending = sources.filter((source) => source.indexing_status === "pending").length;
+  const providers = [...new Set(sources.map((source) => source.provider).filter(Boolean))];
+  const parts = [
+    `${sources.length} fonti`,
+    `${indexed} indicizzate`,
+    providers.length ? providers.join(", ") : "nessun provider",
+  ];
+  if (pending) parts.push(`${pending} in attesa`);
+  els.sourceCatalogSummary.textContent = parts.join(" · ");
 }
 
 function assignedYearsById() {
@@ -964,7 +1134,9 @@ function renderHeadings() {
     });
     title.append(titleText);
     const usedLabel = usedInYears.size ? ` · inserito in ${[...usedInYears].join(", ")}` : "";
-    node.querySelector(".headingMeta").textContent = `${heading.source}:${heading.line} · H${heading.level}${usedLabel}`;
+    const sourceLabel = heading.source_label || heading.source;
+    const sourceProvider = heading.source_provider || "local";
+    node.querySelector(".headingMeta").textContent = `${sourceLabel} (${sourceProvider}) · ${heading.source}:${heading.line} · H${heading.level}${usedLabel}`;
     node.addEventListener("dragstart", () => {
       state.draggedHeading = heading;
     });
@@ -1074,6 +1246,11 @@ function itemFromHeading(heading) {
     id: heading.id,
     title: heading.title,
     source: heading.source,
+    source_id: heading.source_id,
+    source_label: heading.source_label,
+    source_provider: heading.source_provider,
+    source_repository: heading.source_repository,
+    source_ref: heading.source_ref,
     href: heading.href,
     level: heading.level,
     line: heading.line,
@@ -1096,6 +1273,11 @@ function childItemsFromHeading(parentHeading) {
       id: heading.id,
       title: heading.title,
       source: heading.source,
+      source_id: heading.source_id,
+      source_label: heading.source_label,
+      source_provider: heading.source_provider,
+      source_repository: heading.source_repository,
+      source_ref: heading.source_ref,
       href: heading.href,
       level: heading.level,
       line: heading.line,
@@ -1493,23 +1675,42 @@ function renderParagraphContent(source) {
   return blocks.join("") || '<p class="empty">Questo paragrafo non contiene testo oltre al titolo.</p>';
 }
 
+function invalidateParagraphPreview(closeDialog = false) {
+  paragraphPreviewRequestId += 1;
+  if (closeDialog && els.paragraphDialog.open) {
+    els.paragraphDialog.close();
+  }
+}
+
 async function openParagraphPreview(paragraph) {
+  const requestId = ++paragraphPreviewRequestId;
   els.paragraphDialogTitle.textContent = paragraph.title || "Testo del paragrafo";
-  els.paragraphDialogMeta.textContent = `${paragraph.source || "Sorgente n/d"} · riga ${paragraph.line || "?"} · H${paragraph.level || "?"}`;
+  els.paragraphDialogMeta.textContent = `${paragraph.source_label || paragraph.source || "Sorgente n/d"} (${paragraph.source_provider || "local"}) · riga ${paragraph.line || "?"} · H${paragraph.level || "?"}`;
   els.paragraphContent.textContent = "Caricamento del contenuto...";
   els.paragraphSourceLink.hidden = true;
   els.paragraphDialog.showModal();
   try {
-    const payload = await api(`/api/heading-content?id=${encodeURIComponent(paragraph.id)}`);
+    const payload = state.isNewDesign
+      ? await api("/api/heading-content", {
+          method: "POST",
+          body: JSON.stringify({ id: paragraph.id, design: state.design }),
+        })
+      : await api(
+          `/api/heading-content?id=${encodeURIComponent(paragraph.id)}${
+            state.activeSavedDesign ? `&design=${encodeURIComponent(state.activeSavedDesign)}` : ""
+          }`,
+        );
+    if (requestId !== paragraphPreviewRequestId) return;
     const heading = payload.heading || paragraph;
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
-    els.paragraphDialogMeta.textContent = `${heading.source || "Sorgente n/d"} · riga ${heading.line || "?"} · H${heading.level || "?"}`;
+    els.paragraphDialogMeta.textContent = `${heading.source_label || heading.source || "Sorgente n/d"} (${heading.source_provider || "local"}) · riga ${heading.line || "?"} · H${heading.level || "?"}`;
     els.paragraphContent.innerHTML = renderParagraphContent(heading.content);
     if (heading.github_url) {
       els.paragraphSourceLink.href = heading.github_url;
       els.paragraphSourceLink.hidden = false;
     }
   } catch (error) {
+    if (requestId !== paragraphPreviewRequestId) return;
     els.paragraphContent.textContent = `Contenuto non disponibile. Dettaglio: ${error.message}`;
   }
 }
@@ -1549,6 +1750,11 @@ function defaultCourseBrief(year) {
 }
 
 function openCourseAiDialog(year) {
+  courseAiRequestId += 1;
+  courseAiDialogContext = captureBoardContext();
+  courseAiProposalContext = null;
+  courseAiProposalBriefSnapshot = "";
+  els.courseAiGenerateBtn.disabled = false;
   const brief = { ...defaultCourseBrief(year), ...(year.ai_brief || {}) };
   state.courseAiYearId = year.id;
   state.courseAiProposal = null;
@@ -1582,10 +1788,31 @@ function readCourseBrief() {
 }
 
 async function generateCourseAiProposal() {
+  if (
+    frameBatch
+    || frameVerificationBatch
+    || activeCourseAiRequestId !== null
+    || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
+  ) {
+    setStatus("Una operazione AI è già in corso: attendi il completamento prima di generare il percorso.");
+    return;
+  }
+  if (!courseAiDialogContext || !isBoardContextUnchanged(courseAiDialogContext)) {
+    els.courseAiApplyBtn.disabled = true;
+    setStatus("Generazione AI annullata: la board è cambiata; riapri il dialogo.");
+    return;
+  }
   const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
   if (!year) return;
   const brief = readCourseBrief();
+  const briefSnapshot = JSON.stringify(brief);
   year.ai_brief = brief;
+  const boardContext = captureBoardContext();
+  courseAiDialogContext = boardContext;
+  const requestYearId = state.courseAiYearId;
+  const requestId = ++courseAiRequestId;
+  activeCourseAiRequestId = requestId;
   els.courseAiGenerateBtn.disabled = true;
   els.courseAiApplyBtn.disabled = true;
   els.courseAiPreview.innerHTML = '<p class="empty">Generazione proposta in corso...</p>';
@@ -1600,17 +1827,29 @@ async function generateCourseAiProposal() {
         brief,
       }),
     });
+    if (
+      !isBoardContextUnchanged(boardContext)
+      || state.courseAiYearId !== requestYearId
+      || requestId !== courseAiRequestId
+      || JSON.stringify(readCourseBrief()) !== briefSnapshot
+    ) {
+      throw new Error("la board o l'anno sono cambiati durante la generazione; proposta AI ignorata");
+    }
     state.courseAiProposal = payload.proposal;
+    courseAiProposalContext = boardContext;
+    courseAiProposalBriefSnapshot = briefSnapshot;
     renderCourseAiPreview(payload.proposal);
     els.courseAiApplyBtn.disabled = false;
     setStatus(`Proposta percorso generata per ${year.title}.`);
     stopAiProgress("Proposta generata. Puoi controllarla e applicarla.");
   } catch (error) {
+    if (requestId !== courseAiRequestId) return;
     els.courseAiPreview.innerHTML = `<p class="empty">Errore: ${escapeHtml(error.message)}</p>`;
     setStatus(`AI assisted percorso non riuscito. Dettaglio provider/server: ${error.message}`);
     failAiProgress("Errore durante la generazione AI.");
   } finally {
-    els.courseAiGenerateBtn.disabled = false;
+    if (activeCourseAiRequestId === requestId) activeCourseAiRequestId = null;
+    if (requestId === courseAiRequestId) els.courseAiGenerateBtn.disabled = false;
   }
 }
 
@@ -1648,6 +1887,15 @@ function countItems(items) {
 function applyCourseAiProposal() {
   const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
   if (!year || !state.courseAiProposal) return;
+  if (
+    !courseAiProposalContext
+    || !isBoardContextUnchanged(courseAiProposalContext)
+    || JSON.stringify(readCourseBrief()) !== courseAiProposalBriefSnapshot
+  ) {
+    els.courseAiApplyBtn.disabled = true;
+    setStatus("Proposta AI non applicata: la board o il brief sono cambiati dopo la generazione.");
+    return;
+  }
   const brief = readCourseBrief();
   year.title = state.courseAiProposal.title || year.title;
   year.description = state.courseAiProposal.description || year.description;
@@ -1658,6 +1906,8 @@ function applyCourseAiProposal() {
   year.ai_brief = brief;
   els.courseAiDialog.close();
   state.courseAiProposal = null;
+  courseAiProposalContext = null;
+  courseAiProposalBriefSnapshot = "";
   renderCourse();
   renderHeadings();
   setStatus(`Proposta AI applicata a ${year.title}. Ricordati di salvare il JSON.`);
@@ -1681,6 +1931,18 @@ async function fillFrameWithAi(year, uda, item) {
 }
 
 async function fillSingleFrameWithAi(year, uda, item) {
+  if (
+    frameBatch
+    || frameVerificationBatch
+    || activeCourseAiRequestId !== null
+    || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
+  ) {
+    setStatus("Una coda AI e gia in esecuzione: attendi il completamento prima di generare una cornice singola.");
+    return false;
+  }
+  const requestId = ++singleFrameRequestId;
+  activeSingleFrameRequestId = requestId;
   setStatus(`AI assisted: preparo la cornice per "${item.title}"...`);
   startAiProgress(`AI assisted cornice: ${item.title}`);
   try {
@@ -1691,6 +1953,8 @@ async function fillSingleFrameWithAi(year, uda, item) {
   } catch (error) {
     setStatus(`AI assisted non riuscito. Dettaglio provider/server: ${error.message}`);
     failAiProgress(`Errore provider/server: ${error.message}`);
+  } finally {
+    if (activeSingleFrameRequestId === requestId) activeSingleFrameRequestId = null;
   }
 }
 
@@ -1709,7 +1973,13 @@ function openFrameBatch(year, uda, item, entries) {
 }
 
 function openFrameBatchQueue(rootTitle, entries, message) {
-  if (frameBatch) {
+  if (
+    frameBatch
+    || frameVerificationBatch
+    || activeCourseAiRequestId !== null
+    || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
+  ) {
     setStatus("Una coda AI e gia in esecuzione: chiudila o attendi il completamento prima di avviarne un'altra.");
     return;
   }
@@ -1720,6 +1990,7 @@ function openFrameBatchQueue(rootTitle, entries, message) {
     running: false,
     cancelled: false,
     cancelAction: "",
+    boardContext: captureBoardContext(),
     snapshots: entries.map(frameEntrySnapshot),
   };
   els.generateAllFramesBtn.disabled = true;
@@ -1732,15 +2003,66 @@ function frameEntrySnapshot(entry) {
     item: entry.item,
     frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(entry.item.frame || {}) })),
     frameQuality: JSON.parse(JSON.stringify({ ...defaultFrameQuality(), ...(entry.item.frame_quality || {}) })),
+    lastAppliedFrame: null,
+    lastAppliedFrameQuality: null,
   };
 }
 
-function restoreFrameSnapshot(snapshot) {
-  snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
-  snapshot.item.frame_quality = JSON.parse(JSON.stringify(snapshot.frameQuality));
+function recordAppliedFrameSnapshot(snapshot) {
+  snapshot.lastAppliedFrame = JSON.parse(JSON.stringify(snapshot.item.frame || {}));
+  snapshot.lastAppliedFrameQuality = JSON.parse(JSON.stringify(snapshot.item.frame_quality || {}));
 }
 
-async function generateFrameForEntry(entry) {
+function restoreQueueOwnedFrameFields(
+  currentFrame,
+  currentQuality,
+  lastAppliedFrame,
+  lastAppliedQuality,
+  originalFrame,
+  originalQuality,
+) {
+  if (!lastAppliedFrame) return 0;
+  let restored = 0;
+  for (const key of new Set([...Object.keys(lastAppliedFrame), ...Object.keys(originalFrame || {})])) {
+    const textStillQueueOwned = (
+      JSON.stringify(currentFrame?.[key]) === JSON.stringify(lastAppliedFrame[key])
+    );
+    const qualityStillQueueOwned = (
+      JSON.stringify(currentQuality?.[key]) === JSON.stringify(lastAppliedQuality?.[key])
+    );
+    if (!textStillQueueOwned || !qualityStillQueueOwned) continue;
+    if (Object.hasOwn(originalFrame || {}, key)) {
+      currentFrame[key] = JSON.parse(JSON.stringify(originalFrame[key]));
+    } else {
+      delete currentFrame[key];
+    }
+    restored += 1;
+    if (Object.hasOwn(originalQuality || {}, key)) {
+      currentQuality[key] = JSON.parse(JSON.stringify(originalQuality[key]));
+    } else {
+      delete currentQuality[key];
+    }
+    restored += 1;
+  }
+  return restored;
+}
+
+function restoreFrameSnapshot(snapshot) {
+  if (snapshot.lastAppliedFrame === null) return false;
+  return restoreQueueOwnedFrameFields(
+    snapshot.item.frame,
+    snapshot.item.frame_quality,
+    snapshot.lastAppliedFrame,
+    snapshot.lastAppliedFrameQuality,
+    snapshot.frame,
+    snapshot.frameQuality,
+  ) > 0;
+}
+
+async function generateFrameForEntry(entry, boardContext = captureBoardContext()) {
+  if (!isBoardContextUnchanged(boardContext)) {
+    throw new Error("la board è cambiata dopo la creazione della coda; richiesta AI annullata");
+  }
   const payload = await api("/api/ai-frame", {
     method: "POST",
     body: JSON.stringify({
@@ -1750,6 +2072,9 @@ async function generateFrameForEntry(entry) {
       item_id: entry.item.id,
     }),
   });
+  if (!isBoardContextUnchanged(boardContext)) {
+    throw new Error("la board è stata modificata durante la generazione; risposta AI ignorata");
+  }
   entry.item.frame = { ...defaultFrame(), ...(entry.item.frame || {}), ...payload.frame, status: "draft" };
   entry.item.frame_quality = defaultFrameQuality();
 }
@@ -1762,11 +2087,18 @@ async function generateNextFrameInBatch() {
   const entry = frameBatch.entries[frameBatch.index];
   setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
   try {
-    await generateFrameForEntry(entry);
+    await generateFrameForEntry(entry, frameBatch.boardContext);
+    recordAppliedFrameSnapshot(frameBatch.snapshots[frameBatch.index]);
+    frameBatch.boardContext = captureBoardContext();
     frameBatch.index += 1;
     renderCourse();
     setStatus(`Cornice generata per "${entry.item.title}".`);
   } catch (error) {
+    if (frameBatch?.cancelled) {
+      frameBatch.running = false;
+      finishCancelledFrameBatch();
+      return;
+    }
     setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
     failAiProgress(`Errore provider/server: ${error.message}`);
     frameBatch = null;
@@ -1794,7 +2126,9 @@ async function generateAllFramesInBatch() {
       const percent = Math.round((frameBatch.index / frameBatch.entries.length) * 100);
       updateAiProgress(percent, `Genero ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
       setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
-      await generateFrameForEntry(entry);
+      await generateFrameForEntry(entry, frameBatch.boardContext);
+      recordAppliedFrameSnapshot(frameBatch.snapshots[frameBatch.index]);
+      frameBatch.boardContext = captureBoardContext();
       frameBatch.index += 1;
       renderCourse();
     }
@@ -1811,6 +2145,10 @@ async function generateAllFramesInBatch() {
     els.generateAllFramesBtn.disabled = false;
   } catch (error) {
     if (frameBatch) frameBatch.running = false;
+    if (frameBatch?.cancelled) {
+      finishCancelledFrameBatch();
+      return;
+    }
     setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
     failAiProgress(`Errore provider/server: ${error.message}`);
     frameBatch = null;
@@ -2017,6 +2355,7 @@ function setFrameFieldQuality(item, fieldKey, label, stateName) {
   item.frame_quality[fieldKey] = stateName;
   setFrameLabelQuality(label, stateName);
   updateFrameEditorQuality(label?.closest(".frameEditor"), item);
+  renderCourseActions();
 }
 
 function frameQualityState(item) {
@@ -2088,11 +2427,25 @@ function applyLocalTextFixes(value) {
 }
 
 async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
+  if (
+    frameBatch
+    || frameVerificationBatch
+    || activeCourseAiRequestId !== null
+    || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
+  ) {
+    showToolbarMessage(output, "Una operazione AI è già in corso: attendi il completamento.", "neutral");
+    return false;
+  }
   const original = textarea.value;
   if (!original.trim()) {
     showToolbarMessage(output, "Campo vuoto: niente da correggere con AI.", "neutral");
-    return;
+    return false;
   }
+  const requestId = ++proofreadRequestId;
+  activeProofreadRequestId = requestId;
+  const boardContext = captureBoardContext();
+  const originalItemText = String(item.frame?.[fieldKey] || "");
   showToolbarMessage(output, "AI grammatica in corso: invio il campo al provider configurato...", "neutral");
   try {
     const payload = await api("/api/ai-proofread", {
@@ -2102,6 +2455,14 @@ async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
     const corrected = String(payload.corrected_text || "");
     if (!corrected.trim()) {
       showToolbarMessage(output, "La AI non ha restituito testo corretto utilizzabile.", "warn");
+      return;
+    }
+    if (
+      textarea.value !== original
+      || String(item.frame?.[fieldKey] || "") !== originalItemText
+      || !isBoardContextUnchanged(boardContext)
+    ) {
+      showToolbarMessage(output, "La board o il testo sono cambiati durante la verifica AI: la proposta non è stata applicata.", "warn");
       return;
     }
     if (corrected === original) {
@@ -2127,8 +2488,12 @@ async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
       showToolbarMessage(output, "Correzione AI non applicata.", "neutral");
       return;
     }
-    if (textarea.value !== original) {
-      showToolbarMessage(output, "Il testo è cambiato durante la verifica AI: la proposta non è stata applicata.", "warn");
+    if (
+      textarea.value !== original
+      || String(item.frame?.[fieldKey] || "") !== originalItemText
+      || !isBoardContextUnchanged(boardContext)
+    ) {
+      showToolbarMessage(output, "La board o il testo sono cambiati durante la verifica AI: la proposta non è stata applicata.", "warn");
       return;
     }
     textarea.value = corrected;
@@ -2138,6 +2503,8 @@ async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
     output.className = "textQuality textQualityOk";
   } catch (error) {
     showToolbarMessage(output, `AI grammatica non riuscita: ${error.message}`, "warn");
+  } finally {
+    if (activeProofreadRequestId === requestId) activeProofreadRequestId = null;
   }
 }
 
@@ -2146,12 +2513,18 @@ function frameFieldsWithContent(item) {
   return FRAME_FIELDS.filter((field) => String(frame[field.key] || "").trim());
 }
 
-async function proofreadFrameFieldForBatch(item, field) {
+async function proofreadFrameFieldForBatch(item, field, boardContext) {
+  if (!isBoardContextUnchanged(boardContext)) {
+    throw new Error("la board è cambiata dopo la creazione della coda; verifica AI annullata");
+  }
   const original = String(item.frame[field.key] || "");
   const payload = await api("/api/ai-proofread", {
     method: "POST",
     body: JSON.stringify({ text: original }),
   });
+  if (!isBoardContextUnchanged(boardContext)) {
+    throw new Error("la board è cambiata durante la verifica; risposta AI ignorata");
+  }
   const corrected = String(payload.corrected_text || "").trim();
   if (!corrected) throw new Error(`La AI non ha restituito testo per "${field.label}".`);
   item.frame[field.key] = corrected === original.trim() ? original : corrected;
@@ -2160,7 +2533,13 @@ async function proofreadFrameFieldForBatch(item, field) {
 }
 
 function verifyEntireFrame(item) {
-  if (frameBatch || frameVerificationBatch) {
+  if (
+    frameBatch
+    || frameVerificationBatch
+    || activeCourseAiRequestId !== null
+    || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
+  ) {
     setStatus("Una coda AI e gia in esecuzione: attendi il completamento prima di avviare una nuova verifica.");
     return;
   }
@@ -2169,6 +2548,10 @@ function verifyEntireFrame(item) {
     setStatus("Cornice vuota: inserisci almeno un campo prima di avviare la verifica completa.");
     return;
   }
+  item.frame_quality = {
+    ...defaultFrameQuality(),
+    ...(item.frame_quality || {}),
+  };
   frameVerificationBatch = {
     item,
     fields,
@@ -2176,10 +2559,13 @@ function verifyEntireFrame(item) {
     running: true,
     cancelled: false,
     closeRequested: false,
+    boardContext: captureBoardContext(),
     snapshots: {
       frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(item.frame || {}) })),
       frameQuality: JSON.parse(JSON.stringify({ ...defaultFrameQuality(), ...(item.frame_quality || {}) })),
     },
+    lastAppliedFrame: null,
+    lastAppliedFrameQuality: null,
   };
   frameVerificationBatch.running = false;
   showFrameVerificationProgress();
@@ -2194,13 +2580,24 @@ async function verifyNextFrameField() {
   const total = frameVerificationBatch.fields.length;
   showFrameVerificationProgress();
   try {
+    if (!isBoardContextUnchanged(frameVerificationBatch.boardContext)) {
+      throw new Error("la board è cambiata dopo la creazione della coda; verifica annullata");
+    }
     const local = applyLocalTextFixes(String(frameVerificationBatch.item.frame[current.key] || ""));
     frameVerificationBatch.item.frame[current.key] = local.text;
     frameVerificationBatch.item.frame_quality[current.key] = "local";
+    recordAppliedFrameVerificationSnapshot();
     renderCourse();
     showFrameVerificationProgress();
     setStatus(`Controllo locale: ${current.label} (${frameVerificationBatch.index + 1}/${total}).`);
-    await proofreadFrameFieldForBatch(frameVerificationBatch.item, current);
+    frameVerificationBatch.boardContext = captureBoardContext();
+    await proofreadFrameFieldForBatch(
+      frameVerificationBatch.item,
+      current,
+      frameVerificationBatch.boardContext,
+    );
+    recordAppliedFrameVerificationSnapshot();
+    frameVerificationBatch.boardContext = captureBoardContext();
     frameVerificationBatch.index += 1;
     renderCourse();
     if (frameVerificationBatch.cancelled) {
@@ -2233,6 +2630,15 @@ async function verifyNextFrameField() {
     setStatus(`Campo verificato: ${current.label}. Puoi passare al prossimo o verificare tutti i rimanenti.`);
     return true;
   } catch (error) {
+    if (frameVerificationBatch?.cancelled) {
+      restoreFrameVerificationSnapshot();
+      frameVerificationBatch = null;
+      els.aiBusyControls.hidden = true;
+      renderCourse();
+      setStatus("Verifica cornice annullata: ripristinate solo le modifiche della coda non sovrascritte.");
+      stopAiProgress("Verifica annullata.");
+      return false;
+    }
     frameVerificationBatch = null;
     els.aiBusyControls.hidden = true;
     els.aiBusyCloseBtn.disabled = false;
@@ -2257,10 +2663,26 @@ async function verifyAllFrameFields() {
   }
 }
 
-function restoreFrameVerificationSnapshot() {
+function recordAppliedFrameVerificationSnapshot() {
   if (!frameVerificationBatch) return;
-  frameVerificationBatch.item.frame = JSON.parse(JSON.stringify(frameVerificationBatch.snapshots.frame));
-  frameVerificationBatch.item.frame_quality = JSON.parse(JSON.stringify(frameVerificationBatch.snapshots.frameQuality));
+  frameVerificationBatch.lastAppliedFrame = JSON.parse(
+    JSON.stringify(frameVerificationBatch.item.frame || {}),
+  );
+  frameVerificationBatch.lastAppliedFrameQuality = JSON.parse(
+    JSON.stringify(frameVerificationBatch.item.frame_quality || {}),
+  );
+}
+
+function restoreFrameVerificationSnapshot() {
+  if (!frameVerificationBatch || frameVerificationBatch.lastAppliedFrame === null) return false;
+  return restoreQueueOwnedFrameFields(
+    frameVerificationBatch.item.frame,
+    frameVerificationBatch.item.frame_quality,
+    frameVerificationBatch.lastAppliedFrame,
+    frameVerificationBatch.lastAppliedFrameQuality,
+    frameVerificationBatch.snapshots.frame,
+    frameVerificationBatch.snapshots.frameQuality,
+  ) > 0;
 }
 
 function closeFrameVerification() {
@@ -2385,12 +2807,16 @@ async function persistDesignAsCurrent() {
   normalizeCourseDesignFrames();
   const savedSnapshot = designSnapshot();
   const boardContext = captureBoardContext();
+  const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio...");
   await api("/api/course-design", {
     method: "POST",
     body: savedSnapshot,
   });
-  if (!isBoardContextCurrent(boardContext)) {
+  if (
+    !isBoardContextCurrent(boardContext)
+    || courseContextGeneration !== courseContextRequestId
+  ) {
     setStatus("Progetto impostato come corrente. La vista aperta non e stata cambiata.");
     return;
   }
@@ -2460,7 +2886,11 @@ els.addYearBtn.addEventListener("click", openYearDialog);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCreateBtn.addEventListener("click", createYearFromDialog);
-els.paragraphCloseBtn.addEventListener("click", () => els.paragraphDialog.close());
+els.paragraphCloseBtn.addEventListener("click", () => {
+  invalidateParagraphPreview();
+  els.paragraphDialog.close();
+});
+els.paragraphDialog.addEventListener("close", () => invalidateParagraphPreview());
 els.yearIdInput.addEventListener("input", () => {
   els.yearIdInput.dataset.touched = "true";
 });
@@ -2500,6 +2930,18 @@ els.aiBusyCancelBtn.addEventListener("click", () => {
   cancelFrameBatch();
 });
 els.courseAiCloseBtn.addEventListener("click", () => els.courseAiDialog.close());
+els.courseAiDialog.addEventListener("close", () => {
+  courseAiRequestId += 1;
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = null;
+  courseAiDialogContext = null;
+  courseAiProposalContext = null;
+  courseAiProposalBriefSnapshot = "";
+  state.courseAiProposal = null;
+  els.aiBusy.hidden = true;
+  els.courseAiGenerateBtn.disabled = false;
+  els.courseAiApplyBtn.disabled = true;
+});
 els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
 els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
 els.sourceFilter.addEventListener("change", renderHeadings);

@@ -306,7 +306,7 @@ Questa fase serve a togliere al docente la gestione manuale di file e repository
 
 La pagina del percorso deve poter costruire UDA e argomenti usando paragrafi provenienti da piu fonti, non solo dal README locale.
 
-1. Introdurre un catalogo delle fonti didattiche:
+1. Introdurre un catalogo delle fonti didattiche (contratto iniziale e compatibilità legacy: `doc/COURSE_SOURCE_CATALOG.md`):
    - id fonte;
    - tipo fonte;
    - provider;

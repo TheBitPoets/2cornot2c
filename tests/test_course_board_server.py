@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import http.client
+import io
 import json
 import os
 import subprocess
@@ -105,6 +106,531 @@ def test_extract_headings_and_section_text_include_paragraph_content(tmp_path, m
     )
 
 
+def test_markdown_line_iteration_is_streaming_and_preserves_line_endings() -> None:
+    class SplitlinesForbidden(str):
+        def splitlines(self, *args, **kwargs):
+            raise AssertionError("splitlines must not materialize all lines")
+
+        def find(self, *args, **kwargs):
+            raise AssertionError("each delimiter must be scanned only once")
+
+    text = SplitlinesForbidden("# One\r\n## Two\r### Three\n")
+
+    assert list(course_board_server.iter_markdown_lines(text)) == [
+        "# One",
+        "## Two",
+        "### Three",
+    ]
+
+
+def test_heading_extraction_rejects_excessive_line_count(tmp_path, monkeypatch) -> None:
+    descriptor = course_board_server.course_source_catalog.CourseSource(
+        source_id="local",
+        label="Local",
+        source_type="local_markdown",
+        provider="local",
+        path=".",
+        repository=None,
+        ref=None,
+        files=("lesson.md",),
+        updated_at=None,
+        indexing_status="current",
+    )
+    source_file = course_board_server.course_source_catalog.LocalCourseSourceFile(
+        source=descriptor,
+        relative_path="lesson.md",
+        resolved_path=tmp_path / "lesson.md",
+        expected_size=None,
+        expected_identity=None,
+        expected_sha256=None,
+    )
+    monkeypatch.setattr(course_board_server, "MAX_MARKDOWN_LINES_PER_SOURCE", 3)
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="troppe righe",
+    ):
+        course_board_server.headings_from_source_snapshot(
+            source_file,
+            "ordinary\nlines\nwithout headings\nstill fail",
+        )
+
+
+def test_extract_headings_rejects_oversized_heading_catalog(tmp_path, monkeypatch) -> None:
+    (tmp_path / "headings.md").write_text(
+        "\n".join("# topic" for _ in range(course_board_server.MAX_HEADINGS_PER_SOURCE + 1)),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_design",
+        lambda: {"source_files": ["headings.md"]},
+    )
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="troppi heading",
+    ):
+        course_board_server.extract_headings()
+
+
+def test_extract_headings_rejects_overlong_titles(tmp_path, monkeypatch) -> None:
+    (tmp_path / "title.md").write_text(
+        "# " + "x" * (course_board_server.MAX_HEADING_TITLE_CHARS + 1) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_design",
+        lambda: {"source_files": ["title.md"]},
+    )
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="titolo Markdown troppo lungo",
+    ):
+        course_board_server.extract_headings()
+
+
+def test_extract_headings_preserves_explicit_source_provenance(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lessons").mkdir()
+    (tmp_path / "lessons" / "intro.md").write_text(
+        "# Corso\n\n## Array\n\nContenuto.\n",
+        encoding="utf-8",
+    )
+    design = {
+        "sources": [
+            {
+                "id": "local-lessons",
+                "label": "Lezioni locali",
+                "type": "markdown",
+                "provider": "local",
+                "path": "lessons",
+                "files": ["intro.md"],
+                "indexing_status": "ready",
+            },
+            {
+                "id": "github-pending",
+                "label": "Lezioni remote",
+                "type": "markdown",
+                "provider": "github",
+                "repository": "TheBitPoets/course",
+                "ref": "main",
+                "files": ["README.md"],
+                "indexing_status": "pending",
+            },
+        ]
+    }
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "read_design", lambda: design)
+
+    headings = course_board_server.extract_headings()
+
+    assert {heading["source_provider"] for heading in headings} == {"local"}
+    array = next(heading for heading in headings if heading["title"] == "Array")
+    assert array["id"] == "local-lessons:lessons/intro.md#array"
+    assert array["source_id"] == "local-lessons"
+    assert array["source_label"] == "Lezioni locali"
+    assert array["source_repository"] is None
+    assert array["source_ref"] is None
+
+
+def test_write_design_rejects_unsafe_source_catalog_before_persistence(tmp_path, monkeypatch) -> None:
+    class FailingCourseService:
+        def write_design(self, payload):
+            raise AssertionError("Il catalogo non valido non deve essere persistito.")
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "course_service", lambda: FailingCourseService())
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="path relativo canonico",
+    ):
+        course_board_server.write_design(
+            {
+                "sources": [
+                    {
+                        "id": "unsafe",
+                        "label": "Unsafe",
+                        "type": "markdown",
+                        "provider": "local",
+                        "path": "../outside",
+                        "files": ["lesson.md"],
+                        "indexing_status": "ready",
+                    }
+                ]
+            }
+        )
+
+
+def test_ai_config_uses_one_provider_model_snapshot(monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
+    monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")
+    providers = {
+        "openai": {
+            "id": "openai",
+            "model": "fallback-a",
+            "default_model": "default-a",
+            "api_key_configured": True,
+            "billing_note": "",
+        }
+    }
+    monkeypatch.setattr(course_board_server, "ai_providers", lambda: providers)
+    monkeypatch.setattr(course_board_server, "ai_secret_status", lambda current: {})
+    monkeypatch.setattr(
+        course_board_server,
+        "active_ai_model",
+        lambda: (_ for _ in ()).throw(AssertionError("must not take a second snapshot")),
+    )
+
+    config = course_board_server.ai_config()
+
+    assert config["provider"] == "openai"
+    assert config["model"] == "model-a"
+
+
+def test_ai_request_keeps_provider_and_model_snapshot_during_reconfiguration(monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
+    monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")
+    observed = []
+
+    def fake_openai_call(payload):
+        observed.append((
+            course_board_server.active_ai_provider(),
+            course_board_server.active_ai_model(),
+        ))
+        with course_board_server.AI_CONFIG_LOCK:
+            course_board_server.ACTIVE_AI_PROVIDER = "gemini"
+            course_board_server.ACTIVE_AI_MODEL = "model-b"
+        observed.append((
+            course_board_server.active_ai_provider(),
+            course_board_server.active_ai_model(),
+        ))
+        return {"ok": payload["ok"]}
+
+    monkeypatch.setattr(
+        course_board_server,
+        "call_openai_didactic_frame",
+        fake_openai_call,
+    )
+
+    assert course_board_server.call_ai_didactic_frame({"ok": True}) == {"ok": True}
+    assert observed == [("openai", "model-a"), ("openai", "model-a")]
+
+
+def test_ai_proofread_text_requires_a_bounded_string() -> None:
+    assert course_board_server.validated_ai_proofread_text({"text": "Valid"}) == "Valid"
+
+    for payload in (
+        {"text": 123},
+        {"text": "   "},
+        {"text": "x" * (course_board_server.MAX_AI_PROOFREAD_CHARS + 1)},
+    ):
+        with pytest.raises(ValueError):
+            course_board_server.validated_ai_proofread_text(payload)
+
+
+def test_ai_provider_response_reader_is_strictly_bounded() -> None:
+    assert course_board_server.read_bounded_ai_provider_body(io.BytesIO(b"ok"), 2) == b"ok"
+
+    with pytest.raises(RuntimeError, match="supera il limite"):
+        course_board_server.read_bounded_ai_provider_body(io.BytesIO(b"too large"), 3)
+
+
+def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lesson.md").write_text("# Corso\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_design",
+        lambda: {"source_files": ["lesson.md"]},
+    )
+    monkeypatch.setattr(
+        course_board_server,
+        "read_saved_design",
+        lambda name: {
+            "sources": [
+                {
+                    "id": "archived-source",
+                    "label": f"Archivio {name}",
+                    "type": "markdown",
+                    "provider": "local",
+                    "files": ["lesson.md"],
+                    "indexing_status": "ready",
+                }
+            ]
+        },
+    )
+    original_local_files = course_board_server.course_source_catalog.local_markdown_source_files
+    catalog_snapshots = []
+
+    def counted_local_files(*args, **kwargs):
+        catalog_snapshots.append(1)
+        return original_local_files(*args, **kwargs)
+
+    monkeypatch.setattr(
+        course_board_server.course_source_catalog,
+        "local_markdown_source_files",
+        counted_local_files,
+    )
+    teacher_token = "teacher-dashboard-token-for-source-catalog"
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = teacher_token
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        authorization = "Basic " + base64.b64encode(
+            f"teacher:{teacher_token}".encode("utf-8")
+        ).decode("ascii")
+        request = urllib.request.Request(
+            "http://127.0.0.1:%s/api/course-sources"
+            % server.server_address[1],
+            headers={"Authorization": authorization},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        assert len(payload["sources"]) == 1
+        assert payload["sources"][0]["provider"] == "local"
+        assert payload["sources"][0]["legacy"] is True
+        assert payload["sources"][0]["indexed_files"] == ["lesson.md"]
+
+        archived_request = urllib.request.Request(
+            "http://127.0.0.1:%s/api/course-source-context?design=archive.json"
+            % server.server_address[1],
+            headers={"Authorization": authorization},
+        )
+        with urllib.request.urlopen(archived_request, timeout=5) as response:
+            archived = json.loads(response.read().decode("utf-8"))
+        assert archived["design"]["sources"][0]["id"] == "archived-source"
+        assert archived["sources"][0]["id"] == "archived-source"
+        assert archived["sources"][0]["label"] == "Archivio archive.json"
+        assert archived["headings"][0]["source_id"] == "archived-source"
+        assert len(catalog_snapshots) == 2
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lesson.md").write_text(
+        "## Before\n\nOne.\n\n## Target\n\nTwo.\n\n## After\n\nThree.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {
+        "source_files": ["lesson.md"],
+        "years": [{
+            "id": "year",
+            "udas": [{
+                "id": "uda",
+                "items": [
+                    {"id": "lesson.md#before", "title": "Before", "source": "lesson.md", "line": 1, "level": 2},
+                    {"id": "lesson.md#target", "title": "Target", "source": "lesson.md", "line": 5, "level": 2},
+                    {"id": "lesson.md#after", "title": "After", "source": "lesson.md", "line": 9, "level": 2},
+                ],
+            }],
+        }],
+    }
+    original_read = course_board_server.course_source_catalog.read_local_markdown_text
+    reads = []
+
+    def counted_read(item, root):
+        reads.append(item.relative_path)
+        return original_read(item, root)
+
+    monkeypatch.setattr(
+        course_board_server.course_source_catalog,
+        "read_local_markdown_text",
+        counted_read,
+    )
+
+    context = course_board_server.target_context(design, "year", "uda", "lesson.md#target")
+
+    assert context["previous_topics"][0]["text"] == "One."
+    assert context["target_topic"]["text"] == "Two."
+    assert context["next_topics"][0]["text"] == "Three."
+    assert reads == ["lesson.md"]
+
+
+def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lesson.md").write_text("## Current\n\nNew content.\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {
+        "sources": [{
+            "id": "source-b",
+            "label": "Current",
+            "type": "markdown",
+            "provider": "local",
+            "files": ["lesson.md"],
+            "indexing_status": "ready",
+        }],
+        "years": [{
+            "id": "year",
+            "udas": [{
+                "id": "uda",
+                "items": [{
+                    "id": "source-a:lesson.md#current",
+                    "title": "Stale",
+                    "source": "lesson.md",
+                    "source_id": "source-a",
+                    "line": 1,
+                    "level": 2,
+                }],
+            }],
+        }],
+    }
+
+    context = course_board_server.target_context(
+        design,
+        "year",
+        "uda",
+        "source-a:lesson.md#current",
+    )
+
+    assert context["target_topic"]["source_id"] == "source-a"
+    assert context["target_topic"]["text"] == ""
+
+    design["years"][0]["udas"][0]["items"][0].pop("source_id")
+    missing_provenance = course_board_server.target_context(
+        design,
+        "year",
+        "uda",
+        "source-a:lesson.md#current",
+    )
+    assert missing_provenance["target_topic"]["text"] == ""
+
+    stale_item = design["years"][0]["udas"][0]["items"][0]
+    stale_item.update({
+        "id": "source-b:lesson.md#current",
+        "source_id": "source-b",
+        "line": 2,
+    })
+    shifted = course_board_server.target_context(
+        design,
+        "year",
+        "uda",
+        "source-b:lesson.md#current",
+    )
+    assert shifted["target_topic"]["text"] == ""
+
+
+def test_ai_catalog_rejects_excessive_heading_count(tmp_path, monkeypatch) -> None:
+    source = tmp_path / "many.md"
+    source.write_text(
+        "".join(f"## Topic {index}\n" for index in range(course_board_server.MAX_AI_CATALOG_HEADINGS + 1)),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="Troppi heading per il catalogo di contesto AI",
+    ):
+        course_board_server.heading_catalog_tree({"source_files": ["many.md"]})
+
+
+def test_catalog_excerpt_scans_bounded_lines_per_heading() -> None:
+    class CountingLines(list):
+        reads = 0
+
+        def __getitem__(self, index):
+            self.reads += 1
+            return super().__getitem__(index)
+
+    lines = CountingLines([""] * 10_000)
+
+    assert course_board_server.catalog_excerpt_from_lines(lines, 1, 2) == ""
+    assert lines.reads <= 256
+
+
+def test_heading_catalog_never_nests_across_source_files(tmp_path, monkeypatch) -> None:
+    (tmp_path / "first.md").write_text("## First\n", encoding="utf-8")
+    (tmp_path / "second.md").write_text("### Second\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {"source_files": ["first.md", "second.md"]}
+
+    catalog = course_board_server.heading_catalog_tree(design)
+
+    assert [item["title"] for item in catalog] == ["First", "Second"]
+    assert all("children" not in item for item in catalog)
+
+
+def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monkeypatch) -> None:
+    (tmp_path / "current.md").write_text("# Current\n", encoding="utf-8")
+    (tmp_path / "archived.md").write_text(
+        "# Archived\n\nContenuto archivio.\n",
+        encoding="utf-8",
+    )
+    archived_design = {
+        "sources": [
+            {
+                "id": "archive",
+                "label": "Archive",
+                "type": "markdown",
+                "provider": "local",
+                "files": ["archived.md"],
+                "indexing_status": "ready",
+            }
+        ],
+        "years": [{"id": "year", "title": "Year", "udas": []}],
+    }
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_design",
+        lambda: {"source_files": ["current.md"]},
+    )
+
+    catalog = course_board_server.heading_catalog_tree(archived_design)
+    hydration_headings = course_board_server.flatten_heading_catalog(catalog)
+    (tmp_path / "archived.md").write_text(
+        "# Changed\n\nContenuto cambiato.\n",
+        encoding="utf-8",
+    )
+    proposal = course_board_server.normalize_course_plan(
+        {
+            "title": "Plan",
+            "udas": [
+                {
+                    "id": "uda-1",
+                    "items": ["archive:archived.md#archived"],
+                }
+            ],
+        },
+        archived_design,
+        "year",
+        headings=hydration_headings,
+    )
+
+    assert catalog[0]["id"] == "archive:archived.md#archived"
+    assert catalog[0]["excerpt"] == "Contenuto archivio."
+    assert proposal["udas"][0]["items"][0]["source_id"] == "archive"
+    framed_design = {
+        **archived_design,
+        "years": [
+            {
+                "id": "year",
+                "title": "Year",
+                "udas": proposal["udas"],
+            }
+        ],
+    }
+    context = course_board_server.target_context(
+        framed_design,
+        "year",
+        "uda-1",
+        "archive:archived.md#archived",
+    )
+    assert context["target_topic"]["text"] == ""
+
+
 def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:
     source = tmp_path / "lesson.md"
     source.write_text("# Corso\n\n## Array\n\nTesto leggibile.\n", encoding="utf-8")
@@ -119,6 +645,19 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
     thread.start()
     try:
         heading = next(item for item in course_board_server.extract_headings() if item["title"] == "Array")
+        original_read = course_board_server.course_source_catalog.read_local_markdown_text
+        reads = 0
+
+        def counted_read(item, root):
+            nonlocal reads
+            reads += 1
+            return original_read(item, root)
+
+        monkeypatch.setattr(
+            course_board_server.course_source_catalog,
+            "read_local_markdown_text",
+            counted_read,
+        )
         authorization = "Basic " + base64.b64encode(f"teacher:{teacher_token}".encode("utf-8")).decode("ascii")
         request = urllib.request.Request(
             "http://127.0.0.1:%s/api/heading-content?id=%s"
@@ -129,6 +668,22 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
             payload = json.loads(response.read().decode("utf-8"))
         assert payload["heading"]["title"] == "Array"
         assert payload["heading"]["content"] == "Testo leggibile."
+        detached_request = urllib.request.Request(
+            "http://127.0.0.1:%s/api/heading-content" % server.server_address[1],
+            data=json.dumps({
+                "id": heading["id"],
+                "design": {"source_files": ["lesson.md"]},
+            }).encode("utf-8"),
+            headers={
+                "Authorization": authorization,
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(detached_request, timeout=5) as response:
+            detached_payload = json.loads(response.read().decode("utf-8"))
+        assert detached_payload["heading"]["content"] == "Testo leggibile."
+        assert reads == 2
     finally:
         server.shutdown()
         server.server_close()

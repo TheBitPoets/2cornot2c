@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from contextlib import contextmanager
 import hashlib
 import ipaddress
 import json
@@ -55,6 +56,7 @@ from scripts import (
     assignment_records,
     assign_activity,
     codex_activity_adapter,
+    course_source_catalog,
     create_activity,
     create_submission_scaffold,
     manual_ai_feedback,
@@ -94,6 +96,8 @@ LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
 ACTIVE_AI_MODEL = os.environ.get("AI_MODEL", "").strip()
+AI_CONFIG_LOCK = threading.RLock()
+AI_REQUEST_CONFIG = threading.local()
 MAX_HTTP_WORKERS = 64
 MAX_HTTP_WORKERS_PER_CLIENT = 8
 HTTP_CLIENT_TIMEOUT_SECONDS = 15
@@ -101,6 +105,7 @@ PAIRING_BODY_DEADLINE_SECONDS = 15
 STUDENT_API_BODY_DEADLINE_SECONDS = 15
 HTTP_HEADER_DEADLINE_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+MARKDOWN_LINE_ENDING_RE = re.compile(r"\r\n|\r|\n")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
 SPACE_RE = re.compile(r"[\s_]+")
@@ -118,8 +123,17 @@ COURSE_PLAN_REQUIRED_FIELDS = ["year_id", "title", "description", "udas", "unpla
 MAX_SECTION_CHARS = 6000
 MAX_CHILDREN_WITH_TEXT = 8
 MAX_CATALOG_EXCERPT_CHARS = 400
+MAX_TOTAL_CATALOG_EXCERPT_CHARS = 1_000_000
+MAX_AI_CATALOG_HEADINGS = 5_000
+MAX_HEADINGS_PER_SOURCE = 10_000
+MAX_MARKDOWN_LINES_PER_SOURCE = 250_000
+MAX_TOTAL_HEADINGS = 50_000
+MAX_HEADING_TITLE_CHARS = 512
 AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
+MAX_AI_PROVIDER_RESPONSE_BYTES = 4 * 1024 * 1024
+MAX_AI_PROVIDER_ERROR_BYTES = 64 * 1024
+MAX_AI_PROOFREAD_CHARS = 20_000
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
@@ -537,15 +551,28 @@ def read_design() -> dict:
     return course_service().read_design()
 
 
+def validate_course_source_catalog(payload: dict) -> None:
+    """Validate source descriptors and repository confinement before persistence."""
+
+    course_source_catalog.local_markdown_source_files(
+        payload,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+        existing_only=False,
+    )
+
+
 def write_design(payload: dict) -> None:
     """Persist the course design JSON with stable formatting."""
 
+    validate_course_source_catalog(payload)
     course_service().write_design(payload)
 
 
 def generate_course_plan_md(payload: dict) -> dict:
     """Generate doc/PERCORSO_DIDATTICO.md without promoting the edited design."""
 
+    validate_course_source_catalog(payload)
     temporary_root = ROOT / "tmp"
     temporary_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="course-plan-", dir=temporary_root) as directory:
@@ -655,9 +682,22 @@ def read_saved_design(name: str) -> dict:
     return course_service().read_saved_design(name)
 
 
+def source_request_design(raw_query: str) -> dict:
+    """Resolve the current or one safely named archived design for source APIs."""
+
+    query = parse_qs(raw_query, keep_blank_values=True)
+    names = query.get("design", [])
+    if not names:
+        return read_design()
+    if len(names) != 1 or not names[0]:
+        raise ValueError("Parametro design non valido.")
+    return read_saved_design(names[0])
+
+
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
     """Persist a named course design in the archive folder."""
 
+    validate_course_source_catalog(payload)
     return course_service().write_saved_design(name, payload, overwrite=overwrite)
 
 
@@ -2009,42 +2049,131 @@ def default_ai_provider_config() -> dict:
     }
 
 
-def extract_headings() -> list[dict]:
+def extract_headings(
+    design: dict | None = None,
+    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+) -> list[dict]:
     """Extract headings from configured Markdown sources."""
 
-    design = read_design()
-    sources = design.get("source_files") or DEFAULT_SOURCES
+    selected_design = read_design() if design is None else design
     headings: list[dict] = []
-    for source in sources:
-        path = (ROOT / source).resolve()
-        try:
-            path.relative_to(ROOT)
-        except ValueError:
-            continue
-        if not path.is_file():
-            continue
-        seen: dict[str, int] = {}
-        for lineno, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
-            match = HEADING_RE.match(line)
-            if not match:
-                continue
-            title = match.group(2).strip()
-            if not title or title.startswith("0 \""):
-                continue
-            anchor = github_anchor(title, seen)
-            headings.append(
-                {
-                    "id": f"{source}#{anchor}",
-                    "source": source,
-                    "level": len(match.group(1)),
-                    "title": TAG_RE.sub("", title).strip(),
-                    "anchor": anchor,
-                    "href": f"../{source}#{anchor}",
-                    "github_url": github_blob_url(source, anchor),
-                    "line": lineno,
-                }
+    selected_files = (
+        course_source_catalog.local_markdown_source_files(
+            selected_design,
+            ROOT,
+            default_files=DEFAULT_SOURCES,
+        )
+        if source_files is None
+        else source_files
+    )
+    for source_file in selected_files:
+        source_text = course_source_catalog.read_local_markdown_text(
+            source_file,
+            ROOT,
+        )
+        source_headings = headings_from_source_snapshot(source_file, source_text)
+        if len(headings) + len(source_headings) > MAX_TOTAL_HEADINGS:
+            raise course_source_catalog.CourseSourceCatalogError(
+                "Il catalogo contiene troppi heading Markdown."
             )
+        headings.extend(source_headings)
     return headings
+
+
+def iter_markdown_lines(source_text: str):
+    """Yield LF, CRLF, or CR-delimited lines without materializing a list."""
+
+    start = 0
+    for delimiter in MARKDOWN_LINE_ENDING_RE.finditer(source_text):
+        yield source_text[start:delimiter.start()]
+        start = delimiter.end()
+    if start < len(source_text):
+        yield source_text[start:]
+
+
+def headings_from_source_snapshot(
+    source_file: course_source_catalog.LocalCourseSourceFile,
+    source_text: str,
+) -> list[dict]:
+    """Extract bounded public heading metadata from one verified source snapshot."""
+
+    source = source_file.relative_path
+    descriptor = source_file.source
+    seen: dict[str, int] = {}
+    headings: list[dict] = []
+    for lineno, line in enumerate(iter_markdown_lines(source_text), start=1):
+        if lineno > MAX_MARKDOWN_LINES_PER_SOURCE:
+            raise course_source_catalog.CourseSourceCatalogError(
+                f"La fonte {source} contiene troppe righe Markdown."
+            )
+        match = HEADING_RE.match(line)
+        if not match:
+            continue
+        title = match.group(2).strip()
+        if not title or title.startswith("0 \""):
+            continue
+        if len(title) > MAX_HEADING_TITLE_CHARS:
+            raise course_source_catalog.CourseSourceCatalogError(
+                f"La fonte {source} contiene un titolo Markdown troppo lungo."
+            )
+        anchor = github_anchor(title, seen)
+        heading_id = (
+            f"{source}#{anchor}"
+            if descriptor.legacy
+            else f"{descriptor.source_id}:{source}#{anchor}"
+        )
+        if len(headings) >= MAX_HEADINGS_PER_SOURCE:
+            raise course_source_catalog.CourseSourceCatalogError(
+                f"La fonte {source} contiene troppi heading Markdown."
+            )
+        headings.append(
+            {
+                "id": heading_id,
+                "source": source,
+                "source_id": descriptor.source_id,
+                "source_label": descriptor.label,
+                "source_provider": descriptor.provider,
+                "source_repository": descriptor.repository,
+                "source_ref": descriptor.ref,
+                "level": len(match.group(1)),
+                "title": TAG_RE.sub("", title).strip(),
+                "anchor": anchor,
+                "href": f"../{source}#{anchor}",
+                "github_url": github_blob_url(source, anchor),
+                "line": lineno,
+            }
+        )
+    return headings
+
+
+def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] | None:
+    """Return heading metadata and section from one bounded source read."""
+
+    total_headings = 0
+    for source_file in course_source_catalog.local_markdown_source_files(
+        design,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+    ):
+        source_text = course_source_catalog.read_local_markdown_text(
+            source_file,
+            ROOT,
+        )
+        source_headings = headings_from_source_snapshot(source_file, source_text)
+        total_headings += len(source_headings)
+        if total_headings > MAX_TOTAL_HEADINGS:
+            raise course_source_catalog.CourseSourceCatalogError(
+                "Il catalogo contiene troppi heading Markdown."
+            )
+        for heading in source_headings:
+            if heading["id"] == heading_id:
+                return heading, section_text_from_source(
+                    source_text,
+                    heading["line"],
+                    heading["level"],
+                )
+        source_text = None
+    return None
 
 
 def github_blob_url(source: str, anchor: str = "") -> str:
@@ -2054,7 +2183,16 @@ def github_blob_url(source: str, anchor: str = "") -> str:
     return f"{base}#{anchor}" if anchor else base
 
 
-def section_text(source: str, line: int | str, level: int | str) -> str:
+def section_text(
+    source: str,
+    line: int | str,
+    level: int | str,
+    design: dict | None = None,
+    source_snapshots: dict[str, str] | None = None,
+    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+    source_id: str = "",
+    heading_id: str = "",
+) -> str:
     """Extract local Markdown text for one heading section."""
 
     try:
@@ -2062,20 +2200,72 @@ def section_text(source: str, line: int | str, level: int | str) -> str:
         start_level = int(level)
     except (TypeError, ValueError):
         return ""
-    path = (ROOT / source).resolve()
-    try:
-        path.relative_to(ROOT)
-    except ValueError:
+    selected_design = read_design() if design is None else design
+    selected_files = (
+        course_source_catalog.local_markdown_source_files(
+            selected_design,
+            ROOT,
+            default_files=DEFAULT_SOURCES,
+        )
+        if source_files is None
+        else source_files
+    )
+    source_file = next(
+        (
+            item
+            for item in selected_files
+            if item.relative_path == source
+            and (
+                item.source.source_id == source_id
+                if source_id
+                else item.source.legacy
+            )
+        ),
+        None,
+    )
+    if source_file is None:
         return ""
-    if not path.is_file():
-        return ""
+    snapshot_key = f"{source_id}\0{source}"
+    source_text = None if source_snapshots is None else source_snapshots.get(snapshot_key)
+    if source_text is None:
+        source_text = course_source_catalog.read_local_markdown_text(
+            source_file,
+            ROOT,
+        )
+        if source_snapshots is not None:
+            source_snapshots[snapshot_key] = source_text
+    if heading_id:
+        matching_heading = next(
+            (
+                heading
+                for heading in headings_from_source_snapshot(source_file, source_text)
+                if heading["id"] == heading_id
+            ),
+            None,
+        )
+        if (
+            matching_heading is None
+            or matching_heading["line"] != start_line
+            or matching_heading["level"] != start_level
+        ):
+            return ""
+    return section_text_from_source(source_text, start_line, start_level)
 
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+
+def section_text_from_source(source_text: str, start_line: int, start_level: int) -> str:
+    """Extract one heading section from an already verified source snapshot."""
+
+    return section_text_from_lines(source_text.splitlines(), start_line, start_level)
+
+
+def section_text_from_lines(lines: list[str], start_line: int, start_level: int) -> str:
+    """Extract one heading section from pre-split Markdown lines."""
+
     if start_line < 1 or start_line > len(lines):
         return ""
-
     section: list[str] = []
-    for current in lines[start_line:]:
+    for index in range(start_line, len(lines)):
+        current = lines[index]
         match = HEADING_RE.match(current)
         if match and len(match.group(1)) <= start_level:
             break
@@ -2086,29 +2276,93 @@ def section_text(source: str, line: int | str, level: int | str) -> str:
     return text
 
 
-def section_excerpt(heading: dict) -> str:
-    """Return a short local excerpt for course-plan generation."""
+def catalog_excerpt_from_lines(
+    lines: list[str],
+    start_line: int,
+    start_level: int,
+) -> str:
+    """Build a compact excerpt with bounded work per heading."""
 
-    text = section_text(heading.get("source", ""), heading.get("line", ""), heading.get("level", ""))
-    text = re.sub(r"\s+", " ", text).strip()
-    if len(text) > MAX_CATALOG_EXCERPT_CHARS:
-        return text[:MAX_CATALOG_EXCERPT_CHARS].rstrip() + "..."
-    return text
+    if start_line < 1 or start_line > len(lines):
+        return ""
+    parts: list[str] = []
+    raw_chars = 0
+    stop = min(len(lines), start_line + 256)
+    for index in range(start_line, stop):
+        current = lines[index]
+        match = HEADING_RE.match(current)
+        if match and len(match.group(1)) <= start_level:
+            break
+        parts.append(current)
+        raw_chars += len(current) + 1
+        if raw_chars >= MAX_CATALOG_EXCERPT_CHARS * 4:
+            break
+    return re.sub(r"\s+", " ", "\n".join(parts)).strip()
 
 
-def heading_catalog_tree() -> list[dict]:
+def heading_catalog_tree(design: dict | None = None) -> list[dict]:
     """Return all available headings as a tree with compact excerpts."""
+
+    selected_design = read_design() if design is None else design
+    catalog_headings: list[dict] = []
+    total_excerpt_chars = 0
+    for source_file in course_source_catalog.local_markdown_source_files(
+        selected_design,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+    ):
+        source_text = course_source_catalog.read_local_markdown_text(
+            source_file,
+            ROOT,
+        )
+        source_headings = headings_from_source_snapshot(source_file, source_text)
+        if len(catalog_headings) + len(source_headings) > MAX_AI_CATALOG_HEADINGS:
+            raise course_source_catalog.CourseSourceCatalogError(
+                "Troppi heading per il catalogo di contesto AI."
+            )
+        source_lines = source_text.splitlines()
+        for heading in source_headings:
+            excerpt = catalog_excerpt_from_lines(
+                source_lines,
+                heading["line"],
+                heading["level"],
+            )
+            remaining = MAX_TOTAL_CATALOG_EXCERPT_CHARS - total_excerpt_chars
+            excerpt_limit = min(MAX_CATALOG_EXCERPT_CHARS, max(0, remaining))
+            if len(excerpt) > excerpt_limit:
+                excerpt = (
+                    excerpt[: max(0, excerpt_limit - 3)].rstrip() + "..."
+                    if excerpt_limit >= 3
+                    else excerpt[:excerpt_limit]
+                )
+            heading["excerpt"] = excerpt
+            total_excerpt_chars += len(excerpt)
+        catalog_headings.extend(source_headings)
+        source_lines = None
+        source_text = None
 
     roots: list[dict] = []
     stack: list[dict] = []
-    for heading in extract_headings():
+    previous_source = None
+    for heading in catalog_headings:
+        if heading["source"] != previous_source:
+            stack.clear()
+            previous_source = heading["source"]
         node = {
             "id": heading["id"],
             "title": heading["title"],
             "source": heading["source"],
+            "source_id": heading.get("source_id", ""),
+            "source_label": heading.get("source_label", heading["source"]),
+            "source_provider": heading.get("source_provider", "local"),
+            "source_repository": heading.get("source_repository"),
+            "source_ref": heading.get("source_ref"),
             "level": heading["level"],
+            "line": heading["line"],
+            "anchor": heading["anchor"],
             "href": heading["href"],
-            "excerpt": section_excerpt(heading),
+            "github_url": heading["github_url"],
+            "excerpt": heading["excerpt"],
             "children": [],
         }
         while stack and heading["level"] <= stack[-1]["level"]:
@@ -2131,23 +2385,49 @@ def prune_empty_children(items: list[dict]) -> None:
             item.pop("children", None)
 
 
-def topic_summary(item: dict, include_text: bool = False, child_text_budget: int = 0) -> dict:
+def topic_summary(
+    item: dict,
+    include_text: bool = False,
+    child_text_budget: int = 0,
+    design: dict | None = None,
+    source_snapshots: dict[str, str] | None = None,
+    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+) -> dict:
     """Return a compact recursive topic summary for the AI prompt."""
 
     anchor = str(item.get("href", "")).split("#", 1)[-1] if "#" in str(item.get("href", "")) else ""
     summary = {
         "title": item.get("title", ""),
         "source": item.get("source", ""),
+        "source_id": item.get("source_id", ""),
+        "source_provider": item.get("source_provider", "local"),
+        "source_repository": item.get("source_repository"),
+        "source_ref": item.get("source_ref"),
         "level": item.get("level", ""),
         "href": item.get("href", ""),
         "github_url": github_blob_url(item.get("source", ""), anchor),
         "children": [
-            topic_summary(child, include_text=include_text and index < child_text_budget)
+            topic_summary(
+                child,
+                include_text=include_text and index < child_text_budget,
+                design=design,
+                source_snapshots=source_snapshots,
+                source_files=source_files,
+            )
             for index, child in enumerate(item.get("children", []))
         ],
     }
     if include_text:
-        summary["text"] = section_text(item.get("source", ""), item.get("line", ""), item.get("level", ""))
+        summary["text"] = section_text(
+            item.get("source", ""),
+            item.get("line", ""),
+            item.get("level", ""),
+            design,
+            source_snapshots,
+            source_files,
+            str(item.get("source_id", "")),
+            str(item.get("id", "")),
+        )
     return summary
 
 
@@ -2189,6 +2469,11 @@ def board_item_from_heading(heading: dict) -> dict:
         "id": heading["id"],
         "title": heading["title"],
         "source": heading["source"],
+        "source_id": heading.get("source_id", ""),
+        "source_label": heading.get("source_label", heading["source"]),
+        "source_provider": heading.get("source_provider", "local"),
+        "source_repository": heading.get("source_repository"),
+        "source_ref": heading.get("source_ref"),
         "href": heading["href"],
         "level": heading["level"],
         "line": heading["line"],
@@ -2211,7 +2496,10 @@ def compact_design(design: dict) -> dict:
                         "title": uda.get("title", ""),
                         "path": uda.get("path", ""),
                         "weeks": uda.get("weeks", ""),
-                        "items": [topic_summary(item) for item in uda.get("items", [])],
+                        "items": [
+                            topic_summary(item, design=design)
+                            for item in uda.get("items", [])
+                        ],
                     }
                     for uda in year.get("udas", [])
                 ],
@@ -2233,6 +2521,12 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
             found = find_item_context(uda.get("items", []), item_id)
             if found:
                 index, siblings, item = found
+                source_files = course_source_catalog.local_markdown_source_files(
+                    design,
+                    ROOT,
+                    default_files=DEFAULT_SOURCES,
+                )
+                source_snapshots: dict[str, str] = {}
                 previous_topics = siblings[max(0, index - 2):index]
                 next_topics = siblings[index + 1:index + 3]
                 return {
@@ -2240,16 +2534,31 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
                     "uda": {key: uda.get(key, "") for key in ["id", "title", "path", "weeks"]},
                     "position": topic_position(index, siblings, item),
                     "previous_topics": [
-                        topic_summary(candidate, include_text=True)
+                        topic_summary(
+                            candidate,
+                            include_text=True,
+                            design=design,
+                            source_snapshots=source_snapshots,
+                            source_files=source_files,
+                        )
                         for candidate in previous_topics
                     ],
                     "target_topic": topic_summary(
                         item,
                         include_text=True,
                         child_text_budget=MAX_CHILDREN_WITH_TEXT,
+                        design=design,
+                        source_snapshots=source_snapshots,
+                        source_files=source_files,
                     ),
                     "next_topics": [
-                        topic_summary(candidate, include_text=True)
+                        topic_summary(
+                            candidate,
+                            include_text=True,
+                            design=design,
+                            source_snapshots=source_snapshots,
+                            source_files=source_files,
+                        )
                         for candidate in next_topics
                     ],
                 }
@@ -2477,10 +2786,26 @@ def normalize_proofread(result: dict, original_text: str) -> dict:
     }
 
 
-def normalize_course_plan(raw: dict, design: dict, year_id: str) -> dict:
+def flatten_heading_catalog(items: list[dict]) -> list[dict]:
+    """Flatten one catalog tree in source order for deterministic hydration."""
+
+    flattened: list[dict] = []
+    for item in items:
+        flattened.append({key: value for key, value in item.items() if key != "children"})
+        flattened.extend(flatten_heading_catalog(item.get("children", [])))
+    return flattened
+
+
+def normalize_course_plan(
+    raw: dict,
+    design: dict,
+    year_id: str,
+    *,
+    headings: list[dict] | None = None,
+) -> dict:
     """Validate a raw AI proposal and hydrate item ids into board items."""
 
-    headings = extract_headings()
+    headings = extract_headings(design) if headings is None else headings
     valid_ids = {heading["id"] for heading in headings}
     year = next((candidate for candidate in design.get("years", []) if candidate.get("id") == year_id), {})
     used: set[str] = set()
@@ -2591,9 +2916,9 @@ def call_openai_didactic_frame(payload: dict) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore OpenAI API {error.code}: {detail}") from error
 
     output_text = data.get("output_text")
@@ -2643,9 +2968,9 @@ def call_gemini_didactic_frame(payload: dict) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore Gemini API {error.code}: {detail}") from error
 
     try:
@@ -2662,6 +2987,27 @@ def gemini_frame_payload(payload: dict) -> dict:
     if secret_value("GEMINI_COMPACT_TEXT_CHARS"):
         return compact_frame_payload(payload)
     return payload
+
+
+def read_bounded_ai_provider_body(stream, limit: int) -> bytes:
+    """Read one provider body with a strict allocation bound."""
+
+    body = stream.read(limit + 1)
+    if len(body) > limit:
+        raise RuntimeError("La risposta del provider AI supera il limite consentito.")
+    return body
+
+
+def read_ai_provider_error(error: urllib.error.HTTPError) -> str:
+    """Return bounded provider diagnostics without retaining oversized bodies."""
+
+    try:
+        return read_bounded_ai_provider_body(
+            error,
+            MAX_AI_PROVIDER_ERROR_BYTES,
+        ).decode("utf-8", errors="replace")
+    except RuntimeError:
+        return "[corpo errore omesso: supera il limite consentito]"
 
 
 def call_chat_completions_json(provider_name: str, url: str, api_key: str, model: str, system_prompt: str, payload: dict) -> dict:
@@ -2693,9 +3039,9 @@ def call_chat_completions_json(provider_name: str, url: str, api_key: str, model
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_COURSE_PLAN_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore {provider_name} API {error.code}: {detail}") from error
     try:
         return parse_json_object(data["choices"][0]["message"]["content"])
@@ -2755,7 +3101,7 @@ def compact_frame_payload(payload: dict) -> dict:
 def compact_topic(topic: dict, include_text: bool) -> dict:
     """Return a compact topic with optional truncated text and child titles."""
 
-    text_limit = secret_int_value(f"{ACTIVE_AI_PROVIDER.upper()}_COMPACT_TEXT_CHARS", COMPACT_TEXT_CHARS)
+    text_limit = secret_int_value(f"{active_ai_provider().upper()}_COMPACT_TEXT_CHARS", COMPACT_TEXT_CHARS)
     compact = {
         "title": topic.get("title", ""),
         "source": topic.get("source", ""),
@@ -2813,18 +3159,18 @@ def call_openrouter_didactic_frame(payload: dict) -> dict:
 
 
 def call_ai_didactic_frame(payload: dict) -> dict:
-    """Route didactic-frame generation to the configured AI provider."""
+    """Route didactic-frame generation with one provider/model snapshot."""
 
-    provider = ACTIVE_AI_PROVIDER
-    if provider == "openai":
-        return call_openai_didactic_frame(payload)
-    if provider == "gemini":
-        return call_gemini_didactic_frame(payload)
-    if provider == "groq":
-        return call_groq_didactic_frame(payload)
-    if provider == "openrouter":
-        return call_openrouter_didactic_frame(payload)
-    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
+    with ai_request_configuration() as provider:
+        if provider == "openai":
+            return call_openai_didactic_frame(payload)
+        if provider == "gemini":
+            return call_gemini_didactic_frame(payload)
+        if provider == "groq":
+            return call_groq_didactic_frame(payload)
+        if provider == "openrouter":
+            return call_openrouter_didactic_frame(payload)
+        raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
 
 
 def call_openai_proofread(text: str) -> dict:
@@ -2857,9 +3203,9 @@ def call_openai_proofread(text: str) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore OpenAI API {error.code}: {detail}") from error
     output_text = data.get("output_text")
     if not output_text:
@@ -2894,9 +3240,9 @@ def call_gemini_proofread(text: str) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore Gemini API {error.code}: {detail}") from error
     try:
         output_text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -2939,19 +3285,32 @@ def call_openrouter_proofread(text: str) -> dict:
     return normalize_proofread(result, text)
 
 
-def call_ai_proofread(text: str) -> dict:
-    """Route proofreading to the configured AI provider."""
+def validated_ai_proofread_text(payload: dict) -> str:
+    """Validate a bounded teacher-supplied proofread field without coercion."""
 
-    provider = ACTIVE_AI_PROVIDER
-    if provider == "openai":
-        return call_openai_proofread(text)
-    if provider == "gemini":
-        return call_gemini_proofread(text)
-    if provider == "groq":
-        return call_groq_proofread(text)
-    if provider == "openrouter":
-        return call_openrouter_proofread(text)
-    raise RuntimeError(f"Provider AI non supportato: {provider}.")
+    text = payload.get("text")
+    if not isinstance(text, str):
+        raise ValueError("Il testo da correggere deve essere una stringa.")
+    if not text.strip():
+        raise ValueError("Testo vuoto: niente da correggere.")
+    if len(text) > MAX_AI_PROOFREAD_CHARS:
+        raise ValueError("Il testo da correggere supera il limite consentito.")
+    return text
+
+
+def call_ai_proofread(text: str) -> dict:
+    """Route proofreading with one provider/model snapshot."""
+
+    with ai_request_configuration() as provider:
+        if provider == "openai":
+            return call_openai_proofread(text)
+        if provider == "gemini":
+            return call_gemini_proofread(text)
+        if provider == "groq":
+            return call_groq_proofread(text)
+        if provider == "openrouter":
+            return call_openrouter_proofread(text)
+        raise RuntimeError(f"Provider AI non supportato: {provider}.")
 
 
 def call_openai_course_plan(payload: dict) -> dict:
@@ -2991,9 +3350,9 @@ def call_openai_course_plan(payload: dict) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_COURSE_PLAN_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore OpenAI API {error.code}: {detail}") from error
     output_text = data.get("output_text")
     if not output_text:
@@ -3032,9 +3391,9 @@ def call_gemini_course_plan(payload: dict) -> dict:
     )
     try:
         with urllib.request.urlopen(request, timeout=AI_COURSE_PLAN_TIMEOUT_SECONDS) as response:
-            data = json.loads(response.read().decode("utf-8"))
+            data = json.loads(read_bounded_ai_provider_body(response, MAX_AI_PROVIDER_RESPONSE_BYTES).decode("utf-8"))
     except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
+        detail = read_ai_provider_error(error)
         raise RuntimeError(f"Errore Gemini API {error.code}: {detail}") from error
     try:
         output_text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -3076,28 +3435,32 @@ def call_openrouter_course_plan(payload: dict) -> dict:
 
 
 def call_ai_course_plan(payload: dict) -> dict:
-    """Route annual course-plan generation to the configured AI provider."""
+    """Route course-plan generation with one provider/model snapshot."""
 
-    provider = ACTIVE_AI_PROVIDER
-    if provider == "openai":
-        return call_openai_course_plan(payload)
-    if provider == "gemini":
-        return call_gemini_course_plan(payload)
-    if provider == "groq":
-        return call_groq_course_plan(payload)
-    if provider == "openrouter":
-        return call_openrouter_course_plan(payload)
-    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
+    with ai_request_configuration() as provider:
+        if provider == "openai":
+            return call_openai_course_plan(payload)
+        if provider == "gemini":
+            return call_gemini_course_plan(payload)
+        if provider == "groq":
+            return call_groq_course_plan(payload)
+        if provider == "openrouter":
+            return call_openrouter_course_plan(payload)
+        raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
 
 
 def ai_config() -> dict:
     """Return safe AI provider configuration for the board UI."""
 
-    providers = ai_providers()
-    active = providers.get(ACTIVE_AI_PROVIDER) or providers["openai"]
+    with AI_CONFIG_LOCK:
+        providers = ai_providers()
+        selected_provider = ACTIVE_AI_PROVIDER
+        selected_model = ACTIVE_AI_MODEL
+        active = providers.get(selected_provider) or providers["openai"]
+        model = selected_model or active.get("model") or active.get("default_model", "")
     return {
         "provider": active["id"],
-        "model": active_ai_model(),
+        "model": model,
         "api_key_configured": active["api_key_configured"],
         "billing_note": active["billing_note"],
         "providers": list(providers.values()),
@@ -3143,12 +3506,15 @@ def ai_providers() -> dict:
     """Return all server-supported providers with safe configuration status."""
 
     config = parse_ai_providers_yaml()["providers"]
+    with AI_CONFIG_LOCK:
+        selected_provider = ACTIVE_AI_PROVIDER
+        selected_model = ACTIVE_AI_MODEL
     providers: dict[str, dict] = {}
     for provider_id, provider in config.items():
         secret_key = provider.get("secret_key", "")
         default_model = provider.get("default_model", "")
         env_model = os.environ.get(f"{provider_id.upper()}_MODEL", "")
-        model = env_model or (ACTIVE_AI_MODEL if ACTIVE_AI_PROVIDER == provider_id else "") or default_model
+        model = env_model or (selected_model if selected_provider == provider_id else "") or default_model
         models = provider.get("models", [])
         providers[provider_id] = {
             "id": provider_id,
@@ -3163,11 +3529,54 @@ def ai_providers() -> dict:
 
 
 def active_ai_model() -> str:
-    """Return the currently selected model for the active provider."""
+    """Return the request-scoped model, or one atomic global snapshot."""
 
+    request_model = getattr(AI_REQUEST_CONFIG, "model", None)
+    if request_model is not None:
+        return request_model
+    with AI_CONFIG_LOCK:
+        provider = ACTIVE_AI_PROVIDER
+        configured_model = ACTIVE_AI_MODEL
     providers = ai_providers()
-    active = providers.get(ACTIVE_AI_PROVIDER) or providers["openai"]
-    return ACTIVE_AI_MODEL or active.get("model") or active.get("default_model", "")
+    active = providers.get(provider) or providers["openai"]
+    return configured_model or active.get("model") or active.get("default_model", "")
+
+
+def active_ai_provider() -> str:
+    """Return the request-scoped provider when an AI call is active."""
+
+    request_provider = getattr(AI_REQUEST_CONFIG, "provider", None)
+    if request_provider is not None:
+        return request_provider
+    with AI_CONFIG_LOCK:
+        return ACTIVE_AI_PROVIDER
+
+
+@contextmanager
+def ai_request_configuration():
+    """Bind one provider/model pair for the full provider operation."""
+
+    with AI_CONFIG_LOCK:
+        provider = ACTIVE_AI_PROVIDER
+        configured_model = ACTIVE_AI_MODEL
+        providers = ai_providers()
+        active = providers.get(provider) or providers["openai"]
+        model = configured_model or active.get("model") or active.get("default_model", "")
+    previous_provider = getattr(AI_REQUEST_CONFIG, "provider", None)
+    previous_model = getattr(AI_REQUEST_CONFIG, "model", None)
+    AI_REQUEST_CONFIG.provider = provider
+    AI_REQUEST_CONFIG.model = model
+    try:
+        yield provider
+    finally:
+        if previous_provider is None:
+            AI_REQUEST_CONFIG.__dict__.pop("provider", None)
+        else:
+            AI_REQUEST_CONFIG.provider = previous_provider
+        if previous_model is None:
+            AI_REQUEST_CONFIG.__dict__.pop("model", None)
+        else:
+            AI_REQUEST_CONFIG.model = previous_model
 
 
 def set_ai_provider(provider: str, model: str = "") -> dict:
@@ -3175,18 +3584,19 @@ def set_ai_provider(provider: str, model: str = "") -> dict:
 
     global ACTIVE_AI_PROVIDER, ACTIVE_AI_MODEL
     provider = provider.strip().lower()
-    providers = ai_providers()
-    if provider not in providers:
-        raise RuntimeError(f"Provider AI non supportato: {provider}.")
-    if not providers[provider]["api_key_configured"]:
-        raise RuntimeError(f"Provider {providers[provider]['label']} non configurato: API key mancante.")
-    model_ids = {candidate.get("id") for candidate in providers[provider].get("models", [])}
-    selected_model = model.strip() or providers[provider].get("model") or providers[provider].get("default_model", "")
-    if model_ids and selected_model not in model_ids:
-        raise RuntimeError(f"Modello non supportato per {providers[provider]['label']}: {selected_model}.")
-    ACTIVE_AI_PROVIDER = provider
-    ACTIVE_AI_MODEL = selected_model
-    return ai_config()
+    with AI_CONFIG_LOCK:
+        providers = ai_providers()
+        if provider not in providers:
+            raise RuntimeError(f"Provider AI non supportato: {provider}.")
+        if not providers[provider]["api_key_configured"]:
+            raise RuntimeError(f"Provider {providers[provider]['label']} non configurato: API key mancante.")
+        model_ids = {candidate.get("id") for candidate in providers[provider].get("models", [])}
+        selected_model = model.strip() or providers[provider].get("model") or providers[provider].get("default_model", "")
+        if model_ids and selected_model not in model_ids:
+            raise RuntimeError(f"Modello non supportato per {providers[provider]['label']}: {selected_model}.")
+        ACTIVE_AI_PROVIDER = provider
+        ACTIVE_AI_MODEL = selected_model
+        return ai_config()
 
 
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
@@ -4016,21 +4426,73 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             except Exception:  # noqa: BLE001
                 self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
             return
+        if parsed.path == "/api/course-source-context":
+            try:
+                design = source_request_design(parsed.query)
+                source_files = course_source_catalog.local_markdown_source_files(
+                    design,
+                    ROOT,
+                    default_files=DEFAULT_SOURCES,
+                )
+                catalog = course_source_catalog.course_source_catalog_payload(
+                    design,
+                    ROOT,
+                    default_files=DEFAULT_SOURCES,
+                    local_files=source_files,
+                )
+                self.write_json(
+                    {
+                        "design": design,
+                        "headings": extract_headings(design, source_files),
+                        "sources": catalog["sources"],
+                    }
+                )
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
+            return
+        if parsed.path == "/api/course-sources":
+            try:
+                design = source_request_design(parsed.query)
+                self.write_json(
+                    course_source_catalog.course_source_catalog_payload(
+                        design,
+                        ROOT,
+                        default_files=DEFAULT_SOURCES,
+                    )
+                )
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
+            return
         if parsed.path == "/api/headings":
-            self.write_json({"headings": extract_headings()})
+            try:
+                design = source_request_design(parsed.query)
+                self.write_json({"headings": extract_headings(design)})
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
             return
         if parsed.path == "/api/heading-content":
-            heading_id = parse_qs(parsed.query).get("id", [""])[0]
-            heading = next((item for item in extract_headings() if item["id"] == heading_id), None)
-            if heading is None:
+            query = parse_qs(parsed.query)
+            heading_id = query.get("id", [""])[0]
+            try:
+                design = source_request_design(parsed.query)
+                snapshot = heading_content_snapshot(design, heading_id)
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+                return
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato.")
+                return
+            if snapshot is None:
                 self.write_error_json(404, "Paragrafo non trovato.")
                 return
-            self.write_json({
-                "heading": {
-                    **heading,
-                    "content": section_text(heading["source"], heading["line"], heading["level"]),
-                }
-            })
+            heading, content = snapshot
+            self.write_json({"heading": {**heading, "content": content}})
             return
         if parsed.path == "/api/course-design":
             self.write_json(read_design())
@@ -4151,13 +4613,35 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         payload = self.read_teacher_json()
         if payload is None:
             return
+        if parsed.path == "/api/heading-content":
+            heading_id = payload.get("id", "")
+            design = payload.get("design")
+            if not isinstance(heading_id, str) or not isinstance(design, dict):
+                self.write_error_json(400, "Richiesta contenuto paragrafo non valida.")
+                return
+            try:
+                snapshot = heading_content_snapshot(design, heading_id)
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+                return
+            if snapshot is None:
+                self.write_error_json(404, "Paragrafo non trovato.")
+                return
+            heading, content = snapshot
+            self.write_json({"heading": {**heading, "content": content}})
+            return
         if parsed.path == "/api/course-design":
-            write_design(payload)
-            self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+            try:
+                write_design(payload)
+                self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/course-plan-md":
             try:
                 self.write_json(generate_course_plan_md(payload.get("design", payload)))
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(400, str(error))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -4418,9 +4902,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/ai-proofread":
             try:
-                text = str(payload.get("text", ""))
-                if not text.strip():
-                    raise RuntimeError("Testo vuoto: niente da correggere.")
+                text = validated_ai_proofread_text(payload)
+            except ValueError as error:
+                self.write_error_json(400, str(error))
+                return
+            try:
                 self.write_json(call_ai_proofread(text))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
@@ -4433,13 +4919,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 design = payload.get("design", {})
                 year_id = payload.get("year_id", "")
                 brief = payload.get("brief", {})
+                available_topics = heading_catalog_tree(design)
+                hydration_headings = flatten_heading_catalog(available_topics)
                 ai_payload = {
                     "brief": brief,
                     "selection_objectives": brief.get("description", ""),
                     "selection_rule": "Usa selection_objectives come criterio principale per scegliere quali paragrafi e sottoparagrafi inserire nelle UDA.",
                     "target_year_id": year_id,
                     "current_course": compact_design(design),
-                    "available_topics": heading_catalog_tree(),
+                    "available_topics": available_topics,
                     "constraints": {
                         "use_only_available_topic_ids": True,
                         "do_not_duplicate_topics": True,
@@ -4448,7 +4936,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     },
                 }
                 raw = call_ai_course_plan(ai_payload)
-                self.write_json({"proposal": normalize_course_plan(raw, design, year_id)})
+                self.write_json(
+                    {
+                        "proposal": normalize_course_plan(
+                            raw,
+                            design,
+                            year_id,
+                            headings=hydration_headings,
+                        )
+                    }
+                )
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

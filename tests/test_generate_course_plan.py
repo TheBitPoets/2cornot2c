@@ -31,6 +31,70 @@ def test_render_design_includes_summary_uda_and_didactic_frame() -> None:
     assert "Richiama il ruolo di printf e scanf." in markdown
 
 
+def test_render_design_uses_board_defaults_when_source_fields_are_absent() -> None:
+    markdown = generate_course_plan.render_design({"years": []})
+
+    assert "README.md" in markdown
+    assert "LINUX_PROGRAMMING.md" in markdown
+
+
+def test_render_design_includes_explicit_source_catalog_and_item_provenance() -> None:
+    design = load_fixture()
+    design.pop("source_files")
+    design["sources"] = [
+        {
+            "id": "local-course",
+            "label": "Corso locale",
+            "type": "markdown",
+            "provider": "local",
+            "path": "doc",
+            "files": ["course.md"],
+            "updated_at": "2026-07-29T08:00:00Z",
+            "indexing_status": "ready",
+        }
+    ]
+    item = design["years"][0]["udas"][0]["items"][0]
+    item.update(
+        source="doc/course.md",
+        source_id="local-course",
+        source_provider="local",
+    )
+
+    markdown = generate_course_plan.render_design(design)
+
+    assert (
+        "`local-course` — Corso locale "
+        "(provider `local`, stato `ready`, aggiornata `2026-07-29T08:00:00Z`)"
+        in markdown
+    )
+    assert "<code>local:local-course · doc/course.md</code>" in markdown
+
+
+def test_render_design_preserves_remote_repository_ref_and_timestamp() -> None:
+    design = {
+        "sources": [
+            {
+                "id": "remote-course",
+                "label": "Corso remoto",
+                "type": "markdown",
+                "provider": "github",
+                "repository": "TheBitPoets/course",
+                "ref": "release/2026",
+                "files": ["README.md"],
+                "updated_at": "2026-07-29T08:00:00Z",
+                "indexing_status": "pending",
+            }
+        ],
+        "years": [],
+    }
+
+    markdown = generate_course_plan.render_design(design)
+
+    assert "TheBitPoets/course" in markdown
+    assert "ref `release/2026`" in markdown
+    assert "aggiornata `2026-07-29T08:00:00Z`" in markdown
+
+
 def test_cli_check_uses_explicit_paths_without_touching_real_course_design(tmp_path, monkeypatch) -> None:
     input_path = tmp_path / "course_design.json"
     output_path = tmp_path / "PERCORSO_DIDATTICO.md"
