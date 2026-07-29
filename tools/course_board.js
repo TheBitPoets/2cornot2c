@@ -2003,17 +2003,34 @@ function recordAppliedFrameSnapshot(snapshot) {
   snapshot.lastAppliedFrameQuality = JSON.parse(JSON.stringify(snapshot.item.frame_quality || {}));
 }
 
-function restoreFrameSnapshot(snapshot) {
-  if (
-    snapshot.lastAppliedFrame === null
-    || JSON.stringify(snapshot.item.frame || {}) !== JSON.stringify(snapshot.lastAppliedFrame)
-    || JSON.stringify(snapshot.item.frame_quality || {}) !== JSON.stringify(snapshot.lastAppliedFrameQuality)
-  ) {
-    return false;
+function restoreQueueOwnedFields(current, lastApplied, original) {
+  if (!lastApplied) return 0;
+  let restored = 0;
+  for (const key of new Set([...Object.keys(lastApplied), ...Object.keys(original || {})])) {
+    if (JSON.stringify(current?.[key]) !== JSON.stringify(lastApplied[key])) continue;
+    if (Object.hasOwn(original || {}, key)) {
+      current[key] = JSON.parse(JSON.stringify(original[key]));
+    } else {
+      delete current[key];
+    }
+    restored += 1;
   }
-  snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
-  snapshot.item.frame_quality = JSON.parse(JSON.stringify(snapshot.frameQuality));
-  return true;
+  return restored;
+}
+
+function restoreFrameSnapshot(snapshot) {
+  if (snapshot.lastAppliedFrame === null) return false;
+  const restoredFrame = restoreQueueOwnedFields(
+    snapshot.item.frame,
+    snapshot.lastAppliedFrame,
+    snapshot.frame,
+  );
+  const restoredQuality = restoreQueueOwnedFields(
+    snapshot.item.frame_quality,
+    snapshot.lastAppliedFrameQuality,
+    snapshot.frameQuality,
+  );
+  return restoredFrame + restoredQuality > 0;
 }
 
 async function generateFrameForEntry(entry, boardContext = captureBoardContext()) {
@@ -2631,17 +2648,18 @@ function recordAppliedFrameVerificationSnapshot() {
 }
 
 function restoreFrameVerificationSnapshot() {
-  if (!frameVerificationBatch) return false;
-  if (
-    frameVerificationBatch.lastAppliedFrame === null
-    || JSON.stringify(frameVerificationBatch.item.frame || {}) !== JSON.stringify(frameVerificationBatch.lastAppliedFrame)
-    || JSON.stringify(frameVerificationBatch.item.frame_quality || {}) !== JSON.stringify(frameVerificationBatch.lastAppliedFrameQuality)
-  ) {
-    return false;
-  }
-  frameVerificationBatch.item.frame = JSON.parse(JSON.stringify(frameVerificationBatch.snapshots.frame));
-  frameVerificationBatch.item.frame_quality = JSON.parse(JSON.stringify(frameVerificationBatch.snapshots.frameQuality));
-  return true;
+  if (!frameVerificationBatch || frameVerificationBatch.lastAppliedFrame === null) return false;
+  const restoredFrame = restoreQueueOwnedFields(
+    frameVerificationBatch.item.frame,
+    frameVerificationBatch.lastAppliedFrame,
+    frameVerificationBatch.snapshots.frame,
+  );
+  const restoredQuality = restoreQueueOwnedFields(
+    frameVerificationBatch.item.frame_quality,
+    frameVerificationBatch.lastAppliedFrameQuality,
+    frameVerificationBatch.snapshots.frameQuality,
+  );
+  return restoredFrame + restoredQuality > 0;
 }
 
 function closeFrameVerification() {

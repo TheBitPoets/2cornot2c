@@ -302,6 +302,32 @@ def test_cancelled_generation_restores_prior_steps_even_if_pending_provider_fail
     )
 
 
+def test_generation_cancel_restores_owned_fields_and_preserves_manual_field() -> None:
+    run_course_board_js(
+        """
+        api = async () => ({ frame: { context: "AI context", objectives: "AI objectives" } });
+        renderCourse = () => {};
+        const item = {
+          id: "item",
+          title: "Item",
+          frame: { context: "Original context", objectives: "Original objectives" },
+        };
+        const uda = { id: "uda", items: [item] };
+        const year = { id: "year", udas: [uda] };
+        state.design = { years: [year] };
+        openFrameBatchQueue("Batch", [{ year, uda, item }], "Ready");
+
+        generateNextFrameInBatch().then(() => {
+          item.frame.context = "Manual context";
+          cancelFrameBatch();
+          assert.equal(item.frame.context, "Manual context");
+          assert.equal(item.frame.objectives, "Original objectives");
+          assert.equal(frameBatch, null);
+        });
+        """
+    )
+
+
 def test_verification_cancel_preserves_manual_edits_after_queue_progress() -> None:
     run_course_board_js(
         """
@@ -319,9 +345,11 @@ def test_verification_cancel_preserves_manual_edits_after_queue_progress() -> No
         verifyEntireFrame(item);
 
         verifyNextFrameField().then(() => {
-          item.frame.context = "Manual edit";
+          assert.equal(item.frame.context, "Context AI");
+          item.frame.objectives = "Manual edit";
           cancelFrameVerification();
-          assert.equal(item.frame.context, "Manual edit");
+          assert.equal(item.frame.context, "Context");
+          assert.equal(item.frame.objectives, "Manual edit");
           assert.equal(frameVerificationBatch, null);
         });
         """
