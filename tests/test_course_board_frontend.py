@@ -685,6 +685,48 @@ def test_newer_load_wins_over_an_earlier_save_copy_response() -> None:
     )
 
 
+def test_newer_load_wins_over_earlier_set_current_response() -> None:
+    run_course_board_js(
+        """
+        let completeSave;
+        let completeLoad;
+        api = async (path) => {
+          if (path === "/api/course-design") {
+            return new Promise((resolve) => { completeSave = resolve; });
+          }
+          if (path === "/api/course-source-context?design=target.json") {
+            return new Promise((resolve) => { completeLoad = resolve; });
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        populateFilters = () => {};
+        renderSourceCatalogSummary = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "origin" }] };
+        state.activeSavedDesign = "origin.json";
+
+        const saving = saveDesign();
+        Promise.resolve().then(async () => {
+          while (!completeSave) await Promise.resolve();
+          const loading = loadSavedDesignByName("target.json", { confirmFirst: false });
+          completeSave({ ok: true });
+          return saving.then(() => {
+            assert.equal(state.activeSavedDesign, "origin.json");
+            completeLoad({ design: { years: [{ id: "target" }] }, headings: [], sources: [] });
+            return loading.then(() => {
+              assert.equal(state.activeSavedDesign, "target.json");
+              assert.equal(state.design.years[0].id, "target");
+            });
+          });
+        });
+        """
+    )
+
+
 def test_loading_archived_design_refreshes_its_source_context() -> None:
     run_course_board_js(
         """
@@ -943,6 +985,28 @@ def test_late_paragraph_preview_cannot_overwrite_newer_dialog() -> None:
             assert.equal(els.paragraphDialogTitle.textContent, "Secondo");
             assert.match(els.paragraphContent.innerHTML, /Nuovo/);
           });
+        });
+        """
+    )
+
+
+def test_course_ai_can_retry_in_the_same_dialog_after_provider_failure() -> None:
+    run_course_board_js(
+        """
+        let requests = 0;
+        api = async () => {
+          requests += 1;
+          if (requests === 1) throw new Error("temporary provider failure");
+          return { proposal: { title: "Retry", stats: {}, udas: [] } };
+        };
+        const year = { id: "year", title: "Year", udas: [] };
+        state.design = { years: [year] };
+        openCourseAiDialog(year);
+
+        generateCourseAiProposal().then(() => generateCourseAiProposal()).then(() => {
+          assert.equal(requests, 2);
+          assert.equal(state.courseAiProposal.title, "Retry");
+          assert.equal(els.courseAiApplyBtn.disabled, false);
         });
         """
     )

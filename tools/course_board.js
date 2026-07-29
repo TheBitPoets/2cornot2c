@@ -1784,6 +1784,7 @@ async function generateCourseAiProposal() {
   const briefSnapshot = JSON.stringify(brief);
   year.ai_brief = brief;
   const boardContext = captureBoardContext();
+  courseAiDialogContext = boardContext;
   const requestYearId = state.courseAiYearId;
   const requestId = ++courseAiRequestId;
   els.courseAiGenerateBtn.disabled = true;
@@ -2616,12 +2617,16 @@ async function persistDesignAsCurrent() {
   normalizeCourseDesignFrames();
   const savedSnapshot = designSnapshot();
   const boardContext = captureBoardContext();
+  const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio...");
   await api("/api/course-design", {
     method: "POST",
     body: savedSnapshot,
   });
-  if (!isBoardContextCurrent(boardContext)) {
+  if (
+    !isBoardContextCurrent(boardContext)
+    || courseContextGeneration !== courseContextRequestId
+  ) {
     setStatus("Progetto impostato come corrente. La vista aperta non e stata cambiata.");
     return;
   }
