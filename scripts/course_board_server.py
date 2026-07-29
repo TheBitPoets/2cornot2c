@@ -2165,6 +2165,7 @@ def section_text(
     design: dict | None = None,
     source_snapshots: dict[str, str] | None = None,
     source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+    source_id: str = "",
 ) -> str:
     """Extract local Markdown text for one heading section."""
 
@@ -2174,7 +2175,8 @@ def section_text(
     except (TypeError, ValueError):
         return ""
     selected_design = read_design() if design is None else design
-    source_text = None if source_snapshots is None else source_snapshots.get(source)
+    snapshot_key = f"{source_id}\0{source}"
+    source_text = None if source_snapshots is None else source_snapshots.get(snapshot_key)
     if source_text is None:
         source_file = next(
             (
@@ -2189,6 +2191,7 @@ def section_text(
                     else source_files
                 )
                 if item.relative_path == source
+                and (not source_id or item.source.source_id == source_id)
             ),
             None,
         )
@@ -2199,7 +2202,7 @@ def section_text(
             ROOT,
         )
         if source_snapshots is not None:
-            source_snapshots[source] = source_text
+            source_snapshots[snapshot_key] = source_text
     return section_text_from_source(source_text, start_line, start_level)
 
 
@@ -2215,7 +2218,8 @@ def section_text_from_lines(lines: list[str], start_line: int, start_level: int)
     if start_line < 1 or start_line > len(lines):
         return ""
     section: list[str] = []
-    for current in lines[start_line:]:
+    for index in range(start_line, len(lines)):
+        current = lines[index]
         match = HEADING_RE.match(current)
         if match and len(match.group(1)) <= start_level:
             break
@@ -2224,6 +2228,30 @@ def section_text_from_lines(lines: list[str], start_line: int, start_level: int)
     if len(text) > MAX_SECTION_CHARS:
         return text[:MAX_SECTION_CHARS].rstrip() + "\n\n[contenuto tagliato per limite di contesto]"
     return text
+
+
+def catalog_excerpt_from_lines(
+    lines: list[str],
+    start_line: int,
+    start_level: int,
+) -> str:
+    """Build a compact excerpt with bounded work per heading."""
+
+    if start_line < 1 or start_line > len(lines):
+        return ""
+    parts: list[str] = []
+    raw_chars = 0
+    stop = min(len(lines), start_line + 256)
+    for index in range(start_line, stop):
+        current = lines[index]
+        match = HEADING_RE.match(current)
+        if match and len(match.group(1)) <= start_level:
+            break
+        parts.append(current)
+        raw_chars += len(current) + 1
+        if raw_chars >= MAX_CATALOG_EXCERPT_CHARS * 4:
+            break
+    return re.sub(r"\s+", " ", "\n".join(parts)).strip()
 
 
 def heading_catalog_tree(design: dict | None = None) -> list[dict]:
@@ -2247,12 +2275,11 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
             )
         source_lines = source_text.splitlines()
         for heading in source_headings:
-            excerpt = section_text_from_lines(
+            excerpt = catalog_excerpt_from_lines(
                 source_lines,
                 heading["line"],
                 heading["level"],
             )
-            excerpt = re.sub(r"\s+", " ", excerpt).strip()
             heading["excerpt"] = (
                 excerpt[:MAX_CATALOG_EXCERPT_CHARS].rstrip() + "..."
                 if len(excerpt) > MAX_CATALOG_EXCERPT_CHARS
@@ -2346,6 +2373,7 @@ def topic_summary(
             design,
             source_snapshots,
             source_files,
+            str(item.get("source_id", "")),
         )
     return summary
 

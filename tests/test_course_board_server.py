@@ -334,6 +334,54 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
     assert reads == ["lesson.md"]
 
 
+def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lesson.md").write_text("## Current\n\nNew content.\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {
+        "sources": [{
+            "id": "source-b",
+            "label": "Current",
+            "type": "markdown",
+            "provider": "local",
+            "files": ["lesson.md"],
+            "indexing_status": "ready",
+        }],
+        "years": [{
+            "id": "year",
+            "udas": [{
+                "id": "uda",
+                "items": [{
+                    "id": "stale",
+                    "title": "Stale",
+                    "source": "lesson.md",
+                    "source_id": "source-a",
+                    "line": 1,
+                    "level": 2,
+                }],
+            }],
+        }],
+    }
+
+    context = course_board_server.target_context(design, "year", "uda", "stale")
+
+    assert context["target_topic"]["source_id"] == "source-a"
+    assert context["target_topic"]["text"] == ""
+
+
+def test_catalog_excerpt_scans_bounded_lines_per_heading() -> None:
+    class CountingLines(list):
+        reads = 0
+
+        def __getitem__(self, index):
+            self.reads += 1
+            return super().__getitem__(index)
+
+    lines = CountingLines([""] * 10_000)
+
+    assert course_board_server.catalog_excerpt_from_lines(lines, 1, 2) == ""
+    assert lines.reads <= 256
+
+
 def test_heading_catalog_never_nests_across_source_files(tmp_path, monkeypatch) -> None:
     (tmp_path / "first.md").write_text("## First\n", encoding="utf-8")
     (tmp_path / "second.md").write_text("### Second\n", encoding="utf-8")

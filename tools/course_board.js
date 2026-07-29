@@ -790,6 +790,13 @@ async function deleteArchiveDesign() {
       calendars: linkedCalendars.map((calendar) => calendar.name),
     }),
   });
+  if (requestId !== courseContextRequestId) {
+    state.savedDesigns = payload.designs || [];
+    renderSavedDesigns();
+    renderCourseActions();
+    setStatus(`Progetto archiviato eliminato: ${name}. Un caricamento più recente controlla la vista aperta.`);
+    return;
+  }
   if (!isBoardContextUnchanged(boardContext)) {
     const detachedDraft = reconcileDeletedArchive(name, payload);
     const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
@@ -797,7 +804,14 @@ async function deleteArchiveDesign() {
     return;
   }
   const courseContext = await fetchCourseContext();
-  if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) {
+  if (requestId !== courseContextRequestId) {
+    state.savedDesigns = payload.designs || [];
+    renderSavedDesigns();
+    renderCourseActions();
+    setStatus(`Progetto archiviato eliminato: ${name}. Un caricamento più recente controlla la vista aperta.`);
+    return;
+  }
+  if (!isBoardContextUnchanged(boardContext)) {
     const detachedDraft = reconcileDeletedArchive(name, payload);
     const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
     setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);

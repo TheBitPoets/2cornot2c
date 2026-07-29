@@ -985,6 +985,53 @@ def test_delete_response_does_not_replace_a_newly_opened_project() -> None:
     )
 
 
+def test_stale_delete_cannot_cancel_a_newer_archived_load() -> None:
+    run_course_board_js(
+        """
+        let completeDelete;
+        let completeLoad;
+        api = async (path) => {
+          if (path === "/api/school-calendars") return { calendars: [] };
+          if (path === "/api/saved-designs/delete") {
+            return new Promise((resolve) => { completeDelete = resolve; });
+          }
+          if (path === "/api/course-source-context?design=second.json") {
+            return new Promise((resolve) => { completeLoad = resolve; });
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        populateFilters = () => {};
+        renderSourceCatalogSummary = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "first" }] };
+        state.activeSavedDesign = "first.json";
+        state.savedDesigns = [{ name: "first.json" }, { name: "second.json" }];
+
+        const deleting = deleteArchiveDesign();
+        Promise.resolve().then(() => Promise.resolve()).then(() => {
+          const loading = loadSavedDesignByName("second.json", { confirmFirst: false });
+          completeDelete({ designs: [{ name: "second.json" }], deleted_calendars: [] });
+          return deleting.then(() => {
+            assert.equal(state.activeSavedDesign, "first.json");
+            completeLoad({
+              design: { years: [{ id: "second" }] },
+              headings: [],
+              sources: [],
+            });
+            return loading.then(() => {
+              assert.equal(state.activeSavedDesign, "second.json");
+              assert.equal(state.design.years[0].id, "second");
+            });
+          });
+        });
+        """
+    )
+
+
 def test_delete_response_detaches_edits_from_the_deleted_archive() -> None:
     run_course_board_js(
         """
