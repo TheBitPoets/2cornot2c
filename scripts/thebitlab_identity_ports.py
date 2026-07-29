@@ -226,6 +226,35 @@ class ClassDirectoryStorage(Protocol):
         expected_class_updated_at: datetime,
     ) -> bool: ...
 
+    def revoke_github_memberships_without_identity(
+        self,
+        user_id: str,
+        *,
+        expected_user_updated_at: datetime,
+        expected_memberships: tuple[ClassMembership, ...],
+    ) -> None:
+        """Revoke provider-owned memberships only while no GitHub link exists."""
+        ...
+
+    def synchronize_github_memberships(
+        self,
+        user_id: str,
+        desired_memberships: tuple[ClassMembership, ...],
+        *,
+        expected_user_updated_at: datetime,
+        expected_identity_subject: str,
+        expected_identity_linked_at: datetime,
+        expected_memberships: tuple[ClassMembership, ...],
+        expected_mappings: tuple[ExternalGroupMapping, ...],
+        expected_snapshot_group_keys: tuple[tuple[str, str], ...],
+        expected_snapshot_captured_at: datetime,
+        max_snapshot_age: timedelta,
+        future_skew: timedelta,
+        expected_classes: tuple[ClassGroup, ...],
+    ) -> None:
+        """Replace only GitHub-governed student memberships after atomic CAS validation."""
+        ...
+
     def onboard_pending_user_from_external_group(
         self,
         membership: ClassMembership,
