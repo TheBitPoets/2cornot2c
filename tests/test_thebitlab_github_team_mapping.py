@@ -456,6 +456,32 @@ def test_existing_student_sync_preserves_manual_memberships(setup) -> None:
     assert storage.list_user_memberships("pending-01") == [manual]
 
 
+def test_unlinked_github_identity_revokes_only_github_memberships(setup) -> None:
+    storage, mappings, clock = setup
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    current = snapshot("123456", GitHubTeamMembership("1001", "2002"))
+    GitHubPendingOnboardingService(
+        storage,
+        FakeGitHubTeamDirectory({"123456": current}),
+        clock=clock,
+    ).reconcile("pending-01")
+    storage.create_class(class_group("manual-class"))
+    manual = ClassMembership("pending-01", "manual-class", "student", NOW)
+    storage.save_membership(manual)
+    assert storage.unlink_external_identity("github", "123456") is True
+
+    result = GitHubMembershipSyncService(
+        storage,
+        FakeGitHubTeamDirectory({}),
+        clock=clock,
+    ).reconcile("pending-01")
+
+    assert result.status == "synchronized"
+    assert result.reason == "github-unlinked"
+    assert result.removed_class_ids == ("class-01",)
+    assert storage.list_user_memberships("pending-01") == [manual]
+
+
 def test_existing_student_noop_still_detects_mapping_revocation_race(setup, monkeypatch) -> None:
     storage, mappings, clock = setup
     mappings.save_mapping("admin-01", "class-01", "1001", "2002")
@@ -482,6 +508,36 @@ def test_existing_student_noop_still_detects_mapping_revocation_race(setup, monk
         ).reconcile("pending-01")
 
     assert original_list("pending-01")[0].class_id == "class-01"
+
+
+def test_snapshot_validation_rejects_non_tuple_teams_without_iterating(setup) -> None:
+    storage, mappings, clock = setup
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    current = snapshot("123456", GitHubTeamMembership("1001", "2002"))
+    GitHubPendingOnboardingService(
+        storage,
+        FakeGitHubTeamDirectory({"123456": current}),
+        clock=clock,
+    ).reconcile("pending-01")
+
+    class NeverIterable(list):
+        def __iter__(self):
+            raise AssertionError("malformed teams must not be consumed")
+
+    forged = object.__new__(GitHubTeamMembershipSnapshot)
+    object.__setattr__(forged, "user_subject", "123456")
+    object.__setattr__(forged, "teams", NeverIterable())
+    object.__setattr__(forged, "captured_at", NOW)
+    object.__setattr__(forged, "complete", True)
+
+    class ForgedDirectory:
+        def read_complete_memberships(self, _subject):
+            return forged
+
+    with pytest.raises(GitHubTeamDirectoryRejectedError, match="non valido"):
+        GitHubMembershipSyncService(storage, ForgedDirectory(), clock=clock).reconcile(
+            "pending-01"
+        )
 
 
 def test_existing_student_sync_rejects_forged_incomplete_snapshot(setup) -> None:

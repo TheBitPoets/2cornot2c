@@ -1745,6 +1745,68 @@ class SqliteIdentityStorage:
                 "Admin, classe o mapping modificati durante la rimozione."
             )
 
+    def revoke_github_memberships_without_identity(
+        self,
+        user_id: str,
+        *,
+        expected_user_updated_at: datetime,
+        expected_memberships: tuple[ClassMembership, ...],
+    ) -> None:
+        if (
+            type(user_id) is not str
+            or not user_id
+            or type(expected_memberships) is not tuple
+            or any(
+                type(item) is not ClassMembership or item.user_id != user_id
+                for item in expected_memberships
+            )
+        ):
+            raise IdentityStorageError("Snapshot revoca GitHub non valido.")
+        user_revision = _encode_datetime(expected_user_updated_at, "expected_user_updated_at")
+        expected_rows = sorted(
+            (
+                item.user_id,
+                item.class_id,
+                item.role,
+                _encode_datetime(item.joined_at, "joined_at"),
+                item.source_provider,
+                item.source_group_subject,
+            )
+            for item in expected_memberships
+        )
+        with self._transaction("revoke_github_memberships_without_identity") as connection:
+            user_row = connection.execute(
+                "SELECT active, role, updated_at FROM users WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+            if user_row is None or tuple(user_row) != (1, "student", user_revision):
+                raise IdentityStorageConflictError("Utente modificato durante revoca GitHub.")
+            identity_count = connection.execute(
+                """
+                SELECT COUNT(*) FROM external_identities
+                WHERE provider = 'github' AND user_id = ?
+                """,
+                (user_id,),
+            ).fetchone()[0]
+            if identity_count != 0:
+                raise IdentityStorageConflictError("Identita GitHub ricollegata durante revoca.")
+            membership_rows = [
+                tuple(row)
+                for row in connection.execute(
+                    "SELECT * FROM class_memberships WHERE user_id = ? ORDER BY class_id, role",
+                    (user_id,),
+                ).fetchall()
+            ]
+            if membership_rows != expected_rows:
+                raise IdentityStorageConflictError("Membership modificate durante revoca GitHub.")
+            connection.execute(
+                """
+                DELETE FROM class_memberships
+                WHERE user_id = ? AND role = 'student' AND source_provider = 'github'
+                """,
+                (user_id,),
+            )
+
     def synchronize_github_memberships(
         self,
         user_id: str,

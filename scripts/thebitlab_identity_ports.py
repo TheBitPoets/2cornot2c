@@ -226,6 +226,16 @@ class ClassDirectoryStorage(Protocol):
         expected_class_updated_at: datetime,
     ) -> bool: ...
 
+    def revoke_github_memberships_without_identity(
+        self,
+        user_id: str,
+        *,
+        expected_user_updated_at: datetime,
+        expected_memberships: tuple[ClassMembership, ...],
+    ) -> None:
+        """Revoke provider-owned memberships only while no GitHub link exists."""
+        ...
+
     def synchronize_github_memberships(
         self,
         user_id: str,

@@ -155,7 +155,11 @@ def _validated_membership_snapshot(
 ) -> GitHubTeamMembershipSnapshot:
     """Rebuild an adapter value so forged dataclass instances fail closed."""
 
-    if type(value) is not GitHubTeamMembershipSnapshot:
+    if (
+        type(value) is not GitHubTeamMembershipSnapshot
+        or type(value.teams) is not tuple
+        or len(value.teams) > _MAX_TEAMS
+    ):
         raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non valido.")
     try:
         teams = tuple(
@@ -239,6 +243,13 @@ class GitHubTeamMappingStorage(Protocol):
         expected_admin_updated_at: datetime,
         expected_class_updated_at: datetime,
     ) -> bool: ...
+    def revoke_github_memberships_without_identity(
+        self,
+        user_id: str,
+        *,
+        expected_user_updated_at: datetime,
+        expected_memberships: tuple[ClassMembership, ...],
+    ) -> None: ...
     def synchronize_github_memberships(
         self,
         user_id: str,
@@ -547,8 +558,33 @@ class GitHubMembershipSyncService:
             for identity in self.storage.list_external_identities(account.user_id)
             if identity.provider == "github"
         ]
+        if not github_identities:
+            memberships = tuple(self.storage.list_user_memberships(account.user_id))
+            github_class_ids = tuple(
+                sorted(
+                    membership.class_id
+                    for membership in memberships
+                    if membership.role == "student"
+                    and membership.source_provider == "github"
+                )
+            )
+            try:
+                self.storage.revoke_github_memberships_without_identity(
+                    account.user_id,
+                    expected_user_updated_at=account.updated_at,
+                    expected_memberships=memberships,
+                )
+            except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
+                raise GitHubTeamMappingConflictError(
+                    "Stato modificato durante revoca collegamento GitHub."
+                ) from error
+            return GitHubMembershipSyncResult(
+                "synchronized" if github_class_ids else "unchanged",
+                "github-unlinked",
+                removed_class_ids=github_class_ids,
+            )
         if len(github_identities) != 1:
-            return GitHubMembershipSyncResult("unchanged", "github-not-linked")
+            return GitHubMembershipSyncResult("unchanged", "github-identity-ambiguous")
         identity = github_identities[0]
         try:
             snapshot = self.directory.read_complete_memberships(identity.subject)
