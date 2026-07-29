@@ -67,6 +67,7 @@ from scripts import (
     thebitlab_auth_runtime,
     thebitlab_grading_artifacts,
     thebitlab_google_oidc_http,
+    thebitlab_github_oauth_http,
     thebitlab_http_auth,
     thebitlab_services,
     thebitlab_session_http,
@@ -3735,6 +3736,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             auth_path in combined
             for auth_path in (
                 "/auth/google/",
+                "/auth/github/",
                 "/auth/session",
                 "/auth/logout",
                 "/auth/tui/",
@@ -3748,7 +3750,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             any(
                 auth_path in str(argument)
                 for auth_path in (
-                    "/auth/google/", "/auth/session", "/auth/logout", "/auth/tui/"
+                    "/auth/google/", "/auth/github/", "/auth/session", "/auth/logout", "/auth/tui/"
                 )
             )
             for argument in args
@@ -3768,6 +3770,12 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 safe_path = "/auth/google/callback"
             elif "/auth/google/login" in combined:
                 safe_path = "/auth/google/login"
+            elif "/auth/github/callback" in combined:
+                safe_path = "/auth/github/callback"
+            elif "/auth/github/link" in combined:
+                safe_path = "/auth/github/link"
+            elif "/auth/github/unlink" in combined:
+                safe_path = "/auth/github/unlink"
             elif "/auth/session" in combined:
                 safe_path = "/auth/session"
             elif "/auth/logout" in combined:
@@ -4248,6 +4256,97 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         except Exception:  # noqa: BLE001
             return
 
+    def dispatch_github_oauth(self, parsed) -> bool:
+        """Delegate exact authenticated GitHub OAuth routes."""
+
+        routes = getattr(self.server, "github_oauth_http_routes", None)
+        request_parts = str(getattr(self, "requestline", "")).split()
+        raw_target = request_parts[1] if len(request_parts) == 3 else None
+        raw_parsed = urlparse(raw_target) if raw_target is not None else None
+        is_github_target = routes is not None and (
+            routes.handles(parsed.path)
+            or (raw_parsed is not None and routes.handles(raw_parsed.path))
+        )
+        raw_headers = None
+        content_lengths = None
+        transfer_encodings = None
+        if is_github_target:
+            raw_headers = tuple(self.headers.raw_items())
+            content_lengths = [
+                value.strip()
+                for name, value in raw_headers
+                if name.lower() == "content-length"
+            ]
+            transfer_encodings = [
+                value
+                for name, value in raw_headers
+                if name.lower() == "transfer-encoding"
+            ]
+            if (
+                transfer_encodings
+                or len(content_lengths) > 1
+                or (content_lengths and content_lengths != ["0"])
+            ):
+                self.close_connection = True
+        if routes is not None and routes.handles(parsed.path) and len(request_parts) != 3:
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        if routes is not None and raw_parsed is not None:
+            candidate_path = raw_parsed.path if routes.handles(raw_parsed.path) else parsed.path
+            if routes.handles(candidate_path) and not (
+                raw_target == candidate_path
+                or raw_target.startswith(candidate_path + "?")
+                or raw_target.startswith(candidate_path + "#")
+                or raw_target.startswith(candidate_path + ";")
+            ):
+                self.write_oidc_transport_error(400, "bad_auth_request")
+                return True
+            if routes.handles(raw_parsed.path):
+                parsed = raw_parsed
+        request_parts = None
+        raw_target = None
+        raw_parsed = None
+        candidate_path = None
+        is_github_target = None
+        if routes is None or not routes.handles(parsed.path):
+            return False
+        if parsed.scheme or parsed.netloc or parsed.params:
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        try:
+            edge = thebitlab_github_oauth_http.EdgeRequestMetadata(
+                str(self.client_address[0]), raw_headers
+            )
+            raw_query = parsed.query
+            if parsed.fragment:
+                raw_query += "#" + parsed.fragment
+            request = thebitlab_github_oauth_http.GitHubOAuthHttpRequest(
+                self.command,
+                parsed.path,
+                raw_query,
+                edge,
+                is_tls=isinstance(self.connection, ssl.SSLSocket),
+            )
+        except (ValueError, thebitlab_github_oauth_http.EdgeClientAttributionError):
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        try:
+            response = routes.dispatch(request)
+            if response is None:
+                raise RuntimeError("Router GitHub senza risposta.")
+        except Exception:  # noqa: BLE001
+            self.write_oidc_transport_error(503, "authentication_unavailable")
+            return True
+        finally:
+            edge = None
+            request = None
+            raw_query = None
+            raw_headers = None
+            content_lengths = None
+            transfer_encodings = None
+        self.write_session_http_response(response)
+        return True
+
     def dispatch_google_oidc(self, parsed) -> bool:
         """Delegate exact Google auth routes to the injected secure router."""
 
@@ -4355,6 +4454,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if self.dispatch_session_http(parsed):
             return
+        if self.dispatch_github_oauth(parsed):
+            return
         if self.dispatch_google_oidc(parsed):
             return
         self.send_error(501)
@@ -4364,6 +4465,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if self.dispatch_tui_pairing_http(parsed):
             return
         if self.dispatch_session_http(parsed):
+            return
+        if self.dispatch_github_oauth(parsed):
             return
         if self.dispatch_google_oidc(parsed):
             return
@@ -4392,6 +4495,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if self.dispatch_tui_pairing_http(parsed):
             return
         if self.dispatch_session_http(parsed):
+            return
+        if self.dispatch_github_oauth(parsed):
             return
         if self.dispatch_google_oidc(parsed):
             return
@@ -4539,6 +4644,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if self.dispatch_tui_pairing_http(parsed):
             return
         if self.dispatch_session_http(parsed):
+            return
+        if self.dispatch_github_oauth(parsed):
             return
         if self.dispatch_google_oidc(parsed):
             return
@@ -5052,6 +5159,7 @@ def main() -> int:
         if auth_runtime is not None:
             server.google_oidc_runtime = auth_runtime
             server.google_oidc_http_routes = auth_runtime.routes
+            server.github_oauth_http_routes = auth_runtime.github_routes
             server.session_http_routes = auth_runtime.session_routes
             server.tui_pairing_http_routes = auth_runtime.tui_pairing_routes
         if not is_loopback_bind_host(args.host):
