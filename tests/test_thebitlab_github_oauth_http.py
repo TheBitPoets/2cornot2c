@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from urllib.parse import parse_qs, urlsplit
+from types import SimpleNamespace
+from urllib.parse import parse_qs, urlsplit, urlparse
+
+from scripts.course_board_server import CourseBoardHandler
 
 from scripts.thebitlab_auth_services import ExternalIdentityLinkService, SessionService
 from scripts.thebitlab_edge_rate_limit import (
@@ -103,6 +106,35 @@ def request(path, *, method="GET", query="", headers=()):
 
 def header(response, name):
     return [value for key, value in response.headers if key.lower() == name.lower()]
+
+
+def test_handler_closes_connection_when_auth_body_framing_is_rejected() -> None:
+    class Headers:
+        def raw_items(self):
+            return [("Content-Length", "5")]
+
+    class Routes:
+        @staticmethod
+        def handles(path):
+            return path == "/auth/github/link"
+
+        @staticmethod
+        def dispatch(_request):
+            return SimpleNamespace(status_code=400, headers=(), body=b"")
+
+    handler = object.__new__(CourseBoardHandler)
+    handler.server = SimpleNamespace(github_oauth_http_routes=Routes())
+    handler.requestline = "GET /auth/github/link HTTP/1.1"
+    handler.path = "/auth/github/link"
+    handler.command = "GET"
+    handler.client_address = ("127.0.0.1", 12345)
+    handler.headers = Headers()
+    handler.connection = object()
+    handler.close_connection = False
+    handler.write_session_http_response = lambda _response: None
+
+    assert handler.dispatch_github_oauth(urlparse(handler.path)) is True
+    assert handler.close_connection is True
 
 
 def test_flow_allocation_is_bounded_per_authenticated_session() -> None:

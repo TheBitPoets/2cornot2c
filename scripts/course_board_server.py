@@ -4288,9 +4288,26 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             self.write_oidc_transport_error(400, "bad_auth_request")
             return True
         try:
+            raw_headers = tuple(self.headers.raw_items())
             edge = thebitlab_github_oauth_http.EdgeRequestMetadata(
-                str(self.client_address[0]), tuple(self.headers.raw_items())
+                str(self.client_address[0]), raw_headers
             )
+            content_lengths = [
+                value.strip()
+                for name, value in raw_headers
+                if name.lower() == "content-length"
+            ]
+            transfer_encodings = [
+                value
+                for name, value in raw_headers
+                if name.lower() == "transfer-encoding"
+            ]
+            if (
+                transfer_encodings
+                or len(content_lengths) > 1
+                or (content_lengths and content_lengths != ["0"])
+            ):
+                self.close_connection = True
             raw_query = parsed.query
             if parsed.fragment:
                 raw_query += "#" + parsed.fragment
@@ -4315,6 +4332,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             edge = None
             request = None
             raw_query = None
+            raw_headers = None
+            content_lengths = None
+            transfer_encodings = None
         self.write_session_http_response(response)
         return True
 
