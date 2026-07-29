@@ -808,6 +808,29 @@ def test_archived_load_does_not_replace_edits_made_while_request_is_pending() ->
     )
 
 
+def test_unchanged_proofread_marks_board_dirty_and_enables_save() -> None:
+    run_course_board_js(
+        """
+        api = async () => ({ corrected_text: "Original", changes: [] });
+        const textarea = document.querySelector("#clean-proofread-textarea");
+        const output = document.querySelector("#clean-proofread-output");
+        const label = null;
+        textarea.value = "Original";
+        const item = { id: "item", frame: { context: "Original" }, frame_quality: {} };
+        state.design = { years: [{ id: "year", udas: [{ id: "uda", items: [item] }] }] };
+        markDesignClean();
+        renderCourseActions();
+        assert.equal(els.saveArchiveBtn.disabled, true);
+
+        proofreadTextWithAi(textarea, output, item, "context", label).then(() => {
+          assert.equal(item.frame_quality.context, "ai");
+          assert.equal(hasUnsavedChanges(), true);
+          assert.equal(els.saveArchiveBtn.disabled, false);
+        });
+        """
+    )
+
+
 def test_unchanged_proofread_response_cannot_mark_newer_text_as_verified() -> None:
     run_course_board_js(
         """

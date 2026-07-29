@@ -2281,6 +2281,7 @@ function setFrameFieldQuality(item, fieldKey, label, stateName) {
   item.frame_quality[fieldKey] = stateName;
   setFrameLabelQuality(label, stateName);
   updateFrameEditorQuality(label?.closest(".frameEditor"), item);
+  renderCourseActions();
 }
 
 function frameQualityState(item) {
