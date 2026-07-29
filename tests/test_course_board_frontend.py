@@ -646,6 +646,45 @@ def test_late_initial_load_cannot_replace_a_newer_board_context() -> None:
     )
 
 
+def test_newer_load_wins_over_an_earlier_save_copy_response() -> None:
+    run_course_board_js(
+        """
+        let completeSave;
+        let completeLoad;
+        api = async (path) => {
+          if (path === "/api/saved-designs/save") {
+            return new Promise((resolve) => { completeSave = resolve; });
+          }
+          if (path === "/api/course-source-context?design=target.json") {
+            return new Promise((resolve) => { completeLoad = resolve; });
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        populateFilters = () => {};
+        renderSourceCatalogSummary = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "origin" }] };
+        state.activeSavedDesign = "origin.json";
+
+        const saving = saveArchiveDesignWithName("copy.json", { overwrite: true });
+        const loading = loadSavedDesignByName("target.json", { confirmFirst: false });
+        completeSave({ saved: { name: "copy.json" }, designs: [{ name: "copy.json" }] });
+        saving.then(() => {
+          assert.equal(state.activeSavedDesign, "origin.json");
+          completeLoad({ design: { years: [{ id: "target" }] }, headings: [], sources: [] });
+          return loading.then(() => {
+            assert.equal(state.activeSavedDesign, "target.json");
+            assert.equal(state.design.years[0].id, "target");
+          });
+        });
+        """
+    )
+
+
 def test_loading_archived_design_refreshes_its_source_context() -> None:
     run_course_board_js(
         """
@@ -909,6 +948,43 @@ def test_late_paragraph_preview_cannot_overwrite_newer_dialog() -> None:
     )
 
 
+def test_course_ai_dialog_is_invalidated_when_a_pending_load_replaces_board() -> None:
+    run_course_board_js(
+        """
+        let completeLoad;
+        let aiRequests = 0;
+        api = async (path) => {
+          if (path === "/api/course-source-context?design=new.json") {
+            return new Promise((resolve) => { completeLoad = resolve; });
+          }
+          if (path === "/api/ai-course-plan") aiRequests += 1;
+          return {};
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        populateFilters = () => {};
+        renderSourceCatalogSummary = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+        const oldYear = { id: "same-year", title: "Old", udas: [] };
+        state.design = { years: [oldYear] };
+        const loading = loadSavedDesignByName("new.json", { confirmFirst: false });
+        openCourseAiDialog(oldYear);
+        completeLoad({
+          design: { years: [{ id: "same-year", title: "New", udas: [] }] },
+          headings: [],
+          sources: [],
+        });
+
+        loading.then(() => generateCourseAiProposal()).then(() => {
+          assert.equal(aiRequests, 0);
+          assert.match(els.status.textContent, /riapri il dialogo/);
+        });
+        """
+    )
+
+
 def test_course_ai_proposal_is_ignored_after_concurrent_board_edit() -> None:
     run_course_board_js(
         """
@@ -917,6 +993,7 @@ def test_course_ai_proposal_is_ignored_after_concurrent_board_edit() -> None:
         const year = { id: "year", title: "Before", udas: [] };
         state.design = { years: [year] };
         state.courseAiYearId = "year";
+        courseAiDialogContext = captureBoardContext();
 
         const generating = generateCourseAiProposal();
         year.title = "Edited while generating";

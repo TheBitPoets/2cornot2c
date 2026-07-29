@@ -125,6 +125,7 @@ let paragraphPreviewRequestId = 0;
 let courseContextRequestId = 0;
 let courseContextRequestName = null;
 let courseAiRequestId = 0;
+let courseAiDialogContext = null;
 let courseAiProposalContext = null;
 let courseAiProposalBriefSnapshot = "";
 let deleteArchiveOperationInProgress = false;
@@ -642,6 +643,7 @@ async function persistArchiveDesignWithName(name, options = {}) {
     design = state.design,
     opensSavedDesign = state.design !== design,
     boardContext = captureBoardContext(),
+    courseContextGeneration = courseContextRequestId,
   } = options;
   normalizeCourseDesignFrames(design);
   const designToSave = JSON.parse(JSON.stringify(design));
@@ -671,6 +673,7 @@ async function persistArchiveDesignWithName(name, options = {}) {
         overwrite: true,
         opensSavedDesign,
         boardContext,
+        courseContextGeneration,
       });
     }
     setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
@@ -679,7 +682,10 @@ async function persistArchiveDesignWithName(name, options = {}) {
   const contextStillValid = opensSavedDesign
     ? isBoardContextUnchanged(boardContext)
     : isBoardContextCurrent(boardContext);
-  if (!contextStillValid) {
+  if (
+    !contextStillValid
+    || courseContextGeneration !== courseContextRequestId
+  ) {
     setStatus(`Progetto salvato in archivio: ${payload.saved?.name || name}. La vista aperta non e stata cambiata.`);
     return !opensSavedDesign;
   }
@@ -710,12 +716,16 @@ async function persistCurrentProject() {
   normalizeCourseDesignFrames();
   const savedSnapshot = designSnapshot();
   const boardContext = captureBoardContext();
+  const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio progetto corrente in doc/course_design.json...");
   await api("/api/course-design", {
     method: "POST",
     body: savedSnapshot,
   });
-  if (!isBoardContextCurrent(boardContext)) {
+  if (
+    !isBoardContextCurrent(boardContext)
+    || courseContextGeneration !== courseContextRequestId
+  ) {
     setStatus("Progetto corrente salvato. La vista aperta non e stata cambiata.");
     return;
   }
@@ -1726,6 +1736,7 @@ function defaultCourseBrief(year) {
 
 function openCourseAiDialog(year) {
   courseAiRequestId += 1;
+  courseAiDialogContext = captureBoardContext();
   courseAiProposalContext = null;
   courseAiProposalBriefSnapshot = "";
   els.courseAiGenerateBtn.disabled = false;
@@ -1762,6 +1773,11 @@ function readCourseBrief() {
 }
 
 async function generateCourseAiProposal() {
+  if (!courseAiDialogContext || !isBoardContextUnchanged(courseAiDialogContext)) {
+    els.courseAiApplyBtn.disabled = true;
+    setStatus("Generazione AI annullata: la board è cambiata; riapri il dialogo.");
+    return;
+  }
   const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
   if (!year) return;
   const brief = readCourseBrief();
@@ -2723,6 +2739,7 @@ els.courseAiDialog.addEventListener("close", () => {
   courseAiRequestId += 1;
   clearInterval(aiProgressTimer);
   aiProgressTimer = null;
+  courseAiDialogContext = null;
   courseAiProposalContext = null;
   courseAiProposalBriefSnapshot = "";
   state.courseAiProposal = null;
