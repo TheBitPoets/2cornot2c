@@ -27,6 +27,11 @@ def run_course_board_js(assertions: str) -> None:
       removeAttribute(name) {{ delete this[name]; }}
       focus() {{ this.focused = true; }}
       contains() {{ return false; }}
+      showModal() {{ this.open = true; }}
+      close() {{
+        this.open = false;
+        if (this.listeners.close) this.listeners.close();
+      }}
     }}
 
     const elements = new Map();
@@ -641,6 +646,73 @@ def test_loading_archived_design_refreshes_its_source_context() -> None:
     )
 
 
+def test_new_project_loads_its_saved_source_context() -> None:
+    run_course_board_js(
+        """
+        DashboardDialogs.prompt = async () => "new.json";
+        api = async (path) => {
+          if (path === "/api/saved-designs/save") {
+            return { saved: { name: "new.json" }, designs: [{ name: "new.json" }] };
+          }
+          if (path === "/api/course-source-context?design=new.json") {
+            return {
+              design: { years: [], source_files: ["README.md"] },
+              headings: [{ id: "new-heading" }],
+              sources: [{ id: "new-source" }],
+            };
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        populateFilters = () => {};
+        renderSourceCatalogSummary = () => {};
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "old" }] };
+        state.headings = [{ id: "old-heading" }];
+        state.sources = [{ id: "old-source" }];
+        markDesignClean();
+
+        newCourseDesign().then(() => {
+          assert.equal(state.activeSavedDesign, "new.json");
+          assert.equal(state.headings[0].id, "new-heading");
+          assert.equal(state.sources[0].id, "new-source");
+        });
+        """
+    )
+
+
+def test_late_paragraph_preview_cannot_overwrite_newer_dialog() -> None:
+    run_course_board_js(
+        """
+        let resolveFirst;
+        let resolveSecond;
+        let requests = 0;
+        api = async () => {
+          requests += 1;
+          return new Promise((resolve) => {
+            if (requests === 1) resolveFirst = resolve;
+            else resolveSecond = resolve;
+          });
+        };
+        const first = openParagraphPreview({ id: "first", title: "Primo", source: "a.md" });
+        const second = openParagraphPreview({ id: "second", title: "Secondo", source: "b.md" });
+        resolveSecond({ heading: { title: "Secondo", content: "Nuovo" } });
+        second.then(() => {
+          assert.equal(els.paragraphDialogTitle.textContent, "Secondo");
+          assert.match(els.paragraphContent.innerHTML, /Nuovo/);
+          resolveFirst({ heading: { title: "Primo", content: "Vecchio" } });
+          return first.then(() => {
+            assert.equal(els.paragraphDialogTitle.textContent, "Secondo");
+            assert.match(els.paragraphContent.innerHTML, /Nuovo/);
+          });
+        });
+        """
+    )
+
+
 def test_new_project_save_does_not_discard_in_place_edits() -> None:
     run_course_board_js(
         """
@@ -664,6 +736,47 @@ def test_new_project_save_does_not_discard_in_place_edits() -> None:
           assert.equal(state.activeSavedDesign, "open.json");
           assert.equal(state.design.years[1].id, "edited-while-saving");
           assert.match(els.status.textContent, /vista aperta non e stata cambiata/);
+        });
+        """
+    )
+
+
+def test_deleting_active_archive_restores_current_source_context() -> None:
+    run_course_board_js(
+        """
+        api = async (path) => {
+          if (path === "/api/school-calendars") return { calendars: [] };
+          if (path === "/api/saved-designs/delete") {
+            return { designs: [], deleted_calendars: [] };
+          }
+          if (path === "/api/course-source-context") {
+            return {
+              design: { years: [{ id: "current" }] },
+              headings: [{ id: "current-heading" }],
+              sources: [{ id: "current-source" }],
+            };
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        populateFilters = () => {};
+        renderSourceCatalogSummary = () => {};
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "archived" }] };
+        state.headings = [{ id: "archived-heading" }];
+        state.sources = [{ id: "archived-source" }];
+        state.activeSavedDesign = "archive.json";
+        state.savedDesigns = [{ name: "archive.json" }];
+        markDesignClean();
+
+        deleteArchiveDesign().then(() => {
+          assert.equal(state.design.years[0].id, "current");
+          assert.equal(state.headings[0].id, "current-heading");
+          assert.equal(state.sources[0].id, "current-source");
+          assert.equal(state.activeSavedDesign, "");
         });
         """
     )

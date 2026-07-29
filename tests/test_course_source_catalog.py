@@ -69,6 +69,13 @@ def test_normalizes_explicit_local_github_and_gitlab_sources() -> None:
     assert all(not source.legacy for source in sources)
 
 
+def test_accepts_git_ref_with_at_outside_reflog_sequence() -> None:
+    design = explicit_design()
+    design["sources"][1]["ref"] = "release@2026"
+
+    assert normalize_course_sources(design)[1].ref == "release@2026"
+
+
 def test_projects_legacy_source_files_without_mutating_design() -> None:
     design = {"source_files": ["README.md", "doc/TESTING.md"]}
 

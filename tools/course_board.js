@@ -121,6 +121,7 @@ const AI_PROGRESS_STAGES = [
 ];
 
 let aiProgressTimer = null;
+let paragraphPreviewRequestId = 0;
 let frameBatch = null;
 let frameVerificationBatch = null;
 let cleanDesignSnapshot = "";
@@ -505,6 +506,7 @@ async function loadCurrentDesign() {
   if (!confirmed) return;
   setStatus("Caricamento progetto corrente...");
   const courseContext = await fetchCourseContext();
+  invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
@@ -537,6 +539,7 @@ async function loadSavedDesignByName(name, options = {}) {
   }
   setStatus(`Caricamento progetto salvato "${name}"...`);
   const courseContext = await fetchCourseContext(name);
+  invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
@@ -777,7 +780,7 @@ async function deleteArchiveDesign() {
     setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
     return;
   }
-  const currentDesign = await api("/api/course-design");
+  const courseContext = await fetchCourseContext();
   if (!isBoardContextUnchanged(boardContext)) {
     const detachedDraft = reconcileDeletedArchive(name, payload);
     const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
@@ -787,12 +790,17 @@ async function deleteArchiveDesign() {
   state.savedDesigns = payload.designs || [];
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
-  state.design = currentDesign;
+  invalidateParagraphPreview(true);
+  state.design = courseContext.design;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();
   renderSavedDesigns();
   renderProjectTitle();
+  populateFilters();
+  renderSourceCatalogSummary();
   renderHeadings();
   renderCourse();
   renderCourseActions();
@@ -823,8 +831,16 @@ async function newCourseDesign() {
   const design = emptyCourseDesign();
   const saved = await saveArchiveDesignWithName(name, { design, confirmOverwrite: true });
   if (!saved) return;
+  const courseContext = await fetchCourseContext(name);
+  invalidateParagraphPreview(true);
+  state.design = courseContext.design;
+  state.headings = courseContext.headings;
+  state.sources = courseContext.sources;
+  markDesignClean();
   renderSavedDesigns();
   renderProjectTitle();
+  populateFilters();
+  renderSourceCatalogSummary();
   renderHeadings();
   renderCourse();
   renderCourseActions();
@@ -1550,7 +1566,15 @@ function renderParagraphContent(source) {
   return blocks.join("") || '<p class="empty">Questo paragrafo non contiene testo oltre al titolo.</p>';
 }
 
+function invalidateParagraphPreview(closeDialog = false) {
+  paragraphPreviewRequestId += 1;
+  if (closeDialog && els.paragraphDialog.open) {
+    els.paragraphDialog.close();
+  }
+}
+
 async function openParagraphPreview(paragraph) {
+  const requestId = ++paragraphPreviewRequestId;
   els.paragraphDialogTitle.textContent = paragraph.title || "Testo del paragrafo";
   els.paragraphDialogMeta.textContent = `${paragraph.source_label || paragraph.source || "Sorgente n/d"} (${paragraph.source_provider || "local"}) · riga ${paragraph.line || "?"} · H${paragraph.level || "?"}`;
   els.paragraphContent.textContent = "Caricamento del contenuto...";
@@ -1561,6 +1585,7 @@ async function openParagraphPreview(paragraph) {
       ? `&design=${encodeURIComponent(state.activeSavedDesign)}`
       : "";
     const payload = await api(`/api/heading-content?id=${encodeURIComponent(paragraph.id)}${designQuery}`);
+    if (requestId !== paragraphPreviewRequestId) return;
     const heading = payload.heading || paragraph;
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
     els.paragraphDialogMeta.textContent = `${heading.source_label || heading.source || "Sorgente n/d"} (${heading.source_provider || "local"}) · riga ${heading.line || "?"} · H${heading.level || "?"}`;
@@ -1570,6 +1595,7 @@ async function openParagraphPreview(paragraph) {
       els.paragraphSourceLink.hidden = false;
     }
   } catch (error) {
+    if (requestId !== paragraphPreviewRequestId) return;
     els.paragraphContent.textContent = `Contenuto non disponibile. Dettaglio: ${error.message}`;
   }
 }
@@ -2520,7 +2546,11 @@ els.addYearBtn.addEventListener("click", openYearDialog);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCreateBtn.addEventListener("click", createYearFromDialog);
-els.paragraphCloseBtn.addEventListener("click", () => els.paragraphDialog.close());
+els.paragraphCloseBtn.addEventListener("click", () => {
+  invalidateParagraphPreview();
+  els.paragraphDialog.close();
+});
+els.paragraphDialog.addEventListener("close", () => invalidateParagraphPreview());
 els.yearIdInput.addEventListener("input", () => {
   els.yearIdInput.dataset.touched = "true";
 });

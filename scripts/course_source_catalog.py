@@ -20,7 +20,7 @@ GITHUB_REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 GITLAB_REPOSITORY_RE = re.compile(
     r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+$"
 )
-GIT_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$")
+GIT_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/@-]{0,127}$")
 ALLOWED_PROVIDERS = frozenset({"local", "github", "gitlab"})
 ALLOWED_TYPES = frozenset({"markdown"})
 ALLOWED_INDEXING_STATUSES = frozenset({"ready", "pending", "error", "disabled"})

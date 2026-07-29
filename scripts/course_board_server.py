@@ -2036,42 +2036,49 @@ def default_ai_provider_config() -> dict:
     }
 
 
-def extract_headings(
-    design: dict | None = None,
-    *,
-    include_source_text: bool = False,
-) -> list[dict]:
+def extract_headings(design: dict | None = None) -> list[dict]:
     """Extract headings from configured Markdown sources."""
 
-    design = read_design() if design is None else design
-    source_files = course_source_catalog.local_markdown_source_files(
-        design,
+    selected_design = read_design() if design is None else design
+    headings: list[dict] = []
+    for source_file in course_source_catalog.local_markdown_source_files(
+        selected_design,
         ROOT,
         default_files=DEFAULT_SOURCES,
-    )
-    headings: list[dict] = []
-    for source_file in source_files:
-        source = source_file.relative_path
-        descriptor = source_file.source
-        seen: dict[str, int] = {}
+    ):
         source_text = course_source_catalog.read_local_markdown_text(
             source_file,
             ROOT,
         )
-        for lineno, line in enumerate(source_text.splitlines(), start=1):
-            match = HEADING_RE.match(line)
-            if not match:
-                continue
-            title = match.group(2).strip()
-            if not title or title.startswith("0 \""):
-                continue
-            anchor = github_anchor(title, seen)
-            heading_id = (
-                f"{source}#{anchor}"
-                if descriptor.legacy
-                else f"{descriptor.source_id}:{source}#{anchor}"
-            )
-            heading = {
+        headings.extend(headings_from_source_snapshot(source_file, source_text))
+    return headings
+
+
+def headings_from_source_snapshot(
+    source_file: course_source_catalog.LocalCourseSourceFile,
+    source_text: str,
+) -> list[dict]:
+    """Extract public heading metadata from one verified source snapshot."""
+
+    source = source_file.relative_path
+    descriptor = source_file.source
+    seen: dict[str, int] = {}
+    headings: list[dict] = []
+    for lineno, line in enumerate(source_text.splitlines(), start=1):
+        match = HEADING_RE.match(line)
+        if not match:
+            continue
+        title = match.group(2).strip()
+        if not title or title.startswith("0 \""):
+            continue
+        anchor = github_anchor(title, seen)
+        heading_id = (
+            f"{source}#{anchor}"
+            if descriptor.legacy
+            else f"{descriptor.source_id}:{source}#{anchor}"
+        )
+        headings.append(
+            {
                 "id": heading_id,
                 "source": source,
                 "source_id": descriptor.source_id,
@@ -2086,10 +2093,31 @@ def extract_headings(
                 "github_url": github_blob_url(source, anchor),
                 "line": lineno,
             }
-            if include_source_text:
-                heading["_source_text"] = source_text
-            headings.append(heading)
+        )
     return headings
+
+
+def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] | None:
+    """Return heading metadata and section from one bounded source read."""
+
+    for source_file in course_source_catalog.local_markdown_source_files(
+        design,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+    ):
+        source_text = course_source_catalog.read_local_markdown_text(
+            source_file,
+            ROOT,
+        )
+        for heading in headings_from_source_snapshot(source_file, source_text):
+            if heading["id"] == heading_id:
+                return heading, section_text_from_source(
+                    source_text,
+                    heading["line"],
+                    heading["level"],
+                )
+        source_text = None
+    return None
 
 
 def github_blob_url(source: str, anchor: str = "") -> str:
@@ -4146,24 +4174,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             heading_id = query.get("id", [""])[0]
             try:
                 design = source_request_design(parsed.query)
-                headings = extract_headings(design, include_source_text=True)
+                snapshot = heading_content_snapshot(design, heading_id)
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
                 return
             except (ValueError, FileNotFoundError):
                 self.write_error_json(404, "Progetto didattico non trovato.")
                 return
-            heading = next((item for item in headings if item["id"] == heading_id), None)
-            if heading is None:
+            if snapshot is None:
                 self.write_error_json(404, "Paragrafo non trovato.")
                 return
-            source_text = heading.pop("_source_text")
-            content = section_text_from_source(
-                source_text,
-                heading["line"],
-                heading["level"],
-            )
-            source_text = None
+            heading, content = snapshot
             self.write_json({"heading": {**heading, "content": content}})
             return
         if parsed.path == "/api/course-design":
