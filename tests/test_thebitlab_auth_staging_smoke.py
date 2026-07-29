@@ -350,15 +350,19 @@ def test_staging_smoke_rejects_public_state_reused_as_cookie_binding() -> None:
         )
 
 
-def test_staging_smoke_rejects_cookie_binding_derived_from_public_state() -> None:
+@pytest.mark.parametrize("combine", [False, True])
+def test_staging_smoke_rejects_cookie_binding_derived_from_public_state(combine) -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/google/login")]
     location = next(
         value for name, value in current.headers if name.lower() == "location"
     )
-    state = urllib.parse.parse_qs(urllib.parse.urlsplit(location).query)["state"][0]
+    query = urllib.parse.parse_qs(urllib.parse.urlsplit(location).query)
+    public_source = query["state"][0]
+    if combine:
+        public_source += query["nonce"][0]
     derived = base64.urlsafe_b64encode(
-        hashlib.sha256(state.encode("ascii")).digest()
+        hashlib.sha256(public_source.encode("ascii")).digest()
     ).rstrip(b"=").decode("ascii")
 
     def derived_cookie(value):
@@ -558,7 +562,7 @@ def test_staging_smoke_ignores_script_and_routes_inside_html_comments() -> None:
 
 @pytest.mark.parametrize(
     "container",
-    ["template", "noscript", "textarea", "xmp", "plaintext"],
+    ["template", "noscript", "textarea", "xmp", "plaintext", "title"],
 )
 def test_staging_smoke_rejects_pairing_logic_inside_inert_container(container) -> None:
     fixtures = responses()

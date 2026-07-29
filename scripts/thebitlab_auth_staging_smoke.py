@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import itertools
 import json
 import math
 import os
@@ -210,7 +211,7 @@ def _check_google_login(
     response: ResponseSnapshot,
     expected_origin: str,
     expected_client_id: str,
-) -> tuple[bytes, bytes, bytes, bytes]:
+) -> tuple[bytes, ...]:
     _require_status(response, 302)
     _require_no_store(response)
     locations = _headers(response, "location")
@@ -259,13 +260,7 @@ def _check_google_login(
         query["nonce"][0],
         query["code_challenge"][0],
     }
-    predictable_bindings = set(public_values)
-    for value in public_values:
-        digest = hashlib.sha256(value.encode("ascii")).digest()
-        predictable_bindings.add(digest.hex())
-        predictable_bindings.add(
-            base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
-        )
+    predictable_bindings = _predictable_public_bindings(public_values)
     attributes = _cookie_attributes(cookie_parts[1:]) if cookie_parts else None
     max_age = None if attributes is None else attributes.get("max-age")
     if (
@@ -284,13 +279,20 @@ def _check_google_login(
         or str(attributes.get("samesite", "")).lower() != "lax"
     ):
         raise StagingSmokeError("Check staging google_login non valido.")
+    actual_values = (
+        query["state"][0],
+        query["nonce"][0],
+        query["code_challenge"][0],
+        cookie_value,
+    )
+    if len(set(actual_values)) != len(actual_values):
+        raise StagingSmokeError("Check staging google_login non valido.")
     material = tuple(
-        hashlib.sha256(value.encode("ascii")).digest()
-        for value in (
-            query["state"][0],
-            query["nonce"][0],
-            query["code_challenge"][0],
-            cookie_value,
+        sorted(
+            {
+                hashlib.sha256(value.encode("ascii")).digest()
+                for value in predictable_bindings | set(actual_values)
+            }
         )
     )
     location = None
@@ -298,6 +300,7 @@ def _check_google_login(
     query = None
     cookie_parts = None
     cookie_value = None
+    actual_values = None
     public_values = None
     predictable_bindings = None
     digest = None
@@ -472,6 +475,22 @@ def _strict_query(raw_query: str) -> dict[str, list[str]]:
     return result
 
 
+def _predictable_public_bindings(public_values: set[str]) -> set[str]:
+    predictable = set(public_values)
+    ordered_values = tuple(public_values)
+    for length in (1, 2, 3):
+        for values in itertools.permutations(ordered_values, length):
+            for separator in ("", ":", ".", "|"):
+                combined = separator.join(values)
+                predictable.add(combined)
+                digest = hashlib.sha256(combined.encode("ascii")).digest()
+                predictable.add(digest.hex())
+                predictable.add(
+                    base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+                )
+    return predictable
+
+
 def _forbidden_followup_fingerprints(material: tuple[bytes, ...]) -> set[bytes]:
     forbidden = set(material)
     for fingerprint in material:
@@ -490,6 +509,7 @@ _INERT_HTML_CONTAINERS = {
     "xmp",
     "iframe",
     "noembed",
+    "title",
 }
 _FORBIDDEN_HTML_ELEMENTS = {"plaintext"}
 
