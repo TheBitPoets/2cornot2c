@@ -206,6 +206,29 @@ def test_staging_smoke_validates_public_routes_without_exposing_secrets() -> Non
     assert all(call[2] == 30 for call in calls)
 
 
+def test_staging_smoke_accepts_runtime_global_security_headers() -> None:
+    fixtures = responses()
+    key = ("GET", "https://school.test/auth/tui/pair")
+    current = fixtures[key]
+    fixtures[key] = smoke.ResponseSnapshot(
+        current.status,
+        current.headers
+        + (
+            ("Content-Security-Policy", "frame-ancestors 'none'"),
+            ("X-Frame-Options", "DENY"),
+            ("X-Content-Type-Options", "nosniff"),
+        ),
+        current.body,
+    )
+
+    result = smoke.run_smoke(
+        "https://school.test",
+        lambda method, url, timeout: fixtures[(method, url)],
+    )
+
+    assert all(check["ok"] for check in result["checks"])
+
+
 @pytest.mark.parametrize(
     "origin",
     [

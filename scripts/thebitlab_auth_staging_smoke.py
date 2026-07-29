@@ -321,9 +321,9 @@ def _check_pairing_page(response: ResponseSnapshot) -> None:
     _require_no_store(response)
     if _headers(response, "content-type") != ["text/html; charset=utf-8"]:
         raise StagingSmokeError("Check staging pairing_page non valido.")
-    csp = _headers(response, "content-security-policy")
-    directives = _csp_directives(csp[0]) if len(csp) == 1 else None
-    csp_nonce = None if directives is None else _pairing_csp_nonce(directives)
+    csp_nonce = _pairing_csp_contract(
+        _headers(response, "content-security-policy")
+    )
     try:
         html = response.body.decode("utf-8")
     except UnicodeDecodeError:
@@ -342,8 +342,12 @@ def _check_pairing_page(response: ResponseSnapshot) -> None:
         or parser.style_nonces != [csp_nonce]
         or parser.script_ends != 1
         or parser.style_ends != 1
-        or _headers(response, "x-frame-options") != ["DENY"]
-        or _headers(response, "x-content-type-options") != ["nosniff"]
+        or not _repeated_header_is(response, "x-frame-options", "DENY")
+        or not _repeated_header_is(
+            response,
+            "x-content-type-options",
+            "nosniff",
+        )
         or "/auth/session" not in visible_source
         or "/auth/tui/pair" not in visible_source
     ):
@@ -419,6 +423,24 @@ def _csp_directives(value: str) -> dict[str, list[str]] | None:
             return None
         directives[name] = tokens[1:]
     return directives
+
+
+def _pairing_csp_contract(values: list[str]) -> str | None:
+    if not 1 <= len(values) <= 2:
+        return None
+    nonce = None
+    for value in values:
+        directives = _csp_directives(value)
+        if directives is None:
+            return None
+        candidate = _pairing_csp_nonce(directives)
+        if candidate is not None:
+            if nonce is not None:
+                return None
+            nonce = candidate
+        elif directives != {"frame-ancestors": ["'none'"]}:
+            return None
+    return nonce
 
 
 def _pairing_csp_nonce(directives: dict[str, list[str]]) -> str | None:
@@ -623,6 +645,15 @@ def _require_response_framing(response: ResponseSnapshot) -> None:
 
 def _headers(response: ResponseSnapshot, name: str) -> list[str]:
     return [value for key, value in response.headers if key.lower() == name]
+
+
+def _repeated_header_is(
+    response: ResponseSnapshot,
+    name: str,
+    expected: str,
+) -> bool:
+    values = _headers(response, name)
+    return 1 <= len(values) <= 2 and all(value == expected for value in values)
 
 
 def _valid_pkce_challenge(value: str) -> bool:
