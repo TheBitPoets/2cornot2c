@@ -193,11 +193,23 @@ def test_tui_logout_revokes_before_empty_response_and_replay_is_unauthorized(gra
     )
     bearer = json.loads(consumed.body)["bearer_token"]
     consumed.delivery_guard.delivered()
+    fake_bearer = "F" * 40
+    fake_logout_statuses = [
+        routes.dispatch(
+            request(
+                "/auth/tui/logout",
+                b"",
+                ("Authorization", "Bearer " + fake_bearer),
+            )
+        ).status_code
+        for _ in range(21)
+    ]
 
     logged_out = routes.dispatch(
         request("/auth/tui/logout", b"", ("Authorization", "Bearer " + bearer))
     )
 
+    assert fake_logout_statuses == [401] * 20 + [429]
     assert logged_out.status_code == 204
     assert logged_out.body == b""
     persisted = storage.read_session_by_token_digest(session_token_digest(bearer))
