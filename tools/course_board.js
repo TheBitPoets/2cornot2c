@@ -126,6 +126,7 @@ let courseContextRequestId = 0;
 let courseContextRequestName = null;
 let courseAiRequestId = 0;
 let courseAiProposalContext = null;
+let courseAiProposalBriefSnapshot = "";
 let deleteArchiveOperationInProgress = false;
 let frameBatch = null;
 let frameVerificationBatch = null;
@@ -232,8 +233,8 @@ async function runAsyncAction(action, label) {
 }
 
 function startSaveOperation() {
-  if (saveOperationInProgress) {
-    setStatus("Salvataggio gia in corso. Attendi il completamento prima di avviarne un altro.");
+  if (saveOperationInProgress || deleteArchiveOperationInProgress) {
+    setStatus("Salvataggio o cancellazione gia in corso. Attendi il completamento prima di avviarne un altro.");
     return false;
   }
   saveOperationInProgress = true;
@@ -468,15 +469,17 @@ function renderCourseActions() {
     els.saveArchiveBtn.title = "Salva il nuovo progetto nell'archivio dei progetti didattici.";
   }
   els.saveArchiveAsBtn.title = "Salva una copia del progetto con un nuovo nome nell'archivio; poi potrai impostarla come progetto corrente.";
-  els.saveArchiveBtn.disabled = saveOperationInProgress || !hasChanges;
+  els.saveArchiveBtn.disabled = saveOperationInProgress || deleteArchiveOperationInProgress || !hasChanges;
+  els.saveArchiveAsBtn.disabled = saveOperationInProgress || deleteArchiveOperationInProgress;
+  els.newDesignBtn.disabled = saveOperationInProgress || deleteArchiveOperationInProgress;
   if (!hasChanges) {
     els.saveArchiveBtn.title = "Nessuna modifica da salvare nel progetto attualmente caricato.";
   }
-  els.deleteArchiveBtn.disabled = isCurrent;
+  els.deleteArchiveBtn.disabled = isCurrent || saveOperationInProgress || deleteArchiveOperationInProgress;
   els.deleteArchiveBtn.title = isCurrent
     ? "Il progetto corrente doc/course_design.json non puo essere eliminato dalla board."
     : `Cancella il progetto archiviato ${state.activeSavedDesign}.`;
-  els.saveBtn.disabled = isCurrent;
+  els.saveBtn.disabled = isCurrent || saveOperationInProgress || deleteArchiveOperationInProgress;
   els.saveBtn.title = isCurrent
     ? "Il progetto corrente e gia caricato: non serve impostarlo di nuovo."
     : "Imposta il progetto caricato come progetto corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.";
@@ -759,15 +762,23 @@ function reconcileDeletedArchive(name, payload) {
 }
 
 async function deleteArchiveDesign() {
-  if (deleteArchiveOperationInProgress) {
+  if (deleteArchiveOperationInProgress || saveOperationInProgress) {
     setStatus("Una cancellazione di archivio è già in corso.");
     return false;
   }
   deleteArchiveOperationInProgress = true;
+  els.newDesignBtn.disabled = true;
+  els.saveArchiveBtn.disabled = true;
+  els.saveArchiveAsBtn.disabled = true;
+  els.saveBtn.disabled = true;
+  els.deleteArchiveBtn.disabled = true;
   try {
     return await deleteArchiveDesignOnce();
   } finally {
     deleteArchiveOperationInProgress = false;
+    els.newDesignBtn.disabled = false;
+    els.saveArchiveAsBtn.disabled = false;
+    renderCourseActions();
   }
 }
 
@@ -1715,6 +1726,7 @@ function defaultCourseBrief(year) {
 function openCourseAiDialog(year) {
   courseAiRequestId += 1;
   courseAiProposalContext = null;
+  courseAiProposalBriefSnapshot = "";
   els.courseAiGenerateBtn.disabled = false;
   const brief = { ...defaultCourseBrief(year), ...(year.ai_brief || {}) };
   state.courseAiYearId = year.id;
@@ -1752,6 +1764,7 @@ async function generateCourseAiProposal() {
   const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
   if (!year) return;
   const brief = readCourseBrief();
+  const briefSnapshot = JSON.stringify(brief);
   year.ai_brief = brief;
   const boardContext = captureBoardContext();
   const requestYearId = state.courseAiYearId;
@@ -1774,11 +1787,13 @@ async function generateCourseAiProposal() {
       !isBoardContextUnchanged(boardContext)
       || state.courseAiYearId !== requestYearId
       || requestId !== courseAiRequestId
+      || JSON.stringify(readCourseBrief()) !== briefSnapshot
     ) {
       throw new Error("la board o l'anno sono cambiati durante la generazione; proposta AI ignorata");
     }
     state.courseAiProposal = payload.proposal;
     courseAiProposalContext = boardContext;
+    courseAiProposalBriefSnapshot = briefSnapshot;
     renderCourseAiPreview(payload.proposal);
     els.courseAiApplyBtn.disabled = false;
     setStatus(`Proposta percorso generata per ${year.title}.`);
@@ -1830,9 +1845,10 @@ function applyCourseAiProposal() {
   if (
     !courseAiProposalContext
     || !isBoardContextUnchanged(courseAiProposalContext)
+    || JSON.stringify(readCourseBrief()) !== courseAiProposalBriefSnapshot
   ) {
     els.courseAiApplyBtn.disabled = true;
-    setStatus("Proposta AI non applicata: la board è cambiata dopo la generazione.");
+    setStatus("Proposta AI non applicata: la board o il brief sono cambiati dopo la generazione.");
     return;
   }
   const brief = readCourseBrief();
@@ -1846,6 +1862,7 @@ function applyCourseAiProposal() {
   els.courseAiDialog.close();
   state.courseAiProposal = null;
   courseAiProposalContext = null;
+  courseAiProposalBriefSnapshot = "";
   renderCourse();
   renderHeadings();
   setStatus(`Proposta AI applicata a ${year.title}. Ricordati di salvare il JSON.`);
@@ -2701,6 +2718,7 @@ els.courseAiDialog.addEventListener("close", () => {
   clearInterval(aiProgressTimer);
   aiProgressTimer = null;
   courseAiProposalContext = null;
+  courseAiProposalBriefSnapshot = "";
   state.courseAiProposal = null;
   els.aiBusy.hidden = true;
   els.courseAiGenerateBtn.disabled = false;

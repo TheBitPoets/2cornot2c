@@ -945,7 +945,27 @@ def test_course_ai_apply_rejects_changes_after_proposal_generation() -> None:
         assert.equal(year.udas[0].id, "original");
         assert.equal(item.frame.why, "generated later");
         assert.equal(els.courseAiApplyBtn.disabled, true);
-        assert.match(els.status.textContent, /board è cambiata/);
+        assert.match(els.status.textContent, /board o il brief/);
+        """
+    )
+
+
+def test_course_ai_apply_rejects_a_changed_brief() -> None:
+    run_course_board_js(
+        """
+        const year = { id: "year", title: "Year", udas: [{ id: "original", items: [] }] };
+        state.design = { years: [year] };
+        state.courseAiYearId = "year";
+        state.courseAiProposal = { title: "Stale", udas: [{ id: "replacement", items: [] }] };
+        courseAiProposalContext = captureBoardContext();
+        courseAiProposalBriefSnapshot = JSON.stringify(readCourseBrief());
+        els.briefSubject.value = "Changed after generation";
+
+        applyCourseAiProposal();
+
+        assert.equal(year.udas[0].id, "original");
+        assert.equal(els.courseAiApplyBtn.disabled, true);
+        assert.match(els.status.textContent, /brief sono cambiati/);
         """
     )
 
@@ -1012,6 +1032,29 @@ def test_duplicate_archive_delete_is_serialized() -> None:
           assert.equal(deleteRequests, 1);
           completeDelete({ designs: [], deleted_calendars: [] });
           return first;
+        });
+        """
+    )
+
+
+def test_archive_save_and_delete_share_one_mutation_lock() -> None:
+    run_course_board_js(
+        """
+        let requests = 0;
+        api = async () => { requests += 1; return {}; };
+        state.design = { years: [] };
+        state.activeSavedDesign = "archive.json";
+
+        deleteArchiveOperationInProgress = true;
+        saveArchiveDesignWithName("archive.json", { overwrite: true }).then((saved) => {
+          assert.equal(saved, false);
+          assert.equal(requests, 0);
+          deleteArchiveOperationInProgress = false;
+          saveOperationInProgress = true;
+          return deleteArchiveDesign().then((deleted) => {
+            assert.equal(deleted, false);
+            assert.equal(requests, 0);
+          });
         });
         """
     )
