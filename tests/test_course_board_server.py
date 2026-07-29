@@ -105,6 +105,115 @@ def test_extract_headings_and_section_text_include_paragraph_content(tmp_path, m
     )
 
 
+def test_extract_headings_preserves_explicit_source_provenance(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lessons").mkdir()
+    (tmp_path / "lessons" / "intro.md").write_text(
+        "# Corso\n\n## Array\n\nContenuto.\n",
+        encoding="utf-8",
+    )
+    design = {
+        "sources": [
+            {
+                "id": "local-lessons",
+                "label": "Lezioni locali",
+                "type": "markdown",
+                "provider": "local",
+                "path": "lessons",
+                "files": ["intro.md"],
+                "indexing_status": "ready",
+            },
+            {
+                "id": "github-pending",
+                "label": "Lezioni remote",
+                "type": "markdown",
+                "provider": "github",
+                "repository": "TheBitPoets/course",
+                "ref": "main",
+                "files": ["README.md"],
+                "indexing_status": "pending",
+            },
+        ]
+    }
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "read_design", lambda: design)
+
+    headings = course_board_server.extract_headings()
+
+    assert {heading["source_provider"] for heading in headings} == {"local"}
+    array = next(heading for heading in headings if heading["title"] == "Array")
+    assert array["id"] == "local-lessons:lessons/intro.md#array"
+    assert array["source_id"] == "local-lessons"
+    assert array["source_label"] == "Lezioni locali"
+    assert array["source_repository"] is None
+    assert array["source_ref"] is None
+
+
+def test_write_design_rejects_unsafe_source_catalog_before_persistence(tmp_path, monkeypatch) -> None:
+    class FailingCourseService:
+        def write_design(self, payload):
+            raise AssertionError("Il catalogo non valido non deve essere persistito.")
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "course_service", lambda: FailingCourseService())
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="path relativo canonico",
+    ):
+        course_board_server.write_design(
+            {
+                "sources": [
+                    {
+                        "id": "unsafe",
+                        "label": "Unsafe",
+                        "type": "markdown",
+                        "provider": "local",
+                        "path": "../outside",
+                        "files": ["lesson.md"],
+                        "indexing_status": "ready",
+                    }
+                ]
+            }
+        )
+
+
+def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lesson.md").write_text("# Corso\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_design",
+        lambda: {"source_files": ["lesson.md"]},
+    )
+    teacher_token = "teacher-dashboard-token-for-source-catalog"
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = teacher_token
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        authorization = "Basic " + base64.b64encode(
+            f"teacher:{teacher_token}".encode("utf-8")
+        ).decode("ascii")
+        request = urllib.request.Request(
+            "http://127.0.0.1:%s/api/course-sources"
+            % server.server_address[1],
+            headers={"Authorization": authorization},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        assert len(payload["sources"]) == 1
+        assert payload["sources"][0]["provider"] == "local"
+        assert payload["sources"][0]["legacy"] is True
+        assert payload["sources"][0]["indexed_files"] == ["lesson.md"]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
 def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:
     source = tmp_path / "lesson.md"
     source.write_text("# Corso\n\n## Array\n\nTesto leggibile.\n", encoding="utf-8")

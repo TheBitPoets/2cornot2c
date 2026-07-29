@@ -55,6 +55,7 @@ from scripts import (
     assignment_records,
     assign_activity,
     codex_activity_adapter,
+    course_source_catalog,
     create_activity,
     create_submission_scaffold,
     manual_ai_feedback,
@@ -537,15 +538,28 @@ def read_design() -> dict:
     return course_service().read_design()
 
 
+def validate_course_source_catalog(payload: dict) -> None:
+    """Validate source descriptors and repository confinement before persistence."""
+
+    course_source_catalog.local_markdown_source_files(
+        payload,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+        existing_only=False,
+    )
+
+
 def write_design(payload: dict) -> None:
     """Persist the course design JSON with stable formatting."""
 
+    validate_course_source_catalog(payload)
     course_service().write_design(payload)
 
 
 def generate_course_plan_md(payload: dict) -> dict:
     """Generate doc/PERCORSO_DIDATTICO.md without promoting the edited design."""
 
+    validate_course_source_catalog(payload)
     temporary_root = ROOT / "tmp"
     temporary_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="course-plan-", dir=temporary_root) as directory:
@@ -658,6 +672,7 @@ def read_saved_design(name: str) -> dict:
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
     """Persist a named course design in the archive folder."""
 
+    validate_course_source_catalog(payload)
     return course_service().write_saved_design(name, payload, overwrite=overwrite)
 
 
@@ -2013,18 +2028,23 @@ def extract_headings() -> list[dict]:
     """Extract headings from configured Markdown sources."""
 
     design = read_design()
-    sources = design.get("source_files") or DEFAULT_SOURCES
+    source_files = course_source_catalog.local_markdown_source_files(
+        design,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+    )
     headings: list[dict] = []
-    for source in sources:
-        path = (ROOT / source).resolve()
-        try:
-            path.relative_to(ROOT)
-        except ValueError:
-            continue
-        if not path.is_file():
-            continue
+    for source_file in source_files:
+        source = source_file.relative_path
+        descriptor = source_file.source
         seen: dict[str, int] = {}
-        for lineno, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
+        for lineno, line in enumerate(
+            source_file.resolved_path.read_text(
+                encoding="utf-8",
+                errors="replace",
+            ).splitlines(),
+            start=1,
+        ):
             match = HEADING_RE.match(line)
             if not match:
                 continue
@@ -2032,10 +2052,20 @@ def extract_headings() -> list[dict]:
             if not title or title.startswith("0 \""):
                 continue
             anchor = github_anchor(title, seen)
+            heading_id = (
+                f"{source}#{anchor}"
+                if descriptor.legacy
+                else f"{descriptor.source_id}:{source}#{anchor}"
+            )
             headings.append(
                 {
-                    "id": f"{source}#{anchor}",
+                    "id": heading_id,
                     "source": source,
+                    "source_id": descriptor.source_id,
+                    "source_label": descriptor.label,
+                    "source_provider": descriptor.provider,
+                    "source_repository": descriptor.repository,
+                    "source_ref": descriptor.ref,
                     "level": len(match.group(1)),
                     "title": TAG_RE.sub("", title).strip(),
                     "anchor": anchor,
@@ -2106,6 +2136,11 @@ def heading_catalog_tree() -> list[dict]:
             "id": heading["id"],
             "title": heading["title"],
             "source": heading["source"],
+            "source_id": heading.get("source_id", ""),
+            "source_label": heading.get("source_label", heading["source"]),
+            "source_provider": heading.get("source_provider", "local"),
+            "source_repository": heading.get("source_repository"),
+            "source_ref": heading.get("source_ref"),
             "level": heading["level"],
             "href": heading["href"],
             "excerpt": section_excerpt(heading),
@@ -2138,6 +2173,10 @@ def topic_summary(item: dict, include_text: bool = False, child_text_budget: int
     summary = {
         "title": item.get("title", ""),
         "source": item.get("source", ""),
+        "source_id": item.get("source_id", ""),
+        "source_provider": item.get("source_provider", "local"),
+        "source_repository": item.get("source_repository"),
+        "source_ref": item.get("source_ref"),
         "level": item.get("level", ""),
         "href": item.get("href", ""),
         "github_url": github_blob_url(item.get("source", ""), anchor),
@@ -2189,6 +2228,11 @@ def board_item_from_heading(heading: dict) -> dict:
         "id": heading["id"],
         "title": heading["title"],
         "source": heading["source"],
+        "source_id": heading.get("source_id", ""),
+        "source_label": heading.get("source_label", heading["source"]),
+        "source_provider": heading.get("source_provider", "local"),
+        "source_repository": heading.get("source_repository"),
+        "source_ref": heading.get("source_ref"),
         "href": heading["href"],
         "level": heading["level"],
         "line": heading["line"],
@@ -4016,12 +4060,32 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             except Exception:  # noqa: BLE001
                 self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
             return
+        if parsed.path == "/api/course-sources":
+            try:
+                self.write_json(
+                    course_source_catalog.course_source_catalog_payload(
+                        read_design(),
+                        ROOT,
+                        default_files=DEFAULT_SOURCES,
+                    )
+                )
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+            return
         if parsed.path == "/api/headings":
-            self.write_json({"headings": extract_headings()})
+            try:
+                self.write_json({"headings": extract_headings()})
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
             return
         if parsed.path == "/api/heading-content":
             heading_id = parse_qs(parsed.query).get("id", [""])[0]
-            heading = next((item for item in extract_headings() if item["id"] == heading_id), None)
+            try:
+                headings = extract_headings()
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+                return
+            heading = next((item for item in headings if item["id"] == heading_id), None)
             if heading is None:
                 self.write_error_json(404, "Paragrafo non trovato.")
                 return
@@ -4152,12 +4216,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if payload is None:
             return
         if parsed.path == "/api/course-design":
-            write_design(payload)
-            self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+            try:
+                write_design(payload)
+                self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/course-plan-md":
             try:
                 self.write_json(generate_course_plan_md(payload.get("design", payload)))
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(400, str(error))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

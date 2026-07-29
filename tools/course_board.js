@@ -1,5 +1,6 @@
 ﻿const state = {
   headings: [],
+  sources: [],
   design: null,
   savedDesigns: [],
   activeSavedDesign: "",
@@ -23,6 +24,7 @@ const els = {
   sourceFilter: document.querySelector("#sourceFilter"),
   levelFilter: document.querySelector("#levelFilter"),
   searchInput: document.querySelector("#searchInput"),
+  sourceCatalogSummary: document.querySelector("#sourceCatalogSummary"),
   courseTree: document.querySelector("#courseTree"),
   projectTitle: document.querySelector("#projectTitle"),
   status: document.querySelector("#status"),
@@ -365,13 +367,15 @@ async function responseErrorMessage(response) {
 
 async function loadAll() {
   setStatus("Caricamento...");
-  const [headingsPayload, design, aiConfig, savedDesigns] = await Promise.all([
+  const [headingsPayload, sourcesPayload, design, aiConfig, savedDesigns] = await Promise.all([
     api("/api/headings"),
+    api("/api/course-sources"),
     api("/api/course-design"),
     api("/api/ai-config"),
     api("/api/saved-designs"),
   ]);
   state.headings = headingsPayload.headings;
+  state.sources = sourcesPayload.sources || [];
   state.design = design;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
@@ -383,6 +387,7 @@ async function loadAll() {
     await loadSavedDesignByName(activeDesign, { confirmFirst: false, render: false });
   }
   populateFilters();
+  renderSourceCatalogSummary();
   renderAiConfig();
   renderSavedDesigns();
   renderProjectTitle();
@@ -876,15 +881,37 @@ async function switchAiModel() {
 
 function populateFilters() {
   const selected = els.sourceFilter.value;
-  const sources = [...new Set(state.headings.map((heading) => heading.source))];
+  const sources = new Map();
+  for (const heading of state.headings) {
+    if (!sources.has(heading.source)) {
+      sources.set(heading.source, {
+        label: heading.source_label || heading.source,
+        provider: heading.source_provider || "local",
+      });
+    }
+  }
   els.sourceFilter.innerHTML = '<option value="">Tutte le sorgenti</option>';
-  for (const source of sources) {
+  for (const [source, metadata] of sources) {
     const option = document.createElement("option");
     option.value = source;
-    option.textContent = source;
+    option.textContent = `${metadata.label} (${metadata.provider})`;
     els.sourceFilter.append(option);
   }
   els.sourceFilter.value = selected;
+}
+
+function renderSourceCatalogSummary() {
+  const sources = state.sources || [];
+  const indexed = sources.filter((source) => (source.indexed_files || []).length > 0).length;
+  const pending = sources.filter((source) => source.indexing_status === "pending").length;
+  const providers = [...new Set(sources.map((source) => source.provider).filter(Boolean))];
+  const parts = [
+    `${sources.length} fonti`,
+    `${indexed} indicizzate`,
+    providers.length ? providers.join(", ") : "nessun provider",
+  ];
+  if (pending) parts.push(`${pending} in attesa`);
+  els.sourceCatalogSummary.textContent = parts.join(" · ");
 }
 
 function assignedYearsById() {
@@ -964,7 +991,9 @@ function renderHeadings() {
     });
     title.append(titleText);
     const usedLabel = usedInYears.size ? ` · inserito in ${[...usedInYears].join(", ")}` : "";
-    node.querySelector(".headingMeta").textContent = `${heading.source}:${heading.line} · H${heading.level}${usedLabel}`;
+    const sourceLabel = heading.source_label || heading.source;
+    const sourceProvider = heading.source_provider || "local";
+    node.querySelector(".headingMeta").textContent = `${sourceLabel} (${sourceProvider}) · ${heading.source}:${heading.line} · H${heading.level}${usedLabel}`;
     node.addEventListener("dragstart", () => {
       state.draggedHeading = heading;
     });
@@ -1074,6 +1103,11 @@ function itemFromHeading(heading) {
     id: heading.id,
     title: heading.title,
     source: heading.source,
+    source_id: heading.source_id,
+    source_label: heading.source_label,
+    source_provider: heading.source_provider,
+    source_repository: heading.source_repository,
+    source_ref: heading.source_ref,
     href: heading.href,
     level: heading.level,
     line: heading.line,
@@ -1096,6 +1130,11 @@ function childItemsFromHeading(parentHeading) {
       id: heading.id,
       title: heading.title,
       source: heading.source,
+      source_id: heading.source_id,
+      source_label: heading.source_label,
+      source_provider: heading.source_provider,
+      source_repository: heading.source_repository,
+      source_ref: heading.source_ref,
       href: heading.href,
       level: heading.level,
       line: heading.line,
@@ -1495,7 +1534,7 @@ function renderParagraphContent(source) {
 
 async function openParagraphPreview(paragraph) {
   els.paragraphDialogTitle.textContent = paragraph.title || "Testo del paragrafo";
-  els.paragraphDialogMeta.textContent = `${paragraph.source || "Sorgente n/d"} · riga ${paragraph.line || "?"} · H${paragraph.level || "?"}`;
+  els.paragraphDialogMeta.textContent = `${paragraph.source_label || paragraph.source || "Sorgente n/d"} (${paragraph.source_provider || "local"}) · riga ${paragraph.line || "?"} · H${paragraph.level || "?"}`;
   els.paragraphContent.textContent = "Caricamento del contenuto...";
   els.paragraphSourceLink.hidden = true;
   els.paragraphDialog.showModal();
@@ -1503,7 +1542,7 @@ async function openParagraphPreview(paragraph) {
     const payload = await api(`/api/heading-content?id=${encodeURIComponent(paragraph.id)}`);
     const heading = payload.heading || paragraph;
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
-    els.paragraphDialogMeta.textContent = `${heading.source || "Sorgente n/d"} · riga ${heading.line || "?"} · H${heading.level || "?"}`;
+    els.paragraphDialogMeta.textContent = `${heading.source_label || heading.source || "Sorgente n/d"} (${heading.source_provider || "local"}) · riga ${heading.line || "?"} · H${heading.level || "?"}`;
     els.paragraphContent.innerHTML = renderParagraphContent(heading.content);
     if (heading.github_url) {
       els.paragraphSourceLink.href = heading.github_url;

@@ -103,6 +103,32 @@ def test_collapsed_heading_only_hides_its_real_descendants() -> None:
     )
 
 
+def test_source_catalog_summary_reports_indexed_pending_and_providers() -> None:
+    run_course_board_js(
+        """
+        state.sources = [
+          { provider: "local", indexing_status: "ready", indexed_files: ["README.md"] },
+          { provider: "github", indexing_status: "pending", indexed_files: [] },
+          { provider: "gitlab", indexing_status: "disabled", indexed_files: [] },
+        ];
+
+        renderSourceCatalogSummary();
+
+        assert.equal(
+          els.sourceCatalogSummary.textContent,
+          "3 fonti · 1 indicizzate · local, github, gitlab · 1 in attesa",
+        );
+        """
+    )
+
+
+def test_course_board_declares_source_catalog_summary() -> None:
+    html = Path("tools/course_board.html").read_text(encoding="utf-8")
+
+    assert 'id="sourceCatalogSummary"' in html
+    assert 'api("/api/course-sources")' in Path("tools/course_board.js").read_text(encoding="utf-8")
+
+
 def test_catalog_paragraph_preview_uses_keyboard_accessible_button() -> None:
     source = Path("tools/course_board.js").read_text(encoding="utf-8")
     css = Path("tools/course_board.css").read_text(encoding="utf-8")
@@ -110,6 +136,34 @@ def test_catalog_paragraph_preview_uses_keyboard_accessible_button() -> None:
     assert 'const titleText = document.createElement("button");' in source
     assert 'titleText.type = "button";' in source
     assert ".headingPreviewTrigger" in css
+
+
+def test_item_from_heading_preserves_source_provenance() -> None:
+    run_course_board_js(
+        """
+        const heading = {
+          id: "course:doc/course.md#topic",
+          title: "Argomento",
+          source: "doc/course.md",
+          source_id: "course",
+          source_label: "Corso",
+          source_provider: "local",
+          source_repository: null,
+          source_ref: null,
+          href: "../doc/course.md#topic",
+          level: 2,
+          line: 4,
+        };
+        state.headings = [heading];
+
+        const item = itemFromHeading(heading);
+
+        assert.equal(item.source_id, "course");
+        assert.equal(item.source_label, "Corso");
+        assert.equal(item.source_provider, "local");
+        assert.equal(item.source, "doc/course.md");
+        """
+    )
 
 
 def test_quick_add_does_not_duplicate_a_heading_tree() -> None:
