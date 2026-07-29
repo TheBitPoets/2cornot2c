@@ -147,8 +147,10 @@ python scripts/student_lab_cli.py --student-id <id-locale> --server-url https://
 ```
 
 La CLI mostra un codice, apre la pagina browser fissa e attende l'autorizzazione dello studente. Il bearer TUI
-risultante resta soltanto nella memoria del processo. Quando il runtime federato è presente, le API student-lab
-accettano esclusivamente bearer TUI correlati al pairing e non effettuano fallback al secret legacy.
+risultante resta soltanto nella memoria del processo. All'uscita normale, dopo un errore o durante un'interruzione,
+la CLI tenta la revoca remota prima di eliminare il riferimento locale; segnala con exit non-zero se il logout non
+può essere confermato. Quando il runtime federato è presente, le API student-lab accettano esclusivamente bearer
+TUI correlati al pairing e non effettuano fallback al secret legacy.
 
 Il token legacy puo viaggiare su HTTP solo quando il server e in loopback (`localhost` o `127.0.0.1`).
 Per collegare una macchina studente al server docente usa HTTPS, direttamente o tramite tunnel. Il tunnel non

@@ -32,6 +32,7 @@ from scripts.thebitlab_tui_pairing import (
 
 _BEGIN_PATH = "/auth/tui/pairings"
 _AUTHORIZE_PATH = "/auth/tui/pair"
+_LOGOUT_PATH = "/auth/tui/logout"
 _TOKEN_RE = re.compile(r"^/auth/tui/pairings/([A-Za-z0-9_-]{1,128})/token$")
 _CODE_RE = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 _MAX_BODY_BYTES = 2048
@@ -134,6 +135,7 @@ class TuiPairingHttpRateLimiter:
             "begin": (120, 8),
             "authorize": (300, 20),
             "consume": (600, 30),
+            "logout_invalid": (600, 30),
         }
         if route_id not in limits:
             raise EdgeRateLimitStoreError("Route pairing non valida.")
@@ -144,7 +146,9 @@ class TuiPairingHttpRateLimiter:
             RateLimitBucket(client_key, client_limit, 60),
         ]
         if correlation is not None:
-            buckets.append(RateLimitBucket(self._key(route_id, correlation), 20, 60))
+            buckets.append(
+                RateLimitBucket(self._key(route_id, correlation), 20, 60)
+            )
         retry_after = self.store.admit(tuple(buckets), now=now.astimezone(timezone.utc))
         if retry_after is not None:
             if type(retry_after) is not int or retry_after < 1:
@@ -178,7 +182,7 @@ class TuiPairingHttpRoutes:
         self.rate_limiter = rate_limiter
 
     def handles(self, path: str) -> bool:
-        return path in {_BEGIN_PATH, _AUTHORIZE_PATH} or _TOKEN_RE.fullmatch(path or "") is not None
+        return path in {_BEGIN_PATH, _AUTHORIZE_PATH, _LOGOUT_PATH} or _TOKEN_RE.fullmatch(path or "") is not None
 
     def dispatch(self, request: TuiPairingHttpRequest) -> TuiPairingHttpResponse | None:
         if type(request) is not TuiPairingHttpRequest:
@@ -191,6 +195,8 @@ class TuiPairingHttpRoutes:
         payload = None
         cookie_header = None
         csrf_token = None
+        authorization_header = None
+        logout_proof = None
         started = None
         try:
             self._require_https_and_query(request)
@@ -212,6 +218,22 @@ class TuiPairingHttpRoutes:
                     "verification_path": started.verification_path,
                     "expires_at": _utc_z(started.expires_at),
                 })
+            if request.path == _LOGOUT_PATH:
+                self._require_empty_body(request)
+                authorization_header = _authorization_header(request.edge)
+                logout_proof = _logout_proof_header(request.edge)
+                try:
+                    self.boundary.revoke_bearer(
+                        authorization_header,
+                        logout_proof,
+                    )
+                except HttpAuthenticationRequiredError:
+                    self.rate_limiter.admit("logout_invalid", request.edge)
+                    raise
+                return TuiPairingHttpResponse(
+                    204,
+                    self._base_headers() + (("Content-Length", "0"),),
+                )
             payload = _json_object(request)
             code = payload.get("code")
             if set(payload) != {"code"} or type(code) is not str or _CODE_RE.fullmatch(code) is None:
@@ -233,6 +255,7 @@ class TuiPairingHttpRoutes:
             response = self._json(200, {
                 "token_type": "Bearer",
                 "bearer_token": credential.bearer_token,
+                "logout_proof": credential.logout_proof,
                 "expires_at": _utc_z(credential.expires_at),
             }, guard=TuiCredentialDeliveryGuard(self.boundary, credential))
             credential = None
@@ -255,6 +278,8 @@ class TuiPairingHttpRoutes:
             payload = None
             cookie_header = None
             csrf_token = None
+            authorization_header = None
+            logout_proof = None
             started = None
 
     def _require_https_and_query(self, request: TuiPairingHttpRequest) -> None:
@@ -381,6 +406,24 @@ def _csrf_header(edge: EdgeRequestMetadata) -> str:
     values = _header_values(edge, "x-csrf-token")
     if len(values) != 1 or not values[0] or len(values[0]) > 512:
         raise HttpCsrfRejectedError()
+    return values[0]
+
+
+def _authorization_header(edge: EdgeRequestMetadata) -> str:
+    values = _header_values(edge, "authorization")
+    if not values:
+        raise HttpAuthenticationRequiredError()
+    if len(values) > 1 or len(
+        values[0].encode("utf-8", errors="surrogatepass")
+    ) > 2048:
+        raise TuiPairingBadRequestError()
+    return values[0]
+
+
+def _logout_proof_header(edge: EdgeRequestMetadata) -> str:
+    values = _header_values(edge, "x-tui-logout-proof")
+    if len(values) != 1 or not values[0] or len(values[0]) > 128:
+        raise HttpAuthenticationRequiredError()
     return values[0]
 
 

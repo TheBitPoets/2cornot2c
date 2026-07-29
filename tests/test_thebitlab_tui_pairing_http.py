@@ -173,6 +173,112 @@ def test_full_browser_pairing_delivers_one_tui_bearer(graph) -> None:
     assert replay.status_code == 409
 
 
+def test_tui_logout_revokes_before_empty_response_and_replay_is_unauthorized(graph) -> None:
+    storage, http, boundary, routes = graph
+    start = json.loads(routes.dispatch(request("/auth/tui/pairings")).body)
+    browser = http.establish_session("student-01")
+    routes.dispatch(
+        json_request(
+            "/auth/tui/pair",
+            {"code": start["user_code"]},
+            ("Cookie", cookie(browser)),
+            ("X-CSRF-Token", browser.context.csrf_token),
+        )
+    )
+    consumed = routes.dispatch(
+        json_request(
+            f"/auth/tui/pairings/{start['pairing_id']}/token",
+            {"code": start["user_code"]},
+        )
+    )
+    credential = json.loads(consumed.body)
+    bearer = credential["bearer_token"]
+    proof = credential["logout_proof"]
+    consumed.delivery_guard.delivered()
+
+    logged_out = routes.dispatch(
+        request(
+            "/auth/tui/logout",
+            b"",
+            ("Authorization", "Bearer " + bearer),
+            ("X-TUI-Logout-Proof", proof),
+        )
+    )
+
+    assert logged_out.status_code == 204
+    assert logged_out.body == b""
+    persisted = storage.read_session_by_token_digest(session_token_digest(bearer))
+    assert persisted.revoked_at == NOW
+    replay = routes.dispatch(
+        request(
+            "/auth/tui/logout",
+            b"",
+            ("Authorization", "Bearer " + bearer),
+            ("X-TUI-Logout-Proof", proof),
+        )
+    )
+    assert replay.status_code == 401
+    duplicate = routes.dispatch(
+        request(
+            "/auth/tui/logout",
+            b"",
+            ("Authorization", "Bearer " + bearer),
+            ("Authorization", "Bearer " + bearer),
+            ("X-TUI-Logout-Proof", proof),
+        )
+    )
+    assert duplicate.status_code == 400
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.authenticate_bearer("Bearer " + bearer)
+
+
+def test_invalid_logout_flood_cannot_block_valid_logout_or_grow_per_bearer(graph) -> None:
+    _storage, http, _boundary, routes = graph
+    start = json.loads(routes.dispatch(request("/auth/tui/pairings")).body)
+    browser = http.establish_session("student-01")
+    routes.dispatch(
+        json_request(
+            "/auth/tui/pair",
+            {"code": start["user_code"]},
+            ("Cookie", cookie(browser)),
+            ("X-CSRF-Token", browser.context.csrf_token),
+        )
+    )
+    consumed = routes.dispatch(
+        json_request(
+            f"/auth/tui/pairings/{start['pairing_id']}/token",
+            {"code": start["user_code"]},
+        )
+    )
+    credential = json.loads(consumed.body)
+    bearer = credential["bearer_token"]
+    proof = credential["logout_proof"]
+    consumed.delivery_guard.delivered()
+
+    statuses = [
+        routes.dispatch(
+            request(
+                "/auth/tui/logout",
+                b"",
+                ("Authorization", "Bearer " + (f"F{index:039d}")),
+                ("X-TUI-Logout-Proof", "Q" * 43),
+            )
+        ).status_code
+        for index in range(31)
+    ]
+    logged_out = routes.dispatch(
+        request(
+            "/auth/tui/logout",
+            b"",
+            ("Authorization", "Bearer " + bearer),
+            ("X-TUI-Logout-Proof", proof),
+        )
+    )
+
+    assert statuses == [401] * 30 + [429]
+    assert logged_out.status_code == 204
+
+
 def test_delivery_failure_revokes_new_tui_session(graph) -> None:
     storage, http, boundary, routes = graph
     start = json.loads(routes.dispatch(request("/auth/tui/pairings")).body)
@@ -339,7 +445,9 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
             f"/auth/tui/pairings/{start['pairing_id']}/token",
             {"code": start["user_code"]},
         )
-        bearer = json.loads(consume_body)["bearer_token"]
+        tui_credential = json.loads(consume_body)
+        bearer = tui_credential["bearer_token"]
+        logout_proof = tui_credential["logout_proof"]
         assignments_status, assignments_body = exchange(
             "/api/student-lab/assignments",
             headers={"Authorization": "Bearer " + bearer},
@@ -443,6 +551,18 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
             slow_headers.close()
         wrong_method, _ = exchange("/auth/tui/pairings", method="GET")
         network_path, _ = exchange("//auth/tui/pairings")
+        logout_status, logout_body = exchange(
+            "/auth/tui/logout",
+            headers={
+                "Authorization": "Bearer " + bearer,
+                "X-TUI-Logout-Proof": logout_proof,
+            },
+        )
+        after_logout_status, _ = exchange(
+            "/api/student-lab/assignments",
+            headers={"Authorization": "Bearer " + bearer},
+            method="GET",
+        )
     finally:
         server.shutdown()
         server.server_close()
@@ -464,4 +584,7 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
     assert header_closed is True
     assert wrong_method == 405
     assert network_path == 400
-    assert boundary.authenticate_bearer("Bearer " + bearer).user.user_id == "student-01"
+    assert logout_status == 204 and logout_body == b""
+    assert after_logout_status == 401
+    with pytest.raises(HttpAuthenticationRequiredError):
+        boundary.authenticate_bearer("Bearer " + bearer)

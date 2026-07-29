@@ -863,6 +863,34 @@ def test_session_revoke_reports_concurrent_active_change(storage, monkeypatch) -
         service.revoke(issued.bearer_token)
 
 
+def test_session_revoke_retries_concurrent_last_seen_update(storage, monkeypatch) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "Y" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+    save_session = storage.save_session
+    raced = False
+
+    def authenticate_before_first_revoke(session):
+        nonlocal raced
+        if session.revoked_at is not None and not raced:
+            raced = True
+            clock.value += timedelta(seconds=1)
+            service.authenticate(issued.bearer_token)
+        save_session(session)
+
+    monkeypatch.setattr(storage, "save_session", authenticate_before_first_revoke)
+
+    assert service.revoke(issued.bearer_token) is True
+    persisted = storage.read_session(issued.session.session_id)
+    assert persisted.revoked_at == persisted.last_seen_at == clock.value
+
+
 def test_concurrent_session_revocation_has_one_winner(storage, monkeypatch) -> None:
     storage.create_user(account())
     service = SessionService(

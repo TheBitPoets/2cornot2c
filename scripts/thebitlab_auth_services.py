@@ -1047,28 +1047,27 @@ class SessionService:
         finally:
             bearer_token = None
         session = self.storage.read_session_by_token_digest(digest)
-        now = _utc(self.clock())
-        if (
-            session is None
-            or session.audience != self.audience
-            or session.revoked_at is not None
-            or not hmac.compare_digest(session.token_digest, digest)
-        ):
-            return False
-        if now < session.created_at or now >= session.expires_at:
-            return False
-        if now < session.last_seen_at:
-            raise ConcurrentStateChangeError("Clock anteriore all'ultimo utilizzo della sessione.")
-        try:
-            self.storage.save_session(replace(session, revoked_at=now))
-        except (IdentityStorageConflictError, IdentityStorageNotFoundError) as error:
-            current = self.storage.read_session_by_token_digest(digest)
-            if current is None or current.revoked_at is not None:
+        for _attempt in range(_MAX_ATTEMPTS):
+            now = _utc(self.clock())
+            if (
+                session is None
+                or session.audience != self.audience
+                or session.revoked_at is not None
+                or not hmac.compare_digest(session.token_digest, digest)
+            ):
                 return False
-            raise ConcurrentStateChangeError(
-                "Sessione modificata durante la revoca."
-            ) from error
-        return True
+            if now < session.created_at or now >= session.expires_at:
+                return False
+            revoked_at = max(now, session.last_seen_at)
+            try:
+                self.storage.save_session(replace(session, revoked_at=revoked_at))
+            except (IdentityStorageConflictError, IdentityStorageNotFoundError):
+                session = self.storage.read_session_by_token_digest(digest)
+                continue
+            return True
+        raise ConcurrentStateChangeError(
+            "Sessione modificata ripetutamente durante la revoca."
+        )
 
     def revoke_all(self, user_id: str) -> int:
         try:

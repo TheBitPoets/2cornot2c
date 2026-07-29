@@ -23,6 +23,7 @@ from typing import Callable
 _PAIRING_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 _CODE_RE = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 _BEARER_RE = re.compile(r"^[A-Za-z0-9_-]{32,512}$")
+_LOGOUT_PROOF_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 _MAX_RESPONSE_BYTES = 16 * 1024
 _MAX_PAIRING_LIFETIME = timedelta(minutes=15)
 _DEFAULT_POLL_SECONDS = 2.0
@@ -57,10 +58,16 @@ class TuiPairingStart:
 @dataclass(frozen=True)
 class TuiBearerCredential:
     bearer_token: str = field(repr=False)
+    logout_proof: str = field(repr=False)
     expires_at: datetime
 
     def __post_init__(self) -> None:
-        if type(self.bearer_token) is not str or _BEARER_RE.fullmatch(self.bearer_token) is None:
+        if (
+            type(self.bearer_token) is not str
+            or _BEARER_RE.fullmatch(self.bearer_token) is None
+            or type(self.logout_proof) is not str
+            or _LOGOUT_PROOF_RE.fullmatch(self.logout_proof) is None
+        ):
             raise ValueError("Credenziale TUI locale non valida.")
         _aware_utc(self.expires_at)
 
@@ -159,6 +166,65 @@ class TuiPairingClient:
             verification_path = None
             result = None
 
+    def logout(
+        self,
+        credential: TuiBearerCredential,
+        *,
+        timeout: float = 15,
+    ) -> None:
+        request = None
+        authorization = None
+        try:
+            timeout = _request_timeout(timeout)
+            if type(credential) is not TuiBearerCredential:
+                raise TuiPairingClientError("Credenziale TUI locale non valida.")
+            deadline = self._monotonic_now() + timeout
+            authorization = "Bearer " + credential.bearer_token
+            retry_delay = 0.25
+            while True:
+                remaining = deadline - self._monotonic_now()
+                if remaining <= 0:
+                    raise TuiPairingClientError(
+                        "Logout TUI remoto non confermato."
+                    )
+                request = urllib.request.Request(
+                    self.server_url + "/auth/tui/logout",
+                    data=b"",
+                    headers={
+                        "Authorization": authorization,
+                        "X-TUI-Logout-Proof": credential.logout_proof,
+                    },
+                    method="POST",
+                )
+                try:
+                    payload = self._request_json_bounded(
+                        request,
+                        timeout=max(0.001, remaining),
+                        expected_status=204,
+                    )
+                except _PairingRateLimitedError as error:
+                    request = None
+                    self._sleep_bounded(float(error.retry_after), deadline)
+                    continue
+                except _PairingUnavailableError:
+                    request = None
+                    self._sleep_bounded(retry_delay, deadline)
+                    retry_delay = min(2.0, retry_delay * 2)
+                    continue
+                except Exception:
+                    raise TuiPairingClientError(
+                        "Logout TUI remoto non confermato."
+                    ) from None
+                if payload is not None:
+                    raise TuiPairingClientError(
+                        "Logout TUI remoto non confermato."
+                    )
+                return
+        finally:
+            credential = None
+            request = None
+            authorization = None
+
     def poll(self, start: TuiPairingStart, *, timeout: float = 15) -> TuiBearerCredential:
         request = None
         payload = None
@@ -207,10 +273,12 @@ class TuiPairingClient:
                 if type(payload) is not dict or set(payload) != {
                     "token_type",
                     "bearer_token",
+                    "logout_proof",
                     "expires_at",
                 }:
                     raise TuiPairingClientError("Il server pairing ha restituito una credenziale non valida.")
                 bearer = payload.get("bearer_token")
+                logout_proof = payload.get("logout_proof")
                 expires_at = _parse_utc(payload.get("expires_at"))
                 received_at = _aware_utc(self.clock())
                 credential_lifetime = expires_at - received_at
@@ -218,11 +286,17 @@ class TuiPairingClient:
                     payload.get("token_type") != "Bearer"
                     or type(bearer) is not str
                     or _BEARER_RE.fullmatch(bearer) is None
+                    or type(logout_proof) is not str
+                    or _LOGOUT_PROOF_RE.fullmatch(logout_proof) is None
                     or credential_lifetime <= timedelta(0)
                     or credential_lifetime > timedelta(days=1)
                 ):
                     raise TuiPairingClientError("Il server pairing ha restituito una credenziale non valida.")
-                credential = TuiBearerCredential(bearer, expires_at)
+                credential = TuiBearerCredential(
+                    bearer,
+                    logout_proof,
+                    expires_at,
+                )
                 return credential
         finally:
             start = None
@@ -230,6 +304,7 @@ class TuiPairingClient:
             payload = None
             body = None
             bearer = None
+            logout_proof = None
             credential = None
 
     def _sleep_bounded(self, requested: float, deadline: float) -> None:
@@ -281,6 +356,8 @@ class TuiPairingClient:
                     outcome = ("pending", None)
                 except _PairingRateLimitedError as error:
                     outcome = ("rate", error.retry_after)
+                except _PairingUnavailableError:
+                    outcome = ("unavailable", None)
                 except TuiPairingClientError as error:
                     outcome = ("error", str(error))
                 except Exception:
@@ -319,6 +396,8 @@ class TuiPairingClient:
             raise _PairingPendingError()
         if kind == "rate":
             raise _PairingRateLimitedError(value)
+        if kind == "unavailable":
+            raise _PairingUnavailableError()
         raise TuiPairingClientError(str(value))
 
     def _request_json(self, request: urllib.request.Request, *, timeout: float, expected_status: int):
@@ -331,6 +410,10 @@ class TuiPairingClient:
 
 
 class _PairingPendingError(RuntimeError):
+    pass
+
+
+class _PairingUnavailableError(RuntimeError):
     pass
 
 
@@ -490,6 +573,8 @@ def _request_json_in_killable_process(
         raise _PairingPendingError()
     if kind == "rate" and type(value) is int and not isinstance(value, bool):
         raise _PairingRateLimitedError(value)
+    if kind == "unavailable" and value is None:
+        raise _PairingUnavailableError()
     if kind == "error" and type(value) is str:
         raise TuiPairingClientError(value)
     raise TuiPairingClientError("Il server pairing non è raggiungibile.")
@@ -552,6 +637,8 @@ def _run_transport_worker() -> int:
             outcome = ("pending", None)
         except _PairingRateLimitedError as error:
             outcome = ("rate", error.retry_after)
+        except _PairingUnavailableError:
+            outcome = ("unavailable", None)
         except TuiPairingClientError as error:
             outcome = ("error", str(error))
     except Exception:
@@ -576,10 +663,16 @@ def _request_json_with_urlopen(urlopen, request, *, timeout: float, expected_sta
     try:
         response = urlopen(request, timeout=timeout)
         status = getattr(response, "status", None)
-        _require_json_response_headers(response)
-        body = _bounded_read(response)
         if status != expected_status:
             raise TuiPairingClientError("Il server pairing ha restituito uno stato inatteso.")
+        if expected_status == 204:
+            _require_empty_response_headers(response)
+            body = _bounded_read(response)
+            if body:
+                raise TuiPairingClientError("Il server pairing ha restituito una risposta non valida.")
+            return None
+        _require_json_response_headers(response)
+        body = _bounded_read(response)
         return _decode_json(body)
     except urllib.error.HTTPError as error:
         response = error
@@ -591,6 +684,8 @@ def _request_json_with_urlopen(urlopen, request, *, timeout: float, expected_sta
         if error.code == 429:
             retry_after = _retry_after(error.headers)
             raise _PairingRateLimitedError(retry_after) from None
+        if error.code == 503:
+            raise _PairingUnavailableError() from None
         if 300 <= error.code <= 399:
             raise TuiPairingClientError("Il server pairing ha rifiutato un redirect non sicuro.") from None
         raise TuiPairingClientError("Il server pairing ha rifiutato la richiesta.") from None
@@ -644,6 +739,22 @@ def acquire_tui_bearer(
         credential = None
 
 
+def revoke_tui_bearer(
+    server_url: str,
+    credential: TuiBearerCredential,
+    *,
+    client: TuiPairingClient | None = None,
+) -> None:
+    """Revoke one memory-only TUI credential before dropping local references."""
+
+    pairing_client = client or TuiPairingClient(server_url)
+    try:
+        pairing_client.logout(credential)
+    finally:
+        credential = None
+        pairing_client = None
+
+
 def _canonical_server_origin(value: str) -> str:
     text = str(value or "").strip()
     try:
@@ -681,6 +792,25 @@ def _require_json_response_headers(response) -> None:
     content_types = headers.get_all("Content-Type") if hasattr(headers, "get_all") else None
     encodings = headers.get_all("Content-Encoding") if hasattr(headers, "get_all") else None
     if content_types != ["application/json; charset=utf-8"] or encodings not in (None, []):
+        raise TuiPairingClientError("Il server pairing ha restituito header non validi.")
+
+
+def _require_empty_response_headers(response) -> None:
+    headers = getattr(response, "headers", None)
+    if headers is None:
+        return
+    if not hasattr(headers, "get_all"):
+        raise TuiPairingClientError("Il server pairing ha restituito header non validi.")
+    content_types = headers.get_all("Content-Type")
+    encodings = headers.get_all("Content-Encoding")
+    transfers = headers.get_all("Transfer-Encoding")
+    lengths = headers.get_all("Content-Length")
+    if (
+        content_types not in (None, [])
+        or encodings not in (None, [])
+        or transfers not in (None, [])
+        or lengths not in (None, [], ["0"])
+    ):
         raise TuiPairingClientError("Il server pairing ha restituito header non validi.")
 
 

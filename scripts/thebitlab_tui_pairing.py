@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import hmac
 import unicodedata
 from dataclasses import dataclass, field
@@ -118,6 +120,7 @@ class IssuedTuiCredential:
     user_id: str
     expires_at: datetime
     bearer_token: str = field(repr=False, compare=False)
+    logout_proof: str = field(repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "session_id", _identifier(self.session_id, "session_id"))
@@ -125,6 +128,15 @@ class IssuedTuiCredential:
         object.__setattr__(self, "expires_at", _utc(self.expires_at, "expires_at"))
         if not valid_session_bearer(self.bearer_token):
             raise ValueError("bearer_token non valido.")
+        if (
+            type(self.logout_proof) is not str
+            or len(self.logout_proof) != 43
+            or any(
+                character not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+                for character in self.logout_proof
+            )
+        ):
+            raise ValueError("logout_proof non valido.")
 
 
 @dataclass(frozen=True)
@@ -329,6 +341,7 @@ class TuiBrowserPairingBoundary:
                 issued.session.user_id,
                 issued.session.expires_at,
                 issued.bearer_token,
+                self._logout_proof(issued.bearer_token),
             )
         except Exception:
             malformed = True
@@ -379,6 +392,71 @@ class TuiBrowserPairingBoundary:
             session = None
             digest = None
         return revoked
+
+    def revoke_bearer(
+        self,
+        authorization_header: str,
+        logout_proof: str,
+    ) -> None:
+        bearer = None
+        revoked = False
+        try:
+            self._require_shared_registry()
+            bearer = self._bearer(authorization_header)
+            authorization_header = None
+            try:
+                proof_valid = self._valid_logout_proof(bearer, logout_proof)
+            except Exception:
+                raise TuiPairingUnavailableError() from None
+            if not proof_valid:
+                raise HttpAuthenticationRequiredError()
+            logout_proof = None
+            try:
+                revoked = self.tui_sessions.revoke(bearer) is True
+            except (InvalidCredentialError, AccountDisabledError):
+                revoked = False
+            except Exception:
+                raise TuiPairingUnavailableError() from None
+            self._require_shared_registry()
+        finally:
+            bearer = None
+            authorization_header = None
+            logout_proof = None
+        if not revoked:
+            raise HttpAuthenticationRequiredError()
+
+    def _logout_proof(self, bearer: str) -> str:
+        digest = None
+        encoded = None
+        try:
+            digest = hmac.new(
+                self.pairings.pairings.pepper,
+                b"thebitlab:tui-logout:v1\0" + bearer.encode("ascii"),
+                hashlib.sha256,
+            ).digest()
+            encoded = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+            return encoded
+        finally:
+            bearer = None
+            digest = None
+            encoded = None
+
+    def _valid_logout_proof(self, bearer: str, proof: str) -> bool:
+        if (
+            type(proof) is not str
+            or len(proof) != 43
+            or any(
+                character not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+                for character in proof
+            )
+        ):
+            return False
+        try:
+            expected = self._logout_proof(bearer)
+            return hmac.compare_digest(expected, proof)
+        finally:
+            proof = None
+            expected = None
 
     def authenticate_bearer(self, authorization_header: str) -> TuiAuthenticatedContext:
         bearer = None
