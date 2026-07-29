@@ -122,6 +122,7 @@ Le GitHub Actions attive sono:
 | `.github/workflows/lab-snippets.yml` | PR e push su `main` quando cambiano `README.md`, `TEMPLATES.md`, `lab/**`, `scripts/update_lab_snippets.py` o il workflow | Controlla che snippet, codice lab e output inseriti nei documenti siano aggiornati | `python scripts/update_lab_snippets.py --check` |
 | `.github/workflows/lab-outputs.yml` | PR e push su `main` quando cambiano sorgenti/header lab, manifest JSON, output versionati, script output o il workflow | Installa la toolchain C e verifica che gli output dei lab siano aggiornati | `python scripts/update_lab_outputs.py --check` |
 | `.github/workflows/assignment-runner-docker.yml` | PR e push su `main` quando cambiano Dockerfile, script di grading o workflow | Verifica che l'immagine Docker del runner di grading venga costruita e riesca a correggere un sorgente C minimo | `docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .` e smoke test con `python scripts/grade_activity.py --docker` |
+| `.github/workflows/auth-staging-smoke.yml` | Avvio manuale con origin HTTPS di staging | Verifica i contratti pubblici Google/sessione/pairing/logout senza seguire redirect o stampare segreti | `python scripts/thebitlab_auth_staging_smoke.py --origin https://staging.example.edu` |
 
 ### Workflow `Quality`
 
