@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import urllib.parse
 from pathlib import Path
@@ -33,22 +34,30 @@ def google_location(**changes):
 
 
 def responses():
+    location = google_location()
+    state = urllib.parse.parse_qs(urllib.parse.urlsplit(location).query)["state"][0]
+    cookie_suffix = hashlib.sha256(state.encode("ascii")).hexdigest()[:24]
+    transaction_cookie = (
+        f"__Host-thebitlab_oidc_txn-{cookie_suffix}="
+        "COOKIE_SECRET_ABCDEFGHIJKLMNOPQRST; Path=/; Max-Age=600; "
+        "Secure; HttpOnly; SameSite=Lax"
+    )
     return {
         ("GET", "https://school.test/auth/google/login"): smoke.ResponseSnapshot(
             302,
             no_store(
-                ("Location", google_location()),
-                (
-                    "Set-Cookie",
-                    "__Host-thebitlab_oidc_txn-abcdef0123456789abcdef01=COOKIE_SECRET_ABCDEFGHIJKLMNOPQRST; Path=/; Max-Age=600; Secure; HttpOnly; SameSite=Lax",
-                ),
+                ("Location", location),
+                ("Set-Cookie", transaction_cookie),
                 ("Content-Length", "0"),
             ),
             b"",
         ),
         ("GET", "https://school.test/auth/session"): smoke.ResponseSnapshot(
             401,
-            no_store(("Content-Type", "application/json; charset=utf-8")),
+            no_store(
+                ("Content-Type", "application/json; charset=utf-8"),
+                ("Content-Length", "35"),
+            ),
             b'{"error":"authentication_required"}',
         ),
         ("GET", "https://school.test/auth/tui/pair"): smoke.ResponseSnapshot(
@@ -61,20 +70,25 @@ def responses():
                 ),
                 ("X-Frame-Options", "DENY"),
                 ("X-Content-Type-Options", "nosniff"),
+                ("Content-Length", "155"),
             ),
-            b"<html>/auth/session /auth/tui/pair</html>",
+            b"<html><style nonce=\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef\"></style>/auth/session /auth/tui/pair<script nonce=\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef\"></script></html>",
         ),
         ("GET", "https://school.test/auth/tui/pairings"): smoke.ResponseSnapshot(
             405,
             no_store(
                 ("Content-Type", "application/json; charset=utf-8"),
                 ("Allow", "POST"),
+                ("Content-Length", "35"),
             ),
             b'{"error":"auth_method_not_allowed"}',
         ),
         ("POST", "https://school.test/auth/tui/logout"): smoke.ResponseSnapshot(
             401,
-            no_store(("Content-Type", "application/json; charset=utf-8")),
+            no_store(
+                ("Content-Type", "application/json; charset=utf-8"),
+                ("Content-Length", "35"),
+            ),
             b'{"error":"authentication_required"}',
         ),
     }
@@ -140,6 +154,7 @@ def test_staging_smoke_fails_closed_on_noncanonical_google_redirect() -> None:
                 "Set-Cookie",
                 "__Host-thebitlab_oidc_txn-abcdef0123456789abcdef01=COOKIE_SECRET_ABCDEFGHIJKLMNOPQRST; Path=/; Max-Age=600; Secure; HttpOnly; SameSite=Lax",
             ),
+            ("Content-Length", "0"),
         ),
         b"",
     )
@@ -152,6 +167,54 @@ def test_staging_smoke_fails_closed_on_noncanonical_google_redirect() -> None:
 
     assert secret not in str(captured.value)
     assert "COOKIE_SECRET" not in str(captured.value)
+
+
+def test_staging_smoke_rejects_malformed_percent_encoding_in_google_query() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/google/login")]
+    fixtures[("GET", "https://school.test/auth/google/login")] = smoke.ResponseSnapshot(
+        302,
+        tuple(
+            (name, value.replace("client.apps.googleusercontent.com", "%ZZ.apps.googleusercontent.com"))
+            if name.lower() == "location"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        b"",
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+def test_staging_smoke_rejects_cookie_not_correlated_to_state() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/google/login")]
+
+    def unrelated_cookie(value):
+        prefix = "__Host-thebitlab_oidc_txn-"
+        suffix = value.split(prefix, 1)[1].split("=", 1)[0]
+        return value.replace(prefix + suffix, prefix + "0" * 24, 1)
+
+    fixtures[("GET", "https://school.test/auth/google/login")] = smoke.ResponseSnapshot(
+        302,
+        tuple(
+            (name, unrelated_cookie(value))
+            if name.lower() == "set-cookie"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        b"",
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
 
 
 def test_staging_smoke_rejects_short_pkce_challenge() -> None:
@@ -199,6 +262,22 @@ def test_staging_smoke_rejects_duplicate_or_contradictory_cookie_attributes() ->
         )
 
 
+def test_staging_smoke_rejects_conflicting_response_framing() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/session")]
+    fixtures[("GET", "https://school.test/auth/session")] = smoke.ResponseSnapshot(
+        current.status,
+        current.headers + (("Transfer-Encoding", "chunked"),),
+        current.body,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError, match="Framing"):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
 def test_staging_smoke_rejects_csp_with_additional_sources() -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/tui/pair")]
@@ -211,6 +290,30 @@ def test_staging_smoke_rejects_csp_with_additional_sources() -> None:
             for name, value in current.headers
         ),
         current.body,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+def test_staging_smoke_rejects_html_nonce_not_bound_to_csp() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/tui/pair")]
+    fixtures[("GET", "https://school.test/auth/tui/pair")] = smoke.ResponseSnapshot(
+        200,
+        tuple(
+            (name, str(len(current.body.replace(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef", b"ZYXWVUTSRQPONMLKJIHGFEDCBAabcdef"))))
+            if name.lower() == "content-length"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        current.body.replace(
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef",
+            b"ZYXWVUTSRQPONMLKJIHGFEDCBAabcdef",
+        ),
     )
 
     with pytest.raises(smoke.StagingSmokeError):
