@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -115,10 +117,16 @@ def run_smoke(
     origin: str,
     request_fn: RequestFn,
     *,
+    google_client_id: str | None = None,
     timeout: float = 30,
     monotonic: Callable[[], float] = time.monotonic,
 ) -> dict:
     origin = canonical_origin(origin)
+    google_client_id = _validated_google_client_id(
+        google_client_id
+        if google_client_id is not None
+        else os.environ.get("THEBITLAB_EXPECTED_GOOGLE_CLIENT_ID", "")
+    )
     timeout = _validated_timeout(timeout)
     started = _monotonic(monotonic)
     deadline = started + timeout
@@ -128,7 +136,11 @@ def run_smoke(
             "google_login",
             "GET",
             "/auth/google/login",
-            lambda response: _check_google_login(response, origin),
+            lambda response: _check_google_login(
+                response,
+                origin,
+                google_client_id,
+            ),
         ),
         ("anonymous_session", "GET", "/auth/session", _check_anonymous_session),
         ("pairing_page", "GET", "/auth/tui/pair", _check_pairing_page),
@@ -156,12 +168,17 @@ def run_smoke(
         return {"schema_version": "thebitlab.auth_staging_smoke.v1", "ok": True, "checks": checks}
     finally:
         origin = None
+        google_client_id = None
         request_fn = None
         snapshot = None
         specifications = None
 
 
-def _check_google_login(response: ResponseSnapshot, expected_origin: str) -> None:
+def _check_google_login(
+    response: ResponseSnapshot,
+    expected_origin: str,
+    expected_client_id: str,
+) -> None:
     _require_status(response, 302)
     _require_no_store(response)
     locations = _headers(response, "location")
@@ -184,11 +201,11 @@ def _check_google_login(response: ResponseSnapshot, expected_origin: str) -> Non
         or parsed.fragment
         or set(query) != _EXPECTED_GOOGLE_QUERY
         or any(type(values) is not list or len(values) != 1 or not values[0] for values in query.values())
-        or _GOOGLE_CLIENT_ID_RE.fullmatch(query["client_id"][0]) is None
+        or query["client_id"] != [expected_client_id]
         or query["redirect_uri"] != [expected_origin + "/auth/google/callback"]
         or _UNRESERVED_32_256_RE.fullmatch(query["state"][0]) is None
         or _UNRESERVED_32_256_RE.fullmatch(query["nonce"][0]) is None
-        or _PKCE_CHALLENGE_RE.fullmatch(query["code_challenge"][0]) is None
+        or not _valid_pkce_challenge(query["code_challenge"][0])
         or query["response_type"] != ["code"]
         or query["code_challenge_method"] != ["S256"]
         or query["scope"] != ["openid email profile"]
@@ -387,14 +404,14 @@ def _element_nonces(html: str, element: str) -> list[str]:
     tags = re.findall(rf"<{element}\b([^>]*)>", html, flags=re.IGNORECASE)
     nonces: list[str] = []
     for attributes in tags:
-        matches = re.findall(
-            r"(?:^|\s)nonce\s*=\s*(['\"])([^'\"]+)\1",
+        match = re.fullmatch(
+            r"\s*nonce\s*=\s*(['\"])([^'\"]+)\1\s*",
             attributes,
             flags=re.IGNORECASE,
         )
-        if len(matches) != 1:
+        if match is None:
             return []
-        nonces.append(matches[0][1])
+        nonces.append(match.group(2))
     return nonces
 
 
@@ -408,6 +425,23 @@ def _require_response_framing(response: ResponseSnapshot) -> None:
 
 def _headers(response: ResponseSnapshot, name: str) -> list[str]:
     return [value for key, value in response.headers if key.lower() == name]
+
+
+def _valid_pkce_challenge(value: str) -> bool:
+    if type(value) is not str or _PKCE_CHALLENGE_RE.fullmatch(value) is None:
+        return False
+    try:
+        decoded = base64.urlsafe_b64decode(value + "=")
+        canonical = base64.urlsafe_b64encode(decoded).rstrip(b"=").decode("ascii")
+    except Exception:
+        return False
+    return len(decoded) == 32 and canonical == value
+
+
+def _validated_google_client_id(value: str) -> str:
+    if type(value) is not str or _GOOGLE_CLIENT_ID_RE.fullmatch(value) is None:
+        raise StagingSmokeError("Google client ID atteso non valido.")
+    return value
 
 
 def _validated_timeout(value: float) -> float:
@@ -467,16 +501,36 @@ def _request(method: str, url: str, timeout: float) -> ResponseSnapshot:
 
 
 def _worker(specification: dict) -> dict:
-    if type(specification) is not dict or set(specification) != {"origin", "timeout"}:
+    if type(specification) is not dict or set(specification) != {
+        "origin",
+        "google_client_id",
+        "timeout",
+    }:
         raise StagingSmokeError("Specifica staging non valida.")
-    return run_smoke(specification["origin"], _request, timeout=specification["timeout"])
+    return run_smoke(
+        specification["origin"],
+        _request,
+        google_client_id=specification["google_client_id"],
+        timeout=specification["timeout"],
+    )
 
 
-def run_production_smoke(origin: str, *, timeout: float = 30) -> dict:
+def run_production_smoke(
+    origin: str,
+    google_client_id: str,
+    *,
+    timeout: float = 30,
+) -> dict:
     origin = canonical_origin(origin)
+    google_client_id = _validated_google_client_id(google_client_id)
     timeout = _validated_timeout(timeout)
     specification = json.dumps(
-        {"origin": origin, "timeout": timeout}, separators=(",", ":")
+        {
+            "origin": origin,
+            "google_client_id": google_client_id,
+            "timeout": timeout,
+        },
+        separators=(",", ":"),
     ).encode("utf-8")
     stdout = None
     try:
@@ -504,6 +558,7 @@ def run_production_smoke(origin: str, *, timeout: float = 30) -> dict:
         raise StagingSmokeError("Smoke staging non completato.") from None
     finally:
         origin = None
+        google_client_id = None
         specification = None
         stdout = None
 
@@ -532,6 +587,11 @@ def _run_worker() -> int:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verifica le route auth pubbliche di uno staging HTTPS.")
     parser.add_argument("--origin", required=True, help="Origin HTTPS canonica dello staging.")
+    parser.add_argument(
+        "--google-client-id",
+        required=True,
+        help="Client ID Google pubblico atteso nel redirect staging.",
+    )
     parser.add_argument("--timeout", type=float, default=30, help="Deadline assoluta, 5-120 secondi.")
     return parser.parse_args()
 
@@ -539,7 +599,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
-        result = run_production_smoke(args.origin, timeout=args.timeout)
+        result = run_production_smoke(
+            args.origin,
+            args.google_client_id,
+            timeout=args.timeout,
+        )
     except StagingSmokeError as error:
         print(json.dumps({"schema_version": "thebitlab.auth_staging_smoke.v1", "ok": False, "error": str(error)}, separators=(",", ":")))
         return 1

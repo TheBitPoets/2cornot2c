@@ -19,10 +19,11 @@ Non passare client secret, cookie, bearer, proof, state o codici alla CLI.
 ```bash
 python scripts/thebitlab_auth_staging_smoke.py \
   --origin https://staging.example.edu \
+  --google-client-id 123456-example.apps.googleusercontent.com \
   --timeout 30
 ```
 
-L'origin deve essere HTTPS canonica, senza path, query, fragment o userinfo. Il timeout è una deadline assoluta compresa fra 5 e 120 secondi.
+L'origin deve essere HTTPS canonica, senza path, query, fragment o userinfo. Il client ID è pubblico e deve coincidere esattamente con quello configurato nello staging; non inserire il client secret. Il timeout è una deadline assoluta compresa fra 5 e 120 secondi.
 
 Il comando verifica:
 
@@ -42,7 +43,7 @@ Location completa, query OIDC, cookie, body remoti e credenziali non vengono eme
 
 ## Workflow manuale
 
-Da GitHub Actions eseguire **Auth staging smoke** (`.github/workflows/auth-staging-smoke.yml`) e inserire soltanto origin e timeout. Gli input vengono passati al comando via environment quotato, non interpolati nello script shell.
+Da GitHub Actions eseguire **Auth staging smoke** (`.github/workflows/auth-staging-smoke.yml`) e inserire soltanto origin, client ID pubblico atteso e timeout. Gli input vengono passati al comando via environment quotato, non interpolati nello script shell.
 
 Lo staging deve consentire il traffico dal runner GitHub. Per ambienti non pubblici eseguire il comando da una macchina nella rete autorizzata.
 

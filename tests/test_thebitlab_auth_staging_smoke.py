@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import urllib.parse
@@ -8,6 +9,14 @@ from pathlib import Path
 import pytest
 
 from scripts import thebitlab_auth_staging_smoke as smoke
+
+
+@pytest.fixture(autouse=True)
+def expected_google_client_id(monkeypatch):
+    monkeypatch.setenv(
+        "THEBITLAB_EXPECTED_GOOGLE_CLIENT_ID",
+        "client.apps.googleusercontent.com",
+    )
 
 
 def no_store(*extra):
@@ -26,7 +35,9 @@ def google_location(**changes):
         "scope": "openid email profile",
         "state": "STATE_SECRET_ABCDEFGHIJKLMNOPQRST",
         "nonce": "NONCE_SECRET_ABCDEFGHIJKLMNOPQRST",
-        "code_challenge": "C" * 43,
+        "code_challenge": base64.urlsafe_b64encode(
+            hashlib.sha256(b"test-verifier").digest()
+        ).rstrip(b"=").decode("ascii"),
         "code_challenge_method": "S256",
     }
     query.update(changes)
@@ -190,6 +201,30 @@ def test_staging_smoke_rejects_malformed_percent_encoding_in_google_query() -> N
         )
 
 
+def test_staging_smoke_rejects_unexpected_google_client_id() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/google/login")]
+    fixtures[("GET", "https://school.test/auth/google/login")] = smoke.ResponseSnapshot(
+        302,
+        tuple(
+            (
+                name,
+                google_location(client_id="different.apps.googleusercontent.com"),
+            )
+            if name.lower() == "location"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        b"",
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
 def test_staging_smoke_rejects_cookie_not_correlated_to_state() -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/google/login")]
@@ -323,6 +358,31 @@ def test_staging_smoke_rejects_html_nonce_not_bound_to_csp() -> None:
         )
 
 
+def test_staging_smoke_rejects_external_script_even_with_valid_nonce() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/tui/pair")]
+    changed_body = current.body.replace(
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">',
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef" src="https://evil.test/pwn.js">',
+    )
+    fixtures[("GET", "https://school.test/auth/tui/pair")] = smoke.ResponseSnapshot(
+        200,
+        tuple(
+            (name, str(len(changed_body)))
+            if name.lower() == "content-length"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        changed_body,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
 def test_staging_smoke_uses_one_absolute_deadline() -> None:
     fixtures = responses()
     times = iter([10.0, 10.0, 11.0, 12.0, 13.0, 41.0])
@@ -346,11 +406,14 @@ def test_manual_workflow_passes_untrusted_inputs_only_through_environment() -> N
 
     assert "workflow_dispatch:" in workflow
     assert "THEBITLAB_STAGING_ORIGIN: ${{ inputs.origin }}" in workflow
+    assert "THEBITLAB_GOOGLE_CLIENT_ID_EXPECTED: ${{ inputs.google_client_id }}" in workflow
     assert 'THEBITLAB_STAGING_TIMEOUT: ${{ inputs.timeout_seconds }}' in workflow
     run_block = workflow.split("run: >-", 1)[1]
     assert "${{ inputs.origin }}" not in run_block
+    assert "${{ inputs.google_client_id }}" not in run_block
     assert "${{ inputs.timeout_seconds }}" not in run_block
     assert '"$THEBITLAB_STAGING_ORIGIN"' in run_block
+    assert '"$THEBITLAB_GOOGLE_CLIENT_ID_EXPECTED"' in run_block
     assert '"$THEBITLAB_STAGING_TIMEOUT"' in run_block
 
 
