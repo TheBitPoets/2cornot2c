@@ -86,7 +86,11 @@ def normalize_course_sources(
     if not isinstance(design, dict):
         raise CourseSourceCatalogError("Il progetto didattico deve essere un oggetto JSON.")
     if "sources" not in design:
-        legacy_files = design.get("source_files") or list(default_files)
+        legacy_files = (
+            design["source_files"]
+            if "source_files" in design
+            else list(default_files)
+        )
         return _legacy_sources(legacy_files)
 
     raw_sources = design["sources"]
@@ -257,8 +261,10 @@ def _read_local_markdown_bytes(
                     f"File fonte locale troppo grande: {item.relative_path}."
                 )
             payload = stream.read(MAX_LOCAL_MARKDOWN_BYTES + 1)
-            stream.seek(0)
-            confirmation = stream.read(MAX_LOCAL_MARKDOWN_BYTES + 1)
+            confirmation = payload
+            if item.expected_sha256 is None:
+                stream.seek(0)
+                confirmation = stream.read(MAX_LOCAL_MARKDOWN_BYTES + 1)
             final_metadata = os.fstat(stream.fileno())
             if (
                 payload != confirmation
@@ -293,16 +299,22 @@ def course_source_catalog_payload(
     root: Path,
     *,
     default_files: Iterable[str] = (),
+    local_files: Iterable[LocalCourseSourceFile] | None = None,
 ) -> dict[str, Any]:
     """Build the bounded public payload consumed by the Course Board."""
 
     sources = normalize_course_sources(design, default_files=default_files)
     indexed_by_id: dict[str, list[str]] = {source.source_id: [] for source in sources}
-    for item in local_markdown_source_files(
-        design,
-        root,
-        default_files=default_files,
-    ):
+    selected_files = (
+        local_markdown_source_files(
+            design,
+            root,
+            default_files=default_files,
+        )
+        if local_files is None
+        else local_files
+    )
+    for item in selected_files:
         indexed_by_id[item.source.source_id].append(item.relative_path)
     return {
         "sources": [

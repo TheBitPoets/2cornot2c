@@ -61,11 +61,11 @@ I progetti esistenti con:
 
 continuano a funzionare. In lettura ogni file diventa una fonte locale sintetica con ID deterministico e `legacy: true`. Il server non riscrive automaticamente il JSON e non modifica `doc/course_design.json`.
 
-Se `sources` è presente, anche come array vuoto, è autorevole e `source_files` non viene usato.
+Se `sources` è presente, anche come array vuoto, è autorevole e `source_files` non viene usato. Anche `source_files: []` è un catalogo legacy esplicitamente vuoto; solo l'assenza di entrambi i campi abilita le fonti predefinite.
 
 ## API e provenienza
 
-`GET /api/course-sources` restituisce il catalogo normalizzato e `indexed_files`, cioè i file locali `ready` realmente disponibili. La Course Board usa `GET /api/course-source-context`: il server legge una sola volta il progetto corrente o `?design=<nome.json>` e restituisce insieme design, catalogo e heading, evitando revisioni archiviate miste. Per una bozza nuova o separata da un archivio eliminato, `POST /api/heading-content` riceve il design in memoria e l'ID dell'heading, così la preview non ricade sul progetto corrente.
+`GET /api/course-sources` restituisce il catalogo normalizzato e `indexed_files`, cioè i file locali `ready` realmente disponibili. La Course Board usa `GET /api/course-source-context`: il server legge una sola volta il progetto corrente o `?design=<nome.json>`, costruisce un unico catalogo di snapshot digest condiviso da indicizzazione e heading, e restituisce insieme design, catalogo e heading, evitando revisioni archiviate o filesystem miste. Per una bozza nuova o separata da un archivio eliminato, `POST /api/heading-content` riceve il design in memoria e l'ID dell'heading, così la preview non ricade sul progetto corrente.
 
 `GET /api/headings` aggiunge a ogni paragrafo:
 

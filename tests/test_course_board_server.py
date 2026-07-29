@@ -239,6 +239,18 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
             ]
         },
     )
+    original_local_files = course_board_server.course_source_catalog.local_markdown_source_files
+    catalog_snapshots = []
+
+    def counted_local_files(*args, **kwargs):
+        catalog_snapshots.append(1)
+        return original_local_files(*args, **kwargs)
+
+    monkeypatch.setattr(
+        course_board_server.course_source_catalog,
+        "local_markdown_source_files",
+        counted_local_files,
+    )
     teacher_token = "teacher-dashboard-token-for-source-catalog"
     server = course_board_server.BoundedThreadingHTTPServer(
         ("127.0.0.1", 0), course_board_server.CourseBoardHandler
@@ -274,6 +286,7 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         assert archived["sources"][0]["id"] == "archived-source"
         assert archived["sources"][0]["label"] == "Archivio archive.json"
         assert archived["headings"][0]["source_id"] == "archived-source"
+        assert len(catalog_snapshots) == 2
     finally:
         server.shutdown()
         server.server_close()

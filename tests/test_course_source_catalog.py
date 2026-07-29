@@ -100,6 +100,7 @@ def test_uses_defaults_only_when_explicit_and_legacy_sources_are_absent() -> Non
     assert sources[0].files == ("README.md",)
 
     assert normalize_course_sources({"sources": []}, default_files=("README.md",)) == ()
+    assert normalize_course_sources({"source_files": []}, default_files=("README.md",)) == ()
 
 
 def test_resolves_only_ready_local_existing_markdown_files(tmp_path) -> None:
@@ -251,6 +252,8 @@ def test_rejects_malformed_explicit_catalogs(mutate, message) -> None:
     "source_files",
     [
         "README.md",
+        None,
+        False,
         ["../README.md"],
         ["README.txt"],
         ["README.md", "README.md"],

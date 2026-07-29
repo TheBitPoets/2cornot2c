@@ -2039,16 +2039,24 @@ def default_ai_provider_config() -> dict:
     }
 
 
-def extract_headings(design: dict | None = None) -> list[dict]:
+def extract_headings(
+    design: dict | None = None,
+    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+) -> list[dict]:
     """Extract headings from configured Markdown sources."""
 
     selected_design = read_design() if design is None else design
     headings: list[dict] = []
-    for source_file in course_source_catalog.local_markdown_source_files(
-        selected_design,
-        ROOT,
-        default_files=DEFAULT_SOURCES,
-    ):
+    selected_files = (
+        course_source_catalog.local_markdown_source_files(
+            selected_design,
+            ROOT,
+            default_files=DEFAULT_SOURCES,
+        )
+        if source_files is None
+        else source_files
+    )
+    for source_file in selected_files:
         source_text = course_source_catalog.read_local_markdown_text(
             source_file,
             ROOT,
@@ -2156,6 +2164,7 @@ def section_text(
     level: int | str,
     design: dict | None = None,
     source_snapshots: dict[str, str] | None = None,
+    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
 ) -> str:
     """Extract local Markdown text for one heading section."""
 
@@ -2170,10 +2179,14 @@ def section_text(
         source_file = next(
             (
                 item
-                for item in course_source_catalog.local_markdown_source_files(
-                    selected_design,
-                    ROOT,
-                    default_files=DEFAULT_SOURCES,
+                for item in (
+                    course_source_catalog.local_markdown_source_files(
+                        selected_design,
+                        ROOT,
+                        default_files=DEFAULT_SOURCES,
+                    )
+                    if source_files is None
+                    else source_files
                 )
                 if item.relative_path == source
             ),
@@ -2299,6 +2312,7 @@ def topic_summary(
     child_text_budget: int = 0,
     design: dict | None = None,
     source_snapshots: dict[str, str] | None = None,
+    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
 ) -> dict:
     """Return a compact recursive topic summary for the AI prompt."""
 
@@ -2319,6 +2333,7 @@ def topic_summary(
                 include_text=include_text and index < child_text_budget,
                 design=design,
                 source_snapshots=source_snapshots,
+                source_files=source_files,
             )
             for index, child in enumerate(item.get("children", []))
         ],
@@ -2330,6 +2345,7 @@ def topic_summary(
             item.get("level", ""),
             design,
             source_snapshots,
+            source_files,
         )
     return summary
 
@@ -2424,6 +2440,11 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
             found = find_item_context(uda.get("items", []), item_id)
             if found:
                 index, siblings, item = found
+                source_files = course_source_catalog.local_markdown_source_files(
+                    design,
+                    ROOT,
+                    default_files=DEFAULT_SOURCES,
+                )
                 source_snapshots: dict[str, str] = {}
                 previous_topics = siblings[max(0, index - 2):index]
                 next_topics = siblings[index + 1:index + 3]
@@ -2437,6 +2458,7 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
                             include_text=True,
                             design=design,
                             source_snapshots=source_snapshots,
+                            source_files=source_files,
                         )
                         for candidate in previous_topics
                     ],
@@ -2446,6 +2468,7 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
                         child_text_budget=MAX_CHILDREN_WITH_TEXT,
                         design=design,
                         source_snapshots=source_snapshots,
+                        source_files=source_files,
                     ),
                     "next_topics": [
                         topic_summary(
@@ -2453,6 +2476,7 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
                             include_text=True,
                             design=design,
                             source_snapshots=source_snapshots,
+                            source_files=source_files,
                         )
                         for candidate in next_topics
                     ],
@@ -4239,15 +4263,21 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-source-context":
             try:
                 design = source_request_design(parsed.query)
-                catalog = course_source_catalog.course_source_catalog_payload(
+                source_files = course_source_catalog.local_markdown_source_files(
                     design,
                     ROOT,
                     default_files=DEFAULT_SOURCES,
                 )
+                catalog = course_source_catalog.course_source_catalog_payload(
+                    design,
+                    ROOT,
+                    default_files=DEFAULT_SOURCES,
+                    local_files=source_files,
+                )
                 self.write_json(
                     {
                         "design": design,
-                        "headings": extract_headings(design),
+                        "headings": extract_headings(design, source_files),
                         "sources": catalog["sources"],
                     }
                 )
