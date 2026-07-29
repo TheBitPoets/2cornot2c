@@ -280,6 +280,18 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         thread.join(timeout=5)
 
 
+def test_heading_catalog_never_nests_across_source_files(tmp_path, monkeypatch) -> None:
+    (tmp_path / "first.md").write_text("## First\n", encoding="utf-8")
+    (tmp_path / "second.md").write_text("### Second\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {"source_files": ["first.md", "second.md"]}
+
+    catalog = course_board_server.heading_catalog_tree(design)
+
+    assert [item["title"] for item in catalog] == ["First", "Second"]
+    assert all("children" not in item for item in catalog)
+
+
 def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monkeypatch) -> None:
     (tmp_path / "current.md").write_text("# Current\n", encoding="utf-8")
     (tmp_path / "archived.md").write_text(

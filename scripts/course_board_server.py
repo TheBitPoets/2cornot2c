@@ -2247,7 +2247,11 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
 
     roots: list[dict] = []
     stack: list[dict] = []
+    previous_source = None
     for heading in catalog_headings:
+        if heading["source"] != previous_source:
+            stack.clear()
+            previous_source = heading["source"]
         node = {
             "id": heading["id"],
             "title": heading["title"],

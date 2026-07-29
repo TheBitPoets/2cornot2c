@@ -771,6 +771,7 @@ async function deleteArchiveDesign() {
     if (!confirmed) return;
   }
   setStatus(`Cancellazione progetto "${name}"...`);
+  const requestId = ++courseContextRequestId;
   const payload = await api("/api/saved-designs/delete", {
     method: "POST",
     body: JSON.stringify({
@@ -785,7 +786,6 @@ async function deleteArchiveDesign() {
     setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
     return;
   }
-  const requestId = ++courseContextRequestId;
   const courseContext = await fetchCourseContext();
   if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) {
     const detachedDraft = reconcileDeletedArchive(name, payload);
