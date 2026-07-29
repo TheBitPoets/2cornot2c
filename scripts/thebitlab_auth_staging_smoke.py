@@ -26,6 +26,9 @@ _MAX_HEADER_BYTES = 32 * 1024
 _TRANSACTION_COOKIE_RE = re.compile(
     r"^__Host-thebitlab_oidc_txn-[0-9a-f]{24}=[A-Za-z0-9_-]{32,512}$"
 )
+_UNRESERVED_32_256_RE = re.compile(r"^[A-Za-z0-9_-]{32,256}$")
+_PKCE_CHALLENGE_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
+_CSP_NONCE_RE = re.compile(r"^'nonce-([A-Za-z0-9_-]{32})'$")
 _EXPECTED_GOOGLE_QUERY = {
     "client_id",
     "redirect_uri",
@@ -182,35 +185,37 @@ def _check_google_login(response: ResponseSnapshot, expected_origin: str) -> Non
         or set(query) != _EXPECTED_GOOGLE_QUERY
         or any(type(values) is not list or len(values) != 1 or not values[0] for values in query.values())
         or query["redirect_uri"] != [expected_origin + "/auth/google/callback"]
+        or _UNRESERVED_32_256_RE.fullmatch(query["state"][0]) is None
+        or _UNRESERVED_32_256_RE.fullmatch(query["nonce"][0]) is None
+        or _PKCE_CHALLENGE_RE.fullmatch(query["code_challenge"][0]) is None
         or query["response_type"] != ["code"]
         or query["code_challenge_method"] != ["S256"]
         or query["scope"] != ["openid email profile"]
     ):
         raise StagingSmokeError("Check staging google_login non valido.")
     cookie_parts = [part.strip() for part in cookies[0].split(";")]
-    max_ages = [
-        part.split("=", 1)[1]
-        for part in cookie_parts[1:]
-        if part.startswith("Max-Age=") and "=" in part
-    ]
+    attributes = _cookie_attributes(cookie_parts[1:]) if cookie_parts else None
+    max_age = None if attributes is None else attributes.get("max-age")
     if (
         not cookie_parts
         or _TRANSACTION_COOKIE_RE.fullmatch(cookie_parts[0]) is None
-        or "Path=/" not in cookie_parts[1:]
-        or "Secure" not in cookie_parts[1:]
-        or "HttpOnly" not in cookie_parts[1:]
-        or "SameSite=Lax" not in cookie_parts[1:]
-        or len(max_ages) != 1
-        or not max_ages[0].isdigit()
-        or not 1 <= int(max_ages[0]) <= 900
-        or any(part.lower().startswith("domain=") for part in cookie_parts[1:])
+        or attributes is None
+        or set(attributes) != {"path", "max-age", "secure", "httponly", "samesite"}
+        or attributes.get("path") != "/"
+        or type(max_age) is not str
+        or not max_age.isdigit()
+        or not 1 <= int(max_age) <= 900
+        or attributes.get("secure") is not None
+        or attributes.get("httponly") is not None
+        or str(attributes.get("samesite", "")).lower() != "lax"
     ):
         raise StagingSmokeError("Check staging google_login non valido.")
     location = None
     parsed = None
     query = None
     cookie_parts = None
-    max_ages = None
+    attributes = None
+    max_age = None
 
 
 def _check_anonymous_session(response: ResponseSnapshot) -> None:
@@ -225,11 +230,10 @@ def _check_pairing_page(response: ResponseSnapshot) -> None:
     if _headers(response, "content-type") != ["text/html; charset=utf-8"]:
         raise StagingSmokeError("Check staging pairing_page non valido.")
     csp = _headers(response, "content-security-policy")
+    directives = _csp_directives(csp[0]) if len(csp) == 1 else None
     if (
-        len(csp) != 1
-        or "default-src 'none'" not in csp[0]
-        or "frame-ancestors 'none'" not in csp[0]
-        or "connect-src 'self'" not in csp[0]
+        directives is None
+        or not _valid_pairing_csp(directives)
         or _headers(response, "x-frame-options") != ["DENY"]
         or _headers(response, "x-content-type-options") != ["nosniff"]
         or b"/auth/session" not in response.body
@@ -276,6 +280,67 @@ def _require_json(response: ResponseSnapshot) -> None:
     if type(value) is not dict or not value:
         raise StagingSmokeError("JSON staging non valido.")
     value = None
+
+
+def _cookie_attributes(parts: list[str]) -> dict[str, str | None] | None:
+    attributes: dict[str, str | None] = {}
+    for part in parts:
+        if not part:
+            return None
+        name, separator, value = part.partition("=")
+        key = name.lower()
+        if not key or key in attributes:
+            return None
+        if separator:
+            if not value:
+                return None
+            attributes[key] = value
+        else:
+            attributes[key] = None
+    return attributes
+
+
+def _csp_directives(value: str) -> dict[str, list[str]] | None:
+    directives: dict[str, list[str]] = {}
+    for raw_directive in value.split(";"):
+        tokens = raw_directive.strip().split()
+        if not tokens:
+            continue
+        name = tokens[0].lower()
+        if name in directives or len(tokens) < 2:
+            return None
+        directives[name] = tokens[1:]
+    return directives
+
+
+def _valid_pairing_csp(directives: dict[str, list[str]]) -> bool:
+    if set(directives) != {
+        "default-src",
+        "script-src",
+        "style-src",
+        "connect-src",
+        "base-uri",
+        "form-action",
+        "frame-ancestors",
+    }:
+        return False
+    if (
+        directives["default-src"] != ["'none'"]
+        or directives["connect-src"] != ["'self'"]
+        or directives["base-uri"] != ["'none'"]
+        or directives["form-action"] != ["'none'"]
+        or directives["frame-ancestors"] != ["'none'"]
+        or len(directives["script-src"]) != 1
+        or len(directives["style-src"]) != 1
+    ):
+        return False
+    script_nonce = _CSP_NONCE_RE.fullmatch(directives["script-src"][0])
+    style_nonce = _CSP_NONCE_RE.fullmatch(directives["style-src"][0])
+    return (
+        script_nonce is not None
+        and style_nonce is not None
+        and script_nonce.group(1) == style_nonce.group(1)
+    )
 
 
 def _headers(response: ResponseSnapshot, name: str) -> list[str]:

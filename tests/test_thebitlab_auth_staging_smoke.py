@@ -23,8 +23,8 @@ def google_location(**changes):
         "redirect_uri": "https://school.test/auth/google/callback",
         "response_type": "code",
         "scope": "openid email profile",
-        "state": "STATE_SECRET_123456",
-        "nonce": "NONCE_SECRET_123456",
+        "state": "STATE_SECRET_ABCDEFGHIJKLMNOPQRST",
+        "nonce": "NONCE_SECRET_ABCDEFGHIJKLMNOPQRST",
         "code_challenge": "C" * 43,
         "code_challenge_method": "S256",
     }
@@ -57,7 +57,7 @@ def responses():
                 ("Content-Type", "text/html; charset=utf-8"),
                 (
                     "Content-Security-Policy",
-                    "default-src 'none'; connect-src 'self'; frame-ancestors 'none'",
+                    "default-src 'none'; script-src 'nonce-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'; style-src 'nonce-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
                 ),
                 ("X-Frame-Options", "DENY"),
                 ("X-Content-Type-Options", "nosniff"),
@@ -152,6 +152,72 @@ def test_staging_smoke_fails_closed_on_noncanonical_google_redirect() -> None:
 
     assert secret not in str(captured.value)
     assert "COOKIE_SECRET" not in str(captured.value)
+
+
+def test_staging_smoke_rejects_short_pkce_challenge() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/google/login")]
+    fixtures[("GET", "https://school.test/auth/google/login")] = smoke.ResponseSnapshot(
+        302,
+        tuple(
+            (name, google_location(code_challenge="x"))
+            if name.lower() == "location"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        b"",
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+def test_staging_smoke_rejects_duplicate_or_contradictory_cookie_attributes() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/google/login")]
+    fixtures[("GET", "https://school.test/auth/google/login")] = smoke.ResponseSnapshot(
+        302,
+        tuple(
+            (
+                name,
+                value + "; path=/wrong; SameSite=None",
+            )
+            if name.lower() == "set-cookie"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        b"",
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+def test_staging_smoke_rejects_csp_with_additional_sources() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/tui/pair")]
+    fixtures[("GET", "https://school.test/auth/tui/pair")] = smoke.ResponseSnapshot(
+        200,
+        tuple(
+            (name, value.replace("connect-src 'self'", "connect-src 'self' https://evil.test"))
+            if name.lower() == "content-security-policy"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        current.body,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
 
 
 def test_staging_smoke_uses_one_absolute_deadline() -> None:
