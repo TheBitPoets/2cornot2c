@@ -498,6 +498,10 @@ def _relative_path(value: Any, field: str, *, allow_dot: bool) -> str:
         return ""
     if "\\" in text:
         raise CourseSourceCatalogError(f"{field} deve usare separatori '/'.")
+    if ":" in text:
+        raise CourseSourceCatalogError(
+            f"{field} non può contenere ':' (stream alternativi Windows non ammessi)."
+        )
     path = PurePosixPath(text)
     if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
         raise CourseSourceCatalogError(f"{field} deve essere un path relativo canonico.")

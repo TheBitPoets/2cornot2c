@@ -727,6 +727,32 @@ def test_archived_load_does_not_replace_edits_made_while_request_is_pending() ->
     )
 
 
+def test_frame_batch_is_bound_to_the_board_where_it_was_created() -> None:
+    run_course_board_js(
+        """
+        let requests = 0;
+        api = async () => { requests += 1; return { frame: { why: "wrong" } }; };
+        const oldItem = { id: "same-item", title: "Old", frame: {} };
+        const oldYear = { id: "same-year", udas: [{ id: "same-uda", items: [oldItem] }] };
+        state.design = { years: [oldYear] };
+        openFrameBatchQueue(
+          "Old",
+          [{ year: oldYear, uda: oldYear.udas[0], item: oldItem }],
+          "Ready",
+        );
+        state.design = {
+          years: [{ id: "same-year", udas: [{ id: "same-uda", items: [{ id: "same-item", title: "New" }] }] }],
+        };
+
+        generateNextFrameInBatch().then(() => {
+          assert.equal(requests, 0);
+          assert.equal(oldItem.frame.why, undefined);
+          assert.equal(frameBatch, null);
+        });
+        """
+    )
+
+
 def test_ai_frame_response_is_rejected_after_concurrent_board_edit() -> None:
     run_course_board_js(
         """

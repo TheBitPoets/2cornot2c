@@ -258,6 +258,7 @@ def test_rejects_malformed_explicit_catalogs(mutate, message) -> None:
         ["README.txt"],
         ["README.md", "README.md"],
         ["doc\\README.md"],
+        ["base.md:stream.md"],
     ],
 )
 def test_rejects_malformed_legacy_source_files(source_files) -> None:

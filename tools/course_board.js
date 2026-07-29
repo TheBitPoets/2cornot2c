@@ -1926,6 +1926,7 @@ function openFrameBatchQueue(rootTitle, entries, message) {
     running: false,
     cancelled: false,
     cancelAction: "",
+    boardContext: captureBoardContext(),
     snapshots: entries.map(frameEntrySnapshot),
   };
   els.generateAllFramesBtn.disabled = true;
@@ -1946,8 +1947,10 @@ function restoreFrameSnapshot(snapshot) {
   snapshot.item.frame_quality = JSON.parse(JSON.stringify(snapshot.frameQuality));
 }
 
-async function generateFrameForEntry(entry) {
-  const boardContext = captureBoardContext();
+async function generateFrameForEntry(entry, boardContext = captureBoardContext()) {
+  if (!isBoardContextUnchanged(boardContext)) {
+    throw new Error("la board è cambiata dopo la creazione della coda; richiesta AI annullata");
+  }
   const payload = await api("/api/ai-frame", {
     method: "POST",
     body: JSON.stringify({
@@ -1972,7 +1975,8 @@ async function generateNextFrameInBatch() {
   const entry = frameBatch.entries[frameBatch.index];
   setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
   try {
-    await generateFrameForEntry(entry);
+    await generateFrameForEntry(entry, frameBatch.boardContext);
+    frameBatch.boardContext = captureBoardContext();
     frameBatch.index += 1;
     renderCourse();
     setStatus(`Cornice generata per "${entry.item.title}".`);
@@ -2004,7 +2008,8 @@ async function generateAllFramesInBatch() {
       const percent = Math.round((frameBatch.index / frameBatch.entries.length) * 100);
       updateAiProgress(percent, `Genero ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
       setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
-      await generateFrameForEntry(entry);
+      await generateFrameForEntry(entry, frameBatch.boardContext);
+      frameBatch.boardContext = captureBoardContext();
       frameBatch.index += 1;
       renderCourse();
     }
