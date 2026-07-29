@@ -216,6 +216,35 @@ def test_write_design_rejects_unsafe_source_catalog_before_persistence(tmp_path,
         )
 
 
+def test_ai_request_keeps_provider_and_model_snapshot_during_reconfiguration(monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
+    monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")
+    observed = []
+
+    def fake_openai_call(payload):
+        observed.append((
+            course_board_server.active_ai_provider(),
+            course_board_server.active_ai_model(),
+        ))
+        with course_board_server.AI_CONFIG_LOCK:
+            course_board_server.ACTIVE_AI_PROVIDER = "gemini"
+            course_board_server.ACTIVE_AI_MODEL = "model-b"
+        observed.append((
+            course_board_server.active_ai_provider(),
+            course_board_server.active_ai_model(),
+        ))
+        return {"ok": payload["ok"]}
+
+    monkeypatch.setattr(
+        course_board_server,
+        "call_openai_didactic_frame",
+        fake_openai_call,
+    )
+
+    assert course_board_server.call_ai_didactic_frame({"ok": True}) == {"ok": True}
+    assert observed == [("openai", "model-a"), ("openai", "model-a")]
+
+
 def test_ai_proofread_text_requires_a_bounded_string() -> None:
     assert course_board_server.validated_ai_proofread_text({"text": "Valid"}) == "Valid"
 

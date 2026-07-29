@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from contextlib import contextmanager
 import hashlib
 import ipaddress
 import json
@@ -95,6 +96,8 @@ LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
 ACTIVE_AI_MODEL = os.environ.get("AI_MODEL", "").strip()
+AI_CONFIG_LOCK = threading.RLock()
+AI_REQUEST_CONFIG = threading.local()
 MAX_HTTP_WORKERS = 64
 MAX_HTTP_WORKERS_PER_CLIENT = 8
 HTTP_CLIENT_TIMEOUT_SECONDS = 15
@@ -3081,7 +3084,7 @@ def compact_frame_payload(payload: dict) -> dict:
 def compact_topic(topic: dict, include_text: bool) -> dict:
     """Return a compact topic with optional truncated text and child titles."""
 
-    text_limit = secret_int_value(f"{ACTIVE_AI_PROVIDER.upper()}_COMPACT_TEXT_CHARS", COMPACT_TEXT_CHARS)
+    text_limit = secret_int_value(f"{active_ai_provider().upper()}_COMPACT_TEXT_CHARS", COMPACT_TEXT_CHARS)
     compact = {
         "title": topic.get("title", ""),
         "source": topic.get("source", ""),
@@ -3139,18 +3142,18 @@ def call_openrouter_didactic_frame(payload: dict) -> dict:
 
 
 def call_ai_didactic_frame(payload: dict) -> dict:
-    """Route didactic-frame generation to the configured AI provider."""
+    """Route didactic-frame generation with one provider/model snapshot."""
 
-    provider = ACTIVE_AI_PROVIDER
-    if provider == "openai":
-        return call_openai_didactic_frame(payload)
-    if provider == "gemini":
-        return call_gemini_didactic_frame(payload)
-    if provider == "groq":
-        return call_groq_didactic_frame(payload)
-    if provider == "openrouter":
-        return call_openrouter_didactic_frame(payload)
-    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
+    with ai_request_configuration() as provider:
+        if provider == "openai":
+            return call_openai_didactic_frame(payload)
+        if provider == "gemini":
+            return call_gemini_didactic_frame(payload)
+        if provider == "groq":
+            return call_groq_didactic_frame(payload)
+        if provider == "openrouter":
+            return call_openrouter_didactic_frame(payload)
+        raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
 
 
 def call_openai_proofread(text: str) -> dict:
@@ -3279,18 +3282,18 @@ def validated_ai_proofread_text(payload: dict) -> str:
 
 
 def call_ai_proofread(text: str) -> dict:
-    """Route proofreading to the configured AI provider."""
+    """Route proofreading with one provider/model snapshot."""
 
-    provider = ACTIVE_AI_PROVIDER
-    if provider == "openai":
-        return call_openai_proofread(text)
-    if provider == "gemini":
-        return call_gemini_proofread(text)
-    if provider == "groq":
-        return call_groq_proofread(text)
-    if provider == "openrouter":
-        return call_openrouter_proofread(text)
-    raise RuntimeError(f"Provider AI non supportato: {provider}.")
+    with ai_request_configuration() as provider:
+        if provider == "openai":
+            return call_openai_proofread(text)
+        if provider == "gemini":
+            return call_gemini_proofread(text)
+        if provider == "groq":
+            return call_groq_proofread(text)
+        if provider == "openrouter":
+            return call_openrouter_proofread(text)
+        raise RuntimeError(f"Provider AI non supportato: {provider}.")
 
 
 def call_openai_course_plan(payload: dict) -> dict:
@@ -3415,25 +3418,27 @@ def call_openrouter_course_plan(payload: dict) -> dict:
 
 
 def call_ai_course_plan(payload: dict) -> dict:
-    """Route annual course-plan generation to the configured AI provider."""
+    """Route course-plan generation with one provider/model snapshot."""
 
-    provider = ACTIVE_AI_PROVIDER
-    if provider == "openai":
-        return call_openai_course_plan(payload)
-    if provider == "gemini":
-        return call_gemini_course_plan(payload)
-    if provider == "groq":
-        return call_groq_course_plan(payload)
-    if provider == "openrouter":
-        return call_openrouter_course_plan(payload)
-    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
+    with ai_request_configuration() as provider:
+        if provider == "openai":
+            return call_openai_course_plan(payload)
+        if provider == "gemini":
+            return call_gemini_course_plan(payload)
+        if provider == "groq":
+            return call_groq_course_plan(payload)
+        if provider == "openrouter":
+            return call_openrouter_course_plan(payload)
+        raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
 
 
 def ai_config() -> dict:
     """Return safe AI provider configuration for the board UI."""
 
     providers = ai_providers()
-    active = providers.get(ACTIVE_AI_PROVIDER) or providers["openai"]
+    with AI_CONFIG_LOCK:
+        selected_provider = ACTIVE_AI_PROVIDER
+    active = providers.get(selected_provider) or providers["openai"]
     return {
         "provider": active["id"],
         "model": active_ai_model(),
@@ -3482,12 +3487,15 @@ def ai_providers() -> dict:
     """Return all server-supported providers with safe configuration status."""
 
     config = parse_ai_providers_yaml()["providers"]
+    with AI_CONFIG_LOCK:
+        selected_provider = ACTIVE_AI_PROVIDER
+        selected_model = ACTIVE_AI_MODEL
     providers: dict[str, dict] = {}
     for provider_id, provider in config.items():
         secret_key = provider.get("secret_key", "")
         default_model = provider.get("default_model", "")
         env_model = os.environ.get(f"{provider_id.upper()}_MODEL", "")
-        model = env_model or (ACTIVE_AI_MODEL if ACTIVE_AI_PROVIDER == provider_id else "") or default_model
+        model = env_model or (selected_model if selected_provider == provider_id else "") or default_model
         models = provider.get("models", [])
         providers[provider_id] = {
             "id": provider_id,
@@ -3502,11 +3510,54 @@ def ai_providers() -> dict:
 
 
 def active_ai_model() -> str:
-    """Return the currently selected model for the active provider."""
+    """Return the request-scoped model, or one atomic global snapshot."""
 
+    request_model = getattr(AI_REQUEST_CONFIG, "model", None)
+    if request_model is not None:
+        return request_model
+    with AI_CONFIG_LOCK:
+        provider = ACTIVE_AI_PROVIDER
+        configured_model = ACTIVE_AI_MODEL
     providers = ai_providers()
-    active = providers.get(ACTIVE_AI_PROVIDER) or providers["openai"]
-    return ACTIVE_AI_MODEL or active.get("model") or active.get("default_model", "")
+    active = providers.get(provider) or providers["openai"]
+    return configured_model or active.get("model") or active.get("default_model", "")
+
+
+def active_ai_provider() -> str:
+    """Return the request-scoped provider when an AI call is active."""
+
+    request_provider = getattr(AI_REQUEST_CONFIG, "provider", None)
+    if request_provider is not None:
+        return request_provider
+    with AI_CONFIG_LOCK:
+        return ACTIVE_AI_PROVIDER
+
+
+@contextmanager
+def ai_request_configuration():
+    """Bind one provider/model pair for the full provider operation."""
+
+    with AI_CONFIG_LOCK:
+        provider = ACTIVE_AI_PROVIDER
+        configured_model = ACTIVE_AI_MODEL
+        providers = ai_providers()
+        active = providers.get(provider) or providers["openai"]
+        model = configured_model or active.get("model") or active.get("default_model", "")
+    previous_provider = getattr(AI_REQUEST_CONFIG, "provider", None)
+    previous_model = getattr(AI_REQUEST_CONFIG, "model", None)
+    AI_REQUEST_CONFIG.provider = provider
+    AI_REQUEST_CONFIG.model = model
+    try:
+        yield provider
+    finally:
+        if previous_provider is None:
+            AI_REQUEST_CONFIG.__dict__.pop("provider", None)
+        else:
+            AI_REQUEST_CONFIG.provider = previous_provider
+        if previous_model is None:
+            AI_REQUEST_CONFIG.__dict__.pop("model", None)
+        else:
+            AI_REQUEST_CONFIG.model = previous_model
 
 
 def set_ai_provider(provider: str, model: str = "") -> dict:
@@ -3514,18 +3565,19 @@ def set_ai_provider(provider: str, model: str = "") -> dict:
 
     global ACTIVE_AI_PROVIDER, ACTIVE_AI_MODEL
     provider = provider.strip().lower()
-    providers = ai_providers()
-    if provider not in providers:
-        raise RuntimeError(f"Provider AI non supportato: {provider}.")
-    if not providers[provider]["api_key_configured"]:
-        raise RuntimeError(f"Provider {providers[provider]['label']} non configurato: API key mancante.")
-    model_ids = {candidate.get("id") for candidate in providers[provider].get("models", [])}
-    selected_model = model.strip() or providers[provider].get("model") or providers[provider].get("default_model", "")
-    if model_ids and selected_model not in model_ids:
-        raise RuntimeError(f"Modello non supportato per {providers[provider]['label']}: {selected_model}.")
-    ACTIVE_AI_PROVIDER = provider
-    ACTIVE_AI_MODEL = selected_model
-    return ai_config()
+    with AI_CONFIG_LOCK:
+        providers = ai_providers()
+        if provider not in providers:
+            raise RuntimeError(f"Provider AI non supportato: {provider}.")
+        if not providers[provider]["api_key_configured"]:
+            raise RuntimeError(f"Provider {providers[provider]['label']} non configurato: API key mancante.")
+        model_ids = {candidate.get("id") for candidate in providers[provider].get("models", [])}
+        selected_model = model.strip() or providers[provider].get("model") or providers[provider].get("default_model", "")
+        if model_ids and selected_model not in model_ids:
+            raise RuntimeError(f"Modello non supportato per {providers[provider]['label']}: {selected_model}.")
+        ACTIVE_AI_PROVIDER = provider
+        ACTIVE_AI_MODEL = selected_model
+        return ai_config()
 
 
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):

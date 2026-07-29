@@ -285,12 +285,22 @@ function updateAiProgress(percent, message) {
   els.aiBusyBarFill.style.width = `${percent}%`;
 }
 
+function hasActiveAiUiOperation() {
+  return Boolean(
+    frameBatch
+    || frameVerificationBatch
+    || activeCourseAiRequestId !== null
+    || activeSingleFrameRequestId !== null
+    || activeProofreadRequestId !== null
+  );
+}
+
 function stopAiProgress(message = "Completato.") {
   clearInterval(aiProgressTimer);
   aiProgressTimer = null;
   updateAiProgress(100, message);
   setTimeout(() => {
-    if (!aiProgressTimer) els.aiBusy.hidden = true;
+    if (!aiProgressTimer && !hasActiveAiUiOperation()) els.aiBusy.hidden = true;
   }, 900);
 }
 
@@ -299,7 +309,7 @@ function failAiProgress(message = "Operazione non riuscita.") {
   aiProgressTimer = null;
   updateAiProgress(100, message);
   setTimeout(() => {
-    if (!aiProgressTimer) els.aiBusy.hidden = true;
+    if (!aiProgressTimer && !hasActiveAiUiOperation()) els.aiBusy.hidden = true;
   }, 8000);
 }
 
@@ -2017,14 +2027,16 @@ function restoreQueueOwnedFrameFields(
     const textStillQueueOwned = (
       JSON.stringify(currentFrame?.[key]) === JSON.stringify(lastAppliedFrame[key])
     );
-    if (!textStillQueueOwned) continue;
+    const qualityStillQueueOwned = (
+      JSON.stringify(currentQuality?.[key]) === JSON.stringify(lastAppliedQuality?.[key])
+    );
+    if (!textStillQueueOwned || !qualityStillQueueOwned) continue;
     if (Object.hasOwn(originalFrame || {}, key)) {
       currentFrame[key] = JSON.parse(JSON.stringify(originalFrame[key]));
     } else {
       delete currentFrame[key];
     }
     restored += 1;
-    if (JSON.stringify(currentQuality?.[key]) !== JSON.stringify(lastAppliedQuality?.[key])) continue;
     if (Object.hasOwn(originalQuality || {}, key)) {
       currentQuality[key] = JSON.parse(JSON.stringify(originalQuality[key]));
     } else {

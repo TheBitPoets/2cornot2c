@@ -332,6 +332,57 @@ def test_generation_cancel_restores_owned_fields_and_preserves_manual_field() ->
     )
 
 
+def test_generation_cancel_preserves_manual_quality_and_its_ai_text() -> None:
+    run_course_board_js(
+        """
+        api = async () => ({ frame: { context: "AI context", objectives: "AI objectives" } });
+        renderCourse = () => {};
+        const item = {
+          id: "item",
+          title: "Item",
+          frame: { context: "Original context", objectives: "Original objectives" },
+          frame_quality: { context: "ai", objectives: "ai" },
+        };
+        const uda = { id: "uda", items: [item] };
+        const year = { id: "year", udas: [uda] };
+        state.design = { years: [year] };
+        openFrameBatchQueue("Batch", [{ year, uda, item }], "Ready");
+
+        generateNextFrameInBatch().then(() => {
+          item.frame_quality.context = "local";
+          cancelFrameBatch();
+          assert.equal(item.frame.context, "AI context");
+          assert.equal(item.frame_quality.context, "local");
+          assert.equal(item.frame.objectives, "Original objectives");
+          assert.equal(item.frame_quality.objectives, "ai");
+        });
+        """
+    )
+
+
+def test_old_progress_timeout_cannot_hide_a_new_ai_queue() -> None:
+    run_course_board_js(
+        """
+        let delayedHide;
+        setTimeout = (callback) => { delayedHide = callback; return 1; };
+        api = async () => ({ frame: { context: "Generated" } });
+        renderCourse = () => {};
+        const item = { id: "item", title: "Item", frame: {} };
+        const uda = { id: "uda", items: [item] };
+        const year = { id: "year", udas: [uda] };
+        state.design = { years: [year] };
+
+        fillSingleFrameWithAi(year, uda, item).then(() => {
+          openFrameBatchQueue("Next", [{ year, uda, item }], "Ready");
+          assert.notEqual(frameBatch, null);
+          delayedHide();
+          assert.equal(els.aiBusy.hidden, false);
+          assert.notEqual(frameBatch, null);
+        });
+        """
+    )
+
+
 def test_verification_cancel_preserves_manual_edits_after_queue_progress() -> None:
     run_course_board_js(
         """
