@@ -105,6 +105,25 @@ def test_extract_headings_and_section_text_include_paragraph_content(tmp_path, m
     )
 
 
+def test_extract_headings_rejects_oversized_heading_catalog(tmp_path, monkeypatch) -> None:
+    (tmp_path / "headings.md").write_text(
+        "\n".join("# topic" for _ in range(course_board_server.MAX_HEADINGS_PER_SOURCE + 1)),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_design",
+        lambda: {"source_files": ["headings.md"]},
+    )
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="troppi heading",
+    ):
+        course_board_server.extract_headings()
+
+
 def test_extract_headings_preserves_explicit_source_provenance(tmp_path, monkeypatch) -> None:
     (tmp_path / "lessons").mkdir()
     (tmp_path / "lessons" / "intro.md").write_text(
@@ -240,6 +259,52 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monkeypatch) -> None:
+    (tmp_path / "current.md").write_text("# Current\n", encoding="utf-8")
+    (tmp_path / "archived.md").write_text(
+        "# Archived\n\nContenuto archivio.\n",
+        encoding="utf-8",
+    )
+    archived_design = {
+        "sources": [
+            {
+                "id": "archive",
+                "label": "Archive",
+                "type": "markdown",
+                "provider": "local",
+                "files": ["archived.md"],
+                "indexing_status": "ready",
+            }
+        ],
+        "years": [{"id": "year", "title": "Year", "udas": []}],
+    }
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_design",
+        lambda: {"source_files": ["current.md"]},
+    )
+
+    catalog = course_board_server.heading_catalog_tree(archived_design)
+    proposal = course_board_server.normalize_course_plan(
+        {
+            "title": "Plan",
+            "udas": [
+                {
+                    "id": "uda-1",
+                    "items": ["archive:archived.md#archived"],
+                }
+            ],
+        },
+        archived_design,
+        "year",
+    )
+
+    assert catalog[0]["id"] == "archive:archived.md#archived"
+    assert catalog[0]["excerpt"] == "Contenuto archivio."
+    assert proposal["udas"][0]["items"][0]["source_id"] == "archive"
 
 
 def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:

@@ -831,7 +831,12 @@ async function newCourseDesign() {
   const design = emptyCourseDesign();
   const saved = await saveArchiveDesignWithName(name, { design, confirmOverwrite: true });
   if (!saved) return;
+  const boardContext = captureBoardContext();
   const courseContext = await fetchCourseContext(name);
+  if (!isBoardContextUnchanged(boardContext)) {
+    setStatus(`Nuovo progetto "${name}" creato. La vista aperta non è stata cambiata.`);
+    return;
+  }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.headings = courseContext.headings;

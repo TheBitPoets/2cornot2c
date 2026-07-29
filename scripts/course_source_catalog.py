@@ -15,6 +15,8 @@ MAX_SOURCES = 64
 MAX_FILES_PER_SOURCE = 64
 MAX_TEXT = 512
 MAX_LOCAL_MARKDOWN_BYTES = 8 * 1024 * 1024
+MAX_INDEXED_LOCAL_FILES = 256
+MAX_TOTAL_LOCAL_MARKDOWN_BYTES = 64 * 1024 * 1024
 SOURCE_ID_RE = re.compile(r"^[a-z0-9](?:[a-z0-9._-]{0,63})$")
 GITHUB_REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 GITLAB_REPOSITORY_RE = re.compile(
@@ -117,10 +119,17 @@ def local_markdown_source_files(
     seen_paths: set[str] = set()
     seen_resolved_paths: set[str] = set()
     seen_file_identities: set[tuple[int, int]] = set()
+    indexed_file_count = 0
+    total_existing_bytes = 0
     for source in normalize_course_sources(design, default_files=default_files):
         if source.provider != "local" or source.indexing_status != "ready":
             continue
         for declared_file in source.files:
+            indexed_file_count += 1
+            if indexed_file_count > MAX_INDEXED_LOCAL_FILES:
+                raise CourseSourceCatalogError(
+                    "Troppi file Markdown locali pronti per l'indicizzazione."
+                )
             relative_path = _join_source_path(source.path, declared_file)
             if relative_path in seen_paths:
                 raise CourseSourceCatalogError(
@@ -144,6 +153,16 @@ def local_markdown_source_files(
                 raise CourseSourceCatalogError(
                     f"La fonte locale non è un file regolare: {relative_path}."
                 )
+            if metadata is not None:
+                if metadata.st_size > MAX_LOCAL_MARKDOWN_BYTES:
+                    raise CourseSourceCatalogError(
+                        f"File fonte locale troppo grande: {relative_path}."
+                    )
+                total_existing_bytes += metadata.st_size
+                if total_existing_bytes > MAX_TOTAL_LOCAL_MARKDOWN_BYTES:
+                    raise CourseSourceCatalogError(
+                        "Le fonti Markdown locali superano il limite complessivo."
+                    )
             if existing_only and metadata is None:
                 continue
             resolved_key = os.path.normcase(str(resolved))
@@ -183,6 +202,12 @@ def read_local_markdown_text(item: LocalCourseSourceFile, root: Path) -> str:
                 raise CourseSourceCatalogError(
                     f"File fonte fuori dal repository: {item.relative_path}."
                 ) from exc
+            expected_key = os.path.normcase(str(item.resolved_path))
+            opened_key = os.path.normcase(str(opened_path))
+            if opened_key != expected_key:
+                raise CourseSourceCatalogError(
+                    f"File fonte locale cambiato durante la lettura: {item.relative_path}."
+                )
             metadata = os.fstat(stream.fileno())
             if not stat.S_ISREG(metadata.st_mode):
                 raise CourseSourceCatalogError(

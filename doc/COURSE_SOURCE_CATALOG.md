@@ -49,7 +49,7 @@ Campi:
 | `updated_at` | Timestamp UTC canonico opzionale |
 | `indexing_status` | `ready`, `pending`, `error` o `disabled` |
 
-Il server rifiuta ID duplicati, campi sconosciuti, path non canonici, repository con segmenti `.`/`..`, ref Git non sicure, file non Markdown e duplicati locali anche quando alias o hard link risolvono allo stesso file. La lettura apre prima il file e verifica il path reale dell'handle contro la root del repository, impedendo escape e sostituzioni concorrenti tramite link simbolici/junction. Ogni Markdown locale è limitato a 8 MiB.
+Il server rifiuta ID duplicati, campi sconosciuti, path non canonici, repository con segmenti `.`/`..`, ref Git non sicure, file non Markdown e duplicati locali anche quando alias o hard link risolvono allo stesso file. La lettura apre prima il file e verifica il path reale dell'handle contro la root del repository, impedendo escape e sostituzioni concorrenti tramite link simbolici/junction. Ogni Markdown locale è limitato a 8 MiB; un catalogo può indicizzare al massimo 256 file, 64 MiB complessivi e 50.000 heading (massimo 10.000 per file).
 
 ## Compatibilità `source_files`
 

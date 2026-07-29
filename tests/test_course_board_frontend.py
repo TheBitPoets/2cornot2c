@@ -684,6 +684,46 @@ def test_new_project_loads_its_saved_source_context() -> None:
     )
 
 
+def test_late_new_project_context_cannot_replace_newly_opened_archive() -> None:
+    run_course_board_js(
+        """
+        let resolveContext;
+        DashboardDialogs.prompt = async () => "new.json";
+        api = async (path) => {
+          if (path === "/api/saved-designs/save") {
+            return { saved: { name: "new.json" }, designs: [{ name: "new.json" }] };
+          }
+          if (path === "/api/course-source-context?design=new.json") {
+            return new Promise((resolve) => { resolveContext = resolve; });
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "old" }] };
+        markDesignClean();
+
+        (async () => {
+          const creating = newCourseDesign();
+          while (!resolveContext) await Promise.resolve();
+          const otherDesign = { years: [{ id: "other" }] };
+          state.design = otherDesign;
+          state.activeSavedDesign = "other.json";
+          resolveContext({
+            design: { years: [{ id: "new" }] },
+            headings: [{ id: "new-heading" }],
+            sources: [{ id: "new-source" }],
+          });
+          await creating;
+          assert.equal(state.design, otherDesign);
+          assert.equal(state.activeSavedDesign, "other.json");
+          assert.match(els.status.textContent, /vista aperta non è stata cambiata/);
+        })();
+        """
+    )
+
+
 def test_late_paragraph_preview_cannot_overwrite_newer_dialog() -> None:
     run_course_board_js(
         """

@@ -119,6 +119,8 @@ COURSE_PLAN_REQUIRED_FIELDS = ["year_id", "title", "description", "udas", "unpla
 MAX_SECTION_CHARS = 6000
 MAX_CHILDREN_WITH_TEXT = 8
 MAX_CATALOG_EXCERPT_CHARS = 400
+MAX_HEADINGS_PER_SOURCE = 10_000
+MAX_TOTAL_HEADINGS = 50_000
 AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
@@ -2050,7 +2052,12 @@ def extract_headings(design: dict | None = None) -> list[dict]:
             source_file,
             ROOT,
         )
-        headings.extend(headings_from_source_snapshot(source_file, source_text))
+        source_headings = headings_from_source_snapshot(source_file, source_text)
+        if len(headings) + len(source_headings) > MAX_TOTAL_HEADINGS:
+            raise course_source_catalog.CourseSourceCatalogError(
+                "Il catalogo contiene troppi heading Markdown."
+            )
+        headings.extend(source_headings)
     return headings
 
 
@@ -2077,6 +2084,10 @@ def headings_from_source_snapshot(
             if descriptor.legacy
             else f"{descriptor.source_id}:{source}#{anchor}"
         )
+        if len(headings) >= MAX_HEADINGS_PER_SOURCE:
+            raise course_source_catalog.CourseSourceCatalogError(
+                f"La fonte {source} contiene troppi heading Markdown."
+            )
         headings.append(
             {
                 "id": heading_id,
@@ -2166,7 +2177,12 @@ def section_text(
 def section_text_from_source(source_text: str, start_line: int, start_level: int) -> str:
     """Extract one heading section from an already verified source snapshot."""
 
-    lines = source_text.splitlines()
+    return section_text_from_lines(source_text.splitlines(), start_line, start_level)
+
+
+def section_text_from_lines(lines: list[str], start_line: int, start_level: int) -> str:
+    """Extract one heading section from pre-split Markdown lines."""
+
     if start_line < 1 or start_line > len(lines):
         return ""
     section: list[str] = []
@@ -2181,22 +2197,45 @@ def section_text_from_source(source_text: str, start_line: int, start_level: int
     return text
 
 
-def section_excerpt(heading: dict) -> str:
-    """Return a short local excerpt for course-plan generation."""
-
-    text = section_text(heading.get("source", ""), heading.get("line", ""), heading.get("level", ""))
-    text = re.sub(r"\s+", " ", text).strip()
-    if len(text) > MAX_CATALOG_EXCERPT_CHARS:
-        return text[:MAX_CATALOG_EXCERPT_CHARS].rstrip() + "..."
-    return text
-
-
-def heading_catalog_tree() -> list[dict]:
+def heading_catalog_tree(design: dict | None = None) -> list[dict]:
     """Return all available headings as a tree with compact excerpts."""
+
+    selected_design = read_design() if design is None else design
+    catalog_headings: list[dict] = []
+    for source_file in course_source_catalog.local_markdown_source_files(
+        selected_design,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+    ):
+        source_text = course_source_catalog.read_local_markdown_text(
+            source_file,
+            ROOT,
+        )
+        source_headings = headings_from_source_snapshot(source_file, source_text)
+        if len(catalog_headings) + len(source_headings) > MAX_TOTAL_HEADINGS:
+            raise course_source_catalog.CourseSourceCatalogError(
+                "Il catalogo contiene troppi heading Markdown."
+            )
+        source_lines = source_text.splitlines()
+        for heading in source_headings:
+            excerpt = section_text_from_lines(
+                source_lines,
+                heading["line"],
+                heading["level"],
+            )
+            excerpt = re.sub(r"\s+", " ", excerpt).strip()
+            heading["excerpt"] = (
+                excerpt[:MAX_CATALOG_EXCERPT_CHARS].rstrip() + "..."
+                if len(excerpt) > MAX_CATALOG_EXCERPT_CHARS
+                else excerpt
+            )
+        catalog_headings.extend(source_headings)
+        source_lines = None
+        source_text = None
 
     roots: list[dict] = []
     stack: list[dict] = []
-    for heading in extract_headings():
+    for heading in catalog_headings:
         node = {
             "id": heading["id"],
             "title": heading["title"],
@@ -2208,7 +2247,7 @@ def heading_catalog_tree() -> list[dict]:
             "source_ref": heading.get("source_ref"),
             "level": heading["level"],
             "href": heading["href"],
-            "excerpt": section_excerpt(heading),
+            "excerpt": heading["excerpt"],
             "children": [],
         }
         while stack and heading["level"] <= stack[-1]["level"]:
@@ -2589,7 +2628,7 @@ def normalize_proofread(result: dict, original_text: str) -> dict:
 def normalize_course_plan(raw: dict, design: dict, year_id: str) -> dict:
     """Validate a raw AI proposal and hydrate item ids into board items."""
 
-    headings = extract_headings()
+    headings = extract_headings(design)
     valid_ids = {heading["id"] for heading in headings}
     year = next((candidate for candidate in design.get("years", []) if candidate.get("id") == year_id), {})
     used: set[str] = set()
@@ -4599,7 +4638,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     "selection_rule": "Usa selection_objectives come criterio principale per scegliere quali paragrafi e sottoparagrafi inserire nelle UDA.",
                     "target_year_id": year_id,
                     "current_course": compact_design(design),
-                    "available_topics": heading_catalog_tree(),
+                    "available_topics": heading_catalog_tree(design),
                     "constraints": {
                         "use_only_available_topic_ids": True,
                         "do_not_duplicate_topics": True,

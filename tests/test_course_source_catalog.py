@@ -145,6 +145,49 @@ def test_open_handle_verification_rejects_outside_file(tmp_path, monkeypatch) ->
         read_local_markdown_text(item, repository)
 
 
+def test_open_handle_verification_rejects_different_internal_file(tmp_path, monkeypatch) -> None:
+    first = tmp_path / "first.md"
+    second = tmp_path / "second.md"
+    first.write_text("# First\n", encoding="utf-8")
+    second.write_text("# Second\n", encoding="utf-8")
+    item = local_markdown_source_files(
+        {"source_files": ["first.md"]},
+        tmp_path,
+    )[0]
+    monkeypatch.setattr(
+        "scripts.course_source_catalog._opened_file_path",
+        lambda _descriptor: second,
+    )
+
+    with pytest.raises(CourseSourceCatalogError, match="cambiato durante la lettura"):
+        read_local_markdown_text(item, tmp_path)
+
+
+def test_rejects_too_many_ready_local_files(tmp_path) -> None:
+    sources = []
+    for source_index in range(5):
+        sources.append(
+            {
+                "id": f"source-{source_index}",
+                "label": f"Source {source_index}",
+                "type": "markdown",
+                "provider": "local",
+                "files": [
+                    f"source-{source_index}/lesson-{file_index}.md"
+                    for file_index in range(64)
+                ],
+                "indexing_status": "ready",
+            }
+        )
+
+    with pytest.raises(CourseSourceCatalogError, match="Troppi file Markdown"):
+        local_markdown_source_files(
+            {"sources": sources},
+            tmp_path,
+            existing_only=False,
+        )
+
+
 def test_catalog_payload_reports_only_files_actually_indexable(tmp_path) -> None:
     (tmp_path / "doc").mkdir()
     (tmp_path / "doc" / "intro.md").write_text("# Intro\n", encoding="utf-8")
