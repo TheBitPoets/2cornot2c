@@ -124,14 +124,15 @@ def test_handler_closes_connection_when_auth_body_framing_is_rejected() -> None:
 
     handler = object.__new__(CourseBoardHandler)
     handler.server = SimpleNamespace(github_oauth_http_routes=Routes())
-    handler.requestline = "GET /auth/github/link HTTP/1.1"
-    handler.path = "/auth/github/link"
+    handler.requestline = "GET https://evil.test/auth/github/link HTTP/1.1"
+    handler.path = "https://evil.test/auth/github/link"
     handler.command = "GET"
     handler.client_address = ("127.0.0.1", 12345)
     handler.headers = Headers()
     handler.connection = object()
     handler.close_connection = False
     handler.write_session_http_response = lambda _response: None
+    handler.write_oidc_transport_error = lambda _status, _code: None
 
     assert handler.dispatch_github_oauth(urlparse(handler.path)) is True
     assert handler.close_connection is True

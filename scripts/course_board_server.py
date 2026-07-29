@@ -4261,37 +4261,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
         routes = getattr(self.server, "github_oauth_http_routes", None)
         request_parts = str(getattr(self, "requestline", "")).split()
-        if routes is not None and routes.handles(parsed.path) and len(request_parts) != 3:
-            self.write_oidc_transport_error(400, "bad_auth_request")
-            return True
-        if routes is not None and len(request_parts) == 3:
-            raw_target = request_parts[1]
-            raw_parsed = urlparse(raw_target)
-            candidate_path = raw_parsed.path if routes.handles(raw_parsed.path) else parsed.path
-            if routes.handles(candidate_path) and not (
-                raw_target == candidate_path
-                or raw_target.startswith(candidate_path + "?")
-                or raw_target.startswith(candidate_path + "#")
-                or raw_target.startswith(candidate_path + ";")
-            ):
-                self.write_oidc_transport_error(400, "bad_auth_request")
-                return True
-            if routes.handles(raw_parsed.path):
-                parsed = raw_parsed
-        request_parts = None
-        raw_target = None
-        raw_parsed = None
-        candidate_path = None
-        if routes is None or not routes.handles(parsed.path):
-            return False
-        if parsed.scheme or parsed.netloc or parsed.params:
-            self.write_oidc_transport_error(400, "bad_auth_request")
-            return True
-        try:
+        raw_target = request_parts[1] if len(request_parts) == 3 else None
+        raw_parsed = urlparse(raw_target) if raw_target is not None else None
+        is_github_target = routes is not None and (
+            routes.handles(parsed.path)
+            or (raw_parsed is not None and routes.handles(raw_parsed.path))
+        )
+        raw_headers = None
+        content_lengths = None
+        transfer_encodings = None
+        if is_github_target:
             raw_headers = tuple(self.headers.raw_items())
-            edge = thebitlab_github_oauth_http.EdgeRequestMetadata(
-                str(self.client_address[0]), raw_headers
-            )
             content_lengths = [
                 value.strip()
                 for name, value in raw_headers
@@ -4308,6 +4288,35 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 or (content_lengths and content_lengths != ["0"])
             ):
                 self.close_connection = True
+        if routes is not None and routes.handles(parsed.path) and len(request_parts) != 3:
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        if routes is not None and raw_parsed is not None:
+            candidate_path = raw_parsed.path if routes.handles(raw_parsed.path) else parsed.path
+            if routes.handles(candidate_path) and not (
+                raw_target == candidate_path
+                or raw_target.startswith(candidate_path + "?")
+                or raw_target.startswith(candidate_path + "#")
+                or raw_target.startswith(candidate_path + ";")
+            ):
+                self.write_oidc_transport_error(400, "bad_auth_request")
+                return True
+            if routes.handles(raw_parsed.path):
+                parsed = raw_parsed
+        request_parts = None
+        raw_target = None
+        raw_parsed = None
+        candidate_path = None
+        is_github_target = None
+        if routes is None or not routes.handles(parsed.path):
+            return False
+        if parsed.scheme or parsed.netloc or parsed.params:
+            self.write_oidc_transport_error(400, "bad_auth_request")
+            return True
+        try:
+            edge = thebitlab_github_oauth_http.EdgeRequestMetadata(
+                str(self.client_address[0]), raw_headers
+            )
             raw_query = parsed.query
             if parsed.fragment:
                 raw_query += "#" + parsed.fragment
