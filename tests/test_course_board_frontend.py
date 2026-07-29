@@ -1230,6 +1230,39 @@ def test_delete_invalidates_newer_load_of_the_same_deleted_archive() -> None:
     )
 
 
+def test_delete_preserves_an_already_modified_archive_as_detached_draft() -> None:
+    run_course_board_js(
+        """
+        let currentContextRequests = 0;
+        api = async (path) => {
+          if (path === "/api/school-calendars") return { calendars: [] };
+          if (path === "/api/saved-designs/delete") return { designs: [], deleted_calendars: [] };
+          if (path === "/api/course-source-context") {
+            currentContextRequests += 1;
+            return { design: { years: [{ id: "current" }] }, headings: [], sources: [] };
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "archive" }] };
+        state.activeSavedDesign = "archive.json";
+        state.savedDesigns = [{ name: "archive.json" }];
+        markDesignClean();
+        state.design.years.push({ id: "unsaved" });
+
+        deleteArchiveDesign().then(() => {
+          assert.equal(state.design.years[1].id, "unsaved");
+          assert.equal(state.activeSavedDesign, "");
+          assert.equal(state.isNewDesign, true);
+          assert.equal(currentContextRequests, 0);
+          assert.equal(hasUnsavedChanges(), true);
+        });
+        """
+    )
+
+
 def test_delete_response_detaches_edits_from_the_deleted_archive() -> None:
     run_course_board_js(
         """

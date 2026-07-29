@@ -789,6 +789,7 @@ async function deleteArchiveDesignOnce() {
     return;
   }
   const boardContext = captureBoardContext();
+  const preserveUnsavedDraft = hasUnsavedChanges();
   const name = state.activeSavedDesign;
   const calendarsPayload = await api("/api/school-calendars");
   if (!isBoardContextUnchanged(boardContext)) {
@@ -846,7 +847,7 @@ async function deleteArchiveDesignOnce() {
     reconcileStaleArchiveDelete(name, payload);
     return;
   }
-  if (!isBoardContextUnchanged(boardContext)) {
+  if (!isBoardContextUnchanged(boardContext) || preserveUnsavedDraft) {
     const detachedDraft = reconcileDeletedArchive(name, payload);
     const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
     setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
