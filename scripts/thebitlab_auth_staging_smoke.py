@@ -172,15 +172,17 @@ def run_smoke(
                 _require_response_framing(snapshot)
                 material = validator(snapshot)
                 if name == "google_login":
+                    if type(material) is not tuple or len(set(material)) != len(material):
+                        raise StagingSmokeError(
+                            "Check staging google_login non valido."
+                        )
                     first_login_material = material
                 elif name == "google_login_repeat" and (
                     type(first_login_material) is not tuple
                     or type(material) is not tuple
                     or len(material) != len(first_login_material)
-                    or any(
-                        first == second
-                        for first, second in zip(first_login_material, material)
-                    )
+                    or len(set(material)) != len(material)
+                    or not set(first_login_material).isdisjoint(material)
                 ):
                     raise StagingSmokeError(
                         "Check staging google_login_repeat non valido."
@@ -468,6 +470,16 @@ def _strict_query(raw_query: str) -> dict[str, list[str]]:
     return result
 
 
+_INERT_HTML_CONTAINERS = {
+    "template",
+    "noscript",
+    "textarea",
+    "xmp",
+    "iframe",
+    "noembed",
+}
+
+
 class _PairingPageParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -478,23 +490,23 @@ class _PairingPageParser(HTMLParser):
         self.data: list[str] = []
         self.stack: list[str] = []
         self.seen = {"html": 0, "head": 0, "body": 0}
-        self.template_depth = 0
+        self.inert_stack: list[str] = []
         self.invalid = False
 
     @property
     def complete(self) -> bool:
         return (
             not self.invalid
-            and self.template_depth == 0
+            and not self.inert_stack
             and not self.stack
             and self.seen == {"html": 1, "head": 1, "body": 1}
         )
 
     def handle_starttag(self, tag, attrs) -> None:
-        if tag == "template":
-            self.template_depth += 1
+        if tag in _INERT_HTML_CONTAINERS:
+            self.inert_stack.append(tag)
             return
-        if self.template_depth:
+        if self.inert_stack:
             return
         if tag in {"html", "head", "body"}:
             expected = {
@@ -527,13 +539,17 @@ class _PairingPageParser(HTMLParser):
         self.stack.append(tag)
 
     def handle_endtag(self, tag) -> None:
-        if tag == "template":
-            if self.template_depth == 0:
-                self.invalid = True
-            else:
-                self.template_depth -= 1
+        if self.inert_stack:
+            if tag in _INERT_HTML_CONTAINERS:
+                if self.inert_stack[-1] != tag:
+                    self.invalid = True
+                else:
+                    self.inert_stack.pop()
             return
-        if self.template_depth or tag not in {"html", "head", "body", "script", "style"}:
+        if tag in _INERT_HTML_CONTAINERS:
+            self.invalid = True
+            return
+        if tag not in {"html", "head", "body", "script", "style"}:
             return
         if not self.stack or self.stack[-1] != tag:
             self.invalid = True
@@ -545,11 +561,11 @@ class _PairingPageParser(HTMLParser):
             self.style_ends += 1
 
     def handle_startendtag(self, tag, attrs) -> None:
-        if tag in {"html", "head", "body", "script", "style", "template"}:
+        if tag in {"html", "head", "body", "script", "style"} | _INERT_HTML_CONTAINERS:
             self.invalid = True
 
     def handle_data(self, data) -> None:
-        if self.template_depth == 0 and self.stack and self.stack[-1] == "script":
+        if not self.inert_stack and self.stack and self.stack[-1] == "script":
             self.data.append(data)
 
 

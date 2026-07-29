@@ -384,6 +384,43 @@ def test_staging_smoke_rejects_cookie_binding_derived_from_public_state() -> Non
         )
 
 
+def test_staging_smoke_rejects_cross_flow_public_material_as_binding() -> None:
+    fixtures = responses()
+    first = fixtures[FreshResponses.LOGIN_KEY]
+    second = fixtures[FreshResponses.LOGIN_KEY]
+    first_location = next(
+        value for name, value in first.headers if name.lower() == "location"
+    )
+    first_state = urllib.parse.parse_qs(
+        urllib.parse.urlsplit(first_location).query
+    )["state"][0]
+
+    def reuse_previous_state(value):
+        cookie_name = value.split("=", 1)[0]
+        attributes = value.split(";", 1)[1]
+        return f"{cookie_name}={first_state};{attributes}"
+
+    second = smoke.ResponseSnapshot(
+        second.status,
+        tuple(
+            (name, reuse_previous_state(value))
+            if name.lower() == "set-cookie"
+            else (name, value)
+            for name, value in second.headers
+        ),
+        second.body,
+    )
+    login_responses = iter((first, second))
+
+    def request(method, url, timeout):
+        if (method, url) == FreshResponses.LOGIN_KEY:
+            return next(login_responses)
+        return fixtures[(method, url)]
+
+    with pytest.raises(smoke.StagingSmokeError, match="google_login_repeat"):
+        smoke.run_smoke("https://school.test", request)
+
+
 def test_staging_smoke_rejects_short_pkce_challenge() -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/google/login")]
@@ -512,15 +549,16 @@ def test_staging_smoke_ignores_script_and_routes_inside_html_comments() -> None:
         )
 
 
-def test_staging_smoke_rejects_pairing_logic_inside_inert_template() -> None:
+@pytest.mark.parametrize("container", ["template", "noscript", "textarea", "xmp"])
+def test_staging_smoke_rejects_pairing_logic_inside_inert_container(container) -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/tui/pair")]
     inert_body = current.body.replace(
         b"<body>",
-        b"<body><template>",
+        f"<body><{container}>".encode(),
     ).replace(
         b"</body>",
-        b"</template></body>",
+        f"</{container}></body>".encode(),
     )
     fixtures[("GET", "https://school.test/auth/tui/pair")] = smoke.ResponseSnapshot(
         200,
