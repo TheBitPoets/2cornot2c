@@ -149,6 +149,41 @@ class GitHubTeamMembershipSnapshot:
         )
 
 
+def _validated_membership_snapshot(
+    value: object,
+    expected_user_subject: str,
+) -> GitHubTeamMembershipSnapshot:
+    """Rebuild an adapter value so forged dataclass instances fail closed."""
+
+    if type(value) is not GitHubTeamMembershipSnapshot:
+        raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non valido.")
+    try:
+        teams = tuple(
+            GitHubTeamMembership(
+                team.organization_subject,
+                team.team_subject,
+                team.display_name,
+            )
+            for team in value.teams
+            if type(team) is GitHubTeamMembership
+        )
+        if len(teams) != len(value.teams):
+            raise GitHubTeamDirectoryRejectedError("Snapshot team GitHub non valido.")
+        snapshot = GitHubTeamMembershipSnapshot(
+            value.user_subject,
+            teams,
+            value.captured_at,
+            value.complete,
+        )
+    except GitHubTeamDirectoryRejectedError:
+        raise
+    except Exception as error:
+        raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non valido.") from error
+    if snapshot.user_subject != expected_user_subject:
+        raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non correlato all'utente.")
+    return snapshot
+
+
 class GitHubTeamDirectory(Protocol):
     def read_complete_memberships(self, user_subject: str) -> GitHubTeamMembershipSnapshot: ...
 
@@ -414,8 +449,7 @@ class GitHubPendingOnboardingService:
             raise GitHubTeamDirectoryUnavailableError(
                 "Directory team GitHub non disponibile."
             ) from error
-        if type(snapshot) is not GitHubTeamMembershipSnapshot or snapshot.user_subject != identity.subject:
-            raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non correlato all'utente.")
+        snapshot = _validated_membership_snapshot(snapshot, identity.subject)
         validation_now = _utc(self.clock())
         if (
             snapshot.captured_at < identity.linked_at
@@ -524,8 +558,7 @@ class GitHubMembershipSyncService:
             raise GitHubTeamDirectoryUnavailableError(
                 "Directory team GitHub non disponibile."
             ) from error
-        if type(snapshot) is not GitHubTeamMembershipSnapshot or snapshot.user_subject != identity.subject:
-            raise GitHubTeamDirectoryRejectedError("Snapshot GitHub non correlato all'utente.")
+        snapshot = _validated_membership_snapshot(snapshot, identity.subject)
         validation_now = _utc(self.clock())
         if (
             snapshot.captured_at < identity.linked_at
@@ -586,8 +619,10 @@ class GitHubMembershipSyncService:
         desired_tuple = tuple(desired)
         current_ids = frozenset(current_github)
         desired_ids = frozenset(membership.class_id for membership in desired_tuple)
-        if tuple(sorted(current_github.values(), key=lambda item: item.class_id)) == desired_tuple:
-            return GitHubMembershipSyncResult("unchanged", "already-current")
+        already_current = (
+            tuple(sorted(current_github.values(), key=lambda item: item.class_id))
+            == desired_tuple
+        )
         try:
             self.storage.synchronize_github_memberships(
                 account.user_id,
@@ -610,8 +645,8 @@ class GitHubMembershipSyncService:
                 "Stato modificato durante sincronizzazione GitHub."
             ) from error
         return GitHubMembershipSyncResult(
-            "synchronized",
-            "complete-snapshot",
+            "unchanged" if already_current else "synchronized",
+            "already-current" if already_current else "complete-snapshot",
             tuple(sorted(desired_ids - current_ids)),
             tuple(sorted(current_ids - desired_ids)),
         )

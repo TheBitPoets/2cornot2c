@@ -443,6 +443,62 @@ def test_existing_student_sync_preserves_manual_memberships(setup) -> None:
     assert storage.list_user_memberships("pending-01") == [manual]
 
 
+def test_existing_student_noop_still_detects_mapping_revocation_race(setup, monkeypatch) -> None:
+    storage, mappings, clock = setup
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    current = snapshot("123456", GitHubTeamMembership("1001", "2002"))
+    GitHubPendingOnboardingService(
+        storage,
+        FakeGitHubTeamDirectory({"123456": current}),
+        clock=clock,
+    ).reconcile("pending-01")
+    original_list = storage.list_user_memberships
+
+    def revoke_mapping_during_read(user_id):
+        result = original_list(user_id)
+        mappings.delete_mapping("admin-01", "1001", "2002")
+        return result
+
+    monkeypatch.setattr(storage, "list_user_memberships", revoke_mapping_during_read)
+
+    with pytest.raises(GitHubTeamMappingConflictError, match="sincronizzazione"):
+        GitHubMembershipSyncService(
+            storage,
+            FakeGitHubTeamDirectory({"123456": current}),
+            clock=clock,
+        ).reconcile("pending-01")
+
+    assert original_list("pending-01")[0].class_id == "class-01"
+
+
+def test_existing_student_sync_rejects_forged_incomplete_snapshot(setup) -> None:
+    storage, mappings, clock = setup
+    mappings.save_mapping("admin-01", "class-01", "1001", "2002")
+    current = snapshot("123456", GitHubTeamMembership("1001", "2002"))
+    GitHubPendingOnboardingService(
+        storage,
+        FakeGitHubTeamDirectory({"123456": current}),
+        clock=clock,
+    ).reconcile("pending-01")
+    before = storage.list_user_memberships("pending-01")
+    forged = object.__new__(GitHubTeamMembershipSnapshot)
+    object.__setattr__(forged, "user_subject", "123456")
+    object.__setattr__(forged, "teams", ())
+    object.__setattr__(forged, "captured_at", NOW)
+    object.__setattr__(forged, "complete", False)
+
+    class ForgedDirectory:
+        def read_complete_memberships(self, _subject):
+            return forged
+
+    with pytest.raises(GitHubTeamDirectoryRejectedError, match="non completo"):
+        GitHubMembershipSyncService(storage, ForgedDirectory(), clock=clock).reconcile(
+            "pending-01"
+        )
+
+    assert storage.list_user_memberships("pending-01") == before
+
+
 def test_existing_student_sync_rejects_stale_snapshot_without_revocation(setup) -> None:
     storage, mappings, clock = setup
     mappings.save_mapping("admin-01", "class-01", "1001", "2002")
