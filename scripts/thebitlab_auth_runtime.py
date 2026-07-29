@@ -15,6 +15,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from scripts.thebitlab_auth_services import (
+    ExternalIdentityLinkService,
     FederatedIdentityService,
     PairingService,
     SessionService,
@@ -33,6 +34,13 @@ from scripts.thebitlab_google_oidc import (
     UrllibGoogleTokenTransport,
 )
 from scripts.thebitlab_google_oidc_http import GoogleOidcHttpRoutes
+from scripts.thebitlab_github_oauth import (
+    GitHubAccountLinkService,
+    GitHubOAuthConfig,
+    InMemoryGitHubLinkFlowStore,
+    UrllibGitHubOAuthTransport,
+)
+from scripts.thebitlab_github_oauth_http import GitHubOAuthHttpRoutes
 from scripts.thebitlab_http_auth import HttpSessionAuthBoundary, SessionCookiePolicy
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 from scripts.thebitlab_session_http import SessionHttpRoutes
@@ -44,6 +52,7 @@ from scripts.thebitlab_tui_pairing_http import (
 
 _SECRET_RE = re.compile(r"^[A-Za-z0-9_-]{43,86}$")
 _CALLBACK_PATH = "/auth/google/callback"
+_GITHUB_CALLBACK_PATH = "/auth/github/callback"
 _DEFAULT_DATABASE_NAME = ".thebitlab-auth/auth.sqlite3"
 _WINDOWS_REPARSE_POINT = 0x400
 _SID_RE = re.compile(r"^S-1-(?:[0-9]+-)+[0-9]+$")
@@ -59,13 +68,19 @@ class AuthRuntimeConfigurationError(RuntimeError):
 class GoogleOidcRuntime:
     """Own the composed service graph while exposing only its HTTP routes."""
 
-    __slots__ = ("_routes", "_session_routes", "_tui_pairing_routes")
+    __slots__ = (
+        "_routes",
+        "_session_routes",
+        "_tui_pairing_routes",
+        "_github_routes",
+    )
 
     def __init__(
         self,
         routes: GoogleOidcHttpRoutes,
         session_routes: SessionHttpRoutes,
         tui_pairing_routes: TuiPairingHttpRoutes,
+        github_routes: GitHubOAuthHttpRoutes | None = None,
     ) -> None:
         if (
             type(routes) is not GoogleOidcHttpRoutes
@@ -75,11 +90,20 @@ class GoogleOidcRuntime:
             or type(tui_pairing_routes) is not TuiPairingHttpRoutes
             or tui_pairing_routes.proxy_resolver is not routes.proxy_resolver
             or tui_pairing_routes.boundary.http_sessions is not routes.session_discarder
+            or (
+                github_routes is not None
+                and (
+                    type(github_routes) is not GitHubOAuthHttpRoutes
+                    or github_routes.http_sessions is not routes.session_discarder
+                    or github_routes.proxy_resolver is not routes.proxy_resolver
+                )
+            )
         ):
             raise AuthRuntimeConfigurationError("Grafo autenticazione non valido.")
         self._routes = routes
         self._session_routes = session_routes
         self._tui_pairing_routes = tui_pairing_routes
+        self._github_routes = github_routes
 
     @property
     def routes(self) -> GoogleOidcHttpRoutes:
@@ -92,6 +116,10 @@ class GoogleOidcRuntime:
     @property
     def tui_pairing_routes(self) -> TuiPairingHttpRoutes:
         return self._tui_pairing_routes
+
+    @property
+    def github_routes(self) -> GitHubOAuthHttpRoutes | None:
+        return self._github_routes
 
     def __repr__(self) -> str:
         return "GoogleOidcRuntime(configured=True)"
@@ -125,6 +153,10 @@ def compose_google_oidc_runtime(
     pairing_sessions = None
     tui_sessions = None
     pairing_boundary = None
+    github_client_secret = None
+    github_config = None
+    github_service = None
+    github_routes = None
     try:
         client_id = _required(environment, "THEBITLAB_GOOGLE_CLIENT_ID")
         client_secret = _required(environment, "THEBITLAB_GOOGLE_CLIENT_SECRET")
@@ -217,7 +249,54 @@ def compose_google_oidc_runtime(
                 pepper=rate_limit_pepper,
             ),
         )
-        return GoogleOidcRuntime(routes, session_routes, tui_pairing_routes)
+        github_values = {
+            name: environment.get(name)
+            for name in (
+                "THEBITLAB_GITHUB_CLIENT_ID",
+                "THEBITLAB_GITHUB_CLIENT_SECRET",
+                "THEBITLAB_GITHUB_REDIRECT_URI",
+            )
+        }
+        if any(value is not None for value in github_values.values()):
+            github_client_id = _required(environment, "THEBITLAB_GITHUB_CLIENT_ID")
+            github_client_secret = _required(environment, "THEBITLAB_GITHUB_CLIENT_SECRET")
+            github_redirect_uri = _required(environment, "THEBITLAB_GITHUB_REDIRECT_URI")
+            parsed_github_callback = urllib.parse.urlsplit(github_redirect_uri)
+            if (
+                parsed_github_callback.path != _GITHUB_CALLBACK_PATH
+                or parsed_github_callback.query
+                or parsed_github_callback.fragment
+            ):
+                raise AuthRuntimeConfigurationError(
+                    "THEBITLAB_GITHUB_REDIRECT_URI deve terminare con il path callback canonico."
+                )
+            github_post_link_path = environment.get(
+                "THEBITLAB_GITHUB_POST_LINK_PATH", "/tools/course_board.html"
+            )
+            _validate_post_login_path(github_post_link_path)
+            github_config = GitHubOAuthConfig(
+                github_client_id,
+                github_client_secret,
+                github_redirect_uri,
+                post_link_path=github_post_link_path,
+            )
+            github_service = GitHubAccountLinkService(
+                github_config,
+                InMemoryGitHubLinkFlowStore(),
+                UrllibGitHubOAuthTransport(),
+                ExternalIdentityLinkService(storage, expected_provider="github"),
+            )
+            github_routes = GitHubOAuthHttpRoutes(
+                github_service,
+                http_sessions,
+                proxy_resolver,
+            )
+        return GoogleOidcRuntime(
+            routes,
+            session_routes,
+            tui_pairing_routes,
+            github_routes,
+        )
     except AuthRuntimeConfigurationError:
         raise
     except Exception:
@@ -246,6 +325,10 @@ def compose_google_oidc_runtime(
         pairing_sessions = None
         tui_sessions = None
         pairing_boundary = None
+        github_client_secret = None
+        github_config = None
+        github_service = None
+        github_routes = None
 
 
 def _require_auth_dependencies() -> None:

@@ -60,6 +60,36 @@ def valid_environment() -> dict[str, str]:
     }
 
 
+def test_composition_adds_github_routes_only_with_complete_configuration(tmp_path: Path) -> None:
+    environment = valid_environment()
+    assert compose_google_oidc_runtime(environment, data_root=tmp_path).github_routes is None
+
+    environment.update(
+        {
+            "THEBITLAB_GITHUB_CLIENT_ID": "github-client-id-123",
+            "THEBITLAB_GITHUB_CLIENT_SECRET": "github-client-secret-raw",
+            "THEBITLAB_GITHUB_REDIRECT_URI": "https://lab.example.edu/auth/github/callback",
+        }
+    )
+    runtime = compose_google_oidc_runtime(environment, data_root=tmp_path)
+
+    assert runtime.github_routes is not None
+    assert runtime.github_routes.http_sessions is runtime.routes.session_discarder
+    assert runtime.github_routes.proxy_resolver is runtime.routes.proxy_resolver
+    assert runtime.github_routes.service.config.redirect_uri.endswith(
+        "/auth/github/callback"
+    )
+    assert environment["THEBITLAB_GITHUB_CLIENT_SECRET"] not in repr(runtime)
+
+
+def test_partial_github_runtime_configuration_fails_closed(tmp_path: Path) -> None:
+    environment = valid_environment()
+    environment["THEBITLAB_GITHUB_CLIENT_ID"] = "github-client-id-123"
+
+    with pytest.raises(AuthRuntimeConfigurationError):
+        compose_google_oidc_runtime(environment, data_root=tmp_path)
+
+
 def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> None:
     runtime = compose_google_oidc_runtime(valid_environment(), data_root=tmp_path)
 
@@ -302,7 +332,10 @@ def test_course_board_main_requires_explicit_google_auth_opt_in(
     from scripts import course_board_server
 
     runtime = SimpleNamespace(
-        routes=object(), session_routes=object(), tui_pairing_routes=object()
+        routes=object(),
+        session_routes=object(),
+        tui_pairing_routes=object(),
+        github_routes=None,
     )
     composition_calls = []
     servers = []

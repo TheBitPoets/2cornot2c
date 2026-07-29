@@ -25,9 +25,12 @@
 - un utente può collegare un solo account per il provider configurato e uno stesso subject non può avere due owner;
 - la migrazione v3 mette in quarantena tutti i link legacy ambigui prima di applicare il vincolo unico `(user_id, provider)`.
 
+## Confine HTTP
+
+Le route concrete, la callback canonica e la composizione runtime sono documentate in [`github-oauth-http-routes.md`](github-oauth-http-routes.md).
+
 ## Fuori scope
 
-- route concrete e gestione header HTTP;
 - credenziali GitHub reali/browser E2E;
 - organization/team mapping e membership classi;
 - GitHub App installation token e repository discovery;
