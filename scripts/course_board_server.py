@@ -2168,6 +2168,7 @@ def section_text(
     source_snapshots: dict[str, str] | None = None,
     source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
     source_id: str = "",
+    heading_id: str = "",
 ) -> str:
     """Extract local Markdown text for one heading section."""
 
@@ -2177,38 +2178,54 @@ def section_text(
     except (TypeError, ValueError):
         return ""
     selected_design = read_design() if design is None else design
+    selected_files = (
+        course_source_catalog.local_markdown_source_files(
+            selected_design,
+            ROOT,
+            default_files=DEFAULT_SOURCES,
+        )
+        if source_files is None
+        else source_files
+    )
+    source_file = next(
+        (
+            item
+            for item in selected_files
+            if item.relative_path == source
+            and (
+                item.source.source_id == source_id
+                if source_id
+                else item.source.legacy
+            )
+        ),
+        None,
+    )
+    if source_file is None:
+        return ""
     snapshot_key = f"{source_id}\0{source}"
     source_text = None if source_snapshots is None else source_snapshots.get(snapshot_key)
     if source_text is None:
-        source_file = next(
-            (
-                item
-                for item in (
-                    course_source_catalog.local_markdown_source_files(
-                        selected_design,
-                        ROOT,
-                        default_files=DEFAULT_SOURCES,
-                    )
-                    if source_files is None
-                    else source_files
-                )
-                if item.relative_path == source
-                and (
-                    item.source.source_id == source_id
-                    if source_id
-                    else item.source.legacy
-                )
-            ),
-            None,
-        )
-        if source_file is None:
-            return ""
         source_text = course_source_catalog.read_local_markdown_text(
             source_file,
             ROOT,
         )
         if source_snapshots is not None:
             source_snapshots[snapshot_key] = source_text
+    if heading_id:
+        matching_heading = next(
+            (
+                heading
+                for heading in headings_from_source_snapshot(source_file, source_text)
+                if heading["id"] == heading_id
+            ),
+            None,
+        )
+        if (
+            matching_heading is None
+            or matching_heading["line"] != start_line
+            or matching_heading["level"] != start_level
+        ):
+            return ""
     return section_text_from_source(source_text, start_line, start_level)
 
 
@@ -2386,6 +2403,7 @@ def topic_summary(
             source_snapshots,
             source_files,
             str(item.get("source_id", "")),
+            str(item.get("id", "")),
         )
     return summary
 

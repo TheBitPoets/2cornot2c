@@ -921,6 +921,8 @@ def test_old_course_ai_request_cannot_populate_reopened_same_year_dialog() -> No
         generating.then(() => {
           assert.equal(state.courseAiProposal, null);
           assert.equal(els.courseAiApplyBtn.disabled, true);
+          assert.equal(els.courseAiGenerateBtn.disabled, false);
+          assert.equal(els.aiBusy.hidden, true);
           assert.match(els.courseAiPreview.innerHTML, /Modifica il brief/);
         });
         """

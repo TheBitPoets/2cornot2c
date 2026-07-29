@@ -404,7 +404,8 @@ async function loadAll() {
   const keepActiveDesign = sessionStorage.getItem(ACTIVE_COURSE_SESSION_KEY) === "true";
   const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
   if (keepActiveDesign && activeDesign && state.savedDesigns.some((saved) => saved.name === activeDesign)) {
-    await loadSavedDesignByName(activeDesign, { confirmFirst: false, render: false });
+    const restored = await loadSavedDesignByName(activeDesign, { confirmFirst: false, render: false });
+    if (!restored) return;
   }
   populateFilters();
   renderSourceCatalogSummary();
@@ -550,17 +551,17 @@ async function loadSavedDesignByName(name, options = {}) {
       cancelLabel: "Annulla",
       danger: true,
     });
-    if (!confirmed) return;
+    if (!confirmed) return false;
   }
   setStatus(`Caricamento progetto salvato "${name}"...`);
   const boardContext = captureBoardContext();
   const requestId = ++courseContextRequestId;
   courseContextRequestName = name;
   const courseContext = await fetchCourseContext(name);
-  if (requestId !== courseContextRequestId) return;
+  if (requestId !== courseContextRequestId) return false;
   if (!isBoardContextUnchanged(boardContext)) {
     setStatus("Caricamento annullato: la board è stata modificata durante la richiesta.");
-    return;
+    return false;
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
@@ -581,6 +582,7 @@ async function loadSavedDesignByName(name, options = {}) {
     renderCourseActions();
   }
   setStatus(`Progetto "${name}" caricato. Usa "Salva progetto" per aggiornare l'archivio o "Imposta corrente" per sovrascrivere doc/course_design.json.`);
+  return true;
 }
 
 async function saveArchiveDesign() {
@@ -1697,6 +1699,7 @@ function defaultCourseBrief(year) {
 
 function openCourseAiDialog(year) {
   courseAiRequestId += 1;
+  els.courseAiGenerateBtn.disabled = false;
   const brief = { ...defaultCourseBrief(year), ...(year.ai_brief || {}) };
   state.courseAiYearId = year.id;
   state.courseAiProposal = null;
@@ -2667,7 +2670,13 @@ els.aiBusyCancelBtn.addEventListener("click", () => {
   cancelFrameBatch();
 });
 els.courseAiCloseBtn.addEventListener("click", () => els.courseAiDialog.close());
-els.courseAiDialog.addEventListener("close", () => { courseAiRequestId += 1; });
+els.courseAiDialog.addEventListener("close", () => {
+  courseAiRequestId += 1;
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = null;
+  els.aiBusy.hidden = true;
+  els.courseAiGenerateBtn.disabled = false;
+});
 els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
 els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
 els.sourceFilter.addEventListener("change", renderHeadings);

@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 from scripts import course_source_catalog
 DEFAULT_INPUT = ROOT / "doc" / "course_design.json"
 DEFAULT_OUTPUT = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
+DEFAULT_SOURCES = ("README.md", "LINUX_PROGRAMMING.md")
 FRAME_FIELDS = [
     ("context", "Contesto"),
     ("prerequisites", "Prerequisiti"),
@@ -157,7 +158,10 @@ def render_design(design: dict[str, Any]) -> str:
         "",
     ]
 
-    for source in course_source_catalog.normalize_course_sources(design):
+    for source in course_source_catalog.normalize_course_sources(
+        design,
+        default_files=DEFAULT_SOURCES,
+    ):
         if source.legacy:
             lines.append(f"- `{source.files[0]}`")
             continue

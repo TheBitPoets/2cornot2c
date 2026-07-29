@@ -306,9 +306,9 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
             "udas": [{
                 "id": "uda",
                 "items": [
-                    {"id": "before", "title": "Before", "source": "lesson.md", "line": 1, "level": 2},
-                    {"id": "target", "title": "Target", "source": "lesson.md", "line": 5, "level": 2},
-                    {"id": "after", "title": "After", "source": "lesson.md", "line": 9, "level": 2},
+                    {"id": "lesson.md#before", "title": "Before", "source": "lesson.md", "line": 1, "level": 2},
+                    {"id": "lesson.md#target", "title": "Target", "source": "lesson.md", "line": 5, "level": 2},
+                    {"id": "lesson.md#after", "title": "After", "source": "lesson.md", "line": 9, "level": 2},
                 ],
             }],
         }],
@@ -326,7 +326,7 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
         counted_read,
     )
 
-    context = course_board_server.target_context(design, "year", "uda", "target")
+    context = course_board_server.target_context(design, "year", "uda", "lesson.md#target")
 
     assert context["previous_topics"][0]["text"] == "One."
     assert context["target_topic"]["text"] == "Two."
@@ -351,7 +351,7 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
             "udas": [{
                 "id": "uda",
                 "items": [{
-                    "id": "stale",
+                    "id": "source-a:lesson.md#current",
                     "title": "Stale",
                     "source": "lesson.md",
                     "source_id": "source-a",
@@ -362,7 +362,12 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
         }],
     }
 
-    context = course_board_server.target_context(design, "year", "uda", "stale")
+    context = course_board_server.target_context(
+        design,
+        "year",
+        "uda",
+        "source-a:lesson.md#current",
+    )
 
     assert context["target_topic"]["source_id"] == "source-a"
     assert context["target_topic"]["text"] == ""
@@ -372,9 +377,23 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
         design,
         "year",
         "uda",
-        "stale",
+        "source-a:lesson.md#current",
     )
     assert missing_provenance["target_topic"]["text"] == ""
+
+    stale_item = design["years"][0]["udas"][0]["items"][0]
+    stale_item.update({
+        "id": "source-b:lesson.md#current",
+        "source_id": "source-b",
+        "line": 2,
+    })
+    shifted = course_board_server.target_context(
+        design,
+        "year",
+        "uda",
+        "source-b:lesson.md#current",
+    )
+    assert shifted["target_topic"]["text"] == ""
 
 
 def test_ai_catalog_rejects_excessive_heading_count(tmp_path, monkeypatch) -> None:
@@ -484,7 +503,7 @@ def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monk
         "uda-1",
         "archive:archived.md#archived",
     )
-    assert context["target_topic"]["text"] == "Contenuto cambiato."
+    assert context["target_topic"]["text"] == ""
 
 
 def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:

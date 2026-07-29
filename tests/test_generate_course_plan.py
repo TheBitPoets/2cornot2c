@@ -31,6 +31,13 @@ def test_render_design_includes_summary_uda_and_didactic_frame() -> None:
     assert "Richiama il ruolo di printf e scanf." in markdown
 
 
+def test_render_design_uses_board_defaults_when_source_fields_are_absent() -> None:
+    markdown = generate_course_plan.render_design({"years": []})
+
+    assert "README.md" in markdown
+    assert "LINUX_PROGRAMMING.md" in markdown
+
+
 def test_render_design_includes_explicit_source_catalog_and_item_provenance() -> None:
     design = load_fixture()
     design.pop("source_files")
