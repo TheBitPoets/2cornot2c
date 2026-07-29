@@ -71,6 +71,8 @@ class LocalCourseSourceFile:
     source: CourseSource
     relative_path: str
     resolved_path: Path
+    expected_size: int | None
+    expected_identity: tuple[int, int] | None
 
 
 def normalize_course_sources(
@@ -184,6 +186,12 @@ def local_markdown_source_files(
                     source=source,
                     relative_path=relative_path,
                     resolved_path=resolved,
+                    expected_size=None if metadata is None else metadata.st_size,
+                    expected_identity=(
+                        None
+                        if metadata is None
+                        else (metadata.st_dev, metadata.st_ino)
+                    ),
                 )
             )
     return tuple(files)
@@ -209,6 +217,16 @@ def read_local_markdown_text(item: LocalCourseSourceFile, root: Path) -> str:
                     f"File fonte locale cambiato durante la lettura: {item.relative_path}."
                 )
             metadata = os.fstat(stream.fileno())
+            opened_identity = (metadata.st_dev, metadata.st_ino)
+            if (
+                item.expected_size is None
+                or item.expected_identity is None
+                or metadata.st_size != item.expected_size
+                or opened_identity != item.expected_identity
+            ):
+                raise CourseSourceCatalogError(
+                    f"File fonte locale cambiato durante la lettura: {item.relative_path}."
+                )
             if not stat.S_ISREG(metadata.st_mode):
                 raise CourseSourceCatalogError(
                     f"La fonte locale non è un file regolare: {item.relative_path}."

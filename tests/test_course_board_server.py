@@ -124,6 +124,25 @@ def test_extract_headings_rejects_oversized_heading_catalog(tmp_path, monkeypatc
         course_board_server.extract_headings()
 
 
+def test_extract_headings_rejects_overlong_titles(tmp_path, monkeypatch) -> None:
+    (tmp_path / "title.md").write_text(
+        "# " + "x" * (course_board_server.MAX_HEADING_TITLE_CHARS + 1) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_design",
+        lambda: {"source_files": ["title.md"]},
+    )
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="titolo Markdown troppo lungo",
+    ):
+        course_board_server.extract_headings()
+
+
 def test_extract_headings_preserves_explicit_source_provenance(tmp_path, monkeypatch) -> None:
     (tmp_path / "lessons").mkdir()
     (tmp_path / "lessons" / "intro.md").write_text(
@@ -288,6 +307,11 @@ def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monk
     )
 
     catalog = course_board_server.heading_catalog_tree(archived_design)
+    hydration_headings = course_board_server.flatten_heading_catalog(catalog)
+    (tmp_path / "archived.md").write_text(
+        "# Changed\n\nContenuto cambiato.\n",
+        encoding="utf-8",
+    )
     proposal = course_board_server.normalize_course_plan(
         {
             "title": "Plan",
@@ -300,11 +324,29 @@ def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monk
         },
         archived_design,
         "year",
+        headings=hydration_headings,
     )
 
     assert catalog[0]["id"] == "archive:archived.md#archived"
     assert catalog[0]["excerpt"] == "Contenuto archivio."
     assert proposal["udas"][0]["items"][0]["source_id"] == "archive"
+    framed_design = {
+        **archived_design,
+        "years": [
+            {
+                "id": "year",
+                "title": "Year",
+                "udas": proposal["udas"],
+            }
+        ],
+    }
+    context = course_board_server.target_context(
+        framed_design,
+        "year",
+        "uda-1",
+        "archive:archived.md#archived",
+    )
+    assert context["target_topic"]["text"] == "Contenuto cambiato."
 
 
 def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:

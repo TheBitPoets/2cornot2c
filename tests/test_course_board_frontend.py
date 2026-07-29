@@ -646,6 +646,39 @@ def test_loading_archived_design_refreshes_its_source_context() -> None:
     )
 
 
+def test_late_archived_load_cannot_replace_newer_project() -> None:
+    run_course_board_js(
+        """
+        let resolveA;
+        let resolveB;
+        api = async (path) => new Promise((resolve) => {
+          if (path.endsWith("design=a.json")) resolveA = resolve;
+          else if (path.endsWith("design=b.json")) resolveB = resolve;
+          else throw new Error("Unexpected request: " + path);
+        });
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        populateFilters = () => {};
+        renderSourceCatalogSummary = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+
+        const loadingA = loadSavedDesignByName("a.json", { confirmFirst: false });
+        const loadingB = loadSavedDesignByName("b.json", { confirmFirst: false });
+        resolveB({ design: { years: [{ id: "b" }] }, headings: [], sources: [] });
+        loadingB.then(() => {
+          assert.equal(state.activeSavedDesign, "b.json");
+          resolveA({ design: { years: [{ id: "a" }] }, headings: [], sources: [] });
+          return loadingA.then(() => {
+            assert.equal(state.activeSavedDesign, "b.json");
+            assert.equal(state.design.years[0].id, "b");
+          });
+        });
+        """
+    )
+
+
 def test_new_project_loads_its_saved_source_context() -> None:
     run_course_board_js(
         """

@@ -121,6 +121,7 @@ MAX_CHILDREN_WITH_TEXT = 8
 MAX_CATALOG_EXCERPT_CHARS = 400
 MAX_HEADINGS_PER_SOURCE = 10_000
 MAX_TOTAL_HEADINGS = 50_000
+MAX_HEADING_TITLE_CHARS = 512
 AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
@@ -2078,6 +2079,10 @@ def headings_from_source_snapshot(
         title = match.group(2).strip()
         if not title or title.startswith("0 \""):
             continue
+        if len(title) > MAX_HEADING_TITLE_CHARS:
+            raise course_source_catalog.CourseSourceCatalogError(
+                f"La fonte {source} contiene un titolo Markdown troppo lungo."
+            )
         anchor = github_anchor(title, seen)
         heading_id = (
             f"{source}#{anchor}"
@@ -2111,6 +2116,7 @@ def headings_from_source_snapshot(
 def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] | None:
     """Return heading metadata and section from one bounded source read."""
 
+    total_headings = 0
     for source_file in course_source_catalog.local_markdown_source_files(
         design,
         ROOT,
@@ -2120,7 +2126,13 @@ def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] 
             source_file,
             ROOT,
         )
-        for heading in headings_from_source_snapshot(source_file, source_text):
+        source_headings = headings_from_source_snapshot(source_file, source_text)
+        total_headings += len(source_headings)
+        if total_headings > MAX_TOTAL_HEADINGS:
+            raise course_source_catalog.CourseSourceCatalogError(
+                "Il catalogo contiene troppi heading Markdown."
+            )
+        for heading in source_headings:
             if heading["id"] == heading_id:
                 return heading, section_text_from_source(
                     source_text,
@@ -2246,7 +2258,10 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
             "source_repository": heading.get("source_repository"),
             "source_ref": heading.get("source_ref"),
             "level": heading["level"],
+            "line": heading["line"],
+            "anchor": heading["anchor"],
             "href": heading["href"],
+            "github_url": heading["github_url"],
             "excerpt": heading["excerpt"],
             "children": [],
         }
@@ -2270,7 +2285,12 @@ def prune_empty_children(items: list[dict]) -> None:
             item.pop("children", None)
 
 
-def topic_summary(item: dict, include_text: bool = False, child_text_budget: int = 0) -> dict:
+def topic_summary(
+    item: dict,
+    include_text: bool = False,
+    child_text_budget: int = 0,
+    design: dict | None = None,
+) -> dict:
     """Return a compact recursive topic summary for the AI prompt."""
 
     anchor = str(item.get("href", "")).split("#", 1)[-1] if "#" in str(item.get("href", "")) else ""
@@ -2285,12 +2305,21 @@ def topic_summary(item: dict, include_text: bool = False, child_text_budget: int
         "href": item.get("href", ""),
         "github_url": github_blob_url(item.get("source", ""), anchor),
         "children": [
-            topic_summary(child, include_text=include_text and index < child_text_budget)
+            topic_summary(
+                child,
+                include_text=include_text and index < child_text_budget,
+                design=design,
+            )
             for index, child in enumerate(item.get("children", []))
         ],
     }
     if include_text:
-        summary["text"] = section_text(item.get("source", ""), item.get("line", ""), item.get("level", ""))
+        summary["text"] = section_text(
+            item.get("source", ""),
+            item.get("line", ""),
+            item.get("level", ""),
+            design,
+        )
     return summary
 
 
@@ -2359,7 +2388,10 @@ def compact_design(design: dict) -> dict:
                         "title": uda.get("title", ""),
                         "path": uda.get("path", ""),
                         "weeks": uda.get("weeks", ""),
-                        "items": [topic_summary(item) for item in uda.get("items", [])],
+                        "items": [
+                            topic_summary(item, design=design)
+                            for item in uda.get("items", [])
+                        ],
                     }
                     for uda in year.get("udas", [])
                 ],
@@ -2388,16 +2420,17 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
                     "uda": {key: uda.get(key, "") for key in ["id", "title", "path", "weeks"]},
                     "position": topic_position(index, siblings, item),
                     "previous_topics": [
-                        topic_summary(candidate, include_text=True)
+                        topic_summary(candidate, include_text=True, design=design)
                         for candidate in previous_topics
                     ],
                     "target_topic": topic_summary(
                         item,
                         include_text=True,
                         child_text_budget=MAX_CHILDREN_WITH_TEXT,
+                        design=design,
                     ),
                     "next_topics": [
-                        topic_summary(candidate, include_text=True)
+                        topic_summary(candidate, include_text=True, design=design)
                         for candidate in next_topics
                     ],
                 }
@@ -2625,10 +2658,26 @@ def normalize_proofread(result: dict, original_text: str) -> dict:
     }
 
 
-def normalize_course_plan(raw: dict, design: dict, year_id: str) -> dict:
+def flatten_heading_catalog(items: list[dict]) -> list[dict]:
+    """Flatten one catalog tree in source order for deterministic hydration."""
+
+    flattened: list[dict] = []
+    for item in items:
+        flattened.append({key: value for key, value in item.items() if key != "children"})
+        flattened.extend(flatten_heading_catalog(item.get("children", [])))
+    return flattened
+
+
+def normalize_course_plan(
+    raw: dict,
+    design: dict,
+    year_id: str,
+    *,
+    headings: list[dict] | None = None,
+) -> dict:
     """Validate a raw AI proposal and hydrate item ids into board items."""
 
-    headings = extract_headings(design)
+    headings = extract_headings(design) if headings is None else headings
     valid_ids = {heading["id"] for heading in headings}
     year = next((candidate for candidate in design.get("years", []) if candidate.get("id") == year_id), {})
     used: set[str] = set()
@@ -4632,13 +4681,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 design = payload.get("design", {})
                 year_id = payload.get("year_id", "")
                 brief = payload.get("brief", {})
+                available_topics = heading_catalog_tree(design)
+                hydration_headings = flatten_heading_catalog(available_topics)
                 ai_payload = {
                     "brief": brief,
                     "selection_objectives": brief.get("description", ""),
                     "selection_rule": "Usa selection_objectives come criterio principale per scegliere quali paragrafi e sottoparagrafi inserire nelle UDA.",
                     "target_year_id": year_id,
                     "current_course": compact_design(design),
-                    "available_topics": heading_catalog_tree(design),
+                    "available_topics": available_topics,
                     "constraints": {
                         "use_only_available_topic_ids": True,
                         "do_not_duplicate_topics": True,
@@ -4647,7 +4698,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     },
                 }
                 raw = call_ai_course_plan(ai_payload)
-                self.write_json({"proposal": normalize_course_plan(raw, design, year_id)})
+                self.write_json(
+                    {
+                        "proposal": normalize_course_plan(
+                            raw,
+                            design,
+                            year_id,
+                            headings=hydration_headings,
+                        )
+                    }
+                )
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

@@ -122,6 +122,7 @@ const AI_PROGRESS_STAGES = [
 
 let aiProgressTimer = null;
 let paragraphPreviewRequestId = 0;
+let courseContextRequestId = 0;
 let frameBatch = null;
 let frameVerificationBatch = null;
 let cleanDesignSnapshot = "";
@@ -505,7 +506,9 @@ async function loadCurrentDesign() {
   });
   if (!confirmed) return;
   setStatus("Caricamento progetto corrente...");
+  const requestId = ++courseContextRequestId;
   const courseContext = await fetchCourseContext();
+  if (requestId !== courseContextRequestId) return;
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.headings = courseContext.headings;
@@ -538,7 +541,9 @@ async function loadSavedDesignByName(name, options = {}) {
     if (!confirmed) return;
   }
   setStatus(`Caricamento progetto salvato "${name}"...`);
+  const requestId = ++courseContextRequestId;
   const courseContext = await fetchCourseContext(name);
+  if (requestId !== courseContextRequestId) return;
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.headings = courseContext.headings;
@@ -780,8 +785,9 @@ async function deleteArchiveDesign() {
     setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
     return;
   }
+  const requestId = ++courseContextRequestId;
   const courseContext = await fetchCourseContext();
-  if (!isBoardContextUnchanged(boardContext)) {
+  if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) {
     const detachedDraft = reconcileDeletedArchive(name, payload);
     const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
     setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
@@ -832,8 +838,9 @@ async function newCourseDesign() {
   const saved = await saveArchiveDesignWithName(name, { design, confirmOverwrite: true });
   if (!saved) return;
   const boardContext = captureBoardContext();
+  const requestId = ++courseContextRequestId;
   const courseContext = await fetchCourseContext(name);
-  if (!isBoardContextUnchanged(boardContext)) {
+  if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) {
     setStatus(`Nuovo progetto "${name}" creato. La vista aperta non è stata cambiata.`);
     return;
   }
