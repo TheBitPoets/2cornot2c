@@ -1904,6 +1904,10 @@ async function fillFrameWithAi(year, uda, item) {
 }
 
 async function fillSingleFrameWithAi(year, uda, item) {
+  if (frameBatch || frameVerificationBatch) {
+    setStatus("Una coda AI e gia in esecuzione: attendi il completamento prima di generare una cornice singola.");
+    return false;
+  }
   setStatus(`AI assisted: preparo la cornice per "${item.title}"...`);
   startAiProgress(`AI assisted cornice: ${item.title}`);
   try {
@@ -2407,6 +2411,10 @@ function verifyEntireFrame(item) {
     setStatus("Cornice vuota: inserisci almeno un campo prima di avviare la verifica completa.");
     return;
   }
+  item.frame_quality = {
+    ...defaultFrameQuality(),
+    ...(item.frame_quality || {}),
+  };
   frameVerificationBatch = {
     item,
     fields,
@@ -2433,12 +2441,16 @@ async function verifyNextFrameField() {
   const total = frameVerificationBatch.fields.length;
   showFrameVerificationProgress();
   try {
+    if (!isBoardContextUnchanged(frameVerificationBatch.boardContext)) {
+      throw new Error("la board è cambiata dopo la creazione della coda; verifica annullata");
+    }
     const local = applyLocalTextFixes(String(frameVerificationBatch.item.frame[current.key] || ""));
     frameVerificationBatch.item.frame[current.key] = local.text;
     frameVerificationBatch.item.frame_quality[current.key] = "local";
     renderCourse();
     showFrameVerificationProgress();
     setStatus(`Controllo locale: ${current.label} (${frameVerificationBatch.index + 1}/${total}).`);
+    frameVerificationBatch.boardContext = captureBoardContext();
     await proofreadFrameFieldForBatch(
       frameVerificationBatch.item,
       current,
