@@ -159,6 +159,7 @@ def test_tui_home_exposes_the_complete_lifecycle() -> None:
     assert "Installa, completa o ripara" in rendered
     assert "Aggiorna l'ambiente" in rendered
     assert "Disinstalla l'ambiente" in rendered
+    assert "Ripristina il PC - elimina anche la VM" in rendered
 
 
 def test_tui_uninstall_requires_confirmation_and_launches_separately(
@@ -214,8 +215,40 @@ def test_windows_lifecycle_uses_only_persistent_known_scripts(
         str(launcher / "uninstall-classroom-windows.ps1"),
     )
     assert command[-1] == "-ConfirmedFromTui"
+
+    reset_command = powershell_action_command("reset")
+    assert reset_command[-2:] == (
+        "-ConfirmedFromTui",
+        "-DestroyClassroomVm",
+    )
     with pytest.raises(ValueError, match="non supportata"):
         powershell_action_command("qualcosa")
+
+
+def test_tui_complete_reset_requires_destructive_confirmation(
+    monkeypatch,
+) -> None:
+    pytest.importorskip("utui")
+    from installer.tui import State, confirm_home_action, open_home_action
+
+    launched = []
+    monkeypatch.setattr(
+        "installer.tui.launch_windows_action",
+        lambda action: launched.append(action),
+    )
+    state = State(
+        Host.WINDOWS_AMD64,
+        (Provider.VIRTUALBOX,),
+        screen="home",
+        action_index=4,
+    )
+
+    open_home_action(state)
+    assert state.confirmation_pending is True
+    assert "eliminati definitivamente" in " ".join(state.report)
+
+    confirm_home_action(state)
+    assert launched == ["reset"]
 
 
 def test_tui_launches_environment_without_showing_python_commands(

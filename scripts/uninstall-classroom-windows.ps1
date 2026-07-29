@@ -1,5 +1,6 @@
 param(
-    [switch]$ConfirmedFromTui
+    [switch]$ConfirmedFromTui,
+    [switch]$DestroyClassroomVm
 )
 
 $ErrorActionPreference = "Stop"
@@ -74,7 +75,8 @@ function Test-SafeInstallDirectory {
                     @("Non rimuovere la cartella manualmente."; "Comunica E27 al docente.") $FullPath
             }
         }
-        if (Test-Path (Join-Path $FullPath ".vagrant")) {
+        if ((Test-Path (Join-Path $FullPath ".vagrant")) -and
+            -not $DestroyClassroomVm) {
             Stop-WithMessage "E28" "C'è ancora una macchina virtuale VirtualBox" `
                 "La VM può contenere file. Per evitare perdite non verrà eliminata automaticamente." `
                 @(
@@ -83,7 +85,8 @@ function Test-SafeInstallDirectory {
                     "Poi ripeti la disinstallazione."
                 )
         }
-        if (Test-Path (Join-Path $FullPath ".vagrant-vmware")) {
+        if ((Test-Path (Join-Path $FullPath ".vagrant-vmware")) -and
+            -not $DestroyClassroomVm) {
             Stop-WithMessage "E28" "C'è ancora una macchina virtuale VMware" `
                 "La VM può contenere file. Per evitare perdite non verrà eliminata automaticamente." `
                 @(
@@ -273,6 +276,75 @@ function Backup-StudentWork {
     return $Backup
 }
 
+function Remove-ClassroomVirtualMachines {
+    param([string]$Project)
+
+    $StateDirectories = @(
+        ".vagrant"
+        ".vagrant-vmware"
+    ) | Where-Object { Test-Path (Join-Path $Project $_) }
+    if ($StateDirectories.Count -eq 0) {
+        return
+    }
+    if (-not (Get-Command vagrant -ErrorAction SilentlyContinue)) {
+        Stop-WithMessage "E33" "Non posso eliminare la macchina virtuale" `
+            "La VM esiste, ma Vagrant non è disponibile. Nessun disco è stato cancellato." `
+            @(
+                "Non eliminare file o dischi manualmente."
+                "Comunica E33 al docente."
+            )
+    }
+
+    Push-Location $Project
+    try {
+        foreach ($StateDirectory in $StateDirectories) {
+            $PreviousDotfile = $env:VAGRANT_DOTFILE
+            $env:VAGRANT_DOTFILE = $StateDirectory
+            & vagrant destroy --force
+            $ExitCode = $LASTEXITCODE
+            if ($null -eq $PreviousDotfile) {
+                Remove-Item Env:VAGRANT_DOTFILE -ErrorAction SilentlyContinue
+            } else {
+                $env:VAGRANT_DOTFILE = $PreviousDotfile
+            }
+            if ($ExitCode -ne 0) {
+                Stop-WithMessage "E33" "La VM non è stata eliminata" `
+                    "Vagrant non ha confermato la rimozione del disco. La disinstallazione si è fermata per sicurezza." `
+                    @(
+                        "Chiudi VirtualBox e VMware."
+                        "Riprova il ripristino completo."
+                        "Se ricompare, comunica E33 al docente."
+                    ) "vagrant destroy exit code $ExitCode; $StateDirectory"
+            }
+            $StatePath = Join-Path $Project $StateDirectory
+            if (Test-Path $StatePath) {
+                Remove-Item -LiteralPath $StatePath -Recurse -Force
+            }
+        }
+    } finally {
+        Pop-Location
+    }
+
+    $BoxFile = Join-Path $Project ".classroom-box"
+    if (Test-Path $BoxFile) {
+        $BoxName = (Get-Content $BoxFile -Raw).Trim()
+        if ($BoxName -match "^2cornot2c/") {
+            $ProviderFile = Join-Path $Project ".classroom-provider"
+            $ProviderArgs = @()
+            if (Test-Path $ProviderFile) {
+                $Provider = (Get-Content $ProviderFile -Raw).Trim()
+                if ($Provider -match "^[a-z0-9_-]+$") {
+                    $ProviderArgs = @("--provider", $Provider)
+                }
+            }
+            & vagrant box remove $BoxName @ProviderArgs --force
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "Box $BoxName già assente o non rimovibile."
+            }
+        }
+    }
+}
+
 $SafeInstallDir = Test-SafeInstallDirectory
 $OwnedPackages = Get-OwnedPackages
 $OwnedWsl = Test-WslInstalledByClassroom
@@ -305,8 +377,13 @@ if ($OwnedWsl) {
 if (-not $ConfirmedFromTui) {
     Write-Host ""
     Write-Host "lab, lab2 e modifiche locali verranno salvati prima della rimozione."
-    $Confirmation = Read-Host "Digita esattamente DISINSTALLA"
-    if ($Confirmation -ne "DISINSTALLA") {
+    $RequiredConfirmation = if ($DestroyClassroomVm) {
+        "DISINSTALLA TUTTO"
+    } else {
+        "DISINSTALLA"
+    }
+    $Confirmation = Read-Host "Digita esattamente $RequiredConfirmation"
+    if ($Confirmation -ne $RequiredConfirmation) {
         Write-Host "Disinstallazione annullata senza modifiche."
         exit 2
     }
@@ -328,6 +405,11 @@ try {
 }
 if ($BackupPath) {
     Write-Host "Backup creato: $BackupPath"
+}
+
+if ($DestroyClassroomVm) {
+    Write-Host "Eliminazione della VM 2cornot2c e del relativo disco..."
+    Remove-ClassroomVirtualMachines $SafeInstallDir
 }
 
 if ($ImageReference -and (Get-Command docker -ErrorAction SilentlyContinue)) {
