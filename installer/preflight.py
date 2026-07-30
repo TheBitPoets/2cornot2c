@@ -102,12 +102,29 @@ def evaluate(
             ResourceResult("memory", "warning", "RAM non misurabile automaticamente")
         )
     elif measured.total_memory < minimum_memory:
+        status = (
+            "warning"
+            if provider in {Provider.VIRTUALBOX, Provider.VMWARE}
+            else "blocked"
+        )
+        consequence = (
+            "; installazione consentita, ma Windows e la VM possono "
+            "diventare lenti: chiudi gli altri programmi"
+            if status == "warning"
+            else ""
+        )
+        requirement = (
+            "sono consigliati almeno"
+            if status == "warning"
+            else "servono almeno"
+        )
         results.append(
             ResourceResult(
                 "memory",
-                "blocked",
+                status,
                 f"RAM {measured.total_memory / GIB:.1f} GiB; "
-                f"servono almeno {minimum_memory / GIB:.0f} GiB",
+                f"{requirement} {minimum_memory / GIB:.0f} GiB"
+                f"{consequence}",
             )
         )
     else:

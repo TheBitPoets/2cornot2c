@@ -244,6 +244,7 @@ def _paint_guidance_rows(rows: list[str]) -> list[str]:
 
     markers = (
         ("ERRORE E", "\x1b[31m"),
+        ("AVVISO -", "\x1b[33m"),
         ("AZIONE RICHIESTA", "\x1b[33m"),
         ("COSA SIGNIFICA:", "\x1b[33m"),
         ("COSA DEVI FARE:", "\x1b[33m"),
@@ -319,7 +320,21 @@ def refresh_report(state: State) -> None:
     results = diagnose(install_plan(state.host, provider))
     report: list[str] = []
     for result in results:
-        if not result.ok and result.check.key in {"resources", "network"}:
+        if (
+            result.check.key == "resources"
+            and result.ok
+            and "WARNING " in result.detail
+        ):
+            report.extend(
+                (
+                    "AVVISO - COMPUTER CON RISORSE LIMITATE",
+                    result.detail,
+                    "Puoi continuare comunque con la VM completa.",
+                    "Chiudi Docker Desktop, browser e altri programmi pesanti.",
+                    "Durante l'uso Windows e la VM potrebbero essere lenti.",
+                )
+            )
+        elif not result.ok and result.check.key in {"resources", "network"}:
             report.extend(for_check(result.check.key, result.detail).lines(result.detail))
         else:
             report.append(
