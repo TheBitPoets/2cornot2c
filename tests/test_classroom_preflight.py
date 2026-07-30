@@ -19,7 +19,7 @@ def test_docker_preflight_accepts_minimum_resources() -> None:
     assert {result.status for result in results} == {"ok"}
 
 
-def test_vm_preflight_blocks_resources_but_warns_on_unreliable_virtualization() -> None:
+def test_vm_preflight_warns_on_low_memory_but_blocks_low_disk() -> None:
     results = evaluate(
         Host.WINDOWS_AMD64,
         Provider.VIRTUALBOX,
@@ -27,10 +27,21 @@ def test_vm_preflight_blocks_resources_but_warns_on_unreliable_virtualization() 
     )
 
     assert [result.status for result in results] == [
-        "blocked",
+        "warning",
         "blocked",
         "warning",
     ]
+    assert "installazione consentita" in results[0].detail
+
+
+def test_vm_preflight_allows_nominal_eight_gb_reported_below_eight_gib() -> None:
+    results = evaluate(
+        Host.WINDOWS_AMD64,
+        Provider.VIRTUALBOX,
+        ResourceSnapshot(int(7.7 * GIB), 25 * GIB, True),
+    )
+
+    assert [result.status for result in results] == ["warning", "ok", "ok"]
 
 
 def test_unknown_measurements_warn_but_do_not_block_sufficient_disk() -> None:

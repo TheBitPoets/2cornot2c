@@ -94,6 +94,13 @@ vecchia viene aggiornata con `winget`. Gli aggiornamenti di programmi già
 presenti sono registrati come `updated` e non diventano proprietà di
 2cornot2c: la successiva disinstallazione dell'ambiente li conserva.
 
+Per la VM completa 8 GiB di RAM restano la raccomandazione, non un blocco.
+Un computer nominalmente da 8 GB può dichiarare a Windows meno di 8 GiB:
+l'installer mostra un avviso giallo con le conseguenze, ma permette di
+continuare. Lo studente deve chiudere Docker Desktop, browser e programmi
+pesanti; Windows e la VM possono risultare lenti. Lo spazio disco minimo resta
+invece bloccante.
+
 ## Diagnosi
 
 La prima fetta implementa rilevamento, scelta provider e diagnosi read-only:

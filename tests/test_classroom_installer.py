@@ -461,6 +461,35 @@ def test_colored_diagnostics_leave_panel_padding_unstyled() -> None:
     assert "\x1b[33mCOSA FARE" in command_row
 
 
+def test_low_memory_vm_warning_is_visible_but_does_not_block(
+    monkeypatch,
+) -> None:
+    pytest.importorskip("utui")
+    from installer.diagnostics import CheckResult
+    from installer.tui import State, refresh_report
+
+    plan = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
+    resource_check = next(check for check in plan.checks if check.key == "resources")
+    monkeypatch.setattr(
+        "installer.tui.diagnose",
+        lambda current_plan: (
+            CheckResult(
+                resource_check,
+                True,
+                "WARNING RAM 7.7 GiB; installazione consentita",
+                True,
+            ),
+        ),
+    )
+    state = State(Host.WINDOWS_AMD64, (Provider.VIRTUALBOX,))
+
+    refresh_report(state)
+
+    rendered = " ".join(state.report)
+    assert "AVVISO - COMPUTER CON RISORSE LIMITATE" in rendered
+    assert "Puoi continuare comunque" in rendered
+
+
 def check_results(plan, *, missing: set[str] = set()):
     return tuple(
         CheckResult(check, check.key not in missing, "manca")
