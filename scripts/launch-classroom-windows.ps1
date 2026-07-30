@@ -101,7 +101,8 @@ try {
         exit $LASTEXITCODE
     }
     if ($Provider -eq "virtualbox") {
-        & vagrant up --provider=virtualbox
+        & (Join-Path $InstallDir `
+            "scripts\invoke-vagrant-virtualbox-windows.ps1") -Action up
         exit $LASTEXITCODE
     }
     Write-Host "ERRORE E31 - Ambiente da avviare non riconosciuto" `

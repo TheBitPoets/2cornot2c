@@ -139,12 +139,30 @@ def test_windows_launcher_hides_technical_start_commands() -> None:
 
     assert "selected-provider.txt" in launcher
     assert "student_dev_shell.py" in launcher
-    assert "vagrant up --provider=virtualbox" in launcher
+    assert "invoke-vagrant-virtualbox-windows.ps1" in launcher
     assert "AMBIENTE NON ANCORA PRONTO" in launcher
     assert "Find-ExistingProvider" in launcher
     assert 'Record.key -eq "student-image"' in launcher
     assert "image inspect" in launcher
     assert "Ambiente precedente riconosciuto" in launcher
+
+
+def test_windows_virtualbox_boot_has_bounded_automatic_recovery() -> None:
+    recovery = (
+        ROOT / "scripts" / "invoke-vagrant-virtualbox-windows.ps1"
+    ).read_text(encoding="utf-8")
+    setup = (ROOT / "scripts" / "setup-vm.ps1").read_text(encoding="utf-8")
+
+    assert '[ValidateSet("up", "reload")]' in recovery
+    assert "$RecoveryAfterSeconds = 75" in recovery
+    assert ".vagrant\\machines\\default\\virtualbox\\id" in recovery
+    assert "controlvm $MachineId pause" in recovery
+    assert "controlvm $MachineId resume" in recovery
+    assert '"/VirtualBox/GuestAdd/Version"' in recovery
+    assert "$RecoveryAttempted = $true" in recovery
+    assert "finally" in recovery
+    assert recovery.count("controlvm $MachineId pause") == 1
+    assert setup.count("invoke-vagrant-virtualbox-windows.ps1") == 2
 
 
 def test_wsl_preparation_is_elevated_and_resumes_after_restart() -> None:

@@ -568,6 +568,11 @@ script controlla i prerequisiti, avvia la VM, verifica gli strumenti didattici,
 le Guest Additions e le cartelle condivise. Se il primo controllo fallisce,
 prova automaticamente un riavvio.
 
+Su Windows l'avvio sorveglia anche l'arresto apparente di VirtualBox su
+`Begin: Loading essential drivers...`: dopo un'attesa controllata mette in
+pausa per due secondi e riprende automaticamente soltanto la VM 2cornot2c.
+Non è necessario intervenire dalla finestra di VirtualBox.
+
 La sessione grafica accede automaticamente con l'utente `vagrant`; la password,
 se richiesta, è `vagrant`.
 

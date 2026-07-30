@@ -101,6 +101,15 @@ continuare. Lo studente deve chiudere Docker Desktop, browser e programmi
 pesanti; Windows e la VM possono risultare lenti. Lo spazio disco minimo resta
 invece bloccante.
 
+Durante l'avvio VirtualBox su Windows il launcher sorveglia soltanto la VM
+2cornot2c. Se Linux non raggiunge le Guest Additions entro 75 secondi, esegue
+una sola pausa di due secondi e riprende automaticamente la macchina. Questo
+recupera il blocco osservato su `Begin: Loading essential drivers...` senza
+chiedere allo studente di usare i controlli di VirtualBox. Se la pausa non può
+essere applicata, Vagrant continua normalmente; se VirtualBox non riesce
+neppure a riprendere la VM, il launcher termina con una spiegazione invece di
+rimanere bloccato.
+
 ## Diagnosi
 
 La prima fetta implementa rilevamento, scelta provider e diagnosi read-only:
