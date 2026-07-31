@@ -2809,7 +2809,30 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
     assert payload["dependencies"] == {"assignments": [], "reports": [], "course_designs": []}
     assert payload["activities"] == []
     assert not activity_path.exists()
-    assert synced_directories == [activity_path.parent]
+    assert synced_directories == [activity_path.parent, activity_path.parent]
+
+
+def test_delete_activity_record_restores_file_when_commit_flush_fails(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    calls = 0
+
+    def fail_first_sync(path):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise OSError("directory flush failed")
+
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", fail_first_sync)
+    with pytest.raises(OSError, match="directory flush failed"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert calls == 2
 
 
 def test_delete_activity_record_rejects_nested_json_asset(tmp_path, monkeypatch) -> None:

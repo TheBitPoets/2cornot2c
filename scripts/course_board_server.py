@@ -459,6 +459,7 @@ def configure_data_root(root: Path) -> Path:
     AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
     LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
     recover_interrupted_assignment_deletions()
+    recover_interrupted_activity_deletions()
     return ROOT
 
 
@@ -1203,6 +1204,8 @@ def course_design_activity_dependencies(activity_id: str, activity_path: str) ->
         raise ValueError("Course design corrente non verificabile: symlink non consentito.")
     designs = [("doc/course_design.json", read_design())]
     archived_dir = ROOT / "doc" / "course_designs"
+    if (ROOT / "doc").is_symlink() or archived_dir.is_symlink():
+        raise ValueError("Directory course design non verificabile: symlink non consentito.")
     archived_paths = sorted(archived_dir.glob("*.json")) if archived_dir.is_dir() else []
     for archived_path in archived_paths:
         if archived_path.is_symlink():
@@ -1295,6 +1298,25 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
     }
 
 
+def recover_interrupted_activity_deletions() -> None:
+    """Purge durable activity tombstones left by interrupted cleanup."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        drafts_dir = ROOT / "activities" / "drafts"
+        if drafts_dir.is_symlink():
+            raise RuntimeError("Directory bozze activity non valida: symlink non consentito.")
+        if not drafts_dir.is_dir():
+            return
+        changed = False
+        for tombstone in sorted(drafts_dir.glob(".*.tombstone")):
+            if tombstone.is_symlink() or not tombstone.is_file():
+                raise RuntimeError(f"Tombstone activity non valida: {tombstone.name}")
+            tombstone.unlink()
+            changed = True
+        if changed:
+            thebitlab_storage.sync_directory(drafts_dir)
+
+
 def delete_activity_record(payload: dict) -> dict:
     """Delete one unlinked teacher-authored activity draft."""
 
@@ -1334,9 +1356,27 @@ def delete_activity_record(payload: dict) -> dict:
             "title": activity.get("title", ""),
             "path": repository_relative_path(activity_path),
         }
-        activity_path.unlink()
-        thebitlab_storage.sync_directory(activity_path.parent)
-        return {"ok": True, "deleted": deleted, "dependencies": dependencies, "activities": list_activities()}
+        tombstone = activity_path.with_name(f".{activity_path.name}.{uuid.uuid4().hex}.tombstone")
+        os.replace(activity_path, tombstone)
+        try:
+            thebitlab_storage.sync_directory(activity_path.parent)
+        except Exception:
+            os.replace(tombstone, activity_path)
+            thebitlab_storage.sync_directory(activity_path.parent)
+            raise
+        cleanup_pending = False
+        try:
+            tombstone.unlink()
+            thebitlab_storage.sync_directory(tombstone.parent)
+        except OSError:
+            cleanup_pending = True
+        return {
+            "ok": True,
+            "deleted": deleted,
+            "dependencies": dependencies,
+            "cleanup_pending": cleanup_pending,
+            "activities": list_activities(),
+        }
 
 
 def list_class_rosters() -> list[dict]:
