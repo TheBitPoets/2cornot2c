@@ -397,12 +397,12 @@ Per la macchina virtuale servono:
 - [Git](https://git-scm.com/downloads);
 - [Vagrant](https://developer.hashicorp.com/vagrant/install) 2.4 o successivo.
 
-Serve inoltre un provider:
+Serve inoltre il provider previsto per il sistema operativo:
 
 - su Windows: [VirtualBox](https://www.virtualbox.org/wiki/Downloads) 7.1 o
   successivo;
-- su macOS Apple Silicon: VirtualBox 7.1 o successivo oppure VMware Fusion,
-  come descritto più avanti.
+- su macOS Apple Silicon: [VMware Fusion](https://support.broadcom.com/), come
+  descritto più avanti. VirtualBox non è supportato dal flusso classroom ARM64.
 
 La stessa configurazione supporta Windows su processori Intel/AMD e macOS su
 Apple Silicon. La macchina virtuale usa Ubuntu 24.04 e contiene già compilatore,
@@ -558,16 +558,16 @@ Esegui **un solo avvio guidato**:
 
 - su Windows fai doppio clic su `setup-vm.cmd`;
 - su macOS apri il Terminale nella cartella del progetto ed esegui il comando
-  seguente, quindi scegli VirtualBox o VMware Fusion:
+  seguente per usare il provider VMware già configurato dall'installer:
 
 ```bash
-./scripts/setup-vm.sh
+./scripts/setup-vm.sh --vmware
 ```
 
-Al primo avvio il download della macchina può richiedere alcuni minuti. Lo
-script controlla i prerequisiti, avvia la VM, verifica gli strumenti didattici,
-le Guest Additions e le cartelle condivise. Se il primo controllo fallisce,
-prova automaticamente un riavvio.
+Durante l'installazione guidata il download della macchina può richiedere
+alcuni minuti. Lo script di avvio controlla i prerequisiti, avvia la VM e
+verifica gli strumenti didattici, i Guest Tools del provider e le cartelle
+condivise. Se il primo controllo fallisce, prova automaticamente un riavvio.
 
 La sessione grafica accede automaticamente con l'utente `vagrant`; la password,
 se richiesta, è `vagrant`.
@@ -623,14 +623,10 @@ Gli appunti e il trascinamento dei file sono abilitati in entrambe le
 direzioni. Con VMware le cartelle condivise usano VMware Tools; con VirtualBox
 usano le Guest Additions incluse nella box.
 
-### VirtualBox
+### VirtualBox su Windows
 
-VirtualBox è il provider usato automaticamente su Windows. Su macOS può essere
-scelto dal menu oppure avviato direttamente:
-
-```bash
-./scripts/setup-vm.sh --virtualbox
-```
+VirtualBox è il provider VM supportato su Windows. Il launcher `setup-vm.cmd`
+usa automaticamente la box Packer installata dalla procedura guidata.
 
 I comandi di gestione vanno eseguiti dalla directory del progetto:
 
@@ -643,19 +639,14 @@ I comandi di gestione vanno eseguiti dalla directory del progetto:
 | Ripeti la configurazione | `vagrant provision` |
 | Spegni | `vagrant halt` |
 
-Su macOS Apple Silicon VirtualBox usa una finestra scalata e una risoluzione
-guest stabile di 1280×800. Non abilitare il ridimensionamento automatico: il
-framebuffer ARM di VirtualBox non lo supporta in modo affidabile. Puoi
-ingrandire o ridurre la finestra trascinandone i bordi.
-
 ### VMware Fusion su macOS
 
-Il percorso VMware non modifica la VM VirtualBox esistente. Usa una directory
-di stato separata (`.vagrant-vmware`) e la box ufficiale Bento per
-`vmware_desktop/arm64`. VMware Tools adatta dinamicamente la risoluzione quando
-la finestra viene ridimensionata.
+VMware Fusion è l'unico provider VM supportato su macOS Apple Silicon. Usa una
+directory di stato dedicata (`.vagrant-vmware`) e la box Packer ARM64 scaricata,
+verificata e configurata dall'installer classroom. VMware Tools adatta
+dinamicamente la risoluzione quando la finestra viene ridimensionata.
 
-Prima di selezionare VMware devono essere installati:
+Prima di avviare la VM devono essere installati:
 
 - [VMware Fusion](https://support.broadcom.com/) per Apple Silicon;
 - [Vagrant VMware Utility](https://developer.hashicorp.com/vagrant/install/vmware);
@@ -726,42 +717,31 @@ da una VM già esistente, puoi reinstallarlo con `vm-provision`.
 Il menu applica la risoluzione selezionata e chiede conferma entro 15 secondi.
 Se non viene confermata, ripristina automaticamente quella precedente.
 
-### Passare da un provider all'altro su macOS
+### Installazioni VirtualBox legacy su macOS
 
-VirtualBox e VMware mantengono due VM indipendenti. Le cartelle `lab` e `lab2`
-sono però condivise con entrambe: salva lì il lavoro che vuoi ritrovare
-passando da un provider all'altro.
-
-Prima di avviare un provider, spegni l'altro:
-
-```bash
-# da VirtualBox a VMware
-vagrant halt
-vm-up
-
-# da VMware a VirtualBox
-vm-halt
-./scripts/setup-vm.sh --virtualbox
-```
-
-Non usare `vagrant destroy` se vuoi conservare la VM già configurata.
+Le VM VirtualBox create su macOS da versioni precedenti sono legacy e non
+possono essere avviate dal nuovo flusso classroom ARM64. Salva prima il lavoro
+in `lab` e `lab2`, poi usa la procedura esplicita descritta in
+[`installer/README.md`](installer/README.md#vm-già-esistente) per rimuovere la
+vecchia VM e completa l'installazione VMware. La migrazione non avviene mai
+implicitamente e richiede la conferma esatta `RICREA VM`.
 
 ### Diagnosi rapida
 
 Se la finestra non compare o la macchina non risponde:
 
 ```bash
-# VirtualBox
+# Windows con VirtualBox
 vagrant status
 vagrant reload
 
-# VMware
+# macOS con VMware Fusion
 vm-status
 vm-reload
 ```
 
-Se il problema resta, ripeti il controllo e il provisioning con
-`./scripts/setup-vm.sh --virtualbox` oppure `./scripts/setup-vm.sh --vmware`.
+Se il problema resta, su Windows riapri `setup-vm.cmd`; su macOS ripeti il
+controllo e il provisioning con `./scripts/setup-vm.sh --vmware`.
 
 ### Guest Additions
 
@@ -813,10 +793,11 @@ Riferimento principale: README.md, sezione "Guest Additions" (../README.md#guest
 </table>
 <!-- COURSE-FRAME:END README.md#guest-additions -->
 
-Le Guest Additions sono già incluse nella box Bento usata dal progetto. Non
-installare il plugin `vagrant-vbguest` e non montare manualmente alcuna ISO:
-queste operazioni possono rendere la VM meno stabile. Lo script di avvio
-controlla sia il servizio delle Guest Additions sia le cartelle condivise.
+Le Guest Additions sono già incluse nella box Packer VirtualBox usata su
+Windows. Non installare il plugin `vagrant-vbguest` e non montare manualmente
+alcuna ISO: queste operazioni possono rendere la VM meno stabile. Lo script di
+avvio controlla sia il servizio delle Guest Additions sia le cartelle
+condivise.
 
 Se la macchina era già stata creata, rilancia semplicemente lo stesso script.
 Il docente può ottenere una prima diagnosi con:
