@@ -2884,6 +2884,7 @@ def test_delete_activity_record_keeps_recovery_state_when_commit_and_reset_fail(
         if payload.get("schema_version") != "activity_deletion.v1":
             return original_write(self, path, payload)
         if payload.get("state") == "committed":
+            original_write(self, path, payload)
             commit_failed = True
             raise OSError("commit marker failed")
         if commit_failed:
@@ -2900,8 +2901,8 @@ def test_delete_activity_record_keeps_recovery_state_when_commit_and_reset_fail(
             {"activity_path": "activities/drafts/python-base-somma-001.json"}
         )
 
-    assert not activity_path.exists()
-    assert len(list(activity_path.parent.glob(".*.tombstone"))) == 1
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
     assert len(list(activity_path.parent.glob(".activity-delete-*.txn"))) == 1
 
     monkeypatch.setattr(

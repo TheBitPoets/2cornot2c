@@ -1435,7 +1435,18 @@ def delete_activity_record(payload: dict) -> dict:
             # Publish rollback intent before restoring the original. Recovery
             # always restores rolling_back transactions, regardless of which
             # side of the rename survived a crash.
-            storage.write_json(journal, {**transaction, "state": "rolling_back"})
+            try:
+                storage.write_json(journal, {**transaction, "state": "rolling_back"})
+            except Exception:
+                # Even if the marker cannot be updated, restore the original:
+                # recovery deliberately prefers original+committed over deletion.
+                if tombstone.is_file() and not activity_path.exists():
+                    os.replace(tombstone, activity_path)
+                    try:
+                        thebitlab_storage.sync_directory(activity_path.parent)
+                    except OSError:
+                        pass
+                raise
             if tombstone.is_file() and not activity_path.exists():
                 os.replace(tombstone, activity_path)
                 thebitlab_storage.sync_directory(activity_path.parent)
