@@ -1639,12 +1639,14 @@ def test_sync_file_tree_flushes_regular_files(tmp_path, monkeypatch) -> None:
     first.write_text("{}\n", encoding="utf-8")
     second.write_text("{}\n", encoding="utf-8")
     flushed = []
-    monkeypatch.setattr(course_board_server.assignment_records, "sync_directory", lambda path: None)
+    synced = []
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", synced.append)
     monkeypatch.setattr(course_board_server.os, "fsync", lambda descriptor: flushed.append(descriptor))
 
     course_board_server.sync_file_tree(root)
 
     assert len(flushed) == 2
+    assert set(synced) == {root, first.parent, second.parent, root.parent}
 
 
 def test_delete_assignment_uses_canonical_record_id_for_help_logs(tmp_path, monkeypatch) -> None:
@@ -4924,6 +4926,10 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
                 },
             ],
             "Target AI duplicato",
+        ),
+        (
+            [{"path": "one.py", "target_path": "README.md", "content": "one", "visibility": "student"}],
+            "Target asset riservato",
         ),
     ],
 )

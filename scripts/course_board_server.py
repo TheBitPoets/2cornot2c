@@ -825,8 +825,8 @@ def sync_file_tree(root: Path) -> None:
                 os.fsync(stream.fileno())
             directories.add(candidate.parent)
     for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
-        assignment_records.sync_directory(directory)
-    assignment_records.sync_directory(root.parent)
+        thebitlab_storage.sync_directory(directory)
+    thebitlab_storage.sync_directory(root.parent)
 
 
 def update_help_deletion_manifest(trash_root: Path, **updates: Any) -> dict[str, Any]:
@@ -1516,6 +1516,8 @@ def persist_activity_draft_files(
         )
         if any(create_submission_scaffold.portable_paths_overlap(target_path, existing) for existing in target_paths):
             raise ValueError(f"Target AI duplicato, equivalente o sovrapposto: {target_path.as_posix()}.")
+        if create_submission_scaffold.is_reserved_scaffold_target(target_path):
+            raise ValueError(f"Target asset riservato allo scaffold: {target_path.as_posix()}.")
         target_paths.append(target_path)
         metadata = {
             "type": asset_type,
