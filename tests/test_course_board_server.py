@@ -2846,6 +2846,32 @@ def test_delete_activity_record_restores_file_when_commit_flush_fails(tmp_path, 
     assert failed is True
 
 
+def test_delete_activity_record_recovers_when_committed_journal_write_fails(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    original_write = course_board_server.thebitlab_storage.JsonAssignmentStorage.write_json
+
+    def fail_committed(self, path, payload):
+        if payload.get("schema_version") == "activity_deletion.v1" and payload.get("state") == "committed":
+            raise OSError("committed journal failed")
+        return original_write(self, path, payload)
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        fail_committed,
+    )
+    with pytest.raises(OSError, match="committed journal failed"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+
+
 def test_delete_activity_record_rejects_nested_json_asset(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     asset_path = tmp_path / "activities" / "drafts" / "assets" / "demo" / "fixture.json"

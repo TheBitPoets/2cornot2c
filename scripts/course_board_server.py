@@ -1419,7 +1419,14 @@ def delete_activity_record(payload: dict) -> dict:
         except Exception:
             recover_interrupted_activity_deletions()
             raise
-        storage.write_json(journal, {**transaction, "state": "committed"})
+        try:
+            storage.write_json(journal, {**transaction, "state": "committed"})
+        except Exception:
+            try:
+                storage.write_json(journal, transaction)
+            finally:
+                recover_interrupted_activity_deletions()
+            raise
         cleanup_pending = False
         try:
             recover_interrupted_activity_deletions()
