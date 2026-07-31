@@ -2826,6 +2826,36 @@ def test_delete_activity_record_rejects_nested_json_asset(tmp_path, monkeypatch)
     assert asset_path.exists()
 
 
+@pytest.mark.skipif(os.name == "nt", reason="creazione symlink non disponibile nel runner locale Windows")
+def test_delete_activity_record_rejects_symlink_alias(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    target = tmp_path / "activities" / "drafts" / "target.json"
+    write_demo_activity(target, activity_id="target")
+    alias = target.with_name("alias.json")
+    alias.symlink_to(target.name)
+
+    with pytest.raises(ValueError, match="symlink"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/alias.json"}
+        )
+
+    assert alias.is_symlink()
+    assert target.exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="creazione symlink non disponibile nel runner locale Windows")
+def test_course_design_dependency_scan_rejects_archived_symlink(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    outside = tmp_path / "outside.json"
+    outside.write_text('{"years": []}', encoding="utf-8")
+    archived_dir = tmp_path / "doc" / "course_designs"
+    archived_dir.mkdir(parents=True)
+    (archived_dir / "linked.json").symlink_to(outside)
+
+    with pytest.raises(ValueError, match="non verificabile"):
+        course_board_server.course_design_activity_dependencies("demo", "activities/drafts/demo.json")
+
+
 def test_delete_activity_record_blocks_when_course_design_links_activity(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"

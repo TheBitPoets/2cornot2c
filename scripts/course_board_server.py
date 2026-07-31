@@ -1198,11 +1198,17 @@ def ensure_activity_draft_path(path: Path) -> None:
 def course_design_activity_dependencies(activity_id: str, activity_path: str) -> list[dict]:
     """Return current and archived course-design links to one activity."""
 
+    current_path = ROOT / "doc" / "course_design.json"
+    if current_path.is_symlink():
+        raise ValueError("Course design corrente non verificabile: symlink non consentito.")
     designs = [("doc/course_design.json", read_design())]
-    for summary in list_saved_designs():
-        name = str(summary.get("name", "")).strip()
-        if name:
-            designs.append((f"doc/course_designs/{name}", read_saved_design(name)))
+    archived_dir = ROOT / "doc" / "course_designs"
+    archived_paths = sorted(archived_dir.glob("*.json")) if archived_dir.is_dir() else []
+    for archived_path in archived_paths:
+        if archived_path.is_symlink():
+            raise ValueError(f"Course design archiviato non verificabile: {archived_path.name}.")
+        name = safe_design_name(archived_path.name)
+        designs.append((f"doc/course_designs/{name}", read_saved_design(name)))
 
     dependencies = []
     path_key = activity_path.casefold()
@@ -1293,7 +1299,21 @@ def delete_activity_record(payload: dict) -> dict:
     """Delete one unlinked teacher-authored activity draft."""
 
     with thebitlab_storage.course_storage_lock(ROOT):
-        activity_path = resolve_local_path(str(payload.get("activity_path", "")), "activity_path")
+        raw_activity_path = str(payload.get("activity_path", "")).strip().replace("\\", "/")
+        relative_path = Path(raw_activity_path)
+        if (
+            not raw_activity_path
+            or relative_path.is_absolute()
+            or relative_path.as_posix() != raw_activity_path
+            or any(part in {"", ".", ".."} for part in relative_path.parts)
+        ):
+            raise ValueError("activity_path deve essere un percorso relativo canonico.")
+        lexical_path = ROOT
+        for part in relative_path.parts:
+            lexical_path /= part
+            if lexical_path.is_symlink():
+                raise ValueError("activity_path non puo attraversare symlink.")
+        activity_path = resolve_local_path(raw_activity_path, "activity_path")
         if not activity_path.is_file():
             raise FileNotFoundError(f"Activity non trovata: {activity_path}")
         ensure_activity_draft_path(activity_path)
