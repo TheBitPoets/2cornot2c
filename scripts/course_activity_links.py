@@ -191,6 +191,12 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                 validation_errors = validate_activity.validate_activity(payload, link["activity_path"])
                 if validation_errors:
                     raise ValueError(f"Activity collegata non valida: {validation_errors[0]}.")
+                normalized_activity = normalize_activity(payload)
+                selected_language = create_submission_scaffold.language_for(payload)
+                source_name = str(normalized_activity.get("source_name", "")) or (
+                    create_submission_scaffold.default_source_name_for(selected_language)
+                )
+                source_name = create_submission_scaffold.validate_source_name(source_name)
                 source_paths: list[Path] = []
                 target_paths: list[Path] = []
                 activity_root = resolved.parent.resolve(strict=True)
@@ -209,6 +215,16 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                         raise ValueError("Activity collegata con target asset duplicato o sovrapposto.")
                     if create_submission_scaffold.is_reserved_scaffold_target(target):
                         raise ValueError(f"Target asset riservato allo scaffold: {target.as_posix()}.")
+                    target_key = create_submission_scaffold.portable_path_key(target)
+                    source_name_path = Path(source_name)
+                    source_name_key = create_submission_scaffold.portable_path_key(source_name_path)
+                    if target_key != source_name_key and create_submission_scaffold.portable_paths_overlap(
+                        target,
+                        source_name_path,
+                    ):
+                        raise ValueError(f"Target asset sovrapposto al file sorgente: {target.as_posix()}.")
+                    if target_key == source_name_key and target.as_posix() != source_name_path.as_posix():
+                        raise ValueError(f"Target sorgente non canonico: {target.as_posix()}.")
                     source_path = activity_root
                     for part in source.parts:
                         try:
@@ -229,13 +245,6 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                         raise ValueError(f"Asset non trovato: {source.as_posix()}.")
                     source_paths.append(source)
                     target_paths.append(target)
-                normalized_activity = normalize_activity(payload)
-                source_name = str(normalized_activity.get("source_name", ""))
-                if source_name:
-                    create_submission_scaffold.validate_source_name(source_name)
-                language = str(normalized_activity.get("language", ""))
-                if language:
-                    create_submission_scaffold.validate_language(language)
                 authoritative_id = str(normalized_activity.get("id", ""))
                 if authoritative_id != link["activity_id"]:
                     raise ValueError(f"activity_id non corrisponde al file {link['activity_path']}.")

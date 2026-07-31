@@ -179,6 +179,13 @@ def test_validate_course_activity_targets_requires_matching_authoritative_file(t
     with pytest.raises(ValueError, match="non portabile"):
         validate_course_activity_targets(design(link()), tmp_path)
     del payload["source_name"]
+    payload["language"] = "c"
+    payload["linguaggio"] = "python"
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="stesso linguaggio"):
+        validate_course_activity_targets(design(link()), tmp_path)
+    del payload["language"]
+    del payload["linguaggio"]
     payload["assets"] = [
         {
             "type": "starter",
@@ -195,10 +202,15 @@ def test_validate_course_activity_targets_requires_matching_authoritative_file(t
         {
             "type": "starter",
             "path": "assets/missing.txt",
-            "target_path": "missing.txt",
+            "target_path": "main.c/nested.txt",
             "visibility": "student",
         }
     ]
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="sovrapposto al file sorgente"):
+        validate_course_activity_targets(design(link()), tmp_path)
+
+    payload["assets"][0]["target_path"] = "missing.txt"
     activity_path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="non trovato"):
         validate_course_activity_targets(design(link()), tmp_path)
