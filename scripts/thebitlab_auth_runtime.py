@@ -91,6 +91,9 @@ class GoogleOidcRuntime:
             or type(session_routes) is not SessionHttpRoutes
             or session_routes.sessions is not routes.session_discarder
             or session_routes.proxy_resolver is not routes.proxy_resolver
+            or session_routes.admin_provisioning is None
+            or session_routes.admin_provisioning.storage
+            is not routes.session_discarder.sessions.storage
             or type(tui_pairing_routes) is not TuiPairingHttpRoutes
             or tui_pairing_routes.proxy_resolver is not routes.proxy_resolver
             or tui_pairing_routes.boundary.http_sessions is not routes.session_discarder

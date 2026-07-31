@@ -11,8 +11,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 from scripts.thebitlab_auth_runtime import (
     AuthRuntimeConfigurationError,
+    GoogleOidcRuntime,
     _windows_acl_tools,
     compose_google_oidc_runtime as _compose_google_oidc_runtime,
 )
@@ -130,6 +132,21 @@ def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> Non
     assert {"users", "sessions", "rate_limit_counters", "rate_limit_metadata"} <= tables
     if os.name != "nt":
         assert database.stat().st_mode & 0o777 == 0o600
+
+
+def test_runtime_rejects_admin_service_backed_by_another_storage(tmp_path: Path) -> None:
+    runtime = compose_google_oidc_runtime(valid_environment(), data_root=tmp_path)
+    runtime.session_routes.admin_provisioning.storage = SqliteIdentityStorage(
+        tmp_path / "rogue.sqlite3"
+    )
+
+    with pytest.raises(AuthRuntimeConfigurationError, match="Grafo autenticazione"):
+        GoogleOidcRuntime(
+            runtime.routes,
+            runtime.session_routes,
+            runtime.tui_pairing_routes,
+            runtime.github_routes,
+        )
 
 
 def test_composition_accepts_relative_database_and_canonical_account_landing(

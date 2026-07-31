@@ -172,6 +172,24 @@ def test_admin_page_requires_current_admin_and_escapes_read_model(tmp_path) -> N
     assert header(response, "Cache-Control") == "no-store"
     assert header(response, "X-Frame-Options") == "DENY"
 
+    for index in range(40):
+        storage.create_user(
+            UserAccount(
+                f"pending-{index + 100}",
+                "<&>" * 150,
+                "pending",
+                True,
+                NOW,
+                NOW,
+            )
+        )
+    bounded = routes.dispatch(
+        request("GET", "/auth/admin", ("Cookie", cookie(established)))
+    )
+    assert bounded.status_code == 200
+    assert len(bounded.body) <= 16 * 1024
+    assert "Elenco troncato" in bounded.body.decode("utf-8")
+
     student_storage, student_boundary, _student_routes, student_session = build_graph(
         tmp_path, "student"
     )

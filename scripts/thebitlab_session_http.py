@@ -286,14 +286,31 @@ class SessionHttpRoutes:
 
     def _admin_response(self, context) -> SessionHttpResponse:
         snapshot = self.admin_provisioning.snapshot(context.user)
-        pending = "".join(
-            f"<li><code>{html.escape(user.user_id)}</code> — {html.escape(user.display_name)}</li>"
-            for user in snapshot.pending_users
-        ) or "<li>Nessun account pending</li>"
-        classes = "".join(
-            f"<li><code>{html.escape(item.class_id)}</code> — {html.escape(item.label)}</li>"
-            for item in snapshot.classes
-        ) or "<li>Nessuna classe</li>"
+        budget = 10_000
+
+        def bounded_rows(items, render, empty):
+            nonlocal budget
+            rows = []
+            for item in items:
+                row = render(item)
+                size = len(row.encode("utf-8"))
+                if size > budget:
+                    rows.append("<li>Elenco troncato</li>")
+                    break
+                rows.append(row)
+                budget -= size
+            return "".join(rows) or empty
+
+        pending = bounded_rows(
+            snapshot.pending_users,
+            lambda user: f"<li><code>{html.escape(user.user_id)}</code> — {html.escape(user.display_name)}</li>",
+            "<li>Nessun account pending</li>",
+        )
+        classes = bounded_rows(
+            snapshot.classes,
+            lambda item: f"<li><code>{html.escape(item.class_id)}</code> — {html.escape(item.label)}</li>",
+            "<li>Nessuna classe</li>",
+        )
         body = (
             "<!doctype html><html lang=\"it\"><head><meta charset=\"utf-8\">"
             "<title>Amministrazione - TheBitLab</title></head><body><main>"
