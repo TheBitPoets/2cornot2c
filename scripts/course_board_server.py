@@ -4774,13 +4774,13 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 write_design(payload)
                 self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
-            except course_source_catalog.CourseSourceCatalogError as error:
+            except (course_source_catalog.CourseSourceCatalogError, ValueError) as error:
                 self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/course-plan-md":
             try:
                 self.write_json(generate_course_plan_md(payload.get("design", payload)))
-            except course_source_catalog.CourseSourceCatalogError as error:
+            except (course_source_catalog.CourseSourceCatalogError, ValueError) as error:
                 self.write_error_json(400, str(error))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)

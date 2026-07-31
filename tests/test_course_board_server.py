@@ -4646,6 +4646,48 @@ def test_teacher_post_rejects_invalid_and_oversized_json_bodies(tmp_path) -> Non
             "Richiesta docente troppo grande."
         )
         oversized.close()
+
+        invalid_design = {
+            "years": [
+                {
+                    "id": "terzo-anno",
+                    "udas": [
+                        {
+                            "id": "uda-1",
+                            "activity_links": [
+                                {
+                                    "activity_id": "unsafe",
+                                    "activity_path": "../outside.json",
+                                    "title": "Unsafe",
+                                    "kind": "laboratorio",
+                                    "role": "practice",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        for path, payload in (
+            ("/api/course-design", invalid_design),
+            ("/api/course-plan-md", {"design": invalid_design}),
+        ):
+            body = json.dumps(payload).encode("utf-8")
+            invalid = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+            invalid.request(
+                "POST",
+                path,
+                body=body,
+                headers={
+                    "Authorization": authorization,
+                    "Content-Type": "application/json",
+                    "Content-Length": str(len(body)),
+                },
+            )
+            invalid_response = invalid.getresponse()
+            assert invalid_response.status == 400
+            assert "activity_path" in json.loads(invalid_response.read().decode("utf-8"))["error"]
+            invalid.close()
     finally:
         if server is not None:
             server.shutdown()

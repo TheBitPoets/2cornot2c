@@ -95,6 +95,20 @@ def test_validate_course_activity_links_allows_legacy_design_without_links() -> 
 
 
 @pytest.mark.parametrize(
+    "malformed",
+    [
+        {"years": "terzo-anno"},
+        {"years": ["terzo-anno"]},
+        {"years": [{"udas": {"uda-1": {}}}]},
+        {"years": [{"udas": ["uda-1"]}]},
+    ],
+)
+def test_validate_course_activity_links_rejects_malformed_containers(malformed) -> None:
+    with pytest.raises(ValueError):
+        validate_course_activity_links(malformed)
+
+
+@pytest.mark.parametrize(
     "duplicates",
     [
         (link(), link(activity_path="activities/examples/other.json")),

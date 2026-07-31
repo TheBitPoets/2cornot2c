@@ -97,12 +97,14 @@ def validate_course_activity_links(design: Any) -> None:
         raise ValueError("years deve essere una lista.")
     for year in years:
         if not isinstance(year, Mapping):
-            continue
+            raise ValueError("Ogni elemento di years deve essere un oggetto.")
         udas = year.get("udas", [])
         if not isinstance(udas, list):
-            continue
+            raise ValueError("udas deve essere una lista.")
         for uda in udas:
-            if not isinstance(uda, Mapping) or "activity_links" not in uda:
+            if not isinstance(uda, Mapping):
+                raise ValueError("Ogni UDA deve essere un oggetto.")
+            if "activity_links" not in uda:
                 continue
             links = uda["activity_links"]
             if not isinstance(links, list):
@@ -124,13 +126,9 @@ def iter_scheduled_activity_links(design: Any) -> Iterator[dict[str, str]]:
 
     validate_course_activity_links(design)
     for year in design.get("years", []):
-        if not isinstance(year, Mapping):
-            continue
         year_id = str(year.get("id", ""))
         year_title = str(year.get("title", ""))
         for uda in year.get("udas", []):
-            if not isinstance(uda, Mapping):
-                continue
             uda_id = str(uda.get("id", ""))
             uda_title = str(uda.get("title", ""))
             for raw_link in uda.get("activity_links", []):
