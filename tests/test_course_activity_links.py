@@ -127,6 +127,10 @@ def test_validate_course_activity_links_rejects_malformed_containers(malformed) 
             link(activity_path="activities/examples/Demo.json"),
             link(activity_id="other-activity", activity_path="activities/examples/demo.json"),
         ),
+        (
+            link(activity_id="Activity-1"),
+            link(activity_id="activity-1", activity_path="activities/examples/other.json"),
+        ),
     ],
 )
 def test_validate_course_activity_links_rejects_duplicate_id_or_path(duplicates) -> None:

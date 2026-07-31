@@ -138,10 +138,11 @@ def validate_course_activity_links(design: Any) -> None:
             seen_paths: set[str] = set()
             for raw_link in links:
                 link = validate_activity_link(raw_link)
+                id_key = link["activity_id"].casefold()
                 path_key = link["activity_path"].casefold()
-                if link["activity_id"] in seen_ids or path_key in seen_paths:
+                if id_key in seen_ids or path_key in seen_paths:
                     raise ValueError("La stessa activity non puo essere collegata due volte alla medesima UDA.")
-                seen_ids.add(link["activity_id"])
+                seen_ids.add(id_key)
                 seen_paths.add(path_key)
 
 

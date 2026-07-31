@@ -4867,6 +4867,8 @@ def test_save_activity_overwrite_cannot_change_identity_on_slug_collision(tmp_pa
 def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    synced_directories = []
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", synced_directories.append)
     result = course_board_server.save_activity({
         "title": "Asset AI",
         "kind": "laboratorio",
@@ -4894,6 +4896,10 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
     assert len(asset["path"].split("/")[2]) == 32
     assert asset["target_path"] == "starter/main.py"
     assert (tmp_path / "activities" / "drafts" / asset["path"]).read_text(encoding="utf-8") == "print('ok')\n"
+    drafts_dir = tmp_path / "activities" / "drafts"
+    assert drafts_dir in synced_directories
+    assert drafts_dir / "assets" in synced_directories
+    assert drafts_dir / "assets" / "asset-ai" in synced_directories
 
 
 def test_save_activity_keeps_old_and_orphan_bundles_when_json_save_fails(tmp_path, monkeypatch) -> None:

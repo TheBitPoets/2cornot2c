@@ -1514,9 +1514,15 @@ def persist_activity_draft_files(
     bundle_id = hashlib.sha256(
         json.dumps(fingerprint, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()[:32]
-    bundle_parent = drafts_dir / "assets" / create_activity.slugify(activity_id)
+    assets_root = drafts_dir / "assets"
+    bundle_parent = assets_root / create_activity.slugify(activity_id)
     bundle_dir = bundle_parent / bundle_id
     bundle_parent.mkdir(parents=True, exist_ok=True)
+    # Sync every ancestor entry even on retries: a previous attempt may have
+    # created it and then failed before its directory entry became durable.
+    thebitlab_storage.sync_directory(drafts_dir)
+    thebitlab_storage.sync_directory(assets_root)
+    thebitlab_storage.sync_directory(bundle_parent)
     staging_dir = Path(tempfile.mkdtemp(prefix=f".{bundle_id}.", dir=bundle_parent))
     try:
         for source, content, _ in normalized:
@@ -1528,7 +1534,8 @@ def persist_activity_draft_files(
             shutil.rmtree(staging_dir)
         else:
             os.replace(staging_dir, bundle_dir)
-            thebitlab_storage.sync_directory(bundle_parent)
+        # Required in both branches: an earlier post-rename fsync may have failed.
+        thebitlab_storage.sync_directory(bundle_parent)
     finally:
         if staging_dir.exists():
             shutil.rmtree(staging_dir)
