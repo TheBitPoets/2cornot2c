@@ -181,12 +181,13 @@ def sync_directory(path: Path) -> None:
         os.close(descriptor)
 
 
-def recover_json_rollbacks(directory: Path) -> None:
+def recover_json_rollbacks(directory: Path, target_name: str | None = None) -> None:
     """Restore durable JSON backups left by interrupted rollback."""
 
     if not directory.is_dir() or directory.is_symlink():
         return
-    for backup in sorted(directory.rglob(".*.*.rollback")):
+    pattern = f".{target_name}.*.rollback" if target_name else ".*.*.rollback"
+    for backup in sorted(directory.glob(pattern) if target_name else directory.rglob(pattern)):
         if backup.is_symlink() or not backup.is_file():
             raise RuntimeError(f"Backup JSON non valido: {backup}")
         core = backup.name[1 : -len(".rollback")]
@@ -542,10 +543,15 @@ class JsonAssignmentStorage:
         return payload
 
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
-        """Atomically replace JSON and restore the prior version on commit failure."""
+        """Atomically replace JSON while preserving per-file concurrency."""
+
+        JsonAssignmentStorage._write_json_locked(self, path, payload)
+
+    def _write_json_locked(self, path: Path, payload: dict[str, Any]) -> None:
+        """Restore the prior JSON version on commit failure."""
 
         ensure_directory_durable(path.parent, self.root)
-        recover_json_rollbacks(path.parent)
+        recover_json_rollbacks(path.parent, path.name)
         destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
         backup_path: Path | None = None
         if path.exists():
@@ -613,10 +619,8 @@ class JsonAssignmentStorage:
                 os.close(descriptor)
             temporary_path.unlink(missing_ok=True)
             if backup_path is not None and (not published or commit_complete or rollback_complete):
-                try:
-                    backup_path.unlink(missing_ok=True)
-                except OSError:
-                    pass
+                backup_path.unlink(missing_ok=True)
+                sync_directory(path.parent)
 
     def save_activity(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]:
         """Validate and persist a teacher-authored activity draft."""
