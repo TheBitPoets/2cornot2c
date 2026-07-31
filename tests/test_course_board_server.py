@@ -2900,8 +2900,8 @@ def test_delete_activity_record_keeps_recovery_state_when_commit_and_reset_fail(
             {"activity_path": "activities/drafts/python-base-somma-001.json"}
         )
 
-    assert activity_path.exists()
-    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert not activity_path.exists()
+    assert len(list(activity_path.parent.glob(".*.tombstone"))) == 1
     assert len(list(activity_path.parent.glob(".activity-delete-*.txn"))) == 1
 
     monkeypatch.setattr(
@@ -5139,9 +5139,10 @@ def test_save_activity_rejects_corrupted_existing_immutable_bundle(tmp_path, mon
         "estimated_minutes": "20",
         "language": "python",
         "source_name": "main.py",
-        "files": [{"path": "starter.py", "content": "original\n", "visibility": "student"}],
+        "files": [{"path": "starter.py", "content": "original\r\n", "visibility": "student"}],
     }
     result = course_board_server.save_activity(payload)
+    course_board_server.save_activity({**payload, "files": None, "overwrite": True})
     asset_path = tmp_path / result["activity"]["path"]
     saved = json.loads(asset_path.read_text(encoding="utf-8"))
     bundle_file = asset_path.parent / saved["assets"][0]["path"]

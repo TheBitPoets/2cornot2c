@@ -1333,7 +1333,7 @@ def recover_interrupted_activity_deletions() -> None:
             original_name = str(transaction.get("original", ""))
             tombstone_name = str(transaction.get("tombstone", ""))
             if (
-                state not in {"prepared", "committed"}
+                state not in {"prepared", "rolling_back", "committed"}
                 or Path(original_name).name != original_name
                 or Path(tombstone_name).name != tombstone_name
                 or not tombstone_name.endswith(".tombstone")
@@ -1344,7 +1344,7 @@ def recover_interrupted_activity_deletions() -> None:
             referenced_tombstones.add(tombstone_name)
             if original.is_symlink() or tombstone.is_symlink():
                 raise RuntimeError(f"Path journal activity non valido: {journal.name}")
-            if state == "prepared":
+            if state in {"prepared", "rolling_back"}:
                 if tombstone.is_file() and not original.exists():
                     os.replace(tombstone, original)
                     thebitlab_storage.sync_directory(drafts_dir)
@@ -1432,13 +1432,13 @@ def delete_activity_record(payload: dict) -> dict:
         try:
             storage.write_json(journal, {**transaction, "state": "committed"})
         except Exception:
+            # Publish rollback intent before restoring the original. Recovery
+            # always restores rolling_back transactions, regardless of which
+            # side of the rename survived a crash.
+            storage.write_json(journal, {**transaction, "state": "rolling_back"})
             if tombstone.is_file() and not activity_path.exists():
                 os.replace(tombstone, activity_path)
                 thebitlab_storage.sync_directory(activity_path.parent)
-            # Only commit-oriented recovery after a durable prepared marker.
-            # If this write fails, keep the restored original plus journal for
-            # explicit fail-closed operator recovery at the next startup.
-            storage.write_json(journal, transaction)
             recover_interrupted_activity_deletions()
             raise
         cleanup_pending = False
@@ -1841,7 +1841,7 @@ def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> N
         ):
             raise ValueError(f"Asset preservato fuori da un bundle immutabile: {source.as_posix()}.")
         try:
-            content = source_file.read_text(encoding="utf-8")
+            content = source_file.read_bytes().decode("utf-8")
         except (OSError, UnicodeError) as error:
             raise ValueError(f"Asset preservato non leggibile: {source.as_posix()}.") from error
         bundle_ids.add(source_parts[2])
