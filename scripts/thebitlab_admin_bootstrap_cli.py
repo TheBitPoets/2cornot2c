@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
-import argparse
 import sys
+
+if __name__ == "__main__" and not sys.flags.isolated:
+    print("Avviare il bootstrap con Python in modalità isolata (-I).", file=sys.stderr)
+    raise SystemExit(2)
+
+import argparse
 from pathlib import Path
 
 if __package__ in {None, ""}:

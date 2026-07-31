@@ -18,7 +18,7 @@ Gli errori applicativi sono sanitizzati e non serializzano identità provider o 
 Dopo che il primo account Google è stato creato come `pending`, un operatore locale con accesso al database protetto esegue una sola volta:
 
 ```text
-python scripts/thebitlab_admin_bootstrap_cli.py --database <auth.sqlite3> --user-id <user-id-TheBitLab>
+python -I scripts/thebitlab_admin_bootstrap_cli.py --database <auth.sqlite3> --user-id <user-id-TheBitLab>
 ```
 
-Il comando non accetta email, subject provider, cookie o token. Verifica nuovamente ACL/permessi del database, quindi promuove il target pending e revoca le sue sessioni nella stessa transazione. Fallisce se esiste già un admin, il target non è pending/attivo, possiede membership, la revisione cambia o il clock precede una sessione corrente. Le esecuzioni concorrenti producono un solo vincitore; output ed errori non mostrano lo user ID. Dopo il bootstrap l'admin deve effettuare nuovamente il login.
+Il comando rifiuta l'avvio senza la modalità Python isolata `-I`, che ignora `PYTHONPATH`, user site e variabili Python ereditate prima di caricare moduli privilegiati. Non accetta email, subject provider, cookie o token. Verifica nuovamente ACL/permessi del database, quindi promuove il target pending e revoca le sue sessioni nella stessa transazione. Fallisce se esiste già un admin, il target non è pending/attivo, possiede membership, la revisione cambia o il clock precede una sessione corrente. Le esecuzioni concorrenti producono un solo vincitore; output ed errori non mostrano lo user ID. Dopo il bootstrap l'admin deve effettuare nuovamente il login.

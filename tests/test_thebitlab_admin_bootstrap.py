@@ -99,7 +99,7 @@ def test_cli_is_directly_executable_without_namespace_package_hijack(tmp_path) -
     environment = dict(os.environ)
     environment["PYTHONPATH"] = str(fake.parent)
     completed = subprocess.run(
-        [sys.executable, "scripts/thebitlab_admin_bootstrap_cli.py", "--help"],
+        [sys.executable, "-I", "scripts/thebitlab_admin_bootstrap_cli.py", "--help"],
         cwd=root,
         env=environment,
         capture_output=True,
@@ -111,6 +111,17 @@ def test_cli_is_directly_executable_without_namespace_package_hijack(tmp_path) -
     assert "--database" in completed.stdout
     assert "ModuleNotFoundError" not in completed.stderr
     assert "HIJACKED" not in completed.stderr
+
+    non_isolated = subprocess.run(
+        [sys.executable, "scripts/thebitlab_admin_bootstrap_cli.py", "--help"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert non_isolated.returncode == 2
+    assert "modalità isolata" in non_isolated.stderr
 
 
 def test_cli_sanitizes_storage_initialization_failure(tmp_path, monkeypatch, capsys) -> None:
