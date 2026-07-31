@@ -761,13 +761,21 @@ def _verify_windows_ancestor_chain(path: Path, sid: str) -> None:
 def _windows_acl_tools(
     *, acl_path: Path | None = None, acl_sid: str | None = None
 ) -> tuple[str, str, dict[str, str]]:
-    system_root = os.environ.get("SystemRoot", "")
-    if not system_root or "\x00" in system_root:
-        raise OSError("SystemRoot Windows non valido")
+    try:
+        import ctypes
+
+        buffer = ctypes.create_unicode_buffer(32_768)
+        length = ctypes.windll.kernel32.GetSystemDirectoryW(buffer, len(buffer))
+        if not 0 < length < len(buffer):
+            raise OSError("Directory sistema Windows non disponibile")
+        system_directory = Path(buffer.value)
+        system_root = str(system_directory.parent)
+    except (AttributeError, OSError, ValueError):
+        raise OSError("Directory sistema Windows non disponibile") from None
     powershell = str(
-        Path(system_root) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+        system_directory / "WindowsPowerShell" / "v1.0" / "powershell.exe"
     )
-    icacls = str(Path(system_root) / "System32" / "icacls.exe")
+    icacls = str(system_directory / "icacls.exe")
     environment = {"SystemRoot": system_root, "WINDIR": system_root}
     if acl_path is not None and acl_sid is not None:
         environment["THEBITLAB_ACL_PATH"] = str(acl_path)
