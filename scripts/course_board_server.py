@@ -1255,7 +1255,9 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
         assignment = assignment_records.validate_assignment_record(record_storage.read_json(assignment_file))
         assignment_activity_id = str(assignment.get("activity_id", "")).strip()
         assignment_activity_path = str(assignment.get("activity_path", "")).strip().replace("\\", "/")
-        if (activity_id and assignment_activity_id == activity_id) or assignment_activity_path == relative_activity_path:
+        if (
+            activity_id and assignment_activity_id.casefold() == activity_id.casefold()
+        ) or assignment_activity_path.casefold() == relative_activity_path.casefold():
             assignments.append(
                 {
                     "id": assignment.get("id", ""),
@@ -1288,7 +1290,9 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
         report = storage.read_assignment_report(name)
         report_activity_id = str(report.get("activity_id", "")).strip()
         report_activity_path = str(report.get("activity_path", "")).strip().replace("\\", "/")
-        if (activity_id and report_activity_id == activity_id) or report_activity_path == relative_activity_path:
+        if (
+            activity_id and report_activity_id.casefold() == activity_id.casefold()
+        ) or report_activity_path.casefold() == relative_activity_path.casefold():
             reports.append(
                 {
                     "name": name,

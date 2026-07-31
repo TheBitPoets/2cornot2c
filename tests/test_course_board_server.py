@@ -3022,8 +3022,8 @@ def test_delete_activity_record_blocks_when_assignment_exists(tmp_path, monkeypa
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
     storage.write_assignment(
         assignment_records.build_assignment_record(
-            activity_id="python-base-somma-001",
-            activity_path="activities/drafts/python-base-somma-001.json",
+            activity_id="PYTHON-BASE-SOMMA-001",
+            activity_path="activities/drafts/PYTHON-BASE-SOMMA-001.json",
             target_type="class",
             class_id="3A-TPSI",
             class_label="3A TPSI",
