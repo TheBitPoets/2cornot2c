@@ -1179,8 +1179,39 @@ def ensure_activity_draft_path(path: Path) -> None:
         raise ValueError("Puoi cancellare solo bozze activity dentro activities/drafts.") from error
 
 
+def course_design_activity_dependencies(activity_id: str, activity_path: str) -> list[dict]:
+    """Return current and archived course-design links to one activity."""
+
+    designs = [("doc/course_design.json", read_design())]
+    for summary in list_saved_designs():
+        name = str(summary.get("name", "")).strip()
+        if name:
+            designs.append((f"doc/course_designs/{name}", read_saved_design(name)))
+
+    dependencies = []
+    path_key = activity_path.casefold()
+    for design_name, design in designs:
+        course_activity_links.validate_course_activity_links(design)
+        for year in design.get("years", []):
+            for uda in year.get("udas", []):
+                for link in uda.get("activity_links", []):
+                    linked_id = str(link.get("activity_id", ""))
+                    linked_path = str(link.get("activity_path", ""))
+                    if (activity_id and linked_id == activity_id) or linked_path.casefold() == path_key:
+                        dependencies.append(
+                            {
+                                "design": design_name,
+                                "year_id": str(year.get("id", "")),
+                                "uda_id": str(uda.get("id", "")),
+                                "activity_id": linked_id,
+                                "activity_path": linked_path,
+                            }
+                        )
+    return dependencies
+
+
 def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
-    """Return assignments and registers that still reference an activity."""
+    """Return persisted objects that still reference an activity."""
 
     activity_id = str(activity.get("id", "")).strip()
     relative_activity_path = repository_relative_path(activity_path.resolve())
@@ -1224,7 +1255,11 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
                     "due_at": report.get("due_at", ""),
                 }
             )
-    return {"assignments": assignments, "reports": reports}
+    return {
+        "assignments": assignments,
+        "reports": reports,
+        "course_designs": course_design_activity_dependencies(activity_id, relative_activity_path),
+    }
 
 
 def delete_activity_record(payload: dict) -> dict:
@@ -1237,13 +1272,14 @@ def delete_activity_record(payload: dict) -> dict:
     storage = assignment_storage()
     activity = normalize_activity(storage.read_json(activity_path))
     dependencies = activity_delete_dependencies(activity_path, activity)
-    if dependencies["assignments"] or dependencies["reports"]:
+    if dependencies["assignments"] or dependencies["reports"] or dependencies["course_designs"]:
         assignment_count = len(dependencies["assignments"])
         report_count = len(dependencies["reports"])
+        design_count = len(dependencies["course_designs"])
         raise ValueError(
             "Activity collegata a "
-            f"{assignment_count} assegnazioni e {report_count} registri: cancellazione bloccata. "
-            "Cancella prima le assegnazioni o i registri collegati."
+            f"{assignment_count} assegnazioni, {report_count} registri e {design_count} percorsi: "
+            "cancellazione bloccata. Rimuovi prima tutti i collegamenti."
         )
     deleted = {
         "id": activity.get("id", ""),

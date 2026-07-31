@@ -2802,9 +2802,50 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
 
     assert payload["ok"] is True
     assert payload["deleted"]["id"] == "python-base-somma-001"
-    assert payload["dependencies"] == {"assignments": [], "reports": []}
+    assert payload["dependencies"] == {"assignments": [], "reports": [], "course_designs": []}
     assert payload["activities"] == []
     assert not activity_path.exists()
+
+
+def test_delete_activity_record_blocks_when_course_design_links_activity(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    design_path = tmp_path / "doc" / "course_design.json"
+    design_path.parent.mkdir(parents=True)
+    design_path.write_text(
+        json.dumps(
+            {
+                "years": [
+                    {
+                        "id": "terzo-anno",
+                        "udas": [
+                            {
+                                "id": "uda-1",
+                                "activity_links": [
+                                    {
+                                        "activity_id": "legacy-renamed-id",
+                                        "activity_path": "activities/drafts/PYTHON-BASE-SOMMA-001.json",
+                                        "title": "Somma in Python",
+                                        "kind": "laboratorio",
+                                        "role": "practice",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="1 percorsi"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
 
 
 def test_delete_activity_record_blocks_when_assignment_exists(tmp_path, monkeypatch) -> None:

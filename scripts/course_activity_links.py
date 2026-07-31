@@ -18,7 +18,7 @@ WINDOWS_RESERVED_BASENAMES = frozenset(
     | {f"com{index}" for index in "¹²³"}
     | {f"lpt{index}" for index in "¹²³"}
 )
-WINDOWS_INVALID_FILENAME_CHARACTERS = frozenset('<>:"|?*')
+WINDOWS_INVALID_FILENAME_CHARACTERS = frozenset('<>:"|?*~')
 
 
 def _bounded_text(value: Any, field: str, maximum: int, *, required: bool = True) -> str:
