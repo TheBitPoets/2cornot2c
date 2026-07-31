@@ -9,6 +9,7 @@ import pytest
 
 from installer.artifacts import (
     ArtifactError,
+    MAX_BOX_BYTES,
     download_box,
     load_release,
     select_artifact,
@@ -85,6 +86,14 @@ def test_manifest_rejects_unsafe_box_identifiers(
     payload["artifacts"][0][field] = value
 
     with pytest.raises(ArtifactError, match=message):
+        load_release(write_manifest(tmp_path, payload))
+
+
+def test_manifest_rejects_box_too_large_for_github_release(tmp_path: Path) -> None:
+    payload = manifest_payload()
+    payload["artifacts"][0]["size_bytes"] = MAX_BOX_BYTES + 1
+
+    with pytest.raises(ArtifactError, match="Dimensione"):
         load_release(write_manifest(tmp_path, payload))
 
     payload = manifest_payload()

@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import sys
 import tempfile
 from urllib.request import urlopen
@@ -31,6 +32,9 @@ RELEASES_API_URL = (
 )
 MAX_MANIFEST_BYTES = 256 * 1024
 MAX_RELEASE_INDEX_BYTES = 1024 * 1024
+CLASSROOM_TAG_RE = re.compile(
+    r"^classroom-v([0-9]+)\.([0-9]+)\.([0-9]+)$"
+)
 
 
 class ClassroomImageError(RuntimeError):
@@ -67,12 +71,15 @@ def latest_manifest_url() -> str:
         ) from error
     if not isinstance(payload, list):
         raise ClassroomImageError("Elenco release GitHub non valido.")
+    candidates: list[tuple[tuple[int, int, int], str]] = []
     for release in payload:
+        tag = str(release.get("tag_name", "")) if isinstance(release, dict) else ""
+        tag_match = CLASSROOM_TAG_RE.fullmatch(tag)
         if (
             not isinstance(release, dict)
             or release.get("draft") is not False
             or release.get("prerelease") is not False
-            or not str(release.get("tag_name", "")).startswith("classroom-v")
+            or tag_match is None
         ):
             continue
         assets = release.get("assets")
@@ -85,8 +92,16 @@ def latest_manifest_url() -> str:
             and asset.get("name") == "release-manifest.json"
             and isinstance(asset.get("browser_download_url"), str)
         ]
-        if len(matches) == 1 and matches[0].startswith("https://"):
-            return matches[0]
+        expected_suffix = f"/download/{tag}/release-manifest.json"
+        if (
+            len(matches) == 1
+            and matches[0].startswith("https://")
+            and matches[0].endswith(expected_suffix)
+        ):
+            version = tuple(int(part) for part in tag_match.groups())
+            candidates.append((version, matches[0]))
+    if candidates:
+        return max(candidates)[1]
     raise ClassroomImageError(
         "Nessuna release classroom Packer collaudata è disponibile."
     )
@@ -218,7 +233,11 @@ def install_image(project: Path, host: Host, provider: Provider) -> str:
     cache_name = f"{artifact.box_name.replace('/', '--')}.box"
     box_path = cache / cache_name
     try:
-        download_box(artifact, box_path)
+        download_box(
+            artifact,
+            box_path,
+            opener=lambda url: urlopen(url, timeout=60),
+        )
         result = import_box(artifact, box_path)
     except ArtifactError as error:
         raise ClassroomImageError(str(error)) from error

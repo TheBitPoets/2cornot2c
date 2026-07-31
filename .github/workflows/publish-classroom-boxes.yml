@@ -60,7 +60,12 @@ jobs:
 
       - name: Stage release asset
         shell: pwsh
-        run: Copy-Item packer/output/virtualbox-amd64/package.box 2cornot2c-windows-amd64-virtualbox.box
+        run: |
+          $source = 'packer/output/virtualbox-amd64/package.box'
+          if ((Get-Item -LiteralPath $source).Length -ge 2GB) {
+            throw 'La box supera il limite GitHub Releases di 2 GiB.'
+          }
+          Copy-Item -LiteralPath $source 2cornot2c-windows-amd64-virtualbox.box
 
       - name: Upload verified box
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -99,7 +104,13 @@ jobs:
         run: ./packer/acceptance/test-box.sh vmware_desktop packer/output/vmware-arm64/package.box
 
       - name: Stage release asset
-        run: cp packer/output/vmware-arm64/package.box 2cornot2c-macos-arm64-vmware.box
+        run: |
+          source_box="packer/output/vmware-arm64/package.box"
+          if [ "$(stat -f %z "$source_box")" -ge 2147483648 ]; then
+            echo "La box supera il limite GitHub Releases di 2 GiB." >&2
+            exit 3
+          fi
+          cp "$source_box" 2cornot2c-macos-arm64-vmware.box
 
       - name: Upload verified box
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -10,6 +10,7 @@ import re
 
 
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+MAX_RELEASE_ASSET_BYTES = 2 * 1024 * 1024 * 1024 - 1
 
 
 def digest(path: Path) -> tuple[str, int]:
@@ -34,6 +35,10 @@ def artifact(
     filename: str,
 ) -> dict[str, object]:
     checksum, size = digest(path)
+    if size > MAX_RELEASE_ASSET_BYTES:
+        raise SystemExit(
+            f"La box supera il limite GitHub Releases di 2 GiB: {path}"
+        )
     tag = f"classroom-v{version}"
     return {
         "name": name,

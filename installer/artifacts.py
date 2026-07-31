@@ -24,7 +24,8 @@ BOX_NAME_RE = re.compile(
     r"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"
 )
 BOX_FILENAME_RE = re.compile(r"^[A-Za-z0-9._-]+\.box$")
-MAX_BOX_BYTES = 8 * 1024 * 1024 * 1024
+# GitHub Releases richiede che ogni singolo asset sia strettamente sotto 2 GiB.
+MAX_BOX_BYTES = 2 * 1024 * 1024 * 1024 - 1
 MANIFEST_KEYS = {"schema_version", "release", "artifacts"}
 ARTIFACT_KEYS = {
     "name",

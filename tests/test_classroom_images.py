@@ -47,7 +47,9 @@ def test_install_image_downloads_imports_and_configures(
 
     downloaded: list[Path] = []
 
-    def fake_download(item: BoxArtifact, destination: Path) -> Path:
+    def fake_download(
+        item: BoxArtifact, destination: Path, *, opener=None
+    ) -> Path:
         downloaded.append(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(CONTENT)
@@ -138,7 +140,7 @@ def test_latest_manifest_ignores_unrelated_releases(
             "assets": [],
         },
         {
-            "tag_name": "classroom-v1.2.3",
+            "tag_name": "classroom-v1.9.0",
             "draft": False,
             "prerelease": False,
             "assets": [
@@ -146,7 +148,21 @@ def test_latest_manifest_ignores_unrelated_releases(
                     "name": "release-manifest.json",
                     "browser_download_url": (
                         "https://github.com/TheBitPoets/2cornot2c/releases/"
-                        "download/classroom-v1.2.3/release-manifest.json"
+                        "download/classroom-v1.9.0/release-manifest.json"
+                    ),
+                }
+            ],
+        },
+        {
+            "tag_name": "classroom-v1.10.0",
+            "draft": False,
+            "prerelease": False,
+            "assets": [
+                {
+                    "name": "release-manifest.json",
+                    "browser_download_url": (
+                        "https://github.com/TheBitPoets/2cornot2c/releases/"
+                        "download/classroom-v1.10.0/release-manifest.json"
                     ),
                 }
             ],
@@ -168,4 +184,4 @@ def test_latest_manifest_ignores_unrelated_releases(
         lambda url, timeout: Response(json.dumps(payload).encode()),
     )
 
-    assert "classroom-v1.2.3" in classroom_images.latest_manifest_url()
+    assert "classroom-v1.10.0" in classroom_images.latest_manifest_url()
