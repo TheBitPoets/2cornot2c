@@ -639,12 +639,17 @@ def test_provider_error_consumes_state_and_duplicate_or_unknown_params_fail_clos
     assert replayed.value.clear_transaction_cookie is None
     assert transport.calls == []
 
+    class FalseSequence(list):
+        def __bool__(self):
+            return False
+
     malformed = (
         {"code": ["one", "two"], "state": [STATE]},
         {"code": ["one"], "state": [STATE, STATE]},
         {"code": ["one"], "state": [STATE], "evil": ["value"]},
         {"code": ["one"], "state": [STATE], "scope": ["one", "two"]},
         {"code": ["one"], "state": [STATE], "iss": ["https://evil.test"]},
+        {"code": ["one"], "state": [STATE], "iss": FalseSequence(["https://evil.test"])},
         {"code": ["one"], "state": [STATE], "iss": ["https://accounts.google.com", "https://accounts.google.com"]},
         {"code": ["one"], "error": ["access_denied"], "state": [STATE]},
         {"code": ["one"]},

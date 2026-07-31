@@ -33,6 +33,7 @@ from scripts.thebitlab_identity import AccountDisabledError, IdentityDomainError
 _GOOGLE_ISSUERS = frozenset({"accounts.google.com", "https://accounts.google.com"})
 _GOOGLE_AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_AUTHORIZATION_RESPONSE_ISSUER = "https://accounts.google.com"
+_MISSING_CALLBACK_VALUE = object()
 _GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 _UNRESERVED_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{10,512}$")
@@ -1243,8 +1244,8 @@ class GoogleOidcLoginService:
                         or any(ord(character) < 0x20 for character in callback_values[0])
                     ):
                         invalid = True
-                issuer_values = parameters.get("iss", ())
-                if issuer_values and (
+                issuer_values = parameters.get("iss", _MISSING_CALLBACK_VALUE)
+                if issuer_values is not _MISSING_CALLBACK_VALUE and (
                     not isinstance(issuer_values, Sequence)
                     or isinstance(issuer_values, (str, bytes))
                     or len(issuer_values) != 1
