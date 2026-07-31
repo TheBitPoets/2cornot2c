@@ -39,10 +39,9 @@ def account(role="student"):
     )
 
 
-@pytest.fixture
-def graph(tmp_path):
-    storage = SqliteIdentityStorage(tmp_path / "identity.sqlite3", clock=lambda: NOW)
-    storage.create_user(account())
+def build_graph(tmp_path, role="student"):
+    storage = SqliteIdentityStorage(tmp_path / f"identity-{role}.sqlite3", clock=lambda: NOW)
+    storage.create_user(account(role))
     sessions = SessionService(
         storage,
         clock=lambda: NOW,
@@ -61,6 +60,11 @@ def graph(tmp_path):
     )
     established = boundary.establish_session("user-01")
     return storage, boundary, routes, established
+
+
+@pytest.fixture
+def graph(tmp_path):
+    return build_graph(tmp_path)
 
 
 def edge(*headers):
@@ -107,6 +111,57 @@ def test_current_session_returns_minimal_snapshot_and_csrf(graph) -> None:
     assert header(response, "Referrer-Policy") == "no-referrer"
     assert established.context.csrf_token not in repr(response)
     assert cookie(established) not in repr(response)
+
+
+@pytest.mark.parametrize(
+    ("role", "heading", "expected_link", "forbidden_link"),
+    (
+        ("pending", "Account in attesa", None, "/tools/course_board.html"),
+        ("student", "Area studente", "/auth/tui/pair", "/tools/course_board.html"),
+        ("teacher", "Area docente", "/tools/course_board.html", "/auth/tui/pair"),
+        ("admin", "Area docente", "/tools/course_board.html", "/auth/tui/pair"),
+    ),
+)
+def test_account_landing_is_authenticated_and_role_aware(
+    tmp_path, role, heading, expected_link, forbidden_link
+) -> None:
+    _storage, _boundary, routes, established = build_graph(tmp_path, role)
+
+    anonymous = routes.dispatch(request("GET", "/auth/account"))
+    response = routes.dispatch(
+        request("GET", "/auth/account", ("Cookie", cookie(established)))
+    )
+
+    assert anonymous.status_code == 401
+    assert response.status_code == 200
+    body = response.body.decode("utf-8")
+    assert heading in body
+    if expected_link is not None:
+        assert expected_link in body
+    assert forbidden_link not in body
+    assert "user-01" not in body
+    assert "private@example.test" not in body
+    assert established.context.csrf_token not in body
+    assert header(response, "Content-Security-Policy").startswith("default-src 'none'")
+    assert header(response, "X-Frame-Options") == "DENY"
+    assert header(response, "X-Content-Type-Options") == "nosniff"
+    assert header(response, "Cache-Control") == "no-store"
+
+
+def test_account_landing_rejects_non_get_query_and_body(graph) -> None:
+    _storage, _boundary, routes, established = graph
+    browser_cookie = ("Cookie", cookie(established))
+
+    wrong_method = routes.dispatch(request("POST", "/auth/account", browser_cookie))
+    query = routes.dispatch(request("GET", "/auth/account", browser_cookie, query="x=1"))
+    body = routes.dispatch(
+        request("GET", "/auth/account", browser_cookie, ("Content-Length", "1"))
+    )
+
+    assert wrong_method.status_code == 405
+    assert header(wrong_method, "Allow") == "GET"
+    assert query.status_code == 400
+    assert body.status_code == 400
 
 
 def test_logout_requires_csrf_revokes_session_and_clears_cookie(graph) -> None:
@@ -265,6 +320,7 @@ def test_course_board_socket_serves_status_and_logout_without_basic_auth(graph) 
     common = {"X-Forwarded-Proto": "https", "Cookie": browser_cookie}
     try:
         status = exchange("GET", "/auth/session", common)
+        landing = exchange("GET", "/auth/account", common)
         logout = exchange(
             "POST",
             "/auth/logout",
@@ -292,6 +348,10 @@ def test_course_board_socket_serves_status_and_logout_without_basic_auth(graph) 
 
     assert status[0] == 200
     assert json.loads(status[2])["user"]["user_id"] == "user-01"
+    assert landing[0] == 200
+    assert landing[1]["Content-Type"] == "text/html; charset=utf-8"
+    assert "WWW-Authenticate" not in landing[1]
+    assert b"/auth/tui/pair" in landing[2]
     assert logout[0] == 204
     assert "Max-Age=0" in logout[1]["Set-Cookie"]
     assert after[0] == 401

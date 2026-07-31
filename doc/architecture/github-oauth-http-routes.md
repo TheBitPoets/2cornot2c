@@ -43,7 +43,7 @@ THEBITLAB_GITHUB_REDIRECT_URI=https://HOST-PUBBLICO/auth/github/callback
 Opzionale:
 
 ```text
-THEBITLAB_GITHUB_POST_LINK_PATH=/tools/course_board.html
+THEBITLAB_GITHUB_POST_LINK_PATH=/auth/account
 ```
 
 I valori segreti devono essere forniti soltanto tramite environment/secret store e mai salvati nel repository, nei file di configurazione versionati o nella shell history.

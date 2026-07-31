@@ -23,6 +23,7 @@ from scripts.thebitlab_http_auth import (
 )
 
 _SESSION_PATH = "/auth/session"
+_ACCOUNT_PATH = "/auth/account"
 _LOGOUT_PATH = "/auth/logout"
 _MAX_COOKIE_HEADER_BYTES = 16 * 1024
 _CSRF_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
@@ -92,7 +93,7 @@ class SessionHttpRoutes:
         self.proxy_resolver = proxy_resolver
 
     def handles(self, path: str) -> bool:
-        return path in {_SESSION_PATH, _LOGOUT_PATH}
+        return path in {_SESSION_PATH, _ACCOUNT_PATH, _LOGOUT_PATH}
 
     def dispatch(self, request: SessionHttpRequest) -> SessionHttpResponse | None:
         if type(request) is not SessionHttpRequest:
@@ -106,7 +107,10 @@ class SessionHttpRoutes:
         try:
             self._require_https(request)
             self._require_empty_request(request)
-            if request.path == _SESSION_PATH and request.method != "GET":
+            if (
+                request.path in {_SESSION_PATH, _ACCOUNT_PATH}
+                and request.method != "GET"
+            ):
                 return self._method_error("GET")
             if request.path == _LOGOUT_PATH and request.method != "POST":
                 return self._method_error("POST")
@@ -114,13 +118,15 @@ class SessionHttpRoutes:
                 request.edge, "cookie", maximum_bytes=_MAX_COOKIE_HEADER_BYTES,
                 separator="; ", required=True
             )
-            if request.path == _SESSION_PATH:
+            if request.path in {_SESSION_PATH, _ACCOUNT_PATH}:
                 csrf_headers = _header_values(request.edge, "x-csrf-token")
                 if csrf_headers:
                     _csrf_header(csrf_headers)
                 context = self.sessions.authenticate(
                     HttpAuthRequest("GET", cookie_header=cookie_header)
                 )
+                if request.path == _ACCOUNT_PATH:
+                    return self._account_response(context)
                 return self._session_response(context)
             csrf_token = _csrf_header(
                 _header_values(request.edge, "x-csrf-token")
@@ -210,6 +216,49 @@ class SessionHttpRoutes:
             200,
             self._base_headers() + (
                 ("Content-Type", "application/json; charset=utf-8"),
+                ("Content-Length", str(len(body))),
+            ),
+            body,
+        )
+
+    def _account_response(self, context) -> SessionHttpResponse:
+        role = context.user.role
+        if role == "pending":
+            title = "Account in attesa"
+            message = (
+                "L'account è autenticato, ma ruolo e classe devono ancora essere approvati."
+            )
+            action = ""
+        elif role == "student":
+            title = "Area studente"
+            message = (
+                "L'account studente è autorizzato. Puoi associare la TUI da questo browser."
+            )
+            action = '<p><a href="/auth/tui/pair">Associa la TUI</a></p>'
+        else:
+            title = "Area docente"
+            message = (
+                "L'account docente è autorizzato. "
+                "La Board mantiene una protezione docente separata."
+            )
+            action = '<p><a href="/tools/course_board.html">Apri la Course Design Board</a></p>'
+        body = (
+            "<!doctype html><html lang=\"it\"><head><meta charset=\"utf-8\">"
+            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+            f"<title>{title} - TheBitLab</title></head><body><main><h1>{title}</h1>"
+            f"<p>{message}</p>{action}</main></body></html>"
+        ).encode("utf-8")
+        return SessionHttpResponse(
+            200,
+            self._base_headers() + (
+                (
+                    "Content-Security-Policy",
+                    "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; "
+                    "form-action 'none'",
+                ),
+                ("X-Content-Type-Options", "nosniff"),
+                ("X-Frame-Options", "DENY"),
+                ("Content-Type", "text/html; charset=utf-8"),
                 ("Content-Length", str(len(body))),
             ),
             body,

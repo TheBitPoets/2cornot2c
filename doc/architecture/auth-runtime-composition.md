@@ -25,7 +25,7 @@ La configurazione avviene prima della creazione del server HTTP. Qualunque valor
 Opzionali:
 
 - `THEBITLAB_AUTH_DB_PATH`: file SQLite assoluto o relativo al data root; default `.thebitlab-auth/auth.sqlite3` in una directory dedicata;
-- `THEBITLAB_GOOGLE_POST_LOGIN_PATH`: path locale successivo al login; default `/tools/course_board.html`.
+- `THEBITLAB_GOOGLE_POST_LOGIN_PATH`: landing successiva al login; se presente deve essere esattamente `/auth/account`, default autenticato e role-aware.
 
 I tre segreti binari (CSRF, rate limit e pairing) devono essere indipendenti. Per generarli:
 

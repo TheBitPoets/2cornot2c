@@ -181,9 +181,13 @@ def compose_google_oidc_runtime(
             )
         trusted_proxy_cidrs = _trusted_proxy_cidrs(environment)
         post_login_path = environment.get(
-            "THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/tools/course_board.html"
+            "THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/auth/account"
         )
         _validate_post_login_path(post_login_path)
+        if post_login_path != "/auth/account":
+            raise AuthRuntimeConfigurationError(
+                "THEBITLAB_GOOGLE_POST_LOGIN_PATH deve usare la landing account canonica."
+            )
         database_path = _database_path(environment, data_root)
         _prepare_database_file(database_path)
         _require_auth_dependencies()
@@ -274,9 +278,13 @@ def compose_google_oidc_runtime(
                     "THEBITLAB_GITHUB_REDIRECT_URI deve terminare con il path callback canonico."
                 )
             github_post_link_path = environment.get(
-                "THEBITLAB_GITHUB_POST_LINK_PATH", "/tools/course_board.html"
+                "THEBITLAB_GITHUB_POST_LINK_PATH", "/auth/account"
             )
             _validate_post_login_path(github_post_link_path)
+            if github_post_link_path != "/auth/account":
+                raise AuthRuntimeConfigurationError(
+                    "THEBITLAB_GITHUB_POST_LINK_PATH deve usare la landing account canonica."
+                )
             github_config = GitHubOAuthConfig(
                 github_client_id,
                 github_client_secret,
