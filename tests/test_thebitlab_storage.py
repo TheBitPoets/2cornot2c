@@ -29,6 +29,18 @@ def test_read_design_returns_minimal_default_when_missing(tmp_path) -> None:
     assert storage.read_design() == {"version": 1, "source_files": ["README.md"], "years": []}
 
 
+def test_course_storage_rollback_recovery_ignores_unmanaged_doc_subdirectories(tmp_path) -> None:
+    unmanaged = tmp_path / "doc" / "notes"
+    unmanaged.mkdir(parents=True)
+    legitimate = unmanaged / ".example.json.version.rollback"
+    legitimate.write_text("do not touch", encoding="utf-8")
+
+    JsonCourseStorage(tmp_path)
+
+    assert legitimate.read_text(encoding="utf-8") == "do not touch"
+    assert not (unmanaged / "example.json").exists()
+
+
 def test_write_and_read_current_design(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     payload = {"schema_version": "1.0", "years": [{"id": "terzo"}]}

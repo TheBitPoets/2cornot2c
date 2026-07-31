@@ -231,7 +231,9 @@ class JsonCourseStorage:
         self.school_calendars_dir = root / "doc" / "calendars"
         self.delete_staging_dir = root / "doc" / ".delete-staging"
         with self.operation_lock:
-            recover_json_rollbacks(self.root / "doc", recursive=True)
+            recover_json_rollbacks(self.root / "doc")
+            recover_json_rollbacks(self.course_designs_dir)
+            recover_json_rollbacks(self.school_calendars_dir)
             self._recover_delete_transactions()
 
     def _delete_manifest_entries(self, targets: list[Path]) -> list[dict[str, str]]:
