@@ -181,6 +181,37 @@ def sync_directory(path: Path) -> None:
         os.close(descriptor)
 
 
+def recover_json_rollbacks(directory: Path) -> None:
+    """Restore durable JSON backups left by interrupted rollback."""
+
+    if not directory.is_dir() or directory.is_symlink():
+        return
+    for backup in sorted(directory.rglob(".*.*.rollback")):
+        if backup.is_symlink() or not backup.is_file():
+            raise RuntimeError(f"Backup JSON non valido: {backup}")
+        core = backup.name[1 : -len(".rollback")]
+        if "." not in core:
+            raise RuntimeError(f"Nome backup JSON non valido: {backup.name}")
+        target_name = core.rsplit(".", 1)[0]
+        if not target_name.endswith(".json") or Path(target_name).name != target_name:
+            raise RuntimeError(f"Target backup JSON non valido: {backup.name}")
+        target = backup.with_name(target_name)
+        descriptor, restore_name = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".recover", dir=target.parent)
+        restore = Path(restore_name)
+        try:
+            os.chmod(restore, stat.S_IMODE(backup.stat().st_mode))
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(backup.read_bytes())
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(restore, target)
+            sync_directory(target.parent)
+            backup.unlink()
+            sync_directory(target.parent)
+        finally:
+            restore.unlink(missing_ok=True)
+
+
 class JsonCourseStorage:
     """JSON storage adapter for course designs and school calendars."""
 
@@ -193,6 +224,7 @@ class JsonCourseStorage:
         self.school_calendars_dir = root / "doc" / "calendars"
         self.delete_staging_dir = root / "doc" / ".delete-staging"
         with self.operation_lock:
+            recover_json_rollbacks(self.root / "doc")
             self._recover_delete_transactions()
 
     def _delete_manifest_entries(self, targets: list[Path]) -> list[dict[str, str]]:
@@ -471,6 +503,7 @@ class JsonAssignmentStorage:
         self.root = root
         self.teacher_reports_dir = teacher_reports_dir
         self.activity_dirs = activity_dirs
+        self.operation_lock = course_storage_lock(root)
 
     def relative_path(self, path: Path) -> str:
         """Return a repository-relative path with URL-style separators."""
@@ -512,6 +545,7 @@ class JsonAssignmentStorage:
         """Atomically replace JSON and restore the prior version on commit failure."""
 
         ensure_directory_durable(path.parent, self.root)
+        recover_json_rollbacks(path.parent)
         destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
         backup_path: Path | None = None
         if path.exists():
@@ -522,6 +556,7 @@ class JsonAssignmentStorage:
             )
             backup_path = Path(backup_name)
             try:
+                os.chmod(backup_path, destination_mode)
                 with os.fdopen(backup_descriptor, "wb") as backup:
                     backup.write(path.read_bytes())
                     backup.flush()

@@ -18,6 +18,7 @@ from scripts.thebitlab_storage import (
     JsonClassRosterStorage,
     JsonCourseStorage,
     ensure_directory_durable,
+    recover_json_rollbacks,
     sync_directory,
 )
 
@@ -802,6 +803,24 @@ def test_ensure_directory_durable_syncs_each_new_parent_entry(tmp_path, monkeypa
 
     assert target.is_dir()
     assert synced == [tmp_path, tmp_path / "activities"]
+
+
+def test_assignment_storage_recovers_interrupted_json_rollback(tmp_path) -> None:
+    drafts = tmp_path / "activities" / "drafts"
+    drafts.mkdir(parents=True)
+    target = drafts / "demo.json"
+    target.write_text('{"version":"new"}\n', encoding="utf-8")
+    backup = drafts / ".demo.json.deadbeef.rollback"
+    backup.write_text('{"version":"old"}\n', encoding="utf-8")
+    if os.name != "nt":
+        backup.chmod(0o640)
+
+    recover_json_rollbacks(drafts)
+
+    assert json.loads(target.read_text(encoding="utf-8")) == {"version": "old"}
+    assert not backup.exists()
+    if os.name != "nt":
+        assert stat.S_IMODE(target.stat().st_mode) == 0o640
 
 
 def test_assignment_storage_atomic_json_failure_preserves_previous_file(tmp_path, monkeypatch) -> None:

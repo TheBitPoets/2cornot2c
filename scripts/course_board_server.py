@@ -458,6 +458,9 @@ def configure_data_root(root: Path) -> Path:
     AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
     AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
     LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
+    with thebitlab_storage.course_storage_lock(ROOT):
+        thebitlab_storage.recover_json_rollbacks(ROOT / "activities" / "drafts")
+        thebitlab_storage.recover_json_rollbacks(TEACHER_REPORTS_DIR)
     recover_interrupted_assignment_deletions()
     recover_interrupted_activity_deletions()
     return ROOT
@@ -1242,6 +1245,7 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
 
     activity_id = str(activity.get("id", "")).strip()
     relative_activity_path = repository_relative_path(activity_path.resolve())
+    activity_path_key = create_submission_scaffold.portable_path_key(Path(relative_activity_path))
     assignments = []
     record_storage = assignment_record_storage()
     if record_storage.assignments_dir.is_symlink():
@@ -1257,9 +1261,10 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
         assignment = assignment_records.validate_assignment_record(record_storage.read_json(assignment_file))
         assignment_activity_id = str(assignment.get("activity_id", "")).strip()
         assignment_activity_path = str(assignment.get("activity_path", "")).strip().replace("\\", "/")
+        assignment_path_key = create_submission_scaffold.portable_path_key(Path(assignment_activity_path))
         if (
             activity_id and assignment_activity_id.casefold() == activity_id.casefold()
-        ) or assignment_activity_path.casefold() == relative_activity_path.casefold():
+        ) or assignment_path_key == activity_path_key:
             assignments.append(
                 {
                     "id": assignment.get("id", ""),
@@ -1292,9 +1297,10 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
         report = storage.read_assignment_report(name)
         report_activity_id = str(report.get("activity_id", "")).strip()
         report_activity_path = str(report.get("activity_path", "")).strip().replace("\\", "/")
+        report_path_key = create_submission_scaffold.portable_path_key(Path(report_activity_path))
         if (
             activity_id and report_activity_id.casefold() == activity_id.casefold()
-        ) or report_activity_path.casefold() == relative_activity_path.casefold():
+        ) or report_path_key == activity_path_key:
             reports.append(
                 {
                     "name": name,
