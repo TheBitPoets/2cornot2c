@@ -1618,6 +1618,28 @@ def save_activity_with_proposed_files(
     return assignment_service().save_activity(activity, overwrite)
 
 
+def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> None:
+    """Validate retained student assets against updated scaffold metadata."""
+
+    normalized = create_submission_scaffold.validate_activity_contract_or_raise(
+        activity,
+        str(activity.get("id", "")),
+    )
+    language = create_submission_scaffold.language_for(normalized)
+    source_name = create_submission_scaffold.validate_source_name(
+        str(normalized.get("source_name", ""))
+        or create_submission_scaffold.default_source_name_for(language)
+    )
+    for _, target in create_submission_scaffold.student_asset_copy_plan(activity_path, activity):
+        target_key = create_submission_scaffold.portable_path_key(target)
+        source_path = Path(source_name)
+        source_key = create_submission_scaffold.portable_path_key(source_path)
+        if target_key != source_key and create_submission_scaffold.portable_paths_overlap(target, source_path):
+            raise ValueError(f"Target asset sovrapposto al file sorgente: {target.as_posix()}.")
+        if target_key == source_key and target.as_posix() != source_path.as_posix():
+            raise ValueError(f"Target sorgente non canonico: {target.as_posix()}.")
+
+
 def save_activity(payload: dict) -> dict:
     """Create and persist a teacher-authored activity draft."""
 
@@ -1679,6 +1701,10 @@ def _save_activity_locked(payload: dict) -> dict:
     else:
         if isinstance(previous.get("assets"), list):
             activity["assets"] = previous["assets"]
+            validate_preserved_activity_assets(
+                activity,
+                storage.safe_activity_draft_path(activity_id),
+            )
         saved = assignment_service().save_activity(activity, overwrite)
     return {"ok": True, "activity": saved, "activities": list_activities()}
 

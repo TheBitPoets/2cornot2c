@@ -174,6 +174,11 @@ def test_validate_course_activity_targets_requires_matching_authoritative_file(t
         )
 
     payload = json.loads(activity_path.read_text(encoding="utf-8"))
+    payload["id"] = "Foo"
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="slug"):
+        validate_course_activity_targets(design(link(activity_id="Foo")), tmp_path)
+    payload["id"] = "c-base-funzioni-verifica-001"
     payload["source_name"] = "CON.c"
     activity_path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="non portabile"):

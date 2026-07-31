@@ -4882,6 +4882,47 @@ def test_save_activity_overwrite_cannot_change_identity_on_slug_collision(tmp_pa
     assert saved["titolo"] == "Prima activity"
 
 
+def test_save_activity_revalidates_preserved_assets_when_source_name_changes(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "preserved-assets",
+        "title": "Preserved assets",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il sorgente.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [
+            {
+                "path": "starter.py",
+                "target_path": "main.py",
+                "role": "starter",
+                "content": "print('ok')\n",
+                "visibility": "student",
+            }
+        ],
+    }
+    course_board_server.save_activity(payload)
+
+    with pytest.raises(ValueError, match="non canonico"):
+        course_board_server.save_activity(
+            {
+                **payload,
+                "source_name": "Main.py",
+                "files": None,
+                "overwrite": True,
+            }
+        )
+
+    saved = json.loads(
+        (tmp_path / "activities" / "drafts" / "preserved-assets.json").read_text(encoding="utf-8")
+    )
+    assert saved["contesto"]["source_name"] == "main.py"
+
+
 def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
