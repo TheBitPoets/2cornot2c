@@ -64,6 +64,9 @@ def test_validate_activity_link_returns_defensive_canonical_copy() -> None:
         "activities/con.example.json",
         "activities/folder./demo.json",
         "activities/folder /demo.json",
+        "activities/CON .json",
+        "activities/NUL .json",
+        ".",
     ],
 )
 def test_canonical_activity_path_rejects_escape_and_noncanonical_paths(path) -> None:
@@ -118,6 +121,10 @@ def test_validate_course_activity_links_rejects_malformed_containers(malformed) 
     [
         (link(), link(activity_path="activities/examples/other.json")),
         (link(), link(activity_id="other-activity")),
+        (
+            link(activity_path="activities/examples/Demo.json"),
+            link(activity_id="other-activity", activity_path="activities/examples/demo.json"),
+        ),
     ],
 )
 def test_validate_course_activity_links_rejects_duplicate_id_or_path(duplicates) -> None:

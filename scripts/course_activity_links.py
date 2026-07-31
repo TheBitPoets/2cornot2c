@@ -37,16 +37,18 @@ def canonical_activity_path(value: Any) -> str:
     """Return one canonical repository-relative activity JSON path."""
 
     path = _bounded_text(value, "activity_path", 512)
-    if "\\" in path or path.startswith("/") or path.endswith("/"):
+    if not path.isascii() or "\\" in path or path.startswith("/") or path.endswith("/"):
         raise ValueError("activity_path non e canonico.")
     parsed = PurePosixPath(path)
-    if parsed.parts[0] != "activities" or any(part in {"", ".", ".."} for part in parsed.parts):
+    parts = parsed.parts
+    if not parts or parts[0] != "activities" or any(part in {"", ".", ".."} for part in parts):
         raise ValueError("activity_path deve restare dentro activities/.")
-    for part in parsed.parts:
-        basename = part.split(".", 1)[0].casefold()
+    for part in parts:
+        basename = part.split(".", 1)[0].rstrip(" .").casefold()
         if (
             any(character in WINDOWS_INVALID_FILENAME_CHARACTERS for character in part)
             or part.endswith((".", " "))
+            or any(segment.endswith(" ") for segment in part.split("."))
             or basename in WINDOWS_RESERVED_BASENAMES
         ):
             raise ValueError("activity_path contiene un componente non valido su Windows.")
@@ -131,10 +133,11 @@ def validate_course_activity_links(design: Any) -> None:
             seen_paths: set[str] = set()
             for raw_link in links:
                 link = validate_activity_link(raw_link)
-                if link["activity_id"] in seen_ids or link["activity_path"] in seen_paths:
+                path_key = link["activity_path"].casefold()
+                if link["activity_id"] in seen_ids or path_key in seen_paths:
                     raise ValueError("La stessa activity non puo essere collegata due volte alla medesima UDA.")
                 seen_ids.add(link["activity_id"])
-                seen_paths.add(link["activity_path"])
+                seen_paths.add(path_key)
 
 
 def iter_scheduled_activity_links(design: Any) -> Iterator[dict[str, str]]:
