@@ -158,6 +158,28 @@ def project_selection_exists(project: Path) -> bool:
     )
 
 
+def project_selection_provider(project: Path) -> Provider | None:
+    """Legge il provider configurato, se il relativo marker è presente."""
+
+    provider_marker = project_selection_markers(project)[1]
+    if not provider_marker.is_file():
+        return None
+    value = provider_marker.read_text(encoding="utf-8").strip()
+    try:
+        return Provider(value)
+    except ValueError as error:
+        raise RuntimeError(
+            f"Provider non valido in {provider_marker}: {value or '<vuoto>'}"
+        ) from error
+
+
+def provider_mismatch_detail(selected: Provider, requested: Provider) -> str:
+    return (
+        f"La selezione corrente appartiene a {selected.value}, non a "
+        f"{requested.value}; nessun marker è stato rimosso."
+    )
+
+
 def clear_project_selection(project: Path) -> bool:
     """Rimuove in modo idempotente la selezione della box ormai migrata."""
 
@@ -177,6 +199,15 @@ def recreate_machine(
 ) -> MigrationResult:
     """Arresta e distrugge soltanto la VM confermata, mai i dati condivisi."""
 
+    selected_provider = project_selection_provider(project)
+    if (
+        selected_provider is not None
+        and selected_provider is not machine.provider
+    ):
+        return MigrationResult(
+            "blocked",
+            provider_mismatch_detail(selected_provider, machine.provider),
+        )
     if not machine.exists:
         if not project_selection_exists(project):
             return MigrationResult("skipped", "nessuna VM preesistente")
@@ -238,9 +269,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     provider = Provider(args.provider)
     try:
+        selection_exists = project_selection_exists(args.project)
+        selected_provider = project_selection_provider(args.project)
+        if selected_provider is not None and selected_provider is not provider:
+            result = MigrationResult(
+                "blocked",
+                provider_mismatch_detail(selected_provider, provider),
+            )
+            print(f"[{result.status.upper()}] {result.detail}")
+            return 1
         machine = inspect_machine(args.project, provider)
         validate_shared_folders(args.project)
-        selection_exists = project_selection_exists(args.project)
     except (OSError, RuntimeError, ValueError) as error:
         print(f"Migrazione non disponibile: {error}")
         return 1
