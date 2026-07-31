@@ -643,6 +643,12 @@ def test_provider_error_consumes_state_and_duplicate_or_unknown_params_fail_clos
         def __bool__(self):
             return False
 
+    class InconsistentDict(dict):
+        def get(self, key, default=None):
+            if key == "iss":
+                return default
+            return super().get(key, default)
+
     malformed = (
         {"code": ["one", "two"], "state": [STATE]},
         {"code": ["one"], "state": [STATE, STATE]},
@@ -650,6 +656,7 @@ def test_provider_error_consumes_state_and_duplicate_or_unknown_params_fail_clos
         {"code": ["one"], "state": [STATE], "scope": ["one", "two"]},
         {"code": ["one"], "state": [STATE], "iss": ["https://evil.test"]},
         {"code": ["one"], "state": [STATE], "iss": FalseSequence(["https://evil.test"])},
+        InconsistentDict({"code": ["one"], "state": [STATE], "iss": ["https://evil.test"]}),
         {"code": ["one"], "state": [STATE], "iss": ["https://accounts.google.com", "https://accounts.google.com"]},
         {"code": ["one"], "error": ["access_denied"], "state": [STATE]},
         {"code": ["one"]},

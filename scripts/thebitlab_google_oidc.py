@@ -1218,7 +1218,7 @@ class GoogleOidcLoginService:
         state = None
         provider_error = False
         try:
-            if not isinstance(parameters, Mapping):
+            if type(parameters) is not dict:
                 invalid = True
             else:
                 allowed = {
