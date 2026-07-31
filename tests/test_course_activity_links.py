@@ -174,6 +174,11 @@ def test_validate_course_activity_targets_requires_matching_authoritative_file(t
         )
 
     payload = json.loads(activity_path.read_text(encoding="utf-8"))
+    payload["source_name"] = "CON.c"
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="non portabile"):
+        validate_course_activity_targets(design(link()), tmp_path)
+    del payload["source_name"]
     payload["assets"] = [
         {
             "type": "starter",

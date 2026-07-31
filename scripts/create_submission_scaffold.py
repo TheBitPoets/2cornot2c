@@ -178,8 +178,7 @@ def portable_paths_overlap(left: Path, right: Path) -> bool:
 
 def is_reserved_scaffold_target(path: Path) -> bool:
     """Return whether a path aliases a scaffold-owned top-level file."""
-    key = portable_path_key(path)
-    return any(key == portable_path_key(Path(value)) for value in RESERVED_SCAFFOLD_TARGETS)
+    return any(portable_paths_overlap(path, Path(value)) for value in RESERVED_SCAFFOLD_TARGETS)
 
 
 def is_safe_slug(value: str) -> bool:

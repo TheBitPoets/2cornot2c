@@ -276,6 +276,8 @@ def test_create_scaffold_rejects_asset_target_reserved_for_scaffold(
         "CONIN$.txt",
         "COM¹.txt",
         "PROGRA~1/file.txt",
+        "README.md/nested.txt",
+        "activity.json/data",
     ],
 )
 def test_create_scaffold_rejects_nonportable_asset_target(tmp_path, target) -> None:
@@ -293,7 +295,7 @@ def test_create_scaffold_rejects_nonportable_asset_target(tmp_path, target) -> N
     activity_path = write_activity(tmp_path, payload)
     target_dir = tmp_path / "student"
 
-    with pytest.raises(ValueError, match="(non portabile|separatore portabile)"):
+    with pytest.raises(ValueError, match="(non portabile|separatore portabile|riservato allo scaffold)"):
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target_dir,
@@ -355,7 +357,7 @@ def test_create_scaffold_rejects_asset_below_scaffold_file(tmp_path, target) -> 
     activity_path = write_activity(tmp_path, payload)
     target_dir = tmp_path / "student"
 
-    with pytest.raises(ValueError, match="(sovrapposto|non portabile)"):
+    with pytest.raises(ValueError, match="(sovrapposto|non portabile|riservato allo scaffold)"):
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target_dir,

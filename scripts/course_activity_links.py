@@ -229,7 +229,14 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                         raise ValueError(f"Asset non trovato: {source.as_posix()}.")
                     source_paths.append(source)
                     target_paths.append(target)
-                authoritative_id = str(normalize_activity(payload).get("id", ""))
+                normalized_activity = normalize_activity(payload)
+                source_name = str(normalized_activity.get("source_name", ""))
+                if source_name:
+                    create_submission_scaffold.validate_source_name(source_name)
+                language = str(normalized_activity.get("language", ""))
+                if language:
+                    create_submission_scaffold.validate_language(language)
+                authoritative_id = str(normalized_activity.get("id", ""))
                 if authoritative_id != link["activity_id"]:
                     raise ValueError(f"activity_id non corrisponde al file {link['activity_path']}.")
 
