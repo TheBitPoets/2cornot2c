@@ -66,6 +66,7 @@ def test_validate_activity_link_returns_defensive_canonical_copy() -> None:
         "activities/folder /demo.json",
         "activities/CON .json",
         "activities/NUL .json",
+        "activities/examples/PYTHON~1/activity.json",
         ".",
     ],
 )
