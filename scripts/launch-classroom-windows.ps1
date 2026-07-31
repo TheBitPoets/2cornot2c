@@ -68,7 +68,9 @@ function Find-ExistingProvider {
         }
     }
 
-    if (Test-Path (Join-Path $InstallDir ".vagrant")) {
+    if ((Test-Path (Join-Path $InstallDir ".vagrant")) -and
+        (Test-Path (Join-Path $InstallDir ".classroom-box")) -and
+        (Test-Path (Join-Path $InstallDir ".classroom-provider"))) {
         return "virtualbox"
     }
     return $null
@@ -101,7 +103,19 @@ try {
         exit $LASTEXITCODE
     }
     if ($Provider -eq "virtualbox") {
-        & vagrant up --provider=virtualbox
+        $BoxPath = Join-Path $InstallDir ".classroom-box"
+        $ProjectProviderPath = Join-Path $InstallDir ".classroom-provider"
+        if (-not (Test-Path $BoxPath) -or
+            -not (Test-Path $ProjectProviderPath)) {
+            Write-Host "ERRORE E25 - Box Packer non configurata" `
+                -ForegroundColor Red
+            Write-Host (
+                "Apri Ambiente 2cornot2c e scegli " +
+                "Installa, completa o ripara."
+            ) -ForegroundColor Yellow
+            exit 1
+        }
+        & (Join-Path $InstallDir "scripts\setup-vm.ps1")
         exit $LASTEXITCODE
     }
     Write-Host "ERRORE E31 - Ambiente da avviare non riconosciuto" `

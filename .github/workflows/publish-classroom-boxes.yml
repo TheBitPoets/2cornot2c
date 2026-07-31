@@ -1,0 +1,140 @@
+name: Build and publish classroom Packer boxes
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versione SemVer della release, per esempio 1.0.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: classroom-boxes-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  virtualbox-amd64:
+    runs-on: [self-hosted, Windows, X64, classroom-packer]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Validate Packer template
+        working-directory: packer
+        run: |
+          packer init classroom.pkr.hcl
+          packer fmt -check .
+          packer validate classroom.pkr.hcl
+
+      - name: Build VirtualBox AMD64 box
+        working-directory: packer
+        run: |
+          if (-not (vagrant box list | Select-String 'bento/ubuntu-24.04.*virtualbox.*202510.26.0')) {
+            vagrant box add bento/ubuntu-24.04 --box-version 202510.26.0 --provider virtualbox
+          }
+          packer build -only=classroom.vagrant.virtualbox-amd64 classroom.pkr.hcl
+
+      - name: Acceptance test
+        shell: bash
+        run: ./packer/acceptance/test-box.sh virtualbox packer/output/virtualbox-amd64/package.box
+
+      - name: Stage release asset
+        shell: pwsh
+        run: Copy-Item packer/output/virtualbox-amd64/package.box 2cornot2c-windows-amd64-virtualbox.box
+
+      - name: Upload verified box
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: virtualbox-amd64
+          path: 2cornot2c-windows-amd64-virtualbox.box
+          if-no-files-found: error
+          retention-days: 1
+
+  vmware-arm64:
+    runs-on: [self-hosted, macOS, ARM64, classroom-packer]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Validate Packer template
+        working-directory: packer
+        run: |
+          packer init classroom.pkr.hcl
+          packer fmt -check .
+          packer validate classroom.pkr.hcl
+
+      - name: Build VMware ARM64 box
+        working-directory: packer
+        run: |
+          if ! vagrant box list | grep -q 'bento/ubuntu-24.04.*vmware_desktop.*202510.26.0'; then
+            vagrant box add bento/ubuntu-24.04 --box-version 202510.26.0 --provider vmware_desktop
+          fi
+          packer build -only=classroom.vagrant.vmware-arm64 classroom.pkr.hcl
+
+      - name: Acceptance test
+        run: ./packer/acceptance/test-box.sh vmware_desktop packer/output/vmware-arm64/package.box
+
+      - name: Stage release asset
+        run: cp packer/output/vmware-arm64/package.box 2cornot2c-macos-arm64-vmware.box
+
+      - name: Upload verified box
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: vmware-arm64
+          path: 2cornot2c-macos-arm64-vmware.box
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: [virtualbox-amd64, vmware-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Download verified boxes
+        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d16 # v4
+        with:
+          name: vmware-arm64
+          path: release
+
+      - name: Download VirtualBox box
+        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d16 # v4
+        with:
+          name: virtualbox-amd64
+          path: release
+
+      - name: Generate immutable release manifest
+        run: |
+          python packer/create-release-manifest.py \
+            --version "${{ inputs.version }}" \
+            --repository "${{ github.repository }}" \
+            --vmware release/2cornot2c-macos-arm64-vmware.box \
+            --virtualbox release/2cornot2c-windows-amd64-virtualbox.box \
+            --output release/release-manifest.json
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "classroom-v${{ inputs.version }}" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "Classroom VM ${{ inputs.version }}" \
+            --notes "Box Packer collaudate per Windows AMD64 e macOS Apple Silicon." \
+            release/release-manifest.json \
+            release/2cornot2c-macos-arm64-vmware.box \
+            release/2cornot2c-windows-amd64-virtualbox.box

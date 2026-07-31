@@ -54,8 +54,10 @@ Gli artefatti vengono scritti sotto `packer/output/` e sono ignorati da Git.
 
 ## Manifest di rilascio
 
-`release-manifest.example.json` descrive il contratto che una release deve
-pubblicare insieme alle box. Per ciascun host contiene:
+`release-manifest.example.json` descrive il contratto pubblicato insieme alle
+box. La workflow manuale `publish-classroom-boxes.yml` costruisce e collauda i
+due artefatti su runner fisici provider-specifici, genera il manifest e crea
+la GitHub Release `classroom-v<versione>`. Per ciascun host contiene:
 
 - provider e architettura;
 - nome Vagrant immutabile che include la versione;
@@ -64,8 +66,16 @@ pubblicare insieme alle box. Per ciascun host contiene:
 - checksum SHA-256.
 
 L'esempio usa deliberatamente `example.invalid` e checksum fittizi: non è un
-manifest installabile. Il manifest reale verrà aggiunto soltanto dopo aver
-costruito e collaudato entrambe le box.
+manifest installabile. Il manifest reale è un asset della release e viene
+generato da `create-release-manifest.py` soltanto dopo il successo di entrambi
+gli acceptance test.
+
+I runner self-hosted devono avere le etichette:
+
+- `self-hosted, Windows, X64, classroom-packer`, con Packer, Vagrant,
+  VirtualBox e Git Bash;
+- `self-hosted, macOS, ARM64, classroom-packer`, con Packer, Vagrant, VMware
+  Fusion, Vagrant VMware Utility e plugin `vagrant-vmware-desktop`.
 
 L'installer scarica a blocchi in un file `.part`, controlla dimensione e
 checksum e rinomina atomicamente il file solo dopo la verifica. Una box

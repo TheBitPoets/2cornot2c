@@ -195,13 +195,14 @@ Elimina dalla cache esclusivamente box con namespace `2cornot2c/`; non tocca
 altre VM, box Bento o software preesistente. Il comando diretto richiede la
 frase distinta `DISINSTALLA TUTTO`.
 
-La parte VM non scarica ancora la box Packer reale e non avvia la VM. Questi
-passi verranno attivati dopo aver fissato URL, versione e checksum degli
-artefatti che superano il collaudo VirtualBox AMD64.
+La parte VM usa esclusivamente box Packer pubblicate dalla workflow
+`publish-classroom-boxes.yml`. L'installer scarica il manifest dell'ultima
+release `classroom-v*`, seleziona la combinazione host/provider, verifica
+dimensione e SHA-256, importa la box e configura il progetto.
 
-Il contratto e il downloader verificato sono implementati in
-`installer/artifacts.py`; manca intenzionalmente il manifest reale finché la
-box VirtualBox AMD64 non supera il collaudo Windows.
+Se la release o la combinazione richiesta non è disponibile, l'installazione
+si ferma con E25. Non viene più usata implicitamente la box Bento e non parte
+alcun provisioning desktop al primo avvio.
 
 `installer/vagrant_box.py` completa il flusso locale:
 
@@ -211,9 +212,10 @@ box VirtualBox AMD64 non supera il collaudo Windows.
 4. salva box e provider in `.classroom-box` e `.classroom-provider`;
 5. usa gli script `setup-vm` esistenti per primo avvio e health check.
 
-Quando `.classroom-box` è presente, il `Vagrantfile` salta il provisioning
-legacy perché desktop, toolchain e Guest Tools sono già nella box Packer.
-Senza quel file continua a usare Bento e il provisioning attuale.
+Quando `.classroom-box` è presente, il `Vagrantfile` usa desktop, toolchain e
+Guest Tools già inclusi nella box Packer. Senza quel file si ferma. Il fallback
+Bento resta disponibile soltanto agli sviluppatori impostando esplicitamente
+`CLASSROOM_ALLOW_LEGACY_PROVISIONING=1`.
 
 ## VM già esistente
 

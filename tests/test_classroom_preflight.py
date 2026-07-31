@@ -139,7 +139,8 @@ def test_windows_launcher_hides_technical_start_commands() -> None:
 
     assert "selected-provider.txt" in launcher
     assert "student_dev_shell.py" in launcher
-    assert "vagrant up --provider=virtualbox" in launcher
+    assert "setup-vm.ps1" in launcher
+    assert ".classroom-box" in launcher
     assert "AMBIENTE NON ANCORA PRONTO" in launcher
     assert "Find-ExistingProvider" in launcher
     assert 'Record.key -eq "student-image"' in launcher

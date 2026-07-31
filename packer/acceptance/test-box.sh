@@ -18,6 +18,12 @@ box_file="$(cd "$(dirname "$box_file")" && pwd)/$(basename "$box_file")"
 box_name="2cornot2c/acceptance-${provider}"
 dotfile_path=".vagrant-${provider}"
 
+cleanup() {
+  VAGRANT_DOTFILE_PATH="$dotfile_path" vagrant destroy --force >/dev/null 2>&1 || true
+  vagrant box remove "$box_name" --provider "$provider" --force >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
 test -f "$box_file"
 
 vagrant box add "$box_name" "$box_file" --provider "$provider" --force

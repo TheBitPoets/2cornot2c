@@ -526,9 +526,10 @@ Se il progetto è già presente, puoi invece eseguirlo direttamente:
 ./scripts/install-macos-host.sh
 ```
 
-Lo script installa Homebrew, Git, Vagrant, VirtualBox, VMware Fusion, Vagrant
-VMware Utility e il plugin `vagrant-vmware-desktop`, quindi verifica ogni
-componente.
+Lo script installa Homebrew, Git, Python 3.12, Vagrant, VMware Fusion, Vagrant
+VMware Utility e il plugin `vagrant-vmware-desktop`, quindi apre l'installer
+che scarica e verifica la box Packer ARM64. VMware Fusion è il provider VM
+ufficiale su Apple Silicon; Docker resta l'alternativa leggera.
 
 Il download di VMware Fusion richiede l'accesso al portale Broadcom: lo script
 apre la pagina ufficiale, aspetta che venga scaricato il DMG e poi continua

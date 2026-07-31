@@ -35,7 +35,7 @@ def supported_providers(host: Host) -> tuple[Provider, ...]:
     """Restituisce solo i provider ufficialmente supportati per l'host."""
 
     if host is Host.MACOS_ARM64:
-        return (Provider.VMWARE, Provider.VIRTUALBOX, Provider.DOCKER)
+        return (Provider.VMWARE, Provider.DOCKER)
     if host is Host.WINDOWS_AMD64:
         return (Provider.VIRTUALBOX, Provider.DOCKER)
     raise ValueError(f"Host non supportato: {host}")
@@ -93,11 +93,39 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
             ),
         )
     )
+    checks = (resources, connectivity, *plan.checks)
+    steps = plan.steps
+    if provider in {Provider.VMWARE, Provider.VIRTUALBOX}:
+        image_command = (
+            sys.executable,
+            "-m",
+            "installer.classroom_images",
+            "--provider",
+            provider.value,
+            "--host",
+            host.value,
+        )
+        checks = (
+            *checks,
+            Check(
+                "classroom-image",
+                "Box Packer preconfigurata",
+                (*image_command, "--check"),
+            ),
+        )
+        steps = (
+            *steps,
+            Step(
+                "classroom-image",
+                "Scarica e configura la box Packer",
+                (*image_command, "--install"),
+            ),
+        )
     return InstallPlan(
         plan.host,
         plan.provider,
-        (resources, connectivity, *plan.checks),
-        plan.steps,
+        checks,
+        steps,
     )
 
 
