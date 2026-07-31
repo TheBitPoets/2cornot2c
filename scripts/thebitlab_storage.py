@@ -476,10 +476,27 @@ class JsonAssignmentStorage:
         return payload
 
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
-        """Write a JSON object with stable formatting."""
+        """Atomically replace a JSON object with stable formatting."""
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
+        descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        temporary_path = Path(temporary_name)
+        try:
+            os.chmod(temporary_path, destination_mode)
+            destination = os.fdopen(descriptor, "w", encoding="utf-8")
+            descriptor = -1
+            with destination:
+                json.dump(payload, destination, ensure_ascii=False, indent=2)
+                destination.write("\n")
+                destination.flush()
+                os.fsync(destination.fileno())
+            os.replace(temporary_path, path)
+            sync_directory(path.parent)
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+            temporary_path.unlink(missing_ok=True)
 
     def save_activity(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]:
         """Validate and persist a teacher-authored activity draft."""

@@ -1475,7 +1475,7 @@ def persist_activity_draft_files(
     }
     allowed_types = set(validate_activity.ALLOWED_ASSET_TYPES)
     allowed_visibility = set(validate_activity.ALLOWED_ASSET_VISIBILITIES)
-    normalized: list[tuple[Path, Path, dict[str, str]]] = []
+    normalized: list[tuple[Path, str, dict[str, str]]] = []
     seen: set[str] = set()
     for index, file in enumerate(files):
         if not isinstance(file, dict):
@@ -1498,21 +1498,47 @@ def persist_activity_draft_files(
             file.get("target_path") or source_key,
             f"files[{index}].target_path",
         )
-        asset_rel = Path("assets") / create_activity.slugify(activity_id) / source_rel
         metadata = {
             "type": asset_type,
-            "path": asset_rel.as_posix(),
             "target_path": target_path.as_posix(),
             "visibility": visibility,
             "description": str(file.get("description") or "File proposto dal docente o dall'assistente AI."),
         }
-        normalized.append((source_rel, drafts_dir / asset_rel, metadata))
+        normalized.append((source_rel, content, metadata))
 
-    for _, destination, _ in normalized:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-    for file, (_, destination, _) in zip(files, normalized):
-        destination.write_text(str(file.get("content", "")), encoding="utf-8", newline="\n")
-    return [metadata for _, _, metadata in normalized]
+    fingerprint = [
+        {"source": source.as_posix(), "content": content, **metadata}
+        for source, content, metadata in normalized
+    ]
+    bundle_id = hashlib.sha256(
+        json.dumps(fingerprint, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()[:32]
+    bundle_parent = drafts_dir / "assets" / create_activity.slugify(activity_id)
+    bundle_dir = bundle_parent / bundle_id
+    bundle_parent.mkdir(parents=True, exist_ok=True)
+    staging_dir = Path(tempfile.mkdtemp(prefix=f".{bundle_id}.", dir=bundle_parent))
+    try:
+        for source, content, _ in normalized:
+            destination = staging_dir / source
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(content, encoding="utf-8", newline="\n")
+        sync_file_tree(staging_dir)
+        if bundle_dir.exists():
+            shutil.rmtree(staging_dir)
+        else:
+            os.replace(staging_dir, bundle_dir)
+            thebitlab_storage.sync_directory(bundle_parent)
+    finally:
+        if staging_dir.exists():
+            shutil.rmtree(staging_dir)
+
+    return [
+        {
+            **metadata,
+            "path": (Path("assets") / create_activity.slugify(activity_id) / bundle_id / source).as_posix(),
+        }
+        for source, _, metadata in normalized
+    ]
 
 
 def save_activity_with_proposed_files(
@@ -1523,32 +1549,26 @@ def save_activity_with_proposed_files(
     overwrite: bool,
     storage: thebitlab_storage.JsonAssignmentStorage,
 ) -> dict:
-    """Persist proposed assets with rollback if the activity save fails."""
+    """Publish one immutable asset bundle before atomically replacing its activity JSON."""
 
     drafts_dir = storage.activity_drafts_dir()
     assets_dir = drafts_dir / "assets" / create_activity.slugify(activity_id)
     if assets_dir.is_symlink() or (assets_dir.exists() and not assets_dir.is_dir()):
         raise ValueError("Directory asset dell'activity non valida.")
-    drafts_dir.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix=".activity-assets-backup-", dir=drafts_dir) as temporary:
-        backup_dir = Path(temporary) / "assets"
-        had_assets = assets_dir.is_dir()
-        if had_assets:
-            shutil.copytree(assets_dir, backup_dir)
-        try:
-            activity["assets"] = persist_activity_draft_files(
-                activity_id=activity_id,
-                files=files,
-                drafts_dir=drafts_dir,
-            )
-            return assignment_service().save_activity(activity, overwrite)
-        except Exception:
-            if assets_dir.exists():
-                shutil.rmtree(assets_dir)
-            if had_assets:
-                assets_dir.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copytree(backup_dir, assets_dir)
-            raise
+    existing_bundles = {path.name for path in assets_dir.iterdir()} if assets_dir.is_dir() else set()
+    try:
+        activity["assets"] = persist_activity_draft_files(
+            activity_id=activity_id,
+            files=files,
+            drafts_dir=drafts_dir,
+        )
+        return assignment_service().save_activity(activity, overwrite)
+    except Exception:
+        if assets_dir.is_dir():
+            for path in assets_dir.iterdir():
+                if path.name not in existing_bundles and path.is_dir() and not path.is_symlink():
+                    shutil.rmtree(path)
+        raise
 
 
 def save_activity(payload: dict) -> dict:

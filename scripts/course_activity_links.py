@@ -154,7 +154,21 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
         for uda in year.get("udas", []):
             for raw_link in uda.get("activity_links", []):
                 link = validate_activity_link(raw_link)
-                candidate = root.joinpath(*PurePosixPath(link["activity_path"]).parts)
+                path_parts = PurePosixPath(link["activity_path"]).parts
+                cursor = root.resolve(strict=False)
+                for part in path_parts:
+                    try:
+                        exact_names = {entry.name for entry in cursor.iterdir()}
+                    except OSError as error:
+                        raise ValueError(f"Activity collegata non trovata: {link['activity_path']}.") from error
+                    if part not in exact_names:
+                        if any(name.casefold() == part.casefold() for name in exact_names):
+                            raise ValueError(
+                                f"activity_path non rispetta le maiuscole reali: {link['activity_path']}."
+                            )
+                        raise ValueError(f"Activity collegata non trovata: {link['activity_path']}.")
+                    cursor /= part
+                candidate = root.joinpath(*path_parts)
                 try:
                     resolved = candidate.resolve(strict=True)
                     resolved.relative_to(activities_root)

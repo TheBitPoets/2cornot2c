@@ -172,6 +172,16 @@ def test_validate_course_activity_targets_rejects_missing_file(tmp_path) -> None
         validate_course_activity_targets(design(link()), tmp_path)
 
 
+def test_validate_course_activity_targets_rejects_nonportable_path_casing(tmp_path) -> None:
+    activity_path = tmp_path / "activities" / "examples" / "demo.json"
+    activity_path.parent.mkdir(parents=True)
+    activity_path.write_text("{}", encoding="utf-8")
+    mismatched = link(activity_path="activities/examples/DEMO.json")
+
+    with pytest.raises(ValueError, match="maiuscole reali"):
+        validate_course_activity_targets(design(mismatched), tmp_path)
+
+
 def test_validate_course_activity_targets_rejects_structurally_invalid_activity(tmp_path) -> None:
     activity_path = tmp_path / "activities" / "examples" / "practical_test_functions.json"
     activity_path.parent.mkdir(parents=True)

@@ -4886,7 +4886,9 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
     saved = json.loads(activity_path.read_text(encoding="utf-8"))
     asset = saved["assets"][0]
     assert result["ok"] is True
-    assert asset["path"] == "assets/asset-ai/starter/main.py"
+    assert asset["path"].startswith("assets/asset-ai/")
+    assert asset["path"].endswith("/starter/main.py")
+    assert len(asset["path"].split("/")[2]) == 32
     assert asset["target_path"] == "starter/main.py"
     assert (tmp_path / "activities" / "drafts" / asset["path"]).read_text(encoding="utf-8") == "print('ok')\n"
 
@@ -4914,8 +4916,10 @@ def test_save_activity_restores_existing_assets_when_json_save_fails(tmp_path, m
         ],
     }
     course_board_server.save_activity(payload)
-    asset_path = tmp_path / "activities" / "drafts" / "assets" / "asset-rollback" / "starter" / "main.py"
-    original_json = (tmp_path / "activities" / "drafts" / "asset-rollback.json").read_bytes()
+    activity_json_path = tmp_path / "activities" / "drafts" / "asset-rollback.json"
+    original_json = activity_json_path.read_bytes()
+    original_payload = json.loads(original_json)
+    asset_path = tmp_path / "activities" / "drafts" / original_payload["assets"][0]["path"]
     real_service = course_board_server.assignment_service()
 
     class FailingService:
@@ -4936,7 +4940,9 @@ def test_save_activity_restores_existing_assets_when_json_save_fails(tmp_path, m
         )
 
     assert asset_path.read_text(encoding="utf-8") == "print('original')\n"
-    assert (tmp_path / "activities" / "drafts" / "asset-rollback.json").read_bytes() == original_json
+    assert activity_json_path.read_bytes() == original_json
+    bundle_parent = tmp_path / "activities" / "drafts" / "assets" / "asset-rollback"
+    assert [path.name for path in bundle_parent.iterdir()] == [asset_path.parents[1].name]
 
 
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:

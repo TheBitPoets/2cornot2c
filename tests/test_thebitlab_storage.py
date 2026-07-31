@@ -785,6 +785,23 @@ def test_ai_feedback_demo_report_exposes_teacher_review_states() -> None:
     }
 
 
+def test_assignment_storage_atomic_json_failure_preserves_previous_file(tmp_path, monkeypatch) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    path = tmp_path / "activities" / "drafts" / "demo.json"
+    storage.write_json(path, {"version": "old"})
+    original = path.read_bytes()
+
+    def fail_replace(source, destination):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr("scripts.thebitlab_storage.os.replace", fail_replace)
+    with pytest.raises(OSError, match="replace failed"):
+        storage.write_json(path, {"version": "new"})
+
+    assert path.read_bytes() == original
+    assert list(path.parent.glob(".demo.json.*.tmp")) == []
+
+
 def test_assignment_report_rejects_unsafe_or_invalid_reports(tmp_path) -> None:
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
     reports_dir = tmp_path / "teacher-reports"
