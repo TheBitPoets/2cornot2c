@@ -81,6 +81,12 @@ def test_composition_adds_github_routes_only_with_complete_configuration(tmp_pat
     )
     assert environment["THEBITLAB_GITHUB_CLIENT_SECRET"] not in repr(runtime)
 
+    environment["THEBITLAB_GITHUB_POST_LINK_PATH"] = "/tools/course_board.html"
+    with pytest.raises(AuthRuntimeConfigurationError) as captured:
+        compose_google_oidc_runtime(environment, data_root=tmp_path / "rejected")
+    assert "landing account canonica" in str(captured.value)
+    assert "/tools/course_board.html" not in str(captured.value)
+
 
 def test_partial_github_runtime_configuration_fails_closed(tmp_path: Path) -> None:
     environment = valid_environment()
@@ -109,7 +115,7 @@ def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> Non
     assert login.config.redirect_uri == (
         "https://lab.example.edu/auth/google/callback"
     )
-    assert login.config.post_login_path == "/tools/course_board.html"
+    assert login.config.post_login_path == "/auth/account"
     assert repr(runtime) == "GoogleOidcRuntime(configured=True)"
 
     database = _test_data_root(tmp_path) / ".thebitlab-auth" / "auth.sqlite3"
@@ -125,14 +131,16 @@ def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> Non
         assert database.stat().st_mode & 0o777 == 0o600
 
 
-def test_composition_accepts_relative_database_and_local_post_login(tmp_path: Path) -> None:
+def test_composition_accepts_relative_database_and_canonical_account_landing(
+    tmp_path: Path,
+) -> None:
     environment = valid_environment()
     environment["THEBITLAB_AUTH_DB_PATH"] = "state/auth.sqlite3"
-    environment["THEBITLAB_GOOGLE_POST_LOGIN_PATH"] = "/welcome/%E2%9C%93"
+    environment["THEBITLAB_GOOGLE_POST_LOGIN_PATH"] = "/auth/account"
 
     runtime = compose_google_oidc_runtime(environment, data_root=tmp_path)
 
-    assert runtime.routes.callback.config.post_login_path == "/welcome/%E2%9C%93"
+    assert runtime.routes.callback.config.post_login_path == "/auth/account"
     assert (_test_data_root(tmp_path) / "state" / "auth.sqlite3").is_file()
 
 
@@ -157,6 +165,7 @@ def test_composition_accepts_relative_database_and_local_post_login(tmp_path: Pa
             "callback canonico",
         ),
         ("THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/welcome?next=x", "POST_LOGIN"),
+        ("THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/tools/course_board.html", "landing account canonica"),
         ("THEBITLAB_AUTH_DB_PATH", ":memory:", "AUTH_DB_PATH"),
     ),
 )

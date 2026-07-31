@@ -5,6 +5,7 @@
 `scripts/thebitlab_session_http.py` espone due route concrete sullo stesso grafo web creato dalla composizione runtime:
 
 - `GET /auth/session`;
+- `GET /auth/account`;
 - `POST /auth/logout`.
 
 Il principal deriva esclusivamente dal cookie di sessione `web`; nessun `user_id`, ruolo o identificatore inviato dal client viene usato per scegliere l'utente.
@@ -25,6 +26,12 @@ Query, fragment, request-target non origin-form, path params, body, transfer enc
 - token CSRF legato tramite HMAC al bearer corrente.
 
 Email, identità provider, bearer, digest e appartenenze non vengono serializzati. Il token CSRF è necessario al browser per le successive mutazioni, ma body e request sensibili sono esclusi dai `repr`.
+
+## Landing account
+
+`GET /auth/account` richiede la sessione web e rende una pagina HTML minimale `no-store` senza identificativi, email o CSRF. La pagina è role-aware: `pending` mostra soltanto lo stato di attesa, `student` espone il collegamento al pairing TUI, mentre `teacher` e `admin` espongono un accesso esplicito alla Course Design Board. La Board conserva la propria autenticazione Basic separata. CSP, `nosniff` e `DENY` impediscono risorse, form e framing non necessari.
+
+I redirect Google e GitHub usano obbligatoriamente questa landing nella composizione runtime. Override verso Board o path generici sono rifiutati all'avvio, così una configurazione legacy non può reinviare implicitamente studenti o utenti pending alla superficie docente.
 
 ## Logout
 
