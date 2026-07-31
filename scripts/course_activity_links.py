@@ -172,6 +172,8 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                             )
                         raise ValueError(f"Activity collegata non trovata: {link['activity_path']}.")
                     cursor /= part
+                    if cursor.is_symlink():
+                        raise ValueError(f"activity_path non puo attraversare symlink: {link['activity_path']}.")
                 candidate = root.joinpath(*path_parts)
                 try:
                     resolved = candidate.resolve(strict=True)
@@ -191,6 +193,7 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                     raise ValueError(f"Activity collegata non valida: {validation_errors[0]}.")
                 source_paths: list[Path] = []
                 target_paths: list[Path] = []
+                activity_root = resolved.parent.resolve(strict=True)
                 for index, asset in enumerate(payload.get("assets", [])):
                     source = create_submission_scaffold.validate_relative_path(
                         asset.get("path"),
@@ -204,6 +207,26 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                         raise ValueError("Activity collegata con asset sorgente duplicato o sovrapposto.")
                     if any(create_submission_scaffold.portable_paths_overlap(target, item) for item in target_paths):
                         raise ValueError("Activity collegata con target asset duplicato o sovrapposto.")
+                    if create_submission_scaffold.is_reserved_scaffold_target(target):
+                        raise ValueError(f"Target asset riservato allo scaffold: {target.as_posix()}.")
+                    source_path = activity_root
+                    for part in source.parts:
+                        try:
+                            names = {entry.name for entry in source_path.iterdir()}
+                        except OSError as error:
+                            raise ValueError(f"Asset non trovato: {source.as_posix()}.") from error
+                        matches = [name for name in names if name.casefold() == part.casefold()]
+                        if len(matches) > 1 or part not in names:
+                            raise ValueError(f"Asset non portabile o non trovato: {source.as_posix()}.")
+                        source_path /= part
+                        if source_path.is_symlink():
+                            raise ValueError(f"L'asset non puo attraversare symlink: {source.as_posix()}.")
+                    try:
+                        source_path.resolve(strict=True).relative_to(activity_root)
+                    except (FileNotFoundError, RuntimeError, ValueError) as error:
+                        raise ValueError(f"Asset fuori dalla directory activity: {source.as_posix()}.") from error
+                    if not source_path.is_file():
+                        raise ValueError(f"Asset non trovato: {source.as_posix()}.")
                     source_paths.append(source)
                     target_paths.append(target)
                 authoritative_id = str(normalize_activity(payload).get("id", ""))
