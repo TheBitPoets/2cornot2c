@@ -1,0 +1,163 @@
+{
+  "schema_version": "1.0",
+  "id": "tpsi4-activity-c-fork-pipe-square-001",
+  "titolo": "Calcolo del quadrato con fork e pipe",
+  "tipo": "laboratorio",
+  "student_support_mode": "feedback-tecnico",
+  "difficolta": "C",
+  "argomenti": [
+    "processi",
+    "fork",
+    "pipe",
+    "waitpid",
+    "comunicazione-tra-processi",
+    "gestione-errori"
+  ],
+  "linguaggio": "c",
+  "contesto": {
+    "percorso": "quarto-anno",
+    "uda": "uda-11"
+  },
+  "content_ids": [
+    "tpsi4-content-processi-concorrenza",
+    "tpsi4-content-comunicazione-sincronizzazione"
+  ],
+  "source_refs": [
+    {
+      "source_id": "tpsi4-source-originali",
+      "path": "content/tpsi_quarto/01_PROCESSI_E_CONCORRENZA.md",
+      "anchor": "laboratorio-assegnabile-calcolo-con-fork-e-pipe",
+      "role": "lesson"
+    },
+    {
+      "source_id": "tpsi4-source-originali",
+      "path": "content/tpsi_quarto/02_COMUNICAZIONE_E_SINCRONIZZAZIONE.md",
+      "anchor": "comunicazione-tra-processi-con-pipe",
+      "role": "technical-context"
+    },
+    {
+      "source_id": "tpsi4-source-linux-programming",
+      "path": "LINUX_PROGRAMMING.md",
+      "anchor": "fork-exec",
+      "role": "technical-reference"
+    },
+    {
+      "source_id": "tpsi4-source-linux-programming",
+      "path": "LINUX_PROGRAMMING.md",
+      "anchor": "aspettare-la-terminazione-di-un-processo",
+      "role": "technical-reference"
+    }
+  ],
+  "consegna": "Completa main.c. Il processo padre deve leggere un intero da standard input, creare una pipe e un processo figlio. Il figlio calcola il quadrato del valore e lo invia al padre esclusivamente attraverso la pipe. Il padre chiude le estremita non usate, legge il risultato, attende il figlio con waitpid e stampa esattamente `Risultato: N`. Se l'input non e un intero valido, stampa `Input non valido` e termina con codice diverso da zero.",
+  "vincoli": [
+    "usa pipe, fork e waitpid",
+    "il risultato deve attraversare la pipe",
+    "padre e figlio devono chiudere le estremita della pipe non usate",
+    "controlla gli errori delle chiamate di sistema",
+    "non usare file temporanei, memoria condivisa o system",
+    "non stampare PID, prompt o messaggi di debug su stdout"
+  ],
+  "assets": [
+    {
+      "type": "starter",
+      "path": "starter/main.c",
+      "target_path": "main.c",
+      "visibility": "student",
+      "description": "Scheletro C compilabile da completare"
+    },
+    {
+      "type": "example",
+      "path": "student/README.md",
+      "target_path": "README.md",
+      "visibility": "student",
+      "description": "Guida studente, contratto di output e checklist"
+    },
+    {
+      "type": "teacher_only",
+      "path": "solution/main.c",
+      "visibility": "teacher",
+      "description": "Soluzione di riferimento verificata"
+    },
+    {
+      "type": "teacher_only",
+      "path": "teacher/NOTES.md",
+      "visibility": "teacher",
+      "description": "Note didattiche, osservazioni e rubriche"
+    }
+  ],
+  "soluzione_attesa": {
+    "tipo": "programma-c",
+    "file": "main.c",
+    "output": "Risultato: N",
+    "note": "Il valore deve essere calcolato dal figlio e trasferito tramite pipe."
+  },
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 90,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  },
+  "test_cases": [
+    {
+      "name": "positivo",
+      "stdin": "5\n",
+      "expected_stdout": "Risultato: 25\n"
+    },
+    {
+      "name": "negativo",
+      "stdin": "-3\n",
+      "expected_stdout": "Risultato: 9\n"
+    },
+    {
+      "name": "zero",
+      "stdin": "0\n",
+      "expected_stdout": "Risultato: 0\n"
+    },
+    {
+      "name": "valore medio",
+      "stdin": "12\n",
+      "expected_stdout": "Risultato: 144\n"
+    }
+  ],
+  "manual_checks": [
+    {
+      "name": "input non valido",
+      "stdin": "abc\n",
+      "expected_stdout": "Input non valido\n",
+      "expected_exit": "non-zero"
+    },
+    {
+      "name": "verifica architetturale",
+      "criterion": "il risultato deve essere calcolato dal figlio e trasferito tramite pipe"
+    }
+  ],
+  "rubrica": [
+    {
+      "criterio": "Uso corretto di pipe, fork e waitpid",
+      "punti": 3
+    },
+    {
+      "criterio": "Chiusura descrittori e gestione errori",
+      "punti": 2
+    },
+    {
+      "criterio": "Correttezza dei casi di test",
+      "punti": 3
+    },
+    {
+      "criterio": "Chiarezza e organizzazione del codice",
+      "punti": 1
+    },
+    {
+      "criterio": "Spiegazione del protocollo padre-figlio",
+      "punti": 1
+    }
+  ]
+}
