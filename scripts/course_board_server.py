@@ -1472,6 +1472,9 @@ def delete_activity_record(payload: dict) -> dict:
             if current_state != "cleanup":
                 recover_interrupted_activity_deletions()
                 raise
+            # Retry the exact durability barrier before treating the visible
+            # cleanup marker as authoritative.
+            thebitlab_storage.sync_directory(journal.parent)
         cleanup_pending = False
         try:
             tombstone.unlink()

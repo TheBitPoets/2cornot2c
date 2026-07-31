@@ -531,12 +531,33 @@ class JsonAssignmentStorage:
         return payload
 
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
-        """Atomically replace a JSON object with stable formatting."""
+        """Atomically replace JSON and restore the prior version on commit failure."""
 
         ensure_directory_durable(path.parent, self.root)
         destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
+        backup_path: Path | None = None
+        if path.exists():
+            backup_descriptor, backup_name = tempfile.mkstemp(
+                prefix=f".{path.name}.",
+                suffix=".rollback",
+                dir=path.parent,
+            )
+            backup_path = Path(backup_name)
+            try:
+                with os.fdopen(backup_descriptor, "wb") as backup:
+                    backup.write(path.read_bytes())
+                    backup.flush()
+                    os.fsync(backup.fileno())
+                sync_directory(path.parent)
+            except Exception:
+                backup_path.unlink(missing_ok=True)
+                raise
+
         descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
         temporary_path = Path(temporary_name)
+        published = False
+        commit_complete = False
+        rollback_complete = False
         try:
             os.chmod(temporary_path, destination_mode)
             destination = os.fdopen(descriptor, "w", encoding="utf-8")
@@ -547,11 +568,41 @@ class JsonAssignmentStorage:
                 destination.flush()
                 os.fsync(destination.fileno())
             os.replace(temporary_path, path)
-            sync_directory(path.parent)
+            published = True
+            try:
+                sync_directory(path.parent)
+                commit_complete = True
+            except Exception:
+                if backup_path is None:
+                    path.unlink(missing_ok=True)
+                    sync_directory(path.parent)
+                else:
+                    restore_descriptor, restore_name = tempfile.mkstemp(
+                        prefix=f".{path.name}.",
+                        suffix=".restore",
+                        dir=path.parent,
+                    )
+                    restore_path = Path(restore_name)
+                    try:
+                        with os.fdopen(restore_descriptor, "wb") as restored:
+                            restored.write(backup_path.read_bytes())
+                            restored.flush()
+                            os.fsync(restored.fileno())
+                        os.replace(restore_path, path)
+                        sync_directory(path.parent)
+                    finally:
+                        restore_path.unlink(missing_ok=True)
+                rollback_complete = True
+                raise
         finally:
             if descriptor >= 0:
                 os.close(descriptor)
             temporary_path.unlink(missing_ok=True)
+            if backup_path is not None and (not published or commit_complete or rollback_complete):
+                try:
+                    backup_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
     def save_activity(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]:
         """Validate and persist a teacher-authored activity draft."""

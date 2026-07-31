@@ -821,6 +821,36 @@ def test_assignment_storage_atomic_json_failure_preserves_previous_file(tmp_path
     assert list(path.parent.glob(".demo.json.*.tmp")) == []
 
 
+def test_assignment_storage_restores_previous_json_when_commit_flush_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    path = tmp_path / "activities" / "drafts" / "demo.json"
+    storage.write_json(path, {"version": "old"})
+    original = path.read_bytes()
+    real_replace = os.replace
+    published = False
+    failed = False
+
+    def track_replace(source, destination):
+        nonlocal published
+        real_replace(source, destination)
+        if Path(destination) == path and str(source).endswith(".tmp"):
+            published = True
+
+    def fail_published_sync(directory):
+        nonlocal failed
+        if published and not failed:
+            failed = True
+            raise OSError("commit flush failed")
+
+    monkeypatch.setattr("scripts.thebitlab_storage.os.replace", track_replace)
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", fail_published_sync)
+    with pytest.raises(OSError, match="commit flush failed"):
+        storage.write_json(path, {"version": "new"})
+
+    assert path.read_bytes() == original
+    assert list(path.parent.glob(".demo.json.*.rollback")) == []
+
+
 def test_assignment_report_rejects_unsafe_or_invalid_reports(tmp_path) -> None:
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
     reports_dir = tmp_path / "teacher-reports"
