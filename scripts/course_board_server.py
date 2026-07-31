@@ -1242,6 +1242,8 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
     relative_activity_path = repository_relative_path(activity_path.resolve())
     assignments = []
     record_storage = assignment_record_storage()
+    if record_storage.assignments_dir.is_symlink():
+        raise ValueError("Directory assegnazioni non verificabile: symlink non consentito.")
     assignment_paths = (
         sorted(record_storage.assignments_dir.glob("*.json"))
         if record_storage.assignments_dir.is_dir()
@@ -1268,6 +1270,12 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
 
     storage = assignment_storage()
     reports = []
+    if storage.teacher_reports_dir.is_symlink():
+        raise ValueError("Directory registri non verificabile: symlink non consentito.")
+    if storage.teacher_reports_dir.is_dir():
+        for descendant in storage.teacher_reports_dir.rglob("*"):
+            if descendant.is_symlink():
+                raise ValueError(f"Percorso registro non verificabile: {descendant.name}.")
     report_paths = (
         sorted(storage.teacher_reports_dir.rglob("*.json"))
         if storage.teacher_reports_dir.is_dir()
@@ -1299,7 +1307,7 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
 
 
 def recover_interrupted_activity_deletions() -> None:
-    """Purge durable activity tombstones left by interrupted cleanup."""
+    """Recover prepared deletions and purge committed activity tombstones."""
 
     with thebitlab_storage.course_storage_lock(ROOT):
         drafts_dir = ROOT / "activities" / "drafts"
@@ -1307,14 +1315,53 @@ def recover_interrupted_activity_deletions() -> None:
             raise RuntimeError("Directory bozze activity non valida: symlink non consentito.")
         if not drafts_dir.is_dir():
             return
-        changed = False
-        for tombstone in sorted(drafts_dir.glob(".*.tombstone")):
-            if tombstone.is_symlink() or not tombstone.is_file():
-                raise RuntimeError(f"Tombstone activity non valida: {tombstone.name}")
-            tombstone.unlink()
-            changed = True
-        if changed:
+        storage = assignment_storage()
+        referenced_tombstones: set[str] = set()
+        for journal in sorted(drafts_dir.glob(".activity-delete-*.txn")):
+            if journal.is_symlink() or not journal.is_file():
+                raise RuntimeError(f"Journal activity non valido: {journal.name}")
+            transaction = storage.read_json(journal)
+            if transaction.get("schema_version") != "activity_deletion.v1":
+                raise RuntimeError(f"Schema journal activity non supportato: {journal.name}")
+            state = transaction.get("state")
+            original_name = str(transaction.get("original", ""))
+            tombstone_name = str(transaction.get("tombstone", ""))
+            if (
+                state not in {"prepared", "committed"}
+                or Path(original_name).name != original_name
+                or Path(tombstone_name).name != tombstone_name
+                or not tombstone_name.endswith(".tombstone")
+            ):
+                raise RuntimeError(f"Journal activity non valido: {journal.name}")
+            original = drafts_dir / original_name
+            tombstone = drafts_dir / tombstone_name
+            referenced_tombstones.add(tombstone_name)
+            if original.is_symlink() or tombstone.is_symlink():
+                raise RuntimeError(f"Path journal activity non valido: {journal.name}")
+            if state == "prepared":
+                if tombstone.is_file() and not original.exists():
+                    os.replace(tombstone, original)
+                    thebitlab_storage.sync_directory(drafts_dir)
+                elif tombstone.is_file() and original.is_file():
+                    tombstone.unlink()
+                    thebitlab_storage.sync_directory(drafts_dir)
+                elif not original.is_file():
+                    raise RuntimeError(f"Activity e tombstone mancanti: {journal.name}")
+            else:
+                if original.exists():
+                    raise RuntimeError(f"Activity committed riapparsa: {journal.name}")
+                if tombstone.is_file():
+                    tombstone.unlink()
+                    thebitlab_storage.sync_directory(drafts_dir)
+            journal.unlink()
             thebitlab_storage.sync_directory(drafts_dir)
+        orphan_tombstones = [
+            path.name
+            for path in drafts_dir.glob(".*.tombstone")
+            if path.name not in referenced_tombstones
+        ]
+        if orphan_tombstones:
+            raise RuntimeError(f"Tombstone activity senza journal: {orphan_tombstones[0]}")
 
 
 def delete_activity_record(payload: dict) -> dict:
@@ -1356,18 +1403,26 @@ def delete_activity_record(payload: dict) -> dict:
             "title": activity.get("title", ""),
             "path": repository_relative_path(activity_path),
         }
-        tombstone = activity_path.with_name(f".{activity_path.name}.{uuid.uuid4().hex}.tombstone")
+        transaction_id = uuid.uuid4().hex
+        tombstone = activity_path.with_name(f".{activity_path.name}.{transaction_id}.tombstone")
+        journal = activity_path.with_name(f".activity-delete-{transaction_id}.txn")
+        transaction = {
+            "schema_version": "activity_deletion.v1",
+            "state": "prepared",
+            "original": activity_path.name,
+            "tombstone": tombstone.name,
+        }
+        storage.write_json(journal, transaction)
         os.replace(activity_path, tombstone)
         try:
             thebitlab_storage.sync_directory(activity_path.parent)
         except Exception:
-            os.replace(tombstone, activity_path)
-            thebitlab_storage.sync_directory(activity_path.parent)
+            recover_interrupted_activity_deletions()
             raise
+        storage.write_json(journal, {**transaction, "state": "committed"})
         cleanup_pending = False
         try:
-            tombstone.unlink()
-            thebitlab_storage.sync_directory(tombstone.parent)
+            recover_interrupted_activity_deletions()
         except OSError:
             cleanup_pending = True
         return {
@@ -1537,6 +1592,24 @@ def list_activities() -> list[dict]:
     return assignment_service().list_activities()
 
 
+def immutable_bundle_snapshot(root: Path) -> dict[str, str]:
+    """Return a bounded-structure digest map while rejecting symlinks."""
+
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError(f"Bundle asset non valido: {root.name}.")
+    snapshot: dict[str, str] = {}
+    for candidate in sorted(root.rglob("*")):
+        if candidate.is_symlink():
+            raise ValueError(f"Bundle asset con symlink non consentito: {candidate.name}.")
+        if candidate.is_dir():
+            continue
+        if not candidate.is_file():
+            raise ValueError(f"Elemento bundle non valido: {candidate.name}.")
+        relative = candidate.relative_to(root).as_posix()
+        snapshot[relative] = create_submission_scaffold.file_sha256(candidate)
+    return snapshot
+
+
 def persist_activity_draft_files(
     *,
     activity_id: str,
@@ -1633,6 +1706,8 @@ def persist_activity_draft_files(
             destination.write_text(content, encoding="utf-8", newline="\n")
         sync_file_tree(staging_dir)
         if bundle_dir.exists():
+            if immutable_bundle_snapshot(bundle_dir) != immutable_bundle_snapshot(staging_dir):
+                raise ValueError("Collisione o corruzione del bundle asset immutabile.")
             shutil.rmtree(staging_dir)
         else:
             os.replace(staging_dir, bundle_dir)

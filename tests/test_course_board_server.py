@@ -2809,22 +2809,32 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
     assert payload["dependencies"] == {"assignments": [], "reports": [], "course_designs": []}
     assert payload["activities"] == []
     assert not activity_path.exists()
-    assert synced_directories == [activity_path.parent, activity_path.parent]
+    assert activity_path.parent in synced_directories
+    assert payload["cleanup_pending"] is False
 
 
 def test_delete_activity_record_restores_file_when_commit_flush_fails(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
     write_demo_activity(activity_path)
-    calls = 0
+    renamed = False
+    failed = False
+    real_replace = os.replace
 
-    def fail_first_sync(path):
-        nonlocal calls
-        calls += 1
-        if calls == 1:
+    def track_replace(source, destination):
+        nonlocal renamed
+        real_replace(source, destination)
+        if Path(source) == activity_path and str(destination).endswith(".tombstone"):
+            renamed = True
+
+    def fail_commit_sync(path):
+        nonlocal failed
+        if renamed and not failed:
+            failed = True
             raise OSError("directory flush failed")
 
-    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", fail_first_sync)
+    monkeypatch.setattr(course_board_server.os, "replace", track_replace)
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", fail_commit_sync)
     with pytest.raises(OSError, match="directory flush failed"):
         course_board_server.delete_activity_record(
             {"activity_path": "activities/drafts/python-base-somma-001.json"}
@@ -2832,7 +2842,8 @@ def test_delete_activity_record_restores_file_when_commit_flush_fails(tmp_path, 
 
     assert activity_path.exists()
     assert list(activity_path.parent.glob(".*.tombstone")) == []
-    assert calls == 2
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+    assert failed is True
 
 
 def test_delete_activity_record_rejects_nested_json_asset(tmp_path, monkeypatch) -> None:
@@ -5045,6 +5056,31 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
     assert drafts_dir in synced_directories
     assert drafts_dir / "assets" in synced_directories
     assert drafts_dir / "assets" / "asset-ai" in synced_directories
+
+
+def test_save_activity_rejects_corrupted_existing_immutable_bundle(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "immutable-bundle",
+        "title": "Immutable bundle",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il file.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [{"path": "starter.py", "content": "original\n", "visibility": "student"}],
+    }
+    result = course_board_server.save_activity(payload)
+    asset_path = tmp_path / result["activity"]["path"]
+    saved = json.loads(asset_path.read_text(encoding="utf-8"))
+    bundle_file = asset_path.parent / saved["assets"][0]["path"]
+    bundle_file.write_text("corrupted\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="corruzione"):
+        course_board_server.save_activity({**payload, "overwrite": True})
 
 
 @pytest.mark.parametrize(
