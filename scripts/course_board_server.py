@@ -1518,6 +1518,13 @@ def persist_activity_draft_files(
 def save_activity(payload: dict) -> dict:
     """Create and persist a teacher-authored activity draft."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _save_activity_locked(payload)
+
+
+def _save_activity_locked(payload: dict) -> dict:
+    """Persist one activity while the shared course/activity lock is held."""
+
     title = str(payload.get("title", "")).strip()
     activity_id = str(payload.get("id", "")).strip() or create_activity.slugify(title)
     topics = create_activity.parse_topics(str(payload.get("topics", "")))
@@ -1794,6 +1801,13 @@ def validate_global_assignment_target_bindings(
 def save_assignment_record(payload: dict) -> dict:
     """Persist an explicit assignment record from the teacher dashboard."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _save_assignment_record_locked(payload)
+
+
+def _save_assignment_record_locked(payload: dict) -> dict:
+    """Persist one assignment while activity deletion is excluded."""
+
     activity_path_value = str(payload.get("activity_path", "")).strip()
     activity_path = resolve_local_path(activity_path_value, "activity_path")
     if not activity_path.is_file():
@@ -1933,6 +1947,13 @@ def distribute_activity_assignment(payload: dict) -> dict:
 
 def generate_assignment_report(payload: dict) -> dict:
     """Generate and persist an assignment tracking report from the local GUI."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _generate_assignment_report_locked(payload)
+
+
+def _generate_assignment_report_locked(payload: dict) -> dict:
+    """Persist one report while activity deletion is excluded."""
 
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
     if not activity_path.is_file():
