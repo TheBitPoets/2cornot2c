@@ -4851,7 +4851,7 @@ def test_save_activity_builds_valid_draft_from_gui_payload(tmp_path, monkeypatch
     }
 
 
-def test_save_activity_overwrite_cannot_change_identity_on_slug_collision(tmp_path, monkeypatch) -> None:
+def test_save_activity_rejects_noncanonical_or_oversized_id(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
     payload = {
@@ -4865,21 +4865,39 @@ def test_save_activity_overwrite_cannot_change_identity_on_slug_collision(tmp_pa
         "language": "python",
         "source_name": "main.py",
     }
-    course_board_server.save_activity(payload)
+
+    with pytest.raises(ValueError, match="slug sicuro"):
+        course_board_server.save_activity(payload)
+    with pytest.raises(ValueError, match="limite"):
+        course_board_server.save_activity({**payload, "id": "a" * 161})
+
+    assert not (tmp_path / "activities" / "drafts").exists()
+
+
+def test_save_activity_overwrite_cannot_replace_legacy_colliding_identity(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    activity_path = tmp_path / "activities" / "drafts" / "foo.json"
+    write_demo_activity(activity_path, activity_id="Foo")
 
     with pytest.raises(ValueError, match="identita"):
         course_board_server.save_activity(
             {
-                **payload,
                 "id": "foo",
                 "title": "Activity sostitutiva",
+                "kind": "laboratorio",
+                "difficulty": "B",
+                "topics": "variabili",
+                "prompt": "Nuova consegna.",
+                "estimated_minutes": "20",
+                "language": "python",
+                "source_name": "main.py",
                 "overwrite": True,
             }
         )
 
-    saved = json.loads((tmp_path / "activities" / "drafts" / "foo.json").read_text(encoding="utf-8"))
+    saved = json.loads(activity_path.read_text(encoding="utf-8"))
     assert saved["id"] == "Foo"
-    assert saved["titolo"] == "Prima activity"
 
 
 def test_save_activity_revalidates_preserved_assets_when_source_name_changes(tmp_path, monkeypatch) -> None:

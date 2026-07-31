@@ -1652,6 +1652,9 @@ def _save_activity_locked(payload: dict) -> dict:
 
     title = str(payload.get("title", "")).strip()
     activity_id = str(payload.get("id", "")).strip() or create_activity.slugify(title)
+    activity_id = create_submission_scaffold.activity_id({"id": activity_id})
+    if len(activity_id) > course_activity_links.MAX_ID_LENGTH:
+        raise ValueError(f"activity_id supera il limite di {course_activity_links.MAX_ID_LENGTH} caratteri.")
     topics = create_activity.parse_topics(str(payload.get("topics", "")))
     activity = create_activity.build_activity(
         activity_id=activity_id,
