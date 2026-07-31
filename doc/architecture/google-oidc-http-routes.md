@@ -40,6 +40,7 @@ Una negazione edge diventa `429 rate_limit_exceeded` con `Retry-After`. Errori e
 La callback accetta una query massima di 8192 byte e 16 campi. Il parser:
 
 - preserva valori duplicati come sequenze, lasciando al service OIDC la validazione dei parametri ammessi;
+- accetta l'Authorization Response `iss` opzionale soltanto quando è singolo e uguale a `https://accounts.google.com`;
 - mantiene valori vuoti;
 - rifiuta percent escape malformati, UTF-8 invalido, campi senza `=`, fragment e query vuota;
 - non concatena o sceglie arbitrariamente valori duplicati.

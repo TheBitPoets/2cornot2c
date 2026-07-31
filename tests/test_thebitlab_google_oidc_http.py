@@ -222,7 +222,10 @@ def test_rate_limit_errors_map_to_sanitized_429_and_503() -> None:
 
 def test_callback_preserves_duplicate_parameters_and_combines_cookies() -> None:
     router, _admission, callback = routes()
-    raw_query = "state=raw-state&code=raw-code&scope=openid&scope=email"
+    raw_query = (
+        "state=raw-state&code=raw-code&scope=openid&scope=email"
+        "&iss=https%3A%2F%2Faccounts.google.com"
+    )
     callback_request = request(
         "/auth/google/callback",
         raw_query,
@@ -242,6 +245,7 @@ def test_callback_preserves_duplicate_parameters_and_combines_cookies() -> None:
         "state": ("raw-state",),
         "code": ("raw-code",),
         "scope": ("openid", "email"),
+        "iss": ("https://accounts.google.com",),
     }
     assert callback.cookie == "first=one; second=two"
 

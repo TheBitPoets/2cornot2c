@@ -433,7 +433,9 @@ def test_valid_callback_onboards_pending_user_and_issues_session_cookie(
     service, storage, flows, transport, verifier = make_service(database_path, clock)
     state = begin_state(service)
 
-    result = finish_callback(service, valid_callback(state))
+    callback = valid_callback(state)
+    callback["iss"] = ["https://accounts.google.com"]
+    result = finish_callback(service, callback)
 
     assert result.user_id == "internal-user-01"
     assert result.clear_transaction_cookie.startswith(
@@ -642,6 +644,8 @@ def test_provider_error_consumes_state_and_duplicate_or_unknown_params_fail_clos
         {"code": ["one"], "state": [STATE, STATE]},
         {"code": ["one"], "state": [STATE], "evil": ["value"]},
         {"code": ["one"], "state": [STATE], "scope": ["one", "two"]},
+        {"code": ["one"], "state": [STATE], "iss": ["https://evil.test"]},
+        {"code": ["one"], "state": [STATE], "iss": ["https://accounts.google.com", "https://accounts.google.com"]},
         {"code": ["one"], "error": ["access_denied"], "state": [STATE]},
         {"code": ["one"]},
         {"state": [STATE]},
