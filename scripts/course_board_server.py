@@ -1333,7 +1333,7 @@ def recover_interrupted_activity_deletions() -> None:
             original_name = str(transaction.get("original", ""))
             tombstone_name = str(transaction.get("tombstone", ""))
             if (
-                state not in {"prepared", "rolling_back", "committed"}
+                state not in {"prepared", "rolling_back", "committed", "cleanup"}
                 or Path(original_name).name != original_name
                 or Path(tombstone_name).name != tombstone_name
                 or not tombstone_name.endswith(".tombstone")
@@ -1353,15 +1353,21 @@ def recover_interrupted_activity_deletions() -> None:
                     thebitlab_storage.sync_directory(drafts_dir)
                 elif not original.is_file():
                     raise RuntimeError(f"Activity e tombstone mancanti: {journal.name}")
-            else:
-                # A committed transaction left for startup never produced a
-                # fully confirmed response/cleanup. Prefer recoverability: keep
-                # an existing original or restore the tombstone.
+            elif state == "committed":
+                # A committed transaction without cleanup intent never produced
+                # a confirmed response. Prefer recoverability.
                 if original.is_file() and tombstone.is_file():
                     tombstone.unlink()
                     thebitlab_storage.sync_directory(drafts_dir)
                 elif tombstone.is_file():
                     os.replace(tombstone, original)
+                    thebitlab_storage.sync_directory(drafts_dir)
+            else:
+                # Cleanup intent is durable, so recovery preserves deletion.
+                if original.exists():
+                    raise RuntimeError(f"Activity cleanup riapparsa: {journal.name}")
+                if tombstone.is_file():
+                    tombstone.unlink()
                     thebitlab_storage.sync_directory(drafts_dir)
             journal.unlink()
             thebitlab_storage.sync_directory(drafts_dir)
@@ -1441,14 +1447,24 @@ def delete_activity_record(payload: dict) -> dict:
                 # Even if the marker cannot be updated, restore the original:
                 # recovery deliberately prefers original+committed over deletion.
                 if tombstone.is_file() and not activity_path.exists():
-                    shutil.copy2(tombstone, activity_path)
-                    with activity_path.open("r+b") as restored:
-                        os.fsync(restored.fileno())
-                    thebitlab_storage.sync_directory(activity_path.parent)
+                    restore_temp = activity_path.with_name(f".{activity_path.name}.{uuid.uuid4().hex}.restore")
+                    try:
+                        shutil.copy2(tombstone, restore_temp)
+                        with restore_temp.open("r+b") as restored:
+                            os.fsync(restored.fileno())
+                        os.replace(restore_temp, activity_path)
+                        thebitlab_storage.sync_directory(activity_path.parent)
+                    finally:
+                        restore_temp.unlink(missing_ok=True)
                 raise
             if tombstone.is_file() and not activity_path.exists():
                 os.replace(tombstone, activity_path)
                 thebitlab_storage.sync_directory(activity_path.parent)
+            recover_interrupted_activity_deletions()
+            raise
+        try:
+            storage.write_json(journal, {**transaction, "state": "cleanup"})
+        except Exception:
             recover_interrupted_activity_deletions()
             raise
         cleanup_pending = False
