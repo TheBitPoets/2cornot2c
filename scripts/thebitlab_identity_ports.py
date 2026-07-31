@@ -271,6 +271,20 @@ class ClassDirectoryStorage(Protocol):
     ) -> None: ...
 
 
+class AdminBootstrapStorage(Protocol):
+    """One-shot local boundary for establishing the first administrator."""
+
+    def read_user(self, user_id: str) -> UserAccount | None: ...
+
+    def bootstrap_first_admin(
+        self,
+        target_user_id: str,
+        updated_at: datetime,
+        *,
+        expected_target_updated_at: datetime,
+    ) -> tuple[UserAccount, int]: ...
+
+
 class AdminProvisioningStorage(Protocol):
     """Atomic persistence boundary for explicit admin-owned onboarding."""
 

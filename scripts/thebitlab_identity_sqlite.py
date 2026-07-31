@@ -716,6 +716,69 @@ class SqliteIdentityStorage:
     def list_users(self) -> list[UserAccount]:
         return [self._user(row) for row in self._query_all("SELECT * FROM users ORDER BY user_id")]
 
+    def bootstrap_first_admin(
+        self,
+        target_user_id: str,
+        updated_at: datetime,
+        *,
+        expected_target_updated_at: datetime,
+    ) -> tuple[UserAccount, int]:
+        expected = _encode_datetime(expected_target_updated_at, "expected_target_updated_at")
+        changed = _encode_datetime(updated_at, "updated_at")
+        if changed <= expected:
+            raise IdentityStorageConflictError("Revisione bootstrap non crescente.")
+        with self._transaction("bootstrap_first_admin") as connection:
+            if connection.execute(
+                "SELECT 1 FROM users WHERE role = 'admin' LIMIT 1"
+            ).fetchone() is not None:
+                raise IdentityStorageConflictError("Bootstrap admin già completato.")
+            row = connection.execute(
+                "SELECT * FROM users WHERE user_id = ?", (target_user_id,)
+            ).fetchone()
+            if row is None:
+                raise IdentityStorageNotFoundError("Target bootstrap non trovato.")
+            if (
+                row["role"] != "pending"
+                or row["active"] != 1
+                or row["updated_at"] != expected
+            ):
+                raise IdentityStorageConflictError("Target bootstrap non approvabile.")
+            if connection.execute(
+                "SELECT 1 FROM class_memberships WHERE user_id = ? LIMIT 1",
+                (target_user_id,),
+            ).fetchone() is not None:
+                raise IdentityStorageConflictError("Target bootstrap con membership preesistente.")
+            if connection.execute(
+                """
+                SELECT 1 FROM sessions
+                WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
+                    AND (created_at > ? OR last_seen_at > ?)
+                LIMIT 1
+                """,
+                (target_user_id, changed, changed, changed),
+            ).fetchone() is not None:
+                raise IdentityStorageConflictError("Clock bootstrap precedente alla sessione corrente.")
+            connection.execute(
+                "UPDATE users SET role = 'admin', updated_at = ? WHERE user_id = ?",
+                (changed, target_user_id),
+            )
+            revoked = connection.execute(
+                """
+                UPDATE sessions SET revoked_at = ?
+                WHERE user_id = ? AND revoked_at IS NULL
+                    AND created_at <= ? AND expires_at > ?
+                """,
+                (changed, target_user_id, changed, changed),
+            ).rowcount
+            connection.execute(
+                "DELETE FROM tui_pairings WHERE user_id = ? AND status = 'authorized'",
+                (target_user_id,),
+            )
+            updated = connection.execute(
+                "SELECT * FROM users WHERE user_id = ?", (target_user_id,)
+            ).fetchone()
+            return self._user(updated), revoked
+
     @classmethod
     def _require_current_admin(
         cls,
