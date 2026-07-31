@@ -4830,6 +4830,37 @@ def test_save_activity_builds_valid_draft_from_gui_payload(tmp_path, monkeypatch
     }
 
 
+def test_save_activity_overwrite_cannot_change_identity_on_slug_collision(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "Foo",
+        "title": "Prima activity",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "variabili",
+        "prompt": "Prima consegna.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+    }
+    course_board_server.save_activity(payload)
+
+    with pytest.raises(ValueError, match="identita"):
+        course_board_server.save_activity(
+            {
+                **payload,
+                "id": "foo",
+                "title": "Activity sostitutiva",
+                "overwrite": True,
+            }
+        )
+
+    saved = json.loads((tmp_path / "activities" / "drafts" / "foo.json").read_text(encoding="utf-8"))
+    assert saved["id"] == "Foo"
+    assert saved["titolo"] == "Prima activity"
+
+
 def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])

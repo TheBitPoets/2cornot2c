@@ -1547,6 +1547,15 @@ def _save_activity_locked(payload: dict) -> dict:
     )
     storage = assignment_service().storage
     overwrite = bool(payload.get("overwrite", False))
+    previous = {}
+    if overwrite:
+        try:
+            previous = storage.read_json(storage.safe_activity_draft_path(activity_id))
+        except FileNotFoundError:
+            previous = {}
+        previous_id = str(normalize_activity(previous).get("id", "")) if previous else ""
+        if previous_id and previous_id != activity_id:
+            raise ValueError("L'overwrite non puo cambiare l'identita dell'activity esistente.")
     proposed_files = payload.get("files")
     if proposed_files:
         activity["assets"] = persist_activity_draft_files(
@@ -1554,13 +1563,8 @@ def _save_activity_locked(payload: dict) -> dict:
             files=proposed_files,
             drafts_dir=storage.activity_drafts_dir(),
         )
-    elif overwrite:
-        try:
-            previous = storage.read_json(storage.safe_activity_draft_path(activity_id))
-        except FileNotFoundError:
-            previous = {}
-        if isinstance(previous.get("assets"), list):
-            activity["assets"] = previous["assets"]
+    elif isinstance(previous.get("assets"), list):
+        activity["assets"] = previous["assets"]
     saved = assignment_service().save_activity(activity, overwrite)
     return {"ok": True, "activity": saved, "activities": list_activities()}
 
