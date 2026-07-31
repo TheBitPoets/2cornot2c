@@ -4891,6 +4891,54 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
     assert (tmp_path / "activities" / "drafts" / asset["path"]).read_text(encoding="utf-8") == "print('ok')\n"
 
 
+def test_save_activity_restores_existing_assets_when_json_save_fails(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "asset-rollback",
+        "title": "Asset rollback",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il file.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [
+            {
+                "path": "starter/main.py",
+                "role": "starter",
+                "content": "print('original')\n",
+                "visibility": "student",
+            }
+        ],
+    }
+    course_board_server.save_activity(payload)
+    asset_path = tmp_path / "activities" / "drafts" / "assets" / "asset-rollback" / "starter" / "main.py"
+    original_json = (tmp_path / "activities" / "drafts" / "asset-rollback.json").read_bytes()
+    real_service = course_board_server.assignment_service()
+
+    class FailingService:
+        storage = real_service.storage
+
+        @staticmethod
+        def save_activity(activity, overwrite):
+            raise ValueError("salvataggio JSON rifiutato")
+
+    monkeypatch.setattr(course_board_server, "assignment_service", lambda: FailingService())
+    with pytest.raises(ValueError, match="salvataggio JSON rifiutato"):
+        course_board_server.save_activity(
+            {
+                **payload,
+                "overwrite": True,
+                "files": [{**payload["files"][0], "content": "print('changed')\n"}],
+            }
+        )
+
+    assert asset_path.read_text(encoding="utf-8") == "print('original')\n"
+    assert (tmp_path / "activities" / "drafts" / "asset-rollback.json").read_bytes() == original_json
+
+
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "AI_SECRET_PATH", tmp_path / ".secrets" / "ai.secret")

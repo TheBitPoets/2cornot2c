@@ -7,6 +7,7 @@ import json
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterator, Mapping
 
+from scripts import validate_activity
 from scripts.thebitlab_contracts import normalize_activity
 
 MAX_ACTIVITY_LINKS_PER_UDA = 256
@@ -167,6 +168,9 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                     raise ValueError(f"Activity collegata non valida: {link['activity_path']}.") from error
                 if not isinstance(payload, dict):
                     raise ValueError(f"Activity collegata non valida: {link['activity_path']}.")
+                validation_errors = validate_activity.validate_activity(payload, link["activity_path"])
+                if validation_errors:
+                    raise ValueError(f"Activity collegata non valida: {validation_errors[0]}.")
                 authoritative_id = str(normalize_activity(payload).get("id", ""))
                 if authoritative_id != link["activity_id"]:
                     raise ValueError(f"activity_id non corrisponde al file {link['activity_path']}.")

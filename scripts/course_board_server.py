@@ -1515,6 +1515,42 @@ def persist_activity_draft_files(
     return [metadata for _, _, metadata in normalized]
 
 
+def save_activity_with_proposed_files(
+    *,
+    activity_id: str,
+    activity: dict,
+    files: Any,
+    overwrite: bool,
+    storage: thebitlab_storage.JsonAssignmentStorage,
+) -> dict:
+    """Persist proposed assets with rollback if the activity save fails."""
+
+    drafts_dir = storage.activity_drafts_dir()
+    assets_dir = drafts_dir / "assets" / create_activity.slugify(activity_id)
+    if assets_dir.is_symlink() or (assets_dir.exists() and not assets_dir.is_dir()):
+        raise ValueError("Directory asset dell'activity non valida.")
+    drafts_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".activity-assets-backup-", dir=drafts_dir) as temporary:
+        backup_dir = Path(temporary) / "assets"
+        had_assets = assets_dir.is_dir()
+        if had_assets:
+            shutil.copytree(assets_dir, backup_dir)
+        try:
+            activity["assets"] = persist_activity_draft_files(
+                activity_id=activity_id,
+                files=files,
+                drafts_dir=drafts_dir,
+            )
+            return assignment_service().save_activity(activity, overwrite)
+        except Exception:
+            if assets_dir.exists():
+                shutil.rmtree(assets_dir)
+            if had_assets:
+                assets_dir.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(backup_dir, assets_dir)
+            raise
+
+
 def save_activity(payload: dict) -> dict:
     """Create and persist a teacher-authored activity draft."""
 
@@ -1558,14 +1594,17 @@ def _save_activity_locked(payload: dict) -> dict:
             raise ValueError("L'overwrite non puo cambiare l'identita dell'activity esistente.")
     proposed_files = payload.get("files")
     if proposed_files:
-        activity["assets"] = persist_activity_draft_files(
+        saved = save_activity_with_proposed_files(
             activity_id=activity_id,
+            activity=activity,
             files=proposed_files,
-            drafts_dir=storage.activity_drafts_dir(),
+            overwrite=overwrite,
+            storage=storage,
         )
-    elif isinstance(previous.get("assets"), list):
-        activity["assets"] = previous["assets"]
-    saved = assignment_service().save_activity(activity, overwrite)
+    else:
+        if isinstance(previous.get("assets"), list):
+            activity["assets"] = previous["assets"]
+        saved = assignment_service().save_activity(activity, overwrite)
     return {"ok": True, "activity": saved, "activities": list_activities()}
 
 

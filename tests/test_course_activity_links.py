@@ -138,7 +138,23 @@ def test_validate_course_activity_targets_requires_matching_authoritative_file(t
     activity_path = tmp_path / "activities" / "examples" / "practical_test_functions.json"
     activity_path.parent.mkdir(parents=True)
     activity_path.write_text(
-        '{"id":"c-base-funzioni-verifica-001","titolo":"Verifica"}',
+        """{
+          "schema_version": "1.0",
+          "id": "c-base-funzioni-verifica-001",
+          "titolo": "Verifica",
+          "tipo": "verifica-pratica",
+          "difficolta": "C",
+          "argomenti": ["funzioni"],
+          "consegna": "Implementa una funzione.",
+          "correzione": {"compila": true, "test": true, "sandbox": true, "ai_feedback": false},
+          "metriche": {
+            "tempo_stimato_minuti": 50,
+            "traccia_tempo_dichiarato": false,
+            "traccia_sessioni_thebitlab": true,
+            "traccia_eventi_didattici": true,
+            "traccia_errori_compilazione": true
+          }
+        }""",
         encoding="utf-8",
     )
 
@@ -153,6 +169,15 @@ def test_validate_course_activity_targets_requires_matching_authoritative_file(t
 
 def test_validate_course_activity_targets_rejects_missing_file(tmp_path) -> None:
     with pytest.raises(ValueError, match="non trovata"):
+        validate_course_activity_targets(design(link()), tmp_path)
+
+
+def test_validate_course_activity_targets_rejects_structurally_invalid_activity(tmp_path) -> None:
+    activity_path = tmp_path / "activities" / "examples" / "practical_test_functions.json"
+    activity_path.parent.mkdir(parents=True)
+    activity_path.write_text('{"id":"c-base-funzioni-verifica-001"}', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="campo obbligatorio mancante"):
         validate_course_activity_targets(design(link()), tmp_path)
 
 
