@@ -206,14 +206,65 @@ Get-Process Runner.Listener
 Se è installato come servizio, usa PowerShell come amministratore:
 
 ```powershell
-cd C:\actions-runner
-.\svc start
-.\svc status
+Get-Service "actions.runner.*"
+Start-Service "actions.runner.*"
+Get-Service "actions.runner.*"
 ```
 
-Non avviare insieme modalità utente e servizio. I computer devono restare
-accesi, connessi e non sospesi per tutta la build. La prima esecuzione è più
-lunga perché scarica la box Bento e i plugin Packer.
+Non avviare insieme modalità utente e servizio.
+
+Sul runner macOS Apple Silicon effettua il login con lo stesso utente che ha
+registrato il runner. In questa macchina il runner è installato come LaunchAgent
+utente in `~/actions-runner-2cornot2c`; non deve essere avviato come `root`.
+Controllalo e, se necessario, avvialo con:
+
+```bash
+cd ~/actions-runner-2cornot2c
+./svc.sh status
+./svc.sh start
+pgrep -fl Runner.Listener
+```
+
+Verifica poi architettura, toolchain e integrazione VMware:
+
+```bash
+test "$(uname -m)" = arm64
+command -v packer
+command -v vagrant
+grep -q '/opt/homebrew/bin' ~/actions-runner-2cornot2c/.path
+vagrant plugin list | grep '^vagrant-vmware-desktop '
+test -d "/Applications/VMware Fusion.app"
+test -x /opt/vagrant-vmware-desktop/bin/vagrant-vmware-utility
+pgrep -fl vagrant-vmware-utility
+"/Applications/VMware Fusion.app/Contents/Public/vmrun" list
+```
+
+`vmrun list` deve indicare `Total running VMs: 0` prima del job. Apri VMware
+Fusion almeno una volta con quell'utente e completa licenza e autorizzazioni
+macOS. La Vagrant VMware Utility deve restare attiva come servizio di sistema:
+non avviare manualmente il comando `vagrant-vmware-utility api`. Se il processo
+non è presente, ricarica il LaunchDaemon installato dal pacchetto:
+
+```bash
+sudo launchctl load -w \
+  /Library/LaunchDaemons/com.vagrant.vagrant-vmware-utility.plist
+```
+
+Collega il Mac all'alimentazione, non chiudere il coperchio e impedisci lo stop
+per tutta la workflow. In alternativa alle impostazioni permanenti di macOS,
+lascia questo comando aperto in un secondo Terminale fino alla fine dei job:
+
+```bash
+caffeinate -dimsu
+```
+
+La gestione `svc.sh` su macOS e quella tramite Servizi su Windows seguono la
+[procedura ufficiale GitHub per i runner self-hosted](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/configure-the-application).
+Installazione e servizio della utility sono descritti nella
+[documentazione ufficiale HashiCorp](https://developer.hashicorp.com/vagrant/docs/providers/vmware/vagrant-vmware-utility).
+
+I computer devono restare accesi, connessi e non sospesi per tutta la build.
+La prima esecuzione è più lunga perché scarica la box Bento e i plugin Packer.
 
 ### 5. Avviare la workflow
 
