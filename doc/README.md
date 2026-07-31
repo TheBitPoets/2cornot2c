@@ -81,6 +81,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) | Quando devi correggere in modo deterministico una consegna TheBitLab |
 | [`ASSIGNMENT_SANDBOX.md`](ASSIGNMENT_SANDBOX.md) | Quando devi eseguire il grading in una sandbox Docker |
 | [`TESTING.md`](TESTING.md) | Quando devi lanciare test locali o capire quali GitHub Actions sono attive |
+| [packer/README.md](../packer/README.md) | Quando devi modificare, costruire, collaudare o pubblicare le box classroom Packer |
 
 ## Script collegati
 
