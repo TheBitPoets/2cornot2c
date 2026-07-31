@@ -1517,9 +1517,10 @@ def persist_activity_draft_files(
     assets_root = drafts_dir / "assets"
     bundle_parent = assets_root / create_activity.slugify(activity_id)
     bundle_dir = bundle_parent / bundle_id
-    bundle_parent.mkdir(parents=True, exist_ok=True)
-    # Sync every ancestor entry even on retries: a previous attempt may have
-    # created it and then failed before its directory entry became durable.
+    thebitlab_storage.ensure_directory_durable(bundle_parent)
+    # Sync every level even on retries: a previous attempt may have created it
+    # and then failed before its directory entry became durable.
+    thebitlab_storage.sync_directory(drafts_dir.parent)
     thebitlab_storage.sync_directory(drafts_dir)
     thebitlab_storage.sync_directory(assets_root)
     thebitlab_storage.sync_directory(bundle_parent)

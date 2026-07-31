@@ -17,6 +17,7 @@ from scripts.thebitlab_storage import (
     JsonAssignmentStorage,
     JsonClassRosterStorage,
     JsonCourseStorage,
+    ensure_directory_durable,
     sync_directory,
 )
 
@@ -783,6 +784,17 @@ def test_ai_feedback_demo_report_exposes_teacher_review_states() -> None:
         "verdi-anna": False,
         "neri-giulia": False,
     }
+
+
+def test_ensure_directory_durable_syncs_each_new_parent_entry(tmp_path, monkeypatch) -> None:
+    synced = []
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", synced.append)
+    target = tmp_path / "activities" / "drafts"
+
+    ensure_directory_durable(target)
+
+    assert target.is_dir()
+    assert synced == [tmp_path, tmp_path / "activities"]
 
 
 def test_assignment_storage_atomic_json_failure_preserves_previous_file(tmp_path, monkeypatch) -> None:

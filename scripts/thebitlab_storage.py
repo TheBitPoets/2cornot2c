@@ -100,6 +100,23 @@ def course_storage_lock(root: Path) -> CourseStorageLock:
         return _COURSE_LOCKS.setdefault(key, CourseStorageLock(key))
 
 
+def ensure_directory_durable(path: Path) -> None:
+    """Create a directory hierarchy and persist every newly added parent entry."""
+
+    missing: list[Path] = []
+    cursor = path
+    while not cursor.exists():
+        missing.append(cursor)
+        if cursor.parent == cursor:
+            break
+        cursor = cursor.parent
+    if cursor.exists() and not cursor.is_dir():
+        raise NotADirectoryError(str(cursor))
+    path.mkdir(parents=True, exist_ok=True)
+    for created in reversed(missing):
+        sync_directory(created.parent)
+
+
 def sync_directory(path: Path) -> None:
     """Persist directory metadata where the platform exposes directory fsync."""
 
@@ -233,7 +250,7 @@ class JsonCourseStorage:
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
         """Atomically replace a JSON object with stable formatting."""
 
-        path.parent.mkdir(parents=True, exist_ok=True)
+        ensure_directory_durable(path.parent)
         destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
         descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{path.name}.",
@@ -478,7 +495,7 @@ class JsonAssignmentStorage:
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
         """Atomically replace a JSON object with stable formatting."""
 
-        path.parent.mkdir(parents=True, exist_ok=True)
+        ensure_directory_durable(path.parent)
         destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
         descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
         temporary_path = Path(temporary_name)

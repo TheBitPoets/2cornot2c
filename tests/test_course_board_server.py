@@ -4897,6 +4897,7 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
     assert asset["target_path"] == "starter/main.py"
     assert (tmp_path / "activities" / "drafts" / asset["path"]).read_text(encoding="utf-8") == "print('ok')\n"
     drafts_dir = tmp_path / "activities" / "drafts"
+    assert drafts_dir.parent in synced_directories
     assert drafts_dir in synced_directories
     assert drafts_dir / "assets" in synced_directories
     assert drafts_dir / "assets" / "asset-ai" in synced_directories
