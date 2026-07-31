@@ -11,6 +11,14 @@ MAX_ID_LENGTH = 160
 MAX_TITLE_LENGTH = 512
 MAX_KIND_LENGTH = 80
 ACTIVITY_ROLES = frozenset({"practice", "verification"})
+WINDOWS_RESERVED_BASENAMES = frozenset(
+    {"con", "prn", "aux", "nul", "conin$", "conout$"}
+    | {f"com{index}" for index in range(1, 10)}
+    | {f"lpt{index}" for index in range(1, 10)}
+    | {f"com{index}" for index in "¹²³"}
+    | {f"lpt{index}" for index in "¹²³"}
+)
+WINDOWS_INVALID_FILENAME_CHARACTERS = frozenset('<>:"|?*')
 
 
 def _bounded_text(value: Any, field: str, maximum: int, *, required: bool = True) -> str:
@@ -34,6 +42,14 @@ def canonical_activity_path(value: Any) -> str:
     parsed = PurePosixPath(path)
     if parsed.parts[0] != "activities" or any(part in {"", ".", ".."} for part in parsed.parts):
         raise ValueError("activity_path deve restare dentro activities/.")
+    for part in parsed.parts:
+        basename = part.split(".", 1)[0].casefold()
+        if (
+            any(character in WINDOWS_INVALID_FILENAME_CHARACTERS for character in part)
+            or part.endswith((".", " "))
+            or basename in WINDOWS_RESERVED_BASENAMES
+        ):
+            raise ValueError("activity_path contiene un componente non valido su Windows.")
     if parsed.suffix.lower() != ".json" or str(parsed) != path:
         raise ValueError("activity_path deve essere un percorso JSON canonico.")
     return path

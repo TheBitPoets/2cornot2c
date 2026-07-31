@@ -59,6 +59,11 @@ def test_validate_activity_link_returns_defensive_canonical_copy() -> None:
         "lessons/demo.json",
         "activities/demo.txt",
         "activities//demo.json",
+        "activities/foo:.json",
+        "activities/NUL.json",
+        "activities/con.example.json",
+        "activities/folder./demo.json",
+        "activities/folder /demo.json",
     ],
 )
 def test_canonical_activity_path_rejects_escape_and_noncanonical_paths(path) -> None:
