@@ -823,6 +823,24 @@ def test_assignment_storage_recovers_interrupted_json_rollback(tmp_path) -> None
         assert stat.S_IMODE(target.stat().st_mode) == 0o640
 
 
+def test_activity_rollback_recovery_supports_txn_and_ignores_nested_assets(tmp_path) -> None:
+    drafts = tmp_path / "activities" / "drafts"
+    drafts.mkdir(parents=True)
+    journal = drafts / ".activity-delete-demo.txn"
+    journal.write_text('{"state":"new"}\n', encoding="utf-8")
+    backup = drafts / "..activity-delete-demo.txn.deadbeef.rollback"
+    backup.write_text('{"state":"old"}\n', encoding="utf-8")
+    nested_asset = drafts / "assets" / "demo" / "bundle" / ".fixture.json.v1.rollback"
+    nested_asset.parent.mkdir(parents=True)
+    nested_asset.write_text("fixture", encoding="utf-8")
+
+    recover_json_rollbacks(drafts)
+
+    assert json.loads(journal.read_text(encoding="utf-8")) == {"state": "old"}
+    assert not backup.exists()
+    assert nested_asset.read_text(encoding="utf-8") == "fixture"
+
+
 def test_assignment_storage_atomic_json_failure_preserves_previous_file(tmp_path, monkeypatch) -> None:
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
     path = tmp_path / "activities" / "drafts" / "demo.json"

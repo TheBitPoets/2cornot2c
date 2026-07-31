@@ -460,7 +460,7 @@ def configure_data_root(root: Path) -> Path:
     LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
     with thebitlab_storage.course_storage_lock(ROOT):
         thebitlab_storage.recover_json_rollbacks(ROOT / "activities" / "drafts")
-        thebitlab_storage.recover_json_rollbacks(TEACHER_REPORTS_DIR)
+        thebitlab_storage.recover_json_rollbacks(TEACHER_REPORTS_DIR, recursive=True)
     recover_interrupted_assignment_deletions()
     recover_interrupted_activity_deletions()
     return ROOT

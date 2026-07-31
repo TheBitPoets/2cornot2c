@@ -181,20 +181,26 @@ def sync_directory(path: Path) -> None:
         os.close(descriptor)
 
 
-def recover_json_rollbacks(directory: Path, target_name: str | None = None) -> None:
+def recover_json_rollbacks(
+    directory: Path,
+    target_name: str | None = None,
+    *,
+    recursive: bool = False,
+) -> None:
     """Restore durable JSON backups left by interrupted rollback."""
 
     if not directory.is_dir() or directory.is_symlink():
         return
     pattern = f".{target_name}.*.rollback" if target_name else ".*.*.rollback"
-    for backup in sorted(directory.glob(pattern) if target_name else directory.rglob(pattern)):
+    candidates = directory.rglob(pattern) if recursive else directory.glob(pattern)
+    for backup in sorted(candidates):
         if backup.is_symlink() or not backup.is_file():
             raise RuntimeError(f"Backup JSON non valido: {backup}")
         core = backup.name[1 : -len(".rollback")]
         if "." not in core:
             raise RuntimeError(f"Nome backup JSON non valido: {backup.name}")
         target_name = core.rsplit(".", 1)[0]
-        if not target_name.endswith(".json") or Path(target_name).name != target_name:
+        if not target_name.endswith((".json", ".txn")) or Path(target_name).name != target_name:
             raise RuntimeError(f"Target backup JSON non valido: {backup.name}")
         target = backup.with_name(target_name)
         descriptor, restore_name = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".recover", dir=target.parent)
@@ -225,7 +231,7 @@ class JsonCourseStorage:
         self.school_calendars_dir = root / "doc" / "calendars"
         self.delete_staging_dir = root / "doc" / ".delete-staging"
         with self.operation_lock:
-            recover_json_rollbacks(self.root / "doc")
+            recover_json_rollbacks(self.root / "doc", recursive=True)
             self._recover_delete_transactions()
 
     def _delete_manifest_entries(self, targets: list[Path]) -> list[dict[str, str]]:
