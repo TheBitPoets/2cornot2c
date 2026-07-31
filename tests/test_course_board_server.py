@@ -4903,6 +4903,51 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
     assert drafts_dir / "assets" / "asset-ai" in synced_directories
 
 
+@pytest.mark.parametrize(
+    ("files", "message"),
+    [
+        (
+            [
+                {"path": "starter/Main.py", "content": "one", "visibility": "student"},
+                {"path": "starter/main.py", "content": "two", "visibility": "student"},
+            ],
+            "File AI duplicato",
+        ),
+        (
+            [
+                {"path": "one.py", "target_path": "output", "content": "one", "visibility": "student"},
+                {
+                    "path": "two.py",
+                    "target_path": "output/nested.py",
+                    "content": "two",
+                    "visibility": "student",
+                },
+            ],
+            "Target AI duplicato",
+        ),
+    ],
+)
+def test_save_activity_rejects_nonportable_or_overlapping_asset_paths(tmp_path, monkeypatch, files, message) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+
+    with pytest.raises(ValueError, match=message):
+        course_board_server.save_activity(
+            {
+                "id": "asset-paths",
+                "title": "Asset paths",
+                "kind": "laboratorio",
+                "difficulty": "B",
+                "topics": "file",
+                "prompt": "Completa i file.",
+                "estimated_minutes": "20",
+                "language": "python",
+                "source_name": "main.py",
+                "files": files,
+            }
+        )
+
+
 def test_save_activity_keeps_old_and_orphan_bundles_when_json_save_fails(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])

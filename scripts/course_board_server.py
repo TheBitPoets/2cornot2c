@@ -1477,15 +1477,16 @@ def persist_activity_draft_files(
     allowed_types = set(validate_activity.ALLOWED_ASSET_TYPES)
     allowed_visibility = set(validate_activity.ALLOWED_ASSET_VISIBILITIES)
     normalized: list[tuple[Path, str, dict[str, str]]] = []
-    seen: set[str] = set()
+    source_paths: list[Path] = []
+    target_paths: list[Path] = []
     for index, file in enumerate(files):
         if not isinstance(file, dict):
             raise ValueError(f"files[{index}] deve essere un oggetto.")
         source_rel = create_submission_scaffold.validate_relative_path(file.get("path"), f"files[{index}].path")
         source_key = source_rel.as_posix()
-        if source_key in seen:
-            raise ValueError(f"File AI duplicato: {source_key}.")
-        seen.add(source_key)
+        if any(create_submission_scaffold.portable_paths_overlap(source_rel, existing) for existing in source_paths):
+            raise ValueError(f"File AI duplicato, equivalente o sovrapposto: {source_key}.")
+        source_paths.append(source_rel)
         content = file.get("content", "")
         if not isinstance(content, str):
             raise ValueError(f"files[{index}].content deve essere una stringa.")
@@ -1499,6 +1500,9 @@ def persist_activity_draft_files(
             file.get("target_path") or source_key,
             f"files[{index}].target_path",
         )
+        if any(create_submission_scaffold.portable_paths_overlap(target_path, existing) for existing in target_paths):
+            raise ValueError(f"Target AI duplicato, equivalente o sovrapposto: {target_path.as_posix()}.")
+        target_paths.append(target_path)
         metadata = {
             "type": asset_type,
             "target_path": target_path.as_posix(),

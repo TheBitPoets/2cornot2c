@@ -786,6 +786,13 @@ def test_ai_feedback_demo_report_exposes_teacher_review_states() -> None:
     }
 
 
+@pytest.mark.skipif(os.name != "nt", reason="primitive specifica Windows")
+def test_windows_sync_directory_flushes_write_capable_handle(tmp_path) -> None:
+    (tmp_path / "entry.txt").write_text("durable", encoding="utf-8")
+
+    sync_directory(tmp_path)
+
+
 def test_ensure_directory_durable_syncs_each_new_parent_entry(tmp_path, monkeypatch) -> None:
     synced = []
     monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", synced.append)

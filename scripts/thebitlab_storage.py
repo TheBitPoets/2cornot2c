@@ -122,6 +122,43 @@ def sync_directory(path: Path) -> None:
     """Persist directory metadata where the platform exposes directory fsync."""
 
     if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        create_file = kernel32.CreateFileW
+        create_file.argtypes = (
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.LPVOID,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.HANDLE,
+        )
+        create_file.restype = wintypes.HANDLE
+        flush_file_buffers = kernel32.FlushFileBuffers
+        flush_file_buffers.argtypes = (wintypes.HANDLE,)
+        flush_file_buffers.restype = wintypes.BOOL
+        close_handle = kernel32.CloseHandle
+        close_handle.argtypes = (wintypes.HANDLE,)
+        close_handle.restype = wintypes.BOOL
+        handle = create_file(
+            str(path),
+            0x00000002,  # FILE_ADD_FILE: write-capable directory handle
+            0x00000001 | 0x00000002 | 0x00000004,  # share read/write/delete
+            None,
+            3,  # OPEN_EXISTING
+            0x02000000,  # FILE_FLAG_BACKUP_SEMANTICS
+            None,
+        )
+        if handle == wintypes.HANDLE(-1).value:
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            if not flush_file_buffers(handle):
+                raise ctypes.WinError(ctypes.get_last_error())
+        finally:
+            close_handle(handle)
         return
     unsupported_errnos = {
         errno.EINVAL,
