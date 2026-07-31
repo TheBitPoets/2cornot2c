@@ -1291,6 +1291,7 @@ def delete_activity_record(payload: dict) -> dict:
             "path": repository_relative_path(activity_path),
         }
         activity_path.unlink()
+        thebitlab_storage.sync_directory(activity_path.parent)
         return {"ok": True, "deleted": deleted, "dependencies": dependencies, "activities": list_activities()}
 
 
@@ -1549,26 +1550,20 @@ def save_activity_with_proposed_files(
     overwrite: bool,
     storage: thebitlab_storage.JsonAssignmentStorage,
 ) -> dict:
-    """Publish one immutable asset bundle before atomically replacing its activity JSON."""
+    """Publish an immutable bundle before atomically replacing its activity JSON."""
 
     drafts_dir = storage.activity_drafts_dir()
     assets_dir = drafts_dir / "assets" / create_activity.slugify(activity_id)
     if assets_dir.is_symlink() or (assets_dir.exists() and not assets_dir.is_dir()):
         raise ValueError("Directory asset dell'activity non valida.")
-    existing_bundles = {path.name for path in assets_dir.iterdir()} if assets_dir.is_dir() else set()
-    try:
-        activity["assets"] = persist_activity_draft_files(
-            activity_id=activity_id,
-            files=files,
-            drafts_dir=drafts_dir,
-        )
-        return assignment_service().save_activity(activity, overwrite)
-    except Exception:
-        if assets_dir.is_dir():
-            for path in assets_dir.iterdir():
-                if path.name not in existing_bundles and path.is_dir() and not path.is_symlink():
-                    shutil.rmtree(path)
-        raise
+    activity["assets"] = persist_activity_draft_files(
+        activity_id=activity_id,
+        files=files,
+        drafts_dir=drafts_dir,
+    )
+    # A failure with an uncertain JSON commit deliberately leaves the immutable
+    # bundle behind: an orphan is safe, deleting a possibly referenced bundle is not.
+    return assignment_service().save_activity(activity, overwrite)
 
 
 def save_activity(payload: dict) -> dict:
@@ -1973,6 +1968,13 @@ def preview_activity_ai_codex_draft(payload: dict) -> dict:
 
 def distribute_activity_assignment(payload: dict) -> dict:
     """Create activity scaffolds in the selected local target repositories."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _distribute_activity_assignment_locked(payload)
+
+
+def _distribute_activity_assignment_locked(payload: dict) -> dict:
+    """Distribute one stable activity snapshot while writes/deletion are excluded."""
 
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
     if not activity_path.is_file():

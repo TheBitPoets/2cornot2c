@@ -2795,6 +2795,8 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
     write_demo_activity(activity_path)
+    synced_directories = []
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", synced_directories.append)
 
     payload = course_board_server.delete_activity_record({
         "activity_path": "activities/drafts/python-base-somma-001.json",
@@ -2805,6 +2807,7 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
     assert payload["dependencies"] == {"assignments": [], "reports": [], "course_designs": []}
     assert payload["activities"] == []
     assert not activity_path.exists()
+    assert synced_directories == [activity_path.parent]
 
 
 def test_delete_activity_record_blocks_when_course_design_links_activity(tmp_path, monkeypatch) -> None:
@@ -4893,7 +4896,7 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
     assert (tmp_path / "activities" / "drafts" / asset["path"]).read_text(encoding="utf-8") == "print('ok')\n"
 
 
-def test_save_activity_restores_existing_assets_when_json_save_fails(tmp_path, monkeypatch) -> None:
+def test_save_activity_keeps_old_and_orphan_bundles_when_json_save_fails(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
     payload = {
@@ -4942,7 +4945,12 @@ def test_save_activity_restores_existing_assets_when_json_save_fails(tmp_path, m
     assert asset_path.read_text(encoding="utf-8") == "print('original')\n"
     assert activity_json_path.read_bytes() == original_json
     bundle_parent = tmp_path / "activities" / "drafts" / "assets" / "asset-rollback"
-    assert [path.name for path in bundle_parent.iterdir()] == [asset_path.parents[1].name]
+    bundles = sorted(path for path in bundle_parent.iterdir() if path.is_dir())
+    assert len(bundles) == 2
+    assert asset_path.parents[1] in bundles
+    orphan_files = [path for bundle in bundles if bundle != asset_path.parents[1] for path in bundle.rglob("main.py")]
+    assert len(orphan_files) == 1
+    assert orphan_files[0].read_text(encoding="utf-8") == "print('changed')\n"
 
 
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
