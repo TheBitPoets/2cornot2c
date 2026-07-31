@@ -1,0 +1,206 @@
+{
+  "schema_version": "thebitlab.content-pack.v0",
+  "id": "tpsi4-pack-hoepli-v2-original-2026",
+  "title": "TPSI quarto anno - processi, progettazione e qualita del software",
+  "version": "0.1.0",
+  "status": "draft",
+  "language": "it",
+  "audience": {
+    "school_level": "secondaria-secondo-grado",
+    "school_type": "istituto-tecnico-tecnologico",
+    "course": "informatica-e-telecomunicazioni-articolazione-informatica",
+    "subject": "TPSI",
+    "year": 4
+  },
+  "ownership": {
+    "content_origin": "original-course-material",
+    "redistribution_status": "project-license-to-review",
+    "editorial_copying_allowed": false,
+    "notes": "Il pacchetto usa l'indice pubblico del volume come riferimento di copertura e non incorpora il testo integrale del libro."
+  },
+  "curriculum_references": [
+    {
+      "id": "tpsi4-curriculum-hoepli-volume-2",
+      "kind": "bibliographic-index",
+      "role": "coverage-reference",
+      "title": "Tecnologie e progettazione di sistemi informatici e di telecomunicazioni",
+      "authors": [
+        "Paolo Camagni",
+        "Riccardo Nikolassy"
+      ],
+      "volume": 2,
+      "publication_date": "2024-02",
+      "isbn_print": "9788836015122",
+      "isbn_digital": "9788836015139",
+      "provider": "hoepli",
+      "uri": "https://www.hoeplieditore.it/scuola/articolo/tecnologie-e-progettazione-di-sistemi-informatici-e-di-telecomunicazioni-per-larticolazione-informatica-paolo-camagni/9788836015122/2012",
+      "license_status": "reference-only",
+      "text_imported": false
+    }
+  ],
+  "sources": [
+    {
+      "id": "tpsi4-source-originali",
+      "kind": "source-package",
+      "type": "markdown",
+      "provider": "local",
+      "role": "approved-course-content",
+      "path": "content/tpsi_quarto",
+      "files": [
+        "README.md",
+        "COVERAGE.md",
+        "01_PROCESSI_E_CONCORRENZA.md",
+        "02_COMUNICAZIONE_E_SINCRONIZZAZIONE.md",
+        "03_REQUISITI_SOFTWARE.md",
+        "04_DOCUMENTAZIONE_VERSIONAMENTO.md",
+        "05_TESTING_DEBUGGING.md",
+        "06_CITTADINANZA_DIGITALE.md"
+      ],
+      "license_status": "project-license-to-review",
+      "indexing_status": "ready"
+    },
+    {
+      "id": "tpsi4-source-linux-programming",
+      "kind": "source-package",
+      "type": "markdown",
+      "provider": "local",
+      "role": "technical-reference",
+      "path": "",
+      "files": [
+        "LINUX_PROGRAMMING.md"
+      ],
+      "include_from_heading": "Linux Programming",
+      "excluded_headings": [
+        "Controllo dei processi"
+      ],
+      "license_status": "review-required-per-fragment",
+      "indexing_status": "ready"
+    }
+  ],
+  "content_items": [
+    {
+      "id": "tpsi4-content-processi-concorrenza",
+      "kind": "module",
+      "path": "content/tpsi_quarto/01_PROCESSI_E_CONCORRENZA.md",
+      "order": 1,
+      "status": "draft",
+      "curriculum_topics": [
+        "modello-a-processi",
+        "risorse-e-condivisione",
+        "thread-processi-leggeri",
+        "elaborazione-concorrente",
+        "descrizione-della-concorrenza"
+      ],
+      "activity_ids": [
+        "tpsi4-activity-c-fork-pipe-square-001"
+      ]
+    },
+    {
+      "id": "tpsi4-content-comunicazione-sincronizzazione",
+      "kind": "module",
+      "path": "content/tpsi_quarto/02_COMUNICAZIONE_E_SINCRONIZZAZIONE.md",
+      "order": 2,
+      "status": "draft",
+      "curriculum_topics": [
+        "comunicazione-tra-processi",
+        "sincronizzazione-tra-processi",
+        "semafori",
+        "applicazione-dei-semafori",
+        "produttori-consumatori",
+        "lettori-scrittori",
+        "deadlock",
+        "monitor",
+        "scambio-di-messaggi"
+      ],
+      "activity_ids": []
+    },
+    {
+      "id": "tpsi4-content-requisiti-software",
+      "kind": "module",
+      "path": "content/tpsi_quarto/03_REQUISITI_SOFTWARE.md",
+      "order": 3,
+      "status": "draft",
+      "curriculum_topics": [
+        "specifica-dei-requisiti",
+        "raccolta-e-analisi-dei-requisiti",
+        "attori-casi-uso-scenari",
+        "documentazione-dei-requisiti"
+      ],
+      "activity_ids": []
+    },
+    {
+      "id": "tpsi4-content-documentazione-versionamento",
+      "kind": "module",
+      "path": "content/tpsi_quarto/04_DOCUMENTAZIONE_VERSIONAMENTO.md",
+      "order": 4,
+      "status": "draft",
+      "curriculum_topics": [
+        "documentazione-del-progetto",
+        "documentazione-del-codice",
+        "controllo-versioni-documenti-software"
+      ],
+      "activity_ids": []
+    },
+    {
+      "id": "tpsi4-content-testing-debugging",
+      "kind": "module",
+      "path": "content/tpsi_quarto/05_TESTING_DEBUGGING.md",
+      "order": 5,
+      "status": "draft",
+      "curriculum_topics": [
+        "verifica-validazione-software",
+        "verifica-statica-dinamica",
+        "debugging"
+      ],
+      "activity_ids": []
+    },
+    {
+      "id": "tpsi4-content-cittadinanza-digitale",
+      "kind": "module",
+      "path": "content/tpsi_quarto/06_CITTADINANZA_DIGITALE.md",
+      "order": 6,
+      "status": "draft",
+      "curriculum_topics": [
+        "cittadinanza-digitale",
+        "licenze-e-provenienza",
+        "collaborazione-responsabile",
+        "sicurezza-e-privacy"
+      ],
+      "activity_ids": []
+    }
+  ],
+  "course_designs": [
+    {
+      "id": "tpsi4-course-2026-2027",
+      "path": "doc/course_designs/tpsi_quarto_2026_2027.json",
+      "status": "draft"
+    }
+  ],
+  "activity_roots": [
+    "activities/tpsi_quarto"
+  ],
+  "policies": {
+    "provenance_required": true,
+    "teacher_review_required_before_publish": true,
+    "student_teacher_asset_separation_required": true,
+    "ai_is_not_primary_source": true,
+    "book_text_reproduction_forbidden": true,
+    "java_automatic_grading_enabled": false
+  },
+  "compatibility": {
+    "current": [
+      "course-source-catalog-markdown",
+      "course-design-json-v1",
+      "activity-schema-1.0"
+    ],
+    "future_targets": [
+      "Source",
+      "SourceFragment",
+      "SourcePackage",
+      "ProvenanceRecord",
+      "LearningContent",
+      "ContentBlock",
+      "ContentVersion"
+    ]
+  }
+}
