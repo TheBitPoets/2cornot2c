@@ -271,6 +271,38 @@ class ClassDirectoryStorage(Protocol):
     ) -> None: ...
 
 
+class AdminProvisioningStorage(Protocol):
+    """Atomic persistence boundary for explicit admin-owned onboarding."""
+
+    def read_admin_provisioning_snapshot(
+        self,
+        actor_user_id: str,
+        *,
+        expected_actor_updated_at: datetime,
+        maximum_items: int,
+    ) -> tuple[tuple[UserAccount, ...], tuple[ClassGroup, ...]]: ...
+
+    def create_class_as_admin(
+        self,
+        actor_user_id: str,
+        class_group: ClassGroup,
+        *,
+        expected_actor_updated_at: datetime,
+    ) -> None: ...
+
+    def approve_pending_user_as_admin(
+        self,
+        actor_user_id: str,
+        target_user_id: str,
+        role: str,
+        class_id: str | None,
+        updated_at: datetime,
+        *,
+        expected_actor_updated_at: datetime,
+        expected_target_updated_at: datetime,
+    ) -> tuple[UserAccount, ClassMembership | None, int]: ...
+
+
 class SessionStorage(Protocol):
     """Persistence port for hashed web sessions."""
 
