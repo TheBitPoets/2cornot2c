@@ -17,17 +17,17 @@ cd packer
 packer init classroom.pkr.hcl
 ```
 
-Scarica una volta la box sorgente per il provider scelto:
+Scarica una volta la box sorgente per il provider scelto da un contesto
+Vagrant isolato:
 
 ```bash
-vagrant box add bento/ubuntu-24.04 \
-  --box-version 202510.26.0 \
-  --provider vmware_desktop
+./ensure-source-box.sh vmware_desktop 202510.26.0
 ```
 
 Per VirtualBox sostituisci `vmware_desktop` con `virtualbox`. Packer riusa la
 box locale: questo evita download duplicati e rende esplicito quale input
-viene usato.
+viene usato. Lo script evita che Vagrant carichi il `Vagrantfile` fail-closed
+della root durante il comando globale `box add`.
 
 Valida la configurazione:
 

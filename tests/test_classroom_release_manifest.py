@@ -124,3 +124,49 @@ def test_acceptance_import_uses_isolated_vagrantfile(tmp_path: Path) -> None:
             f"{box} --provider vmware_desktop --force"
         ),
     ]
+
+
+def test_source_box_bootstrap_uses_isolated_vagrant_context(tmp_path: Path) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    contexts = tmp_path / "contexts"
+    contexts.mkdir()
+    calls = tmp_path / "vagrant-calls.txt"
+    vagrant = fake_bin / "vagrant"
+    vagrant.write_text(
+        "#!/usr/bin/env bash\n"
+        "test ! -f \"$PWD/Vagrantfile\" || exit 91\n"
+        "printf '%s|%s\\n' \"$PWD\" \"$*\" >> \"$VAGRANT_CALLS\"\n",
+        encoding="utf-8",
+    )
+    vagrant.chmod(0o755)
+
+    completed = subprocess.run(
+        (
+            str(ROOT / "packer" / "ensure-source-box.sh"),
+            "vmware_desktop",
+            "202510.26.0",
+        ),
+        cwd=ROOT / "packer",
+        env=os.environ
+        | {
+            "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            "TMPDIR": str(contexts),
+            "VAGRANT_CALLS": str(calls),
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    recorded = [line.split("|", 1) for line in calls.read_text().splitlines()]
+    assert [command for _, command in recorded] == [
+        "box list",
+        (
+            "box add bento/ubuntu-24.04 --box-version 202510.26.0 "
+            "--provider vmware_desktop"
+        ),
+    ]
+    assert len({cwd for cwd, _ in recorded}) == 1
+    assert all(Path(cwd).parent == contexts for cwd, _ in recorded)

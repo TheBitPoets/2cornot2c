@@ -46,13 +46,14 @@ jobs:
           packer fmt -check .
           packer validate classroom.pkr.hcl
 
+      - name: Prepare VirtualBox source box
+        shell: bash
+        working-directory: packer
+        run: ./ensure-source-box.sh virtualbox 202510.26.0
+
       - name: Build VirtualBox AMD64 box
         working-directory: packer
-        run: |
-          if (-not (vagrant box list | Select-String 'bento/ubuntu-24.04.*virtualbox.*202510.26.0')) {
-            vagrant box add bento/ubuntu-24.04 --box-version 202510.26.0 --provider virtualbox
-          }
-          packer build -only=classroom.vagrant.virtualbox-amd64 classroom.pkr.hcl
+        run: packer build -only=classroom.vagrant.virtualbox-amd64 classroom.pkr.hcl
 
       - name: Acceptance test
         shell: bash
@@ -92,13 +93,13 @@ jobs:
           packer fmt -check .
           packer validate classroom.pkr.hcl
 
+      - name: Prepare VMware source box
+        working-directory: packer
+        run: ./ensure-source-box.sh vmware_desktop 202510.26.0
+
       - name: Build VMware ARM64 box
         working-directory: packer
-        run: |
-          if ! vagrant box list | grep -q 'bento/ubuntu-24.04.*vmware_desktop.*202510.26.0'; then
-            vagrant box add bento/ubuntu-24.04 --box-version 202510.26.0 --provider vmware_desktop
-          fi
-          packer build -only=classroom.vagrant.vmware-arm64 classroom.pkr.hcl
+        run: packer build -only=classroom.vagrant.vmware-arm64 classroom.pkr.hcl
 
       - name: Acceptance test
         run: ./packer/acceptance/test-box.sh vmware_desktop packer/output/vmware-arm64/package.box
