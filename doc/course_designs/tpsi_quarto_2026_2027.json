@@ -1,0 +1,259 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "tpsi4-source-originali",
+      "label": "TPSI quarto - contenuti originali",
+      "type": "markdown",
+      "provider": "local",
+      "path": "content/tpsi_quarto",
+      "files": [
+        "README.md",
+        "COVERAGE.md",
+        "01_PROCESSI_E_CONCORRENZA.md",
+        "02_COMUNICAZIONE_E_SINCRONIZZAZIONE.md",
+        "03_REQUISITI_SOFTWARE.md",
+        "04_DOCUMENTAZIONE_VERSIONAMENTO.md",
+        "05_TESTING_DEBUGGING.md",
+        "06_CITTADINANZA_DIGITALE.md"
+      ],
+      "indexing_status": "ready"
+    },
+    {
+      "id": "tpsi4-source-linux-programming",
+      "label": "Linux Programming",
+      "type": "markdown",
+      "provider": "local",
+      "files": [
+        "LINUX_PROGRAMMING.md"
+      ],
+      "indexing_status": "ready"
+    }
+  ],
+  "years": [
+    {
+      "id": "quarto-anno",
+      "title": "Quarto anno",
+      "audience": {
+        "class_ids": []
+      },
+      "description": "Percorso TPSI originale e multi-fonte allineato ai nuclei pubblici del volume 2 adottato, integrato con la dispensa Linux a partire dalla sezione Linux Programming. La sezione iniziale Controllo dei processi è esclusa.",
+      "weekly_hours": 3,
+      "weeks": 33,
+      "udas": [
+        {
+          "id": "uda-10",
+          "title": "Avvio del percorso, strumenti e fonti",
+          "path": "Fondamenti e metodo",
+          "weeks": "2",
+          "items": [
+            {
+              "id": "tpsi4-source-originali:content/tpsi_quarto/README.md#tpsi-quarto-anno-indice-delle-risorse",
+              "title": "TPSI quarto anno — indice delle risorse",
+              "source": "content/tpsi_quarto/README.md",
+              "source_id": "tpsi4-source-originali",
+              "source_label": "TPSI quarto - contenuti originali",
+              "source_provider": "local",
+              "href": "../content/tpsi_quarto/README.md#tpsi-quarto-anno-indice-delle-risorse",
+              "level": 1,
+              "line": 1,
+              "frame": {
+                "status": "draft",
+                "context": "Presenta struttura, fonti, provenienza e regole d'uso del percorso. Serve a distinguere il riferimento curricolare del libro, la fonte tecnica Linux e i contenuti originali.",
+                "prerequisites": "Uso essenziale del repository, del terminale e della Course Board.",
+                "objectives": "Saper individuare moduli, activity, fonti e stato di revisione; comprendere perché la fedeltà viene controllata con una matrice di copertura.",
+                "recall": "Riprendere compilazione, repository e organizzazione dei file appresi nel terzo anno.",
+                "preview": "Introduce processi, concorrenza e il metodo con cui teoria e laboratori verranno collegati.",
+                "next_step": "Aprire la matrice di copertura e selezionare gli heading del primo modulo.",
+                "references": "Manifest e COVERAGE.md del pacchetto; catalogo fonti della Course Board."
+              }
+            }
+          ]
+        },
+        {
+          "id": "uda-11",
+          "title": "Processi, thread e concorrenza",
+          "path": "Sistemi concorrenti",
+          "weeks": "6",
+          "items": [
+            {
+              "id": "tpsi4-source-originali:content/tpsi_quarto/01_PROCESSI_E_CONCORRENZA.md#processi-thread-e-concorrenza",
+              "title": "Processi, thread e concorrenza",
+              "source": "content/tpsi_quarto/01_PROCESSI_E_CONCORRENZA.md",
+              "source_id": "tpsi4-source-originali",
+              "source_label": "TPSI quarto - contenuti originali",
+              "source_provider": "local",
+              "href": "../content/tpsi_quarto/01_PROCESSI_E_CONCORRENZA.md#processi-thread-e-concorrenza",
+              "level": 1,
+              "line": 1,
+              "activity_ids": [
+                "tpsi4-activity-c-fork-pipe-square-001"
+              ],
+              "frame": {
+                "status": "draft",
+                "context": "Costruisce il modello concettuale di processo, thread, risorsa, concorrenza e parallelismo, collegandolo alle sezioni operative della dispensa Linux.",
+                "prerequisites": "C intermedio, compilazione, memoria, funzioni e puntatori di base.",
+                "objectives": "Distinguere programma/processo/thread, descrivere ciclo di vita e risorse, usare fork/exec/wait in esempi controllati e confrontare POSIX e Java.",
+                "recall": "Riprendere processo di compilazione, spazio di memoria e gestione degli errori.",
+                "preview": "Prepara IPC, race condition, mutex, semafori, condition e problemi classici.",
+                "next_step": "Svolgere esercizi A-D e avviare il laboratorio fork/pipe.",
+                "references": "Modulo originale e heading pertinenti di LINUX_PROGRAMMING.md, esclusa Controllo dei processi."
+              }
+            }
+          ]
+        },
+        {
+          "id": "uda-12",
+          "title": "Comunicazione e sincronizzazione",
+          "path": "Sistemi concorrenti",
+          "weeks": "6",
+          "items": [
+            {
+              "id": "tpsi4-source-originali:content/tpsi_quarto/02_COMUNICAZIONE_E_SINCRONIZZAZIONE.md#comunicazione-e-sincronizzazione",
+              "title": "Comunicazione e sincronizzazione",
+              "source": "content/tpsi_quarto/02_COMUNICAZIONE_E_SINCRONIZZAZIONE.md",
+              "source_id": "tpsi4-source-originali",
+              "source_label": "TPSI quarto - contenuti originali",
+              "source_provider": "local",
+              "href": "../content/tpsi_quarto/02_COMUNICAZIONE_E_SINCRONIZZAZIONE.md#comunicazione-e-sincronizzazione",
+              "level": 1,
+              "line": 1,
+              "activity_ids": [
+                "tpsi4-activity-c-fork-pipe-square-001"
+              ],
+              "frame": {
+                "status": "draft",
+                "context": "Distingue comunicazione e sincronizzazione e sviluppa memoria condivisa, messaggi, race, mutex, semafori, condition, deadlock, monitor e problemi classici.",
+                "prerequisites": "Processi, thread, interleaving, invarianti e gestione degli errori.",
+                "objectives": "Progettare un semplice protocollo IPC, riconoscere e correggere race/deadlock e confrontare primitive POSIX e Java.",
+                "recall": "Riprendere risorse private/condivise, fork, wait e proprietà safety/liveness.",
+                "preview": "I problemi tecnici verranno trasformati in requisiti e criteri verificabili.",
+                "next_step": "Completare il laboratorio pipe e progettare un buffer produttore/consumatore.",
+                "references": "Modulo originale; sezioni Linux su segnali, thread, mutex, semafori, condition e deadlock."
+              }
+            }
+          ]
+        },
+        {
+          "id": "uda-13",
+          "title": "Requisiti software",
+          "path": "Progettazione del software",
+          "weeks": "4",
+          "items": [
+            {
+              "id": "tpsi4-source-originali:content/tpsi_quarto/03_REQUISITI_SOFTWARE.md#requisiti-software",
+              "title": "Requisiti software",
+              "source": "content/tpsi_quarto/03_REQUISITI_SOFTWARE.md",
+              "source_id": "tpsi4-source-originali",
+              "source_label": "TPSI quarto - contenuti originali",
+              "source_provider": "local",
+              "href": "../content/tpsi_quarto/03_REQUISITI_SOFTWARE.md#requisiti-software",
+              "level": 1,
+              "line": 1,
+              "frame": {
+                "status": "draft",
+                "context": "Trasforma bisogni e problemi osservati in requisiti, casi d'uso, scenari, criteri di accettazione e tracciabilità.",
+                "prerequisites": "Esperienza con piccoli progetti e con gli errori tipici dei sistemi concorrenti.",
+                "objectives": "Scrivere requisiti funzionali/non funzionali verificabili, modellare attori e scenari, costruire una specifica leggera.",
+                "recall": "Riprendere invarianti e proprietà di correttezza come esempi di requisiti tecnici.",
+                "preview": "Prepara documentazione, Git, pull request e collegamento fra requisito e test.",
+                "next_step": "Produrre una mini SRS e una bozza activity tracciata ai requisiti.",
+                "references": "Modulo originale e contratti didattici del repository usati come caso di studio."
+              }
+            }
+          ]
+        },
+        {
+          "id": "uda-14",
+          "title": "Documentazione e controllo di versione",
+          "path": "Progettazione del software",
+          "weeks": "4",
+          "items": [
+            {
+              "id": "tpsi4-source-originali:content/tpsi_quarto/04_DOCUMENTAZIONE_VERSIONAMENTO.md#documentazione-e-controllo-di-versione",
+              "title": "Documentazione e controllo di versione",
+              "source": "content/tpsi_quarto/04_DOCUMENTAZIONE_VERSIONAMENTO.md",
+              "source_id": "tpsi4-source-originali",
+              "source_label": "TPSI quarto - contenuti originali",
+              "source_provider": "local",
+              "href": "../content/tpsi_quarto/04_DOCUMENTAZIONE_VERSIONAMENTO.md#documentazione-e-controllo-di-versione",
+              "level": 1,
+              "line": 1,
+              "frame": {
+                "status": "draft",
+                "context": "Organizza README, documentazione del codice, ADR, contratti, Git, branch, conflitti, pull request, review e provenienza.",
+                "prerequisites": "Requisiti, criteri di accettazione e uso essenziale di Git.",
+                "objectives": "Produrre documenti per pubblici diversi, commit intenzionali e una PR verificabile che colleghi requisiti, codice e test.",
+                "recall": "Riprendere stakeholder, glossario, versioni e tracciabilità.",
+                "preview": "La documentazione verrà verificata insieme al codice con test statici e dinamici.",
+                "next_step": "Documentare e versionare una activity completa in un branch dedicato.",
+                "references": "Modulo originale; documentazione e workflow del repository come esempi applicativi."
+              }
+            }
+          ]
+        },
+        {
+          "id": "uda-15",
+          "title": "Testing e debugging",
+          "path": "Qualità del software",
+          "weeks": "5",
+          "items": [
+            {
+              "id": "tpsi4-source-originali:content/tpsi_quarto/05_TESTING_DEBUGGING.md#testing-e-debugging",
+              "title": "Testing e debugging",
+              "source": "content/tpsi_quarto/05_TESTING_DEBUGGING.md",
+              "source_id": "tpsi4-source-originali",
+              "source_label": "TPSI quarto - contenuti originali",
+              "source_provider": "local",
+              "href": "../content/tpsi_quarto/05_TESTING_DEBUGGING.md#testing-e-debugging",
+              "level": 1,
+              "line": 1,
+              "activity_ids": [
+                "tpsi4-activity-c-fork-pipe-square-001"
+              ],
+              "frame": {
+                "status": "draft",
+                "context": "Collega requisiti, verifica, validazione, test statici/dinamici, sanitizer, debugger, regressioni, runner e CI.",
+                "prerequisites": "Requisiti, documentazione, programmi C e concorrenza.",
+                "objectives": "Progettare casi di test, interpretare report, riprodurre e correggere difetti con un metodo basato su evidenze.",
+                "recall": "Riprendere criteri di accettazione, invarianti e contratti delle activity.",
+                "preview": "Prepara il collaudo del progetto finale e la riflessione su dati, licenze, sicurezza e AI.",
+                "next_step": "Eseguire l'activity end-to-end, aggiungere una regressione e documentare il risultato.",
+                "references": "Modulo originale; validator, runner e report della piattaforma."
+              }
+            }
+          ]
+        },
+        {
+          "id": "uda-16",
+          "title": "Cittadinanza digitale e progetto finale",
+          "path": "Progetto e responsabilita",
+          "weeks": "6",
+          "items": [
+            {
+              "id": "tpsi4-source-originali:content/tpsi_quarto/06_CITTADINANZA_DIGITALE.md#cittadinanza-digitale-per-chi-progetta-software",
+              "title": "Cittadinanza digitale per chi progetta software",
+              "source": "content/tpsi_quarto/06_CITTADINANZA_DIGITALE.md",
+              "source_id": "tpsi4-source-originali",
+              "source_label": "TPSI quarto - contenuti originali",
+              "source_provider": "local",
+              "href": "../content/tpsi_quarto/06_CITTADINANZA_DIGITALE.md#cittadinanza-digitale-per-chi-progetta-software",
+              "level": 1,
+              "line": 1,
+              "frame": {
+                "status": "draft",
+                "context": "Integra licenze, provenienza, privacy, segreti, supply chain, accessibilita, valutazione e uso responsabile dell'AI nel progetto finale.",
+                "prerequisites": "Tutti i moduli precedenti e un progetto di gruppo in corso.",
+                "objectives": "Applicare responsabilita tecnica e digitale a fonti, dati, repository, review, dipendenze, AI e valutazione.",
+                "recall": "Riprendere provenienza, ruoli, test, documentazione e policy di aiuto.",
+                "preview": "Conclude con demo, relazione, evidenze e valutazione del progetto integrato.",
+                "next_step": "Completare un progetto concorrente documentato, testato e accompagnato da manifest di fonti e policy.",
+                "references": "Modulo originale; manifest del pacchetto e policy della piattaforma."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
