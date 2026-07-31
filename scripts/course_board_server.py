@@ -1465,8 +1465,13 @@ def delete_activity_record(payload: dict) -> dict:
         try:
             storage.write_json(journal, {**transaction, "state": "cleanup"})
         except Exception:
-            recover_interrupted_activity_deletions()
-            raise
+            # Atomic replace may have published cleanup before a failing parent
+            # flush. If the authoritative journal already says cleanup, finish
+            # and report success instead of returning an error after deletion.
+            current_state = storage.read_json(journal).get("state")
+            if current_state != "cleanup":
+                recover_interrupted_activity_deletions()
+                raise
         cleanup_pending = False
         try:
             tombstone.unlink()

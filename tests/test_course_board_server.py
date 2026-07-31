@@ -2872,6 +2872,33 @@ def test_delete_activity_record_recovers_when_committed_journal_write_fails(tmp_
     assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
 
 
+def test_delete_activity_record_reports_success_when_cleanup_marker_was_published(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    original_write = course_board_server.thebitlab_storage.JsonAssignmentStorage.write_json
+
+    def fail_after_cleanup_publish(self, path, payload):
+        result = original_write(self, path, payload)
+        if payload.get("schema_version") == "activity_deletion.v1" and payload.get("state") == "cleanup":
+            raise OSError("cleanup directory flush failed")
+        return result
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        fail_after_cleanup_publish,
+    )
+    result = course_board_server.delete_activity_record(
+        {"activity_path": "activities/drafts/python-base-somma-001.json"}
+    )
+
+    assert result["ok"] is True
+    assert not activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+
+
 def test_delete_activity_record_keeps_recovery_state_when_commit_and_reset_fail(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
