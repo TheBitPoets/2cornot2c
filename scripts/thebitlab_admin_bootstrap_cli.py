@@ -11,6 +11,7 @@ if __package__ in {None, ""}:
 
 from scripts.thebitlab_admin_bootstrap import AdminBootstrapError, AdminBootstrapService
 from scripts.thebitlab_auth_runtime import AuthRuntimeConfigurationError, _prepare_database_file
+from scripts.thebitlab_identity_ports import IdentityStorageError
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 
 
@@ -33,7 +34,13 @@ def main(argv: list[str] | None = None) -> int:
         result = AdminBootstrapService(SqliteIdentityStorage(database)).bootstrap(args.user_id)
         print(f"Bootstrap admin completato; sessioni revocate: {result.revoked_sessions}.")
         return 0
-    except (AdminBootstrapError, AuthRuntimeConfigurationError, OSError, ValueError):
+    except (
+        AdminBootstrapError,
+        AuthRuntimeConfigurationError,
+        IdentityStorageError,
+        OSError,
+        ValueError,
+    ):
         print("Bootstrap admin non completato.", file=sys.stderr)
         return 1
 
