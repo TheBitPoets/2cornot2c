@@ -100,21 +100,22 @@ def course_storage_lock(root: Path) -> CourseStorageLock:
         return _COURSE_LOCKS.setdefault(key, CourseStorageLock(key))
 
 
-def ensure_directory_durable(path: Path) -> None:
-    """Create a directory hierarchy and persist every newly added parent entry."""
+def ensure_directory_durable(path: Path, durable_root: Path | None = None) -> None:
+    """Create a hierarchy and persist every entry below an established root."""
 
-    missing: list[Path] = []
-    cursor = path
-    while not cursor.exists():
-        missing.append(cursor)
-        if cursor.parent == cursor:
-            break
-        cursor = cursor.parent
-    if cursor.exists() and not cursor.is_dir():
-        raise NotADirectoryError(str(cursor))
+    path = path.resolve(strict=False)
+    root = (durable_root or Path(path.anchor)).resolve(strict=False)
+    try:
+        relative = path.relative_to(root)
+    except ValueError as error:
+        raise ValueError(f"Directory fuori dalla root durevole: {path}") from error
+    if root.exists() and not root.is_dir():
+        raise NotADirectoryError(str(root))
     path.mkdir(parents=True, exist_ok=True)
-    for created in reversed(missing):
-        sync_directory(created.parent)
+    cursor = root
+    for part in relative.parts:
+        sync_directory(cursor)
+        cursor /= part
 
 
 def sync_directory(path: Path) -> None:
@@ -250,7 +251,7 @@ class JsonCourseStorage:
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
         """Atomically replace a JSON object with stable formatting."""
 
-        ensure_directory_durable(path.parent)
+        ensure_directory_durable(path.parent, self.root)
         destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
         descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{path.name}.",
@@ -495,7 +496,7 @@ class JsonAssignmentStorage:
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
         """Atomically replace a JSON object with stable formatting."""
 
-        ensure_directory_durable(path.parent)
+        ensure_directory_durable(path.parent, self.root)
         destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
         descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
         temporary_path = Path(temporary_name)

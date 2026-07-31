@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from scripts.course_activity_links import (
@@ -184,6 +186,20 @@ def test_validate_course_activity_targets_rejects_nonportable_path_casing(tmp_pa
 
     with pytest.raises(ValueError, match="maiuscole reali"):
         validate_course_activity_targets(design(mismatched), tmp_path)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Windows non puo creare la collisione case-insensitive")
+def test_validate_course_activity_targets_rejects_casefold_catalog_collision(tmp_path) -> None:
+    directory = tmp_path / "activities" / "examples"
+    directory.mkdir(parents=True)
+    (directory / "Demo.json").write_text("{}", encoding="utf-8")
+    (directory / "demo.json").write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Catalogo non portabile"):
+        validate_course_activity_targets(
+            design(link(activity_path="activities/examples/Demo.json")),
+            tmp_path,
+        )
 
 
 def test_validate_course_activity_targets_rejects_structurally_invalid_activity(tmp_path) -> None:

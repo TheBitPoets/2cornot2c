@@ -162,8 +162,11 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                         exact_names = {entry.name for entry in cursor.iterdir()}
                     except OSError as error:
                         raise ValueError(f"Activity collegata non trovata: {link['activity_path']}.") from error
+                    folded_matches = [name for name in exact_names if name.casefold() == part.casefold()]
+                    if len(folded_matches) > 1:
+                        raise ValueError(f"Catalogo non portabile per activity_path: {link['activity_path']}.")
                     if part not in exact_names:
-                        if any(name.casefold() == part.casefold() for name in exact_names):
+                        if folded_matches:
                             raise ValueError(
                                 f"activity_path non rispetta le maiuscole reali: {link['activity_path']}."
                             )

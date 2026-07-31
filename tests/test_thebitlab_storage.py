@@ -791,7 +791,7 @@ def test_ensure_directory_durable_syncs_each_new_parent_entry(tmp_path, monkeypa
     monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", synced.append)
     target = tmp_path / "activities" / "drafts"
 
-    ensure_directory_durable(target)
+    ensure_directory_durable(target, tmp_path)
 
     assert target.is_dir()
     assert synced == [tmp_path, tmp_path / "activities"]
