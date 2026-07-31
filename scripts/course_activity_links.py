@@ -191,8 +191,16 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                 validation_errors = validate_activity.validate_activity(payload, link["activity_path"])
                 if validation_errors:
                     raise ValueError(f"Activity collegata non valida: {validation_errors[0]}.")
-                normalized_activity = normalize_activity(payload)
-                selected_language = create_submission_scaffold.language_for(payload)
+                normalized_activity = create_submission_scaffold.validate_activity_contract_or_raise(
+                    payload,
+                    link["activity_id"],
+                )
+                language_metadata = {
+                    key: value
+                    for key, value in payload.items()
+                    if key in {"language", "linguaggio"} and str(value).strip()
+                }
+                selected_language = create_submission_scaffold.language_for(language_metadata)
                 source_name = str(normalized_activity.get("source_name", "")) or (
                     create_submission_scaffold.default_source_name_for(selected_language)
                 )

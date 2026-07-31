@@ -1233,7 +1233,16 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
     activity_id = str(activity.get("id", "")).strip()
     relative_activity_path = repository_relative_path(activity_path.resolve())
     assignments = []
-    for assignment in assignment_record_storage().list_assignments():
+    record_storage = assignment_record_storage()
+    assignment_paths = (
+        sorted(record_storage.assignments_dir.glob("*.json"))
+        if record_storage.assignments_dir.is_dir()
+        else []
+    )
+    for assignment_file in assignment_paths:
+        if assignment_file.is_symlink():
+            raise ValueError(f"Record assegnazione non verificabile: {assignment_file.name}.")
+        assignment = assignment_records.validate_assignment_record(record_storage.read_json(assignment_file))
         assignment_activity_id = str(assignment.get("activity_id", "")).strip()
         assignment_activity_path = str(assignment.get("activity_path", "")).strip().replace("\\", "/")
         if (activity_id and assignment_activity_id == activity_id) or assignment_activity_path == relative_activity_path:
@@ -1251,14 +1260,16 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
 
     storage = assignment_storage()
     reports = []
-    for report_summary in storage.list_assignment_reports():
-        name = str(report_summary.get("name", "")).strip()
-        if not name:
-            continue
-        try:
-            report = storage.read_assignment_report(name)
-        except Exception:  # noqa: BLE001
-            continue
+    report_paths = (
+        sorted(storage.teacher_reports_dir.rglob("*.json"))
+        if storage.teacher_reports_dir.is_dir()
+        else []
+    )
+    for report_path in report_paths:
+        if report_path.is_symlink():
+            raise ValueError(f"Registro non verificabile: {report_path.name}.")
+        name = report_path.relative_to(storage.teacher_reports_dir).as_posix()
+        report = storage.read_assignment_report(name)
         report_activity_id = str(report.get("activity_id", "")).strip()
         report_activity_path = str(report.get("activity_path", "")).strip().replace("\\", "/")
         if (activity_id and report_activity_id == activity_id) or report_activity_path == relative_activity_path:
@@ -1470,6 +1481,7 @@ def list_activities() -> list[dict]:
 def persist_activity_draft_files(
     *,
     activity_id: str,
+    source_name: str,
     files: Any,
     drafts_dir: Path,
 ) -> list[dict[str, str]]:
@@ -1518,6 +1530,16 @@ def persist_activity_draft_files(
             raise ValueError(f"Target AI duplicato, equivalente o sovrapposto: {target_path.as_posix()}.")
         if create_submission_scaffold.is_reserved_scaffold_target(target_path):
             raise ValueError(f"Target asset riservato allo scaffold: {target_path.as_posix()}.")
+        target_key = create_submission_scaffold.portable_path_key(target_path)
+        source_name_path = Path(source_name)
+        source_name_key = create_submission_scaffold.portable_path_key(source_name_path)
+        if target_key != source_name_key and create_submission_scaffold.portable_paths_overlap(
+            target_path,
+            source_name_path,
+        ):
+            raise ValueError(f"Target asset sovrapposto al file sorgente: {target_path.as_posix()}.")
+        if target_key == source_name_key and target_path.as_posix() != source_name_path.as_posix():
+            raise ValueError(f"Target sorgente non canonico: {target_path.as_posix()}.")
         target_paths.append(target_path)
         metadata = {
             "type": asset_type,
@@ -1573,6 +1595,7 @@ def persist_activity_draft_files(
 def save_activity_with_proposed_files(
     *,
     activity_id: str,
+    source_name: str,
     activity: dict,
     files: Any,
     overwrite: bool,
@@ -1586,6 +1609,7 @@ def save_activity_with_proposed_files(
         raise ValueError("Directory asset dell'activity non valida.")
     activity["assets"] = persist_activity_draft_files(
         activity_id=activity_id,
+        source_name=source_name,
         files=files,
         drafts_dir=drafts_dir,
     )
@@ -1637,8 +1661,16 @@ def _save_activity_locked(payload: dict) -> dict:
             raise ValueError("L'overwrite non puo cambiare l'identita dell'activity esistente.")
     proposed_files = payload.get("files")
     if proposed_files:
+        normalized_activity = normalize_activity(activity)
+        selected_language = create_submission_scaffold.language_for(
+            {"language": normalized_activity.get("language", "c") or "c"}
+        )
+        selected_source_name = str(normalized_activity.get("source_name", "")) or (
+            create_submission_scaffold.default_source_name_for(selected_language)
+        )
         saved = save_activity_with_proposed_files(
             activity_id=activity_id,
+            source_name=create_submission_scaffold.validate_source_name(selected_source_name),
             activity=activity,
             files=proposed_files,
             overwrite=overwrite,

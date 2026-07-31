@@ -2853,6 +2853,22 @@ def test_delete_activity_record_blocks_when_course_design_links_activity(tmp_pat
     assert activity_path.exists()
 
 
+def test_delete_activity_record_fails_closed_on_unreadable_dependency(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    assignments_dir = tmp_path / "teacher-assignments"
+    assignments_dir.mkdir()
+    (assignments_dir / "broken.json").write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(json.JSONDecodeError):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+
+
 def test_delete_activity_record_blocks_when_assignment_exists(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
@@ -4930,6 +4946,10 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
         (
             [{"path": "one.py", "target_path": "README.md", "content": "one", "visibility": "student"}],
             "Target asset riservato",
+        ),
+        (
+            [{"path": "one.py", "target_path": "main.py/nested", "content": "one", "visibility": "student"}],
+            "sovrapposto al file sorgente",
         ),
     ],
 )
