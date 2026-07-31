@@ -845,12 +845,15 @@ def test_activity_rollback_recovery_supports_txn_and_ignores_nested_assets(tmp_p
     nested_asset = drafts / "assets" / "demo" / "bundle" / ".fixture.json.v1.rollback"
     nested_asset.parent.mkdir(parents=True)
     nested_asset.write_text("fixture", encoding="utf-8")
+    incomplete_backup = drafts / ".demo.json.deadbeef.rollback.tmp"
+    incomplete_backup.write_text("partial", encoding="utf-8")
 
     recover_json_rollbacks(drafts)
 
     assert json.loads(journal.read_text(encoding="utf-8")) == {"state": "old"}
     assert not backup.exists()
     assert nested_asset.read_text(encoding="utf-8") == "fixture"
+    assert incomplete_backup.read_text(encoding="utf-8") == "partial"
 
 
 def test_assignment_storage_atomic_json_failure_preserves_previous_file(tmp_path, monkeypatch) -> None:

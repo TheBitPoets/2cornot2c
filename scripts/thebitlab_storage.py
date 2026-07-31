@@ -565,18 +565,21 @@ class JsonAssignmentStorage:
         if path.exists():
             backup_descriptor, backup_name = tempfile.mkstemp(
                 prefix=f".{path.name}.",
-                suffix=".rollback",
+                suffix=".rollback.tmp",
                 dir=path.parent,
             )
-            backup_path = Path(backup_name)
+            backup_staging = Path(backup_name)
+            backup_path = backup_staging.with_name(backup_staging.name.removesuffix(".tmp"))
             try:
-                os.chmod(backup_path, destination_mode)
+                os.chmod(backup_staging, destination_mode)
                 with os.fdopen(backup_descriptor, "wb") as backup:
                     backup.write(path.read_bytes())
                     backup.flush()
                     os.fsync(backup.fileno())
+                os.replace(backup_staging, backup_path)
                 sync_directory(path.parent)
             except Exception:
+                backup_staging.unlink(missing_ok=True)
                 backup_path.unlink(missing_ok=True)
                 raise
 
@@ -627,11 +630,21 @@ class JsonAssignmentStorage:
                 os.close(descriptor)
             temporary_path.unlink(missing_ok=True)
             if backup_path is not None and (not published or commit_complete or rollback_complete):
-                # The operation is not complete (and no HTTP success can be
-                # returned) until removal of the rollback backup is durable.
-                # A crash before this barrier intentionally restores old JSON.
-                backup_path.unlink(missing_ok=True)
-                sync_directory(path.parent)
+                # Rename to a non-recoverable cleanup name, then persist that
+                # rename as the transaction commit boundary. A crash before the
+                # barrier still exposes .rollback and intentionally restores old JSON.
+                cleanup_path = backup_path.with_name(f"{backup_path.name}.cleanup")
+                os.replace(backup_path, cleanup_path)
+                try:
+                    sync_directory(path.parent)
+                except Exception:
+                    os.replace(cleanup_path, backup_path)
+                    sync_directory(path.parent)
+                    raise
+                try:
+                    cleanup_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
     def save_activity(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]:
         """Validate and persist a teacher-authored activity draft."""
