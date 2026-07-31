@@ -69,26 +69,33 @@ def import_box(
 ) -> VagrantResult:
     """Verifica e importa la box senza forzare o sovrascrivere installazioni."""
 
+    box_path = box_path.resolve(strict=True)
     verify_box(box_path, artifact)
-    returncode, output = runner(("vagrant", "box", "list", "--machine-readable"), None)
-    if returncode != 0:
-        return VagrantResult("failed", output or "Impossibile elencare le box Vagrant.")
-    identity = (artifact.box_name, artifact.provider.value)
-    if identity in parse_installed_boxes(output):
-        return VagrantResult("skipped", "box già installata")
+    with tempfile.TemporaryDirectory(prefix="2cornot2c-vagrant-box-") as directory:
+        isolated_cwd = Path(directory)
+        returncode, output = runner(
+            ("vagrant", "box", "list", "--machine-readable"), isolated_cwd
+        )
+        if returncode != 0:
+            return VagrantResult(
+                "failed", output or "Impossibile elencare le box Vagrant."
+            )
+        identity = (artifact.box_name, artifact.provider.value)
+        if identity in parse_installed_boxes(output):
+            return VagrantResult("skipped", "box già installata")
 
-    returncode, output = runner(
-        (
-            "vagrant",
-            "box",
-            "add",
-            artifact.box_name,
-            str(box_path),
-            "--provider",
-            artifact.provider.value,
-        ),
-        None,
-    )
+        returncode, output = runner(
+            (
+                "vagrant",
+                "box",
+                "add",
+                artifact.box_name,
+                str(box_path),
+                "--provider",
+                artifact.provider.value,
+            ),
+            isolated_cwd,
+        )
     if returncode != 0:
         return VagrantResult("failed", output or "Importazione box non riuscita.")
     return VagrantResult("succeeded", "box verificata e importata")

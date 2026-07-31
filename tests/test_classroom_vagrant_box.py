@@ -90,6 +90,35 @@ def test_import_does_not_force_overwrite(tmp_path: Path) -> None:
     assert "--force" not in calls[1]
 
 
+def test_import_uses_an_isolated_vagrant_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "Vagrantfile").write_text(
+        'raise "Box Packer 2cornot2c non configurata"\n',
+        encoding="utf-8",
+    )
+    box = project / "classroom.box"
+    box.write_bytes(CONTENT)
+    calls: list[tuple[tuple[str, ...], Path]] = []
+
+    def fail_closed_runner(command: tuple[str, ...], cwd: Path | None):
+        assert cwd is not None
+        assert cwd.is_dir()
+        assert not (cwd / "Vagrantfile").exists()
+        calls.append((command, cwd))
+        return 0, ""
+
+    monkeypatch.chdir(project)
+    result = import_box(artifact(), box, runner=fail_closed_runner)
+
+    assert result.status == "succeeded"
+    assert [call[0][1:3] for call in calls] == [("box", "list"), ("box", "add")]
+    assert calls[0][1] == calls[1][1]
+    assert Path(calls[1][0][4]).is_absolute()
+
+
 def test_configure_project_writes_local_selection(tmp_path: Path) -> None:
     (tmp_path / "Vagrantfile").write_text("", encoding="utf-8")
 
