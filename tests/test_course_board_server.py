@@ -2812,6 +2812,20 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
     assert synced_directories == [activity_path.parent]
 
 
+def test_delete_activity_record_rejects_nested_json_asset(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    asset_path = tmp_path / "activities" / "drafts" / "assets" / "demo" / "fixture.json"
+    asset_path.parent.mkdir(parents=True)
+    asset_path.write_text('{"fixture": true}', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="direttamente"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/assets/demo/fixture.json"}
+        )
+
+    assert asset_path.exists()
+
+
 def test_delete_activity_record_blocks_when_course_design_links_activity(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
@@ -4917,9 +4931,9 @@ def test_save_activity_revalidates_preserved_assets_when_source_name_changes(tmp
             {
                 "path": "starter.py",
                 "target_path": "main.py",
-                "role": "starter",
+                "type": "hidden_test",
                 "content": "print('ok')\n",
-                "visibility": "student",
+                "visibility": "grading",
             }
         ],
     }

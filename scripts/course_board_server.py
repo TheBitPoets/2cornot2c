@@ -1190,10 +1190,9 @@ def ensure_activity_draft_path(path: Path) -> None:
     """Reject deletion targets outside activities/drafts."""
 
     drafts_dir = (ROOT / "activities" / "drafts").resolve()
-    try:
-        path.resolve().relative_to(drafts_dir)
-    except ValueError as error:
-        raise ValueError("Puoi cancellare solo bozze activity dentro activities/drafts.") from error
+    resolved = path.resolve()
+    if resolved.parent != drafts_dir or resolved.suffix.casefold() != ".json":
+        raise ValueError("Puoi cancellare solo file activity JSON direttamente dentro activities/drafts.")
 
 
 def course_design_activity_dependencies(activity_id: str, activity_path: str) -> list[dict]:
@@ -1619,7 +1618,7 @@ def save_activity_with_proposed_files(
 
 
 def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> None:
-    """Validate retained student assets against updated scaffold metadata."""
+    """Validate every retained asset against updated scaffold metadata."""
 
     normalized = create_submission_scaffold.validate_activity_contract_or_raise(
         activity,
@@ -1630,14 +1629,51 @@ def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> N
         str(normalized.get("source_name", ""))
         or create_submission_scaffold.default_source_name_for(language)
     )
-    for _, target in create_submission_scaffold.student_asset_copy_plan(activity_path, activity):
+    source_name_path = Path(source_name)
+    source_name_key = create_submission_scaffold.portable_path_key(source_name_path)
+    source_paths: list[Path] = []
+    target_paths: list[Path] = []
+    activity_root = activity_path.parent.resolve(strict=True)
+    for index, asset in enumerate(activity.get("assets", [])):
+        source = create_submission_scaffold.validate_relative_path(asset.get("path"), f"assets[{index}].path")
+        target = create_submission_scaffold.validate_relative_path(
+            asset.get("target_path", asset.get("path")),
+            f"assets[{index}].target_path",
+        )
+        if any(create_submission_scaffold.portable_paths_overlap(source, item) for item in source_paths):
+            raise ValueError("Asset preservato duplicato o sovrapposto.")
+        if any(create_submission_scaffold.portable_paths_overlap(target, item) for item in target_paths):
+            raise ValueError("Target preservato duplicato o sovrapposto.")
+        if create_submission_scaffold.is_reserved_scaffold_target(target):
+            raise ValueError(f"Target asset riservato allo scaffold: {target.as_posix()}.")
         target_key = create_submission_scaffold.portable_path_key(target)
-        source_path = Path(source_name)
-        source_key = create_submission_scaffold.portable_path_key(source_path)
-        if target_key != source_key and create_submission_scaffold.portable_paths_overlap(target, source_path):
+        if target_key != source_name_key and create_submission_scaffold.portable_paths_overlap(
+            target,
+            source_name_path,
+        ):
             raise ValueError(f"Target asset sovrapposto al file sorgente: {target.as_posix()}.")
-        if target_key == source_key and target.as_posix() != source_path.as_posix():
+        if target_key == source_name_key and target.as_posix() != source_name_path.as_posix():
             raise ValueError(f"Target sorgente non canonico: {target.as_posix()}.")
+        source_file = activity_root
+        for part in source.parts:
+            try:
+                names = {entry.name for entry in source_file.iterdir()}
+            except OSError as error:
+                raise ValueError(f"Asset preservato non trovato: {source.as_posix()}.") from error
+            matches = [name for name in names if name.casefold() == part.casefold()]
+            if len(matches) > 1 or part not in names:
+                raise ValueError(f"Asset preservato non portabile o mancante: {source.as_posix()}.")
+            source_file /= part
+            if source_file.is_symlink():
+                raise ValueError(f"Asset preservato non puo attraversare symlink: {source.as_posix()}.")
+        try:
+            source_file.resolve(strict=True).relative_to(activity_root)
+        except (FileNotFoundError, RuntimeError, ValueError) as error:
+            raise ValueError(f"Asset preservato fuori dalla activity: {source.as_posix()}.") from error
+        if not source_file.is_file():
+            raise ValueError(f"Asset preservato non trovato: {source.as_posix()}.")
+        source_paths.append(source)
+        target_paths.append(target)
 
 
 def save_activity(payload: dict) -> dict:
