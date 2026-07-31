@@ -500,6 +500,44 @@ def test_staging_smoke_rejects_duplicate_or_contradictory_cookie_attributes() ->
         )
 
 
+def test_staging_smoke_accepts_single_chunked_framing_from_https_intermediary() -> None:
+    fixtures = responses()
+    key = ("GET", "https://school.test/auth/tui/pair")
+    current = fixtures[key]
+    fixtures[key] = smoke.ResponseSnapshot(
+        current.status,
+        tuple(
+            (name, value)
+            for name, value in current.headers
+            if name.lower() != "content-length"
+        )
+        + (("Transfer-Encoding", "chunked"),),
+        current.body,
+    )
+
+    smoke.run_smoke(
+        "https://school.test",
+        lambda method, url, timeout: fixtures[(method, url)],
+    )
+
+
+@pytest.mark.parametrize(
+    "headers",
+    (
+        (),
+        (("Content-Length", "3"), ("Content-Length", "3")),
+        (("Content-Length", "03"),),
+        (("Transfer-Encoding", "gzip"),),
+        (("Transfer-Encoding", "chunked, gzip"),),
+        (("Transfer-Encoding", "chunked"), ("Transfer-Encoding", "chunked")),
+        (("Content-Length", "3"), ("Transfer-Encoding", "chunked")),
+    ),
+)
+def test_response_framing_rejects_ambiguous_or_unsupported_forms(headers) -> None:
+    with pytest.raises(smoke.StagingSmokeError, match="Framing"):
+        smoke._require_response_framing(smoke.ResponseSnapshot(200, headers, b"abc"))
+
+
 def test_staging_smoke_rejects_conflicting_response_framing() -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/session")]

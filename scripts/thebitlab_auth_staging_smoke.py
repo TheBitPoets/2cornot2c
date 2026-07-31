@@ -636,10 +636,15 @@ class _PairingPageParser(HTMLParser):
 
 
 def _require_response_framing(response: ResponseSnapshot) -> None:
-    if (
-        _headers(response, "transfer-encoding")
-        or _headers(response, "content-length") != [str(len(response.body))]
-    ):
+    transfers = _headers(response, "transfer-encoding")
+    lengths = _headers(response, "content-length")
+    content_length_framing = not transfers and lengths == [str(len(response.body))]
+    chunked_framing = (
+        not lengths
+        and len(transfers) == 1
+        and transfers[0].strip().lower() == "chunked"
+    )
+    if not (content_length_framing or chunked_framing):
         raise StagingSmokeError("Framing risposta staging non valido.")
 
 
