@@ -134,8 +134,13 @@ def acquire_manifest(cache_dir: Path) -> Path:
     """Acquisisce il manifest da file locale o HTTPS con limite dimensionale."""
 
     override = os.environ.get("CLASSROOM_RELEASE_MANIFEST") or None
-    destination = cache_dir / "release-manifest.json"
-    cached_valid = _cached_manifest_is_valid(destination)
+    official_destination = cache_dir / "release-manifest.json"
+    destination = (
+        cache_dir / "override-release-manifest.json"
+        if override is not None
+        else official_destination
+    )
+    cached_valid = _cached_manifest_is_valid(official_destination)
     if override is None and cached_valid and _cached_manifest_is_fresh(destination):
         return destination
 
@@ -143,7 +148,7 @@ def acquire_manifest(cache_dir: Path) -> Path:
         source = _manifest_source()
     except ClassroomImageError:
         if override is None and cached_valid:
-            return destination
+            return official_destination
         raise
     local = Path(source).expanduser()
     if "://" not in source:
@@ -178,7 +183,7 @@ def acquire_manifest(cache_dir: Path) -> Path:
         return destination
     except (ArtifactError, ClassroomImageError, OSError, ValueError) as error:
         if override is None and cached_valid:
-            return destination
+            return official_destination
         if isinstance(error, ClassroomImageError):
             raise
         if isinstance(error, ArtifactError):

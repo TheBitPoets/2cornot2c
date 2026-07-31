@@ -296,3 +296,53 @@ def test_acquire_manifest_preserves_valid_cache_on_invalid_refresh(
 
     assert classroom_images.acquire_manifest(cache) == manifest
     assert manifest.read_text(encoding="utf-8") == original
+
+
+def test_remote_override_does_not_replace_official_manifest_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = tmp_path / "images"
+    override_url = "https://staging.example.test/release-manifest.json"
+    official_url = "https://downloads.example.test/release-manifest.json"
+    override_payload = manifest_payload()
+    override_payload["release"] = "9.9.9"
+    requested: list[str] = []
+
+    class Response(io.BytesIO):
+        headers: dict[str, str] = {}
+
+        def __init__(self, url: str, payload: dict) -> None:
+            super().__init__(json.dumps(payload).encode())
+            self.url = url
+
+        def geturl(self) -> str:
+            return self.url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+
+    def fake_urlopen(url: str, timeout: int) -> Response:
+        requested.append(url)
+        payload = override_payload if url == override_url else manifest_payload()
+        return Response(url, payload)
+
+    monkeypatch.setattr(classroom_images, "urlopen", fake_urlopen)
+    monkeypatch.setenv("CLASSROOM_RELEASE_MANIFEST", override_url)
+
+    override = classroom_images.acquire_manifest(cache)
+
+    assert override == cache / "override-release-manifest.json"
+    assert classroom_images.load_release(override).version == "9.9.9"
+    assert not (cache / "release-manifest.json").exists()
+
+    monkeypatch.delenv("CLASSROOM_RELEASE_MANIFEST")
+    monkeypatch.setattr(classroom_images, "latest_manifest_url", lambda: official_url)
+
+    official = classroom_images.acquire_manifest(cache)
+
+    assert official == cache / "release-manifest.json"
+    assert classroom_images.load_release(official).version == "1.0.0"
+    assert requested == [override_url, official_url]
