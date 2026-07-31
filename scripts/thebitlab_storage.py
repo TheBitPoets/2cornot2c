@@ -288,29 +288,7 @@ class JsonCourseStorage:
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
         """Atomically replace a JSON object with stable formatting."""
 
-        ensure_directory_durable(path.parent, self.root)
-        destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
-        descriptor, temporary_name = tempfile.mkstemp(
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            dir=path.parent,
-        )
-        temporary_path = Path(temporary_name)
-        try:
-            os.chmod(temporary_path, destination_mode)
-            destination = os.fdopen(descriptor, "w", encoding="utf-8")
-            descriptor = -1
-            with destination:
-                json.dump(payload, destination, ensure_ascii=False, indent=2)
-                destination.write("\n")
-                destination.flush()
-                os.fsync(destination.fileno())
-            os.replace(temporary_path, path)
-            sync_directory(path.parent)
-        finally:
-            if descriptor >= 0:
-                os.close(descriptor)
-            temporary_path.unlink(missing_ok=True)
+        JsonAssignmentStorage.write_json(self, path, payload)
 
     def write_json_exclusive(self, path: Path, payload: dict[str, Any]) -> None:
         """Publish JSON only when the process-locked final name is still free."""
@@ -584,6 +562,7 @@ class JsonAssignmentStorage:
                     )
                     restore_path = Path(restore_name)
                     try:
+                        os.chmod(restore_path, destination_mode)
                         with os.fdopen(restore_descriptor, "wb") as restored:
                             restored.write(backup_path.read_bytes())
                             restored.flush()

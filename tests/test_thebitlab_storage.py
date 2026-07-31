@@ -825,6 +825,8 @@ def test_assignment_storage_restores_previous_json_when_commit_flush_fails(tmp_p
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
     path = tmp_path / "activities" / "drafts" / "demo.json"
     storage.write_json(path, {"version": "old"})
+    if os.name != "nt":
+        path.chmod(0o640)
     original = path.read_bytes()
     real_replace = os.replace
     published = False
@@ -848,6 +850,8 @@ def test_assignment_storage_restores_previous_json_when_commit_flush_fails(tmp_p
         storage.write_json(path, {"version": "new"})
 
     assert path.read_bytes() == original
+    if os.name != "nt":
+        assert stat.S_IMODE(path.stat().st_mode) == 0o640
     assert list(path.parent.glob(".demo.json.*.rollback")) == []
 
 
