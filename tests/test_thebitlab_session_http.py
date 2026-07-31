@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from scripts.thebitlab_admin_provisioning import AdminProvisioningService
 from scripts.thebitlab_auth_services import SessionService
 from scripts.thebitlab_edge_rate_limit import EdgeRequestMetadata, TrustedProxyClientResolver
 from scripts.thebitlab_http_auth import HttpSessionAuthBoundary, SessionCookiePolicy
@@ -119,7 +120,7 @@ def test_current_session_returns_minimal_snapshot_and_csrf(graph) -> None:
         ("pending", "Account in attesa", None, "/tools/course_board.html"),
         ("student", "Area studente", "/auth/tui/pair", "/tools/course_board.html"),
         ("teacher", "Area docente", "/tools/course_board.html", "/auth/tui/pair"),
-        ("admin", "Area docente", "/tools/course_board.html", "/auth/tui/pair"),
+        ("admin", "Area amministratore", "/auth/admin", "/auth/tui/pair"),
     ),
 )
 def test_account_landing_is_authenticated_and_role_aware(
@@ -146,6 +147,62 @@ def test_account_landing_is_authenticated_and_role_aware(
     assert header(response, "X-Frame-Options") == "DENY"
     assert header(response, "X-Content-Type-Options") == "nosniff"
     assert header(response, "Cache-Control") == "no-store"
+
+
+def test_admin_page_requires_current_admin_and_escapes_read_model(tmp_path) -> None:
+    storage, boundary, _routes, established = build_graph(tmp_path, "admin")
+    storage.create_user(
+        UserAccount("pending-01", "<script>alert(1)</script>", "pending", True, NOW, NOW)
+    )
+    routes = SessionHttpRoutes(
+        boundary,
+        TrustedProxyClientResolver(("127.0.0.1/32",)),
+        AdminProvisioningService(storage, clock=lambda: NOW),
+    )
+
+    response = routes.dispatch(
+        request("GET", "/auth/admin", ("Cookie", cookie(established)))
+    )
+
+    assert response.status_code == 200
+    body = response.body.decode("utf-8")
+    assert "pending-01" in body
+    assert "&lt;script&gt;" in body
+    assert "<script>" not in body
+    assert header(response, "Cache-Control") == "no-store"
+    assert header(response, "X-Frame-Options") == "DENY"
+
+    for index in range(40):
+        storage.create_user(
+            UserAccount(
+                f"pending-{index + 100}",
+                "<&>" * 150,
+                "pending",
+                True,
+                NOW,
+                NOW,
+            )
+        )
+    bounded = routes.dispatch(
+        request("GET", "/auth/admin", ("Cookie", cookie(established)))
+    )
+    assert bounded.status_code == 200
+    assert len(bounded.body) <= 16 * 1024
+    assert "Elenco troncato" in bounded.body.decode("utf-8")
+
+    student_storage, student_boundary, _student_routes, student_session = build_graph(
+        tmp_path, "student"
+    )
+    student_routes = SessionHttpRoutes(
+        student_boundary,
+        TrustedProxyClientResolver(("127.0.0.1/32",)),
+        AdminProvisioningService(student_storage, clock=lambda: NOW),
+    )
+    forbidden = student_routes.dispatch(
+        request("GET", "/auth/admin", ("Cookie", cookie(student_session)))
+    )
+    assert forbidden.status_code == 403
+    assert json.loads(forbidden.body)["error"] == "admin_forbidden"
 
 
 def test_account_landing_rejects_non_get_query_and_body(graph) -> None:

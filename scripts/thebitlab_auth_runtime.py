@@ -14,6 +14,7 @@ import urllib.parse
 from collections.abc import Mapping
 from pathlib import Path
 
+from scripts.thebitlab_admin_provisioning import AdminProvisioningService
 from scripts.thebitlab_auth_services import (
     ExternalIdentityLinkService,
     FederatedIdentityService,
@@ -90,6 +91,9 @@ class GoogleOidcRuntime:
             or type(session_routes) is not SessionHttpRoutes
             or session_routes.sessions is not routes.session_discarder
             or session_routes.proxy_resolver is not routes.proxy_resolver
+            or session_routes.admin_provisioning is None
+            or session_routes.admin_provisioning.storage
+            is not routes.session_discarder.sessions.storage
             or type(tui_pairing_routes) is not TuiPairingHttpRoutes
             or tui_pairing_routes.proxy_resolver is not routes.proxy_resolver
             or tui_pairing_routes.boundary.http_sessions is not routes.session_discarder
@@ -238,7 +242,11 @@ def compose_google_oidc_runtime(
             http_sessions,
             session_cookie_policy=cookie_policy,
         )
-        session_routes = SessionHttpRoutes(http_sessions, proxy_resolver)
+        session_routes = SessionHttpRoutes(
+            http_sessions,
+            proxy_resolver,
+            AdminProvisioningService(storage),
+        )
         pairing_service = PairingService(storage, pepper=pairing_pepper)
         pairing_sessions = TuiPairingSessionService(pairing_service)
         tui_sessions = SessionService(storage, audience="tui")

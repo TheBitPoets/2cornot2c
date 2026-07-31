@@ -13,6 +13,10 @@ L'approvazione avviene in una singola transazione SQLite. Sono ricontrollati ruo
 
 Gli errori applicativi sono sanitizzati e non serializzano identità provider o dettagli SQLite. La superficie HTTP/GUI amministrativa è un confine separato: questo service non consente auto-approvazione e non trasforma un pending in admin.
 
+## Read model web amministrativo
+
+`GET /auth/admin` è composto soltanto quando il runtime federato include il service. Richiede TLS e una sessione web il cui account viene riletto atomicamente come admin attivo alla revisione corrente. Restituisce HTML bounded `no-store` con utenti pending e classi; valori dinamici sono escaped e non include email, subject provider, CSRF o cookie. CSP, `nosniff` e `DENY` proteggono la pagina. Le mutazioni restano separate e richiederanno POST con CSRF.
+
 ## Bootstrap del primo admin
 
 Dopo che il primo account Google è stato creato come `pending`, un operatore locale con accesso al database protetto esegue una sola volta:
