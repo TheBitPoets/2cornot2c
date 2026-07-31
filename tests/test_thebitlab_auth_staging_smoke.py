@@ -528,6 +528,8 @@ def test_staging_smoke_accepts_single_chunked_framing_from_https_intermediary() 
         (("Content-Length", "3"), ("Content-Length", "3")),
         (("Content-Length", "03"),),
         (("Transfer-Encoding", "gzip"),),
+        (("Transfer-Encoding", "chunked "),),
+        (("Transfer-Encoding", " chunked"),),
         (("Transfer-Encoding", "chunked, gzip"),),
         (("Transfer-Encoding", "chunked"), ("Transfer-Encoding", "chunked")),
         (("Content-Length", "3"), ("Transfer-Encoding", "chunked")),

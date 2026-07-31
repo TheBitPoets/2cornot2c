@@ -642,7 +642,7 @@ def _require_response_framing(response: ResponseSnapshot) -> None:
     chunked_framing = (
         not lengths
         and len(transfers) == 1
-        and transfers[0].strip().lower() == "chunked"
+        and transfers[0].lower() == "chunked"
     )
     if not (content_length_framing or chunked_framing):
         raise StagingSmokeError("Framing risposta staging non valido.")
