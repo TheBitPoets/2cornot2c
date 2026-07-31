@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -84,6 +87,21 @@ def test_non_pending_inactive_membership_and_stale_clock_fail_without_mutation(t
             "pending-01"
         )
     assert storage.read_user("pending-01").role == "student"
+
+
+def test_cli_is_directly_executable_from_repository_root() -> None:
+    root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(
+        [sys.executable, "scripts/thebitlab_admin_bootstrap_cli.py", "--help"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert completed.returncode == 0
+    assert "--database" in completed.stdout
+    assert "ModuleNotFoundError" not in completed.stderr
 
 
 def test_cli_reports_only_sanitized_success_and_failure(tmp_path, monkeypatch, capsys) -> None:

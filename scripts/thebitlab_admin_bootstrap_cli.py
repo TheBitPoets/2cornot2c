@@ -6,6 +6,9 @@ import argparse
 import sys
 from pathlib import Path
 
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from scripts.thebitlab_admin_bootstrap import AdminBootstrapError, AdminBootstrapService
 from scripts.thebitlab_auth_runtime import AuthRuntimeConfigurationError, _prepare_database_file
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
