@@ -7,7 +7,7 @@ import json
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterator, Mapping
 
-from scripts import validate_activity
+from scripts import create_submission_scaffold, validate_activity
 from scripts.thebitlab_contracts import normalize_activity
 
 MAX_ACTIVITY_LINKS_PER_UDA = 256
@@ -189,6 +189,23 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                 validation_errors = validate_activity.validate_activity(payload, link["activity_path"])
                 if validation_errors:
                     raise ValueError(f"Activity collegata non valida: {validation_errors[0]}.")
+                source_paths: list[Path] = []
+                target_paths: list[Path] = []
+                for index, asset in enumerate(payload.get("assets", [])):
+                    source = create_submission_scaffold.validate_relative_path(
+                        asset.get("path"),
+                        f"assets[{index}].path",
+                    )
+                    target = create_submission_scaffold.validate_relative_path(
+                        asset.get("target_path", asset.get("path")),
+                        f"assets[{index}].target_path",
+                    )
+                    if any(create_submission_scaffold.portable_paths_overlap(source, item) for item in source_paths):
+                        raise ValueError("Activity collegata con asset sorgente duplicato o sovrapposto.")
+                    if any(create_submission_scaffold.portable_paths_overlap(target, item) for item in target_paths):
+                        raise ValueError("Activity collegata con target asset duplicato o sovrapposto.")
+                    source_paths.append(source)
+                    target_paths.append(target)
                 authoritative_id = str(normalize_activity(payload).get("id", ""))
                 if authoritative_id != link["activity_id"]:
                     raise ValueError(f"activity_id non corrisponde al file {link['activity_path']}.")

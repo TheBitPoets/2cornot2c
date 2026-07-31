@@ -273,6 +273,9 @@ def test_create_scaffold_rejects_asset_target_reserved_for_scaffold(
         "folder\\child.txt",
         "trailing./file.txt",
         "file.txt ",
+        "CONIN$.txt",
+        "COM¹.txt",
+        "PROGRA~1/file.txt",
     ],
 )
 def test_create_scaffold_rejects_nonportable_asset_target(tmp_path, target) -> None:

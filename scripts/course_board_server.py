@@ -1003,6 +1003,13 @@ def stage_help_logs_for_deletion(
 def recover_interrupted_assignment_deletions() -> None:
     """Recover or complete journaled help-log deletions after a server restart."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        _recover_interrupted_assignment_deletions_locked()
+
+
+def _recover_interrupted_assignment_deletions_locked() -> None:
+    """Recover deletion journals while activity lifecycle changes are excluded."""
+
     trash_base = ROOT / "teacher-help-events" / ".trash"
     if not trash_base.is_dir():
         return
@@ -1083,6 +1090,13 @@ def rollback_help_deletion(
 
 def delete_assignment_record(payload: dict) -> dict:
     """Delete one assignment, including its authoritative student help logs."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _delete_assignment_record_locked(payload)
+
+
+def _delete_assignment_record_locked(payload: dict) -> dict:
+    """Delete one assignment while activity lifecycle changes are excluded."""
 
     requested_assignment_id = str(payload.get("assignment_id", "")).strip()
     if not requested_assignment_id:

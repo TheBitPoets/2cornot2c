@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -171,6 +172,19 @@ def test_validate_course_activity_targets_requires_matching_authoritative_file(t
             design(link(activity_id="different-id")),
             tmp_path,
         )
+
+    payload = json.loads(activity_path.read_text(encoding="utf-8"))
+    payload["assets"] = [
+        {
+            "type": "starter",
+            "path": "assets/CONIN$.txt",
+            "target_path": "CONIN$.txt",
+            "visibility": "student",
+        }
+    ]
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="non portabile"):
+        validate_course_activity_targets(design(link()), tmp_path)
 
 
 def test_validate_course_activity_targets_rejects_missing_file(tmp_path) -> None:

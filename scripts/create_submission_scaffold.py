@@ -46,8 +46,16 @@ WINDOWS_RESERVED_NAMES = {
     "lpt7",
     "lpt8",
     "lpt9",
+    "conin$",
+    "conout$",
+    "com¹",
+    "com²",
+    "com³",
+    "lpt¹",
+    "lpt²",
+    "lpt³",
 }
-WINDOWS_INVALID_PATH_CHARACTERS = frozenset('<>:"|?*')
+WINDOWS_INVALID_PATH_CHARACTERS = frozenset('<>:"|?*~')
 DEFAULT_SOURCE_NAMES = {
     "assembly": "main.asm",
     "c": "main.c",
@@ -257,7 +265,7 @@ def default_source_name_for(language: str) -> str:
 
 def validate_portable_path_component(component: str, field_name: str) -> None:
     """Reject a path component that cannot be represented portably."""
-    basename = component.split(".", 1)[0].casefold()
+    basename = component.split(".", 1)[0].rstrip(" .").casefold()
     if (
         not component
         or component in {".", ".."}
