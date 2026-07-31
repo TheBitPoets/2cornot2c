@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import sys
 import tempfile
+import time
 from urllib.request import urlopen
 
 from installer.artifacts import (
@@ -32,6 +33,7 @@ RELEASES_API_URL = (
 )
 MAX_MANIFEST_BYTES = 256 * 1024
 MAX_RELEASE_INDEX_BYTES = 1024 * 1024
+MANIFEST_CACHE_MAX_AGE_SECONDS = 60 * 60
 CLASSROOM_TAG_RE = re.compile(
     r"^classroom-v([0-9]+)\.([0-9]+)\.([0-9]+)$"
 )
@@ -108,14 +110,41 @@ def latest_manifest_url() -> str:
 
 
 def _manifest_source() -> str:
-    override = os.environ.get("CLASSROOM_RELEASE_MANIFEST")
+    override = os.environ.get("CLASSROOM_RELEASE_MANIFEST") or None
     return override if override else latest_manifest_url()
+
+
+def _cached_manifest_is_valid(path: Path) -> bool:
+    try:
+        load_release(path)
+    except ArtifactError:
+        return False
+    return True
+
+
+def _cached_manifest_is_fresh(path: Path) -> bool:
+    try:
+        age = max(0.0, time.time() - path.stat().st_mtime)
+    except OSError:
+        return False
+    return age <= MANIFEST_CACHE_MAX_AGE_SECONDS
 
 
 def acquire_manifest(cache_dir: Path) -> Path:
     """Acquisisce il manifest da file locale o HTTPS con limite dimensionale."""
 
-    source = _manifest_source()
+    override = os.environ.get("CLASSROOM_RELEASE_MANIFEST") or None
+    destination = cache_dir / "release-manifest.json"
+    cached_valid = _cached_manifest_is_valid(destination)
+    if override is None and cached_valid and _cached_manifest_is_fresh(destination):
+        return destination
+
+    try:
+        source = _manifest_source()
+    except ClassroomImageError:
+        if override is None and cached_valid:
+            return destination
+        raise
     local = Path(source).expanduser()
     if "://" not in source:
         if not local.is_file():
@@ -125,7 +154,6 @@ def acquire_manifest(cache_dir: Path) -> Path:
     if not source.startswith("https://"):
         raise ClassroomImageError("Il manifest remoto deve usare HTTPS.")
     cache_dir.mkdir(parents=True, exist_ok=True)
-    destination = cache_dir / "release-manifest.json"
     temporary_name = ""
     try:
         with tempfile.NamedTemporaryFile(
@@ -145,9 +173,16 @@ def acquire_manifest(cache_dir: Path) -> Path:
                 output.write(_read_bounded(response, MAX_MANIFEST_BYTES))
             output.flush()
             os.fsync(output.fileno())
+        load_release(Path(temporary_name))
         Path(temporary_name).replace(destination)
         return destination
-    except (OSError, ValueError) as error:
+    except (ArtifactError, ClassroomImageError, OSError, ValueError) as error:
+        if override is None and cached_valid:
+            return destination
+        if isinstance(error, ClassroomImageError):
+            raise
+        if isinstance(error, ArtifactError):
+            raise ClassroomImageError(str(error)) from error
         raise ClassroomImageError(
             f"Manifest delle box non disponibile: {error}"
         ) from error

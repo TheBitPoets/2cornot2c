@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,26 @@ def artifact() -> BoxArtifact:
         hashlib.sha256(CONTENT).hexdigest(),
         len(CONTENT),
     )
+
+
+def manifest_payload() -> dict:
+    selected = artifact()
+    return {
+        "schema_version": "2cornot2c.classroom-images.v1",
+        "release": "1.0.0",
+        "artifacts": [
+            {
+                "name": selected.name,
+                "host": selected.host.value,
+                "provider": selected.provider.value,
+                "architecture": selected.architecture,
+                "box_name": selected.box_name,
+                "url": selected.url,
+                "sha256": selected.sha256,
+                "size_bytes": selected.size_bytes,
+            }
+        ],
+    }
 
 
 def project(tmp_path: Path) -> Path:
@@ -185,3 +206,93 @@ def test_latest_manifest_ignores_unrelated_releases(
     )
 
     assert "classroom-v1.10.0" in classroom_images.latest_manifest_url()
+
+
+def test_acquire_manifest_reuses_fresh_valid_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = tmp_path / "images"
+    cache.mkdir()
+    manifest = cache / "release-manifest.json"
+    manifest.write_text(json.dumps(manifest_payload()), encoding="utf-8")
+    monkeypatch.setattr(
+        classroom_images,
+        "latest_manifest_url",
+        lambda: pytest.fail("la cache fresca non deve interrogare GitHub"),
+    )
+
+    assert classroom_images.acquire_manifest(cache) == manifest
+
+
+def test_acquire_manifest_falls_back_to_stale_valid_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = tmp_path / "images"
+    cache.mkdir()
+    manifest = cache / "release-manifest.json"
+    manifest.write_text(json.dumps(manifest_payload()), encoding="utf-8")
+    os.utime(manifest, (1, 1))
+    monkeypatch.setattr(
+        classroom_images,
+        "latest_manifest_url",
+        lambda: (_ for _ in ()).throw(
+            classroom_images.ClassroomImageError("GitHub API rate limit")
+        ),
+    )
+
+    assert classroom_images.acquire_manifest(cache) == manifest
+
+
+def test_acquire_manifest_rejects_invalid_cache_during_api_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = tmp_path / "images"
+    cache.mkdir()
+    (cache / "release-manifest.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        classroom_images,
+        "latest_manifest_url",
+        lambda: (_ for _ in ()).throw(
+            classroom_images.ClassroomImageError("GitHub API rate limit")
+        ),
+    )
+
+    with pytest.raises(classroom_images.ClassroomImageError, match="rate limit"):
+        classroom_images.acquire_manifest(cache)
+
+
+def test_acquire_manifest_preserves_valid_cache_on_invalid_refresh(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = tmp_path / "images"
+    cache.mkdir()
+    manifest = cache / "release-manifest.json"
+    original = json.dumps(manifest_payload())
+    manifest.write_text(original, encoding="utf-8")
+    os.utime(manifest, (1, 1))
+    monkeypatch.setattr(
+        classroom_images,
+        "latest_manifest_url",
+        lambda: "https://downloads.example.test/release-manifest.json",
+    )
+
+    class Response(io.BytesIO):
+        headers: dict[str, str] = {}
+
+        def geturl(self) -> str:
+            return "https://downloads.example.test/release-manifest.json"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+
+    monkeypatch.setattr(
+        classroom_images,
+        "urlopen",
+        lambda url, timeout: Response(b"{}"),
+    )
+
+    assert classroom_images.acquire_manifest(cache) == manifest
+    assert manifest.read_text(encoding="utf-8") == original
