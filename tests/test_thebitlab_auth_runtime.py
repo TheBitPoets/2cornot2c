@@ -13,6 +13,7 @@ import pytest
 
 from scripts.thebitlab_auth_runtime import (
     AuthRuntimeConfigurationError,
+    _windows_acl_tools,
     compose_google_oidc_runtime as _compose_google_oidc_runtime,
 )
 
@@ -189,6 +190,20 @@ def test_composition_rejects_unsafe_configuration_without_echoing_values(
         "THEBITLAB_TUI_PAIRING_PEPPER_B64",
     ):
         assert environment[secret_name] not in serialized
+
+
+def test_windows_acl_tools_ignore_untrusted_systemroot_environment(monkeypatch) -> None:
+    if os.name != "nt":
+        pytest.skip("ACL Windows non disponibili")
+    monkeypatch.setenv("SystemRoot", r"C:\attacker-controlled")
+
+    powershell, icacls, environment = _windows_acl_tools()
+
+    assert "attacker-controlled" not in powershell.lower()
+    assert "attacker-controlled" not in icacls.lower()
+    assert "attacker-controlled" not in environment["SystemRoot"].lower()
+    assert Path(powershell).is_file()
+    assert Path(icacls).is_file()
 
 
 def test_windows_composition_rejects_preexisting_everyone_acl_without_repair(tmp_path: Path) -> None:

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import sys
 
-if __name__ == "__main__" and not sys.flags.isolated:
-    print("Avviare il bootstrap con Python in modalità isolata (-I).", file=sys.stderr)
+if __name__ == "__main__" and (not sys.flags.isolated or not sys.flags.no_site):
+    print("Avviare il bootstrap con Python isolato e senza site (-I -S).", file=sys.stderr)
     raise SystemExit(2)
 
 import argparse
