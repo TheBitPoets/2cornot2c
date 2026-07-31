@@ -266,6 +266,40 @@ def test_write_design_rejects_unsafe_source_catalog_before_persistence(tmp_path,
         )
 
 
+def test_write_design_rejects_invalid_activity_link_before_persistence(tmp_path, monkeypatch) -> None:
+    class FailingCourseService:
+        def write_design(self, payload):
+            raise AssertionError("L'activity link non valido non deve essere persistito.")
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "course_service", lambda: FailingCourseService())
+
+    with pytest.raises(ValueError, match="activities"):
+        course_board_server.write_design(
+            {
+                "years": [
+                    {
+                        "id": "terzo-anno",
+                        "udas": [
+                            {
+                                "id": "uda-1",
+                                "activity_links": [
+                                    {
+                                        "activity_id": "unsafe",
+                                        "activity_path": "../outside.json",
+                                        "title": "Unsafe",
+                                        "kind": "laboratorio",
+                                        "role": "practice",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        )
+
+
 def test_ai_config_uses_one_provider_model_snapshot(monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")

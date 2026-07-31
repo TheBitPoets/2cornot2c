@@ -56,6 +56,7 @@ from scripts import (
     assignment_records,
     assign_activity,
     codex_activity_adapter,
+    course_activity_links,
     course_source_catalog,
     create_activity,
     create_submission_scaffold,
@@ -553,7 +554,7 @@ def read_design() -> dict:
 
 
 def validate_course_source_catalog(payload: dict) -> None:
-    """Validate source descriptors and repository confinement before persistence."""
+    """Validate source and activity-link boundaries before persistence."""
 
     course_source_catalog.local_markdown_source_files(
         payload,
@@ -561,6 +562,7 @@ def validate_course_source_catalog(payload: dict) -> None:
         default_files=DEFAULT_SOURCES,
         existing_only=False,
     )
+    course_activity_links.validate_course_activity_links(payload)
 
 
 def write_design(payload: dict) -> None:
