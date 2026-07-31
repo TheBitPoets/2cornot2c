@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import html
 import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from scripts.thebitlab_admin_provisioning import (
+    AdminProvisioningConflictError,
+    AdminProvisioningService,
+)
 from scripts.thebitlab_edge_rate_limit import (
     EdgeClientAttributionError,
     EdgeRequestMetadata,
@@ -24,6 +29,7 @@ from scripts.thebitlab_http_auth import (
 
 _SESSION_PATH = "/auth/session"
 _ACCOUNT_PATH = "/auth/account"
+_ADMIN_PATH = "/auth/admin"
 _LOGOUT_PATH = "/auth/logout"
 _MAX_COOKIE_HEADER_BYTES = 16 * 1024
 _CSRF_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
@@ -82,6 +88,7 @@ class SessionHttpRoutes:
         self,
         sessions: HttpSessionAuthBoundary,
         proxy_resolver: TrustedProxyClientResolver,
+        admin_provisioning: AdminProvisioningService | None = None,
     ) -> None:
         if type(sessions) is not HttpSessionAuthBoundary:
             raise ValueError("Boundary sessione HTTP non valido.")
@@ -89,11 +96,16 @@ class SessionHttpRoutes:
             raise ValueError("Resolver proxy sessione non valido.")
         if not sessions.cookie_policy.secure:
             raise ValueError("Le route sessione richiedono cookie Secure.")
+        if admin_provisioning is not None and type(admin_provisioning) is not AdminProvisioningService:
+            raise ValueError("Service provisioning amministrativo non valido.")
         self.sessions = sessions
         self.proxy_resolver = proxy_resolver
+        self.admin_provisioning = admin_provisioning
 
     def handles(self, path: str) -> bool:
-        return path in {_SESSION_PATH, _ACCOUNT_PATH, _LOGOUT_PATH}
+        return path in {_SESSION_PATH, _ACCOUNT_PATH, _LOGOUT_PATH} or (
+            path == _ADMIN_PATH and self.admin_provisioning is not None
+        )
 
     def dispatch(self, request: SessionHttpRequest) -> SessionHttpResponse | None:
         if type(request) is not SessionHttpRequest:
@@ -108,7 +120,7 @@ class SessionHttpRoutes:
             self._require_https(request)
             self._require_empty_request(request)
             if (
-                request.path in {_SESSION_PATH, _ACCOUNT_PATH}
+                request.path in {_SESSION_PATH, _ACCOUNT_PATH, _ADMIN_PATH}
                 and request.method != "GET"
             ):
                 return self._method_error("GET")
@@ -118,7 +130,7 @@ class SessionHttpRoutes:
                 request.edge, "cookie", maximum_bytes=_MAX_COOKIE_HEADER_BYTES,
                 separator="; ", required=True
             )
-            if request.path in {_SESSION_PATH, _ACCOUNT_PATH}:
+            if request.path in {_SESSION_PATH, _ACCOUNT_PATH, _ADMIN_PATH}:
                 csrf_headers = _header_values(request.edge, "x-csrf-token")
                 if csrf_headers:
                     _csrf_header(csrf_headers)
@@ -127,6 +139,8 @@ class SessionHttpRoutes:
                 )
                 if request.path == _ACCOUNT_PATH:
                     return self._account_response(context)
+                if request.path == _ADMIN_PATH:
+                    return self._admin_response(context)
                 return self._session_response(context)
             csrf_token = _csrf_header(
                 _header_values(request.edge, "x-csrf-token")
@@ -147,6 +161,8 @@ class SessionHttpRoutes:
             )
         except _SessionRequestError as error:
             return self._error(error.status_code, error.error_code, error.public_message)
+        except AdminProvisioningConflictError:
+            return self._error(403, "admin_forbidden", "Accesso amministrativo non consentito.")
         except HttpAuthError as error:
             extra = (("Allow", "POST"),) if isinstance(error, HttpMethodNotAllowedError) else ()
             return self._error(error.status_code, error.error_code, error.public_message, extra)
@@ -235,13 +251,17 @@ class SessionHttpRoutes:
                 "L'account studente è autorizzato. Puoi associare la TUI da questo browser."
             )
             action = '<p><a href="/auth/tui/pair">Associa la TUI</a></p>'
-        else:
+        elif role == "teacher":
             title = "Area docente"
             message = (
                 "L'account docente è autorizzato. "
                 "La Board mantiene una protezione docente separata."
             )
             action = '<p><a href="/tools/course_board.html">Apri la Course Design Board</a></p>'
+        else:
+            title = "Area amministratore"
+            message = "L'account amministratore è autorizzato."
+            action = '<p><a href="/auth/admin">Gestisci utenti e classi</a></p>'
         body = (
             "<!doctype html><html lang=\"it\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
@@ -263,6 +283,29 @@ class SessionHttpRoutes:
             ),
             body,
         )
+
+    def _admin_response(self, context) -> SessionHttpResponse:
+        snapshot = self.admin_provisioning.snapshot(context.user)
+        pending = "".join(
+            f"<li><code>{html.escape(user.user_id)}</code> — {html.escape(user.display_name)}</li>"
+            for user in snapshot.pending_users
+        ) or "<li>Nessun account pending</li>"
+        classes = "".join(
+            f"<li><code>{html.escape(item.class_id)}</code> — {html.escape(item.label)}</li>"
+            for item in snapshot.classes
+        ) or "<li>Nessuna classe</li>"
+        body = (
+            "<!doctype html><html lang=\"it\"><head><meta charset=\"utf-8\">"
+            "<title>Amministrazione - TheBitLab</title></head><body><main>"
+            f"<h1>Amministrazione</h1><h2>Account pending</h2><ul>{pending}</ul>"
+            f"<h2>Classi</h2><ul>{classes}</ul></main></body></html>"
+        ).encode("utf-8")
+        return SessionHttpResponse(200, self._base_headers() + (
+            ("Content-Security-Policy", "default-src 'none'; base-uri 'none'; frame-ancestors 'none'"),
+            ("X-Content-Type-Options", "nosniff"), ("X-Frame-Options", "DENY"),
+            ("Content-Type", "text/html; charset=utf-8"),
+            ("Content-Length", str(len(body))),
+        ), body)
 
     def _method_error(self, allowed: str) -> SessionHttpResponse:
         return self._error(
