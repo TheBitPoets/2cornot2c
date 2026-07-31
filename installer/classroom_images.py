@@ -215,7 +215,8 @@ def install_image(project: Path, host: Host, provider: Provider) -> str:
             "la VM non verrà sostituita automaticamente."
         )
 
-    box_path = cache / artifact.name
+    cache_name = f"{artifact.box_name.replace('/', '--')}.box"
+    box_path = cache / cache_name
     try:
         download_box(artifact, box_path)
         result = import_box(artifact, box_path)

@@ -199,8 +199,10 @@ printf '\nINSTALLAZIONE HOST COMPLETATA.\n'
 printf 'Versione Git: %s\n' "$(git --version)"
 printf 'Versione Vagrant: %s\n' "$(vagrant --version)"
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [ -f "$project_dir/requirements-utui.txt" ] &&
-   [ -f "$project_dir/Vagrantfile" ]; then
+if [ -d "$project_dir/.git" ] &&
+   [ -f "$project_dir/requirements-utui.txt" ] &&
+   [ -f "$project_dir/Vagrantfile" ] &&
+   [ -f "$project_dir/installer/tui.py" ]; then
   printf '\n[8/8] Preparazione e avvio installer box Packer...\n'
   venv_dir="$project_dir/.installer-venv"
   /opt/homebrew/opt/python@3.12/bin/python3.12 -m venv --clear "$venv_dir"

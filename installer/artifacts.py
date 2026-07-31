@@ -20,6 +20,10 @@ from installer.model import Host, Provider
 SCHEMA_VERSION = "2cornot2c.classroom-images.v1"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+BOX_NAME_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"
+)
+BOX_FILENAME_RE = re.compile(r"^[A-Za-z0-9._-]+\.box$")
 MAX_BOX_BYTES = 8 * 1024 * 1024 * 1024
 MANIFEST_KEYS = {"schema_version", "release", "artifacts"}
 ARTIFACT_KEYS = {
@@ -113,12 +117,18 @@ def _parse_artifact(payload: Any) -> BoxArtifact:
     architecture = payload["architecture"]
     if expected.get((host, provider)) != architecture:
         raise ArtifactError("Architettura non coerente con host e provider.")
-    for key in ("name", "box_name"):
-        if not isinstance(payload[key], str) or not payload[key].strip():
-            raise ArtifactError(f"Campo artefatto vuoto: {key}")
+    name = payload["name"]
+    if not isinstance(name, str) or not name.strip():
+        raise ArtifactError("Campo artefatto vuoto: name")
+    box_name = payload["box_name"]
+    if not isinstance(box_name, str) or not BOX_NAME_RE.fullmatch(box_name):
+        raise ArtifactError("Nome box Vagrant non valido.")
     url = payload["url"]
     if not isinstance(url, str) or urlparse(url).scheme != "https":
         raise ArtifactError("La box deve usare un URL HTTPS.")
+    filename = Path(urlparse(url).path).name
+    if not BOX_FILENAME_RE.fullmatch(filename):
+        raise ArtifactError("Nome file box non valido.")
     digest = payload["sha256"]
     if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
         raise ArtifactError("Checksum SHA-256 non valido.")
@@ -126,11 +136,11 @@ def _parse_artifact(payload: Any) -> BoxArtifact:
     if not isinstance(size, int) or isinstance(size, bool) or not 0 < size <= MAX_BOX_BYTES:
         raise ArtifactError("Dimensione artefatto non valida.")
     return BoxArtifact(
-        payload["name"],
+        name,
         host,
         provider,
         architecture,
-        payload["box_name"],
+        box_name,
         url,
         digest,
         size,

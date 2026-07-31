@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 
 from installer.artifacts import load_release
 from installer.model import Host, Provider
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_release_manifest_generator_emits_installable_contract(tmp_path: Path) -> None:
@@ -15,11 +19,7 @@ def test_release_manifest_generator_emits_installable_contract(tmp_path: Path) -
     output = tmp_path / "release-manifest.json"
     vmware.write_bytes(b"vmware")
     virtualbox.write_bytes(b"virtualbox")
-    script = (
-        Path(__file__).resolve().parents[1]
-        / "packer"
-        / "create-release-manifest.py"
-    )
+    script = ROOT / "packer" / "create-release-manifest.py"
 
     completed = subprocess.run(
         (
@@ -54,3 +54,23 @@ def test_release_manifest_generator_emits_installable_contract(tmp_path: Path) -
         )
         for item in release.artifacts
     )
+    assert {item.name for item in release.artifacts} == {
+        "VMware ARM64",
+        "VirtualBox AMD64",
+    }
+
+
+def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
+    workflow = (
+        ROOT / ".github" / "workflows" / "publish-classroom-boxes.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "if: github.ref == 'refs/heads/main'" in workflow
+    assert "RELEASE_VERSION: ${{ inputs.version }}" in workflow
+    run_blocks = re.findall(
+        r"(?m)^        run: \|\n((?:^          .*(?:\n|$))*)",
+        workflow,
+    )
+    assert run_blocks
+    for run_block in run_blocks:
+        assert "${{ inputs.version }}" not in run_block

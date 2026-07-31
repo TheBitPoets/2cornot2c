@@ -7,6 +7,7 @@ import pytest
 from installer.migration import (
     CONFIRMATION,
     MachineState,
+    legacy_environment,
     parse_machine_state,
     recreate_machine,
     state_directory,
@@ -38,6 +39,13 @@ def test_parse_provider_specific_machine_state() -> None:
 def test_docker_is_not_a_vagrant_migration_provider() -> None:
     with pytest.raises(ValueError, match="non VM"):
         state_directory(Provider.DOCKER)
+
+
+def test_migration_explicitly_enables_legacy_vagrantfile_only_for_its_process() -> None:
+    assert legacy_environment(Provider.VIRTUALBOX) == {
+        "VAGRANT_DOTFILE_PATH": ".vagrant",
+        "CLASSROOM_ALLOW_LEGACY_PROVISIONING": "1",
+    }
 
 
 def test_recreate_requires_exact_confirmation_before_commands(tmp_path: Path) -> None:
@@ -76,7 +84,11 @@ def test_running_machine_is_halted_then_destroyed(tmp_path: Path) -> None:
         ("vagrant", "destroy", "--force"),
     ]
     assert all(
-        call[1] == {"VAGRANT_DOTFILE_PATH": ".vagrant-vmware"}
+        call[1]
+        == {
+            "VAGRANT_DOTFILE_PATH": ".vagrant-vmware",
+            "CLASSROOM_ALLOW_LEGACY_PROVISIONING": "1",
+        }
         for call in calls
     )
     assert (tmp_path / "lab").is_dir()

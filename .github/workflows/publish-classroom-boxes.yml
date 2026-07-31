@@ -16,7 +16,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Validate release version
+        run: |
+          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Versione non valida: usare SemVer numerica, per esempio 1.0.0." >&2
+            exit 2
+          fi
+
   virtualbox-amd64:
+    needs: validate-release
     runs-on: [self-hosted, Windows, X64, classroom-packer]
     timeout-minutes: 120
     steps:
@@ -57,6 +71,7 @@ jobs:
           retention-days: 1
 
   vmware-arm64:
+    needs: validate-release
     runs-on: [self-hosted, macOS, ARM64, classroom-packer]
     timeout-minutes: 120
     steps:
@@ -99,6 +114,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -120,7 +137,7 @@ jobs:
       - name: Generate immutable release manifest
         run: |
           python packer/create-release-manifest.py \
-            --version "${{ inputs.version }}" \
+            --version "$RELEASE_VERSION" \
             --repository "${{ github.repository }}" \
             --vmware release/2cornot2c-macos-arm64-vmware.box \
             --virtualbox release/2cornot2c-windows-amd64-virtualbox.box \
@@ -130,10 +147,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "classroom-v${{ inputs.version }}" \
+          gh release create "classroom-v${RELEASE_VERSION}" \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
-            --title "Classroom VM ${{ inputs.version }}" \
+            --title "Classroom VM ${RELEASE_VERSION}" \
             --notes "Box Packer collaudate per Windows AMD64 e macOS Apple Silicon." \
             release/release-manifest.json \
             release/2cornot2c-macos-arm64-vmware.box \

@@ -36,7 +36,7 @@ def artifact(
     checksum, size = digest(path)
     tag = f"classroom-v{version}"
     return {
-        "name": filename,
+        "name": name,
         "host": host,
         "provider": provider,
         "architecture": architecture,

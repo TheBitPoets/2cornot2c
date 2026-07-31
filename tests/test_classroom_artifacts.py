@@ -60,6 +60,33 @@ def test_manifest_rejects_http_and_wrong_architecture(tmp_path: Path) -> None:
     with pytest.raises(ArtifactError, match="HTTPS"):
         load_release(write_manifest(tmp_path, payload))
 
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("box_name", "../outside", "Nome box Vagrant"),
+        ("box_name", "--force", "Nome box Vagrant"),
+        (
+            "url",
+            "https://downloads.example.test/not-a-box.txt",
+            "Nome file box",
+        ),
+        (
+            "url",
+            "https://downloads.example.test/%2e%2e%2foutside.box",
+            "Nome file box",
+        ),
+    ],
+)
+def test_manifest_rejects_unsafe_box_identifiers(
+    tmp_path: Path, field: str, value: str, message: str
+) -> None:
+    payload = manifest_payload()
+    payload["artifacts"][0][field] = value
+
+    with pytest.raises(ArtifactError, match=message):
+        load_release(write_manifest(tmp_path, payload))
+
     payload = manifest_payload()
     payload["artifacts"][0]["architecture"] = "amd64"
     with pytest.raises(ArtifactError, match="Architettura"):

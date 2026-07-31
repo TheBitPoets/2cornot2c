@@ -45,7 +45,10 @@ def test_install_image_downloads_imports_and_configures(
         lambda host, provider, cache: selected,
     )
 
+    downloaded: list[Path] = []
+
     def fake_download(item: BoxArtifact, destination: Path) -> Path:
+        downloaded.append(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(CONTENT)
         return destination
@@ -62,6 +65,9 @@ def test_install_image_downloads_imports_and_configures(
     )
 
     assert "importata" in detail
+    assert downloaded[0].name == (
+        "2cornot2c--ubuntu-24.04-virtualbox-amd64-1.0.0.box"
+    )
     assert (root / ".classroom-box").read_text(encoding="utf-8").strip() == (
         selected.box_name
     )

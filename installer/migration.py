@@ -81,6 +81,15 @@ def state_directory(provider: Provider) -> str:
     return ".vagrant-vmware" if provider is Provider.VMWARE else ".vagrant"
 
 
+def legacy_environment(provider: Provider) -> dict[str, str]:
+    """Abilita Bento soltanto per ispezionare/rimuovere la VM da migrare."""
+
+    return {
+        "VAGRANT_DOTFILE_PATH": state_directory(provider),
+        "CLASSROOM_ALLOW_LEGACY_PROVISIONING": "1",
+    }
+
+
 def parse_machine_state(machine_output: str, provider: Provider) -> MachineState:
     """Legge lo stato della macchina `default` dall'output machine-readable."""
 
@@ -99,7 +108,7 @@ def inspect_machine(
 ) -> MachineState:
     """Ispeziona una sola VM senza modificarla."""
 
-    environment = {"VAGRANT_DOTFILE_PATH": state_directory(provider)}
+    environment = legacy_environment(provider)
     returncode, output = runner(
         ("vagrant", "status", "--machine-readable"),
         project,
@@ -144,7 +153,7 @@ def recreate_machine(
             f"Conferma non valida: digitare esattamente {CONFIRMATION}",
         )
     validate_shared_folders(project)
-    environment = {"VAGRANT_DOTFILE_PATH": state_directory(machine.provider)}
+    environment = legacy_environment(machine.provider)
 
     if machine.running:
         returncode, output = runner(("vagrant", "halt"), project, environment)
