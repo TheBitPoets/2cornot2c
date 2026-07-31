@@ -2872,6 +2872,48 @@ def test_delete_activity_record_recovers_when_committed_journal_write_fails(tmp_
     assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
 
 
+def test_delete_activity_record_keeps_recovery_state_when_commit_and_reset_fail(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    original_write = course_board_server.thebitlab_storage.JsonAssignmentStorage.write_json
+    commit_failed = False
+
+    def fail_commit_and_reset(self, path, payload):
+        nonlocal commit_failed
+        if payload.get("schema_version") != "activity_deletion.v1":
+            return original_write(self, path, payload)
+        if payload.get("state") == "committed":
+            commit_failed = True
+            raise OSError("commit marker failed")
+        if commit_failed:
+            raise OSError("reset marker failed")
+        return original_write(self, path, payload)
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        fail_commit_and_reset,
+    )
+    with pytest.raises(OSError, match="reset marker failed"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert len(list(activity_path.parent.glob(".activity-delete-*.txn"))) == 1
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        original_write,
+    )
+    course_board_server.recover_interrupted_activity_deletions()
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+
+
 def test_delete_activity_record_rejects_nested_json_asset(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     asset_path = tmp_path / "activities" / "drafts" / "assets" / "demo" / "fixture.json"

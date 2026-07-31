@@ -1422,10 +1422,14 @@ def delete_activity_record(payload: dict) -> dict:
         try:
             storage.write_json(journal, {**transaction, "state": "committed"})
         except Exception:
-            try:
-                storage.write_json(journal, transaction)
-            finally:
-                recover_interrupted_activity_deletions()
+            if tombstone.is_file() and not activity_path.exists():
+                os.replace(tombstone, activity_path)
+                thebitlab_storage.sync_directory(activity_path.parent)
+            # Only commit-oriented recovery after a durable prepared marker.
+            # If this write fails, keep the restored original plus journal for
+            # explicit fail-closed operator recovery at the next startup.
+            storage.write_json(journal, transaction)
+            recover_interrupted_activity_deletions()
             raise
         cleanup_pending = False
         try:
