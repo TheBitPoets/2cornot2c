@@ -231,7 +231,7 @@ class JsonCourseStorage:
         self.school_calendars_dir = root / "doc" / "calendars"
         self.delete_staging_dir = root / "doc" / ".delete-staging"
         with self.operation_lock:
-            recover_json_rollbacks(self.root / "doc")
+            recover_json_rollbacks(self.root / "doc", self.design_path.name)
             recover_json_rollbacks(self.course_designs_dir)
             recover_json_rollbacks(self.school_calendars_dir)
             self._recover_delete_transactions()
@@ -627,6 +627,9 @@ class JsonAssignmentStorage:
                 os.close(descriptor)
             temporary_path.unlink(missing_ok=True)
             if backup_path is not None and (not published or commit_complete or rollback_complete):
+                # The operation is not complete (and no HTTP success can be
+                # returned) until removal of the rollback backup is durable.
+                # A crash before this barrier intentionally restores old JSON.
                 backup_path.unlink(missing_ok=True)
                 sync_directory(path.parent)
 
