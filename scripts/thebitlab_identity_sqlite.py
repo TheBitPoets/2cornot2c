@@ -716,6 +716,159 @@ class SqliteIdentityStorage:
     def list_users(self) -> list[UserAccount]:
         return [self._user(row) for row in self._query_all("SELECT * FROM users ORDER BY user_id")]
 
+    @classmethod
+    def _require_current_admin(
+        cls,
+        connection: sqlite3.Connection,
+        actor_user_id: str,
+        expected_actor_updated_at: str,
+    ) -> UserAccount:
+        row = connection.execute(
+            "SELECT * FROM users WHERE user_id = ?", (actor_user_id,)
+        ).fetchone()
+        if row is None:
+            raise IdentityStorageNotFoundError("Account amministratore non trovato.")
+        actor = cls._user(row)
+        if (
+            actor.role != "admin"
+            or not actor.active
+            or row["updated_at"] != expected_actor_updated_at
+        ):
+            raise IdentityStorageConflictError("Autorizzazione amministrativa non corrente.")
+        return actor
+
+    def read_admin_provisioning_snapshot(
+        self,
+        actor_user_id: str,
+        *,
+        expected_actor_updated_at: datetime,
+        maximum_items: int,
+    ) -> tuple[tuple[UserAccount, ...], tuple[ClassGroup, ...]]:
+        if type(maximum_items) is not int or not 1 <= maximum_items <= 10_000:
+            raise IdentityStorageConflictError("Limite snapshot amministrativo non valido.")
+        expected = _encode_datetime(expected_actor_updated_at, "expected_actor_updated_at")
+        with self._transaction("read_admin_provisioning_snapshot") as connection:
+            self._require_current_admin(connection, actor_user_id, expected)
+            users = connection.execute(
+                "SELECT * FROM users WHERE role = 'pending' ORDER BY created_at, user_id LIMIT ?",
+                (maximum_items + 1,),
+            ).fetchall()
+            classes = connection.execute(
+                "SELECT * FROM classes ORDER BY class_id LIMIT ?", (maximum_items + 1,)
+            ).fetchall()
+            if len(users) > maximum_items or len(classes) > maximum_items:
+                raise IdentityStorageConflictError("Snapshot amministrativo oltre il limite.")
+            return (
+                tuple(self._user(row) for row in users),
+                tuple(self._class_group(row) for row in classes),
+            )
+
+    def create_class_as_admin(
+        self,
+        actor_user_id: str,
+        class_group: ClassGroup,
+        *,
+        expected_actor_updated_at: datetime,
+    ) -> None:
+        if type(class_group) is not ClassGroup:
+            raise IdentityStorageConflictError("Classe amministrativa non valida.")
+        expected = _encode_datetime(expected_actor_updated_at, "expected_actor_updated_at")
+        with self._transaction("create_class_as_admin") as connection:
+            self._require_current_admin(connection, actor_user_id, expected)
+            connection.execute(
+                "INSERT INTO classes VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    class_group.class_id,
+                    class_group.label,
+                    class_group.school_year,
+                    int(class_group.active),
+                    _encode_datetime(class_group.created_at, "created_at"),
+                    _encode_datetime(class_group.updated_at, "updated_at"),
+                ),
+            )
+
+    def approve_pending_user_as_admin(
+        self,
+        actor_user_id: str,
+        target_user_id: str,
+        role: str,
+        class_id: str | None,
+        updated_at: datetime,
+        *,
+        expected_actor_updated_at: datetime,
+        expected_target_updated_at: datetime,
+    ) -> tuple[UserAccount, ClassMembership | None, int]:
+        if role not in {"teacher", "student"} or (role == "student") != (class_id is not None):
+            raise IdentityStorageConflictError("Approvazione amministrativa non valida.")
+        expected_actor = _encode_datetime(expected_actor_updated_at, "expected_actor_updated_at")
+        expected_target = _encode_datetime(expected_target_updated_at, "expected_target_updated_at")
+        changed = _encode_datetime(updated_at, "updated_at")
+        if changed <= expected_target:
+            raise IdentityStorageConflictError("Revisione approvazione non crescente.")
+        with self._transaction("approve_pending_user_as_admin") as connection:
+            self._require_current_admin(connection, actor_user_id, expected_actor)
+            row = connection.execute(
+                "SELECT * FROM users WHERE user_id = ?", (target_user_id,)
+            ).fetchone()
+            if row is None:
+                raise IdentityStorageNotFoundError("Account pending non trovato.")
+            if (
+                target_user_id == actor_user_id
+                or row["role"] != "pending"
+                or row["active"] != 1
+                or row["updated_at"] != expected_target
+            ):
+                raise IdentityStorageConflictError("Account pending modificato o non approvabile.")
+            if connection.execute(
+                "SELECT 1 FROM class_memberships WHERE user_id = ? LIMIT 1",
+                (target_user_id,),
+            ).fetchone() is not None:
+                raise IdentityStorageConflictError("Account pending con membership preesistente.")
+            if role == "student":
+                class_row = connection.execute(
+                    "SELECT * FROM classes WHERE class_id = ?", (class_id,)
+                ).fetchone()
+                if class_row is None or class_row["active"] != 1:
+                    raise IdentityStorageConflictError("Classe studente assente o non attiva.")
+            stale = connection.execute(
+                """
+                SELECT 1 FROM sessions
+                WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
+                    AND (created_at > ? OR last_seen_at > ?)
+                LIMIT 1
+                """,
+                (target_user_id, changed, changed, changed),
+            ).fetchone()
+            if stale is not None:
+                raise IdentityStorageConflictError("Clock approvazione precedente alla sessione corrente.")
+            connection.execute(
+                "UPDATE users SET role = ?, updated_at = ? WHERE user_id = ?",
+                (role, changed, target_user_id),
+            )
+            membership = None
+            if role == "student":
+                connection.execute(
+                    "INSERT INTO class_memberships VALUES (?, ?, 'student', ?, NULL, NULL)",
+                    (target_user_id, class_id, changed),
+                )
+                membership = ClassMembership(target_user_id, class_id, "student", updated_at)
+            revoked = connection.execute(
+                """
+                UPDATE sessions SET revoked_at = ?
+                WHERE user_id = ? AND revoked_at IS NULL
+                    AND created_at <= ? AND expires_at > ?
+                """,
+                (changed, target_user_id, changed, changed),
+            ).rowcount
+            connection.execute(
+                "DELETE FROM tui_pairings WHERE user_id = ? AND status = 'authorized'",
+                (target_user_id,),
+            )
+            updated_row = connection.execute(
+                "SELECT * FROM users WHERE user_id = ?", (target_user_id,)
+            ).fetchone()
+            return self._user(updated_row), membership, revoked
+
     @staticmethod
     def _reserve_external_identity_generation(
         connection: sqlite3.Connection,
