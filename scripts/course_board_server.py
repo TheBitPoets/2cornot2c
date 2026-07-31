@@ -4211,10 +4211,36 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.scheme or parsed.netloc or parsed.params:
             self.write_oidc_transport_error(400, "bad_auth_request")
             return True
+        body = b""
         try:
             edge = thebitlab_google_oidc_http.EdgeRequestMetadata(
                 str(self.client_address[0]), tuple(self.headers.raw_items())
             )
+            if routes.expects_body(parsed.path) and self.command != "POST":
+                self.close_connection = True
+            if routes.expects_body(parsed.path) and self.command == "POST":
+                lengths = [
+                    value.strip()
+                    for name, value in edge.headers
+                    if name.lower() == "content-length"
+                ]
+                transfers = [
+                    value
+                    for name, value in edge.headers
+                    if name.lower() == "transfer-encoding"
+                ]
+                if (
+                    transfers
+                    or len(lengths) != 1
+                    or not lengths[0].isdigit()
+                    or not 1 <= int(lengths[0]) <= 4096
+                ):
+                    raise ValueError("admin body framing")
+                body = self._read_body_with_deadline(
+                    int(lengths[0]), PAIRING_BODY_DEADLINE_SECONDS
+                )
+                if body is None:
+                    raise ValueError("admin body timeout")
             raw_query = parsed.query
             if parsed.fragment:
                 raw_query += "#" + parsed.fragment
@@ -4224,11 +4250,13 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 raw_query,
                 edge,
                 is_tls=isinstance(self.connection, ssl.SSLSocket),
+                body=body,
             )
         except (
             ValueError,
             thebitlab_google_oidc_http.EdgeClientAttributionError,
         ):
+            self.close_connection = True
             self.write_oidc_transport_error(400, "bad_auth_request")
             return True
         try:
@@ -4242,6 +4270,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             edge = None
             request = None
             raw_query = None
+            body = None
+            lengths = None
+            transfers = None
         self.write_session_http_response(response)
         return True
 

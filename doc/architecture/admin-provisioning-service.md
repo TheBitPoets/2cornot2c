@@ -15,7 +15,9 @@ Gli errori applicativi sono sanitizzati e non serializzano identità provider o 
 
 ## Read model web amministrativo
 
-`GET /auth/admin` è composto soltanto quando il runtime federato include il service. Richiede TLS e una sessione web il cui account viene riletto atomicamente come admin attivo alla revisione corrente. Restituisce HTML bounded `no-store` con utenti pending e classi; valori dinamici sono escaped e non include email, subject provider, CSRF o cookie. CSP, `nosniff` e `DENY` proteggono la pagina. Le mutazioni restano separate e richiederanno POST con CSRF.
+`GET /auth/admin` è composto soltanto quando il runtime federato include il service. Richiede TLS e una sessione web il cui account viene riletto atomicamente come admin attivo alla revisione corrente. Restituisce HTML bounded `no-store` con utenti pending e classi; valori dinamici sono escaped e non include email, subject provider, CSRF o cookie. CSP con hash dello script statico, `nosniff` e `DENY` proteggono la pagina.
+
+Le mutazioni usano `POST /auth/admin/classes` e `POST /auth/admin/approvals`. Richiedono cookie admin corrente e `X-CSRF-Token`; la pagina recupera il token da `/auth/session` senza serializzarlo nell'HTML e chiede conferma esplicita. Sono accettati soltanto JSON UTF-8 con `Content-Type: application/json`, schema esatto, singolo `Content-Length` canonico e body fra 1 e 4096 byte. Query, transfer coding, header duplicati, chiavi JSON duplicate, campi extra e revisioni non canoniche falliscono chiusi. La revisione target è obbligatoria; `class_id` è valorizzato solo per studenti. Successo `204`, race/replay `409`, input non valido `400`, CSRF `403`. Il socket legge il body con deadline assoluta e chiude la connessione sui framing rifiutati.
 
 ## Bootstrap del primo admin
 

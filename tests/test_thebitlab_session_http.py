@@ -4,7 +4,7 @@ import http.client
 import json
 import socket
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -79,8 +79,8 @@ def cookie(established):
     return established.set_cookie.split(";", 1)[0]
 
 
-def request(method, path, *headers, query=""):
-    return SessionHttpRequest(method, path, query, edge(*headers))
+def request(method, path, *headers, query="", body=b""):
+    return SessionHttpRequest(method, path, query, edge(*headers), body=body)
 
 
 def header(response, name):
@@ -168,7 +168,10 @@ def test_admin_page_requires_current_admin_and_escapes_read_model(tmp_path) -> N
     body = response.body.decode("utf-8")
     assert "pending-01" in body
     assert "&lt;script&gt;" in body
-    assert "<script>" not in body
+    assert "<script>alert(1)</script>" not in body
+    assert "<script>" in body
+    assert established.context.csrf_token not in body
+    assert "script-src 'sha256-" in header(response, "Content-Security-Policy")
     assert header(response, "Cache-Control") == "no-store"
     assert header(response, "X-Frame-Options") == "DENY"
 
@@ -203,6 +206,140 @@ def test_admin_page_requires_current_admin_and_escapes_read_model(tmp_path) -> N
     )
     assert forbidden.status_code == 403
     assert json.loads(forbidden.body)["error"] == "admin_forbidden"
+
+
+def test_admin_mutations_require_csrf_and_apply_class_and_student_approval(tmp_path) -> None:
+    storage, boundary, _routes, established = build_graph(tmp_path, "admin")
+    pending_user = UserAccount(
+        "pending-01", "Pending", "pending", True, NOW, NOW
+    )
+    storage.create_user(pending_user)
+    routes = SessionHttpRoutes(
+        boundary,
+        TrustedProxyClientResolver(("127.0.0.1/32",)),
+        AdminProvisioningService(storage, clock=lambda: NOW + timedelta(seconds=1)),
+    )
+    browser_cookie = ("Cookie", cookie(established))
+
+    class_body = json.dumps(
+        {"class_id": "class-01", "label": "Classe 1", "school_year": "2026/2027"},
+        separators=(",", ":"),
+    ).encode()
+    common = (
+        browser_cookie,
+        ("Content-Type", "application/json"),
+        ("Content-Length", str(len(class_body))),
+    )
+    sensitive_request = request(
+        "POST", "/auth/admin/classes", *common, body=class_body
+    )
+    assert class_body.decode() not in repr(sensitive_request)
+    missing_csrf = routes.dispatch(sensitive_request)
+    created = routes.dispatch(
+        request(
+            "POST",
+            "/auth/admin/classes",
+            *common,
+            ("X-CSRF-Token", established.context.csrf_token),
+            body=class_body,
+        )
+    )
+
+    approval_body = json.dumps(
+        {
+            "target_user_id": "pending-01",
+            "expected_target_updated_at": "2026-09-01T08:00:00.000000Z",
+            "role": "student",
+            "class_id": "class-01",
+        },
+        separators=(",", ":"),
+    ).encode()
+    approved = routes.dispatch(
+        request(
+            "POST",
+            "/auth/admin/approvals",
+            browser_cookie,
+            ("Content-Type", "application/json"),
+            ("Content-Length", str(len(approval_body))),
+            ("X-CSRF-Token", established.context.csrf_token),
+            body=approval_body,
+        )
+    )
+    replay = routes.dispatch(
+        request(
+            "POST",
+            "/auth/admin/approvals",
+            browser_cookie,
+            ("Content-Type", "application/json"),
+            ("Content-Length", str(len(approval_body))),
+            ("X-CSRF-Token", established.context.csrf_token),
+            body=approval_body,
+        )
+    )
+
+    assert missing_csrf.status_code == 403
+    assert created.status_code == 204
+    assert approved.status_code == 204
+    assert replay.status_code == 409
+    assert storage.read_user("pending-01").role == "student"
+    memberships = storage.list_user_memberships("pending-01")
+    assert len(memberships) == 1 and memberships[0].class_id == "class-01"
+
+
+def test_admin_mutations_reject_malformed_contracts_before_service(tmp_path) -> None:
+    _storage, boundary, _routes, established = build_graph(tmp_path, "admin")
+    routes = SessionHttpRoutes(
+        boundary,
+        TrustedProxyClientResolver(("127.0.0.1/32",)),
+        AdminProvisioningService(_storage, clock=lambda: NOW + timedelta(seconds=1)),
+    )
+    cookie_header = ("Cookie", cookie(established))
+    malformed = b'{"class_id":"one","class_id":"two","label":"x","school_year":"y"}'
+
+    duplicate = routes.dispatch(
+        request(
+            "POST",
+            "/auth/admin/classes",
+            cookie_header,
+            ("Content-Type", "application/json"),
+            ("Content-Length", str(len(malformed))),
+            ("X-CSRF-Token", established.context.csrf_token),
+            body=malformed,
+        )
+    )
+    conflicting = routes.dispatch(
+        request(
+            "POST",
+            "/auth/admin/classes",
+            cookie_header,
+            ("Content-Type", "application/json"),
+            ("Content-Length", "2"),
+            ("Transfer-Encoding", "chunked"),
+            ("X-CSRF-Token", established.context.csrf_token),
+            body=b"{}",
+        )
+    )
+    encoded = routes.dispatch(
+        request(
+            "POST",
+            "/auth/admin/classes",
+            cookie_header,
+            ("Content-Type", "application/json"),
+            ("Content-Encoding", "gzip"),
+            ("Content-Length", "2"),
+            ("X-CSRF-Token", established.context.csrf_token),
+            body=b"{}",
+        )
+    )
+    wrong_method = routes.dispatch(
+        request("GET", "/auth/admin/classes", cookie_header)
+    )
+
+    assert duplicate.status_code == 400
+    assert conflicting.status_code == 400
+    assert encoded.status_code == 400
+    assert wrong_method.status_code == 405
+    assert _storage.list_classes() == []
 
 
 def test_account_landing_rejects_non_get_query_and_body(graph) -> None:
@@ -352,6 +489,76 @@ def test_duplicate_cookie_headers_are_preserved_for_boundary_rejection(graph) ->
 def test_unknown_path_is_not_claimed(graph) -> None:
     _storage, _boundary, routes, _established = graph
     assert routes.dispatch(request("GET", "/auth/other")) is None
+
+
+def test_course_board_socket_reads_bounded_admin_mutation_body(tmp_path) -> None:
+    storage, boundary, _routes, established = build_graph(tmp_path, "admin")
+    routes = SessionHttpRoutes(
+        boundary,
+        TrustedProxyClientResolver(("127.0.0.1/32",)),
+        AdminProvisioningService(storage, clock=lambda: NOW + timedelta(seconds=1)),
+    )
+    server = BoundedThreadingHTTPServer(("127.0.0.1", 0), CourseBoardHandler)
+    server.session_http_routes = routes
+    server.teacher_token = "T" * 32
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    payload = json.dumps(
+        {"class_id": "class-01", "label": "Classe", "school_year": "2026/2027"},
+        separators=(",", ":"),
+    ).encode()
+    connection = http.client.HTTPConnection(
+        "127.0.0.1", server.server_address[1], timeout=5
+    )
+    try:
+        connection.request(
+            "POST",
+            "/auth/admin/classes",
+            body=payload,
+            headers={
+                "X-Forwarded-Proto": "https",
+                "Cookie": cookie(established),
+                "X-CSRF-Token": established.context.csrf_token,
+                "Content-Type": "application/json",
+            },
+        )
+        response = connection.getresponse()
+        status = response.status
+        response.read()
+        raw = socket.create_connection(server.server_address, timeout=5)
+        try:
+            raw.sendall(
+                (
+                    "POST /auth/admin/classes HTTP/1.1\r\n"
+                    "Host: localhost\r\n"
+                    "X-Forwarded-Proto: https\r\n"
+                    f"Cookie: {cookie(established)}\r\n"
+                    f"X-CSRF-Token: {established.context.csrf_token}\r\n"
+                    "Content-Type: application/json\r\n"
+                    "Content-Length: 2\r\n"
+                    "Transfer-Encoding: chunked\r\n\r\n{}"
+                ).encode("ascii")
+            )
+            raw.settimeout(2)
+            chunks = []
+            while True:
+                chunk = raw.recv(4096)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            malformed = b"".join(chunks)
+        finally:
+            raw.close()
+    finally:
+        connection.close()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert status == 204
+    assert b"400" in malformed
+    assert b"bad_auth_request" in malformed
+    assert storage.read_class("class-01") is not None
 
 
 def test_course_board_socket_serves_status_and_logout_without_basic_auth(graph) -> None:
