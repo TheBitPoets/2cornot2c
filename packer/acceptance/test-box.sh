@@ -18,6 +18,13 @@ box_file="$(cd "$(dirname "$box_file")" && pwd)/$(basename "$box_file")"
 box_name="2cornot2c/acceptance-${provider}"
 dotfile_path=".vagrant-${provider}"
 
+export CLASSROOM_BOX_NAME="$box_name"
+export CLASSROOM_REPO_ROOT="$repo_root"
+export CLASSROOM_MEMORY_MB="${CLASSROOM_MEMORY_MB:-2048}"
+export VAGRANT_DOTFILE_PATH="$dotfile_path"
+
+cd "$script_dir"
+
 cleanup() {
   VAGRANT_DOTFILE_PATH="$dotfile_path" vagrant destroy --force >/dev/null 2>&1 || true
   vagrant box remove "$box_name" --provider "$provider" --force >/dev/null 2>&1 || true
@@ -28,12 +35,6 @@ test -f "$box_file"
 
 vagrant box add "$box_name" "$box_file" --provider "$provider" --force
 
-export CLASSROOM_BOX_NAME="$box_name"
-export CLASSROOM_REPO_ROOT="$repo_root"
-export CLASSROOM_MEMORY_MB="${CLASSROOM_MEMORY_MB:-2048}"
-export VAGRANT_DOTFILE_PATH="$dotfile_path"
-
-cd "$script_dir"
 vagrant up --provider "$provider"
 vagrant ssh -c '
   set -eu

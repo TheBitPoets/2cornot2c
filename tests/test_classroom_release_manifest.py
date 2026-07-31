@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -76,3 +77,50 @@ def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
         assert "${{ inputs.version }}" not in run_block
     assert "Length -ge 2GB" in workflow
     assert "stat -f %z" in workflow
+
+
+def test_acceptance_import_uses_isolated_vagrantfile(tmp_path: Path) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    calls = tmp_path / "vagrant-calls.txt"
+    vagrant = fake_bin / "vagrant"
+    vagrant.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf '%s|%s|%s|%s|%s\\n' \"$PWD\" \"${CLASSROOM_BOX_NAME:-}\" "
+        "\"${CLASSROOM_REPO_ROOT:-}\" \"${VAGRANT_DOTFILE_PATH:-}\" \"$*\" "
+        '>> \"$VAGRANT_CALLS\"\n',
+        encoding="utf-8",
+    )
+    vagrant.chmod(0o755)
+    box = tmp_path / "classroom.box"
+    box.write_bytes(b"box")
+
+    completed = subprocess.run(
+        (
+            str(ROOT / "packer" / "acceptance" / "test-box.sh"),
+            "vmware_desktop",
+            str(box),
+        ),
+        cwd=ROOT,
+        env=os.environ
+        | {
+            "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            "VAGRANT_CALLS": str(calls),
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    first_call = calls.read_text(encoding="utf-8").splitlines()[0].split("|")
+    assert first_call == [
+        str(ROOT / "packer" / "acceptance"),
+        "2cornot2c/acceptance-vmware_desktop",
+        str(ROOT),
+        ".vagrant-vmware_desktop",
+        (
+            "box add 2cornot2c/acceptance-vmware_desktop "
+            f"{box} --provider vmware_desktop --force"
+        ),
+    ]
