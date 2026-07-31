@@ -1354,14 +1354,14 @@ def recover_interrupted_activity_deletions() -> None:
                 elif not original.is_file():
                     raise RuntimeError(f"Activity e tombstone mancanti: {journal.name}")
             else:
-                if original.is_file():
-                    # A failed commit-marker flush may have been followed by a
-                    # durable direct rollback. Prefer the restored original.
-                    if tombstone.is_file():
-                        tombstone.unlink()
-                        thebitlab_storage.sync_directory(drafts_dir)
-                elif tombstone.is_file():
+                # A committed transaction left for startup never produced a
+                # fully confirmed response/cleanup. Prefer recoverability: keep
+                # an existing original or restore the tombstone.
+                if original.is_file() and tombstone.is_file():
                     tombstone.unlink()
+                    thebitlab_storage.sync_directory(drafts_dir)
+                elif tombstone.is_file():
+                    os.replace(tombstone, original)
                     thebitlab_storage.sync_directory(drafts_dir)
             journal.unlink()
             thebitlab_storage.sync_directory(drafts_dir)
@@ -1441,11 +1441,10 @@ def delete_activity_record(payload: dict) -> dict:
                 # Even if the marker cannot be updated, restore the original:
                 # recovery deliberately prefers original+committed over deletion.
                 if tombstone.is_file() and not activity_path.exists():
-                    os.replace(tombstone, activity_path)
-                    try:
-                        thebitlab_storage.sync_directory(activity_path.parent)
-                    except OSError:
-                        pass
+                    shutil.copy2(tombstone, activity_path)
+                    with activity_path.open("r+b") as restored:
+                        os.fsync(restored.fileno())
+                    thebitlab_storage.sync_directory(activity_path.parent)
                 raise
             if tombstone.is_file() and not activity_path.exists():
                 os.replace(tombstone, activity_path)
@@ -1454,7 +1453,10 @@ def delete_activity_record(payload: dict) -> dict:
             raise
         cleanup_pending = False
         try:
-            recover_interrupted_activity_deletions()
+            tombstone.unlink()
+            thebitlab_storage.sync_directory(tombstone.parent)
+            journal.unlink()
+            thebitlab_storage.sync_directory(journal.parent)
         except OSError:
             cleanup_pending = True
         return {
@@ -2304,6 +2306,11 @@ def _distribute_activity_assignment_locked(payload: dict) -> dict:
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
     if not activity_path.is_file():
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    if activity_path.parent == (ROOT / "activities" / "drafts").resolve(strict=False):
+        validate_preserved_activity_assets(
+            assignment_storage().read_json(activity_path),
+            activity_path,
+        )
     targets = read_assignment_target_paths_from_text(str(payload.get("targets_text", "")))
     results = assign_activity.assign_activity_to_targets(
         activity_path=activity_path,

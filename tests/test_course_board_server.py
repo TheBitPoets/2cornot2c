@@ -2902,7 +2902,7 @@ def test_delete_activity_record_keeps_recovery_state_when_commit_and_reset_fail(
         )
 
     assert activity_path.exists()
-    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert len(list(activity_path.parent.glob(".*.tombstone"))) == 1
     assert len(list(activity_path.parent.glob(".activity-delete-*.txn"))) == 1
 
     monkeypatch.setattr(
@@ -5153,6 +5153,10 @@ def test_save_activity_rejects_corrupted_existing_immutable_bundle(tmp_path, mon
         course_board_server.save_activity({**payload, "overwrite": True})
     with pytest.raises(ValueError, match="alterato"):
         course_board_server.save_activity({**payload, "files": None, "overwrite": True})
+    with pytest.raises(ValueError, match="alterato"):
+        course_board_server.distribute_activity_assignment(
+            {"activity_path": result["activity"]["path"], "targets_text": ""}
+        )
 
 
 @pytest.mark.parametrize(
