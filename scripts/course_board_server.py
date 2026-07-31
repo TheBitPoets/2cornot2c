@@ -563,13 +563,15 @@ def validate_course_source_catalog(payload: dict) -> None:
         existing_only=False,
     )
     course_activity_links.validate_course_activity_links(payload)
+    course_activity_links.validate_course_activity_targets(payload, ROOT)
 
 
 def write_design(payload: dict) -> None:
     """Persist the course design JSON with stable formatting."""
 
-    validate_course_source_catalog(payload)
-    course_service().write_design(payload)
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        course_service().write_design(payload)
 
 
 def generate_course_plan_md(payload: dict) -> dict:
@@ -700,8 +702,9 @@ def source_request_design(raw_query: str) -> dict:
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
     """Persist a named course design in the archive folder."""
 
-    validate_course_source_catalog(payload)
-    return course_service().write_saved_design(name, payload, overwrite=overwrite)
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        return course_service().write_saved_design(name, payload, overwrite=overwrite)
 
 
 def delete_saved_design(name: str, delete_calendars: bool = False, calendars: list[str] | None = None) -> dict:
@@ -1265,29 +1268,30 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
 def delete_activity_record(payload: dict) -> dict:
     """Delete one unlinked teacher-authored activity draft."""
 
-    activity_path = resolve_local_path(str(payload.get("activity_path", "")), "activity_path")
-    if not activity_path.is_file():
-        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
-    ensure_activity_draft_path(activity_path)
-    storage = assignment_storage()
-    activity = normalize_activity(storage.read_json(activity_path))
-    dependencies = activity_delete_dependencies(activity_path, activity)
-    if dependencies["assignments"] or dependencies["reports"] or dependencies["course_designs"]:
-        assignment_count = len(dependencies["assignments"])
-        report_count = len(dependencies["reports"])
-        design_count = len(dependencies["course_designs"])
-        raise ValueError(
-            "Activity collegata a "
-            f"{assignment_count} assegnazioni, {report_count} registri e {design_count} percorsi: "
-            "cancellazione bloccata. Rimuovi prima tutti i collegamenti."
-        )
-    deleted = {
-        "id": activity.get("id", ""),
-        "title": activity.get("title", ""),
-        "path": repository_relative_path(activity_path),
-    }
-    activity_path.unlink()
-    return {"ok": True, "deleted": deleted, "dependencies": dependencies, "activities": list_activities()}
+    with thebitlab_storage.course_storage_lock(ROOT):
+        activity_path = resolve_local_path(str(payload.get("activity_path", "")), "activity_path")
+        if not activity_path.is_file():
+            raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+        ensure_activity_draft_path(activity_path)
+        storage = assignment_storage()
+        activity = normalize_activity(storage.read_json(activity_path))
+        dependencies = activity_delete_dependencies(activity_path, activity)
+        if dependencies["assignments"] or dependencies["reports"] or dependencies["course_designs"]:
+            assignment_count = len(dependencies["assignments"])
+            report_count = len(dependencies["reports"])
+            design_count = len(dependencies["course_designs"])
+            raise ValueError(
+                "Activity collegata a "
+                f"{assignment_count} assegnazioni, {report_count} registri e {design_count} percorsi: "
+                "cancellazione bloccata. Rimuovi prima tutti i collegamenti."
+            )
+        deleted = {
+            "id": activity.get("id", ""),
+            "title": activity.get("title", ""),
+            "path": repository_relative_path(activity_path),
+        }
+        activity_path.unlink()
+        return {"ok": True, "deleted": deleted, "dependencies": dependencies, "activities": list_activities()}
 
 
 def list_class_rosters() -> list[dict]:

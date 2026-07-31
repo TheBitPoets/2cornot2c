@@ -25,10 +25,14 @@ Il course design non incorpora una copia dell'activity. Ogni UDA puo mantenere u
 - `activity_path` e relativo al repository, canonico e confinato in `activities/`;
 - `role` e `practice` oppure `verification`, indipendentemente dal testo libero `kind` del catalogo;
 - `scheduled_on` e `due_on` sono date ISO opzionali; la scadenza non precede la data pianificata;
-- ID e path non possono essere duplicati nella stessa UDA;
+- ID e path non possono essere duplicati nella stessa UDA, inclusi alias case-insensitive;
+- il path e portabile tra POSIX e Windows: device name, caratteri non validi e alias DOS 8.3 sono rifiutati;
+- prima del salvataggio il file deve esistere, restare in `activities/` e dichiarare lo stesso `activity_id`;
 - i campi sono bounded e lo schema rifiuta chiavi sconosciute;
 - i design legacy senza `activity_links` restano validi.
 
 `scripts/course_activity_links.py` e il confine autorevole. Il server lo applica prima di salvare o generare un percorso. `iter_scheduled_activity_links()` produce copie difensive con il contesto anno/UDA per la vista calendario senza trasformare l'activity in un evento proprietario separato.
 
-L'activity originale resta autorevole per consegna, rubriche e correzione; il link conserva soltanto i metadati necessari alla pianificazione. La UI deve aggiornare questi metadati in modo esplicito quando il catalogo cambia, evitando modifiche implicite ai percorsi gia approvati.
+L'activity originale resta autorevole per consegna, rubriche e correzione; il link conserva soltanto i metadati necessari alla pianificazione. La cancellazione di una bozza e serializzata con i salvataggi dei percorsi e viene bloccata finche un design corrente o archiviato la referenzia. Dopo la cancellazione non e possibile creare un nuovo link pendente perche il salvataggio richiede nuovamente il file autorevole.
+
+La UI deve aggiornare questi metadati in modo esplicito quando il catalogo cambia, evitando modifiche implicite ai percorsi gia approvati.

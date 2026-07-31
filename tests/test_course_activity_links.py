@@ -7,6 +7,7 @@ from scripts.course_activity_links import (
     iter_scheduled_activity_links,
     validate_activity_link,
     validate_course_activity_links,
+    validate_course_activity_targets,
 )
 
 
@@ -131,6 +132,28 @@ def test_validate_course_activity_links_rejects_malformed_containers(malformed) 
 def test_validate_course_activity_links_rejects_duplicate_id_or_path(duplicates) -> None:
     with pytest.raises(ValueError, match="due volte"):
         validate_course_activity_links(design(*duplicates))
+
+
+def test_validate_course_activity_targets_requires_matching_authoritative_file(tmp_path) -> None:
+    activity_path = tmp_path / "activities" / "examples" / "practical_test_functions.json"
+    activity_path.parent.mkdir(parents=True)
+    activity_path.write_text(
+        '{"id":"c-base-funzioni-verifica-001","titolo":"Verifica"}',
+        encoding="utf-8",
+    )
+
+    validate_course_activity_targets(design(link()), tmp_path)
+
+    with pytest.raises(ValueError, match="activity_id non corrisponde"):
+        validate_course_activity_targets(
+            design(link(activity_id="different-id")),
+            tmp_path,
+        )
+
+
+def test_validate_course_activity_targets_rejects_missing_file(tmp_path) -> None:
+    with pytest.raises(ValueError, match="non trovata"):
+        validate_course_activity_targets(design(link()), tmp_path)
 
 
 def test_iter_scheduled_activity_links_emits_calendar_context_and_skips_undated_links() -> None:

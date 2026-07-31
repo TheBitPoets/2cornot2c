@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from datetime import date
-from pathlib import PurePosixPath
+import json
+from pathlib import Path, PurePosixPath
 from typing import Any, Iterator, Mapping
+
+from scripts.thebitlab_contracts import normalize_activity
 
 MAX_ACTIVITY_LINKS_PER_UDA = 256
 MAX_ID_LENGTH = 160
 MAX_TITLE_LENGTH = 512
 MAX_KIND_LENGTH = 80
+MAX_ACTIVITY_FILE_BYTES = 1024 * 1024
 ACTIVITY_ROLES = frozenset({"practice", "verification"})
 WINDOWS_RESERVED_BASENAMES = frozenset(
     {"con", "prn", "aux", "nul", "conin$", "conout$"}
@@ -138,6 +142,34 @@ def validate_course_activity_links(design: Any) -> None:
                     raise ValueError("La stessa activity non puo essere collegata due volte alla medesima UDA.")
                 seen_ids.add(link["activity_id"])
                 seen_paths.add(path_key)
+
+
+def validate_course_activity_targets(design: Any, root: Path) -> None:
+    """Require every persisted link to resolve to its authoritative activity file."""
+
+    validate_course_activity_links(design)
+    activities_root = (root / "activities").resolve(strict=False)
+    for year in design.get("years", []):
+        for uda in year.get("udas", []):
+            for raw_link in uda.get("activity_links", []):
+                link = validate_activity_link(raw_link)
+                candidate = root.joinpath(*PurePosixPath(link["activity_path"]).parts)
+                try:
+                    resolved = candidate.resolve(strict=True)
+                    resolved.relative_to(activities_root)
+                except (FileNotFoundError, RuntimeError, ValueError) as error:
+                    raise ValueError(f"Activity collegata non trovata: {link['activity_path']}.") from error
+                if not resolved.is_file() or resolved.stat().st_size > MAX_ACTIVITY_FILE_BYTES:
+                    raise ValueError(f"Activity collegata non valida: {link['activity_path']}.")
+                try:
+                    payload = json.loads(resolved.read_text(encoding="utf-8"))
+                except (OSError, UnicodeError, json.JSONDecodeError) as error:
+                    raise ValueError(f"Activity collegata non valida: {link['activity_path']}.") from error
+                if not isinstance(payload, dict):
+                    raise ValueError(f"Activity collegata non valida: {link['activity_path']}.")
+                authoritative_id = str(normalize_activity(payload).get("id", ""))
+                if authoritative_id != link["activity_id"]:
+                    raise ValueError(f"activity_id non corrisponde al file {link['activity_path']}.")
 
 
 def iter_scheduled_activity_links(design: Any) -> Iterator[dict[str, str]]:
