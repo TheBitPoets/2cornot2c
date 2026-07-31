@@ -136,6 +136,22 @@ def validate_shared_folders(project: Path) -> tuple[Path, Path]:
     return folders
 
 
+def clear_project_selection(project: Path) -> bool:
+    """Rimuove in modo idempotente la selezione della box ormai migrata."""
+
+    project = project.resolve(strict=True)
+    markers = tuple(
+        project / name for name in (".classroom-box", ".classroom-provider")
+    )
+    for marker in markers:
+        if marker.is_dir() and not marker.is_symlink():
+            raise RuntimeError(f"Marker classroom non valido: {marker}")
+    removed = any(marker.exists() or marker.is_symlink() for marker in markers)
+    for marker in markers:
+        marker.unlink(missing_ok=True)
+    return removed
+
+
 def recreate_machine(
     project: Path,
     machine: MachineState,
@@ -146,7 +162,11 @@ def recreate_machine(
     """Arresta e distrugge soltanto la VM confermata, mai i dati condivisi."""
 
     if not machine.exists:
-        return MigrationResult("skipped", "nessuna VM preesistente")
+        cleared = clear_project_selection(project)
+        detail = "nessuna VM preesistente"
+        if cleared:
+            detail += "; selezione box precedente rimossa"
+        return MigrationResult("skipped", detail)
     if confirmation != CONFIRMATION:
         return MigrationResult(
             "blocked",
@@ -167,6 +187,7 @@ def recreate_machine(
     )
     if returncode != 0:
         return MigrationResult("failed", output or "Rimozione VM non riuscita.")
+    clear_project_selection(project)
     return MigrationResult(
         "succeeded",
         "VM precedente rimossa; lab e lab2 sono rimaste sull'host",
@@ -200,7 +221,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Migrazione non disponibile: {error}")
         return 1
     if not machine.exists:
-        print("Nessuna VM preesistente da rimuovere.")
+        result = recreate_machine(args.project, machine, "")
+        print(f"[{result.status.upper()}] {result.detail}")
         return 0
 
     print(f"VM trovata: provider={provider.value}, stato={machine.state}")

@@ -68,9 +68,14 @@ def test_recreate_requires_exact_confirmation_before_commands(tmp_path: Path) ->
 def test_running_machine_is_halted_then_destroyed(tmp_path: Path) -> None:
     calls = []
     machine = MachineState(Provider.VMWARE, "running")
+    project = project_with_labs(tmp_path)
+    (project / ".classroom-box").write_text("2cornot2c/old-box\n", encoding="utf-8")
+    (project / ".classroom-provider").write_text(
+        "vmware_desktop\n", encoding="utf-8"
+    )
 
     result = recreate_machine(
-        project_with_labs(tmp_path),
+        project,
         machine,
         CONFIRMATION,
         runner=lambda command, cwd, environment: (
@@ -93,11 +98,42 @@ def test_running_machine_is_halted_then_destroyed(tmp_path: Path) -> None:
     )
     assert (tmp_path / "lab").is_dir()
     assert (tmp_path / "lab2").is_dir()
+    assert not (tmp_path / ".classroom-box").exists()
+    assert not (tmp_path / ".classroom-provider").exists()
+
+
+def test_absent_machine_clears_stale_project_selection(tmp_path: Path) -> None:
+    calls = []
+    project = project_with_labs(tmp_path)
+    (project / ".classroom-box").write_text("2cornot2c/old-box\n", encoding="utf-8")
+    (project / ".classroom-provider").write_text(
+        "virtualbox\n", encoding="utf-8"
+    )
+
+    result = recreate_machine(
+        project,
+        MachineState(Provider.VIRTUALBOX, "not_created"),
+        "",
+        runner=lambda command, cwd, environment: (
+            calls.append((command, environment)) or (0, "")
+        ),
+    )
+
+    assert result.status == "skipped"
+    assert "selezione box precedente rimossa" in result.detail
+    assert calls == []
+    assert not (project / ".classroom-box").exists()
+    assert not (project / ".classroom-provider").exists()
 
 
 def test_destroy_failure_is_reported(tmp_path: Path) -> None:
+    project = project_with_labs(tmp_path)
+    (project / ".classroom-box").write_text("2cornot2c/old-box\n", encoding="utf-8")
+    (project / ".classroom-provider").write_text(
+        "virtualbox\n", encoding="utf-8"
+    )
     result = recreate_machine(
-        project_with_labs(tmp_path),
+        project,
         MachineState(Provider.VIRTUALBOX, "poweroff"),
         CONFIRMATION,
         runner=lambda command, cwd, environment: (3, "destroy failed"),
@@ -105,6 +141,8 @@ def test_destroy_failure_is_reported(tmp_path: Path) -> None:
 
     assert result.status == "failed"
     assert result.detail == "destroy failed"
+    assert (project / ".classroom-box").is_file()
+    assert (project / ".classroom-provider").is_file()
 
 
 def test_shared_folder_symlink_outside_project_is_rejected(tmp_path: Path) -> None:
