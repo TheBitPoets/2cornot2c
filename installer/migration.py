@@ -136,8 +136,8 @@ def validate_shared_folders(project: Path) -> tuple[Path, Path]:
     return folders
 
 
-def clear_project_selection(project: Path) -> bool:
-    """Rimuove in modo idempotente la selezione della box ormai migrata."""
+def project_selection_markers(project: Path) -> tuple[Path, Path]:
+    """Restituisce i marker validati della selezione box del progetto."""
 
     project = project.resolve(strict=True)
     markers = tuple(
@@ -146,6 +146,22 @@ def clear_project_selection(project: Path) -> bool:
     for marker in markers:
         if marker.is_dir() and not marker.is_symlink():
             raise RuntimeError(f"Marker classroom non valido: {marker}")
+    return markers
+
+
+def project_selection_exists(project: Path) -> bool:
+    """Indica se esiste una selezione box, senza modificarla."""
+
+    return any(
+        marker.exists() or marker.is_symlink()
+        for marker in project_selection_markers(project)
+    )
+
+
+def clear_project_selection(project: Path) -> bool:
+    """Rimuove in modo idempotente la selezione della box ormai migrata."""
+
+    markers = project_selection_markers(project)
     removed = any(marker.exists() or marker.is_symlink() for marker in markers)
     for marker in markers:
         marker.unlink(missing_ok=True)
@@ -162,11 +178,18 @@ def recreate_machine(
     """Arresta e distrugge soltanto la VM confermata, mai i dati condivisi."""
 
     if not machine.exists:
-        cleared = clear_project_selection(project)
-        detail = "nessuna VM preesistente"
-        if cleared:
-            detail += "; selezione box precedente rimossa"
-        return MigrationResult("skipped", detail)
+        if not project_selection_exists(project):
+            return MigrationResult("skipped", "nessuna VM preesistente")
+        if confirmation != CONFIRMATION:
+            return MigrationResult(
+                "blocked",
+                f"Conferma non valida: digitare esattamente {CONFIRMATION}",
+            )
+        clear_project_selection(project)
+        return MigrationResult(
+            "succeeded",
+            "nessuna VM preesistente; selezione box precedente rimossa",
+        )
     if confirmation != CONFIRMATION:
         return MigrationResult(
             "blocked",
@@ -217,17 +240,22 @@ def main(argv: list[str] | None = None) -> int:
     try:
         machine = inspect_machine(args.project, provider)
         validate_shared_folders(args.project)
+        selection_exists = project_selection_exists(args.project)
     except (OSError, RuntimeError, ValueError) as error:
         print(f"Migrazione non disponibile: {error}")
         return 1
-    if not machine.exists:
+    if not machine.exists and not selection_exists:
         result = recreate_machine(args.project, machine, "")
         print(f"[{result.status.upper()}] {result.detail}")
         return 0
 
-    print(f"VM trovata: provider={provider.value}, stato={machine.state}")
-    print("Saranno conservate soltanto le cartelle host lab e lab2.")
-    print("I file salvati esclusivamente dentro la VM andranno persi.")
+    if machine.exists:
+        print(f"VM trovata: provider={provider.value}, stato={machine.state}")
+        print("Saranno conservate soltanto le cartelle host lab e lab2.")
+        print("I file salvati esclusivamente dentro la VM andranno persi.")
+    else:
+        print("Nessuna VM trovata, ma esiste una selezione box configurata.")
+        print("Saranno rimossi i marker .classroom-box e .classroom-provider.")
     confirmation = input(f"Digita esattamente {CONFIRMATION}: ")
     result = recreate_machine(args.project, machine, confirmation)
     print(f"[{result.status.upper()}] {result.detail}")

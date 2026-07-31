@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from installer import migration
 from installer.migration import (
     CONFIRMATION,
     MachineState,
@@ -102,7 +103,9 @@ def test_running_machine_is_halted_then_destroyed(tmp_path: Path) -> None:
     assert not (tmp_path / ".classroom-provider").exists()
 
 
-def test_absent_machine_clears_stale_project_selection(tmp_path: Path) -> None:
+def test_absent_machine_requires_confirmation_to_clear_selection(
+    tmp_path: Path,
+) -> None:
     calls = []
     project = project_with_labs(tmp_path)
     (project / ".classroom-box").write_text("2cornot2c/old-box\n", encoding="utf-8")
@@ -110,7 +113,7 @@ def test_absent_machine_clears_stale_project_selection(tmp_path: Path) -> None:
         "virtualbox\n", encoding="utf-8"
     )
 
-    result = recreate_machine(
+    blocked = recreate_machine(
         project,
         MachineState(Provider.VIRTUALBOX, "not_created"),
         "",
@@ -119,9 +122,66 @@ def test_absent_machine_clears_stale_project_selection(tmp_path: Path) -> None:
         ),
     )
 
-    assert result.status == "skipped"
-    assert "selezione box precedente rimossa" in result.detail
+    assert blocked.status == "blocked"
     assert calls == []
+    assert (project / ".classroom-box").is_file()
+    assert (project / ".classroom-provider").is_file()
+
+    confirmed = recreate_machine(
+        project,
+        MachineState(Provider.VIRTUALBOX, "not_created"),
+        CONFIRMATION,
+        runner=lambda command, cwd, environment: (
+            calls.append((command, environment)) or (0, "")
+        ),
+    )
+
+    assert confirmed.status == "succeeded"
+    assert "selezione box precedente rimossa" in confirmed.detail
+    assert calls == []
+    assert not (project / ".classroom-box").exists()
+    assert not (project / ".classroom-provider").exists()
+
+
+def test_absent_machine_without_selection_remains_idempotent(tmp_path: Path) -> None:
+    result = recreate_machine(
+        project_with_labs(tmp_path),
+        MachineState(Provider.VIRTUALBOX, "not_created"),
+        "",
+        runner=lambda command, cwd, environment: pytest.fail(
+            "nessun comando Vagrant atteso"
+        ),
+    )
+
+    assert result.status == "skipped"
+    assert result.detail == "nessuna VM preesistente"
+
+
+def test_cli_prompts_before_clearing_selection_without_machine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = project_with_labs(tmp_path)
+    (project / ".classroom-box").write_text("2cornot2c/old-box\n", encoding="utf-8")
+    (project / ".classroom-provider").write_text(
+        "virtualbox\n", encoding="utf-8"
+    )
+    prompts: list[str] = []
+    monkeypatch.setattr(
+        migration,
+        "inspect_machine",
+        lambda selected_project, provider: MachineState(provider, "not_created"),
+    )
+    monkeypatch.setattr(
+        "builtins.input",
+        lambda prompt: prompts.append(prompt) or CONFIRMATION,
+    )
+
+    exit_code = migration.main(
+        ["--provider", "virtualbox", "--project", str(project)]
+    )
+
+    assert exit_code == 0
+    assert prompts == [f"Digita esattamente {CONFIRMATION}: "]
     assert not (project / ".classroom-box").exists()
     assert not (project / ".classroom-provider").exists()
 
