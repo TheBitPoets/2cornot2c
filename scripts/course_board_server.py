@@ -1222,7 +1222,9 @@ def course_design_activity_dependencies(activity_id: str, activity_path: str) ->
                 for link in uda.get("activity_links", []):
                     linked_id = str(link.get("activity_id", ""))
                     linked_path = str(link.get("activity_path", ""))
-                    if (activity_id and linked_id == activity_id) or linked_path.casefold() == path_key:
+                    if (
+                        activity_id and linked_id.casefold() == activity_id.casefold()
+                    ) or linked_path.casefold() == path_key:
                         dependencies.append(
                             {
                                 "design": design_name,
@@ -1352,9 +1354,13 @@ def recover_interrupted_activity_deletions() -> None:
                 elif not original.is_file():
                     raise RuntimeError(f"Activity e tombstone mancanti: {journal.name}")
             else:
-                if original.exists():
-                    raise RuntimeError(f"Activity committed riapparsa: {journal.name}")
-                if tombstone.is_file():
+                if original.is_file():
+                    # A failed commit-marker flush may have been followed by a
+                    # durable direct rollback. Prefer the restored original.
+                    if tombstone.is_file():
+                        tombstone.unlink()
+                        thebitlab_storage.sync_directory(drafts_dir)
+                elif tombstone.is_file():
                     tombstone.unlink()
                     thebitlab_storage.sync_directory(drafts_dir)
             journal.unlink()
@@ -1783,6 +1789,8 @@ def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> N
     source_name_key = create_submission_scaffold.portable_path_key(source_name_path)
     source_paths: list[Path] = []
     target_paths: list[Path] = []
+    bundle_ids: set[str] = set()
+    fingerprint: list[dict[str, str]] = []
     activity_root = activity_path.parent.resolve(strict=True)
     for index, asset in enumerate(activity.get("assets", [])):
         source = create_submission_scaffold.validate_relative_path(asset.get("path"), f"assets[{index}].path")
@@ -1822,8 +1830,39 @@ def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> N
             raise ValueError(f"Asset preservato fuori dalla activity: {source.as_posix()}.") from error
         if not source_file.is_file():
             raise ValueError(f"Asset preservato non trovato: {source.as_posix()}.")
+        source_parts = source.parts
+        expected_slug = create_activity.slugify(str(activity.get("id", "")))
+        if (
+            len(source_parts) < 4
+            or source_parts[0] != "assets"
+            or source_parts[1] != expected_slug
+            or not re.fullmatch(r"[0-9a-f]{32}", source_parts[2])
+            or source_file.stat().st_size > MAX_TEACHER_REQUEST_BYTES
+        ):
+            raise ValueError(f"Asset preservato fuori da un bundle immutabile: {source.as_posix()}.")
+        try:
+            content = source_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as error:
+            raise ValueError(f"Asset preservato non leggibile: {source.as_posix()}.") from error
+        bundle_ids.add(source_parts[2])
+        fingerprint.append(
+            {
+                "source": Path(*source_parts[3:]).as_posix(),
+                "content": content,
+                "type": str(asset.get("type", "")),
+                "target_path": target.as_posix(),
+                "visibility": str(asset.get("visibility", "")),
+                "description": str(asset.get("description", "")),
+            }
+        )
         source_paths.append(source)
         target_paths.append(target)
+    if fingerprint:
+        expected_bundle_id = hashlib.sha256(
+            json.dumps(fingerprint, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:32]
+        if bundle_ids != {expected_bundle_id}:
+            raise ValueError("Bundle asset preservato alterato o non canonico.")
 
 
 def save_activity(payload: dict) -> dict:

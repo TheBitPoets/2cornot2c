@@ -2975,8 +2975,8 @@ def test_delete_activity_record_blocks_when_course_design_links_activity(tmp_pat
                                 "id": "uda-1",
                                 "activity_links": [
                                     {
-                                        "activity_id": "legacy-renamed-id",
-                                        "activity_path": "activities/drafts/PYTHON-BASE-SOMMA-001.json",
+                                        "activity_id": "PYTHON-BASE-SOMMA-001",
+                                        "activity_path": "activities/drafts/obsolete.json",
                                         "title": "Somma in Python",
                                         "kind": "laboratorio",
                                         "role": "practice",
@@ -5149,6 +5149,8 @@ def test_save_activity_rejects_corrupted_existing_immutable_bundle(tmp_path, mon
 
     with pytest.raises(ValueError, match="corruzione"):
         course_board_server.save_activity({**payload, "overwrite": True})
+    with pytest.raises(ValueError, match="alterato"):
+        course_board_server.save_activity({**payload, "files": None, "overwrite": True})
 
 
 @pytest.mark.parametrize(
