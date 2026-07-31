@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -139,3 +141,39 @@ def test_launch_commands_are_host_specific(tmp_path: Path) -> None:
     )[0] == "powershell.exe"
     with pytest.raises(ValueError, match="non VM"):
         launch_command(tmp_path, Host.MACOS_ARM64, Provider.DOCKER)
+    with pytest.raises(ValueError, match="non supportato"):
+        launch_command(tmp_path, Host.MACOS_ARM64, Provider.VIRTUALBOX)
+
+
+def test_macos_launcher_rejects_virtualbox_before_running_vagrant(
+    tmp_path: Path,
+) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    calls = tmp_path / "vagrant-calls.txt"
+    vagrant = fake_bin / "vagrant"
+    vagrant.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf '%s\\n' \"$*\" >> \"$VAGRANT_CALLS\"\n",
+        encoding="utf-8",
+    )
+    vagrant.chmod(0o755)
+
+    completed = subprocess.run(
+        (
+            str(Path(__file__).resolve().parents[1] / "scripts" / "setup-vm.sh"),
+            "--virtualbox",
+        ),
+        env=os.environ
+        | {
+            "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            "VAGRANT_CALLS": str(calls),
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 1
+    assert "VirtualBox non è supportato" in completed.stderr
+    assert not calls.exists()

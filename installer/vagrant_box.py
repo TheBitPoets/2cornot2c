@@ -131,9 +131,8 @@ def launch_command(project: Path, host: Host, provider: Provider) -> tuple[str, 
 
     if provider not in VM_PROVIDERS:
         raise ValueError(f"Provider non VM: {provider.value}")
-    if host is Host.MACOS_ARM64:
-        option = "--vmware" if provider is Provider.VMWARE else "--virtualbox"
-        return ("bash", str(project / "scripts" / "setup-vm.sh"), option)
+    if host is Host.MACOS_ARM64 and provider is Provider.VMWARE:
+        return ("bash", str(project / "scripts" / "setup-vm.sh"), "--vmware")
     if host is Host.WINDOWS_AMD64 and provider is Provider.VIRTUALBOX:
         return (
             "powershell.exe",

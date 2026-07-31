@@ -3,7 +3,7 @@
 Il codice in questa directory prepara il percorso unico per installare
 l'ambiente didattico:
 
-- macOS Apple Silicon: VMware Fusion raccomandato, VirtualBox opzionale;
+- macOS Apple Silicon: VMware Fusion per la VM completa;
 - Windows amd64: VirtualBox;
 - modalità Docker leggera: disponibile su entrambi e raccomandata
   automaticamente fino a 8 GiB di RAM.
@@ -57,7 +57,7 @@ Il bootstrap installa soltanto Git e Python 3.12, prepara il repository in
 `~/2cornot2c`, crea `.installer-venv` e avvia uTUI. La procedura guidata
 diagnostica e installa poi l'ambiente selezionato:
 
-- VMware Fusion o VirtualBox per una VM grafica completa;
+- VMware Fusion su macOS o VirtualBox su Windows per una VM grafica completa;
 - Docker Desktop e l'immagine pubblica `student-dev` per il percorso da 512 MB.
 
 Il bootstrap crea il collegamento **Ambiente 2cornot2c** sul desktop e nel
