@@ -3124,6 +3124,7 @@ def headings_from_source_snapshot(
                 "source_commit": resolved_ref,
                 "level": len(match.group(1)),
                 "title": TAG_RE.sub("", title).strip(),
+                "_identity_title": title,
                 "anchor": anchor,
                 "href": source_url if descriptor.provider in {"github", "gitlab"} else f"../{source}#{anchor}",
                 "source_url": source_url,
@@ -3145,8 +3146,9 @@ def headings_from_source_snapshot(
         section = "\n".join(
             source_lines[heading["line"] : end_lines[index] - 1]
         ).strip()
+        identity_title = heading.pop("_identity_title")
         identity_text = (
-            f"{heading['level']}\0{heading['title']}\0{section}"
+            f"{heading['level']}\0{identity_title}\0{section}"
         )
         heading["content_sha256"] = hashlib.sha256(
             identity_text.encode("utf-8")

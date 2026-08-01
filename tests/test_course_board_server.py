@@ -603,9 +603,10 @@ def test_heading_content_digest_includes_title_identity(tmp_path) -> None:
 
     headings = course_board_server.headings_from_source_snapshot(
         source_file,
-        "# Allow anonymous access\n\nSame body.\n\n# Deny anonymous access\n\nSame body.\n",
+        "# Include <stdio.h>\n\nSame body.\n\n# Include <stdlib.h>\n\nSame body.\n",
     )
 
+    assert headings[0]["title"] == headings[1]["title"] == "Include"
     assert headings[0]["content_sha256"] != headings[1]["content_sha256"]
 
 
