@@ -30,6 +30,7 @@ GIT_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/@-]{0,127}$")
 ALLOWED_PROVIDERS = frozenset({"local", "github", "gitlab"})
 ALLOWED_TYPES = frozenset({"markdown"})
 ALLOWED_INDEXING_STATUSES = frozenset({"ready", "pending", "error", "disabled"})
+LOCAL_ACQUISITION_SLOTS = threading.BoundedSemaphore(4)
 
 
 class CourseSourceCatalogError(ValueError):
@@ -78,6 +79,7 @@ class LocalCourseSourceFile:
     expected_size: int | None
     expected_identity: tuple[int, int] | None
     expected_sha256: str | None
+    snapshot_content: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -229,11 +231,11 @@ def local_markdown_source_files(
                     else (metadata.st_dev, metadata.st_ino)
                 ),
                 expected_sha256=None,
+                snapshot_content=None,
             )
             if metadata is not None:
-                snapshot_digest = hashlib.sha256(
-                    _read_local_markdown_bytes(candidate, repository_root)
-                ).hexdigest()
+                snapshot_content = _read_local_markdown_bytes(candidate, repository_root)
+                snapshot_digest = hashlib.sha256(snapshot_content).hexdigest()
                 candidate = LocalCourseSourceFile(
                     source=candidate.source,
                     relative_path=candidate.relative_path,
@@ -241,6 +243,7 @@ def local_markdown_source_files(
                     expected_size=candidate.expected_size,
                     expected_identity=candidate.expected_identity,
                     expected_sha256=snapshot_digest,
+                    snapshot_content=snapshot_content,
                 )
             files.append(candidate)
     return tuple(files)
@@ -351,7 +354,21 @@ def _bounded_local_markdown_source_files(
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
-    thread = threading.Thread(target=worker, daemon=True)
+    slot_guard = LOCAL_ACQUISITION_SLOTS
+    if not slot_guard.acquire(timeout=remaining):
+        raise CourseSourceCatalogError("Acquisizione fonti Markdown satura.")
+
+    def bounded_worker() -> None:
+        try:
+            worker()
+        finally:
+            slot_guard.release()
+
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        slot_guard.release()
+        raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
+    thread = threading.Thread(target=bounded_worker, daemon=True)
     thread.start()
     if not done.wait(remaining):
         raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
@@ -432,7 +449,17 @@ def read_markdown_text(item: CourseMarkdownSourceFile, root: Path) -> str:
     """Read one verified local handle or immutable remote payload."""
 
     if isinstance(item, LocalCourseSourceFile):
-        payload = _read_local_markdown_bytes(item, root.resolve())
+        if item.snapshot_content is None:
+            payload = _read_local_markdown_bytes(item, root.resolve())
+        else:
+            payload = item.snapshot_content
+            if (
+                item.expected_sha256 is None
+                or hashlib.sha256(payload).hexdigest() != item.expected_sha256
+            ):
+                raise CourseSourceCatalogError(
+                    f"Snapshot locale non valido: {item.relative_path}."
+                )
     else:
         payload = item.content
         if (

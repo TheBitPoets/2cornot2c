@@ -224,6 +224,12 @@ def test_transport_enforces_absolute_deadline_during_slow_response() -> None:
         def settimeout(self, _timeout):
             pass
 
+        def shutdown(self, _how):
+            pass
+
+        def close(self):
+            pass
+
     class Response:
         status = 200
 
@@ -265,6 +271,12 @@ def test_transport_enforces_absolute_deadline_during_slow_response() -> None:
 def test_transport_returns_at_wall_deadline_even_if_read_does_not_return() -> None:
     class Socket:
         def settimeout(self, _timeout):
+            pass
+
+        def shutdown(self, _how):
+            pass
+
+        def close(self):
             pass
 
     class Response:

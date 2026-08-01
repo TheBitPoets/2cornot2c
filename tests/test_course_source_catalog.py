@@ -137,17 +137,16 @@ def test_open_handle_verification_rejects_outside_file(tmp_path, monkeypatch) ->
     repository.mkdir()
     (repository / "lesson.md").write_text("# Inside\n", encoding="utf-8")
     outside.write_text("# Outside\n", encoding="utf-8")
-    item = local_markdown_source_files(
-        {"source_files": ["lesson.md"]},
-        repository,
-    )[0]
     monkeypatch.setattr(
         "scripts.course_source_catalog._opened_file_path",
         lambda _descriptor: outside,
     )
 
     with pytest.raises(CourseSourceCatalogError, match="fuori dal repository"):
-        read_local_markdown_text(item, repository)
+        local_markdown_source_files(
+            {"source_files": ["lesson.md"]},
+            repository,
+        )
 
 
 def test_open_handle_verification_rejects_different_internal_file(tmp_path, monkeypatch) -> None:
@@ -155,17 +154,16 @@ def test_open_handle_verification_rejects_different_internal_file(tmp_path, monk
     second = tmp_path / "second.md"
     first.write_text("# First\n", encoding="utf-8")
     second.write_text("# Second\n", encoding="utf-8")
-    item = local_markdown_source_files(
-        {"source_files": ["first.md"]},
-        tmp_path,
-    )[0]
     monkeypatch.setattr(
         "scripts.course_source_catalog._opened_file_path",
         lambda _descriptor: second,
     )
 
     with pytest.raises(CourseSourceCatalogError, match="cambiato durante la lettura"):
-        read_local_markdown_text(item, tmp_path)
+        local_markdown_source_files(
+            {"source_files": ["first.md"]},
+            tmp_path,
+        )
 
 
 def test_rejects_too_many_ready_local_files(tmp_path) -> None:
@@ -224,6 +222,35 @@ def test_rejects_excess_ready_remote_files_before_adapter_calls(tmp_path) -> Non
     assert calls == []
 
 
+def test_stalled_local_acquisitions_use_bounded_slots(tmp_path, monkeypatch) -> None:
+    import threading
+    import time
+    from scripts import course_source_catalog
+
+    release = threading.Event()
+    calls = []
+
+    def stalled(*_args, **_kwargs):
+        calls.append(True)
+        release.wait(1.0)
+        return ()
+
+    monkeypatch.setattr(course_source_catalog, "local_markdown_source_files", stalled)
+    monkeypatch.setattr(
+        course_source_catalog, "LOCAL_ACQUISITION_SLOTS", threading.BoundedSemaphore(1)
+    )
+    with pytest.raises(CourseSourceCatalogError, match="Timeout acquisizione"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {}, tmp_path, (), time.monotonic() + 0.05
+        )
+    with pytest.raises(CourseSourceCatalogError, match="satura"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {}, tmp_path, (), time.monotonic() + 0.05
+        )
+    assert calls == [True]
+    release.set()
+
+
 def test_mixed_catalog_checks_global_deadline_before_local_acquisition(
     tmp_path, monkeypatch
 ) -> None:
@@ -238,7 +265,7 @@ def test_mixed_catalog_checks_global_deadline_before_local_acquisition(
         markdown_source_files(design, tmp_path, adapters={"github": object()})
 
 
-def test_rejects_same_length_change_after_catalog_snapshot(tmp_path) -> None:
+def test_local_catalog_keeps_immutable_content_snapshot(tmp_path) -> None:
     lesson = tmp_path / "lesson.md"
     lesson.write_bytes(b"# First\n")
     item = local_markdown_source_files(
@@ -247,8 +274,7 @@ def test_rejects_same_length_change_after_catalog_snapshot(tmp_path) -> None:
     )[0]
     lesson.write_bytes(b"# Other\n")
 
-    with pytest.raises(CourseSourceCatalogError, match="cambiato durante la lettura"):
-        read_local_markdown_text(item, tmp_path)
+    assert read_local_markdown_text(item, tmp_path) == "# First\n"
 
 
 def test_indexes_ready_github_snapshot_with_resolved_commit_provenance(tmp_path) -> None:

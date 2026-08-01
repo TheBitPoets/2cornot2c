@@ -112,12 +112,21 @@ class GitHubApiTransport:
             with lock:
                 response = resources.get("response")
                 connection = resources.get("connection")
-            for resource in (response, connection):
-                if resource is not None:
-                    try:
-                        resource.close()
-                    except OSError:
-                        pass
+            network_socket = None if connection is None else connection.sock
+            if network_socket is None and response is not None:
+                try:
+                    network_socket = response.fp.raw._sock
+                except AttributeError:
+                    network_socket = None
+            if network_socket is not None:
+                try:
+                    network_socket.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
+                try:
+                    network_socket.close()
+                except OSError:
+                    pass
             raise RemoteMarkdownError("Timeout sincronizzazione GitHub esaurito.")
         error_value = result.get("error")
         if error_value is not None:

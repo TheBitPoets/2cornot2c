@@ -630,6 +630,8 @@ def read_github_markdown_token() -> str | None:
                 or (before.st_dev, before.st_ino) != (metadata.st_dev, metadata.st_ino)
                 or before.st_size != metadata.st_size
                 or before.st_mtime_ns != metadata.st_mtime_ns
+                or before.st_mode != metadata.st_mode
+                or getattr(before, "st_uid", None) != getattr(metadata, "st_uid", None)
             ):
                 raise course_github_markdown.RemoteMarkdownError(
                     "File token GitHub sostituito durante l'apertura."
@@ -640,7 +642,19 @@ def read_github_markdown_token() -> str | None:
             len(raw) > course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 2
             or before.st_size != after.st_size
             or before.st_mtime_ns != after.st_mtime_ns
+            or before.st_mode != after.st_mode
+            or getattr(before, "st_uid", None) != getattr(after, "st_uid", None)
             or (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)
+        ):
+            raise course_github_markdown.RemoteMarkdownError("File token GitHub instabile.")
+        verify_github_token_file_permissions(resolved, after)
+        final_metadata = resolved.stat()
+        if (
+            (final_metadata.st_dev, final_metadata.st_ino)
+            != (after.st_dev, after.st_ino)
+            or final_metadata.st_mode != after.st_mode
+            or getattr(final_metadata, "st_uid", None)
+            != getattr(after, "st_uid", None)
         ):
             raise course_github_markdown.RemoteMarkdownError("File token GitHub instabile.")
         if raw.endswith(b"\r\n"):
