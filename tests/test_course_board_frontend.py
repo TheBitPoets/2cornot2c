@@ -326,7 +326,7 @@ def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> No
         }];
         const design = { years: [{ udas: [{ items: [{
           id: "README.md#intro", title: "Intro", source: "README.md",
-          line: 1, level: 1, frame: { status: "done" },
+          line: 99, level: 3, frame: { status: "done" },
         }] }] }] };
         const preview = [{
           id: "legacy-abc:README.md#intro", title: "Intro", source: "README.md",
@@ -340,6 +340,8 @@ def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> No
         const item = design.years[0].udas[0].items[0];
         assert.equal(item.id, "legacy-abc:README.md#intro");
         assert.equal(item.source_id, "legacy-abc");
+        assert.equal(item.line, 1);
+        assert.equal(item.level, 1);
         assert.equal(item.frame.status, "done");
         """
     )
@@ -353,6 +355,7 @@ def test_source_editor_requires_preview_and_context_before_apply() -> None:
     assert "delete nextDesign.source_files" in source
     assert "sourcePreviewSignature(sources) !== editor.preview.signature" in source
     assert "isBoardContextUnchanged(editor.boardContext)" in source
+    assert "state.isNewDesign || hasUnsavedChanges()" in source
     assert "editor.pendingPreviewRequests = Math.max" in source
 
 

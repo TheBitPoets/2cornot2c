@@ -1390,7 +1390,7 @@ function migrateLegacySourceItems(design, previewHeadings) {
   const oldById = new Map((state.headings || []).map((heading) => [heading.id, heading]));
   const newByKey = new Map(
     previewHeadings.map((heading) => [
-      JSON.stringify([heading.source_id, heading.source, heading.anchor, heading.line, heading.level]),
+      JSON.stringify([heading.source_id, heading.source, heading.anchor]),
       heading,
     ]),
   );
@@ -1403,8 +1403,6 @@ function migrateLegacySourceItems(design, previewHeadings) {
           sourceId,
           item.source || oldHeading?.source || "",
           oldHeading?.anchor || String(item.href || "").split("#").at(-1),
-          Number(item.line || oldHeading?.line || 0),
-          Number(item.level || oldHeading?.level || 0),
         ]);
         const replacement = newByKey.get(key);
         if (!replacement) {
@@ -2316,7 +2314,7 @@ async function openParagraphPreview(paragraph) {
   els.paragraphSourceLink.hidden = true;
   els.paragraphDialog.showModal();
   try {
-    const payload = state.isNewDesign
+    const payload = state.isNewDesign || hasUnsavedChanges()
       ? await api("/api/heading-content", {
           method: "POST",
           body: JSON.stringify({
