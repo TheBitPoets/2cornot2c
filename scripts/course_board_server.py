@@ -1834,6 +1834,7 @@ def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> N
     source_paths: list[Path] = []
     target_paths: list[Path] = []
     bundle_ids: set[str] = set()
+    bundle_modes: set[str] = set()
     fingerprint: list[dict[str, str]] = []
     activity_root = activity_path.parent.resolve(strict=True)
     for index, asset in enumerate(activity.get("assets", [])):
@@ -1885,31 +1886,35 @@ def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> N
         source_parts = source.parts
         expected_slug = create_activity.slugify(str(activity.get("id", "")))
         if (
-            len(source_parts) < 4
+            len(source_parts) < 3
             or source_parts[0] != "assets"
             or source_parts[1] != expected_slug
-            or not re.fullmatch(r"[0-9a-f]{32}", source_parts[2])
             or source_file.stat().st_size > MAX_TEACHER_REQUEST_BYTES
         ):
-            raise ValueError(f"Asset preservato fuori da un bundle immutabile: {source.as_posix()}.")
+            raise ValueError(f"Asset preservato fuori dalla directory canonica: {source.as_posix()}.")
+        immutable = len(source_parts) >= 4 and bool(re.fullmatch(r"[0-9a-f]{32}", source_parts[2]))
+        bundle_modes.add("immutable" if immutable else "legacy")
+        if len(bundle_modes) > 1:
+            raise ValueError("Asset preservati legacy e immutabili non possono essere combinati.")
         try:
             content = source_file.read_bytes().decode("utf-8")
         except (OSError, UnicodeError) as error:
             raise ValueError(f"Asset preservato non leggibile: {source.as_posix()}.") from error
-        bundle_ids.add(source_parts[2])
-        fingerprint.append(
-            {
-                "source": Path(*source_parts[3:]).as_posix(),
-                "content": content,
-                "type": str(asset.get("type", "")),
-                "target_path": target.as_posix(),
-                "visibility": str(asset.get("visibility", "")),
-                "description": str(asset.get("description", "")),
-            }
-        )
+        if immutable:
+            bundle_ids.add(source_parts[2])
+            fingerprint.append(
+                {
+                    "source": Path(*source_parts[3:]).as_posix(),
+                    "content": content,
+                    "type": str(asset.get("type", "")),
+                    "target_path": target.as_posix(),
+                    "visibility": str(asset.get("visibility", "")),
+                    "description": str(asset.get("description", "")),
+                }
+            )
         source_paths.append(source)
         target_paths.append(target)
-    if fingerprint:
+    if bundle_modes == {"immutable"}:
         expected_bundle_id = hashlib.sha256(
             json.dumps(fingerprint, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()[:32]
