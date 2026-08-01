@@ -186,6 +186,24 @@ def test_activity_link_dialog_rejects_detached_design_context() -> None:
     )
 
 
+def test_activity_link_removal_ignores_detached_design_context() -> None:
+    run_course_board_js(
+        """
+        (async () => {
+          renderCourse = () => { throw new Error("detached removal must not render"); };
+          const link = { title: "A" };
+          const oldUda = { activity_links: [link] };
+          const oldYear = { udas: [oldUda] };
+          state.design = { years: [{ id: "new", udas: [] }] };
+
+          await removeActivityLink(oldYear, oldUda, link);
+
+          assert.equal(oldUda.activity_links.length, 1);
+        })();
+        """
+    )
+
+
 def test_activity_link_dialog_rejects_duplicate_activity_in_same_uda() -> None:
     run_course_board_js(
         """

@@ -368,6 +368,7 @@ async function loadCalendarByName(name) {
 }
 
 async function saveCalendar() {
+  state.calendarRequestId += 1;
   syncFormToCalendar();
   const name = els.fileName.value.trim() || fileNameFromYear(state.calendar.school_year || "");
   els.fileName.value = name;
@@ -1942,6 +1943,7 @@ function escapeHtml(value) {
 });
 
 els.courseDesignSelect.addEventListener("change", async () => {
+  state.calendarRequestId += 1;
   syncFormToCalendar();
   if (state.calendar.course_design_name) {
     localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);

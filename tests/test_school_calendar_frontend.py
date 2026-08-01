@@ -168,6 +168,14 @@ def test_calendar_declares_activity_event_rendering_without_persisted_event_fiel
     assert "state.calendar.activity" not in source
 
 
+def test_course_selection_invalidates_pending_calendar_loads() -> None:
+    source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
+    listener = source.split('els.courseDesignSelect.addEventListener("change", async () => {', 1)[1].split("\n});", 1)[0]
+
+    assert "state.calendarRequestId += 1;" in listener
+    assert listener.index("state.calendarRequestId += 1;") < listener.index("await loadCourseDesign()")
+
+
 def test_calendar_view_selection_resets_when_period_is_not_available() -> None:
     source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
     start = source.index("function firstAvailableCalendarViewValue")

@@ -1554,7 +1554,7 @@ function renderUdaActivities(year, uda) {
       openActivityLinkDialog(year, uda, link);
     });
     card.querySelector('[data-action="remove-activity-link"]').addEventListener("click", () => {
-      removeActivityLink(uda, link);
+      removeActivityLink(year, uda, link);
     });
     section.append(card);
   }
@@ -1666,7 +1666,7 @@ function saveActivityLink(event) {
   setStatus(`Activity "${saved.title}" ${editor.link ? "aggiornata" : "collegata"}.`);
 }
 
-async function removeActivityLink(uda, link) {
+async function removeActivityLink(year, uda, link) {
   const confirmed = await DashboardDialogs.confirm({
     title: "Rimuovi collegamento activity",
     message: `Rimuovere "${link.title}" dalla UDA? L'activity originale e le consegne non verranno eliminate.`,
@@ -1674,7 +1674,12 @@ async function removeActivityLink(uda, link) {
     cancelLabel: "Mantieni",
     danger: true,
   });
-  if (!confirmed || !(uda.activity_links || []).includes(link)) return;
+  if (
+    !confirmed
+    || !(state.design?.years || []).includes(year)
+    || !(year.udas || []).includes(uda)
+    || !(uda.activity_links || []).includes(link)
+  ) return;
   uda.activity_links = uda.activity_links.filter((candidate) => candidate !== link);
   renderCourse();
   setStatus(`Collegamento a "${link.title}" rimosso.`);
