@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import errno
 import json
 import os
@@ -226,6 +227,15 @@ def test_update_uda_actual_preserves_latest_activity_links(tmp_path) -> None:
     assert uda["actual"] == {"status": "done", "notes": "Completata"}
     assert path == "doc/course_designs/course.json"
     assert storage.read_saved_design("course.json") == design
+
+    stale_board_copy = copy.deepcopy(design)
+    stale_board_copy["years"][0]["udas"][0]["activity_links"] = [{"activity_id": "board-new"}]
+    stale_board_copy["years"][0]["udas"][0]["actual"] = {"status": "todo"}
+    storage.write_saved_design("course.json", stale_board_copy)
+
+    merged = storage.read_saved_design("course.json")["years"][0]["udas"][0]
+    assert merged["activity_links"] == [{"activity_id": "board-new"}]
+    assert merged["actual"] == {"status": "done", "notes": "Completata"}
 
 
 def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:

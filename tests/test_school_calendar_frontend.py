@@ -5,6 +5,19 @@ from pathlib import Path
 import subprocess
 
 
+def test_actual_progress_save_is_serialized_and_context_guarded() -> None:
+    source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
+    function_source = source.split("async function saveActualProgress", 1)[1].split(
+        "\nfunction calculateActualHours", 1
+    )[0]
+
+    assert "state.actualSaveInProgress" in function_source
+    assert "saveButton.disabled = true" in function_source
+    assert "calendarRequestId !== state.calendarRequestId" in function_source
+    assert "courseRequestId !== state.courseDesignRequestId" in function_source
+    assert 'designName !== (state.calendar.course_design_name || "")' in function_source
+
+
 def test_associated_course_update_uses_targeted_uda_mutation() -> None:
     source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
     function_source = source.split("async function saveAssociatedCourseDesign", 1)[1].split(

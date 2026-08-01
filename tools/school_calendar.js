@@ -78,6 +78,8 @@ const state = {
   courseDesignLoading: false,
   calendarSaveInProgress: false,
   interactionLockedElements: [],
+  actualSaveInProgress: false,
+  actualSaveRequestId: 0,
 };
 
 function defaultCalendar() {
@@ -1330,7 +1332,12 @@ async function saveAssociatedCourseDesign(yearId, udaId, actual) {
 }
 
 async function saveActualProgress(segment) {
+  if (state.actualSaveInProgress) {
+    setStatus("Salvataggio programmazione svolta gia in corso.", "error");
+    return;
+  }
   const field = (name) => els.ganttDialogBody.querySelector(`[data-actual-field="${name}"]`);
+  const saveButton = els.ganttDialogBody.querySelector('[data-action="save-actual"]');
   const nextActual = {
     status: field("status").value || "todo",
     start_date: field("start_date").value || "",
@@ -1338,15 +1345,34 @@ async function saveActualProgress(segment) {
     hours_done: field("hours_done").value === "" ? "" : Number(field("hours_done").value),
     notes: field("notes").value.trim(),
   };
+  const requestId = ++state.actualSaveRequestId;
+  const calendarRequestId = state.calendarRequestId;
+  const courseRequestId = state.courseDesignRequestId;
+  const designName = state.calendar.course_design_name || "";
+  state.actualSaveInProgress = true;
+  saveButton.disabled = true;
   try {
     const yearId = segment.track.course_year_id || segment.track.id;
     const payload = await saveAssociatedCourseDesign(yearId, segment.uda.id, nextActual);
+    if (
+      requestId !== state.actualSaveRequestId
+      || calendarRequestId !== state.calendarRequestId
+      || courseRequestId !== state.courseDesignRequestId
+      || designName !== (state.calendar.course_design_name || "")
+    ) return;
     state.courseDesign = payload.design;
     state.activityEvents = payload.activity_events || [];
     renderAll();
     setStatus(`Programmazione svolta salvata in ${payload.path}.`);
   } catch (error) {
-    setStatus(`Salvataggio programmazione svolta non riuscito: ${error.message}`, "error");
+    if (requestId === state.actualSaveRequestId) {
+      setStatus(`Salvataggio programmazione svolta non riuscito: ${error.message}`, "error");
+    }
+  } finally {
+    if (requestId === state.actualSaveRequestId) {
+      state.actualSaveInProgress = false;
+      if (saveButton.isConnected) saveButton.disabled = false;
+    }
   }
 }
 

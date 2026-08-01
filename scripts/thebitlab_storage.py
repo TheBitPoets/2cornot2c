@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import errno
 import json
 import os
@@ -352,11 +353,48 @@ class JsonCourseStorage:
                 return self.read_json(self.design_path)
             return {"version": 1, "source_files": self.default_sources, "years": []}
 
+    @staticmethod
+    def _preserve_latest_uda_actual(
+        latest: dict[str, Any],
+        proposed: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Keep calendar-owned actual progress across full-design saves."""
+
+        merged = copy.deepcopy(proposed)
+        proposed_years = {
+            year.get("id"): year
+            for year in merged.get("years", [])
+            if isinstance(year, dict) and isinstance(year.get("id"), str)
+        }
+        for latest_year in latest.get("years", []):
+            if not isinstance(latest_year, dict):
+                continue
+            proposed_year = proposed_years.get(latest_year.get("id"))
+            if not isinstance(proposed_year, dict):
+                continue
+            proposed_udas = {
+                uda.get("id"): uda
+                for uda in proposed_year.get("udas", [])
+                if isinstance(uda, dict) and isinstance(uda.get("id"), str)
+            }
+            for latest_uda in latest_year.get("udas", []):
+                if not isinstance(latest_uda, dict) or "actual" not in latest_uda:
+                    continue
+                proposed_uda = proposed_udas.get(latest_uda.get("id"))
+                if isinstance(proposed_uda, dict):
+                    proposed_uda["actual"] = copy.deepcopy(latest_uda["actual"])
+        return merged
+
     def write_design(self, payload: dict[str, Any]) -> None:
-        """Persist the current course design."""
+        """Persist the current course design without clobbering UDA progress."""
 
         with self.operation_lock:
-            self.write_json(self.design_path, payload)
+            merged = (
+                self._preserve_latest_uda_actual(self.read_json(self.design_path), payload)
+                if self.design_path.is_file()
+                else payload
+            )
+            self.write_json(self.design_path, merged)
 
     def list_saved_designs(self) -> list[dict[str, str]]:
         """List saved course designs stored in doc/course_designs."""
@@ -388,7 +426,12 @@ class JsonCourseStorage:
         path = self.saved_design_path(name)
         with self.operation_lock:
             if overwrite:
-                self.write_json(path, payload)
+                merged = (
+                    self._preserve_latest_uda_actual(self.read_json(path), payload)
+                    if path.is_file()
+                    else payload
+                )
+                self.write_json(path, merged)
             else:
                 self.write_json_exclusive(path, payload)
         return {"name": path.name, "path": self.relative_path(path)}
