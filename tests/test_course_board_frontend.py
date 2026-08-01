@@ -303,9 +303,10 @@ def test_item_from_heading_preserves_source_provenance() -> None:
           source: "doc/course.md",
           source_id: "course",
           source_label: "Corso",
-          source_provider: "local",
-          source_repository: null,
-          source_ref: null,
+          source_provider: "github",
+          source_repository: "school/course",
+          source_ref: "main",
+          source_commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           href: "../doc/course.md#topic",
           level: 2,
           line: 4,
@@ -316,8 +317,31 @@ def test_item_from_heading_preserves_source_provenance() -> None:
 
         assert.equal(item.source_id, "course");
         assert.equal(item.source_label, "Corso");
-        assert.equal(item.source_provider, "local");
+        assert.equal(item.source_provider, "github");
+        assert.equal(item.source_commit, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
         assert.equal(item.source, "doc/course.md");
+        """
+    )
+
+
+def test_item_subtree_does_not_cross_sources_with_same_relative_path() -> None:
+    run_course_board_js(
+        """
+        const parent = {
+          id: "source-a:README.md#a", title: "A", source: "README.md",
+          source_id: "source-a", level: 1, line: 1, href: "#a",
+        };
+        state.headings = [
+          parent,
+          {
+            id: "source-b:README.md#b", title: "B", source: "README.md",
+            source_id: "source-b", level: 2, line: 1, href: "#b",
+          },
+        ];
+
+        const item = itemFromHeading(parent);
+
+        assert.equal(item.children, undefined);
         """
     )
 
