@@ -818,8 +818,9 @@ class GitHubAppTokenRuntime:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._shutdown_reaper: threading.Thread | None = None
+        self._shutdown_remove_token = False
         self._lock = threading.RLock()
-        self._lifecycle_lock = threading.Lock()
+        self._lifecycle_lock = threading.RLock()
         self._refresh_lock = threading.Lock()
         self._owned_digest: str | None = None
         self._owned_identity: tuple[int, int] | None = None
@@ -975,12 +976,16 @@ class GitHubAppTokenRuntime:
     ) -> None:
         def finish_shutdown() -> None:
             thread.join()
-            if remove_token:
-                self._remove_owned_token()
-            self._process_lock.release()
-            with self._lock:
-                self._thread = None
-                self._shutdown_reaper = None
+            with self._lifecycle_lock:
+                with self._lock:
+                    should_remove_token = self._shutdown_remove_token
+                if should_remove_token:
+                    self._remove_owned_token()
+                self._process_lock.release()
+                with self._lock:
+                    self._thread = None
+                    self._shutdown_reaper = None
+                    self._shutdown_remove_token = False
 
         reaper = threading.Thread(
             target=finish_shutdown,
@@ -990,6 +995,7 @@ class GitHubAppTokenRuntime:
         with self._lock:
             self._thread = thread
             self._shutdown_reaper = reaper
+            self._shutdown_remove_token = self._shutdown_remove_token or remove_token
         try:
             reaper.start()
         except RuntimeError:
@@ -1006,6 +1012,10 @@ class GitHubAppTokenRuntime:
             existing_reaper = self._shutdown_reaper
             thread = self._thread
         if existing_reaper is not None:
+            with self._lock:
+                self._shutdown_remove_token = (
+                    self._shutdown_remove_token or remove_token
+                )
             existing_reaper.join(timeout=SHUTDOWN_WAIT_SECONDS)
             return
         if thread is not None:

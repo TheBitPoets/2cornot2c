@@ -535,13 +535,17 @@ def test_late_worker_delegates_cleanup_without_releasing_lock_early(
     monkeypatch.setattr(service, "_refresh_locked", publish)
     monkeypatch.setattr(service, "_run", lambda: release_worker.wait(2))
     service.start()
-    service.stop()
+    service.stop(remove_token=False)
     with service._lock:
         reaper = service._shutdown_reaper
 
     assert reaper is not None and reaper.is_alive()
     assert service._process_lock.held
     assert config.token_file.exists()
+    service.stop(remove_token=True)
+    with service._lock:
+        assert service._shutdown_reaper is reaper
+        assert service._shutdown_remove_token is True
     release_worker.set()
     reaper.join(timeout=2)
     assert not reaper.is_alive()
