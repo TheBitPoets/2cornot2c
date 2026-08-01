@@ -335,6 +335,14 @@ def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> No
           content_sha256: "c".repeat(64), anchor: "intro", line: 1, level: 1, href: "../README.md#intro",
         }];
 
+        assert.throws(
+          () => reconcileSourceItems(
+            JSON.parse(JSON.stringify(design)),
+            [],
+            [{ id: "legacy-abc", indexing_status: "pending" }],
+          ),
+          /deve restare ready/,
+        );
         reconcileSourceItems(design, preview, [{ id: "legacy-abc", indexing_status: "ready" }]);
 
         const item = design.years[0].udas[0].items[0];

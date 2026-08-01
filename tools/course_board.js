@@ -1385,6 +1385,7 @@ async function previewSourceEditor() {
 
 function reconcileSourceItems(design, previewHeadings, nextSources) {
   const managedSourceIds = new Set((state.sources || []).map((source) => source.id));
+  const currentSourceById = new Map((state.sources || []).map((source) => [source.id, source]));
   const nextSourceById = new Map(nextSources.map((source) => [source.id, source]));
   const oldById = new Map((state.headings || []).map((heading) => [heading.id, heading]));
   const newById = new Map(previewHeadings.map((heading) => [heading.id, heading]));
@@ -1407,6 +1408,9 @@ function reconcileSourceItems(design, previewHeadings, nextSources) {
           throw new Error(`La fonte usata dal paragrafo ${item.id} è stata rimossa o rinominata.`);
         }
         if (nextSource.indexing_status !== "ready") {
+          if (currentSourceById.get(sourceId)?.legacy) {
+            throw new Error(`La fonte legacy ${sourceId} deve restare ready durante la migrazione iniziale.`);
+          }
           visit(item.children);
           continue;
         }
