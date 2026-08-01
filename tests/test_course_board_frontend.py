@@ -204,6 +204,36 @@ def test_activity_link_removal_ignores_detached_design_context() -> None:
     )
 
 
+def test_existing_activity_link_remains_editable_when_catalog_is_unavailable() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        state.activities = [];
+        state.activityCatalogError = "temporaneamente non disponibile";
+        const link = {
+          activity_id: "a",
+          activity_path: "activities/a.json",
+          title: "A",
+          kind: "lab",
+          role: "practice",
+        };
+        const uda = { activity_links: [link] };
+        const year = { udas: [uda] };
+        state.design = { years: [year] };
+        state.activityLinkEditor = { year, uda, link };
+        els.activityLinkSelect.value = link.activity_path;
+        els.activityLinkRole.value = "verification";
+        els.activityLinkScheduledOn.value = "2026-10-01";
+        els.activityLinkDueOn.value = "";
+
+        saveActivityLink({ preventDefault() {} });
+
+        assert.equal(uda.activity_links[0].role, "verification");
+        assert.equal(uda.activity_links[0].scheduled_on, "2026-10-01");
+        """
+    )
+
+
 def test_activity_link_dialog_rejects_duplicate_activity_in_same_uda() -> None:
     run_course_board_js(
         """

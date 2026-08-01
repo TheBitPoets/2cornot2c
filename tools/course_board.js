@@ -2,6 +2,7 @@
   headings: [],
   sources: [],
   activities: [],
+  activityCatalogError: "",
   design: null,
   savedDesigns: [],
   activeSavedDesign: "",
@@ -423,12 +424,19 @@ async function loadAll() {
     fetchCourseContext(),
     api("/api/ai-config"),
     api("/api/saved-designs"),
-    api("/api/course-linkable-activities").catch(() => ({ activities: [] })),
+    api("/api/course-linkable-activities")
+      .then((payload) => ({ payload, error: null }))
+      .catch((error) => ({ payload: null, error })),
   ]);
   if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) return;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
-  state.activities = activities.activities || [];
+  if (activities.error) {
+    state.activityCatalogError = activities.error.message || "errore sconosciuto";
+  } else {
+    state.activities = activities.payload?.activities || [];
+    state.activityCatalogError = "";
+  }
   state.design = courseContext.design;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
@@ -448,7 +456,9 @@ async function loadAll() {
   renderHeadings();
   renderCourse();
   markDesignClean();
-  if (state.activeSavedDesign || state.isNewDesign) {
+  if (state.activityCatalogError) {
+    setStatus(`Catalogo activity non disponibile: ${state.activityCatalogError}. Usa Ricarica per riprovare.`);
+  } else if (state.activeSavedDesign || state.isNewDesign) {
     setStatus("Pronto.");
   } else {
     renderCourseActions();
@@ -1562,14 +1572,27 @@ function renderUdaActivities(year, uda) {
 }
 
 function openActivityLinkDialog(year, uda, link = null) {
-  if (!state.activities.length) {
+  if (!link && state.activityCatalogError) {
+    setStatus(`Catalogo activity non disponibile: ${state.activityCatalogError}. Usa Ricarica per riprovare.`);
+    return;
+  }
+  if (!link && !state.activities.length) {
     setStatus("Nessuna activity disponibile: creane una dalla pagina Consegne.");
     return;
   }
   state.activityLinkEditor = { year, uda, link };
   els.activityLinkDialogTitle.textContent = link ? "Modifica collegamento activity" : "Collega activity";
   els.activityLinkSelect.innerHTML = "";
-  for (const activity of state.activities) {
+  const choices = [...state.activities];
+  if (link && !choices.some((activity) => activity.path === link.activity_path)) {
+    choices.push({
+      id: link.activity_id,
+      path: link.activity_path,
+      title: link.title,
+      kind: link.kind,
+    });
+  }
+  for (const activity of choices) {
     const option = document.createElement("option");
     option.value = activity.path;
     option.textContent = `${activity.title || activity.id} (${activity.id})`;
@@ -1621,7 +1644,16 @@ function saveActivityLink(event) {
     return;
   }
   clearActivityLinkError();
-  const activity = state.activities.find((candidate) => candidate.path === els.activityLinkSelect.value);
+  const activity = state.activities.find((candidate) => candidate.path === els.activityLinkSelect.value) || (
+    editor.link?.activity_path === els.activityLinkSelect.value
+      ? {
+          id: editor.link.activity_id,
+          path: editor.link.activity_path,
+          title: editor.link.title,
+          kind: editor.link.kind,
+        }
+      : null
+  );
   if (!activity) {
     showActivityLinkError("Seleziona un'activity disponibile.", els.activityLinkSelect);
     return;

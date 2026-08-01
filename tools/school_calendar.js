@@ -74,6 +74,7 @@ const state = {
   statusTimer: null,
   courseDesignRequestId: 0,
   calendarRequestId: 0,
+  courseDesignLoading: false,
 };
 
 function defaultCalendar() {
@@ -285,22 +286,34 @@ async function loadCalendarList() {
 async function loadCourseDesign() {
   const name = state.calendar.course_design_name || "";
   const requestId = ++state.courseDesignRequestId;
+  state.courseDesignLoading = true;
+  els.saveBtn.disabled = true;
   try {
     const query = name ? `?design=${encodeURIComponent(name)}` : "";
     const payload = await api(`/api/course-calendar-context${query}`);
-    if (requestId !== state.courseDesignRequestId || (state.calendar.course_design_name || "") !== name) {
+    if (requestId !== state.courseDesignRequestId) return null;
+    if ((state.calendar.course_design_name || "") !== name) {
+      state.courseDesignLoading = false;
+      els.saveBtn.disabled = false;
       return null;
     }
     state.courseDesign = payload.design;
     state.activityEvents = payload.activity_events || [];
+    state.courseDesignLoading = false;
+    els.saveBtn.disabled = false;
     if (name) setStatus(`Percorso didattico associato: ${name}.`);
     return true;
   } catch (error) {
-    if (requestId !== state.courseDesignRequestId || (state.calendar.course_design_name || "") !== name) {
+    if (requestId !== state.courseDesignRequestId) return null;
+    if ((state.calendar.course_design_name || "") !== name) {
+      state.courseDesignLoading = false;
+      els.saveBtn.disabled = false;
       return null;
     }
     state.courseDesign = null;
     state.activityEvents = [];
+    state.courseDesignLoading = false;
+    els.saveBtn.disabled = false;
     setStatus(`Percorso didattico non caricato: ${error.message}`, "error");
     return false;
   }
@@ -368,6 +381,10 @@ async function loadCalendarByName(name) {
 }
 
 async function saveCalendar() {
+  if (state.courseDesignLoading) {
+    setStatus("Attendi il caricamento del percorso prima di salvare il calendario.", "error");
+    return;
+  }
   state.calendarRequestId += 1;
   syncFormToCalendar();
   const name = els.fileName.value.trim() || fileNameFromYear(state.calendar.school_year || "");

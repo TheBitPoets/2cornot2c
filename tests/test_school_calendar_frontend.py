@@ -133,7 +133,9 @@ def test_course_design_loader_ignores_stale_out_of_order_response() -> None:
       courseDesign: null,
       activityEvents: [],
       courseDesignRequestId: 0,
+      courseDesignLoading: false,
     }};
+    const els = {{ saveBtn: {{ disabled: false }} }};
     const pending = new Map();
     function api(path) {{
       return new Promise((resolve) => pending.set(path, resolve));
@@ -154,6 +156,26 @@ def test_course_design_loader_ignores_stale_out_of_order_response() -> None:
       assert.equal(await first, null);
       assert.equal(state.courseDesign.id, "b");
       assert.equal(state.activityEvents[0].activity_id, "b");
+    }})().catch((error) => {{ console.error(error); process.exit(1); }});
+    """
+    subprocess.run(["node", "-e", script], check=True)
+
+
+def test_calendar_save_is_blocked_while_course_context_is_loading() -> None:
+    source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
+    start = source.index("async function saveCalendar")
+    end = source.index("\nfunction renderAll", start)
+    function_source = source[start:end]
+    script = f"""
+    const assert = require("node:assert/strict");
+    const state = {{ courseDesignLoading: true }};
+    let status = "";
+    function setStatus(message) {{ status = message; }}
+    function syncFormToCalendar() {{ throw new Error("must not sync while loading"); }}
+    {function_source}
+    (async () => {{
+      await saveCalendar();
+      assert.match(status, /Attendi il caricamento/);
     }})().catch((error) => {{ console.error(error); process.exit(1); }});
     """
     subprocess.run(["node", "-e", script], check=True)
