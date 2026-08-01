@@ -239,10 +239,15 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                             names = {entry.name for entry in source_path.iterdir()}
                         except OSError as error:
                             raise ValueError(f"Asset non trovato: {source.as_posix()}.") from error
-                        matches = [name for name in names if name.casefold() == part.casefold()]
-                        if len(matches) > 1 or part not in names:
+                        part_key = create_submission_scaffold.portable_path_key(Path(part))
+                        matches = [
+                            name
+                            for name in names
+                            if create_submission_scaffold.portable_path_key(Path(name)) == part_key
+                        ]
+                        if len(matches) != 1:
                             raise ValueError(f"Asset non portabile o non trovato: {source.as_posix()}.")
-                        source_path /= part
+                        source_path /= matches[0]
                         if source_path.is_symlink():
                             raise ValueError(f"L'asset non puo attraversare symlink: {source.as_posix()}.")
                     try:

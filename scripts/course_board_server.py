@@ -1861,10 +1861,15 @@ def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> N
                 names = {entry.name for entry in source_file.iterdir()}
             except OSError as error:
                 raise ValueError(f"Asset preservato non trovato: {source.as_posix()}.") from error
-            matches = [name for name in names if name.casefold() == part.casefold()]
-            if len(matches) > 1 or part not in names:
+            part_key = create_submission_scaffold.portable_path_key(Path(part))
+            matches = [
+                name
+                for name in names
+                if create_submission_scaffold.portable_path_key(Path(name)) == part_key
+            ]
+            if len(matches) != 1:
                 raise ValueError(f"Asset preservato non portabile o mancante: {source.as_posix()}.")
-            source_file /= part
+            source_file /= matches[0]
             if source_file.is_symlink():
                 raise ValueError(f"Asset preservato non puo attraversare symlink: {source.as_posix()}.")
         try:
