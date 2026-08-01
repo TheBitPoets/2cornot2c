@@ -1401,7 +1401,13 @@ function reconcileSourceItems(design, previewHeadings, nextSources) {
   const visit = (items) => {
     for (const item of items || []) {
       const oldHeading = oldById.get(item.id);
-      const sourceId = item.source_id || oldHeading?.source_id || "";
+      const legacyMatches = (state.sources || []).filter((source) =>
+        source.legacy
+        && (source.files || []).some((file) => `${source.path ? `${source.path}/` : ""}${file}` === item.source),
+      );
+      const sourceId = item.source_id
+        || oldHeading?.source_id
+        || (legacyMatches.length === 1 ? legacyMatches[0].id : "");
       if (oldHeading || managedSourceIds.has(sourceId)) {
         const nextSource = nextSourceById.get(sourceId);
         if (!nextSource) {
@@ -2403,11 +2409,12 @@ async function openParagraphPreview(paragraph) {
           body: JSON.stringify({
             id: paragraph.id,
             source_commit: paragraph.source_commit || "",
+            content_sha256: paragraph.content_sha256 || "",
             design: state.design,
           }),
         })
       : await api(
-          `/api/heading-content?id=${encodeURIComponent(paragraph.id)}&source_commit=${encodeURIComponent(paragraph.source_commit || "")}${
+          `/api/heading-content?id=${encodeURIComponent(paragraph.id)}&source_commit=${encodeURIComponent(paragraph.source_commit || "")}&content_sha256=${encodeURIComponent(paragraph.content_sha256 || "")}${
             state.activeSavedDesign ? `&design=${encodeURIComponent(state.activeSavedDesign)}` : ""
           }`,
         );

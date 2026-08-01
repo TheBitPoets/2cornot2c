@@ -355,6 +355,33 @@ def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> No
     )
 
 
+def test_source_editor_detects_orphaned_legacy_item_after_heading_rename() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{
+          id: "legacy-abc", legacy: true, path: "", files: ["README.md"],
+        }];
+        state.headings = [];
+        const design = { years: [{ udas: [{ items: [{
+          id: "README.md#old", source: "README.md", href: "../README.md#old",
+        }] }] }] };
+        const preview = [{
+          id: "legacy-abc:README.md#new", source_id: "legacy-abc", source: "README.md",
+          content_sha256: "a".repeat(64),
+        }];
+
+        assert.throws(
+          () => reconcileSourceItems(
+            design,
+            preview,
+            [{ id: "legacy-abc", indexing_status: "ready" }],
+          ),
+          /non è presente/,
+        );
+        """
+    )
+
+
 def test_source_editor_updates_assigned_remote_commit_from_preview() -> None:
     run_course_board_js(
         """

@@ -3164,6 +3164,7 @@ def heading_content_snapshot(
     design: dict,
     heading_id: str,
     expected_source_commit: str = "",
+    expected_content_sha256: str = "",
 ) -> tuple[dict, str] | None:
     """Return heading content only when immutable remote provenance still matches."""
 
@@ -3184,6 +3185,13 @@ def heading_content_snapshot(
                 ) and heading.get("source_commit") != expected_source_commit:
                     raise CourseSourceRevisionConflictError(
                         "La fonte remota è cambiata: riallinea il paragrafo prima della preview."
+                    )
+                if (
+                    expected_content_sha256
+                    and heading.get("content_sha256") != expected_content_sha256
+                ):
+                    raise CourseSourceRevisionConflictError(
+                        "Il contenuto del paragrafo è cambiato: riallinealo prima della preview."
                     )
                 return heading, section_text_from_source(
                     source_text,
@@ -3258,6 +3266,7 @@ def section_text(
     source_id: str = "",
     heading_id: str = "",
     source_commit: str = "",
+    content_sha256: str = "",
 ) -> str:
     """Extract local Markdown text for one heading section."""
 
@@ -3312,6 +3321,10 @@ def section_text(
             matching_heading is None
             or matching_heading["line"] != start_line
             or matching_heading["level"] != start_level
+            or (
+                content_sha256
+                and matching_heading.get("content_sha256") != content_sha256
+            )
         ):
             return ""
     return section_text_from_source(source_text, start_line, start_level)
@@ -3500,6 +3513,7 @@ def topic_summary(
             str(item.get("source_id", "")),
             str(item.get("id", "")),
             str(item.get("source_commit", "")),
+            str(item.get("content_sha256", "")),
         )
     return summary
 
@@ -5696,10 +5710,14 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             query = parse_qs(parsed.query)
             heading_id = query.get("id", [""])[0]
             expected_source_commit = query.get("source_commit", [""])[0]
+            expected_content_sha256 = query.get("content_sha256", [""])[0]
             try:
                 design = source_request_design(parsed.query)
                 snapshot = heading_content_snapshot(
-                    design, heading_id, expected_source_commit
+                    design,
+                    heading_id,
+                    expected_source_commit,
+                    expected_content_sha256,
                 )
             except course_github_markdown.RemoteMarkdownError as error:
                 self.write_error_json(502, str(error))
@@ -5870,6 +5888,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     design,
                     heading_id,
                     str(payload.get("source_commit", "")),
+                    str(payload.get("content_sha256", "")),
                 )
             except course_github_markdown.RemoteMarkdownError as error:
                 self.write_error_json(502, str(error))
