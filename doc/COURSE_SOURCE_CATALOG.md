@@ -86,9 +86,15 @@ Gli adapter usano esclusivamente `https://api.github.com` e `https://gitlab.com/
 
 I repository pubblici non richiedono credenziali. Per repository privati il processo riceve un installation token GitHub App a vita breve tramite `THEBITLAB_GITHUB_TOKEN_FILE`, oppure un project/group access token GitLab tramite `THEBITLAB_GITLAB_TOKEN_FILE`; entrambi indicano un file esterno al repository. Il path deve essere assoluto e il file regolare e non collegato. Su POSIX deve appartenere all'utente corrente con permessi owner-only; su Windows deve avere una DACL protetta che conceda accesso completo soltanto all'utente corrente e a `SYSTEM`. Il token non compare nel design, negli URL, nei log, nella cache o nelle risposte HTTP. Il rinnovo o la rotazione del token è responsabilità del runtime provider.
 
+## Gestione dalla Course Board
+
+Il comando **Gestisci fonti** apre un editor provider-independent. Il docente può aggiungere, modificare o rimuovere fonti locali, GitHub e GitLab, indicare repository/ref e file Markdown, e scegliere `ready`, `pending` o `disabled`. **Sincronizza anteprima** invia soltanto la bozza in memoria a `POST /api/course-sources/preview`: il server applica gli stessi limiti del catalogo, risolve i commit e restituisce file indicizzati e heading senza scrivere il progetto. **Applica alla board** è disponibile soltanto per la stessa anteprima e lo stesso snapshot della board; il salvataggio del progetto resta un'azione separata protetta da CAS.
+
+La prima applicazione dell'editor migra intenzionalmente il vecchio `source_files` nella forma canonica `sources`. Credenziali e token non compaiono mai nei campi GUI.
+
 ## Limiti attuali
 
 - Nessun clone o pull Git: gli adapter usano le API repository dei provider.
 - La cache è locale al processo; installazioni replicate richiederanno uno snapshot store condiviso.
 - Il Markdown generato conserva repository, ref, commit risolto, stato e timestamp dichiarato della fonte.
-- Modifica GUI del catalogo e conflitti semantici sono incrementi successivi di #290.
+- I conflitti semantici tra contenuti equivalenti di fonti differenti richiedono ancora una decisione del docente.

@@ -579,6 +579,34 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         thread.join(timeout=5)
 
 
+def test_source_preview_resolves_in_memory_design_without_persisting(tmp_path, monkeypatch) -> None:
+    lesson = tmp_path / "lesson.md"
+    lesson.write_text("# Preview\n\n## Topic\n\nText.\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {
+        "sources": [
+            {
+                "id": "preview-source",
+                "label": "Preview source",
+                "type": "markdown",
+                "provider": "local",
+                "files": ["lesson.md"],
+                "indexing_status": "ready",
+            }
+        ],
+        "years": [],
+    }
+
+    payload = course_board_server.preview_course_sources(design)
+
+    assert payload["sources"][0]["indexed_files"] == ["lesson.md"]
+    assert [heading["title"] for heading in payload["headings"]] == [
+        "Preview",
+        "Topic",
+    ]
+    assert not (tmp_path / "doc" / "course_design.json").exists()
+
+
 def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, monkeypatch) -> None:
     (tmp_path / "lesson.md").write_text(
         "## Before\n\nOne.\n\n## Target\n\nTwo.\n\n## After\n\nThree.\n",

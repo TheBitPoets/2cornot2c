@@ -19,6 +19,7 @@
   courseAiProposal: null,
   activeFrameTextarea: null,
   activityLinkEditor: null,
+  sourceEditor: null,
 };
 
 const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
@@ -32,6 +33,17 @@ const els = {
   levelFilter: document.querySelector("#levelFilter"),
   searchInput: document.querySelector("#searchInput"),
   sourceCatalogSummary: document.querySelector("#sourceCatalogSummary"),
+  manageSourcesBtn: document.querySelector("#manageSourcesBtn"),
+  sourceDialog: document.querySelector("#sourceDialog"),
+  sourceForm: document.querySelector("#sourceForm"),
+  sourceCloseBtn: document.querySelector("#sourceCloseBtn"),
+  sourceEditorList: document.querySelector("#sourceEditorList"),
+  sourceDialogError: document.querySelector("#sourceDialogError"),
+  sourcePreviewStatus: document.querySelector("#sourcePreviewStatus"),
+  sourceAddBtn: document.querySelector("#sourceAddBtn"),
+  sourcePreviewBtn: document.querySelector("#sourcePreviewBtn"),
+  sourceApplyBtn: document.querySelector("#sourceApplyBtn"),
+  sourceCancelBtn: document.querySelector("#sourceCancelBtn"),
   courseTree: document.querySelector("#courseTree"),
   projectTitle: document.querySelector("#projectTitle"),
   status: document.querySelector("#status"),
@@ -1133,6 +1145,264 @@ function populateFilters() {
     els.sourceFilter.append(option);
   }
   els.sourceFilter.value = selected;
+}
+
+function editableCourseSources() {
+  return (state.sources || []).map((source) => ({
+    id: source.id || "",
+    label: source.label || source.id || "",
+    type: "markdown",
+    provider: source.provider || "local",
+    path: source.path || "",
+    repository: source.repository || "",
+    ref: source.ref || "",
+    files: [...(source.files || [])],
+    updated_at: source.updated_at || null,
+    indexing_status: source.indexing_status || "ready",
+  }));
+}
+
+function nextSourceId(sources) {
+  const used = new Set(sources.map((source) => source.id));
+  let index = sources.length + 1;
+  while (used.has(`source-${index}`)) index += 1;
+  return `source-${index}`;
+}
+
+function sourceEditorField(label, control) {
+  const wrapper = document.createElement("label");
+  const title = document.createElement("span");
+  title.textContent = label;
+  wrapper.append(title, control);
+  return wrapper;
+}
+
+function renderSourceEditor() {
+  els.sourceEditorList.innerHTML = "";
+  const sources = state.sourceEditor?.draft || [];
+  sources.forEach((source, index) => {
+    const card = document.createElement("article");
+    card.className = "sourceEditorCard";
+    card.dataset.index = String(index);
+    card.dataset.updatedAt = source.updated_at || "";
+
+    const head = document.createElement("header");
+    const title = document.createElement("strong");
+    title.textContent = source.label || source.id || `Fonte ${index + 1}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "danger";
+    remove.textContent = "Rimuovi";
+    remove.addEventListener("click", () => {
+      const current = collectSourceEditorSources();
+      current.splice(index, 1);
+      state.sourceEditor.draft = current;
+      invalidateSourcePreview();
+      renderSourceEditor();
+    });
+    head.append(title, remove);
+
+    const grid = document.createElement("div");
+    grid.className = "sourceEditorGrid";
+    const textInput = (field, value) => {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = value || "";
+      input.dataset.field = field;
+      return input;
+    };
+    const provider = document.createElement("select");
+    provider.dataset.field = "provider";
+    for (const value of ["local", "github", "gitlab"]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      provider.append(option);
+    }
+    provider.value = source.provider;
+    provider.addEventListener("change", () => {
+      state.sourceEditor.draft = collectSourceEditorSources();
+      invalidateSourcePreview();
+      renderSourceEditor();
+    });
+    const status = document.createElement("select");
+    status.dataset.field = "indexing_status";
+    for (const value of ["ready", "pending", "error", "disabled"]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      status.append(option);
+    }
+    status.value = source.indexing_status;
+    const files = document.createElement("textarea");
+    files.rows = 3;
+    files.value = (source.files || []).join("\n");
+    files.dataset.field = "files";
+
+    grid.append(
+      sourceEditorField("ID", textInput("id", source.id)),
+      sourceEditorField("Etichetta", textInput("label", source.label)),
+      sourceEditorField("Provider", provider),
+      sourceEditorField("Stato", status),
+    );
+    if (source.provider === "local") {
+      grid.append(sourceEditorField("Directory locale", textInput("path", source.path)));
+    } else {
+      grid.append(
+        sourceEditorField("Repository", textInput("repository", source.repository)),
+        sourceEditorField("Ref", textInput("ref", source.ref)),
+      );
+    }
+    grid.append(sourceEditorField("File Markdown (uno per riga)", files));
+    const syncMeta = document.createElement("p");
+    syncMeta.className = "sourceSyncMeta";
+    syncMeta.textContent = "Non verificata.";
+    card.append(head, grid, syncMeta);
+    els.sourceEditorList.append(card);
+  });
+  if (!sources.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "Nessuna fonte configurata.";
+    els.sourceEditorList.append(empty);
+  }
+}
+
+function collectSourceEditorSources() {
+  return [...els.sourceEditorList.querySelectorAll(".sourceEditorCard")].map((card) => {
+    const value = (field) => card.querySelector(`[data-field="${field}"]`)?.value.trim() || "";
+    const provider = value("provider") || "local";
+    const source = {
+      id: value("id"),
+      label: value("label"),
+      type: "markdown",
+      provider,
+      files: value("files").split(/[\n,]/).map((item) => item.trim()).filter(Boolean),
+      updated_at: card.dataset.updatedAt || null,
+      indexing_status: value("indexing_status") || "ready",
+    };
+    if (provider === "local") {
+      const path = value("path");
+      if (path) source.path = path;
+    } else {
+      source.repository = value("repository");
+      source.ref = value("ref");
+    }
+    return source;
+  });
+}
+
+function sourcePreviewSignature(sources) {
+  return JSON.stringify(sources);
+}
+
+function invalidateSourcePreview() {
+  if (!state.sourceEditor) return;
+  state.sourceEditor.requestId += 1;
+  state.sourceEditor.preview = null;
+  els.sourceApplyBtn.disabled = true;
+  els.sourcePreviewStatus.textContent = "Modifiche da sincronizzare.";
+}
+
+function showSourceDialogError(message = "") {
+  els.sourceDialogError.textContent = message;
+  els.sourceDialogError.hidden = !message;
+}
+
+function openSourceDialog() {
+  state.sourceEditor = {
+    draft: editableCourseSources(),
+    preview: null,
+    requestId: 0,
+    boardContext: captureBoardContext(),
+  };
+  showSourceDialogError();
+  els.sourceApplyBtn.disabled = true;
+  els.sourcePreviewStatus.textContent = "Sincronizza per verificare file e commit prima di applicare.";
+  renderSourceEditor();
+  els.sourceDialog.showModal();
+}
+
+function closeSourceDialog() {
+  if (state.sourceEditor) state.sourceEditor.requestId += 1;
+  state.sourceEditor = null;
+  if (els.sourceDialog.open) els.sourceDialog.close();
+}
+
+async function previewSourceEditor() {
+  const editor = state.sourceEditor;
+  if (!editor) return;
+  const sources = collectSourceEditorSources();
+  editor.draft = sources;
+  editor.preview = null;
+  showSourceDialogError();
+  els.sourceApplyBtn.disabled = true;
+  els.sourcePreviewBtn.disabled = true;
+  els.sourcePreviewStatus.textContent = "Sincronizzazione in corso...";
+  const requestId = ++editor.requestId;
+  const candidate = JSON.parse(JSON.stringify(state.design));
+  candidate.sources = sources;
+  delete candidate.source_files;
+  try {
+    const payload = await api("/api/course-sources/preview", {
+      method: "POST",
+      body: JSON.stringify({ design: candidate }),
+    });
+    if (state.sourceEditor !== editor || requestId !== editor.requestId) return;
+    if (!isBoardContextUnchanged(editor.boardContext)) {
+      throw new Error("La board è cambiata durante la sincronizzazione: riapri il dialog.");
+    }
+    editor.preview = {
+      signature: sourcePreviewSignature(sources),
+      sources: payload.sources || [],
+      headings: payload.headings || [],
+    };
+    for (const card of els.sourceEditorList.querySelectorAll(".sourceEditorCard")) {
+      const source = editor.preview.sources.find((item) => item.id === card.querySelector('[data-field="id"]').value.trim());
+      const commit = source?.resolved_ref ? ` · commit ${source.resolved_ref.slice(0, 12)}` : "";
+      card.querySelector(".sourceSyncMeta").textContent = source
+        ? `${(source.indexed_files || []).length} file indicizzati${commit}`
+        : "Fonte non restituita dal catalogo.";
+    }
+    els.sourcePreviewStatus.textContent = `${editor.preview.sources.length} fonti verificate · ${editor.preview.headings.length} paragrafi.`;
+    els.sourceApplyBtn.disabled = false;
+  } catch (error) {
+    if (state.sourceEditor === editor && requestId === editor.requestId) {
+      showSourceDialogError(error.message);
+      els.sourcePreviewStatus.textContent = "Sincronizzazione non riuscita.";
+    }
+  } finally {
+    if (state.sourceEditor === editor && requestId === editor.requestId) {
+      els.sourcePreviewBtn.disabled = false;
+    }
+  }
+}
+
+function applySourceEditor(event) {
+  event.preventDefault();
+  const editor = state.sourceEditor;
+  if (!editor?.preview) return;
+  const sources = collectSourceEditorSources();
+  if (sourcePreviewSignature(sources) !== editor.preview.signature) {
+    invalidateSourcePreview();
+    showSourceDialogError("Le fonti sono cambiate: sincronizza di nuovo prima di applicare.");
+    return;
+  }
+  if (!isBoardContextUnchanged(editor.boardContext)) {
+    showSourceDialogError("La board è cambiata: chiudi e riapri il dialog.");
+    return;
+  }
+  state.design.sources = JSON.parse(JSON.stringify(sources));
+  delete state.design.source_files;
+  state.sources = editor.preview.sources;
+  state.headings = editor.preview.headings;
+  closeSourceDialog();
+  populateFilters();
+  renderSourceCatalogSummary();
+  renderHeadings();
+  renderCourse();
+  renderCourseActions();
+  setStatus("Catalogo fonti applicato alla board. Salva il progetto per renderlo persistente.");
 }
 
 function renderSourceCatalogSummary() {
@@ -3193,6 +3463,32 @@ els.saveArchiveBtn.addEventListener("click", () => runAsyncAction(saveArchiveDes
 els.saveArchiveAsBtn.addEventListener("click", () => runAsyncAction(saveArchiveDesignAs, "Salvataggio copia"));
 els.deleteArchiveBtn.addEventListener("click", () => runAsyncAction(deleteArchiveDesign, "Cancellazione progetto"));
 els.addYearBtn.addEventListener("click", openYearDialog);
+els.manageSourcesBtn.addEventListener("click", openSourceDialog);
+els.sourceAddBtn.addEventListener("click", () => {
+  const sources = collectSourceEditorSources();
+  const id = nextSourceId(sources);
+  sources.push({
+    id,
+    label: `Fonte ${sources.length + 1}`,
+    type: "markdown",
+    provider: "local",
+    path: "",
+    repository: "",
+    ref: "",
+    files: [],
+    updated_at: null,
+    indexing_status: "ready",
+  });
+  state.sourceEditor.draft = sources;
+  invalidateSourcePreview();
+  renderSourceEditor();
+});
+els.sourcePreviewBtn.addEventListener("click", () => runAsyncAction(previewSourceEditor, "Sincronizzazione fonti"));
+els.sourceForm.addEventListener("submit", applySourceEditor);
+els.sourceCloseBtn.addEventListener("click", closeSourceDialog);
+els.sourceCancelBtn.addEventListener("click", closeSourceDialog);
+els.sourceDialog.addEventListener("close", closeSourceDialog);
+els.sourceEditorList.addEventListener("input", invalidateSourcePreview);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCreateBtn.addEventListener("click", createYearFromDialog);

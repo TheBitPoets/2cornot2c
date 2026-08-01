@@ -294,6 +294,38 @@ def test_catalog_paragraph_preview_uses_keyboard_accessible_button() -> None:
     assert ".headingPreviewTrigger" in css
 
 
+def test_source_editor_projects_catalog_without_runtime_fields() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{
+          id: "remote", label: "Remote", provider: "gitlab", path: "",
+          repository: "school/course", ref: "main", files: ["README.md"],
+          updated_at: null, indexing_status: "ready", resolved_ref: "a".repeat(40),
+          indexed_files: ["README.md"], legacy: false,
+        }];
+
+        const editable = editableCourseSources();
+
+        assert.deepEqual(JSON.parse(JSON.stringify(editable)), [{
+          id: "remote", label: "Remote", type: "markdown", provider: "gitlab",
+          path: "", repository: "school/course", ref: "main", files: ["README.md"],
+          updated_at: null, indexing_status: "ready",
+        }]);
+        assert.equal(nextSourceId(editable), "source-2");
+        """
+    )
+
+
+def test_source_editor_requires_preview_and_context_before_apply() -> None:
+    source = Path("tools/course_board.js").read_text(encoding="utf-8")
+
+    assert 'api("/api/course-sources/preview"' in source
+    assert "delete candidate.source_files" in source
+    assert "delete state.design.source_files" in source
+    assert "sourcePreviewSignature(sources) !== editor.preview.signature" in source
+    assert "isBoardContextUnchanged(editor.boardContext)" in source
+
+
 def test_item_from_heading_preserves_source_provenance() -> None:
     run_course_board_js(
         """

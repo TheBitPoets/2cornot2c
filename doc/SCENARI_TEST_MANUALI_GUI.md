@@ -811,6 +811,7 @@ della pagina Percorso. Nessun passaggio deve aprire i dialog nativi del browser 
    Riaprilo, conferma, lascia vuoto il nome e verifica l'errore inline; inserisci infine
    `test-manuale-percorso.json` e crea il progetto.
 4. Aggiungi un percorso con settimane e ore valide. Prova poi a crearne uno con `0` settimane e verifica il bordo rosso e il messaggio di errore.
+4a. Usa `Gestisci fonti`, verifica la proiezione delle fonti correnti e aggiungi una fonte locale `README.md`. Prova ID duplicato e file non Markdown, controllando che `Sincronizza anteprima` mostri l'errore senza modificare la board. Correggi, sincronizza, verifica il conteggio dei file/paragrafi e applica. Se un token runtime e configurato, ripeti facoltativamente con una fonte GitHub o GitLab privata e controlla il commit risolto abbreviato. Verifica che nessun campo chieda o mostri credenziali.
 5. Nel catalogo a sinistra usa il pulsante `+` su un paragrafo, poi premilo di nuovo sullo stesso paragrafo.
 5a. Clicca il titolo di un paragrafo e poi il comando `Testo`: verifica che si apra il modal con il contenuto completo.
 5b. Dentro una UDA ripeti dal titolo e dal comando `Testo`, poi usa `Apri sorgente su GitHub` e verifica l'ancora del paragrafo.
@@ -831,6 +832,7 @@ Risultato atteso:
 
 - I dati non validi non entrano nel progetto.
 - Lo stesso paragrafo e la stessa activity non vengono duplicati nella medesima UDA.
+- L'editor fonti applica soltanto anteprime sincronizzate sullo stesso snapshot della board e non espone credenziali.
 - Il collegamento activity conserva ruolo e date; la scadenza non puo precedere la pianificazione.
 - Il titolo e il comando `Testo` aprono il modal con contenuto, fonte, riga e link GitHub coerenti.
 - Ricarica e navigazione non scartano modifiche senza conferma.

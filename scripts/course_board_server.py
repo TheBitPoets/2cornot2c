@@ -980,6 +980,25 @@ def uda_actual_revisions(design: dict) -> dict[str, str]:
     return revisions
 
 
+def preview_course_sources(design: object) -> dict:
+    """Resolve an in-memory source catalog without persisting the design."""
+
+    if not isinstance(design, dict):
+        raise ValueError("design deve essere un oggetto.")
+    validate_course_source_catalog(design)
+    source_files = course_markdown_source_files(design)
+    catalog = course_source_catalog.course_source_catalog_payload(
+        design,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+        local_files=source_files,
+    )
+    return {
+        "sources": catalog["sources"],
+        "headings": extract_headings(design, source_files),
+    }
+
+
 def course_calendar_context(raw_query: str) -> dict:
     """Return one design and its derived activity events from one snapshot."""
 
@@ -5785,6 +5804,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         payload = self.read_teacher_json()
         if payload is None:
+            return
+        if parsed.path == "/api/course-sources/preview":
+            try:
+                self.write_json(preview_course_sources(payload.get("design")))
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+            except ValueError as error:
+                self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/heading-content":
             heading_id = payload.get("id", "")
