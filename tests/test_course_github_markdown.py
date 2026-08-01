@@ -6,6 +6,7 @@ import time
 
 import pytest
 
+from scripts import course_github_markdown
 from scripts.course_github_markdown import (
     GitHubApiTransport,
     GitHubMarkdownAdapter,
@@ -309,6 +310,37 @@ def test_transport_returns_at_wall_deadline_even_if_read_does_not_return() -> No
     with pytest.raises(RemoteMarkdownError, match="Timeout"):
         transport.get_json("/rate_limit", timeout_seconds=0.05)
     assert time.monotonic() - started < 0.5
+
+
+def test_stalled_network_workers_use_bounded_slots(monkeypatch) -> None:
+    import threading
+
+    release = threading.Event()
+    calls = []
+
+    class Connection:
+        sock = None
+
+        def __init__(self, _host, *, timeout):
+            calls.append(timeout)
+
+        def request(self, *_args, **_kwargs):
+            release.wait(1.0)
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(
+        course_github_markdown, "GITHUB_NETWORK_SLOTS", threading.BoundedSemaphore(1)
+    )
+    transport = GitHubApiTransport(None, connection_factory=Connection)
+
+    with pytest.raises(RemoteMarkdownError, match="Timeout"):
+        transport.get_json("/rate_limit", timeout_seconds=0.05)
+    with pytest.raises(RemoteMarkdownError, match="satura"):
+        transport.get_json("/rate_limit", timeout_seconds=0.05)
+    assert len(calls) == 1
+    release.set()
 
 
 def test_uses_one_absolute_deadline_across_all_requests() -> None:

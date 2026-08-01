@@ -23,6 +23,7 @@ MAX_GITHUB_TOKEN_BYTES = 4096
 MAX_REMOTE_FILES = 64
 DEFAULT_MEMORY_CACHE_BYTES = 64 * 1024 * 1024
 DEFAULT_SYNC_TIMEOUT_SECONDS = 30.0
+GITHUB_NETWORK_SLOTS = threading.BoundedSemaphore(8)
 GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
 REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
@@ -91,6 +92,14 @@ class GitHubApiTransport:
     def get_json(self, api_path: str, *, timeout_seconds: float) -> Any:
         """Run one request in an abortable daemon so callers return at the deadline."""
 
+        started = time.monotonic()
+        slot_guard = GITHUB_NETWORK_SLOTS
+        if not slot_guard.acquire(timeout=timeout_seconds):
+            raise RemoteMarkdownError("Sincronizzazione GitHub satura.")
+        remaining_timeout = timeout_seconds - (time.monotonic() - started)
+        if remaining_timeout <= 0:
+            slot_guard.release()
+            raise RemoteMarkdownError("Timeout sincronizzazione GitHub esaurito.")
         resources: dict[str, Any] = {"connection": None, "response": None}
         result: dict[str, Any] = {}
         done = threading.Event()
@@ -99,16 +108,21 @@ class GitHubApiTransport:
         def worker() -> None:
             try:
                 result["value"] = self._get_json_blocking(
-                    api_path, timeout_seconds, resources, lock
+                    api_path, remaining_timeout, resources, lock
                 )
             except BaseException as exc:  # noqa: BLE001
                 result["error"] = exc
             finally:
                 done.set()
+                slot_guard.release()
 
         thread = threading.Thread(target=worker, daemon=True)
-        thread.start()
-        if not done.wait(timeout_seconds):
+        try:
+            thread.start()
+        except RuntimeError:
+            slot_guard.release()
+            raise
+        if not done.wait(remaining_timeout):
             with lock:
                 response = resources.get("response")
                 connection = resources.get("connection")

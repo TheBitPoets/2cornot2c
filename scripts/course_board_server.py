@@ -100,6 +100,7 @@ AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
 AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
 GITHUB_MARKDOWN_TOKEN_FILE = os.environ.get("THEBITLAB_GITHUB_TOKEN_FILE", "").strip()
 GITHUB_MARKDOWN_BLOB_CACHE = course_github_markdown.InMemoryGitHubBlobCache()
+GITHUB_TOKEN_ACQUISITION_SLOTS = threading.BoundedSemaphore(2)
 LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
@@ -601,7 +602,7 @@ def verify_github_token_file_permissions(path: Path, metadata: os.stat_result) -
         ) from exc
 
 
-def read_github_markdown_token() -> str | None:
+def _read_github_markdown_token_blocking() -> str | None:
     """Read an optional short-lived GitHub token from an external regular file."""
 
     if not GITHUB_MARKDOWN_TOKEN_FILE:
@@ -670,11 +671,60 @@ def read_github_markdown_token() -> str | None:
         ) from exc
 
 
+def read_github_markdown_token(deadline: float | None = None) -> str | None:
+    """Bound secret-file and ACL operations within the source-operation deadline."""
+
+    operation_deadline = time.monotonic() + 30.0 if deadline is None else deadline
+    remaining = operation_deadline - time.monotonic()
+    if remaining <= 0:
+        raise course_github_markdown.RemoteMarkdownError(
+            "Timeout lettura token GitHub esaurito."
+        )
+    slot_guard = GITHUB_TOKEN_ACQUISITION_SLOTS
+    if not slot_guard.acquire(timeout=remaining):
+        raise course_github_markdown.RemoteMarkdownError(
+            "Lettura token GitHub satura."
+        )
+    result: dict[str, Any] = {}
+    done = threading.Event()
+
+    def worker() -> None:
+        try:
+            result["value"] = _read_github_markdown_token_blocking()
+        except BaseException as exc:  # noqa: BLE001
+            result["error"] = exc
+        finally:
+            done.set()
+            slot_guard.release()
+
+    remaining = operation_deadline - time.monotonic()
+    if remaining <= 0:
+        slot_guard.release()
+        raise course_github_markdown.RemoteMarkdownError(
+            "Timeout lettura token GitHub esaurito."
+        )
+    thread = threading.Thread(target=worker, daemon=True)
+    try:
+        thread.start()
+    except RuntimeError:
+        slot_guard.release()
+        raise
+    if not done.wait(remaining):
+        raise course_github_markdown.RemoteMarkdownError(
+            "Timeout lettura token GitHub esaurito."
+        )
+    error_value = result.get("error")
+    if error_value is not None:
+        raise error_value
+    return result.get("value")
+
+
 def course_markdown_source_files(
     design: dict,
 ) -> tuple[course_source_catalog.CourseMarkdownSourceFile, ...]:
     """Resolve local files and commit-pinned GitHub snapshots for one operation."""
 
+    operation_deadline = time.monotonic() + 30.0
     sources = course_source_catalog.normalize_course_sources(
         design, default_files=DEFAULT_SOURCES
     )
@@ -684,7 +734,9 @@ def course_markdown_source_files(
         for source in sources
     ):
         adapters["github"] = course_github_markdown.GitHubMarkdownAdapter(
-            course_github_markdown.GitHubApiTransport(read_github_markdown_token()),
+            course_github_markdown.GitHubApiTransport(
+                read_github_markdown_token(operation_deadline)
+            ),
             blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
         )
     return course_source_catalog.markdown_source_files(
@@ -692,6 +744,7 @@ def course_markdown_source_files(
         ROOT,
         adapters=adapters,
         default_files=DEFAULT_SOURCES,
+        deadline=operation_deadline,
     )
 
 

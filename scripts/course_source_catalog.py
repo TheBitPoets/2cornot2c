@@ -384,10 +384,11 @@ def markdown_source_files(
     *,
     adapters: dict[str, RemoteMarkdownAdapter] | None = None,
     default_files: Iterable[str] = (),
+    deadline: float | None = None,
 ) -> tuple[CourseMarkdownSourceFile, ...]:
     """Return local and configured remote Markdown snapshots in catalog order."""
 
-    operation_deadline = time.monotonic() + 30.0
+    operation_deadline = time.monotonic() + 30.0 if deadline is None else deadline
     sources = normalize_course_sources(design, default_files=default_files)
     ready_count = sum(
         len(source.files)
@@ -402,12 +403,8 @@ def markdown_source_files(
         source.provider != "local" and source.indexing_status == "ready"
         for source in sources
     )
-    local_items = (
-        _bounded_local_markdown_source_files(
-            design, root, default_files, operation_deadline
-        )
-        if has_ready_remote
-        else local_markdown_source_files(design, root, default_files=default_files)
+    local_items = _bounded_local_markdown_source_files(
+        design, root, default_files, operation_deadline
     )
     local_by_id: dict[str, list[LocalCourseSourceFile]] = {}
     for item in local_items:
