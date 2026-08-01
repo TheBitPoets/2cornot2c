@@ -1382,11 +1382,8 @@ async function previewSourceEditor() {
   }
 }
 
-function migrateLegacySourceItems(design, previewHeadings) {
-  const legacySourceIds = new Set(
-    (state.sources || []).filter((source) => source.legacy).map((source) => source.id),
-  );
-  if (!legacySourceIds.size) return;
+function reconcileSourceItems(design, previewHeadings) {
+  const managedSourceIds = new Set((state.sources || []).map((source) => source.id));
   const oldById = new Map((state.headings || []).map((heading) => [heading.id, heading]));
   const newByKey = new Map(
     previewHeadings.map((heading) => [
@@ -1398,7 +1395,7 @@ function migrateLegacySourceItems(design, previewHeadings) {
     for (const item of items || []) {
       const oldHeading = oldById.get(item.id);
       const sourceId = item.source_id || oldHeading?.source_id || "";
-      if (legacySourceIds.has(sourceId)) {
+      if (oldHeading || managedSourceIds.has(sourceId)) {
         const key = JSON.stringify([
           sourceId,
           item.source || oldHeading?.source || "",
@@ -1406,7 +1403,7 @@ function migrateLegacySourceItems(design, previewHeadings) {
         ]);
         const replacement = newByKey.get(key);
         if (!replacement) {
-          throw new Error(`Il paragrafo legacy ${item.id} non è presente nell'anteprima sincronizzata.`);
+          throw new Error(`Il paragrafo assegnato ${item.id} non è presente nell'anteprima sincronizzata.`);
         }
         Object.assign(item, {
           id: replacement.id,
@@ -1447,7 +1444,7 @@ function applySourceEditor(event) {
   }
   const nextDesign = JSON.parse(JSON.stringify(state.design));
   try {
-    migrateLegacySourceItems(nextDesign, editor.preview.headings);
+    reconcileSourceItems(nextDesign, editor.preview.headings);
   } catch (error) {
     showSourceDialogError(error.message);
     return;

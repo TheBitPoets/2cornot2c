@@ -335,7 +335,7 @@ def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> No
           anchor: "intro", line: 1, level: 1, href: "../README.md#intro",
         }];
 
-        migrateLegacySourceItems(design, preview);
+        reconcileSourceItems(design, preview);
 
         const item = design.years[0].udas[0].items[0];
         assert.equal(item.id, "legacy-abc:README.md#intro");
@@ -343,6 +343,36 @@ def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> No
         assert.equal(item.line, 1);
         assert.equal(item.level, 1);
         assert.equal(item.frame.status, "done");
+        """
+    )
+
+
+def test_source_editor_updates_assigned_remote_commit_from_preview() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "remote", legacy: false }];
+        state.headings = [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          anchor: "intro", line: 1, level: 1, source_commit: "a".repeat(40),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          source_commit: "a".repeat(40), line: 1, level: 1,
+        }] }] }] };
+        const preview = [{
+          id: "remote:README.md#intro", title: "Intro", source: "README.md",
+          source_id: "remote", source_label: "Remote", source_provider: "github",
+          source_repository: "school/course", source_ref: "main",
+          source_commit: "b".repeat(40), anchor: "intro", line: 2, level: 1,
+          href: "https://example.invalid/" + "b".repeat(40) + "/README.md#intro",
+        }];
+
+        reconcileSourceItems(design, preview);
+
+        const item = design.years[0].udas[0].items[0];
+        assert.equal(item.source_commit, "b".repeat(40));
+        assert.equal(item.line, 2);
+        assert.match(item.href, /bbbbbbbbbbbb/);
         """
     )
 
