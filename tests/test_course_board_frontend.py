@@ -298,11 +298,11 @@ def test_loaded_legacy_item_hydrates_missing_content_digest() -> None:
     run_course_board_js(
         """
         const design = { years: [{ udas: [{ items: [{
-          id: "README.md#intro", source: "README.md",
+          id: "README.md#intro", title: "Intro", source: "README.md", line: 1, level: 1,
         }] }] }] };
         const headings = [{
-          id: "README.md#intro", source: "README.md", source_id: "legacy",
-          content_sha256: "d".repeat(64),
+          id: "README.md#intro", title: "Intro", source: "README.md", source_id: "legacy",
+          line: 1, level: 1, content_sha256: "d".repeat(64),
         }];
 
         const hydrated = hydrateMissingItemContentDigests(design, headings);
@@ -1702,7 +1702,7 @@ def test_detached_draft_preview_posts_its_in_memory_design() -> None:
           return { heading: { title: "Draft", content: "Detached content" } };
         };
 
-        openParagraphPreview({ id: "draft-heading", title: "Draft", source: "draft.md" })
+        openParagraphPreview({ id: "draft-heading", title: "Draft", source: "draft.md", content_sha256: "d".repeat(64) })
           .then(() => assert.match(els.paragraphContent.innerHTML, /Detached content/));
         """
     )
@@ -1721,8 +1721,8 @@ def test_late_paragraph_preview_cannot_overwrite_newer_dialog() -> None:
             else resolveSecond = resolve;
           });
         };
-        const first = openParagraphPreview({ id: "first", title: "Primo", source: "a.md" });
-        const second = openParagraphPreview({ id: "second", title: "Secondo", source: "b.md" });
+        const first = openParagraphPreview({ id: "first", title: "Primo", source: "a.md", content_sha256: "a".repeat(64) });
+        const second = openParagraphPreview({ id: "second", title: "Secondo", source: "b.md", content_sha256: "b".repeat(64) });
         resolveSecond({ heading: { title: "Secondo", content: "Nuovo" } });
         second.then(() => {
           assert.equal(els.paragraphDialogTitle.textContent, "Secondo");

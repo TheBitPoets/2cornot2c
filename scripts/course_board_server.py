@@ -3322,6 +3322,10 @@ def section_text(
             or matching_heading["line"] != start_line
             or matching_heading["level"] != start_level
         ):
+            if content_sha256:
+                raise CourseSourceRevisionConflictError(
+                    "Il paragrafo è stato rinominato, rimosso o spostato: riallinealo prima di usare l'AI."
+                )
             return ""
         if (
             content_sha256
@@ -3506,6 +3510,10 @@ def topic_summary(
         ],
     }
     if include_text:
+        if not item.get("content_sha256"):
+            raise CourseSourceRevisionConflictError(
+                "Il paragrafo non ha una provenienza verificabile: riallinealo prima di usare l'AI."
+            )
         summary["text"] = section_text(
             item.get("source", ""),
             item.get("line", ""),

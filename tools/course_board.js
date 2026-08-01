@@ -1163,6 +1163,9 @@ function hydrateMissingItemContentDigests(design = state.design, headings = stat
         && (!item.source || item.source === heading.source)
         && (!item.source_id || item.source_id === heading.source_id)
         && (!item.source_commit || item.source_commit === heading.source_commit)
+        && item.title === heading.title
+        && Number(item.line) === Number(heading.line)
+        && Number(item.level) === Number(heading.level)
       ) {
         item.content_sha256 = heading.content_sha256;
         hydrated += 1;
@@ -2431,6 +2434,10 @@ async function openParagraphPreview(paragraph) {
   els.paragraphContent.textContent = "Caricamento del contenuto...";
   els.paragraphSourceLink.hidden = true;
   els.paragraphDialog.showModal();
+  if (!paragraph.content_sha256) {
+    els.paragraphContent.textContent = "Contenuto non disponibile: riallinea il paragrafo dal catalogo fonti prima della preview.";
+    return;
+  }
   try {
     const payload = state.isNewDesign || hasUnsavedChanges()
       ? await api("/api/heading-content", {

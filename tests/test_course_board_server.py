@@ -685,6 +685,12 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
             }],
         }],
     }
+    heading_digests = {
+        heading["id"]: heading["content_sha256"]
+        for heading in course_board_server.extract_headings(design)
+    }
+    for item in design["years"][0]["udas"][0]["items"]:
+        item["content_sha256"] = heading_digests[item["id"]]
     original_read = course_board_server.course_source_catalog.read_markdown_text
     reads = []
 
@@ -734,24 +740,22 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
         }],
     }
 
-    context = course_board_server.target_context(
-        design,
-        "year",
-        "uda",
-        "source-a:lesson.md#current",
-    )
-
-    assert context["target_topic"]["source_id"] == "source-a"
-    assert context["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            design,
+            "year",
+            "uda",
+            "source-a:lesson.md#current",
+        )
 
     design["years"][0]["udas"][0]["items"][0].pop("source_id")
-    missing_provenance = course_board_server.target_context(
-        design,
-        "year",
-        "uda",
-        "source-a:lesson.md#current",
-    )
-    assert missing_provenance["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            design,
+            "year",
+            "uda",
+            "source-a:lesson.md#current",
+        )
 
     stale_item = design["years"][0]["udas"][0]["items"][0]
     stale_item.update({
@@ -759,13 +763,13 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
         "source_id": "source-b",
         "line": 2,
     })
-    shifted = course_board_server.target_context(
-        design,
-        "year",
-        "uda",
-        "source-b:lesson.md#current",
-    )
-    assert shifted["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            design,
+            "year",
+            "uda",
+            "source-b:lesson.md#current",
+        )
 
 
 def test_ai_catalog_rejects_excessive_heading_count(tmp_path, monkeypatch) -> None:
