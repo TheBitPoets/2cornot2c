@@ -642,6 +642,8 @@ def test_source_preview_resolves_in_memory_design_without_persisting(tmp_path, m
     assert changed["snapshot_revision"] != payload["snapshot_revision"]
     topic = next(heading for heading in payload["headings"] if heading["title"] == "Topic")
     with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.heading_content_snapshot(design, topic["id"])
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
         course_board_server.heading_content_snapshot(
             design,
             topic["id"],
@@ -873,13 +875,13 @@ def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monk
             }
         ],
     }
-    context = course_board_server.target_context(
-        framed_design,
-        "year",
-        "uda-1",
-        "archive:archived.md#archived",
-    )
-    assert context["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            framed_design,
+            "year",
+            "uda-1",
+            "archive:archived.md#archived",
+        )
 
 
 def test_local_catalog_does_not_read_configured_github_token(tmp_path, monkeypatch) -> None:
@@ -1040,11 +1042,11 @@ def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
         + "/lessons/intro.md#private-lesson"
     )
     assert course_board_server.heading_content_snapshot(
-        design, heading["id"], heading["source_commit"]
+        design, heading["id"], heading["source_commit"], heading["content_sha256"]
     )[1] == "Pinned content."
     with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
         course_board_server.heading_content_snapshot(
-            design, heading["id"], "c" * 40
+            design, heading["id"], "c" * 40, heading["content_sha256"]
         )
 
     (tmp_path / "lessons").mkdir()
@@ -1064,7 +1066,7 @@ def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
     }
     with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
         course_board_server.heading_content_snapshot(
-            local_replacement, heading["id"], heading["source_commit"]
+            local_replacement, heading["id"], heading["source_commit"], heading["content_sha256"]
         )
     local_files = course_board_server.course_markdown_source_files(local_replacement)
     assert course_board_server.section_text(
@@ -1163,7 +1165,7 @@ def test_gitlab_heading_uses_commit_pinned_snapshot(tmp_path, monkeypatch) -> No
         + "/README.md#lesson"
     )
     assert course_board_server.heading_content_snapshot(
-        design, heading["id"], heading["source_commit"]
+        design, heading["id"], heading["source_commit"], heading["content_sha256"]
     )[1] == "Private GitLab content."
     summary = course_board_server.topic_summary(
         course_board_server.board_item_from_heading(heading)
@@ -1201,8 +1203,12 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
         )
         authorization = "Basic " + base64.b64encode(f"teacher:{teacher_token}".encode("utf-8")).decode("ascii")
         request = urllib.request.Request(
-            "http://127.0.0.1:%s/api/heading-content?id=%s"
-            % (server.server_address[1], urllib.parse.quote(heading["id"], safe="")),
+            "http://127.0.0.1:%s/api/heading-content?id=%s&content_sha256=%s"
+            % (
+                server.server_address[1],
+                urllib.parse.quote(heading["id"], safe=""),
+                heading["content_sha256"],
+            ),
             headers={"Authorization": authorization},
         )
         with urllib.request.urlopen(request, timeout=5) as response:
@@ -1213,6 +1219,7 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
             "http://127.0.0.1:%s/api/heading-content" % server.server_address[1],
             data=json.dumps({
                 "id": heading["id"],
+                "content_sha256": heading["content_sha256"],
                 "design": {"source_files": ["lesson.md"]},
             }).encode("utf-8"),
             headers={

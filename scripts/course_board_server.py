@@ -3166,8 +3166,12 @@ def heading_content_snapshot(
     expected_source_commit: str = "",
     expected_content_sha256: str = "",
 ) -> tuple[dict, str] | None:
-    """Return heading content only when immutable remote provenance still matches."""
+    """Return heading content only when immutable provenance still matches."""
 
+    if re.fullmatch(r"[0-9a-f]{64}", expected_content_sha256) is None:
+        raise CourseSourceRevisionConflictError(
+            "Digest del paragrafo mancante o non valido: riallinealo prima della preview."
+        )
     total_headings = 0
     for source_file in course_markdown_source_files(design):
         source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
@@ -3295,12 +3299,20 @@ def section_text(
         None,
     )
     if source_file is None:
+        if content_sha256:
+            raise CourseSourceRevisionConflictError(
+                "La fonte del paragrafo non è disponibile: riattivala o riallinea l'item prima di usare l'AI."
+            )
         return ""
     resolved_ref = getattr(source_file, "resolved_ref", None)
     if (
         (source_commit or source_file.source.provider != "local")
         and source_commit != resolved_ref
     ):
+        if content_sha256:
+            raise CourseSourceRevisionConflictError(
+                "Il commit della fonte è cambiato: riallinea il paragrafo prima di usare l'AI."
+            )
         return ""
     snapshot_key = f"{source_id}\0{source}"
     source_text = None if source_snapshots is None else source_snapshots.get(snapshot_key)
@@ -3523,7 +3535,7 @@ def topic_summary(
             source_files,
             str(item.get("source_id", "")),
             str(item.get("id", "")),
-            str(item.get("source_commit", "")),
+            str(item.get("source_commit") or ""),
             str(item.get("content_sha256", "")),
         )
     return summary
@@ -5898,7 +5910,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 snapshot = heading_content_snapshot(
                     design,
                     heading_id,
-                    str(payload.get("source_commit", "")),
+                    str(payload.get("source_commit") or ""),
                     str(payload.get("content_sha256", "")),
                 )
             except course_github_markdown.RemoteMarkdownError as error:
