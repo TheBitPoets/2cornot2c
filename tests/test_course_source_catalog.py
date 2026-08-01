@@ -224,6 +224,20 @@ def test_rejects_excess_ready_remote_files_before_adapter_calls(tmp_path) -> Non
     assert calls == []
 
 
+def test_mixed_catalog_checks_global_deadline_before_local_acquisition(
+    tmp_path, monkeypatch
+) -> None:
+    design = explicit_design()
+    design["sources"][1]["indexing_status"] = "ready"
+    times = iter([100.0, 131.0])
+    monkeypatch.setattr(
+        "scripts.course_source_catalog.time.monotonic", lambda: next(times)
+    )
+
+    with pytest.raises(CourseSourceCatalogError, match="Timeout acquisizione"):
+        markdown_source_files(design, tmp_path, adapters={"github": object()})
+
+
 def test_rejects_same_length_change_after_catalog_snapshot(tmp_path) -> None:
     lesson = tmp_path / "lesson.md"
     lesson.write_bytes(b"# First\n")

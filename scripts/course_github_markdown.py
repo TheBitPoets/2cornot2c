@@ -89,6 +89,48 @@ class GitHubApiTransport:
         self._connection_factory = connection_factory
 
     def get_json(self, api_path: str, *, timeout_seconds: float) -> Any:
+        """Run one request in an abortable daemon so callers return at the deadline."""
+
+        resources: dict[str, Any] = {"connection": None, "response": None}
+        result: dict[str, Any] = {}
+        done = threading.Event()
+        lock = threading.Lock()
+
+        def worker() -> None:
+            try:
+                result["value"] = self._get_json_blocking(
+                    api_path, timeout_seconds, resources, lock
+                )
+            except BaseException as exc:  # noqa: BLE001
+                result["error"] = exc
+            finally:
+                done.set()
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        if not done.wait(timeout_seconds):
+            with lock:
+                response = resources.get("response")
+                connection = resources.get("connection")
+            for resource in (response, connection):
+                if resource is not None:
+                    try:
+                        resource.close()
+                    except OSError:
+                        pass
+            raise RemoteMarkdownError("Timeout sincronizzazione GitHub esaurito.")
+        error_value = result.get("error")
+        if error_value is not None:
+            raise error_value
+        return result.get("value")
+
+    def _get_json_blocking(
+        self,
+        api_path: str,
+        timeout_seconds: float,
+        resources: dict[str, Any],
+        lock: threading.Lock,
+    ) -> Any:
         parsed_path = parse.urlsplit(api_path)
         if (
             not parsed_path.path.startswith("/")
@@ -109,7 +151,10 @@ class GitHubApiTransport:
         if self._token is not None:
             headers["Authorization"] = f"Bearer {self._token}"
         connection = self._connection_factory("api.github.com", timeout=timeout_seconds)
+        with lock:
+            resources["connection"] = connection
         payload = bytearray()
+        response = None
         try:
             connection.request("GET", api_path, headers=headers)
             remaining = deadline - self._clock()
@@ -118,6 +163,8 @@ class GitHubApiTransport:
             if connection.sock is not None:
                 connection.sock.settimeout(remaining)
             response = connection.getresponse()
+            with lock:
+                resources["response"] = response
             if response.status != 200:
                 raise RemoteMarkdownError(
                     f"GitHub API ha restituito HTTP {response.status}."
@@ -139,6 +186,8 @@ class GitHubApiTransport:
         except (TimeoutError, socket.timeout, OSError, http.client.HTTPException) as exc:
             raise RemoteMarkdownError("GitHub API non raggiungibile entro il timeout.") from exc
         finally:
+            if response is not None:
+                response.close()
             connection.close()
         try:
             return json.loads(bytes(payload).decode("utf-8"))

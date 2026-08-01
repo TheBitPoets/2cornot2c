@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import time
 
 import pytest
 
@@ -230,6 +231,9 @@ def test_transport_enforces_absolute_deadline_during_slow_response() -> None:
             now[0] += 2.0
             return b"{}"
 
+        def close(self):
+            pass
+
     class Connection:
         sock = Socket()
 
@@ -256,6 +260,43 @@ def test_transport_enforces_absolute_deadline_during_slow_response() -> None:
 
     with pytest.raises(RemoteMarkdownError, match="Timeout"):
         transport.get_json("/rate_limit", timeout_seconds=1.0)
+
+
+def test_transport_returns_at_wall_deadline_even_if_read_does_not_return() -> None:
+    class Socket:
+        def settimeout(self, _timeout):
+            pass
+
+    class Response:
+        status = 200
+
+        def read(self, _size):
+            time.sleep(1.0)
+            return b"{}"
+
+        def close(self):
+            pass
+
+    class Connection:
+        sock = Socket()
+
+        def __init__(self, _host, *, timeout):
+            pass
+
+        def request(self, *_args, **_kwargs):
+            pass
+
+        def getresponse(self):
+            return Response()
+
+        def close(self):
+            pass
+
+    transport = GitHubApiTransport(None, connection_factory=Connection)
+    started = time.monotonic()
+    with pytest.raises(RemoteMarkdownError, match="Timeout"):
+        transport.get_json("/rate_limit", timeout_seconds=0.05)
+    assert time.monotonic() - started < 0.5
 
 
 def test_uses_one_absolute_deadline_across_all_requests() -> None:

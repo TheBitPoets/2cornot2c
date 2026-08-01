@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 import re
 import stat
 import sys
+import threading
 import time
 from typing import Any, Iterable, Protocol
 
@@ -326,6 +327,40 @@ def remote_markdown_source_files(
     return tuple(files)
 
 
+def _bounded_local_markdown_source_files(
+    design: dict[str, Any],
+    root: Path,
+    default_files: Iterable[str],
+    deadline: float,
+) -> tuple[LocalCourseSourceFile, ...]:
+    """Keep a mixed-source request bounded even if local filesystem I/O stalls."""
+
+    result: dict[str, Any] = {}
+    done = threading.Event()
+
+    def worker() -> None:
+        try:
+            result["value"] = local_markdown_source_files(
+                design, root, default_files=default_files
+            )
+        except BaseException as exc:  # noqa: BLE001
+            result["error"] = exc
+        finally:
+            done.set()
+
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    if not done.wait(remaining):
+        raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
+    error_value = result.get("error")
+    if error_value is not None:
+        raise error_value
+    return result.get("value", ())
+
+
 def markdown_source_files(
     design: dict[str, Any],
     root: Path,
@@ -346,15 +381,22 @@ def markdown_source_files(
         raise CourseSourceCatalogError(
             "Troppi file Markdown pronti per l'indicizzazione."
         )
-    local_by_id: dict[str, list[LocalCourseSourceFile]] = {}
-    for item in local_markdown_source_files(design, root, default_files=default_files):
-        local_by_id.setdefault(item.source.source_id, []).append(item)
-    local_bytes = sum(
-        item.expected_size or 0 for items in local_by_id.values() for item in items
-    )
     has_ready_remote = any(
         source.provider != "local" and source.indexing_status == "ready"
         for source in sources
+    )
+    local_items = (
+        _bounded_local_markdown_source_files(
+            design, root, default_files, operation_deadline
+        )
+        if has_ready_remote
+        else local_markdown_source_files(design, root, default_files=default_files)
+    )
+    local_by_id: dict[str, list[LocalCourseSourceFile]] = {}
+    for item in local_items:
+        local_by_id.setdefault(item.source.source_id, []).append(item)
+    local_bytes = sum(
+        item.expected_size or 0 for items in local_by_id.values() for item in items
     )
     if has_ready_remote and time.monotonic() >= operation_deadline:
         raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
