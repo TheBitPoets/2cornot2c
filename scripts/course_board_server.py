@@ -3406,9 +3406,14 @@ def topic_summary(
         "source_commit": item.get("source_commit"),
         "level": item.get("level", ""),
         "href": item.get("href", ""),
+        "source_url": (
+            item.get("href", "")
+            if item.get("source_provider") in {"github", "gitlab"}
+            else github_blob_url(item.get("source", ""), anchor)
+        ),
         "github_url": (
             item.get("href", "")
-            if item.get("source_provider") == "github"
+            if item.get("source_provider") in {"github", "gitlab"}
             else github_blob_url(item.get("source", ""), anchor)
         ),
         "children": [

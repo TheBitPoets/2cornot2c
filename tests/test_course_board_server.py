@@ -1075,6 +1075,11 @@ def test_gitlab_heading_uses_commit_pinned_snapshot(tmp_path, monkeypatch) -> No
     assert course_board_server.heading_content_snapshot(
         design, heading["id"], heading["source_commit"]
     )[1] == "Private GitLab content."
+    summary = course_board_server.topic_summary(
+        course_board_server.board_item_from_heading(heading)
+    )
+    assert summary["source_url"] == heading["source_url"]
+    assert summary["github_url"] == heading["source_url"]
 
 
 def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:
