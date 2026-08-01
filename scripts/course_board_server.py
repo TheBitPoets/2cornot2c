@@ -65,6 +65,7 @@ from scripts import (
     course_source_catalog,
     create_activity,
     create_submission_scaffold,
+    github_app_token_runtime,
     manual_ai_feedback,
     student_help_auth,
     student_help_codex_adapter,
@@ -6389,6 +6390,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
+    global GITHUB_MARKDOWN_TOKEN_FILE
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -6407,6 +6410,11 @@ def main() -> int:
         action="store_true",
         help="Abilita Google OIDC usando la configurazione sicura da environment.",
     )
+    parser.add_argument(
+        "--enable-github-app-token-runtime",
+        action="store_true",
+        help="Genera e rinnova il token GitHub App dalla configurazione esterna protetta.",
+    )
     args = parser.parse_args()
     teacher_token_is_configured = bool(os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip())
     try:
@@ -6420,8 +6428,18 @@ def main() -> int:
     except RuntimeError as error:
         parser.error(str(error))
     server = None
+    github_token_runtime = None
     try:
         data_root = configure_data_root(args.root)
+        if args.enable_github_app_token_runtime:
+            try:
+                github_token_runtime = (
+                    github_app_token_runtime.GitHubAppTokenRuntime.from_config_path()
+                )
+                github_token_runtime.start()
+                GITHUB_MARKDOWN_TOKEN_FILE = str(github_token_runtime.config.token_file)
+            except github_app_token_runtime.GitHubAppRuntimeError as error:
+                parser.error(str(error))
         auth_runtime = None
         if args.enable_google_auth:
             try:
@@ -6451,6 +6469,11 @@ def main() -> int:
             if auth_runtime is not None
             else "Google OIDC: disabilitato."
         )
+        print(
+            "GitHub App fonti private: runtime attivo."
+            if github_token_runtime is not None
+            else "GitHub App fonti private: runtime disabilitato."
+        )
         print("Premi Ctrl+C per fermare il server.")
         try:
             server.serve_forever()
@@ -6459,6 +6482,8 @@ def main() -> int:
     finally:
         if server is not None:
             server.server_close()
+        if github_token_runtime is not None:
+            github_token_runtime.stop()
         data_root_lock.release()
     return 0
 

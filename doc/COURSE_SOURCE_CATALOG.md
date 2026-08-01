@@ -86,6 +86,32 @@ Gli adapter usano esclusivamente `https://api.github.com` e `https://gitlab.com/
 
 I repository pubblici non richiedono credenziali. Per repository privati il processo riceve un installation token GitHub App a vita breve tramite `THEBITLAB_GITHUB_TOKEN_FILE`, oppure un project/group access token GitLab tramite `THEBITLAB_GITLAB_TOKEN_FILE`; entrambi indicano un file esterno al repository. Il path deve essere assoluto e il file regolare e non collegato. Su POSIX deve appartenere all'utente corrente con permessi owner-only; su Windows deve avere una DACL protetta che conceda accesso completo soltanto all'utente corrente e a `SYSTEM`. Il token non compare nel design, negli URL, nei log, nella cache o nelle risposte HTTP. Il rinnovo o la rotazione del token è responsabilità del runtime provider.
 
+### Runtime GitHub App per repository privati
+
+Per il pilot, la Course Board può comporre direttamente il runtime GitHub App:
+
+```powershell
+python scripts/course_board_server.py --enable-github-app-token-runtime
+```
+
+Il flag non accetta credenziali. Il runtime legge esclusivamente il file predefinito esterno:
+
+```text
+~/.thebitlab-secrets/github-app/runtime.json
+```
+
+La configurazione ha esattamente `app_id`, `installation_id`, `private_key_file` e `token_file`; tutti i path devono essere assoluti, non collegati e nella stessa directory protetta. Configurazione, chiave privata, directory e token sono verificati come file owner-only su POSIX o con DACL Windows protetta limitata all'utente corrente e `SYSTEM`. La chiave deve essere RSA PEM di almeno 2048 bit.
+
+All'avvio il runtime firma un JWT RS256 retrodatato in modo conservativo, richiede un installation token soltanto a `https://api.github.com`, ne valida scadenza e formato e lo pubblica atomicamente nel `token_file`. Il rinnovo avviene prima della scadenza; errori successivi non cancellano una credenziale ancora valida. Allo shutdown viene eliminata soltanto l'esatta generazione ancora posseduta dal processo, senza rimuovere un token sostituito da un altro runtime. Un lock nella directory protetta impedisce due processi concorrenti sulla stessa installazione.
+
+Per una verifica isolata è disponibile:
+
+```powershell
+python scripts/github_app_token_runtime.py --once
+```
+
+Questa modalità non rinnova il token e va usata soltanto per diagnostica controllata. Il processo continuo integrato nella Course Board è la modalità raccomandata. Token, chiave e identificativi non sono inclusi nei messaggi di errore o nelle risposte HTTP.
+
 ## Gestione dalla Course Board
 
 Il comando **Gestisci fonti** apre un editor provider-independent. Il docente può aggiungere, modificare o rimuovere fonti locali, GitHub e GitLab, indicare repository/ref e file Markdown, e scegliere `ready`, `pending` o `disabled`. **Sincronizza anteprima** invia soltanto la bozza in memoria a `POST /api/course-sources/preview`: il server applica gli stessi limiti del catalogo, risolve i commit e restituisce file indicizzati e heading senza scrivere il progetto. Ogni heading riceve inoltre un digest d'identità che comprende livello, titolo e corpo della sezione, così rinominazioni o slittamenti non possono riallineare silenziosamente una cornice didattica. **Applica alla board** è disponibile soltanto per la stessa anteprima e lo stesso snapshot della board; il salvataggio del progetto resta un'azione separata protetta da CAS.
