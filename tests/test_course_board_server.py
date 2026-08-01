@@ -954,6 +954,39 @@ def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
         course_board_server.heading_content_snapshot(
             design, heading["id"], "c" * 40
         )
+
+    (tmp_path / "lessons").mkdir()
+    (tmp_path / "lessons" / "intro.md").write_bytes(content)
+    local_replacement = {
+        "sources": [
+            {
+                "id": "private-course",
+                "label": "Replacement",
+                "type": "markdown",
+                "provider": "local",
+                "path": "lessons",
+                "files": ["intro.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.heading_content_snapshot(
+            local_replacement, heading["id"], heading["source_commit"]
+        )
+    local_files = course_board_server.course_markdown_source_files(local_replacement)
+    assert course_board_server.section_text(
+        heading["source"],
+        heading["line"],
+        heading["level"],
+        local_replacement,
+        {},
+        local_files,
+        heading["source_id"],
+        heading["id"],
+        heading["source_commit"],
+    ) == ""
+
     assert course_board_server.section_text(
         heading["source"],
         heading["line"],

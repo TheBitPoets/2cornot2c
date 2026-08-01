@@ -790,6 +790,7 @@ def generate_course_plan_md(payload: dict) -> dict:
         for item in source_files
         if isinstance(item, course_source_catalog.RemoteCourseSourceFile)
     }
+    del source_files
     temporary_root = ROOT / "tmp"
     temporary_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="course-plan-", dir=temporary_root) as directory:
@@ -808,7 +809,17 @@ def generate_course_plan_md(payload: dict) -> dict:
             "--output",
             str(output_path),
         ]
-        completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("Timeout durante la generazione del percorso MD.") from exc
         if completed.returncode:
             detail = (
                 completed.stderr
@@ -3075,9 +3086,9 @@ def heading_content_snapshot(
         for heading in source_headings:
             if heading["id"] == heading_id:
                 if (
-                    heading.get("source_provider") != "local"
-                    and heading.get("source_commit") != expected_source_commit
-                ):
+                    expected_source_commit
+                    or heading.get("source_provider") != "local"
+                ) and heading.get("source_commit") != expected_source_commit:
                     raise CourseSourceRevisionConflictError(
                         "La fonte remota è cambiata: riallinea il paragrafo prima della preview."
                     )
@@ -3170,9 +3181,10 @@ def section_text(
     )
     if source_file is None:
         return ""
-    if source_file.source.provider != "local" and (
-        not source_commit
-        or source_commit != getattr(source_file, "resolved_ref", None)
+    resolved_ref = getattr(source_file, "resolved_ref", None)
+    if (
+        (source_commit or source_file.source.provider != "local")
+        and source_commit != resolved_ref
     ):
         return ""
     snapshot_key = f"{source_id}\0{source}"
