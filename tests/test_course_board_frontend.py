@@ -302,6 +302,7 @@ def test_loaded_legacy_item_hydrates_missing_content_digest() -> None:
         }] }] }] };
         const headings = [{
           id: "README.md#intro", title: "Intro", source: "README.md", source_id: "legacy",
+          source_provider: "local", href: "README.md#intro",
           line: 1, level: 1, content_sha256: "d".repeat(64),
         }];
 
@@ -309,6 +310,7 @@ def test_loaded_legacy_item_hydrates_missing_content_digest() -> None:
 
         assert.equal(hydrated, 1);
         assert.equal(design.years[0].udas[0].items[0].content_sha256, "d".repeat(64));
+        assert.equal(design.years[0].udas[0].items[0].source_id, "legacy");
         """
     )
 

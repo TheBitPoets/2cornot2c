@@ -1158,7 +1158,7 @@ function hydrateMissingItemContentDigests(design = state.design, headings = stat
     for (const item of items || []) {
       const heading = byId.get(item.id);
       if (
-        !item.content_sha256
+        (!item.content_sha256 || !item.source_id || !item.source_provider || !item.href)
         && heading?.content_sha256
         && (!item.source || item.source === heading.source)
         && (!item.source_id || item.source_id === heading.source_id)
@@ -1167,7 +1167,20 @@ function hydrateMissingItemContentDigests(design = state.design, headings = stat
         && Number(item.line) === Number(heading.line)
         && Number(item.level) === Number(heading.level)
       ) {
-        item.content_sha256 = heading.content_sha256;
+        Object.assign(item, {
+          title: heading.title,
+          source: heading.source,
+          source_id: heading.source_id,
+          source_label: heading.source_label,
+          source_provider: heading.source_provider,
+          source_repository: heading.source_repository,
+          source_ref: heading.source_ref,
+          source_commit: heading.source_commit,
+          content_sha256: heading.content_sha256,
+          href: heading.href,
+          level: heading.level,
+          line: heading.line,
+        });
         hydrated += 1;
       }
       visit(item.children);
