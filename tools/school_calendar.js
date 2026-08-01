@@ -74,6 +74,7 @@ const state = {
   statusTimer: null,
   courseDesignRequestId: 0,
   calendarRequestId: 0,
+  calendarSaveRequestId: 0,
   courseDesignLoading: false,
 };
 
@@ -357,27 +358,55 @@ async function loadSelectedCalendar() {
 
 async function loadCalendarByName(name) {
   const requestId = ++state.calendarRequestId;
-  const payload = await api("/api/school-calendars/load", {
-    method: "POST",
-    body: JSON.stringify({ name }),
-  });
-  if (requestId !== state.calendarRequestId) return false;
-  state.calendar = payload.calendar;
-  state.visibleTrackIds = null;
-  els.fileName.value = name;
-  localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, name);
-  if (state.calendar.course_design_name) {
-    localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
-    sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
-  } else {
-    localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
-    sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  const courseRequestId = ++state.courseDesignRequestId;
+  state.courseDesignLoading = true;
+  els.saveBtn.disabled = true;
+  try {
+    const payload = await api("/api/school-calendars/load", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    if (requestId !== state.calendarRequestId || courseRequestId !== state.courseDesignRequestId) return false;
+    const candidate = payload.calendar;
+    const designName = candidate.course_design_name || "";
+    const query = designName ? `?design=${encodeURIComponent(designName)}` : "";
+    let context = null;
+    let contextError = null;
+    try {
+      context = await api(`/api/course-calendar-context${query}`);
+    } catch (error) {
+      contextError = error;
+    }
+    if (requestId !== state.calendarRequestId || courseRequestId !== state.courseDesignRequestId) return false;
+    state.calendar = candidate;
+    state.courseDesign = context?.design || null;
+    state.activityEvents = context?.activity_events || [];
+    state.visibleTrackIds = null;
+    state.courseDesignLoading = false;
+    els.saveBtn.disabled = false;
+    els.fileName.value = name;
+    localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, name);
+    if (designName) {
+      localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, designName);
+      sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
+    } else {
+      localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+      sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+    }
+    renderAll();
+    if (contextError) {
+      setStatus(`Calendario caricato, ma percorso didattico non disponibile: ${contextError.message}`, "error");
+    } else {
+      setStatus(`Calendario caricato: ${name}.`);
+    }
+    return true;
+  } catch (error) {
+    if (requestId === state.calendarRequestId && courseRequestId === state.courseDesignRequestId) {
+      state.courseDesignLoading = false;
+      els.saveBtn.disabled = false;
+    }
+    throw error;
   }
-  const courseLoaded = await loadCourseDesign();
-  if (courseLoaded === null || requestId !== state.calendarRequestId) return false;
-  renderAll();
-  if (courseLoaded) setStatus(`Calendario caricato: ${name}.`);
-  return true;
 }
 
 async function saveCalendar() {
@@ -385,7 +414,8 @@ async function saveCalendar() {
     setStatus("Attendi il caricamento del percorso prima di salvare il calendario.", "error");
     return;
   }
-  state.calendarRequestId += 1;
+  const requestId = ++state.calendarRequestId;
+  const saveRequestId = ++state.calendarSaveRequestId;
   syncFormToCalendar();
   const name = els.fileName.value.trim() || fileNameFromYear(state.calendar.school_year || "");
   els.fileName.value = name;
@@ -393,6 +423,7 @@ async function saveCalendar() {
     method: "POST",
     body: JSON.stringify({ name, calendar: state.calendar }),
   });
+  if (requestId !== state.calendarRequestId || saveRequestId !== state.calendarSaveRequestId) return;
   state.calendars = payload.calendars || [];
   renderCalendarList();
   els.calendarSelect.value = payload.saved?.name || name;

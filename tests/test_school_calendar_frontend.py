@@ -61,15 +61,21 @@ def test_calendar_load_renders_new_calendar_when_course_context_fails() -> None:
     function_source = source[start:end]
     script = f"""
     const assert = require("node:assert/strict");
-    const state = {{ calendar: {{ school_year: "old" }}, visibleTrackIds: new Set(), calendarRequestId: 0 }};
-    const els = {{ fileName: {{ value: "" }} }};
+    const state = {{
+      calendar: {{ school_year: "old" }}, visibleTrackIds: new Set(),
+      calendarRequestId: 0, courseDesignRequestId: 0, courseDesignLoading: false,
+      courseDesign: null, activityEvents: [],
+    }};
+    const els = {{ fileName: {{ value: "" }}, saveBtn: {{ disabled: false }} }};
     const localStorage = {{ setItem() {{}}, removeItem() {{}} }};
     const sessionStorage = {{ setItem() {{}}, removeItem() {{}} }};
     const ACTIVE_SCHOOL_CALENDAR_KEY = "calendar";
     const ACTIVE_COURSE_DESIGN_KEY = "design";
     const ACTIVE_COURSE_SESSION_KEY = "session";
-    async function api() {{ return {{ calendar: {{ school_year: "new", course_design_name: "missing.json" }} }}; }}
-    async function loadCourseDesign() {{ return false; }}
+    async function api(path) {{
+      if (path.startsWith("/api/course-calendar-context")) throw new Error("missing design");
+      return {{ calendar: {{ school_year: "new", course_design_name: "missing.json" }} }};
+    }}
     let renders = 0;
     function renderAll() {{ renders += 1; }}
     function setStatus() {{}}
@@ -91,8 +97,12 @@ def test_calendar_loader_ignores_stale_out_of_order_response() -> None:
     function_source = source[start:end]
     script = f"""
     const assert = require("node:assert/strict");
-    const state = {{ calendar: {{}}, visibleTrackIds: null, calendarRequestId: 0 }};
-    const els = {{ fileName: {{ value: "" }} }};
+    const state = {{
+      calendar: {{}}, visibleTrackIds: null, calendarRequestId: 0,
+      courseDesignRequestId: 0, courseDesignLoading: false,
+      courseDesign: null, activityEvents: [],
+    }};
+    const els = {{ fileName: {{ value: "" }}, saveBtn: {{ disabled: false }} }};
     const localStorage = {{ setItem() {{}}, removeItem() {{}} }};
     const sessionStorage = {{ setItem() {{}}, removeItem() {{}} }};
     const ACTIVE_SCHOOL_CALENDAR_KEY = "calendar";
@@ -100,10 +110,12 @@ def test_calendar_loader_ignores_stale_out_of_order_response() -> None:
     const ACTIVE_COURSE_SESSION_KEY = "session";
     const pending = new Map();
     function api(path, options) {{
+      if (path.startsWith("/api/course-calendar-context")) {{
+        return Promise.resolve({{ design: {{ years: [] }}, activity_events: [] }});
+      }}
       const name = JSON.parse(options.body).name;
       return new Promise((resolve) => pending.set(name, resolve));
     }}
-    async function loadCourseDesign() {{ return true; }}
     function renderAll() {{}}
     function setStatus() {{}}
     {function_source}
@@ -156,6 +168,36 @@ def test_course_design_loader_ignores_stale_out_of_order_response() -> None:
       assert.equal(await first, null);
       assert.equal(state.courseDesign.id, "b");
       assert.equal(state.activityEvents[0].activity_id, "b");
+    }})().catch((error) => {{ console.error(error); process.exit(1); }});
+    """
+    subprocess.run(["node", "-e", script], check=True)
+
+
+def test_stale_calendar_save_response_does_not_replace_newer_selection() -> None:
+    source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
+    start = source.index("async function saveCalendar")
+    end = source.index("\nfunction renderAll", start)
+    function_source = source[start:end]
+    script = f"""
+    const assert = require("node:assert/strict");
+    const state = {{
+      courseDesignLoading: false, calendarRequestId: 0, calendarSaveRequestId: 0,
+      calendar: {{ school_year: "2026/2027", course_design_name: "a.json" }},
+    }};
+    const els = {{ fileName: {{ value: "a-calendar.json" }}, calendarSelect: {{ value: "b-calendar.json" }} }};
+    let resolveSave;
+    function api() {{ return new Promise((resolve) => {{ resolveSave = resolve; }}); }}
+    function syncFormToCalendar() {{}}
+    function fileNameFromYear() {{ return "fallback.json"; }}
+    function renderCalendarList() {{ throw new Error("stale save must not render"); }}
+    function setStatus() {{}}
+    {function_source}
+    (async () => {{
+      const save = saveCalendar();
+      state.calendarRequestId += 1;
+      resolveSave({{ saved: {{ name: "a-calendar.json" }}, calendars: [] }});
+      await save;
+      assert.equal(els.calendarSelect.value, "b-calendar.json");
     }})().catch((error) => {{ console.error(error); process.exit(1); }});
     """
     subprocess.run(["node", "-e", script], check=True)
