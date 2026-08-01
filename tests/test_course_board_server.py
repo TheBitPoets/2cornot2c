@@ -379,6 +379,52 @@ def test_course_calendar_context_derives_activity_events_from_one_design_snapsho
     assert "activity_events" not in design
 
 
+def test_update_course_uda_actual_validates_and_returns_latest_design(monkeypatch) -> None:
+    latest = {
+        "years": [
+            {
+                "id": "third",
+                "udas": [
+                    {
+                        "id": "uda-1",
+                        "activity_links": [],
+                        "actual": {"status": "done"},
+                    }
+                ],
+            }
+        ]
+    }
+    calls = []
+
+    class Service:
+        def update_uda_actual(self, name, year_id, uda_id, actual):
+            calls.append((name, year_id, uda_id, actual))
+            return latest, "doc/course_designs/course.json"
+
+    monkeypatch.setattr(course_board_server, "course_service", Service)
+
+    payload = course_board_server.update_course_uda_actual(
+        "course.json",
+        "third",
+        "uda-1",
+        {
+            "status": "done",
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-02",
+            "hours_done": 4,
+            "notes": "Completata",
+        },
+    )
+
+    assert calls[0][0:3] == ("course.json", "third", "uda-1")
+    assert payload["design"] is latest
+    assert payload["path"] == "doc/course_designs/course.json"
+    with pytest.raises(ValueError, match="non puo precedere"):
+        course_board_server.validate_uda_actual(
+            {"start_date": "2026-10-02", "end_date": "2026-10-01"}
+        )
+
+
 def test_ai_config_uses_one_provider_model_snapshot(monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")

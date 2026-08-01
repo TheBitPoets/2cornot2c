@@ -57,6 +57,17 @@ class CourseService:
 
         return self.storage.write_saved_design(name, payload, overwrite=overwrite)
 
+    def update_uda_actual(
+        self,
+        name: str,
+        year_id: str,
+        uda_id: str,
+        actual: dict[str, Any],
+    ) -> tuple[dict[str, Any], str]:
+        """Update only one UDA actual-progress record in the latest design."""
+
+        return self.storage.update_uda_actual(name, year_id, uda_id, actual)
+
     def delete_saved_design(
         self,
         name: str,

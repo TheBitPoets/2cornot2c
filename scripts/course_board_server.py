@@ -714,6 +714,64 @@ def course_calendar_context(raw_query: str) -> dict:
     }
 
 
+def validate_uda_actual(payload: object) -> dict:
+    """Validate the bounded teacher-owned actual-progress payload."""
+
+    if not isinstance(payload, dict):
+        raise ValueError("actual deve essere un oggetto.")
+    allowed = {"status", "start_date", "end_date", "hours_done", "notes"}
+    unknown = set(payload) - allowed
+    if unknown:
+        raise ValueError(f"Campi actual non supportati: {', '.join(sorted(map(str, unknown)))}.")
+    status = payload.get("status", "todo")
+    if status not in {"todo", "in_progress", "done", "paused", "skipped"}:
+        raise ValueError("Stato programmazione svolta non valido.")
+    dates: dict[str, str] = {}
+    for field in ("start_date", "end_date"):
+        value = payload.get(field, "")
+        if not isinstance(value, str):
+            raise ValueError(f"{field} deve essere una data ISO o vuota.")
+        if value:
+            try:
+                parsed = datetime.strptime(value, "%Y-%m-%d").date().isoformat()
+            except ValueError as error:
+                raise ValueError(f"{field} deve essere una data ISO valida.") from error
+            if parsed != value:
+                raise ValueError(f"{field} deve essere una data ISO canonica.")
+        dates[field] = value
+    if dates["start_date"] and dates["end_date"] and dates["end_date"] < dates["start_date"]:
+        raise ValueError("end_date non puo precedere start_date.")
+    hours = payload.get("hours_done", "")
+    if hours != "" and (isinstance(hours, bool) or not isinstance(hours, (int, float)) or not 0 <= hours <= 10000):
+        raise ValueError("hours_done deve essere vuoto o compreso tra 0 e 10000.")
+    notes = payload.get("notes", "")
+    if not isinstance(notes, str) or len(notes) > 20000:
+        raise ValueError("notes deve essere una stringa di massimo 20000 caratteri.")
+    return {"status": status, **dates, "hours_done": hours, "notes": notes}
+
+
+def update_course_uda_actual(name: str, year_id: object, uda_id: object, actual: object) -> dict:
+    """Merge one actual-progress record without replacing concurrent design edits."""
+
+    if not isinstance(name, str):
+        raise ValueError("name deve essere una stringa.")
+    if not isinstance(year_id, str) or not year_id or len(year_id) > 160:
+        raise ValueError("year_id non valido.")
+    if not isinstance(uda_id, str) or not uda_id or len(uda_id) > 160:
+        raise ValueError("uda_id non valido.")
+    normalized_actual = validate_uda_actual(actual)
+    design, path = course_service().update_uda_actual(name, year_id, uda_id, normalized_actual)
+    try:
+        activity_events = list(course_activity_links.iter_scheduled_activity_links(design))
+    except ValueError:
+        activity_events = []
+    return {
+        "design": design,
+        "activity_events": activity_events,
+        "path": path,
+    }
+
+
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
     """Persist a named course design in the archive folder."""
 
@@ -5549,6 +5607,18 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/course-uda-actual":
+            try:
+                result = update_course_uda_actual(
+                    payload.get("name", ""),
+                    payload.get("year_id"),
+                    payload.get("uda_id"),
+                    payload.get("actual"),
+                )
+                self.write_json({"ok": True, **result})
+            except (FileNotFoundError, ValueError) as error:
+                self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/school-calendars/save":
             try:

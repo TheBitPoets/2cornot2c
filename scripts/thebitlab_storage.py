@@ -393,6 +393,30 @@ class JsonCourseStorage:
                 self.write_json_exclusive(path, payload)
         return {"name": path.name, "path": self.relative_path(path)}
 
+    def update_uda_actual(
+        self,
+        name: str,
+        year_id: str,
+        uda_id: str,
+        actual: dict[str, Any],
+    ) -> tuple[dict[str, Any], str]:
+        """Atomically merge one UDA actual record into the latest design."""
+
+        path = self.saved_design_path(name) if name else self.design_path
+        with self.operation_lock:
+            if not path.is_file():
+                raise FileNotFoundError(f"Percorso didattico non trovato: {name or path.name}")
+            design = self.read_json(path)
+            years = [year for year in design.get("years", []) if year.get("id") == year_id]
+            if len(years) != 1:
+                raise ValueError(f"Percorso anno non univoco o non trovato: {year_id}")
+            udas = [uda for uda in years[0].get("udas", []) if uda.get("id") == uda_id]
+            if len(udas) != 1:
+                raise ValueError(f"UDA non univoca o non trovata: {uda_id}")
+            udas[0]["actual"] = dict(actual)
+            self.write_json(path, design)
+            return design, self.relative_path(path)
+
     def list_school_calendars(self) -> list[dict[str, str]]:
         """List saved school calendars stored in doc/calendars."""
 

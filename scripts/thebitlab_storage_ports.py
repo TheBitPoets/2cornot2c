@@ -28,6 +28,14 @@ class CourseStorage(Protocol):
         overwrite: bool = True,
     ) -> dict[str, str]: ...
 
+    def update_uda_actual(
+        self,
+        name: str,
+        year_id: str,
+        uda_id: str,
+        actual: dict[str, Any],
+    ) -> tuple[dict[str, Any], str]: ...
+
     def delete_saved_design(
         self,
         name: str,

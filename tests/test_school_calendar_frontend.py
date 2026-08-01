@@ -5,13 +5,16 @@ from pathlib import Path
 import subprocess
 
 
-def test_associated_course_update_declares_overwrite_intent() -> None:
+def test_associated_course_update_uses_targeted_uda_mutation() -> None:
     source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
-    function_source = source.split("async function saveAssociatedCourseDesign()", 1)[1].split(
+    function_source = source.split("async function saveAssociatedCourseDesign", 1)[1].split(
         "async function saveActualProgress", 1
     )[0]
 
-    assert "overwrite: true" in function_source
+    assert 'api("/api/course-uda-actual"' in function_source
+    assert "year_id: yearId" in function_source
+    assert "uda_id: udaId" in function_source
+    assert "overwrite: true" not in function_source
 
 
 def test_activity_events_are_derived_from_visible_course_year_without_calendar_copies() -> None:
@@ -79,6 +82,7 @@ def test_calendar_load_renders_new_calendar_when_course_context_fails() -> None:
     let renders = 0;
     function renderAll() {{ renders += 1; }}
     function setStatus() {{}}
+    function setCalendarInteractionLocked() {{}}
     {function_source}
     (async () => {{
       await loadCalendarByName("new-calendar.json");
@@ -118,6 +122,7 @@ def test_calendar_loader_ignores_stale_out_of_order_response() -> None:
     }}
     function renderAll() {{}}
     function setStatus() {{}}
+    function setCalendarInteractionLocked() {{}}
     {function_source}
     (async () => {{
       const first = loadCalendarByName("a.json");
@@ -153,6 +158,7 @@ def test_course_design_loader_ignores_stale_out_of_order_response() -> None:
       return new Promise((resolve) => pending.set(path, resolve));
     }}
     function setStatus() {{}}
+    function setCalendarInteractionLocked() {{}}
     {function_source}
     (async () => {{
       const first = loadCourseDesign();
@@ -182,9 +188,14 @@ def test_stale_calendar_save_response_does_not_replace_newer_selection() -> None
     const assert = require("node:assert/strict");
     const state = {{
       courseDesignLoading: false, calendarRequestId: 0, calendarSaveRequestId: 0,
+      calendarSaveInProgress: false,
       calendar: {{ school_year: "2026/2027", course_design_name: "a.json" }},
     }};
-    const els = {{ fileName: {{ value: "a-calendar.json" }}, calendarSelect: {{ value: "b-calendar.json" }} }};
+    const els = {{
+      fileName: {{ value: "a-calendar.json" }},
+      calendarSelect: {{ value: "b-calendar.json" }},
+      saveBtn: {{ disabled: false }},
+    }};
     let resolveSave;
     function api() {{ return new Promise((resolve) => {{ resolveSave = resolve; }}); }}
     function syncFormToCalendar() {{}}

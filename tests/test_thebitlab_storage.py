@@ -195,6 +195,39 @@ def test_school_calendar_metadata_tolerates_invalid_json(tmp_path) -> None:
     ]
 
 
+def test_update_uda_actual_preserves_latest_activity_links(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design(
+        "course.json",
+        {
+            "years": [
+                {
+                    "id": "third",
+                    "udas": [
+                        {
+                            "id": "uda-1",
+                            "activity_links": [{"activity_id": "latest"}],
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+
+    design, path = storage.update_uda_actual(
+        "course.json",
+        "third",
+        "uda-1",
+        {"status": "done", "notes": "Completata"},
+    )
+
+    uda = design["years"][0]["udas"][0]
+    assert uda["activity_links"] == [{"activity_id": "latest"}]
+    assert uda["actual"] == {"status": "done", "notes": "Completata"}
+    assert path == "doc/course_designs/course.json"
+    assert storage.read_saved_design("course.json") == design
+
+
 def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     storage.write_saved_design("as_2026_2027.json", {"title": "AS 2026/2027"})

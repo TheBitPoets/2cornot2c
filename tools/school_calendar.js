@@ -76,6 +76,8 @@ const state = {
   calendarRequestId: 0,
   calendarSaveRequestId: 0,
   courseDesignLoading: false,
+  calendarSaveInProgress: false,
+  interactionLockedElements: [],
 };
 
 function defaultCalendar() {
@@ -173,6 +175,20 @@ function setStatus(message, kind = "neutral") {
       state.statusTimer = null;
     }, 4500);
   }
+}
+
+function setCalendarInteractionLocked(locked) {
+  if (locked) {
+    if (state.interactionLockedElements.length) return;
+    state.interactionLockedElements = [
+      ...document.querySelectorAll("input, select, textarea, button"),
+    ].filter((element) => !element.disabled);
+    for (const element of state.interactionLockedElements) element.disabled = true;
+    return;
+  }
+  for (const element of state.interactionLockedElements) element.disabled = false;
+  state.interactionLockedElements = [];
+  els.saveBtn.disabled = state.courseDesignLoading || state.calendarSaveInProgress;
 }
 
 function collapsedPanels() {
@@ -288,33 +304,33 @@ async function loadCourseDesign() {
   const name = state.calendar.course_design_name || "";
   const requestId = ++state.courseDesignRequestId;
   state.courseDesignLoading = true;
-  els.saveBtn.disabled = true;
+  setCalendarInteractionLocked(true);
   try {
     const query = name ? `?design=${encodeURIComponent(name)}` : "";
     const payload = await api(`/api/course-calendar-context${query}`);
     if (requestId !== state.courseDesignRequestId) return null;
     if ((state.calendar.course_design_name || "") !== name) {
       state.courseDesignLoading = false;
-      els.saveBtn.disabled = false;
+      setCalendarInteractionLocked(false);
       return null;
     }
     state.courseDesign = payload.design;
     state.activityEvents = payload.activity_events || [];
     state.courseDesignLoading = false;
-    els.saveBtn.disabled = false;
+    setCalendarInteractionLocked(false);
     if (name) setStatus(`Percorso didattico associato: ${name}.`);
     return true;
   } catch (error) {
     if (requestId !== state.courseDesignRequestId) return null;
     if ((state.calendar.course_design_name || "") !== name) {
       state.courseDesignLoading = false;
-      els.saveBtn.disabled = false;
+      setCalendarInteractionLocked(false);
       return null;
     }
     state.courseDesign = null;
     state.activityEvents = [];
     state.courseDesignLoading = false;
-    els.saveBtn.disabled = false;
+    setCalendarInteractionLocked(false);
     setStatus(`Percorso didattico non caricato: ${error.message}`, "error");
     return false;
   }
@@ -360,7 +376,7 @@ async function loadCalendarByName(name) {
   const requestId = ++state.calendarRequestId;
   const courseRequestId = ++state.courseDesignRequestId;
   state.courseDesignLoading = true;
-  els.saveBtn.disabled = true;
+  setCalendarInteractionLocked(true);
   try {
     const payload = await api("/api/school-calendars/load", {
       method: "POST",
@@ -383,7 +399,7 @@ async function loadCalendarByName(name) {
     state.activityEvents = context?.activity_events || [];
     state.visibleTrackIds = null;
     state.courseDesignLoading = false;
-    els.saveBtn.disabled = false;
+    setCalendarInteractionLocked(false);
     els.fileName.value = name;
     localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, name);
     if (designName) {
@@ -403,7 +419,7 @@ async function loadCalendarByName(name) {
   } catch (error) {
     if (requestId === state.calendarRequestId && courseRequestId === state.courseDesignRequestId) {
       state.courseDesignLoading = false;
-      els.saveBtn.disabled = false;
+      setCalendarInteractionLocked(false);
     }
     throw error;
   }
@@ -414,28 +430,41 @@ async function saveCalendar() {
     setStatus("Attendi il caricamento del percorso prima di salvare il calendario.", "error");
     return;
   }
+  if (state.calendarSaveInProgress) {
+    setStatus("Salvataggio calendario gia in corso.", "error");
+    return;
+  }
   const requestId = ++state.calendarRequestId;
   const saveRequestId = ++state.calendarSaveRequestId;
-  syncFormToCalendar();
-  const name = els.fileName.value.trim() || fileNameFromYear(state.calendar.school_year || "");
-  els.fileName.value = name;
-  const payload = await api("/api/school-calendars/save", {
-    method: "POST",
-    body: JSON.stringify({ name, calendar: state.calendar }),
-  });
-  if (requestId !== state.calendarRequestId || saveRequestId !== state.calendarSaveRequestId) return;
-  state.calendars = payload.calendars || [];
-  renderCalendarList();
-  els.calendarSelect.value = payload.saved?.name || name;
-  localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, payload.saved?.name || name);
-  if (state.calendar.course_design_name) {
-    localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
-    sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
-  } else {
-    localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
-    sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.calendarSaveInProgress = true;
+  els.saveBtn.disabled = true;
+  try {
+    syncFormToCalendar();
+    const name = els.fileName.value.trim() || fileNameFromYear(state.calendar.school_year || "");
+    els.fileName.value = name;
+    const payload = await api("/api/school-calendars/save", {
+      method: "POST",
+      body: JSON.stringify({ name, calendar: state.calendar }),
+    });
+    if (requestId !== state.calendarRequestId || saveRequestId !== state.calendarSaveRequestId) return;
+    state.calendars = payload.calendars || [];
+    renderCalendarList();
+    els.calendarSelect.value = payload.saved?.name || name;
+    localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, payload.saved?.name || name);
+    if (state.calendar.course_design_name) {
+      localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
+      sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
+    } else {
+      localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+      sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+    }
+    setStatus(`Calendario salvato: ${payload.saved?.path || name}.`);
+  } finally {
+    if (saveRequestId === state.calendarSaveRequestId) {
+      state.calendarSaveInProgress = false;
+      els.saveBtn.disabled = state.courseDesignLoading;
+    }
   }
-  setStatus(`Calendario salvato: ${payload.saved?.path || name}.`);
 }
 
 function renderAll() {
@@ -1285,28 +1314,23 @@ function ganttSegmentTooltip(segment) {
   ].join("\n");
 }
 
-async function saveAssociatedCourseDesign() {
+async function saveAssociatedCourseDesign(yearId, udaId, actual) {
   if (!state.courseDesign) {
     throw new Error("Nessun progetto didattico associato caricato.");
   }
-  const name = state.calendar.course_design_name || "";
-  if (name) {
-    await api("/api/saved-designs/save", {
-      method: "POST",
-      body: JSON.stringify({ name, design: state.courseDesign, overwrite: true }),
-    });
-    return `doc/course_designs/${name}`;
-  }
-  await api("/api/course-design", {
+  return api("/api/course-uda-actual", {
     method: "POST",
-    body: JSON.stringify(state.courseDesign),
+    body: JSON.stringify({
+      name: state.calendar.course_design_name || "",
+      year_id: yearId,
+      uda_id: udaId,
+      actual,
+    }),
   });
-  return "doc/course_design.json";
 }
 
 async function saveActualProgress(segment) {
   const field = (name) => els.ganttDialogBody.querySelector(`[data-actual-field="${name}"]`);
-  const previousActual = segment.uda.actual ? { ...segment.uda.actual } : null;
   const nextActual = {
     status: field("status").value || "todo",
     start_date: field("start_date").value || "",
@@ -1314,17 +1338,14 @@ async function saveActualProgress(segment) {
     hours_done: field("hours_done").value === "" ? "" : Number(field("hours_done").value),
     notes: field("notes").value.trim(),
   };
-  segment.uda.actual = nextActual;
   try {
-    const path = await saveAssociatedCourseDesign();
+    const yearId = segment.track.course_year_id || segment.track.id;
+    const payload = await saveAssociatedCourseDesign(yearId, segment.uda.id, nextActual);
+    state.courseDesign = payload.design;
+    state.activityEvents = payload.activity_events || [];
     renderAll();
-    setStatus(`Programmazione svolta salvata in ${path}.`);
+    setStatus(`Programmazione svolta salvata in ${payload.path}.`);
   } catch (error) {
-    if (previousActual) {
-      segment.uda.actual = previousActual;
-    } else {
-      delete segment.uda.actual;
-    }
     setStatus(`Salvataggio programmazione svolta non riuscito: ${error.message}`, "error");
   }
 }
