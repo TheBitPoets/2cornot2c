@@ -379,6 +379,32 @@ def test_source_editor_updates_assigned_remote_commit_from_preview() -> None:
     )
 
 
+def test_source_editor_keeps_direct_id_when_heading_content_digests_repeat() -> None:
+    run_course_board_js(
+        """
+        const emptyHash = "e".repeat(64);
+        state.sources = [{ id: "course" }];
+        state.headings = [
+          { id: "course:README.md#one", source_id: "course", source: "README.md", content_sha256: emptyHash },
+          { id: "course:README.md#two", source_id: "course", source: "README.md", content_sha256: emptyHash },
+        ];
+        const design = { years: [{ udas: [{ items: [{
+          id: "course:README.md#two", source_id: "course", source: "README.md",
+          content_sha256: emptyHash,
+        }] }] }] };
+        const preview = [
+          { id: "course:README.md#one", source_id: "course", source: "README.md", content_sha256: emptyHash, title: "One" },
+          { id: "course:README.md#two", source_id: "course", source: "README.md", content_sha256: emptyHash, title: "Two" },
+        ];
+
+        reconcileSourceItems(design, preview, [{ id: "course", indexing_status: "ready" }]);
+
+        assert.equal(design.years[0].udas[0].items[0].id, "course:README.md#two");
+        assert.equal(design.years[0].udas[0].items[0].title, "Two");
+        """
+    )
+
+
 def test_source_editor_blocks_removed_used_source_but_allows_pending_source() -> None:
     run_course_board_js(
         """

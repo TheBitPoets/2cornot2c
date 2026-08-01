@@ -1387,6 +1387,7 @@ function reconcileSourceItems(design, previewHeadings, nextSources) {
   const managedSourceIds = new Set((state.sources || []).map((source) => source.id));
   const nextSourceById = new Map(nextSources.map((source) => [source.id, source]));
   const oldById = new Map((state.headings || []).map((heading) => [heading.id, heading]));
+  const newById = new Map(previewHeadings.map((heading) => [heading.id, heading]));
   const newByKey = new Map();
   for (const heading of previewHeadings) {
     const key = JSON.stringify([
@@ -1409,12 +1410,15 @@ function reconcileSourceItems(design, previewHeadings, nextSources) {
           visit(item.children);
           continue;
         }
-        const key = JSON.stringify([
-          sourceId,
-          item.source || oldHeading?.source || "",
-          item.content_sha256 || oldHeading?.content_sha256 || "",
-        ]);
-        const replacement = newByKey.get(key);
+        const sourcePath = item.source || oldHeading?.source || "";
+        const contentSha256 = item.content_sha256 || oldHeading?.content_sha256 || "";
+        const direct = newById.get(item.id);
+        const directMatches = direct
+          && direct.source_id === sourceId
+          && direct.source === sourcePath
+          && direct.content_sha256 === contentSha256;
+        const key = JSON.stringify([sourceId, sourcePath, contentSha256]);
+        const replacement = directMatches ? direct : newByKey.get(key);
         if (!replacement) {
           throw new Error(`Il paragrafo assegnato ${item.id} non è presente nell'anteprima sincronizzata.`);
         }
