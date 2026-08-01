@@ -1,0 +1,274 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+import base64
+import binascii
+import hashlib
+import json
+import re
+import time
+from pathlib import PurePosixPath
+from typing import Any, Callable, Protocol
+from urllib import error, parse, request
+
+
+MAX_REMOTE_MARKDOWN_BYTES = 8 * 1024 * 1024
+MAX_REMOTE_TOTAL_BYTES = 64 * 1024 * 1024
+MAX_GITHUB_RESPONSE_BYTES = 12 * 1024 * 1024
+MAX_GITHUB_TOKEN_BYTES = 4096
+MAX_REMOTE_FILES = 64
+DEFAULT_SYNC_TIMEOUT_SECONDS = 30.0
+GIT_OBJECT_ID_RE = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
+REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+
+
+class RemoteMarkdownError(RuntimeError):
+    """Fail-closed error raised while acquiring one immutable remote snapshot."""
+
+
+class GitHubJsonTransport(Protocol):
+    """Minimal authenticated GitHub JSON port used by the source adapter."""
+
+    def get_json(self, api_path: str, *, timeout_seconds: float) -> Any: ...
+
+
+@dataclass(frozen=True)
+class RemoteMarkdownFile:
+    relative_path: str
+    git_object_id: str
+    sha256: str
+    content: bytes
+
+    def text(self) -> str:
+        return self.content.decode("utf-8", errors="replace")
+
+
+@dataclass(frozen=True)
+class RemoteMarkdownSnapshot:
+    provider: str
+    repository: str
+    declared_ref: str
+    commit_sha: str
+    files: tuple[RemoteMarkdownFile, ...]
+
+
+class _NoRedirectHandler(request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        return None
+
+
+class GitHubApiTransport:
+    """Bounded HTTPS transport with an injected short-lived token provider."""
+
+    def __init__(
+        self,
+        token_provider: Callable[[], str | None],
+        *,
+        api_origin: str = "https://api.github.com",
+    ) -> None:
+        if api_origin != "https://api.github.com":
+            raise ValueError("Origin GitHub API non consentita.")
+        self._token_provider = token_provider
+        self._api_origin = api_origin
+        self._opener = request.build_opener(_NoRedirectHandler())
+
+    def get_json(self, api_path: str, *, timeout_seconds: float) -> Any:
+        parsed_path = parse.urlsplit(api_path)
+        if (
+            not parsed_path.path.startswith("/")
+            or parsed_path.scheme
+            or parsed_path.netloc
+            or parsed_path.fragment
+            or (parsed_path.query and re.fullmatch(r"ref=[0-9a-f]{40}(?:[0-9a-f]{24})?", parsed_path.query) is None)
+        ):
+            raise RemoteMarkdownError("Path GitHub API non valido.")
+        if timeout_seconds <= 0:
+            raise RemoteMarkdownError("Timeout sincronizzazione GitHub esaurito.")
+        token = self._token_provider()
+        if token is not None:
+            encoded_token = token.encode("utf-8")
+            if (
+                not token
+                or token != token.strip()
+                or len(encoded_token) > MAX_GITHUB_TOKEN_BYTES
+                or any(ord(character) < 33 or ord(character) == 127 for character in token)
+            ):
+                raise RemoteMarkdownError("Credenziale GitHub non valida.")
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "TheBitLab-course-source/1",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        if token is not None:
+            headers["Authorization"] = f"Bearer {token}"
+        api_request = request.Request(
+            self._api_origin + api_path,
+            headers=headers,
+            method="GET",
+        )
+        try:
+            with self._opener.open(api_request, timeout=timeout_seconds) as response:
+                if response.status != 200:
+                    raise RemoteMarkdownError(
+                        f"GitHub API ha restituito HTTP {response.status}."
+                    )
+                payload = response.read(MAX_GITHUB_RESPONSE_BYTES + 1)
+        except error.HTTPError as exc:
+            raise RemoteMarkdownError(
+                f"GitHub API ha restituito HTTP {exc.code}."
+            ) from exc
+        except (error.URLError, TimeoutError, OSError) as exc:
+            raise RemoteMarkdownError("GitHub API non raggiungibile entro il timeout.") from exc
+        if len(payload) > MAX_GITHUB_RESPONSE_BYTES:
+            raise RemoteMarkdownError("Risposta GitHub API troppo grande.")
+        try:
+            return json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RemoteMarkdownError("Risposta GitHub API JSON non valida.") from exc
+
+
+class GitHubMarkdownAdapter:
+    """Acquire all declared Markdown blobs from one resolved Git commit."""
+
+    provider_name = "github"
+
+    def __init__(
+        self,
+        transport: GitHubJsonTransport,
+        *,
+        clock: Callable[[], float] = time.monotonic,
+        timeout_seconds: float = DEFAULT_SYNC_TIMEOUT_SECONDS,
+    ) -> None:
+        if timeout_seconds <= 0 or timeout_seconds > 120:
+            raise ValueError("Timeout GitHub non valido.")
+        self._transport = transport
+        self._clock = clock
+        self._timeout_seconds = timeout_seconds
+
+    def fetch_snapshot(
+        self,
+        repository: str,
+        declared_ref: str,
+        files: tuple[str, ...],
+    ) -> RemoteMarkdownSnapshot:
+        if REPOSITORY_RE.fullmatch(repository) is None:
+            raise RemoteMarkdownError("Repository GitHub non valido.")
+        if not declared_ref or len(declared_ref) > 128:
+            raise RemoteMarkdownError("Ref GitHub non valida.")
+        if not files or len(files) > MAX_REMOTE_FILES:
+            raise RemoteMarkdownError("Numero di file Markdown remoti non valido.")
+        seen_paths: set[str] = set()
+        for relative_path in files:
+            path = PurePosixPath(relative_path)
+            if (
+                not relative_path
+                or "\\" in relative_path
+                or path.is_absolute()
+                or path.as_posix() != relative_path
+                or any(part in {"", ".", ".."} for part in path.parts)
+                or path.suffix.lower() not in {".md", ".markdown"}
+            ):
+                raise RemoteMarkdownError("Path Markdown remoto non valido.")
+            if relative_path in seen_paths:
+                raise RemoteMarkdownError("File Markdown remoto duplicato.")
+            seen_paths.add(relative_path)
+        deadline = self._clock() + self._timeout_seconds
+        repository_path = "/".join(parse.quote(part, safe="") for part in repository.split("/"))
+        commit_payload = self._get_json(
+            f"/repos/{repository_path}/commits/{parse.quote(declared_ref, safe='')}",
+            deadline,
+        )
+        commit_sha = _required_object_id(commit_payload, "sha", "commit GitHub")
+
+        snapshots: list[RemoteMarkdownFile] = []
+        total_bytes = 0
+        for relative_path in files:
+            encoded_path = "/".join(
+                parse.quote(part, safe="") for part in relative_path.split("/")
+            )
+            metadata = self._get_json(
+                f"/repos/{repository_path}/contents/{encoded_path}?ref={commit_sha}",
+                deadline,
+                allow_query=True,
+            )
+            if not isinstance(metadata, dict) or metadata.get("type") != "file":
+                raise RemoteMarkdownError(f"File GitHub non valido: {relative_path}.")
+            blob_id = _required_object_id(metadata, "sha", f"file {relative_path}")
+            blob = self._get_json(
+                f"/repos/{repository_path}/git/blobs/{blob_id}", deadline
+            )
+            content = _decode_blob(blob, blob_id, relative_path)
+            total_bytes += len(content)
+            if total_bytes > MAX_REMOTE_TOTAL_BYTES:
+                raise RemoteMarkdownError("Snapshot Markdown remoto troppo grande.")
+            snapshots.append(
+                RemoteMarkdownFile(
+                    relative_path=relative_path,
+                    git_object_id=blob_id,
+                    sha256=hashlib.sha256(content).hexdigest(),
+                    content=content,
+                )
+            )
+        return RemoteMarkdownSnapshot(
+            provider=self.provider_name,
+            repository=repository,
+            declared_ref=declared_ref,
+            commit_sha=commit_sha,
+            files=tuple(snapshots),
+        )
+
+    def _get_json(
+        self,
+        api_path: str,
+        deadline: float,
+        *,
+        allow_query: bool = False,
+    ) -> Any:
+        remaining = deadline - self._clock()
+        if remaining <= 0:
+            raise RemoteMarkdownError("Timeout sincronizzazione GitHub esaurito.")
+        if not allow_query and "?" in api_path:
+            raise RemoteMarkdownError("Query GitHub API inattesa.")
+        return self._transport.get_json(api_path, timeout_seconds=remaining)
+
+
+def _required_object_id(payload: Any, field: str, context: str) -> str:
+    if not isinstance(payload, dict):
+        raise RemoteMarkdownError(f"Risposta {context} non valida.")
+    value = payload.get(field)
+    if not isinstance(value, str) or GIT_OBJECT_ID_RE.fullmatch(value) is None:
+        raise RemoteMarkdownError(f"Identificativo {context} non valido.")
+    return value
+
+
+def _decode_blob(payload: Any, object_id: str, relative_path: str) -> bytes:
+    if not isinstance(payload, dict) or payload.get("encoding") != "base64":
+        raise RemoteMarkdownError(f"Blob GitHub non valido: {relative_path}.")
+    declared_size = payload.get("size")
+    encoded = payload.get("content")
+    if (
+        not isinstance(declared_size, int)
+        or isinstance(declared_size, bool)
+        or declared_size < 0
+        or declared_size > MAX_REMOTE_MARKDOWN_BYTES
+        or not isinstance(encoded, str)
+    ):
+        raise RemoteMarkdownError(f"Blob GitHub non valido: {relative_path}.")
+    compact = "".join(encoded.split())
+    if len(compact) > ((MAX_REMOTE_MARKDOWN_BYTES + 2) // 3) * 4:
+        raise RemoteMarkdownError(f"Blob GitHub troppo grande: {relative_path}.")
+    try:
+        content = base64.b64decode(compact, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise RemoteMarkdownError(f"Blob GitHub base64 non valido: {relative_path}.") from exc
+    if len(content) != declared_size or len(content) > MAX_REMOTE_MARKDOWN_BYTES:
+        raise RemoteMarkdownError(f"Dimensione blob GitHub incoerente: {relative_path}.")
+    header = f"blob {len(content)}\0".encode("ascii")
+    digest = (
+        hashlib.sha1(header + content).hexdigest()
+        if len(object_id) == 40
+        else hashlib.sha256(header + content).hexdigest()
+    )
+    if digest != object_id:
+        raise RemoteMarkdownError(f"Digest blob GitHub incoerente: {relative_path}.")
+    return content

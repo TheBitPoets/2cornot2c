@@ -1,0 +1,175 @@
+from __future__ import annotations
+
+import base64
+import hashlib
+
+import pytest
+
+from scripts.course_github_markdown import (
+    GitHubMarkdownAdapter,
+    MAX_REMOTE_MARKDOWN_BYTES,
+    RemoteMarkdownError,
+)
+
+
+def git_blob_id(content: bytes) -> str:
+    return hashlib.sha1(f"blob {len(content)}\0".encode("ascii") + content).hexdigest()
+
+
+class FakeTransport:
+    def __init__(self, responses: dict[str, object]) -> None:
+        self.responses = responses
+        self.calls: list[tuple[str, float]] = []
+
+    def get_json(self, api_path: str, *, timeout_seconds: float):
+        self.calls.append((api_path, timeout_seconds))
+        if api_path not in self.responses:
+            raise AssertionError(f"Unexpected API call: {api_path}")
+        response = self.responses[api_path]
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+
+def blob_payload(content: bytes, *, object_id: str | None = None) -> tuple[str, dict]:
+    blob_id = object_id or git_blob_id(content)
+    return blob_id, {
+        "sha": blob_id,
+        "encoding": "base64",
+        "size": len(content),
+        "content": base64.b64encode(content).decode("ascii"),
+    }
+
+
+def test_fetches_every_file_from_one_resolved_commit() -> None:
+    commit = "a" * 40
+    intro_id, intro_blob = blob_payload(b"# Intro\n")
+    lesson_id, lesson_blob = blob_payload(b"# Lesson\n")
+    responses = {
+        "/repos/TheBitPoets/course/commits/main": {"sha": commit},
+        f"/repos/TheBitPoets/course/contents/README.md?ref={commit}": {
+            "type": "file",
+            "sha": intro_id,
+        },
+        f"/repos/TheBitPoets/course/git/blobs/{intro_id}": intro_blob,
+        f"/repos/TheBitPoets/course/contents/lessons/one.md?ref={commit}": {
+            "type": "file",
+            "sha": lesson_id,
+        },
+        f"/repos/TheBitPoets/course/git/blobs/{lesson_id}": lesson_blob,
+    }
+    transport = FakeTransport(responses)
+
+    snapshot = GitHubMarkdownAdapter(transport).fetch_snapshot(
+        "TheBitPoets/course", "main", ("README.md", "lessons/one.md")
+    )
+
+    assert snapshot.commit_sha == commit
+    assert snapshot.declared_ref == "main"
+    assert [item.relative_path for item in snapshot.files] == [
+        "README.md",
+        "lessons/one.md",
+    ]
+    assert [item.text().strip() for item in snapshot.files] == ["# Intro", "# Lesson"]
+    content_calls = [path for path, _timeout in transport.calls if "/contents/" in path]
+    assert content_calls == [
+        f"/repos/TheBitPoets/course/contents/README.md?ref={commit}",
+        f"/repos/TheBitPoets/course/contents/lessons/one.md?ref={commit}",
+    ]
+
+
+def test_quotes_declared_ref_and_file_segments_without_changing_repository() -> None:
+    commit = "b" * 40
+    content = b"# Spazi\n"
+    blob_id, blob = blob_payload(content)
+    transport = FakeTransport(
+        {
+            "/repos/owner/repo/commits/feature%2F2026": {"sha": commit},
+            f"/repos/owner/repo/contents/lezioni/reti%20uno.md?ref={commit}": {
+                "type": "file",
+                "sha": blob_id,
+            },
+            f"/repos/owner/repo/git/blobs/{blob_id}": blob,
+        }
+    )
+
+    snapshot = GitHubMarkdownAdapter(transport).fetch_snapshot(
+        "owner/repo", "feature/2026", ("lezioni/reti uno.md",)
+    )
+
+    assert snapshot.files[0].content == content
+
+
+@pytest.mark.parametrize(
+    "files",
+    [(), ("../outside.md",), ("README.txt",), ("a.md", "a.md")],
+)
+def test_rejects_invalid_file_sets_before_fetching_blobs(files) -> None:
+    transport = FakeTransport(
+        {"/repos/owner/repo/commits/main": {"sha": "c" * 40}}
+    )
+
+    with pytest.raises(RemoteMarkdownError):
+        GitHubMarkdownAdapter(transport).fetch_snapshot("owner/repo", "main", files)
+
+
+def test_rejects_blob_whose_git_object_digest_does_not_match() -> None:
+    commit = "d" * 40
+    forged_id = "e" * 40
+    _unused, blob = blob_payload(b"# Forged\n", object_id=forged_id)
+    transport = FakeTransport(
+        {
+            "/repos/owner/repo/commits/main": {"sha": commit},
+            f"/repos/owner/repo/contents/README.md?ref={commit}": {
+                "type": "file",
+                "sha": forged_id,
+            },
+            f"/repos/owner/repo/git/blobs/{forged_id}": blob,
+        }
+    )
+
+    with pytest.raises(RemoteMarkdownError, match="Digest blob"):
+        GitHubMarkdownAdapter(transport).fetch_snapshot(
+            "owner/repo", "main", ("README.md",)
+        )
+
+
+def test_rejects_declared_blob_over_per_file_limit_without_decoding() -> None:
+    commit = "f" * 40
+    blob_id = "1" * 40
+    transport = FakeTransport(
+        {
+            "/repos/owner/repo/commits/main": {"sha": commit},
+            f"/repos/owner/repo/contents/README.md?ref={commit}": {
+                "type": "file",
+                "sha": blob_id,
+            },
+            f"/repos/owner/repo/git/blobs/{blob_id}": {
+                "encoding": "base64",
+                "size": MAX_REMOTE_MARKDOWN_BYTES + 1,
+                "content": "",
+            },
+        }
+    )
+
+    with pytest.raises(RemoteMarkdownError, match="Blob GitHub non valido"):
+        GitHubMarkdownAdapter(transport).fetch_snapshot(
+            "owner/repo", "main", ("README.md",)
+        )
+
+
+def test_uses_one_absolute_deadline_across_all_requests() -> None:
+    times = iter([100.0, 101.0, 102.0])
+    transport = FakeTransport(
+        {"/repos/owner/repo/commits/main": {"sha": "a" * 40}}
+    )
+    adapter = GitHubMarkdownAdapter(
+        transport,
+        clock=lambda: next(times),
+        timeout_seconds=2.0,
+    )
+
+    with pytest.raises(RemoteMarkdownError, match="Timeout"):
+        adapter.fetch_snapshot("owner/repo", "main", ("README.md",))
+
+    assert transport.calls[0][1] == pytest.approx(1.0)
