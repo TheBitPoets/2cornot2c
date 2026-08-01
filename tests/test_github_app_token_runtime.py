@@ -463,6 +463,9 @@ def test_late_worker_after_start_failure_delegates_cleanup(tmp_path, monkeypatch
         reaper = service._shutdown_reaper
     assert reaper is not None and reaper.is_alive()
     assert service._process_lock.held and config.token_file.exists()
+    service.stop()
+    with service._lock:
+        assert service._shutdown_reaper is reaper
     release_worker.set()
     reaper.join(timeout=2)
     assert not reaper.is_alive()

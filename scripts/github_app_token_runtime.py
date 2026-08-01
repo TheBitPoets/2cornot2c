@@ -530,28 +530,30 @@ def _posix_exchange(directory_fd: int, first: str, second: str) -> None:
     import ctypes
 
     libc = ctypes.CDLL(None, use_errno=True)
-    renameat2 = getattr(libc, "renameat2", None)
-    if renameat2 is None:
+    exchange = getattr(libc, "renameat2", None)
+    if exchange is None:
+        exchange = getattr(libc, "renameatx_np", None)
+    if exchange is None:
         raise GitHubAppRuntimeError(
             "Rotazione atomica installation token non disponibile."
         )
-    renameat2.argtypes = (
+    exchange.argtypes = (
         ctypes.c_int,
         ctypes.c_char_p,
         ctypes.c_int,
         ctypes.c_char_p,
         ctypes.c_uint,
     )
-    renameat2.restype = ctypes.c_int
-    if renameat2(
+    exchange.restype = ctypes.c_int
+    if exchange(
         directory_fd,
         os.fsencode(first),
         directory_fd,
         os.fsencode(second),
-        0x2,  # RENAME_EXCHANGE
+        0x2,  # Linux RENAME_EXCHANGE / Darwin-BSD RENAME_SWAP
     ) != 0:
         error = ctypes.get_errno()
-        raise OSError(error, "renameat2 exchange failed")
+        raise OSError(error, "atomic rename exchange failed")
 
 
 def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]]:
@@ -1001,7 +1003,11 @@ class GitHubAppTokenRuntime:
     def _stop_locked(self, *, remove_token: bool) -> None:
         self._stop.set()
         with self._lock:
+            existing_reaper = self._shutdown_reaper
             thread = self._thread
+        if existing_reaper is not None:
+            existing_reaper.join(timeout=SHUTDOWN_WAIT_SECONDS)
+            return
         if thread is not None:
             thread.join(timeout=SHUTDOWN_WAIT_SECONDS)
         if thread is not None and thread.is_alive():
