@@ -449,7 +449,7 @@ async function saveCalendar() {
   const requestId = ++state.calendarRequestId;
   const saveRequestId = ++state.calendarSaveRequestId;
   state.calendarSaveInProgress = true;
-  els.saveBtn.disabled = true;
+  setCalendarInteractionLocked(true);
   try {
     syncFormToCalendar();
     const name = els.fileName.value.trim() || fileNameFromYear(state.calendar.school_year || "");
@@ -485,7 +485,7 @@ async function saveCalendar() {
   } finally {
     if (saveRequestId === state.calendarSaveRequestId) {
       state.calendarSaveInProgress = false;
-      els.saveBtn.disabled = state.courseDesignLoading;
+      setCalendarInteractionLocked(false);
     }
   }
 }

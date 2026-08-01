@@ -215,6 +215,7 @@ def test_stale_calendar_save_response_does_not_replace_newer_selection() -> None
     function fileNameFromYear() {{ return "fallback.json"; }}
     function renderCalendarList() {{ throw new Error("stale save must not render"); }}
     function setStatus() {{}}
+    function setCalendarInteractionLocked() {{}}
     {function_source}
     (async () => {{
       const save = saveCalendar();
@@ -232,6 +233,8 @@ def test_calendar_save_uses_loaded_filename_revision_and_surfaces_conflicts() ->
     function_source = source.split("async function saveCalendar", 1)[1].split("\nfunction renderAll", 1)[0]
 
     assert 'name === state.loadedCalendarName ? state.calendarRevision : ""' in function_source
+    assert "setCalendarInteractionLocked(true)" in function_source
+    assert "setCalendarInteractionLocked(false)" in function_source
     assert "Calendario non salvato" in function_source
     assert "Ricarica prima di riprovare" in function_source
 
