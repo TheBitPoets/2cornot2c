@@ -423,7 +423,7 @@ async function loadAll() {
     fetchCourseContext(),
     api("/api/ai-config"),
     api("/api/saved-designs"),
-    api("/api/activities").catch(() => ({ activities: [] })),
+    api("/api/course-linkable-activities").catch(() => ({ activities: [] })),
   ]);
   if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) return;
   state.headings = courseContext.headings;
@@ -1611,7 +1611,11 @@ function showActivityLinkError(message, input) {
 function saveActivityLink(event) {
   event.preventDefault();
   const editor = state.activityLinkEditor;
-  if (!editor || !(editor.year.udas || []).includes(editor.uda)) {
+  if (
+    !editor
+    || !(state.design?.years || []).includes(editor.year)
+    || !(editor.year.udas || []).includes(editor.uda)
+  ) {
     closeActivityLinkDialog();
     setStatus("Collegamento annullato: la UDA aperta è cambiata.");
     return;

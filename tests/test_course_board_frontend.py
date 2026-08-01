@@ -140,6 +140,7 @@ def test_activity_link_dialog_adds_authoritative_activity_and_validates_dates() 
         const year = { id: "terzo", udas: [] };
         const uda = { id: "uda-1", activity_links: [] };
         year.udas.push(uda);
+        state.design = { years: [year] };
         state.activityLinkEditor = { year, uda, link: null };
         els.activityLinkSelect.value = state.activities[0].path;
         els.activityLinkRole.value = "verification";
@@ -165,6 +166,26 @@ def test_activity_link_dialog_adds_authoritative_activity_and_validates_dates() 
     )
 
 
+def test_activity_link_dialog_rejects_detached_design_context() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        state.activities = [{ id: "a", path: "activities/a.json", title: "A", kind: "lab" }];
+        const oldYear = { id: "old", udas: [{ id: "uda", activity_links: [] }] };
+        const oldUda = oldYear.udas[0];
+        state.design = { years: [{ id: "new", udas: [] }] };
+        state.activityLinkEditor = { year: oldYear, uda: oldUda, link: null };
+        els.activityLinkSelect.value = "activities/a.json";
+        els.activityLinkRole.value = "practice";
+
+        saveActivityLink({ preventDefault() {} });
+
+        assert.equal(oldUda.activity_links.length, 0);
+        assert.match(els.status.textContent, /UDA aperta è cambiata/);
+        """
+    )
+
+
 def test_activity_link_dialog_rejects_duplicate_activity_in_same_uda() -> None:
     run_course_board_js(
         """
@@ -186,6 +207,7 @@ def test_activity_link_dialog_rejects_duplicate_activity_in_same_uda() -> None:
         const year = { id: "terzo", udas: [] };
         const uda = { id: "uda-1", activity_links: [existing] };
         year.udas.push(uda);
+        state.design = { years: [year] };
         state.activityLinkEditor = { year, uda, link: null };
         els.activityLinkSelect.value = activity.path;
         els.activityLinkRole.value = "practice";

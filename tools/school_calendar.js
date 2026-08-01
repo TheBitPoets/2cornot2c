@@ -73,6 +73,7 @@ const state = {
   ganttZoomIndex: GANTT_DEFAULT_ZOOM_INDEX,
   statusTimer: null,
   courseDesignRequestId: 0,
+  calendarRequestId: 0,
 };
 
 function defaultCalendar() {
@@ -342,10 +343,12 @@ async function loadSelectedCalendar() {
 }
 
 async function loadCalendarByName(name) {
+  const requestId = ++state.calendarRequestId;
   const payload = await api("/api/school-calendars/load", {
     method: "POST",
     body: JSON.stringify({ name }),
   });
+  if (requestId !== state.calendarRequestId) return false;
   state.calendar = payload.calendar;
   state.visibleTrackIds = null;
   els.fileName.value = name;
@@ -358,9 +361,10 @@ async function loadCalendarByName(name) {
     sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   }
   const courseLoaded = await loadCourseDesign();
-  if (courseLoaded === null) return;
+  if (courseLoaded === null || requestId !== state.calendarRequestId) return false;
   renderAll();
   if (courseLoaded) setStatus(`Calendario caricato: ${name}.`);
+  return true;
 }
 
 async function saveCalendar() {

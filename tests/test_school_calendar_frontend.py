@@ -61,7 +61,7 @@ def test_calendar_load_renders_new_calendar_when_course_context_fails() -> None:
     function_source = source[start:end]
     script = f"""
     const assert = require("node:assert/strict");
-    const state = {{ calendar: {{ school_year: "old" }}, visibleTrackIds: new Set() }};
+    const state = {{ calendar: {{ school_year: "old" }}, visibleTrackIds: new Set(), calendarRequestId: 0 }};
     const els = {{ fileName: {{ value: "" }} }};
     const localStorage = {{ setItem() {{}}, removeItem() {{}} }};
     const sessionStorage = {{ setItem() {{}}, removeItem() {{}} }};
@@ -79,6 +79,43 @@ def test_calendar_load_renders_new_calendar_when_course_context_fails() -> None:
       assert.equal(state.calendar.school_year, "new");
       assert.equal(els.fileName.value, "new-calendar.json");
       assert.equal(renders, 1);
+    }})().catch((error) => {{ console.error(error); process.exit(1); }});
+    """
+    subprocess.run(["node", "-e", script], check=True)
+
+
+def test_calendar_loader_ignores_stale_out_of_order_response() -> None:
+    source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
+    start = source.index("async function loadCalendarByName")
+    end = source.index("\nasync function saveCalendar", start)
+    function_source = source[start:end]
+    script = f"""
+    const assert = require("node:assert/strict");
+    const state = {{ calendar: {{}}, visibleTrackIds: null, calendarRequestId: 0 }};
+    const els = {{ fileName: {{ value: "" }} }};
+    const localStorage = {{ setItem() {{}}, removeItem() {{}} }};
+    const sessionStorage = {{ setItem() {{}}, removeItem() {{}} }};
+    const ACTIVE_SCHOOL_CALENDAR_KEY = "calendar";
+    const ACTIVE_COURSE_DESIGN_KEY = "design";
+    const ACTIVE_COURSE_SESSION_KEY = "session";
+    const pending = new Map();
+    function api(path, options) {{
+      const name = JSON.parse(options.body).name;
+      return new Promise((resolve) => pending.set(name, resolve));
+    }}
+    async function loadCourseDesign() {{ return true; }}
+    function renderAll() {{}}
+    function setStatus() {{}}
+    {function_source}
+    (async () => {{
+      const first = loadCalendarByName("a.json");
+      const second = loadCalendarByName("b.json");
+      pending.get("b.json")({{ calendar: {{ school_year: "b", course_design_name: "" }} }});
+      assert.equal(await second, true);
+      pending.get("a.json")({{ calendar: {{ school_year: "a", course_design_name: "" }} }});
+      assert.equal(await first, false);
+      assert.equal(state.calendar.school_year, "b");
+      assert.equal(els.fileName.value, "b.json");
     }})().catch((error) => {{ console.error(error); process.exit(1); }});
     """
     subprocess.run(["node", "-e", script], check=True)

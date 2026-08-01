@@ -1667,6 +1667,27 @@ def list_activities() -> list[dict]:
     return assignment_service().list_activities()
 
 
+def list_course_linkable_activities() -> list[dict]:
+    """List only activities that can pass the course-link persistence boundary."""
+
+    linkable: list[dict] = []
+    for activity in list_activities():
+        link = {
+            "activity_id": activity.get("id", ""),
+            "activity_path": activity.get("path", ""),
+            "title": activity.get("title", ""),
+            "kind": activity.get("kind", ""),
+            "role": "practice",
+        }
+        candidate = {"years": [{"udas": [{"activity_links": [link]}]}]}
+        try:
+            course_activity_links.validate_course_activity_targets(candidate, ROOT)
+        except (OSError, ValueError):
+            continue
+        linkable.append(activity)
+    return linkable
+
+
 def immutable_bundle_snapshot(root: Path) -> dict[str, str]:
     """Return a bounded-structure digest map while rejecting symlinks."""
 
@@ -5189,6 +5210,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/activities":
             self.write_json({"activities": list_activities()})
+            return
+        if parsed.path == "/api/course-linkable-activities":
+            self.write_json({"activities": list_course_linkable_activities()})
             return
         if parsed.path == "/api/ai-config":
             self.write_json(ai_config())

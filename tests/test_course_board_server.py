@@ -300,6 +300,30 @@ def test_write_design_rejects_invalid_activity_link_before_persistence(tmp_path,
         )
 
 
+def test_course_linkable_activity_catalog_fails_closed_on_course_validation(monkeypatch) -> None:
+    activities = [
+        {"id": "valid", "path": "activities/valid.json", "title": "Valid", "kind": "lab"},
+        {"id": "outside", "path": "examples/outside.json", "title": "Outside", "kind": "lab"},
+    ]
+    validated = []
+
+    def validate(candidate, root):
+        path = candidate["years"][0]["udas"][0]["activity_links"][0]["activity_path"]
+        validated.append((path, root))
+        if not path.startswith("activities/"):
+            raise ValueError("outside")
+
+    monkeypatch.setattr(course_board_server, "list_activities", lambda: activities)
+    monkeypatch.setattr(
+        course_board_server.course_activity_links,
+        "validate_course_activity_targets",
+        validate,
+    )
+
+    assert course_board_server.list_course_linkable_activities() == [activities[0]]
+    assert [entry[0] for entry in validated] == ["activities/valid.json", "examples/outside.json"]
+
+
 def test_course_calendar_context_derives_activity_events_from_one_design_snapshot(monkeypatch) -> None:
     design = {
         "years": [
