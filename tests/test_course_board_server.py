@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import http.client
 import io
 import json
@@ -598,7 +599,7 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
             }],
         }],
     }
-    original_read = course_board_server.course_source_catalog.read_local_markdown_text
+    original_read = course_board_server.course_source_catalog.read_markdown_text
     reads = []
 
     def counted_read(item, root):
@@ -607,7 +608,7 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
 
     monkeypatch.setattr(
         course_board_server.course_source_catalog,
-        "read_local_markdown_text",
+        "read_markdown_text",
         counted_read,
     )
 
@@ -791,6 +792,112 @@ def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monk
     assert context["target_topic"]["text"] == ""
 
 
+def test_github_token_is_read_only_from_stable_absolute_file(tmp_path, monkeypatch) -> None:
+    token_file = tmp_path / "github.token"
+    token_file.write_text("short-lived-installation-token\n", encoding="utf-8")
+    if os.name != "nt":
+        token_file.chmod(0o600)
+    monkeypatch.setattr(
+        course_board_server, "GITHUB_MARKDOWN_TOKEN_FILE", str(token_file.resolve())
+    )
+    if os.name == "nt":
+        monkeypatch.setattr(
+            course_board_server,
+            "verify_github_token_file_permissions",
+            lambda _path, _metadata: None,
+        )
+
+    assert course_board_server.read_github_markdown_token() == (
+        "short-lived-installation-token"
+    )
+
+    monkeypatch.setattr(course_board_server, "GITHUB_MARKDOWN_TOKEN_FILE", "relative.token")
+    with pytest.raises(
+        course_board_server.course_github_markdown.RemoteMarkdownError,
+        match="path assoluto",
+    ):
+        course_board_server.read_github_markdown_token()
+
+
+def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
+    tmp_path, monkeypatch
+) -> None:
+    content = b"# Remote course\n\n## Private lesson\n\nPinned content.\n"
+    design = {
+        "sources": [
+            {
+                "id": "private-course",
+                "label": "Private course",
+                "type": "markdown",
+                "provider": "github",
+                "repository": "school/private-course",
+                "ref": "main",
+                "files": ["lessons/intro.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+
+    def fetch_snapshot(_adapter, repository, declared_ref, files):
+        return course_board_server.course_github_markdown.RemoteMarkdownSnapshot(
+            provider="github",
+            repository=repository,
+            declared_ref=declared_ref,
+            commit_sha="a" * 40,
+            files=(
+                course_board_server.course_github_markdown.RemoteMarkdownFile(
+                    relative_path=files[0],
+                    git_object_id=hashlib.sha1(
+                        f"blob {len(content)}\0".encode("ascii") + content
+                    ).hexdigest(),
+                    sha256=hashlib.sha256(content).hexdigest(),
+                    content=content,
+                ),
+            ),
+        )
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server.course_github_markdown.GitHubMarkdownAdapter,
+        "fetch_snapshot",
+        fetch_snapshot,
+    )
+
+    source_files = course_board_server.course_markdown_source_files(design)
+    headings = course_board_server.extract_headings(design, source_files)
+    heading = next(item for item in headings if item["title"] == "Private lesson")
+
+    assert heading["source_ref"] == "main"
+    assert heading["source_commit"] == "a" * 40
+    assert heading["href"] == (
+        "https://github.com/school/private-course/blob/"
+        + "a" * 40
+        + "/lessons/intro.md#private-lesson"
+    )
+    assert course_board_server.section_text(
+        heading["source"],
+        heading["line"],
+        heading["level"],
+        design,
+        {},
+        source_files,
+        heading["source_id"],
+        heading["id"],
+        heading["source_commit"],
+    ) == "Pinned content."
+    assert course_board_server.section_text(
+        heading["source"],
+        heading["line"],
+        heading["level"],
+        design,
+        {},
+        source_files,
+        heading["source_id"],
+        heading["id"],
+        "c" * 40,
+    ) == ""
+
+
 def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:
     source = tmp_path / "lesson.md"
     source.write_text("# Corso\n\n## Array\n\nTesto leggibile.\n", encoding="utf-8")
@@ -805,7 +912,7 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
     thread.start()
     try:
         heading = next(item for item in course_board_server.extract_headings() if item["title"] == "Array")
-        original_read = course_board_server.course_source_catalog.read_local_markdown_text
+        original_read = course_board_server.course_source_catalog.read_markdown_text
         reads = 0
 
         def counted_read(item, root):
@@ -815,7 +922,7 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
 
         monkeypatch.setattr(
             course_board_server.course_source_catalog,
-            "read_local_markdown_text",
+            "read_markdown_text",
             counted_read,
         )
         authorization = "Basic " + base64.b64encode(f"teacher:{teacher_token}".encode("utf-8")).decode("ascii")

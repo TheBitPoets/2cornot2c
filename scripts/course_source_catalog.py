@@ -8,7 +8,9 @@ from pathlib import Path, PurePosixPath
 import re
 import stat
 import sys
-from typing import Any, Iterable
+from typing import Any, Iterable, Protocol
+
+from scripts.course_github_markdown import RemoteMarkdownSnapshot
 
 
 MAX_SOURCES = 64
@@ -74,6 +76,31 @@ class LocalCourseSourceFile:
     expected_size: int | None
     expected_identity: tuple[int, int] | None
     expected_sha256: str | None
+
+
+@dataclass(frozen=True)
+class RemoteCourseSourceFile:
+    """One immutable remote Markdown blob pinned to a resolved commit."""
+
+    source: CourseSource
+    relative_path: str
+    resolved_ref: str
+    expected_sha256: str
+    content: bytes
+
+
+CourseMarkdownSourceFile = LocalCourseSourceFile | RemoteCourseSourceFile
+
+
+class RemoteMarkdownAdapter(Protocol):
+    provider_name: str
+
+    def fetch_snapshot(
+        self,
+        repository: str,
+        declared_ref: str,
+        files: tuple[str, ...],
+    ) -> RemoteMarkdownSnapshot: ...
 
 
 def normalize_course_sources(
@@ -214,11 +241,123 @@ def local_markdown_source_files(
     return tuple(files)
 
 
-def read_local_markdown_text(item: LocalCourseSourceFile, root: Path) -> str:
-    """Read exactly the catalogued source snapshot through a verified handle."""
+def remote_markdown_source_files(
+    design: dict[str, Any],
+    adapters: dict[str, RemoteMarkdownAdapter],
+    *,
+    default_files: Iterable[str] = (),
+) -> tuple[RemoteCourseSourceFile, ...]:
+    """Fetch ready remote sources as provider-pinned immutable snapshots."""
 
-    payload = _read_local_markdown_bytes(item, root.resolve())
+    files: list[RemoteCourseSourceFile] = []
+    total_bytes = 0
+    for source in normalize_course_sources(design, default_files=default_files):
+        if source.provider == "local" or source.indexing_status != "ready":
+            continue
+        adapter = adapters.get(source.provider)
+        if adapter is None or adapter.provider_name != source.provider:
+            raise CourseSourceCatalogError(
+                f"Adapter Markdown non configurato per {source.provider}."
+            )
+        if source.repository is None or source.ref is None:
+            raise CourseSourceCatalogError("Fonte remota priva di repository o ref.")
+        snapshot = adapter.fetch_snapshot(source.repository, source.ref, source.files)
+        if (
+            snapshot.provider != source.provider
+            or snapshot.repository != source.repository
+            or snapshot.declared_ref != source.ref
+            or re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", snapshot.commit_sha) is None
+            or tuple(item.relative_path for item in snapshot.files) != source.files
+        ):
+            raise CourseSourceCatalogError(
+                f"Snapshot remoto incoerente per la fonte {source.source_id}."
+            )
+        for item in snapshot.files:
+            if (
+                not isinstance(item.content, bytes)
+                or len(item.content) > MAX_LOCAL_MARKDOWN_BYTES
+                or re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", item.git_object_id) is None
+                or _git_blob_digest(item.content, len(item.git_object_id)) != item.git_object_id
+                or re.fullmatch(r"[0-9a-f]{64}", item.sha256) is None
+                or hashlib.sha256(item.content).hexdigest() != item.sha256
+            ):
+                raise CourseSourceCatalogError(
+                    f"Blob remoto incoerente per la fonte {source.source_id}."
+                )
+            total_bytes += len(item.content)
+            if total_bytes > MAX_TOTAL_LOCAL_MARKDOWN_BYTES:
+                raise CourseSourceCatalogError(
+                    "Le fonti Markdown remote superano il limite complessivo."
+                )
+            files.append(
+                RemoteCourseSourceFile(
+                    source=source,
+                    relative_path=item.relative_path,
+                    resolved_ref=snapshot.commit_sha,
+                    expected_sha256=item.sha256,
+                    content=item.content,
+                )
+            )
+    return tuple(files)
+
+
+def markdown_source_files(
+    design: dict[str, Any],
+    root: Path,
+    *,
+    adapters: dict[str, RemoteMarkdownAdapter] | None = None,
+    default_files: Iterable[str] = (),
+) -> tuple[CourseMarkdownSourceFile, ...]:
+    """Return local and configured remote Markdown snapshots in catalog order."""
+
+    local_by_id: dict[str, list[LocalCourseSourceFile]] = {}
+    for item in local_markdown_source_files(design, root, default_files=default_files):
+        local_by_id.setdefault(item.source.source_id, []).append(item)
+    remote_by_id: dict[str, list[RemoteCourseSourceFile]] = {}
+    for item in remote_markdown_source_files(
+        design, adapters or {}, default_files=default_files
+    ):
+        remote_by_id.setdefault(item.source.source_id, []).append(item)
+    selected: list[CourseMarkdownSourceFile] = []
+    for source in normalize_course_sources(design, default_files=default_files):
+        selected.extend(local_by_id.get(source.source_id, ()))
+        selected.extend(remote_by_id.get(source.source_id, ()))
+    if len(selected) > MAX_INDEXED_LOCAL_FILES:
+        raise CourseSourceCatalogError("Troppi file Markdown pronti per l'indicizzazione.")
+    total_bytes = sum(
+        len(item.content)
+        if isinstance(item, RemoteCourseSourceFile)
+        else (item.expected_size or 0)
+        for item in selected
+    )
+    if total_bytes > MAX_TOTAL_LOCAL_MARKDOWN_BYTES:
+        raise CourseSourceCatalogError(
+            "Le fonti Markdown superano il limite complessivo."
+        )
+    return tuple(selected)
+
+
+def read_markdown_text(item: CourseMarkdownSourceFile, root: Path) -> str:
+    """Read one verified local handle or immutable remote payload."""
+
+    if isinstance(item, LocalCourseSourceFile):
+        payload = _read_local_markdown_bytes(item, root.resolve())
+    else:
+        payload = item.content
+        if (
+            len(payload) > MAX_LOCAL_MARKDOWN_BYTES
+            or hashlib.sha256(payload).hexdigest() != item.expected_sha256
+        ):
+            raise CourseSourceCatalogError(
+                f"Snapshot remoto non valido: {item.relative_path}."
+            )
     return payload.decode("utf-8", errors="replace")
+
+
+def read_local_markdown_text(item: LocalCourseSourceFile, root: Path) -> str:
+    """Read exactly the catalogued local source snapshot."""
+
+    return read_markdown_text(item, root)
 
 
 def _read_local_markdown_bytes(
@@ -299,12 +438,15 @@ def course_source_catalog_payload(
     root: Path,
     *,
     default_files: Iterable[str] = (),
-    local_files: Iterable[LocalCourseSourceFile] | None = None,
+    local_files: Iterable[CourseMarkdownSourceFile] | None = None,
 ) -> dict[str, Any]:
     """Build the bounded public payload consumed by the Course Board."""
 
     sources = normalize_course_sources(design, default_files=default_files)
     indexed_by_id: dict[str, list[str]] = {source.source_id: [] for source in sources}
+    resolved_ref_by_id: dict[str, str | None] = {
+        source.source_id: None for source in sources
+    }
     selected_files = (
         local_markdown_source_files(
             design,
@@ -316,15 +458,30 @@ def course_source_catalog_payload(
     )
     for item in selected_files:
         indexed_by_id[item.source.source_id].append(item.relative_path)
+        if isinstance(item, RemoteCourseSourceFile):
+            previous = resolved_ref_by_id[item.source.source_id]
+            if previous is not None and previous != item.resolved_ref:
+                raise CourseSourceCatalogError(
+                    f"Snapshot remoto misto per la fonte {item.source.source_id}."
+                )
+            resolved_ref_by_id[item.source.source_id] = item.resolved_ref
     return {
         "sources": [
             {
                 **source.as_dict(),
+                "resolved_ref": resolved_ref_by_id[source.source_id],
                 "indexed_files": indexed_by_id[source.source_id],
             }
             for source in sources
         ]
     }
+
+
+def _git_blob_digest(content: bytes, object_id_length: int) -> str:
+    header = f"blob {len(content)}\0".encode("ascii")
+    if object_id_length == 40:
+        return hashlib.sha1(header + content).hexdigest()
+    return hashlib.sha256(header + content).hexdigest()
 
 
 def _legacy_sources(raw_files: Any) -> tuple[CourseSource, ...]:
@@ -446,10 +603,7 @@ def _normalize_source(raw: Any, index: int) -> CourseSource:
             )
         ):
             raise CourseSourceCatalogError(f"{field}.ref non valido.")
-        if status == "ready":
-            raise CourseSourceCatalogError(
-                f"{field}: una fonte remota non può essere ready senza adapter di indicizzazione."
-            )
+        # A ready remote source is resolved only when a runtime adapter is configured.
 
     return CourseSource(
         source_id=source_id,

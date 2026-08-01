@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
 
+from scripts.course_github_markdown import RemoteMarkdownFile, RemoteMarkdownSnapshot
 from scripts.course_source_catalog import (
     CourseSourceCatalogError,
     course_source_catalog_payload,
     local_markdown_source_files,
+    markdown_source_files,
     normalize_course_sources,
     read_local_markdown_text,
+    read_markdown_text,
 )
 
 
@@ -202,6 +206,56 @@ def test_rejects_same_length_change_after_catalog_snapshot(tmp_path) -> None:
         read_local_markdown_text(item, tmp_path)
 
 
+def test_indexes_ready_github_snapshot_with_resolved_commit_provenance(tmp_path) -> None:
+    design = explicit_design()
+    design["sources"][1]["indexing_status"] = "ready"
+    content = b"# Remote lesson\n"
+
+    class Adapter:
+        provider_name = "github"
+
+        def fetch_snapshot(self, repository, declared_ref, files):
+            assert (repository, declared_ref, files) == (
+                "TheBitPoets/c-course",
+                "main",
+                ("README.md",),
+            )
+            return RemoteMarkdownSnapshot(
+                provider="github",
+                repository=repository,
+                declared_ref=declared_ref,
+                commit_sha="a" * 40,
+                files=(
+                    RemoteMarkdownFile(
+                        relative_path="README.md",
+                        git_object_id=hashlib.sha1(
+                            f"blob {len(content)}\0".encode("ascii") + content
+                        ).hexdigest(),
+                        sha256=hashlib.sha256(content).hexdigest(),
+                        content=content,
+                    ),
+                ),
+            )
+
+    selected = markdown_source_files(
+        design,
+        tmp_path,
+        adapters={"github": Adapter()},
+    )
+
+    remote = next(item for item in selected if item.source.provider == "github")
+    assert remote.resolved_ref == "a" * 40
+    assert read_markdown_text(remote, tmp_path) == "# Remote lesson\n"
+
+
+def test_ready_remote_source_fails_closed_without_adapter(tmp_path) -> None:
+    design = explicit_design()
+    design["sources"][1]["indexing_status"] = "ready"
+
+    with pytest.raises(CourseSourceCatalogError, match="Adapter Markdown non configurato"):
+        markdown_source_files(design, tmp_path)
+
+
 def test_catalog_payload_reports_only_files_actually_indexable(tmp_path) -> None:
     (tmp_path / "doc").mkdir()
     (tmp_path / "doc" / "intro.md").write_text("# Intro\n", encoding="utf-8")
@@ -235,7 +289,6 @@ def test_catalog_payload_reports_only_files_actually_indexable(tmp_path) -> None
         (lambda design: design["sources"][1].update(ref="release/foo.lock/bar"), "ref non valido"),
         (lambda design: design["sources"][1].update(ref="release/.hidden"), "ref non valido"),
         (lambda design: design["sources"][1].update(ref="feature@{one"), "ref non valido"),
-        (lambda design: design["sources"][1].update(indexing_status="ready"), "senza adapter"),
         (lambda design: design["sources"][1].update(updated_at="2026-07-29"), "UTC con suffisso Z"),
         (lambda design: design["sources"][1].update(extra=True), "Campi fonte non supportati"),
     ],

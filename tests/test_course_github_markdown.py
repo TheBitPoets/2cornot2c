@@ -8,6 +8,7 @@ import pytest
 from scripts.course_github_markdown import (
     GitHubApiTransport,
     GitHubMarkdownAdapter,
+    InMemoryGitHubBlobCache,
     MAX_REMOTE_MARKDOWN_BYTES,
     RemoteMarkdownError,
 )
@@ -112,6 +113,34 @@ def test_rejects_invalid_file_sets_before_fetching_blobs(files) -> None:
 
     with pytest.raises(RemoteMarkdownError):
         GitHubMarkdownAdapter(transport).fetch_snapshot("owner/repo", "main", files)
+
+
+def test_content_cache_reuses_verified_blob_but_rechecks_repository_access() -> None:
+    commit = "d" * 40
+    content = b"# Cached\n"
+    blob_id, blob = blob_payload(content)
+    transport = FakeTransport(
+        {
+            "/repos/owner/repo/commits/main": {"sha": commit},
+            f"/repos/owner/repo/contents/README.md?ref={commit}": {
+                "type": "file",
+                "sha": blob_id,
+            },
+            f"/repos/owner/repo/git/blobs/{blob_id}": blob,
+        }
+    )
+    adapter = GitHubMarkdownAdapter(
+        transport,
+        blob_cache=InMemoryGitHubBlobCache(max_bytes=1024),
+    )
+
+    assert adapter.fetch_snapshot("owner/repo", "main", ("README.md",)).files[0].content == content
+    assert adapter.fetch_snapshot("owner/repo", "main", ("README.md",)).files[0].content == content
+
+    paths = [path for path, _timeout in transport.calls]
+    assert paths.count("/repos/owner/repo/commits/main") == 2
+    assert paths.count(f"/repos/owner/repo/contents/README.md?ref={commit}") == 2
+    assert paths.count(f"/repos/owner/repo/git/blobs/{blob_id}") == 1
 
 
 def test_rejects_blob_whose_git_object_digest_does_not_match() -> None:

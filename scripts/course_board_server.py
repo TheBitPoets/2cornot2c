@@ -37,6 +37,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from copy import deepcopy
@@ -58,6 +59,7 @@ from scripts import (
     assign_activity,
     codex_activity_adapter,
     course_activity_links,
+    course_github_markdown,
     course_source_catalog,
     create_activity,
     create_submission_scaffold,
@@ -95,6 +97,8 @@ COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
 AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
+GITHUB_MARKDOWN_TOKEN_FILE = os.environ.get("THEBITLAB_GITHUB_TOKEN_FILE", "").strip()
+GITHUB_MARKDOWN_BLOB_CACHE = course_github_markdown.InMemoryGitHubBlobCache()
 LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
@@ -556,6 +560,105 @@ def read_design() -> dict:
     """Load the course design JSON file, creating a minimal shape if missing."""
 
     return course_service().read_design()
+
+
+def verify_github_token_file_permissions(path: Path, metadata: os.stat_result) -> None:
+    """Fail closed unless the token file is owner-only on this platform."""
+
+    if os.name != "nt":
+        if metadata.st_mode & 0o077 or (
+            hasattr(os, "getuid") and metadata.st_uid != os.getuid()
+        ):
+            raise course_github_markdown.RemoteMarkdownError(
+                "Il file token GitHub deve essere accessibile solo al proprietario."
+            )
+        return
+    try:
+        powershell, _icacls, environment = thebitlab_auth_runtime._windows_acl_tools()
+        sid_process = subprocess.run(
+            (
+                powershell,
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value",
+            ),
+            check=True,
+            capture_output=True,
+            timeout=10,
+            env=environment,
+        )
+        sid = sid_process.stdout.decode("ascii", errors="strict").strip()
+        if thebitlab_auth_runtime._SID_RE.fullmatch(sid) is None:
+            raise OSError("SID Windows non valido")
+        thebitlab_auth_runtime._verify_windows_acl(
+            path, sid, require_protected=True
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError) as exc:
+        raise course_github_markdown.RemoteMarkdownError(
+            "ACL del file token GitHub non sicura."
+        ) from exc
+
+
+def read_github_markdown_token() -> str | None:
+    """Read an optional short-lived GitHub token from an external regular file."""
+
+    if not GITHUB_MARKDOWN_TOKEN_FILE:
+        return None
+    configured = Path(GITHUB_MARKDOWN_TOKEN_FILE)
+    if not configured.is_absolute():
+        raise course_github_markdown.RemoteMarkdownError(
+            "Il file token GitHub deve avere un path assoluto."
+        )
+    try:
+        resolved = configured.resolve(strict=True)
+        if os.path.normcase(str(configured.absolute())) != os.path.normcase(str(resolved)):
+            raise course_github_markdown.RemoteMarkdownError(
+                "Il file token GitHub non può essere un collegamento."
+            )
+        metadata = resolved.stat()
+        if not resolved.is_file() or metadata.st_size > course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 2:
+            raise course_github_markdown.RemoteMarkdownError("File token GitHub non valido.")
+        verify_github_token_file_permissions(resolved, metadata)
+        with resolved.open("rb") as stream:
+            before = os.fstat(stream.fileno())
+            raw = stream.read(course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 3)
+            after = os.fstat(stream.fileno())
+        if (
+            len(raw) > course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 2
+            or before.st_size != after.st_size
+            or before.st_mtime_ns != after.st_mtime_ns
+            or (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)
+        ):
+            raise course_github_markdown.RemoteMarkdownError("File token GitHub instabile.")
+        if raw.endswith(b"\r\n"):
+            raw = raw[:-2]
+        elif raw.endswith((b"\r", b"\n")):
+            raw = raw[:-1]
+        return raw.decode("utf-8")
+    except course_github_markdown.RemoteMarkdownError:
+        raise
+    except (OSError, UnicodeDecodeError) as exc:
+        raise course_github_markdown.RemoteMarkdownError(
+            "File token GitHub non leggibile."
+        ) from exc
+
+
+def course_markdown_source_files(
+    design: dict,
+) -> tuple[course_source_catalog.CourseMarkdownSourceFile, ...]:
+    """Resolve local files and commit-pinned GitHub snapshots for one operation."""
+
+    adapter = course_github_markdown.GitHubMarkdownAdapter(
+        course_github_markdown.GitHubApiTransport(read_github_markdown_token()),
+        blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
+    )
+    return course_source_catalog.markdown_source_files(
+        design,
+        ROOT,
+        adapters={"github": adapter},
+        default_files=DEFAULT_SOURCES,
+    )
 
 
 def validate_course_source_catalog(payload: dict) -> None:
@@ -2751,26 +2854,19 @@ def default_ai_provider_config() -> dict:
 
 def extract_headings(
     design: dict | None = None,
-    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+    source_files: tuple[course_source_catalog.CourseMarkdownSourceFile, ...] | None = None,
 ) -> list[dict]:
     """Extract headings from configured Markdown sources."""
 
     selected_design = read_design() if design is None else design
     headings: list[dict] = []
     selected_files = (
-        course_source_catalog.local_markdown_source_files(
-            selected_design,
-            ROOT,
-            default_files=DEFAULT_SOURCES,
-        )
+        course_markdown_source_files(selected_design)
         if source_files is None
         else source_files
     )
     for source_file in selected_files:
-        source_text = course_source_catalog.read_local_markdown_text(
-            source_file,
-            ROOT,
-        )
+        source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
         source_headings = headings_from_source_snapshot(source_file, source_text)
         if len(headings) + len(source_headings) > MAX_TOTAL_HEADINGS:
             raise course_source_catalog.CourseSourceCatalogError(
@@ -2792,7 +2888,7 @@ def iter_markdown_lines(source_text: str):
 
 
 def headings_from_source_snapshot(
-    source_file: course_source_catalog.LocalCourseSourceFile,
+    source_file: course_source_catalog.CourseMarkdownSourceFile,
     source_text: str,
 ) -> list[dict]:
     """Extract bounded public heading metadata from one verified source snapshot."""
@@ -2826,6 +2922,8 @@ def headings_from_source_snapshot(
             raise course_source_catalog.CourseSourceCatalogError(
                 f"La fonte {source} contiene troppi heading Markdown."
             )
+        resolved_ref = getattr(source_file, "resolved_ref", None)
+        source_url = markdown_source_url(source_file, anchor)
         headings.append(
             {
                 "id": heading_id,
@@ -2835,11 +2933,12 @@ def headings_from_source_snapshot(
                 "source_provider": descriptor.provider,
                 "source_repository": descriptor.repository,
                 "source_ref": descriptor.ref,
+                "source_commit": resolved_ref,
                 "level": len(match.group(1)),
                 "title": TAG_RE.sub("", title).strip(),
                 "anchor": anchor,
-                "href": f"../{source}#{anchor}",
-                "github_url": github_blob_url(source, anchor),
+                "href": source_url if descriptor.provider == "github" else f"../{source}#{anchor}",
+                "github_url": source_url,
                 "line": lineno,
             }
         )
@@ -2850,15 +2949,8 @@ def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] 
     """Return heading metadata and section from one bounded source read."""
 
     total_headings = 0
-    for source_file in course_source_catalog.local_markdown_source_files(
-        design,
-        ROOT,
-        default_files=DEFAULT_SOURCES,
-    ):
-        source_text = course_source_catalog.read_local_markdown_text(
-            source_file,
-            ROOT,
-        )
+    for source_file in course_markdown_source_files(design):
+        source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
         source_headings = headings_from_source_snapshot(source_file, source_text)
         total_headings += len(source_headings)
         if total_headings > MAX_TOTAL_HEADINGS:
@@ -2876,11 +2968,45 @@ def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] 
     return None
 
 
-def github_blob_url(source: str, anchor: str = "") -> str:
-    """Return a GitHub URL for a source file and optional anchor."""
+def markdown_source_url(
+    source_file: course_source_catalog.CourseMarkdownSourceFile,
+    anchor: str = "",
+) -> str:
+    """Return an immutable provider URL when available."""
 
-    base = f"https://github.com/TheBitPoets/2cornot2c/blob/main/{source}"
-    return f"{base}#{anchor}" if anchor else base
+    descriptor = source_file.source
+    if descriptor.provider == "github":
+        resolved_ref = getattr(source_file, "resolved_ref", None)
+        if descriptor.repository is None or resolved_ref is None:
+            return ""
+        encoded_repository = "/".join(
+            urllib.parse.quote(part, safe="")
+            for part in descriptor.repository.split("/")
+        )
+        encoded_source = "/".join(
+            urllib.parse.quote(part, safe="")
+            for part in source_file.relative_path.split("/")
+        )
+        base = f"https://github.com/{encoded_repository}/blob/{resolved_ref}/{encoded_source}"
+    else:
+        base = (
+            "https://github.com/TheBitPoets/2cornot2c/blob/main/"
+            + "/".join(
+                urllib.parse.quote(part, safe="")
+                for part in source_file.relative_path.split("/")
+            )
+        )
+    return f"{base}#{urllib.parse.quote(anchor, safe='-')}" if anchor else base
+
+
+def github_blob_url(source: str, anchor: str = "") -> str:
+    """Return the legacy local-repository GitHub URL."""
+
+    encoded_source = "/".join(
+        urllib.parse.quote(part, safe="") for part in source.split("/")
+    )
+    base = f"https://github.com/TheBitPoets/2cornot2c/blob/main/{encoded_source}"
+    return f"{base}#{urllib.parse.quote(anchor, safe='-')}" if anchor else base
 
 
 def section_text(
@@ -2889,9 +3015,10 @@ def section_text(
     level: int | str,
     design: dict | None = None,
     source_snapshots: dict[str, str] | None = None,
-    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+    source_files: tuple[course_source_catalog.CourseMarkdownSourceFile, ...] | None = None,
     source_id: str = "",
     heading_id: str = "",
+    source_commit: str = "",
 ) -> str:
     """Extract local Markdown text for one heading section."""
 
@@ -2902,11 +3029,7 @@ def section_text(
         return ""
     selected_design = read_design() if design is None else design
     selected_files = (
-        course_source_catalog.local_markdown_source_files(
-            selected_design,
-            ROOT,
-            default_files=DEFAULT_SOURCES,
-        )
+        course_markdown_source_files(selected_design)
         if source_files is None
         else source_files
     )
@@ -2925,13 +3048,15 @@ def section_text(
     )
     if source_file is None:
         return ""
+    if source_file.source.provider != "local" and (
+        not source_commit
+        or source_commit != getattr(source_file, "resolved_ref", None)
+    ):
+        return ""
     snapshot_key = f"{source_id}\0{source}"
     source_text = None if source_snapshots is None else source_snapshots.get(snapshot_key)
     if source_text is None:
-        source_text = course_source_catalog.read_local_markdown_text(
-            source_file,
-            ROOT,
-        )
+        source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
         if source_snapshots is not None:
             source_snapshots[snapshot_key] = source_text
     if heading_id:
@@ -3006,15 +3131,8 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
     selected_design = read_design() if design is None else design
     catalog_headings: list[dict] = []
     total_excerpt_chars = 0
-    for source_file in course_source_catalog.local_markdown_source_files(
-        selected_design,
-        ROOT,
-        default_files=DEFAULT_SOURCES,
-    ):
-        source_text = course_source_catalog.read_local_markdown_text(
-            source_file,
-            ROOT,
-        )
+    for source_file in course_markdown_source_files(selected_design):
+        source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
         source_headings = headings_from_source_snapshot(source_file, source_text)
         if len(catalog_headings) + len(source_headings) > MAX_AI_CATALOG_HEADINGS:
             raise course_source_catalog.CourseSourceCatalogError(
@@ -3057,6 +3175,7 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
             "source_provider": heading.get("source_provider", "local"),
             "source_repository": heading.get("source_repository"),
             "source_ref": heading.get("source_ref"),
+            "source_commit": heading.get("source_commit"),
             "level": heading["level"],
             "line": heading["line"],
             "anchor": heading["anchor"],
@@ -3091,7 +3210,7 @@ def topic_summary(
     child_text_budget: int = 0,
     design: dict | None = None,
     source_snapshots: dict[str, str] | None = None,
-    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+    source_files: tuple[course_source_catalog.CourseMarkdownSourceFile, ...] | None = None,
 ) -> dict:
     """Return a compact recursive topic summary for the AI prompt."""
 
@@ -3103,9 +3222,14 @@ def topic_summary(
         "source_provider": item.get("source_provider", "local"),
         "source_repository": item.get("source_repository"),
         "source_ref": item.get("source_ref"),
+        "source_commit": item.get("source_commit"),
         "level": item.get("level", ""),
         "href": item.get("href", ""),
-        "github_url": github_blob_url(item.get("source", ""), anchor),
+        "github_url": (
+            item.get("href", "")
+            if item.get("source_provider") == "github"
+            else github_blob_url(item.get("source", ""), anchor)
+        ),
         "children": [
             topic_summary(
                 child,
@@ -3127,6 +3251,7 @@ def topic_summary(
             source_files,
             str(item.get("source_id", "")),
             str(item.get("id", "")),
+            str(item.get("source_commit", "")),
         )
     return summary
 
@@ -3174,6 +3299,7 @@ def board_item_from_heading(heading: dict) -> dict:
         "source_provider": heading.get("source_provider", "local"),
         "source_repository": heading.get("source_repository"),
         "source_ref": heading.get("source_ref"),
+        "source_commit": heading.get("source_commit"),
         "href": heading["href"],
         "level": heading["level"],
         "line": heading["line"],
@@ -3221,11 +3347,7 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
             found = find_item_context(uda.get("items", []), item_id)
             if found:
                 index, siblings, item = found
-                source_files = course_source_catalog.local_markdown_source_files(
-                    design,
-                    ROOT,
-                    default_files=DEFAULT_SOURCES,
-                )
+                source_files = course_markdown_source_files(design)
                 source_snapshots: dict[str, str] = {}
                 previous_topics = siblings[max(0, index - 2):index]
                 next_topics = siblings[index + 1:index + 3]
@@ -5264,11 +5386,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-source-context":
             try:
                 design = source_request_design(parsed.query)
-                source_files = course_source_catalog.local_markdown_source_files(
-                    design,
-                    ROOT,
-                    default_files=DEFAULT_SOURCES,
-                )
+                source_files = course_markdown_source_files(design)
                 catalog = course_source_catalog.course_source_catalog_payload(
                     design,
                     ROOT,
@@ -5284,6 +5402,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                         "sources": catalog["sources"],
                     }
                 )
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
             except (ValueError, FileNotFoundError):
@@ -5292,13 +5412,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-sources":
             try:
                 design = source_request_design(parsed.query)
+                source_files = course_markdown_source_files(design)
                 self.write_json(
                     course_source_catalog.course_source_catalog_payload(
                         design,
                         ROOT,
                         default_files=DEFAULT_SOURCES,
+                        local_files=source_files,
                     )
                 )
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
             except (ValueError, FileNotFoundError):
@@ -5308,6 +5432,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 design = source_request_design(parsed.query)
                 self.write_json({"headings": extract_headings(design)})
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
             except (ValueError, FileNotFoundError):
@@ -5319,6 +5445,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 design = source_request_design(parsed.query)
                 snapshot = heading_content_snapshot(design, heading_id)
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
+                return
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
                 return
@@ -5469,6 +5598,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 return
             try:
                 snapshot = heading_content_snapshot(design, heading_id)
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
+                return
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
                 return
