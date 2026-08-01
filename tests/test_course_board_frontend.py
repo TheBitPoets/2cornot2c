@@ -526,6 +526,7 @@ def test_source_editor_requires_preview_and_context_before_apply() -> None:
     assert "state.isNewDesign || hasUnsavedChanges()" in source
     assert "editor.pendingPreviewRequests = Math.max" in source
     assert "verified.snapshot_revision !== editor.preview.snapshotRevision" in source
+    assert "sourcePreviewSignature(collectSourceEditorSources()) !== sourcePreviewSignature(sources)" in source
     assert "applied.ref = resolvedRef" in source
 
 

@@ -1543,6 +1543,11 @@ async function applySourceEditor(event) {
     if (!isBoardContextUnchanged(editor.boardContext)) {
       throw new Error("La board è cambiata durante la verifica finale.");
     }
+    if (sourcePreviewSignature(collectSourceEditorSources()) !== sourcePreviewSignature(sources)) {
+      editor.preview = null;
+      els.sourceApplyBtn.disabled = true;
+      throw new Error("Le fonti sono cambiate durante la verifica finale: sincronizza di nuovo.");
+    }
     if (
       !verified.snapshot_revision
       || verified.snapshot_revision !== editor.preview.snapshotRevision
