@@ -206,6 +206,44 @@
     </form>
   </dialog>
 
+  <dialog id="activityLinkDialog" class="courseAiDialog activityLinkDialog" aria-labelledby="activityLinkDialogTitle">
+    <form id="activityLinkForm" class="courseAiPanel">
+      <header class="courseAiHead">
+        <div>
+          <p class="eyebrow">Activity della UDA</p>
+          <h2 id="activityLinkDialogTitle">Collega activity</h2>
+        </div>
+        <button id="activityLinkCloseBtn" type="button" title="Chiude senza salvare il collegamento.">Chiudi</button>
+      </header>
+      <div class="briefGrid">
+        <label>
+          <span>Activity</span>
+          <select id="activityLinkSelect" required></select>
+        </label>
+        <label>
+          <span>Ruolo didattico</span>
+          <select id="activityLinkRole" required>
+            <option value="practice">Esercitazione</option>
+            <option value="verification">Verifica</option>
+          </select>
+        </label>
+        <label>
+          <span>Data pianificata</span>
+          <input id="activityLinkScheduledOn" type="date">
+        </label>
+        <label>
+          <span>Scadenza</span>
+          <input id="activityLinkDueOn" type="date">
+        </label>
+      </div>
+      <p id="activityLinkError" class="dialogInlineError" role="alert" hidden></p>
+      <div class="courseAiActions">
+        <button id="activityLinkSaveBtn" type="submit" class="primary">Salva collegamento</button>
+        <button id="activityLinkCancelBtn" type="button">Annulla</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="paragraphDialog" class="courseAiDialog paragraphDialog" aria-labelledby="paragraphDialogTitle">
     <form method="dialog" class="courseAiPanel">
       <header class="courseAiHead">

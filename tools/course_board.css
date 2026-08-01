@@ -522,6 +522,41 @@ input[aria-invalid="true"] {
 
 .dropzone.dragOver { background: rgba(0, 0, 0, .06); }
 
+.udaActivities {
+  border-top: 1px solid rgba(215, 215, 215, .9);
+  display: grid;
+  gap: .65rem;
+  padding: .85rem;
+}
+
+.udaActivitiesHead,
+.activityLinkCard {
+  align-items: center;
+  display: flex;
+  gap: .65rem;
+  justify-content: space-between;
+}
+
+.udaActivitiesHead span,
+.activityLinkCard span,
+.activityLinkCard code {
+  color: var(--muted);
+  display: block;
+  font-size: .76rem;
+  margin-top: .18rem;
+}
+
+.activityLinkCard {
+  background: #ffffff;
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-left: 5px solid #247a4d;
+  border-radius: 12px;
+  padding: .65rem .75rem;
+}
+
+.activityLinkCard.activityLink-verification { border-left-color: #a82c22; }
+.activityLinkActions { display: flex; flex-wrap: wrap; gap: .3rem; }
+
 .item {
   margin-left: calc(var(--item-depth, 0) * 1.35rem);
 }

@@ -704,6 +704,16 @@ def source_request_design(raw_query: str) -> dict:
     return read_saved_design(names[0])
 
 
+def course_calendar_context(raw_query: str) -> dict:
+    """Return one design and its derived activity events from one snapshot."""
+
+    design = source_request_design(raw_query)
+    return {
+        "design": design,
+        "activity_events": list(course_activity_links.iter_scheduled_activity_links(design)),
+    }
+
+
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
     """Persist a named course design in the archive folder."""
 
@@ -5141,6 +5151,12 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/course-design":
             self.write_json(read_design())
+            return
+        if parsed.path == "/api/course-calendar-context":
+            try:
+                self.write_json(course_calendar_context(parsed.query))
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato o non valido.")
             return
         if parsed.path == "/api/saved-designs":
             self.write_json({"designs": list_saved_designs()})

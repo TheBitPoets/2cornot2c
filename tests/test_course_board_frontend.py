@@ -127,6 +127,87 @@ def test_source_catalog_summary_reports_indexed_pending_and_providers() -> None:
     )
 
 
+def test_activity_link_dialog_adds_authoritative_activity_and_validates_dates() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        state.activities = [{
+          id: "python-somma-001",
+          path: "activities/drafts/python-somma-001.json",
+          title: "Somma",
+          kind: "laboratorio",
+        }];
+        const year = { id: "terzo", udas: [] };
+        const uda = { id: "uda-1", activity_links: [] };
+        year.udas.push(uda);
+        state.activityLinkEditor = { year, uda, link: null };
+        els.activityLinkSelect.value = state.activities[0].path;
+        els.activityLinkRole.value = "verification";
+        els.activityLinkScheduledOn.value = "2026-11-10";
+        els.activityLinkDueOn.value = "2026-11-09";
+
+        saveActivityLink({ preventDefault() {} });
+        assert.equal(uda.activity_links.length, 0);
+        assert.match(els.activityLinkError.textContent, /non può precedere/);
+
+        els.activityLinkDueOn.value = "2026-11-17";
+        saveActivityLink({ preventDefault() {} });
+        assert.deepEqual(uda.activity_links, [{
+          activity_id: "python-somma-001",
+          activity_path: "activities/drafts/python-somma-001.json",
+          title: "Somma",
+          kind: "laboratorio",
+          role: "verification",
+          scheduled_on: "2026-11-10",
+          due_on: "2026-11-17",
+        }]);
+        """
+    )
+
+
+def test_activity_link_dialog_rejects_duplicate_activity_in_same_uda() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        const activity = {
+          id: "python-somma-001",
+          path: "activities/drafts/python-somma-001.json",
+          title: "Somma",
+          kind: "laboratorio",
+        };
+        state.activities = [activity];
+        const existing = {
+          activity_id: activity.id,
+          activity_path: activity.path,
+          title: activity.title,
+          kind: activity.kind,
+          role: "practice",
+        };
+        const year = { id: "terzo", udas: [] };
+        const uda = { id: "uda-1", activity_links: [existing] };
+        year.udas.push(uda);
+        state.activityLinkEditor = { year, uda, link: null };
+        els.activityLinkSelect.value = activity.path;
+        els.activityLinkRole.value = "practice";
+
+        saveActivityLink({ preventDefault() {} });
+
+        assert.equal(uda.activity_links.length, 1);
+        assert.match(els.activityLinkError.textContent, /già collegata/);
+        """
+    )
+
+
+def test_course_board_declares_activity_link_controls() -> None:
+    html = Path("tools/course_board.html").read_text(encoding="utf-8")
+    source = Path("tools/course_board.js").read_text(encoding="utf-8")
+
+    assert 'id="activityLinkDialog"' in html
+    assert 'id="activityLinkScheduledOn"' in html
+    assert 'id="activityLinkDueOn"' in html
+    assert 'addButton.dataset.action = "add-activity-link"' in source
+
+
 def test_course_board_declares_source_catalog_summary() -> None:
     html = Path("tools/course_board.html").read_text(encoding="utf-8")
 

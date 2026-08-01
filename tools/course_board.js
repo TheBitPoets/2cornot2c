@@ -1,6 +1,7 @@
 ﻿const state = {
   headings: [],
   sources: [],
+  activities: [],
   design: null,
   savedDesigns: [],
   activeSavedDesign: "",
@@ -12,6 +13,7 @@
   courseAiYearId: null,
   courseAiProposal: null,
   activeFrameTextarea: null,
+  activityLinkEditor: null,
 };
 
 const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
@@ -58,6 +60,16 @@ const els = {
   paragraphDialogMeta: document.querySelector("#paragraphDialogMeta"),
   paragraphContent: document.querySelector("#paragraphContent"),
   paragraphSourceLink: document.querySelector("#paragraphSourceLink"),
+  activityLinkDialog: document.querySelector("#activityLinkDialog"),
+  activityLinkForm: document.querySelector("#activityLinkForm"),
+  activityLinkDialogTitle: document.querySelector("#activityLinkDialogTitle"),
+  activityLinkCloseBtn: document.querySelector("#activityLinkCloseBtn"),
+  activityLinkSelect: document.querySelector("#activityLinkSelect"),
+  activityLinkRole: document.querySelector("#activityLinkRole"),
+  activityLinkScheduledOn: document.querySelector("#activityLinkScheduledOn"),
+  activityLinkDueOn: document.querySelector("#activityLinkDueOn"),
+  activityLinkError: document.querySelector("#activityLinkError"),
+  activityLinkCancelBtn: document.querySelector("#activityLinkCancelBtn"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
   courseAiTitle: document.querySelector("#courseAiTitle"),
   courseAiCloseBtn: document.querySelector("#courseAiCloseBtn"),
@@ -407,14 +419,16 @@ async function loadAll() {
   const boardContext = captureBoardContext();
   const requestId = ++courseContextRequestId;
   courseContextRequestName = "";
-  const [courseContext, aiConfig, savedDesigns] = await Promise.all([
+  const [courseContext, aiConfig, savedDesigns, activities] = await Promise.all([
     fetchCourseContext(),
     api("/api/ai-config"),
     api("/api/saved-designs"),
+    api("/api/activities").catch(() => ({ activities: [] })),
   ]);
   if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) return;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
+  state.activities = activities.activities || [];
   state.design = courseContext.design;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
@@ -1490,8 +1504,176 @@ function renderUda(year, uda) {
   } else {
     items.forEach((item, index) => dropzone.append(renderItem(year, uda, uda.items, item, index, 0)));
   }
-  details.append(dropzone);
+  details.append(dropzone, renderUdaActivities(year, uda));
   return details;
+}
+
+function renderUdaActivities(year, uda) {
+  const section = document.createElement("section");
+  section.className = "udaActivities";
+  const heading = document.createElement("div");
+  heading.className = "udaActivitiesHead";
+  heading.innerHTML = `<strong>Activity</strong><span>${(uda.activity_links || []).length} collegate</span>`;
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.dataset.action = "add-activity-link";
+  addButton.textContent = "Collega activity";
+  addButton.title = "Collega una activity disponibile a questa UDA.";
+  addButton.addEventListener("click", () => openActivityLinkDialog(year, uda));
+  heading.append(addButton);
+  section.append(heading);
+
+  const links = uda.activity_links || [];
+  if (!links.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "Nessuna activity collegata a questa UDA.";
+    section.append(empty);
+    return section;
+  }
+  for (const link of links) {
+    const card = document.createElement("article");
+    card.className = `activityLinkCard activityLink-${link.role}`;
+    const dates = [
+      link.scheduled_on ? `Pianificata: ${link.scheduled_on}` : "",
+      link.due_on ? `Scadenza: ${link.due_on}` : "",
+    ].filter(Boolean).join(" · ") || "Senza data";
+    card.innerHTML = `
+      <div>
+        <strong>${escapeHtml(link.title)}</strong>
+        <span>${escapeHtml(link.role === "verification" ? "Verifica" : "Esercitazione")} · ${escapeHtml(link.kind || "activity")}</span>
+        <code>${escapeHtml(link.activity_path)}</code>
+        <span>${escapeHtml(dates)}</span>
+      </div>
+      <div class="activityLinkActions">
+        <button type="button" data-action="edit-activity-link">Modifica</button>
+        <button type="button" data-action="remove-activity-link">Rimuovi</button>
+      </div>
+    `;
+    card.querySelector('[data-action="edit-activity-link"]').addEventListener("click", () => {
+      openActivityLinkDialog(year, uda, link);
+    });
+    card.querySelector('[data-action="remove-activity-link"]').addEventListener("click", () => {
+      removeActivityLink(uda, link);
+    });
+    section.append(card);
+  }
+  return section;
+}
+
+function openActivityLinkDialog(year, uda, link = null) {
+  if (!state.activities.length) {
+    setStatus("Nessuna activity disponibile: creane una dalla pagina Consegne.");
+    return;
+  }
+  state.activityLinkEditor = { year, uda, link };
+  els.activityLinkDialogTitle.textContent = link ? "Modifica collegamento activity" : "Collega activity";
+  els.activityLinkSelect.innerHTML = "";
+  for (const activity of state.activities) {
+    const option = document.createElement("option");
+    option.value = activity.path;
+    option.textContent = `${activity.title || activity.id} (${activity.id})`;
+    els.activityLinkSelect.append(option);
+  }
+  els.activityLinkSelect.value = link?.activity_path || state.activities[0]?.path || "";
+  els.activityLinkSelect.disabled = Boolean(link);
+  els.activityLinkRole.value = link?.role || "practice";
+  els.activityLinkScheduledOn.value = link?.scheduled_on || "";
+  els.activityLinkDueOn.value = link?.due_on || "";
+  clearActivityLinkError();
+  if (typeof els.activityLinkDialog.showModal === "function") els.activityLinkDialog.showModal();
+  else els.activityLinkDialog.setAttribute("open", "");
+}
+
+function closeActivityLinkDialog() {
+  state.activityLinkEditor = null;
+  els.activityLinkSelect.disabled = false;
+  if (els.activityLinkDialog.open) els.activityLinkDialog.close();
+  else els.activityLinkDialog.removeAttribute("open");
+  clearActivityLinkError();
+}
+
+function clearActivityLinkError() {
+  els.activityLinkError.textContent = "";
+  els.activityLinkError.hidden = true;
+  for (const input of [els.activityLinkSelect, els.activityLinkRole, els.activityLinkScheduledOn, els.activityLinkDueOn]) {
+    input.removeAttribute("aria-invalid");
+  }
+}
+
+function showActivityLinkError(message, input) {
+  els.activityLinkError.textContent = message;
+  els.activityLinkError.hidden = false;
+  input?.setAttribute("aria-invalid", "true");
+  input?.focus();
+}
+
+function saveActivityLink(event) {
+  event.preventDefault();
+  const editor = state.activityLinkEditor;
+  if (!editor || !(editor.year.udas || []).includes(editor.uda)) {
+    closeActivityLinkDialog();
+    setStatus("Collegamento annullato: la UDA aperta è cambiata.");
+    return;
+  }
+  clearActivityLinkError();
+  const activity = state.activities.find((candidate) => candidate.path === els.activityLinkSelect.value);
+  if (!activity) {
+    showActivityLinkError("Seleziona un'activity disponibile.", els.activityLinkSelect);
+    return;
+  }
+  const scheduledOn = els.activityLinkScheduledOn.value;
+  const dueOn = els.activityLinkDueOn.value;
+  if (scheduledOn && dueOn && dueOn < scheduledOn) {
+    showActivityLinkError("La scadenza non può precedere la data pianificata.", els.activityLinkDueOn);
+    return;
+  }
+  editor.uda.activity_links ||= [];
+  const duplicate = editor.uda.activity_links.find((candidate) => candidate !== editor.link && (
+    candidate.activity_id.toLocaleLowerCase("en-US") === String(activity.id).toLocaleLowerCase("en-US")
+    || candidate.activity_path.toLocaleLowerCase("en-US") === String(activity.path).toLocaleLowerCase("en-US")
+  ));
+  if (duplicate) {
+    showActivityLinkError("Questa activity è già collegata alla UDA.", els.activityLinkSelect);
+    return;
+  }
+  const saved = {
+    activity_id: activity.id,
+    activity_path: activity.path,
+    title: activity.title || activity.id,
+    kind: activity.kind || "activity",
+    role: els.activityLinkRole.value,
+  };
+  if (scheduledOn) saved.scheduled_on = scheduledOn;
+  if (dueOn) saved.due_on = dueOn;
+  if (editor.link) {
+    const index = editor.uda.activity_links.indexOf(editor.link);
+    if (index < 0) {
+      closeActivityLinkDialog();
+      setStatus("Modifica annullata: il collegamento non esiste più.");
+      return;
+    }
+    editor.uda.activity_links[index] = saved;
+  } else {
+    editor.uda.activity_links.push(saved);
+  }
+  closeActivityLinkDialog();
+  renderCourse();
+  setStatus(`Activity "${saved.title}" ${editor.link ? "aggiornata" : "collegata"}.`);
+}
+
+async function removeActivityLink(uda, link) {
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Rimuovi collegamento activity",
+    message: `Rimuovere "${link.title}" dalla UDA? L'activity originale e le consegne non verranno eliminate.`,
+    confirmLabel: "Rimuovi collegamento",
+    cancelLabel: "Mantieni",
+    danger: true,
+  });
+  if (!confirmed || !(uda.activity_links || []).includes(link)) return;
+  uda.activity_links = uda.activity_links.filter((candidate) => candidate !== link);
+  renderCourse();
+  setStatus(`Collegamento a "${link.title}" rimosso.`);
 }
 
 function isAssignedToYear(itemId, yearId) {
@@ -2886,6 +3068,14 @@ els.addYearBtn.addEventListener("click", openYearDialog);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCreateBtn.addEventListener("click", createYearFromDialog);
+els.activityLinkForm.addEventListener("submit", saveActivityLink);
+els.activityLinkCloseBtn.addEventListener("click", closeActivityLinkDialog);
+els.activityLinkCancelBtn.addEventListener("click", closeActivityLinkDialog);
+els.activityLinkDialog.addEventListener("close", () => {
+  state.activityLinkEditor = null;
+  els.activityLinkSelect.disabled = false;
+  clearActivityLinkError();
+});
 els.paragraphCloseBtn.addEventListener("click", () => {
   invalidateParagraphPreview();
   els.paragraphDialog.close();

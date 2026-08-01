@@ -63,6 +63,7 @@ const state = {
   savedDesigns: [],
   calendar: defaultCalendar(),
   courseDesign: null,
+  activityEvents: [],
   visibleTrackIds: null,
   calendarView: {
     mode: "year",
@@ -282,18 +283,14 @@ async function loadCalendarList() {
 async function loadCourseDesign() {
   try {
     const name = state.calendar.course_design_name || "";
-    if (name) {
-      const payload = await api("/api/saved-designs/load", {
-        method: "POST",
-        body: JSON.stringify({ name }),
-      });
-      state.courseDesign = payload.design;
-      setStatus(`Percorso didattico associato: ${name}.`);
-      return;
-    }
-    state.courseDesign = await api("/api/course-design");
+    const query = name ? `?design=${encodeURIComponent(name)}` : "";
+    const payload = await api(`/api/course-calendar-context${query}`);
+    state.courseDesign = payload.design;
+    state.activityEvents = payload.activity_events || [];
+    if (name) setStatus(`Percorso didattico associato: ${name}.`);
   } catch (error) {
     state.courseDesign = null;
+    state.activityEvents = [];
     setStatus(`Percorso didattico non caricato: ${error.message}`, "error");
   }
 }
@@ -316,6 +313,7 @@ async function loadCalendarForActiveCourseDesign() {
   state.visibleTrackIds = null;
   els.fileName.value = "";
   await loadCourseDesign();
+  syncTracksFromCourseDesign();
   renderAll();
   setStatus(`Nessun calendario associato a ${activeDesign || "percorso corrente"}: vista vuota pronta per la configurazione.`);
   return true;
@@ -1669,6 +1667,32 @@ function renderValidation() {
   }
 }
 
+function activityEventsByDate() {
+  const events = new Map();
+  const visibleCourseYears = new Set(
+    visibleTracks().map((track) => track.course_year_id || track.id)
+  );
+  const add = (date, event) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return;
+    const entries = events.get(date) || [];
+    entries.push(event);
+    events.set(date, entries);
+  };
+  for (const link of state.activityEvents || []) {
+    if (!visibleCourseYears.has(link.year_id)) continue;
+    if (link.scheduled_on) add(link.scheduled_on, { ...link, event_type: "scheduled" });
+    if (link.due_on) add(link.due_on, { ...link, event_type: "due" });
+  }
+  for (const entries of events.values()) {
+    entries.sort((left, right) => (
+      left.event_type.localeCompare(right.event_type)
+      || left.title.localeCompare(right.title, "it")
+      || left.activity_id.localeCompare(right.activity_id)
+    ));
+  }
+  return events;
+}
+
 function renderCalendarView() {
   syncFormToCalendar();
   renderValidation();
@@ -1683,9 +1707,10 @@ function renderCalendarView() {
   }
   const closures = closedLabelsByDate();
   const lessons = lessonLabelsByDate();
+  const activityEvents = activityEventsByDate();
   if (state.calendarView.mode === "week") {
     const week = selectedCalendarWeek(start, end);
-    if (week) els.monthGrid.append(renderWeek(week, start, end, lessons, closures));
+    if (week) els.monthGrid.append(renderWeek(week, start, end, lessons, closures, activityEvents));
     renderGanttChart();
     return;
   }
@@ -1701,7 +1726,7 @@ function renderCalendarView() {
     }
     const month = item.month || item;
     const role = item.role || "main";
-    els.monthGrid.append(renderMonth(month, start, end, lessons, closures, role));
+    els.monthGrid.append(renderMonth(month, start, end, lessons, closures, activityEvents, role));
   }
   renderGanttChart();
 }
@@ -1725,7 +1750,7 @@ function selectedCalendarWeek(start, end) {
   return weeks.find((week) => isoDate(week.start) === state.calendarView.week) || weeks[0] || null;
 }
 
-function renderWeek(week, start, end, lessons, closures) {
+function renderWeek(week, start, end, lessons, closures, activityEvents) {
   const card = document.createElement("article");
   card.className = "monthCard weekCard";
   card.innerHTML = `
@@ -1742,12 +1767,12 @@ function renderWeek(week, start, end, lessons, closures) {
   updateCalendarNavButtons(card, calendarMonths(start, end), calendarWeeks(start, end));
   const days = card.querySelector(".monthDays");
   for (const date = new Date(week.start); date <= week.end; date.setDate(date.getDate() + 1)) {
-    days.append(renderDayCell(date, week.start, start, end, lessons, closures));
+    days.append(renderDayCell(date, week.start, start, end, lessons, closures, activityEvents));
   }
   return card;
 }
 
-function renderMonth(month, start, end, lessons, closures, role = "main") {
+function renderMonth(month, start, end, lessons, closures, activityEvents, role = "main") {
   const card = document.createElement("article");
   card.className = `monthCard ${role === "context" ? "monthContextCard" : "monthMainCard"}`;
   const title = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
@@ -1769,16 +1794,17 @@ function renderMonth(month, start, end, lessons, closures, role = "main") {
   const cursor = new Date(first);
   cursor.setDate(cursor.getDate() - startOffset);
   for (let index = 0; index < 42; index += 1) {
-    days.append(renderDayCell(cursor, month, start, end, lessons, closures));
+    days.append(renderDayCell(cursor, month, start, end, lessons, closures, activityEvents));
     cursor.setDate(cursor.getDate() + 1);
   }
   return card;
 }
 
-function renderDayCell(date, month, start, end, lessons, closures) {
+function renderDayCell(date, month, start, end, lessons, closures, activityEvents) {
   const iso = isoDate(date);
   const cell = document.createElement("div");
   const lesson = lessons.get(iso) || [];
+  const activities = activityEvents.get(iso) || [];
   const closure = closures.get(iso);
   const inMonth = date.getMonth() === month.getMonth();
   const inSchool = date >= start && date <= end;
@@ -1786,11 +1812,28 @@ function renderDayCell(date, month, start, end, lessons, closures) {
   if (!inMonth) cell.classList.add("dayOutsideMonth");
   if (!inSchool) cell.classList.add("dayOutsideSchool");
   if (lesson.length) cell.classList.add("dayLesson");
+  if (activities.length) cell.classList.add("dayActivity");
   if (closure) cell.classList.add("dayClosure");
   cell.innerHTML = `
     <span class="dayNumber">${date.getDate()}</span>
     ${closure ? `<span class="dayMeta">${escapeHtml(closure)}</span>` : ""}
   `;
+  for (const event of activities) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `dayMeta dayActivityButton activity-${event.role} activity-${event.event_type}`;
+    button.textContent = `${event.event_type === "due" ? "Scadenza" : event.role === "verification" ? "Verifica" : "Activity"}: ${event.title}`;
+    button.title = `${event.year_title} · ${event.uda_title} · ${event.activity_id}`;
+    button.addEventListener("click", (clickEvent) => {
+      clickEvent.stopPropagation();
+      DashboardDialogs.message({
+        eyebrow: event.event_type === "due" ? "Scadenza activity" : "Activity pianificata",
+        title: event.title,
+        message: `${event.year_title} · ${event.uda_title}\n${event.role === "verification" ? "Verifica" : "Esercitazione"}\n${event.activity_path}`,
+      });
+    });
+    cell.append(button);
+  }
   for (const entry of lesson) {
     if (entry.segment) {
       const button = document.createElement("button");

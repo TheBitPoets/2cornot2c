@@ -300,6 +300,61 @@ def test_write_design_rejects_invalid_activity_link_before_persistence(tmp_path,
         )
 
 
+def test_course_calendar_context_derives_activity_events_from_one_design_snapshot(monkeypatch) -> None:
+    design = {
+        "years": [
+            {
+                "id": "terzo",
+                "title": "Terzo anno",
+                "udas": [
+                    {
+                        "id": "uda-1",
+                        "title": "Funzioni",
+                        "activity_links": [
+                            {
+                                "activity_id": "functions-001",
+                                "activity_path": "activities/functions.json",
+                                "title": "Funzioni",
+                                "kind": "laboratorio",
+                                "role": "verification",
+                                "scheduled_on": "2026-11-10",
+                                "due_on": "2026-11-17",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    queries = []
+    monkeypatch.setattr(
+        course_board_server,
+        "source_request_design",
+        lambda query: queries.append(query) or design,
+    )
+
+    payload = course_board_server.course_calendar_context("design=archive.json")
+
+    assert queries == ["design=archive.json"]
+    assert payload["design"] is design
+    assert payload["activity_events"] == [
+        {
+            "year_id": "terzo",
+            "year_title": "Terzo anno",
+            "uda_id": "uda-1",
+            "uda_title": "Funzioni",
+            "activity_id": "functions-001",
+            "activity_path": "activities/functions.json",
+            "title": "Funzioni",
+            "kind": "laboratorio",
+            "role": "verification",
+            "scheduled_on": "2026-11-10",
+            "due_on": "2026-11-17",
+        }
+    ]
+    assert "activity_events" not in design
+
+
 def test_ai_config_uses_one_provider_model_snapshot(monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")
