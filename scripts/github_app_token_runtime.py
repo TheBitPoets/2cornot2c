@@ -726,8 +726,6 @@ class GitHubAppTokenRuntime:
             raise GitHubAppRuntimeError("Timeout rinnovo credenziali GitHub App.")
         error = result.get("error")
         if error is not None:
-            if isinstance(error, GitHubAppRuntimeError):
-                raise error
             raise GitHubAppRuntimeError(
                 "Rinnovo credenziali GitHub App non riuscito."
             ) from error
@@ -776,6 +774,7 @@ class GitHubAppTokenRuntime:
                 self._thread = thread
             thread.start()
         except BaseException:
+            self._remove_owned_token()
             self._process_lock.release()
             raise
         finally:
@@ -819,6 +818,7 @@ class GitHubAppTokenRuntime:
             thread.join(timeout=max(180.0, self._request_timeout_seconds + 90.0))
         if thread is not None and thread.is_alive():
             LOGGER.error("Arresto runtime GitHub App non completato entro la deadline.")
+            return
         if remove_token:
             self._remove_owned_token()
         self._process_lock.release()

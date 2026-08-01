@@ -285,6 +285,60 @@ def test_runtime_bounds_an_untrusted_transport_and_sanitizes_errors(
         release.set()
 
 
+def test_runtime_sanitizes_even_domain_errors_from_custom_transport(
+    tmp_path, monkeypatch
+) -> None:
+    enable_test_writes(monkeypatch)
+
+    class UnsafeTransport:
+        def create_token(self, installation_id, app_jwt, *, timeout_seconds):
+            raise runtime.GitHubAppRuntimeError("secret-token-and-provider-body")
+
+    config = runtime.GitHubAppRuntimeConfig(
+        app_id="12345",
+        installation_id="67890",
+        private_key_file=tmp_path / "private-key.pem",
+        token_file=(tmp_path / "installation-token.txt").resolve(),
+    )
+    service = runtime.GitHubAppTokenRuntime(config, rsa_key(), UnsafeTransport())
+
+    with pytest.raises(runtime.GitHubAppRuntimeError) as raised:
+        service.refresh()
+    assert "secret-token" not in str(raised.value)
+
+
+def test_runtime_removes_initial_token_when_worker_start_fails(tmp_path, monkeypatch) -> None:
+    enable_test_writes(monkeypatch)
+    config = runtime.GitHubAppRuntimeConfig(
+        app_id="12345",
+        installation_id="67890",
+        private_key_file=tmp_path / "private-key.pem",
+        token_file=(tmp_path / "installation-token.txt").resolve(),
+    )
+    service = runtime.GitHubAppTokenRuntime(config, rsa_key(), FakeTransport({}))
+
+    def publish() -> float:
+        digest, identity = runtime._secure_atomic_write(
+            config.token_file, b"ghs_initial"
+        )
+        service._owned_digest = digest
+        service._owned_identity = identity
+        service._expires_at = 1_900_000_000.0
+        return service._expires_at
+
+    monkeypatch.setattr(service, "refresh", publish)
+    monkeypatch.setattr(
+        runtime.threading.Thread,
+        "start",
+        lambda self: (_ for _ in ()).throw(RuntimeError("thread unavailable")),
+    )
+
+    with pytest.raises(RuntimeError):
+        service.start()
+    assert not config.token_file.exists()
+    assert not service._process_lock.held
+
+
 def test_runtime_refresh_writes_token_and_cleanup_is_generation_safe(
     tmp_path, monkeypatch
 ) -> None:
