@@ -484,12 +484,17 @@ class JsonCourseStorage:
                     sync_directory(transaction_dir)
                     sync_directory(target.parent)
                 os.replace(transaction_dir, committed_transaction_dir)
+                sync_directory(self.delete_staging_dir)
             except Exception:
-                self._rollback_delete_entries(transaction_dir, entries)
-                shutil.rmtree(transaction_dir)
+                rollback_dir = (
+                    committed_transaction_dir
+                    if committed_transaction_dir.is_dir()
+                    else transaction_dir
+                )
+                self._rollback_delete_entries(rollback_dir, entries)
+                shutil.rmtree(rollback_dir)
                 sync_directory(self.delete_staging_dir)
                 raise
-            sync_directory(self.delete_staging_dir)
             cleanup_pending = False
             try:
                 shutil.rmtree(committed_transaction_dir)

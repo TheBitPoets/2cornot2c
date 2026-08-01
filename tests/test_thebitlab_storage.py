@@ -278,6 +278,27 @@ def test_delete_saved_design_rolls_back_when_staging_fails(tmp_path, monkeypatch
     assert storage.read_school_calendar("linked.json") == {"course_design_name": "victim.json"}
 
 
+def test_delete_saved_design_rolls_back_when_commit_directory_flush_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da conservare"})
+    real_sync = sync_directory
+    failed = False
+
+    def fail_committed_sync(path):
+        nonlocal failed
+        if not failed and any(storage.delete_staging_dir.glob("*.committed")):
+            failed = True
+            raise OSError("commit directory flush failed")
+        real_sync(path)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", fail_committed_sync)
+    with pytest.raises(OSError, match="commit directory flush failed"):
+        storage.delete_saved_design("victim.json")
+
+    assert storage.read_saved_design("victim.json") == {"title": "Da conservare"}
+    assert list(storage.delete_staging_dir.glob("*.committed")) == []
+
+
 def test_save_waits_for_delete_rollback_before_updating_design(tmp_path, monkeypatch) -> None:
     deleting_storage = JsonCourseStorage(tmp_path)
     saving_storage = JsonCourseStorage(tmp_path)
