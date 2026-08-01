@@ -379,6 +379,36 @@ def test_source_editor_updates_assigned_remote_commit_from_preview() -> None:
     )
 
 
+def test_source_editor_rejects_pre_digest_item_from_stale_remote_commit() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "remote" }];
+        state.headings = [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          source_provider: "github", source_commit: "b".repeat(40),
+          content_sha256: "c".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          source_provider: "github", source_commit: "a".repeat(40),
+        }] }] }] };
+
+        assert.throws(
+          () => reconcileSourceItems(
+            design,
+            [{
+              id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+              source_provider: "github", source_commit: "b".repeat(40),
+              content_sha256: "c".repeat(64),
+            }],
+            [{ id: "remote", indexing_status: "ready" }],
+          ),
+          /vecchio commit senza digest/,
+        );
+        """
+    )
+
+
 def test_source_editor_keeps_direct_id_when_heading_content_digests_repeat() -> None:
     run_course_board_js(
         """

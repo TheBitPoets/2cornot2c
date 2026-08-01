@@ -1411,6 +1411,16 @@ function reconcileSourceItems(design, previewHeadings, nextSources) {
           continue;
         }
         const sourcePath = item.source || oldHeading?.source || "";
+        const provider = item.source_provider || oldHeading?.source_provider || "local";
+        if (
+          provider !== "local"
+          && item.source_commit
+          && !item.content_sha256
+          && oldHeading?.source_commit
+          && item.source_commit !== oldHeading.source_commit
+        ) {
+          throw new Error(`Il paragrafo ${item.id} appartiene a un vecchio commit senza digest: rimuovilo o ripristina la ref prima di riallinearlo.`);
+        }
         const contentSha256 = item.content_sha256 || oldHeading?.content_sha256 || "";
         const direct = newById.get(item.id);
         const directMatches = direct
