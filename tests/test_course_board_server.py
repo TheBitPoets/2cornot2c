@@ -5121,6 +5121,12 @@ def test_save_activity_revalidates_preserved_assets_when_source_name_changes(tmp
     mismatched_asset_path.rename(asset_path)
 
     course_board_server.save_activity({**payload, "files": [], "overwrite": True})
+    preserved_after_empty_ui_draft = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert len(preserved_after_empty_ui_draft["assets"]) == 1
+
+    course_board_server.save_activity(
+        {**payload, "files": [], "clear_assets": True, "overwrite": True}
+    )
     without_assets = json.loads(saved_path.read_text(encoding="utf-8"))
     assert without_assets["assets"] == []
 

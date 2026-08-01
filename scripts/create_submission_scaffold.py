@@ -503,12 +503,22 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
         ):
             raise ValueError(f"Target asset duplicato, equivalente o sovrapposto: {target_rel}.")
         target_keys.add(target_key)
-        source_path = activity_root / source_rel
         current = activity_root
         for part in source_rel.parts:
-            current = current / part
+            try:
+                names = {entry.name for entry in current.iterdir()}
+            except OSError as error:
+                raise ValueError(f"Asset non trovato: {source_rel}") from error
+            part_key = portable_path_key(Path(part))
+            matches = [name for name in names if portable_path_key(Path(name)) == part_key]
+            if not matches:
+                raise ValueError(f"Asset non trovato: {source_rel}")
+            if len(matches) != 1 or unicodedata.normalize("NFC", matches[0]) != part:
+                raise ValueError(f"Asset non portabile: {source_rel}")
+            current = current / matches[0]
             if current.is_symlink():
                 raise ValueError(f"L'asset non puo attraversare link simbolici: {source_rel}")
+        source_path = current
         if not source_path.is_file():
             raise ValueError(f"Asset non trovato: {source_path}")
         try:

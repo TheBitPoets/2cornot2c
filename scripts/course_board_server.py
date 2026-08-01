@@ -1962,7 +1962,12 @@ def _save_activity_locked(payload: dict) -> dict:
         if previous_id and previous_id != activity_id:
             raise ValueError("L'overwrite non puo cambiare l'identita dell'activity esistente.")
     proposed_files = payload.get("files")
-    if proposed_files is not None:
+    clear_assets = payload.get("clear_assets", False)
+    if not isinstance(clear_assets, bool):
+        raise ValueError("clear_assets deve essere booleano.")
+    if proposed_files and clear_assets:
+        raise ValueError("clear_assets non puo essere combinato con files non vuoto.")
+    if proposed_files or clear_assets:
         normalized_activity = normalize_activity(activity)
         selected_language = create_submission_scaffold.language_for(
             {"language": normalized_activity.get("language", "c") or "c"}
@@ -1974,7 +1979,7 @@ def _save_activity_locked(payload: dict) -> dict:
             activity_id=activity_id,
             source_name=create_submission_scaffold.validate_source_name(selected_source_name),
             activity=activity,
-            files=proposed_files,
+            files=proposed_files if proposed_files is not None else [],
             overwrite=overwrite,
             storage=storage,
         )

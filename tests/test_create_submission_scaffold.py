@@ -213,6 +213,35 @@ def test_create_scaffold_readme_keeps_default_source_when_assets_are_support_fil
     assert "- `tests/test_public.py` (visible_test)" in readme
 
 
+def test_create_scaffold_accepts_unicode_normalization_equivalent_asset_name(tmp_path) -> None:
+    (tmp_path / "cafe\u0301.txt").write_text("fixture\n", encoding="utf-8")
+    activity_path = write_activity(
+        tmp_path,
+        {
+            **activity(),
+            "assets": [{"type": "starter", "path": "caf\u00e9.txt", "target_path": "support.txt"}],
+        },
+    )
+
+    destination = create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
+
+    assert (destination / "support.txt").read_text(encoding="utf-8") == "fixture\n"
+
+
+def test_create_scaffold_rejects_noncanonical_asset_casing(tmp_path) -> None:
+    (tmp_path / "starter.c").write_text("fixture\n", encoding="utf-8")
+    activity_path = write_activity(
+        tmp_path,
+        {
+            **activity(),
+            "assets": [{"type": "starter", "path": "Starter.c", "target_path": "main.c"}],
+        },
+    )
+
+    with pytest.raises(ValueError, match="non portabile"):
+        create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
+
+
 def test_create_scaffold_rejects_missing_student_asset(tmp_path) -> None:
     activity_path = write_activity(
         tmp_path,
