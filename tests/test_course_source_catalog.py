@@ -309,6 +309,27 @@ def test_timed_out_local_worker_keeps_snapshot_memory_reserved(
     memory_slots.release()
 
 
+def test_local_acquisition_releases_retained_lease_before_thread_start(
+    tmp_path, monkeypatch
+) -> None:
+    import threading
+    from scripts import course_source_catalog
+
+    times = iter([100.0, 102.0])
+    monkeypatch.setattr(course_source_catalog.time, "monotonic", lambda: next(times))
+    memory_slots = threading.BoundedSemaphore(1)
+    assert memory_slots.acquire(blocking=False)
+    lease = course_source_catalog._SnapshotMemoryLease(memory_slots)
+
+    with pytest.raises(CourseSourceCatalogError, match="Timeout acquisizione"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {}, tmp_path, (), 101.0, snapshot_lease=lease
+        )
+    lease.release()
+    assert memory_slots.acquire(blocking=False)
+    memory_slots.release()
+
+
 def test_local_acquisition_releases_slot_when_thread_cannot_start(
     tmp_path, monkeypatch
 ) -> None:

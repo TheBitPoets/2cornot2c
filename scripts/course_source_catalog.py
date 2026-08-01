@@ -384,6 +384,8 @@ def _bounded_local_markdown_source_files(
 
     remaining = deadline - time.monotonic()
     if remaining <= 0:
+        if snapshot_lease is not None:
+            snapshot_lease.release()
         slot_guard.release()
         raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
     thread = threading.Thread(target=bounded_worker, daemon=True)
