@@ -784,13 +784,23 @@ def generate_course_plan_md(payload: dict) -> dict:
     """Generate doc/PERCORSO_DIDATTICO.md without promoting the edited design."""
 
     validate_course_source_catalog(payload)
+    source_files = course_markdown_source_files(payload)
+    generation_payload = deepcopy(payload)
+    generation_payload["_resolved_source_refs"] = {
+        item.source.source_id: item.resolved_ref
+        for item in source_files
+        if isinstance(item, course_source_catalog.RemoteCourseSourceFile)
+    }
     temporary_root = ROOT / "tmp"
     temporary_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="course-plan-", dir=temporary_root) as directory:
         workdir = Path(directory)
         input_path = workdir / "course_design.json"
         output_path = workdir / COURSE_PLAN_MD_PATH.name
-        input_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        input_path.write_text(
+            json.dumps(generation_payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
         command = [
             sys.executable,
             str(ROOT / "scripts" / "generate_course_plan.py"),

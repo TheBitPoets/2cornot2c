@@ -1047,7 +1047,10 @@ def test_generate_course_plan_uses_temporary_design_without_promoting_it(tmp_pat
     def fake_run(command, **_kwargs):
         input_path = Path(command[command.index("--input") + 1])
         generated_path = Path(command[command.index("--output") + 1])
-        assert json.loads(input_path.read_text(encoding="utf-8")) == {"title": "Bozza"}
+        assert json.loads(input_path.read_text(encoding="utf-8")) == {
+            "title": "Bozza",
+            "_resolved_source_refs": {},
+        }
         generated_path.write_text("nuovo\n", encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, stdout="generato", stderr="")
 
