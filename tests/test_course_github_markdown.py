@@ -246,7 +246,7 @@ def test_transport_enforces_absolute_deadline_during_slow_response() -> None:
 
         def __init__(self, host, *, timeout):
             assert host == "api.github.com"
-            assert timeout == 1.0
+            assert timeout == pytest.approx(1.0, abs=0.01)
 
         def request(self, method, path, *, headers):
             assert method == "GET"

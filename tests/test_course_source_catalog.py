@@ -251,6 +251,29 @@ def test_stalled_local_acquisitions_use_bounded_slots(tmp_path, monkeypatch) -> 
     release.set()
 
 
+def test_local_acquisition_releases_slot_when_thread_cannot_start(
+    tmp_path, monkeypatch
+) -> None:
+    import threading
+    import time
+    from scripts import course_source_catalog
+
+    slots = threading.BoundedSemaphore(1)
+    monkeypatch.setattr(course_source_catalog, "LOCAL_ACQUISITION_SLOTS", slots)
+    monkeypatch.setattr(
+        course_source_catalog.threading.Thread,
+        "start",
+        lambda _thread: (_ for _ in ()).throw(RuntimeError("thread unavailable")),
+    )
+
+    with pytest.raises(RuntimeError, match="thread unavailable"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {}, tmp_path, (), time.monotonic() + 1.0
+        )
+    assert slots.acquire(blocking=False)
+    slots.release()
+
+
 def test_mixed_catalog_checks_global_deadline_before_local_acquisition(
     tmp_path, monkeypatch
 ) -> None:

@@ -369,7 +369,11 @@ def _bounded_local_markdown_source_files(
         slot_guard.release()
         raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
     thread = threading.Thread(target=bounded_worker, daemon=True)
-    thread.start()
+    try:
+        thread.start()
+    except RuntimeError:
+        slot_guard.release()
+        raise
     if not done.wait(remaining):
         raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
     error_value = result.get("error")
