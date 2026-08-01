@@ -456,6 +456,8 @@ async function loadAll() {
     state.activityCatalogError = "";
   }
   state.design = courseContext.design;
+  markDesignClean();
+  hydrateMissingItemContentDigests();
   state.designRevision = courseContext.revision;
   state.designEditableRevision = courseContext.editableRevision;
   state.currentDesignRevision = courseContext.revision;
@@ -477,7 +479,6 @@ async function loadAll() {
   renderProjectTitle();
   renderHeadings();
   renderCourse();
-  markDesignClean();
   if (state.activityCatalogError) {
     setStatus(`Catalogo activity non disponibile: ${state.activityCatalogError}. Usa Ricarica per riprovare.`);
   } else if (state.activeSavedDesign || state.isNewDesign) {
@@ -600,6 +601,7 @@ async function loadCurrentDesign() {
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();
+  hydrateMissingItemContentDigests();
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   renderSavedDesigns();
@@ -643,6 +645,7 @@ async function loadSavedDesignByName(name, options = {}) {
   state.activeSavedDesign = name;
   state.isNewDesign = false;
   markDesignClean();
+  hydrateMissingItemContentDigests();
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   if (render) {
@@ -992,6 +995,7 @@ async function deleteArchiveDesignOnce() {
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();
+  hydrateMissingItemContentDigests();
   renderSavedDesigns();
   renderProjectTitle();
   populateFilters();
@@ -1145,6 +1149,31 @@ function populateFilters() {
     els.sourceFilter.append(option);
   }
   els.sourceFilter.value = selected;
+}
+
+function hydrateMissingItemContentDigests(design = state.design, headings = state.headings) {
+  const byId = new Map((headings || []).map((heading) => [heading.id, heading]));
+  let hydrated = 0;
+  const visit = (items) => {
+    for (const item of items || []) {
+      const heading = byId.get(item.id);
+      if (
+        !item.content_sha256
+        && heading?.content_sha256
+        && (!item.source || item.source === heading.source)
+        && (!item.source_id || item.source_id === heading.source_id)
+        && (!item.source_commit || item.source_commit === heading.source_commit)
+      ) {
+        item.content_sha256 = heading.content_sha256;
+        hydrated += 1;
+      }
+      visit(item.children);
+    }
+  };
+  for (const year of design?.years || []) {
+    for (const uda of year.udas || []) visit(uda.items);
+  }
+  return hydrated;
 }
 
 function editableCourseSources() {

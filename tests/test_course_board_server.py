@@ -649,18 +649,19 @@ def test_source_preview_resolves_in_memory_design_without_persisting(tmp_path, m
             topic["content_sha256"],
         )
     changed_files = course_board_server.course_markdown_source_files(design)
-    assert course_board_server.section_text(
-        topic["source"],
-        topic["line"],
-        topic["level"],
-        design,
-        {},
-        changed_files,
-        topic["source_id"],
-        topic["id"],
-        "",
-        topic["content_sha256"],
-    ) == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.section_text(
+            topic["source"],
+            topic["line"],
+            topic["level"],
+            design,
+            {},
+            changed_files,
+            topic["source_id"],
+            topic["id"],
+            "",
+            topic["content_sha256"],
+        )
     assert not (tmp_path / "doc" / "course_design.json").exists()
 
 

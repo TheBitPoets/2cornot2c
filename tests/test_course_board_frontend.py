@@ -294,6 +294,25 @@ def test_catalog_paragraph_preview_uses_keyboard_accessible_button() -> None:
     assert ".headingPreviewTrigger" in css
 
 
+def test_loaded_legacy_item_hydrates_missing_content_digest() -> None:
+    run_course_board_js(
+        """
+        const design = { years: [{ udas: [{ items: [{
+          id: "README.md#intro", source: "README.md",
+        }] }] }] };
+        const headings = [{
+          id: "README.md#intro", source: "README.md", source_id: "legacy",
+          content_sha256: "d".repeat(64),
+        }];
+
+        const hydrated = hydrateMissingItemContentDigests(design, headings);
+
+        assert.equal(hydrated, 1);
+        assert.equal(design.years[0].udas[0].items[0].content_sha256, "d".repeat(64));
+        """
+    )
+
+
 def test_source_editor_projects_catalog_without_runtime_fields() -> None:
     run_course_board_js(
         """

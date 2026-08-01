@@ -3321,12 +3321,15 @@ def section_text(
             matching_heading is None
             or matching_heading["line"] != start_line
             or matching_heading["level"] != start_level
-            or (
-                content_sha256
-                and matching_heading.get("content_sha256") != content_sha256
-            )
         ):
             return ""
+        if (
+            content_sha256
+            and matching_heading.get("content_sha256") != content_sha256
+        ):
+            raise CourseSourceRevisionConflictError(
+                "Il contenuto del paragrafo è cambiato: riallinealo prima di usare l'AI."
+            )
     return section_text_from_source(source_text, start_line, start_level)
 
 
@@ -6218,6 +6221,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     ),
                 }
                 self.write_json({"frame": call_ai_didactic_frame(context)})
+            except CourseSourceRevisionConflictError as error:
+                self.write_error_json(409, str(error))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
