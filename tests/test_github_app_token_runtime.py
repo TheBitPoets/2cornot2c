@@ -255,6 +255,36 @@ class FakeTransport:
         return self.payload
 
 
+def test_runtime_bounds_an_untrusted_transport_and_sanitizes_errors(
+    tmp_path, monkeypatch
+) -> None:
+    enable_test_writes(monkeypatch)
+    release = threading.Event()
+
+    class BlockingTransport:
+        def create_token(self, installation_id, app_jwt, *, timeout_seconds):
+            release.wait(2)
+            raise ValueError("provider detail must not escape")
+
+    config = runtime.GitHubAppRuntimeConfig(
+        app_id="12345",
+        installation_id="67890",
+        private_key_file=tmp_path / "private-key.pem",
+        token_file=(tmp_path / "installation-token.txt").resolve(),
+    )
+    service = runtime.GitHubAppTokenRuntime(
+        config, rsa_key(), BlockingTransport(), request_timeout_seconds=0.05
+    )
+    started = time.monotonic()
+    try:
+        with pytest.raises(runtime.GitHubAppRuntimeError) as raised:
+            service.refresh()
+        assert time.monotonic() - started < 0.5
+        assert "provider detail" not in str(raised.value)
+    finally:
+        release.set()
+
+
 def test_runtime_refresh_writes_token_and_cleanup_is_generation_safe(
     tmp_path, monkeypatch
 ) -> None:
@@ -281,6 +311,46 @@ def test_runtime_refresh_writes_token_and_cleanup_is_generation_safe(
     config.token_file.write_text("replacement-from-another-process", encoding="ascii")
     assert service._remove_owned_token() is False
     assert config.token_file.exists()
+
+
+def test_runtime_serializes_concurrent_refreshes(tmp_path, monkeypatch) -> None:
+    enable_test_writes(monkeypatch)
+    now = 1_800_000_000.0
+    expiry = datetime.fromtimestamp(now + 3600, tz=timezone.utc).isoformat().replace(
+        "+00:00", "Z"
+    )
+    active = 0
+    maximum = 0
+    state_lock = threading.Lock()
+
+    class ConcurrentTransport:
+        def create_token(self, installation_id, app_jwt, *, timeout_seconds):
+            nonlocal active, maximum
+            with state_lock:
+                active += 1
+                maximum = max(maximum, active)
+            time.sleep(0.03)
+            with state_lock:
+                active -= 1
+            return {"token": "ghs_serial", "expires_at": expiry}
+
+    config = runtime.GitHubAppRuntimeConfig(
+        app_id="12345",
+        installation_id="67890",
+        private_key_file=tmp_path / "private-key.pem",
+        token_file=(tmp_path / "installation-token.txt").resolve(),
+    )
+    service = runtime.GitHubAppTokenRuntime(
+        config, rsa_key(), ConcurrentTransport(), wall_clock=lambda: now
+    )
+    threads = [threading.Thread(target=service.refresh) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=2)
+
+    assert maximum == 1
+    assert all(not thread.is_alive() for thread in threads)
 
 
 def test_runtime_removes_only_its_unchanged_token(tmp_path, monkeypatch) -> None:

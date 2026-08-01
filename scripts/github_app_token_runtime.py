@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from contextlib import contextmanager
 import argparse
 import base64
 import hashlib
@@ -48,6 +49,7 @@ MIN_TOKEN_LIFETIME_SECONDS = 2 * 60
 APP_ID_RE = re.compile(r"^[1-9][0-9]{0,19}$")
 TOKEN_RE = re.compile(r"^[\x21-\x7e]+$")
 TOKEN_NETWORK_SLOTS = threading.BoundedSemaphore(2)
+RUNTIME_TRANSPORT_SLOTS = threading.BoundedSemaphore(2)
 
 
 class GitHubAppRuntimeError(RuntimeError):
@@ -294,9 +296,12 @@ def _verify_permissions(path: Path, metadata: os.stat_result, *, directory: bool
             raise GitHubAppRuntimeError("Permessi dei file GitHub App non sicuri.")
         return
     try:
+        sid = _current_windows_sid()
         thebitlab_auth_runtime._verify_windows_acl(
-            path, _current_windows_sid(), require_protected=True
+            path, sid, require_protected=True
         )
+        if directory:
+            thebitlab_auth_runtime._verify_windows_ancestor_chain(path, sid)
     except (OSError, subprocess.SubprocessError) as exc:
         raise GitHubAppRuntimeError("ACL dei file GitHub App non sicura.") from exc
 
@@ -450,46 +455,129 @@ def parse_installation_token(payload: dict[str, Any], *, now: float) -> Installa
     return InstallationToken(value=token, expires_at=expiry)
 
 
+@contextmanager
+def _pinned_directory(path: Path):
+    """Pin a verified directory while secret publication uses its namespace."""
+
+    parent = _resolve_external_path(path, must_exist=True)
+    _verify_permissions(parent, parent.stat(), directory=True)
+    if os.name != "nt":
+        flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(parent, flags)
+        try:
+            opened = os.fstat(descriptor)
+            if not stat.S_ISDIR(opened.st_mode):
+                raise GitHubAppRuntimeError("Directory GitHub App non valida.")
+            yield parent, descriptor
+        finally:
+            os.close(descriptor)
+        return
+
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    create_file = kernel32.CreateFileW
+    create_file.argtypes = (
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    )
+    create_file.restype = wintypes.HANDLE
+    handle = create_file(
+        str(parent),
+        0x80,  # FILE_READ_ATTRIBUTES
+        0x1 | 0x2,  # share read/write, deliberately not FILE_SHARE_DELETE
+        None,
+        3,  # OPEN_EXISTING
+        0x02000000 | 0x00200000,  # BACKUP_SEMANTICS | OPEN_REPARSE_POINT
+        None,
+    )
+    if handle == wintypes.HANDLE(-1).value:
+        raise GitHubAppRuntimeError("Directory GitHub App non bloccabile.")
+    try:
+        yield parent, None
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]]:
     if not value or len(value) > MAX_TOKEN_BYTES or b"\n" in value or b"\r" in value:
         raise GitHubAppRuntimeError("Installation token non valido.")
-    parent = _resolve_external_path(path.parent, must_exist=True)
-    _verify_permissions(parent, parent.stat(), directory=True)
-    temp = parent / f".{path.name}.{secrets.token_hex(16)}.tmp"
-    descriptor = None
+    temp_name = f".{path.name}.{secrets.token_hex(16)}.tmp"
     try:
-        descriptor = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(descriptor, "wb", closefd=True) as stream:
+        with _pinned_directory(path.parent) as (parent, directory_fd):
             descriptor = None
-            stream.write(value)
-            stream.flush()
-            os.fsync(stream.fileno())
-        if os.name == "nt":
+            temp = parent / temp_name
             try:
-                thebitlab_auth_runtime._replace_windows_acl(
-                    temp, _current_windows_sid(), directory=False
+                flags = (
+                    os.O_WRONLY
+                    | os.O_CREAT
+                    | os.O_EXCL
+                    | getattr(os, "O_NOFOLLOW", 0)
                 )
-            except (OSError, subprocess.SubprocessError) as exc:
-                raise GitHubAppRuntimeError("ACL del token GitHub App non applicabile.") from exc
-        else:
-            os.chmod(temp, 0o600)
-        metadata = temp.stat()
-        _verify_permissions(temp, metadata)
-        os.replace(temp, path)
-        final = path.stat()
-        _verify_permissions(path, final)
-        return hashlib.sha256(value).hexdigest(), (final.st_dev, final.st_ino)
+                descriptor = os.open(
+                    temp_name if directory_fd is not None else temp,
+                    flags,
+                    0o600,
+                    dir_fd=directory_fd,
+                )
+                with os.fdopen(descriptor, "wb", closefd=True) as stream:
+                    descriptor = None
+                    stream.write(value)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                if os.name == "nt":
+                    try:
+                        thebitlab_auth_runtime._replace_windows_acl(
+                            temp, _current_windows_sid(), directory=False
+                        )
+                    except (OSError, subprocess.SubprocessError) as exc:
+                        raise GitHubAppRuntimeError(
+                            "ACL del token GitHub App non applicabile."
+                        ) from exc
+                else:
+                    os.chmod(temp_name, 0o600, dir_fd=directory_fd)
+                metadata = os.stat(
+                    temp_name if directory_fd is not None else temp,
+                    dir_fd=directory_fd,
+                    follow_symlinks=False,
+                )
+                _verify_permissions(temp, metadata)
+                if directory_fd is None:
+                    os.replace(temp, path)
+                    final = path.stat()
+                else:
+                    os.replace(
+                        temp_name,
+                        path.name,
+                        src_dir_fd=directory_fd,
+                        dst_dir_fd=directory_fd,
+                    )
+                    final = os.stat(
+                        path.name, dir_fd=directory_fd, follow_symlinks=False
+                    )
+                    os.fsync(directory_fd)
+                _verify_permissions(path, final)
+                return hashlib.sha256(value).hexdigest(), (final.st_dev, final.st_ino)
+            finally:
+                if descriptor is not None:
+                    os.close(descriptor)
+                try:
+                    if directory_fd is None:
+                        temp.unlink(missing_ok=True)
+                    else:
+                        os.unlink(temp_name, dir_fd=directory_fd)
+                except OSError:
+                    pass
     except GitHubAppRuntimeError:
         raise
     except OSError as exc:
         raise GitHubAppRuntimeError("Scrittura installation token non riuscita.") from exc
-    finally:
-        if descriptor is not None:
-            os.close(descriptor)
-        try:
-            temp.unlink(missing_ok=True)
-        except OSError:
-            pass
 
 
 class RuntimeFileLock:
@@ -588,6 +676,7 @@ class GitHubAppTokenRuntime:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._lock = threading.RLock()
+        self._refresh_lock = threading.Lock()
         self._owned_digest: str | None = None
         self._owned_identity: tuple[int, int] | None = None
         self._expires_at = 0.0
@@ -605,31 +694,72 @@ class GitHubAppTokenRuntime:
         with self._lock:
             return self._expires_at > self._wall_clock() and self._last_error is None
 
-    def refresh(self) -> float:
-        acquired_here = not self._process_lock.held
-        if acquired_here:
-            self._process_lock.acquire()
+    def _request_token_payload(self, app_jwt: str) -> dict[str, Any]:
+        timeout = self._request_timeout_seconds
+        started = time.monotonic()
+        if not RUNTIME_TRANSPORT_SLOTS.acquire(timeout=timeout):
+            raise GitHubAppRuntimeError("Rinnovo credenziali GitHub App saturo.")
+        result: dict[str, Any] = {}
+        done = threading.Event()
+
+        def worker() -> None:
+            try:
+                result["value"] = self._transport.create_token(
+                    self.config.installation_id,
+                    app_jwt,
+                    timeout_seconds=timeout,
+                )
+            except BaseException as exc:  # noqa: BLE001
+                result["error"] = exc
+            finally:
+                done.set()
+                RUNTIME_TRANSPORT_SLOTS.release()
+
+        thread = threading.Thread(target=worker, daemon=True)
         try:
-            now = self._wall_clock()
-            app_jwt = create_app_jwt(self.config.app_id, self._private_key, now=now)
-            payload = self._transport.create_token(
-                self.config.installation_id,
-                app_jwt,
-                timeout_seconds=self._request_timeout_seconds,
-            )
-            token = parse_installation_token(payload, now=self._wall_clock())
-            digest, identity = _secure_atomic_write(
-                self.config.token_file, token.value.encode("ascii")
-            )
-            with self._lock:
-                self._owned_digest = digest
-                self._owned_identity = identity
-                self._expires_at = token.expires_at
-                self._last_error = None
-            return token.expires_at
-        finally:
+            thread.start()
+        except RuntimeError:
+            RUNTIME_TRANSPORT_SLOTS.release()
+            raise
+        remaining = timeout - (time.monotonic() - started)
+        if remaining <= 0 or not done.wait(remaining):
+            raise GitHubAppRuntimeError("Timeout rinnovo credenziali GitHub App.")
+        error = result.get("error")
+        if error is not None:
+            if isinstance(error, GitHubAppRuntimeError):
+                raise error
+            raise GitHubAppRuntimeError(
+                "Rinnovo credenziali GitHub App non riuscito."
+            ) from error
+        payload = result.get("value")
+        if not isinstance(payload, dict):
+            raise GitHubAppRuntimeError("Risposta installation token non valida.")
+        return payload
+
+    def refresh(self) -> float:
+        with self._refresh_lock:
+            acquired_here = not self._process_lock.held
             if acquired_here:
-                self._process_lock.release()
+                self._process_lock.acquire()
+            try:
+                now = self._wall_clock()
+                app_jwt = create_app_jwt(self.config.app_id, self._private_key, now=now)
+                payload = self._request_token_payload(app_jwt)
+                token = parse_installation_token(payload, now=self._wall_clock())
+                if self._stop.is_set() and self._thread is not None:
+                    raise GitHubAppRuntimeError("Runtime GitHub App in arresto.")
+                digest, identity = _secure_atomic_write(
+                    self.config.token_file, token.value.encode("ascii")
+                )
+                with self._lock:
+                    self._owned_digest = digest
+                    self._owned_identity = identity
+                    self._expires_at = token.expires_at
+                    self._last_error = None
+                return token.expires_at
+            finally:
+                if acquired_here:
+                    self._process_lock.release()
 
     def start(self) -> None:
         with self._lock:
@@ -665,7 +795,12 @@ class GitHubAppTokenRuntime:
             try:
                 self.refresh()
                 retry_seconds = 5.0
-            except GitHubAppRuntimeError as exc:
+            except Exception as error:  # noqa: BLE001 - keep the renewal loop alive
+                exc = (
+                    error
+                    if isinstance(error, GitHubAppRuntimeError)
+                    else GitHubAppRuntimeError("Rinnovo credenziali GitHub App non riuscito.")
+                )
                 with self._lock:
                     self._last_error = str(exc)
                     expired = self._expires_at <= self._wall_clock()
@@ -681,38 +816,63 @@ class GitHubAppTokenRuntime:
         with self._lock:
             thread = self._thread
         if thread is not None:
-            thread.join(timeout=self._request_timeout_seconds + 2.0)
+            thread.join(timeout=max(180.0, self._request_timeout_seconds + 90.0))
         if thread is not None and thread.is_alive():
             LOGGER.error("Arresto runtime GitHub App non completato entro la deadline.")
-            return
         if remove_token:
             self._remove_owned_token()
         self._process_lock.release()
 
     def _remove_owned_token(self) -> bool:
-        with self._lock:
-            digest = self._owned_digest
-            identity = self._owned_identity
-        if digest is None or identity is None:
+        if not self._refresh_lock.acquire(timeout=10.0):
+            LOGGER.error("Pulizia installation token non disponibile entro la deadline.")
             return False
         try:
-            metadata = self.config.token_file.stat()
-            if (metadata.st_dev, metadata.st_ino) != identity:
+            with self._lock:
+                digest = self._owned_digest
+                identity = self._owned_identity
+            if digest is None or identity is None:
                 return False
-            value = _read_secure_file(self.config.token_file, max_bytes=MAX_TOKEN_BYTES)
-            if hashlib.sha256(value).hexdigest() != digest:
+            try:
+                with _pinned_directory(self.config.token_file.parent) as (
+                    _parent,
+                    directory_fd,
+                ):
+                    token_entry: str | Path = (
+                        self.config.token_file
+                        if directory_fd is None
+                        else self.config.token_file.name
+                    )
+                    metadata = os.stat(
+                        token_entry, dir_fd=directory_fd, follow_symlinks=False
+                    )
+                    if (metadata.st_dev, metadata.st_ino) != identity:
+                        return False
+                    value = _read_secure_file(
+                        self.config.token_file, max_bytes=MAX_TOKEN_BYTES
+                    )
+                    if hashlib.sha256(value).hexdigest() != digest:
+                        return False
+                    current = os.stat(
+                        token_entry, dir_fd=directory_fd, follow_symlinks=False
+                    )
+                    if (current.st_dev, current.st_ino) != identity:
+                        return False
+                    os.unlink(token_entry, dir_fd=directory_fd)
+                    if directory_fd is not None:
+                        os.fsync(directory_fd)
+            except FileNotFoundError:
                 return False
-            self.config.token_file.unlink()
-        except FileNotFoundError:
-            return False
-        except (OSError, GitHubAppRuntimeError):
-            LOGGER.error("Pulizia installation token non riuscita.")
-            return False
-        with self._lock:
-            self._owned_digest = None
-            self._owned_identity = None
-            self._expires_at = 0.0
-        return True
+            except (OSError, GitHubAppRuntimeError):
+                LOGGER.error("Pulizia installation token non riuscita.")
+                return False
+            with self._lock:
+                self._owned_digest = None
+                self._owned_identity = None
+                self._expires_at = 0.0
+            return True
+        finally:
+            self._refresh_lock.release()
 
 
 def main() -> int:
