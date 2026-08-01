@@ -513,6 +513,8 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
     try:
         with _pinned_directory(path.parent) as (parent, directory_fd):
             descriptor = None
+            published_identity: tuple[int, int] | None = None
+            completed = False
             temp = parent / temp_name
             try:
                 flags = (
@@ -551,6 +553,7 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
                 _verify_permissions(temp, metadata)
                 if directory_fd is None:
                     os.replace(temp, path)
+                    published_identity = (metadata.st_dev, metadata.st_ino)
                     final = path.stat()
                 else:
                     os.replace(
@@ -559,13 +562,31 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
                         src_dir_fd=directory_fd,
                         dst_dir_fd=directory_fd,
                     )
+                    published_identity = (metadata.st_dev, metadata.st_ino)
                     final = os.stat(
                         path.name, dir_fd=directory_fd, follow_symlinks=False
                     )
                     os.fsync(directory_fd)
                 _verify_permissions(path, final)
+                completed = True
                 return hashlib.sha256(value).hexdigest(), (final.st_dev, final.st_ino)
             finally:
+                if published_identity is not None and not completed:
+                    published_entry: str | Path = (
+                        path if directory_fd is None else path.name
+                    )
+                    try:
+                        published = os.stat(
+                            published_entry,
+                            dir_fd=directory_fd,
+                            follow_symlinks=False,
+                        )
+                        if (published.st_dev, published.st_ino) == published_identity:
+                            os.unlink(published_entry, dir_fd=directory_fd)
+                            if directory_fd is not None:
+                                os.fsync(directory_fd)
+                    except OSError:
+                        pass
                 if descriptor is not None:
                     os.close(descriptor)
                 try:
