@@ -1896,11 +1896,11 @@ def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> N
         bundle_modes.add("immutable" if immutable else "legacy")
         if len(bundle_modes) > 1:
             raise ValueError("Asset preservati legacy e immutabili non possono essere combinati.")
-        try:
-            content = source_file.read_bytes().decode("utf-8")
-        except (OSError, UnicodeError) as error:
-            raise ValueError(f"Asset preservato non leggibile: {source.as_posix()}.") from error
         if immutable:
+            try:
+                content = source_file.read_bytes().decode("utf-8")
+            except (OSError, UnicodeError) as error:
+                raise ValueError(f"Asset preservato non leggibile: {source.as_posix()}.") from error
             bundle_ids.add(source_parts[2])
             fingerprint.append(
                 {

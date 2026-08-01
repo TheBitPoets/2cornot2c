@@ -229,6 +229,43 @@ def test_validate_course_activity_targets_requires_matching_authoritative_file(t
         validate_course_activity_targets(design(link()), tmp_path)
 
 
+def test_validate_course_activity_targets_accepts_canonical_activity_contract(tmp_path) -> None:
+    activity_path = tmp_path / "activities" / "examples" / "canonical.json"
+    activity_path.parent.mkdir(parents=True)
+    activity_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "python-base-somma-001",
+                "title": "Somma canonica",
+                "kind": "compito-casa",
+                "difficulty": "B",
+                "topics": ["variabili"],
+                "language": "python",
+                "instructions": "Scrivi un programma che stampa una somma.",
+                "student_support_mode": "senza-aiuto",
+                "grading_policy": {
+                    "compila": True,
+                    "test": True,
+                    "sandbox": True,
+                    "ai_feedback": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    validate_course_activity_targets(
+        design(
+            link(
+                activity_id="python-base-somma-001",
+                activity_path="activities/examples/canonical.json",
+            )
+        ),
+        tmp_path,
+    )
+
+
 def test_validate_course_activity_targets_rejects_missing_file(tmp_path) -> None:
     with pytest.raises(ValueError, match="non trovata"):
         validate_course_activity_targets(design(link()), tmp_path)

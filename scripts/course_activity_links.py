@@ -8,7 +8,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterator, Mapping
 import unicodedata
 
-from scripts import create_submission_scaffold, validate_activity
+from scripts import create_submission_scaffold
 from scripts.thebitlab_contracts import normalize_activity
 
 MAX_ACTIVITY_LINKS_PER_UDA = 256
@@ -189,9 +189,6 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                     raise ValueError(f"Activity collegata non valida: {link['activity_path']}.") from error
                 if not isinstance(payload, dict):
                     raise ValueError(f"Activity collegata non valida: {link['activity_path']}.")
-                validation_errors = validate_activity.validate_activity(payload, link["activity_path"])
-                if validation_errors:
-                    raise ValueError(f"Activity collegata non valida: {validation_errors[0]}.")
                 normalized_activity = create_submission_scaffold.validate_activity_contract_or_raise(
                     payload,
                     link["activity_id"],

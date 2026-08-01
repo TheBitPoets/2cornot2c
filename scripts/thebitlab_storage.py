@@ -754,6 +754,9 @@ class JsonAssignmentStorage:
             if not directory.is_dir():
                 continue
             for path in sorted(directory.rglob("*.json")):
+                relative_parts = path.relative_to(directory).parts
+                if "assets" in relative_parts[:-1]:
+                    continue
                 resolved = path.resolve()
                 if resolved in seen_paths:
                     continue

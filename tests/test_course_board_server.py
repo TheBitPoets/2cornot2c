@@ -5122,7 +5122,7 @@ def test_save_activity_revalidates_preserved_assets_when_source_name_changes(tmp
 
     legacy_asset_path = saved_path.parent / "assets" / "preserved-assets" / "starter.py"
     legacy_asset_path.parent.mkdir(parents=True, exist_ok=True)
-    legacy_asset_path.write_bytes(asset_path.read_bytes())
+    legacy_asset_path.write_bytes(b"\xff\x00legacy-binary")
     saved["assets"][0]["path"] = "assets/preserved-assets/starter.py"
     saved_path.write_text(json.dumps(saved), encoding="utf-8")
 

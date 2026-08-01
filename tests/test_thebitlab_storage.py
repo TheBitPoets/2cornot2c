@@ -958,6 +958,12 @@ def test_list_activities_skips_invalid_json_and_deduplicates_paths(tmp_path) -> 
         encoding="utf-8",
     )
     (activities_dir / "broken.json").write_text("{", encoding="utf-8")
+    bundled_assets = activities_dir / "drafts" / "assets" / "real" / "digest"
+    bundled_assets.mkdir(parents=True)
+    (bundled_assets / "fixture.json").write_text(
+        json.dumps({"id": "fake-bundled-activity"}),
+        encoding="utf-8",
+    )
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [activities_dir, activities_dir])
 
     assert storage.list_activities() == [
