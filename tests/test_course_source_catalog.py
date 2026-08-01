@@ -193,6 +193,37 @@ def test_rejects_too_many_ready_local_files(tmp_path) -> None:
         )
 
 
+def test_rejects_excess_ready_remote_files_before_adapter_calls(tmp_path) -> None:
+    calls = []
+
+    class Adapter:
+        provider_name = "github"
+
+        def fetch_snapshot(self, *args, **kwargs):
+            calls.append((args, kwargs))
+            raise AssertionError("adapter must not be called")
+
+    design = {
+        "sources": [
+            {
+                "id": f"remote-{index}",
+                "label": f"Remote {index}",
+                "type": "markdown",
+                "provider": "github",
+                "repository": f"school/course-{index}",
+                "ref": "main",
+                "files": [f"lesson-{file_index}.md" for file_index in range(64)],
+                "indexing_status": "ready",
+            }
+            for index in range(5)
+        ]
+    }
+
+    with pytest.raises(CourseSourceCatalogError, match="Troppi file Markdown pronti"):
+        markdown_source_files(design, tmp_path, adapters={"github": Adapter()})
+    assert calls == []
+
+
 def test_rejects_same_length_change_after_catalog_snapshot(tmp_path) -> None:
     lesson = tmp_path / "lesson.md"
     lesson.write_bytes(b"# First\n")
@@ -214,7 +245,8 @@ def test_indexes_ready_github_snapshot_with_resolved_commit_provenance(tmp_path)
     class Adapter:
         provider_name = "github"
 
-        def fetch_snapshot(self, repository, declared_ref, files):
+        def fetch_snapshot(self, repository, declared_ref, files, *, deadline=None):
+            assert deadline is not None
             assert (repository, declared_ref, files) == (
                 "TheBitPoets/c-course",
                 "main",

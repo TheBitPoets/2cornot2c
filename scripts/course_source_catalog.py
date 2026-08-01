@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 import re
 import stat
 import sys
+import time
 from typing import Any, Iterable, Protocol
 
 from scripts.course_github_markdown import RemoteMarkdownSnapshot
@@ -100,6 +101,8 @@ class RemoteMarkdownAdapter(Protocol):
         repository: str,
         declared_ref: str,
         files: tuple[str, ...],
+        *,
+        deadline: float | None = None,
     ) -> RemoteMarkdownSnapshot: ...
 
 
@@ -249,9 +252,20 @@ def remote_markdown_source_files(
 ) -> tuple[RemoteCourseSourceFile, ...]:
     """Fetch ready remote sources as provider-pinned immutable snapshots."""
 
+    sources = normalize_course_sources(design, default_files=default_files)
+    ready_count = sum(
+        len(source.files)
+        for source in sources
+        if source.indexing_status == "ready"
+    )
+    if ready_count > MAX_INDEXED_LOCAL_FILES:
+        raise CourseSourceCatalogError(
+            "Troppi file Markdown pronti per l'indicizzazione."
+        )
+    deadline = time.monotonic() + 30.0
     files: list[RemoteCourseSourceFile] = []
     total_bytes = 0
-    for source in normalize_course_sources(design, default_files=default_files):
+    for source in sources:
         if source.provider == "local" or source.indexing_status != "ready":
             continue
         adapter = adapters.get(source.provider)
@@ -261,7 +275,12 @@ def remote_markdown_source_files(
             )
         if source.repository is None or source.ref is None:
             raise CourseSourceCatalogError("Fonte remota priva di repository o ref.")
-        snapshot = adapter.fetch_snapshot(source.repository, source.ref, source.files)
+        snapshot = adapter.fetch_snapshot(
+            source.repository,
+            source.ref,
+            source.files,
+            deadline=deadline,
+        )
         if (
             snapshot.provider != source.provider
             or snapshot.repository != source.repository
@@ -310,6 +329,16 @@ def markdown_source_files(
 ) -> tuple[CourseMarkdownSourceFile, ...]:
     """Return local and configured remote Markdown snapshots in catalog order."""
 
+    sources = normalize_course_sources(design, default_files=default_files)
+    ready_count = sum(
+        len(source.files)
+        for source in sources
+        if source.indexing_status == "ready"
+    )
+    if ready_count > MAX_INDEXED_LOCAL_FILES:
+        raise CourseSourceCatalogError(
+            "Troppi file Markdown pronti per l'indicizzazione."
+        )
     local_by_id: dict[str, list[LocalCourseSourceFile]] = {}
     for item in local_markdown_source_files(design, root, default_files=default_files):
         local_by_id.setdefault(item.source.source_id, []).append(item)
@@ -319,7 +348,7 @@ def markdown_source_files(
     ):
         remote_by_id.setdefault(item.source.source_id, []).append(item)
     selected: list[CourseMarkdownSourceFile] = []
-    for source in normalize_course_sources(design, default_files=default_files):
+    for source in sources:
         selected.extend(local_by_id.get(source.source_id, ()))
         selected.extend(remote_by_id.get(source.source_id, ()))
     if len(selected) > MAX_INDEXED_LOCAL_FILES:

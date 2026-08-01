@@ -324,6 +324,28 @@ def test_item_from_heading_preserves_source_provenance() -> None:
     )
 
 
+def test_item_subtree_does_not_cross_sources_with_same_relative_path() -> None:
+    run_course_board_js(
+        """
+        const parent = {
+          id: "source-a:README.md#a", title: "A", source: "README.md",
+          source_id: "source-a", level: 1, line: 1, href: "#a",
+        };
+        state.headings = [
+          parent,
+          {
+            id: "source-b:README.md#b", title: "B", source: "README.md",
+            source_id: "source-b", level: 2, line: 1, href: "#b",
+          },
+        ];
+
+        const item = itemFromHeading(parent);
+
+        assert.equal(item.children, undefined);
+        """
+    )
+
+
 def test_quick_add_does_not_duplicate_a_heading_tree() -> None:
     run_course_board_js(
         """

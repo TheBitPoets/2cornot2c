@@ -210,6 +210,8 @@ class GitHubMarkdownAdapter:
         repository: str,
         declared_ref: str,
         files: tuple[str, ...],
+        *,
+        deadline: float | None = None,
     ) -> RemoteMarkdownSnapshot:
         if (
             REPOSITORY_RE.fullmatch(repository) is None
@@ -241,11 +243,13 @@ class GitHubMarkdownAdapter:
             if relative_path in seen_paths:
                 raise RemoteMarkdownError("File Markdown remoto duplicato.")
             seen_paths.add(relative_path)
-        deadline = self._clock() + self._timeout_seconds
+        operation_deadline = self._clock() + self._timeout_seconds
+        if deadline is not None:
+            operation_deadline = min(operation_deadline, deadline)
         repository_path = "/".join(parse.quote(part, safe="") for part in repository.split("/"))
         commit_payload = self._get_json(
             f"/repos/{repository_path}/commits/{parse.quote(declared_ref, safe='')}",
-            deadline,
+            operation_deadline,
         )
         commit_sha = _required_object_id(commit_payload, "sha", "commit GitHub")
 
@@ -257,7 +261,7 @@ class GitHubMarkdownAdapter:
             )
             metadata = self._get_json(
                 f"/repos/{repository_path}/contents/{encoded_path}?ref={commit_sha}",
-                deadline,
+                operation_deadline,
                 allow_query=True,
             )
             if not isinstance(metadata, dict) or metadata.get("type") != "file":
@@ -266,7 +270,7 @@ class GitHubMarkdownAdapter:
             content = None if self._blob_cache is None else self._blob_cache.get(blob_id)
             if content is None:
                 blob = self._get_json(
-                    f"/repos/{repository_path}/git/blobs/{blob_id}", deadline
+                    f"/repos/{repository_path}/git/blobs/{blob_id}", operation_deadline
                 )
                 content = _decode_blob(blob, blob_id, relative_path)
                 if self._blob_cache is not None:

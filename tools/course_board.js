@@ -1105,21 +1105,30 @@ async function switchAiModel() {
   }
 }
 
+function headingSourceKey(heading) {
+  return JSON.stringify([heading.source_id || "", heading.source || ""]);
+}
+
+function sameHeadingSource(first, second) {
+  return headingSourceKey(first) === headingSourceKey(second);
+}
+
 function populateFilters() {
   const selected = els.sourceFilter.value;
   const sources = new Map();
   for (const heading of state.headings) {
-    if (!sources.has(heading.source)) {
-      sources.set(heading.source, {
+    const sourceKey = headingSourceKey(heading);
+    if (!sources.has(sourceKey)) {
+      sources.set(sourceKey, {
         label: heading.source_label || heading.source,
         provider: heading.source_provider || "local",
       });
     }
   }
   els.sourceFilter.innerHTML = '<option value="">Tutte le sorgenti</option>';
-  for (const [source, metadata] of sources) {
+  for (const [sourceKey, metadata] of sources) {
     const option = document.createElement("option");
-    option.value = source;
+    option.value = sourceKey;
     option.textContent = `${metadata.label} (${metadata.provider})`;
     els.sourceFilter.append(option);
   }
@@ -1168,7 +1177,7 @@ function renderHeadings() {
   els.headingList.innerHTML = "";
 
   const headings = state.headings.filter((heading) => {
-    if (source && heading.source !== source) return false;
+    if (source && headingSourceKey(heading) !== source) return false;
     if (level && String(heading.level) !== level) return false;
     if (!query && isHiddenByCollapsedParent(heading)) return false;
     if (query && !`${heading.title} ${heading.source}`.toLowerCase().includes(query)) return false;
@@ -1239,7 +1248,7 @@ function headingHasChildren(heading) {
   const index = state.headings.findIndex((candidate) => candidate.id === heading.id);
   if (index < 0) return false;
   for (const candidate of state.headings.slice(index + 1)) {
-    if (candidate.source !== heading.source) break;
+    if (!sameHeadingSource(candidate, heading)) break;
     if (candidate.level <= heading.level) return false;
     return true;
   }
@@ -1252,7 +1261,7 @@ function isHiddenByCollapsedParent(heading) {
   let ancestorLevel = heading.level;
   for (let i = index - 1; i >= 0; i -= 1) {
     const candidate = state.headings[i];
-    if (candidate.source !== heading.source) break;
+    if (!sameHeadingSource(candidate, heading)) break;
     if (candidate.level >= ancestorLevel) continue;
     if (state.collapsedHeadingIds.has(candidate.id)) return true;
     ancestorLevel = candidate.level;
@@ -1352,7 +1361,7 @@ function childItemsFromHeading(parentHeading) {
   const stack = [{ level: parentHeading.level, children: roots }];
 
   for (const heading of state.headings.slice(parentIndex + 1)) {
-    if (heading.source !== parentHeading.source || heading.level <= parentHeading.level) break;
+    if (!sameHeadingSource(heading, parentHeading) || heading.level <= parentHeading.level) break;
     const item = {
       id: heading.id,
       title: heading.title,
@@ -1794,7 +1803,7 @@ function headingTreeIds(heading) {
   const parentIndex = state.headings.findIndex((candidate) => candidate.id === heading.id);
   if (parentIndex < 0) return ids;
   for (const candidate of state.headings.slice(parentIndex + 1)) {
-    if (candidate.source !== heading.source || candidate.level <= heading.level) break;
+    if (!sameHeadingSource(candidate, heading) || candidate.level <= heading.level) break;
     ids.push(candidate.id);
   }
   return ids;

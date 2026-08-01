@@ -792,6 +792,30 @@ def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monk
     assert context["target_topic"]["text"] == ""
 
 
+def test_persistence_validation_rejects_ready_provider_without_adapter(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {
+        "sources": [
+            {
+                "id": "gitlab-course",
+                "label": "GitLab course",
+                "type": "markdown",
+                "provider": "gitlab",
+                "repository": "school/network/course",
+                "ref": "main",
+                "files": ["README.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+
+    with pytest.raises(
+        course_board_server.course_source_catalog.CourseSourceCatalogError,
+        match="Adapter Markdown non configurato per gitlab",
+    ):
+        course_board_server.validate_course_source_catalog(design)
+
+
 def test_github_token_is_read_only_from_stable_absolute_file(tmp_path, monkeypatch) -> None:
     token_file = tmp_path / "github.token"
     token_file.write_text("short-lived-installation-token\n", encoding="utf-8")
@@ -819,6 +843,34 @@ def test_github_token_is_read_only_from_stable_absolute_file(tmp_path, monkeypat
         course_board_server.read_github_markdown_token()
 
 
+def test_heading_subtrees_do_not_cross_sources_with_same_relative_path() -> None:
+    headings = [
+        {
+            "id": "source-a:README.md#a",
+            "title": "A",
+            "source": "README.md",
+            "source_id": "source-a",
+            "href": "https://example.invalid/a",
+            "level": 1,
+            "line": 1,
+        },
+        {
+            "id": "source-b:README.md#b",
+            "title": "B",
+            "source": "README.md",
+            "source_id": "source-b",
+            "href": "https://example.invalid/b",
+            "level": 2,
+            "line": 1,
+        },
+    ]
+
+    item = course_board_server.item_from_heading_id(headings[0]["id"], headings)
+
+    assert item is not None
+    assert "children" not in item
+
+
 def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
     tmp_path, monkeypatch
 ) -> None:
@@ -838,7 +890,8 @@ def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
         ]
     }
 
-    def fetch_snapshot(_adapter, repository, declared_ref, files):
+    def fetch_snapshot(_adapter, repository, declared_ref, files, *, deadline=None):
+        assert deadline is not None
         return course_board_server.course_github_markdown.RemoteMarkdownSnapshot(
             provider="github",
             repository=repository,

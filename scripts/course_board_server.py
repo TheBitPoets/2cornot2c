@@ -30,6 +30,7 @@ import secrets
 import shutil
 import socket
 import ssl
+import stat
 import unicodedata
 import subprocess
 import sys
@@ -617,11 +618,22 @@ def read_github_markdown_token() -> str | None:
                 "Il file token GitHub non può essere un collegamento."
             )
         metadata = resolved.stat()
-        if not resolved.is_file() or metadata.st_size > course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 2:
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 2:
             raise course_github_markdown.RemoteMarkdownError("File token GitHub non valido.")
         verify_github_token_file_permissions(resolved, metadata)
         with resolved.open("rb") as stream:
             before = os.fstat(stream.fileno())
+            opened_path = course_source_catalog._opened_file_path(stream.fileno()).resolve()
+            if (
+                os.path.normcase(str(opened_path)) != os.path.normcase(str(resolved))
+                or not stat.S_ISREG(before.st_mode)
+                or (before.st_dev, before.st_ino) != (metadata.st_dev, metadata.st_ino)
+                or before.st_size != metadata.st_size
+                or before.st_mtime_ns != metadata.st_mtime_ns
+            ):
+                raise course_github_markdown.RemoteMarkdownError(
+                    "File token GitHub sostituito durante l'apertura."
+                )
             raw = stream.read(course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 3)
             after = os.fstat(stream.fileno())
         if (
@@ -664,6 +676,17 @@ def course_markdown_source_files(
 def validate_course_source_catalog(payload: dict) -> None:
     """Validate source and activity-link boundaries before persistence."""
 
+    for source in course_source_catalog.normalize_course_sources(
+        payload, default_files=DEFAULT_SOURCES
+    ):
+        if (
+            source.provider != "local"
+            and source.indexing_status == "ready"
+            and source.provider != "github"
+        ):
+            raise course_source_catalog.CourseSourceCatalogError(
+                f"Adapter Markdown non configurato per {source.provider}."
+            )
     course_source_catalog.local_markdown_source_files(
         payload,
         ROOT,
@@ -3163,9 +3186,10 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
     stack: list[dict] = []
     previous_source = None
     for heading in catalog_headings:
-        if heading["source"] != previous_source:
+        source_key = (heading.get("source_id", ""), heading["source"])
+        if source_key != previous_source:
             stack.clear()
-            previous_source = heading["source"]
+            previous_source = source_key
         node = {
             "id": heading["id"],
             "title": heading["title"],
@@ -3273,7 +3297,11 @@ def item_from_heading_id(heading_id: str, headings: list[dict]) -> dict | None:
     roots: list[dict] = []
     stack: list[dict] = [{"level": heading["level"], "children": roots}]
     for child in headings[index + 1:]:
-        if child["source"] != heading["source"] or child["level"] <= heading["level"]:
+        if (
+            child["source"] != heading["source"]
+            or child.get("source_id", "") != heading.get("source_id", "")
+            or child["level"] <= heading["level"]
+        ):
             break
         child_item = board_item_from_heading(child)
         child_item["children"] = []
