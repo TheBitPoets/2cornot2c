@@ -18,6 +18,7 @@ from scripts.thebitlab_storage import (
     JsonAssignmentStorage,
     JsonClassRosterStorage,
     JsonCourseStorage,
+    RevisionConflictError,
     ensure_directory_durable,
     recover_json_rollbacks,
     sync_directory,
@@ -196,6 +197,28 @@ def test_school_calendar_metadata_tolerates_invalid_json(tmp_path) -> None:
     ]
 
 
+def test_school_calendar_cas_rejects_stale_revision(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_school_calendar("calendar.json", {"school_year": "2026/2027"})
+    initial = storage.read_school_calendar("calendar.json")
+    revision = storage.design_revision(initial)
+
+    calendar, _, next_revision = storage.write_school_calendar_cas(
+        "calendar.json",
+        {"school_year": "2027/2028"},
+        revision,
+    )
+
+    assert calendar["school_year"] == "2027/2028"
+    assert next_revision != revision
+    with pytest.raises(RevisionConflictError):
+        storage.write_school_calendar_cas(
+            "calendar.json",
+            {"school_year": "2028/2029"},
+            revision,
+        )
+
+
 def test_update_uda_actual_preserves_latest_activity_links(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     storage.write_saved_design(
@@ -231,11 +254,34 @@ def test_update_uda_actual_preserves_latest_activity_links(tmp_path) -> None:
     stale_board_copy = copy.deepcopy(design)
     stale_board_copy["years"][0]["udas"][0]["activity_links"] = [{"activity_id": "board-new"}]
     stale_board_copy["years"][0]["udas"][0]["actual"] = {"status": "todo"}
-    storage.write_saved_design("course.json", stale_board_copy)
+    expected_revision = storage.design_revision(storage.read_saved_design("course.json"))
+    storage.write_saved_design_cas(
+        "course.json",
+        stale_board_copy,
+        expected_revision,
+        preserve_actual=True,
+    )
 
     merged = storage.read_saved_design("course.json")["years"][0]["udas"][0]
     assert merged["activity_links"] == [{"activity_id": "board-new"}]
     assert merged["actual"] == {"status": "done", "notes": "Completata"}
+
+    replacement = copy.deepcopy(stale_board_copy)
+    replacement["years"][0]["udas"][0].pop("actual", None)
+    storage.write_saved_design_cas(
+        "course.json",
+        replacement,
+        storage.design_revision(storage.read_saved_design("course.json")),
+        preserve_actual=False,
+    )
+    assert "actual" not in storage.read_saved_design("course.json")["years"][0]["udas"][0]
+    with pytest.raises(RevisionConflictError):
+        storage.write_saved_design_cas(
+            "course.json",
+            replacement,
+            expected_revision,
+            preserve_actual=False,
+        )
 
 
 def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:

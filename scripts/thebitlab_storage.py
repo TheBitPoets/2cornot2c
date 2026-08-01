@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import errno
+import hashlib
 import json
 import os
 import re
@@ -17,6 +18,10 @@ from typing import Any
 
 from scripts import create_activity, validate_activity
 from scripts.thebitlab_contracts import normalize_activity, normalize_assignment_register
+
+
+class RevisionConflictError(RuntimeError):
+    """Raised when a JSON compare-and-swap revision is stale."""
 
 
 DESIGN_NAME_RE = re.compile(r"^[a-zA-Z0-9_.-]+\.json$")
@@ -385,16 +390,38 @@ class JsonCourseStorage:
                     proposed_uda["actual"] = copy.deepcopy(latest_uda["actual"])
         return merged
 
+    @staticmethod
+    def design_revision(payload: dict[str, Any]) -> str:
+        """Return a canonical content revision for optimistic concurrency."""
+
+        encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
     def write_design(self, payload: dict[str, Any]) -> None:
-        """Persist the current course design without clobbering UDA progress."""
+        """Persist the current course design."""
 
         with self.operation_lock:
-            merged = (
-                self._preserve_latest_uda_actual(self.read_json(self.design_path), payload)
-                if self.design_path.is_file()
-                else payload
-            )
-            self.write_json(self.design_path, merged)
+            self.write_json(self.design_path, payload)
+
+    def write_design_cas(
+        self,
+        payload: dict[str, Any],
+        expected_revision: str,
+        preserve_actual: bool,
+    ) -> tuple[dict[str, Any], str]:
+        """Replace current design only at the expected revision."""
+
+        with self.operation_lock:
+            latest = self.read_json(self.design_path) if self.design_path.is_file() else {
+                "version": 1,
+                "source_files": self.default_sources,
+                "years": [],
+            }
+            if self.design_revision(latest) != expected_revision:
+                raise RevisionConflictError("Il progetto e stato modificato da un'altra sessione.")
+            persisted = self._preserve_latest_uda_actual(latest, payload) if preserve_actual else copy.deepcopy(payload)
+            self.write_json(self.design_path, persisted)
+            return persisted, self.design_revision(persisted)
 
     def list_saved_designs(self) -> list[dict[str, str]]:
         """List saved course designs stored in doc/course_designs."""
@@ -426,15 +453,31 @@ class JsonCourseStorage:
         path = self.saved_design_path(name)
         with self.operation_lock:
             if overwrite:
-                merged = (
-                    self._preserve_latest_uda_actual(self.read_json(path), payload)
-                    if path.is_file()
-                    else payload
-                )
-                self.write_json(path, merged)
+                self.write_json(path, payload)
             else:
                 self.write_json_exclusive(path, payload)
         return {"name": path.name, "path": self.relative_path(path)}
+
+    def write_saved_design_cas(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        expected_revision: str,
+        preserve_actual: bool,
+    ) -> tuple[dict[str, Any], dict[str, str], str]:
+        """Replace one archived design only at the expected revision."""
+
+        path = self.saved_design_path(name)
+        with self.operation_lock:
+            if not path.is_file():
+                raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
+            latest = self.read_json(path)
+            if self.design_revision(latest) != expected_revision:
+                raise RevisionConflictError("Il progetto e stato modificato da un'altra sessione.")
+            persisted = self._preserve_latest_uda_actual(latest, payload) if preserve_actual else copy.deepcopy(payload)
+            self.write_json(path, persisted)
+            metadata = {"name": path.name, "path": self.relative_path(path)}
+            return persisted, metadata, self.design_revision(persisted)
 
     def update_uda_actual(
         self,
@@ -502,6 +545,33 @@ class JsonCourseStorage:
             normalized_payload = {**payload, "course_design_name": course_design_name}
             self.write_json(path, normalized_payload)
         return {"name": path.name, "path": self.relative_path(path)}
+
+    def write_school_calendar_cas(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        expected_revision: str,
+    ) -> tuple[dict[str, Any], dict[str, str], str]:
+        """Persist one calendar only when its revision still matches."""
+
+        path = self.school_calendar_path(name)
+        with self.operation_lock:
+            if path.is_file():
+                latest = self.read_json(path)
+                if self.design_revision(latest) != expected_revision:
+                    raise RevisionConflictError("Il calendario e stato modificato da un'altra sessione.")
+            elif expected_revision:
+                raise RevisionConflictError("Il calendario atteso non esiste piu.")
+            course_design_name = payload.get("course_design_name", "")
+            if not isinstance(course_design_name, str):
+                raise ValueError("course_design_name deve essere una stringa.")
+            course_design_name = course_design_name.strip()
+            if course_design_name and not self.saved_design_path(course_design_name).is_file():
+                raise FileNotFoundError(f"Percorso associato non trovato: {course_design_name}")
+            persisted = {**copy.deepcopy(payload), "course_design_name": course_design_name}
+            self.write_json(path, persisted)
+            metadata = {"name": path.name, "path": self.relative_path(path)}
+            return persisted, metadata, self.design_revision(persisted)
 
     def delete_saved_design(
         self,

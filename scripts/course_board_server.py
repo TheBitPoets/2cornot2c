@@ -704,12 +704,19 @@ def source_request_design(raw_query: str) -> dict:
     return read_saved_design(names[0])
 
 
+def course_design_revision(design: dict) -> str:
+    """Return the canonical optimistic-concurrency revision for a design."""
+
+    return thebitlab_storage.JsonCourseStorage.design_revision(design)
+
+
 def course_calendar_context(raw_query: str) -> dict:
     """Return one design and its derived activity events from one snapshot."""
 
     design = source_request_design(raw_query)
     return {
         "design": design,
+        "revision": course_design_revision(design),
         "activity_events": list(course_activity_links.iter_scheduled_activity_links(design)),
     }
 
@@ -767,9 +774,47 @@ def update_course_uda_actual(name: str, year_id: object, uda_id: object, actual:
         activity_events = []
     return {
         "design": design,
+        "revision": course_design_revision(design),
         "activity_events": activity_events,
         "path": path,
     }
+
+
+def write_design_cas(payload: dict, expected_revision: object, preserve_actual: object) -> dict:
+    """Persist current design only when its revision still matches."""
+
+    if not isinstance(expected_revision, str) or len(expected_revision) != 64:
+        raise ValueError("expected_revision non valida.")
+    if not isinstance(preserve_actual, bool):
+        raise ValueError("preserve_actual deve essere booleano.")
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        course_activity_links.validate_course_activity_links(payload)
+        course_activity_links.validate_course_activity_targets(payload, ROOT)
+        design, revision = course_service().write_design_cas(payload, expected_revision, preserve_actual)
+    return {"design": design, "revision": revision, "path": str(DESIGN_PATH.relative_to(ROOT))}
+
+
+def write_saved_design_cas(
+    name: str,
+    payload: dict,
+    expected_revision: object,
+    preserve_actual: object,
+) -> dict:
+    """Persist archived design only when its revision still matches."""
+
+    if not isinstance(expected_revision, str) or len(expected_revision) != 64:
+        raise ValueError("expected_revision non valida.")
+    if not isinstance(preserve_actual, bool):
+        raise ValueError("preserve_actual deve essere booleano.")
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        course_activity_links.validate_course_activity_links(payload)
+        course_activity_links.validate_course_activity_targets(payload, ROOT)
+        design, saved, revision = course_service().write_saved_design_cas(
+            name, payload, expected_revision, preserve_actual
+        )
+    return {"design": design, "saved": saved, "revision": revision}
 
 
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
@@ -2547,6 +2592,21 @@ def write_school_calendar(name: str, payload: dict) -> dict:
     """Persist a named school calendar in the calendars folder."""
 
     return course_service().write_school_calendar(name, payload)
+
+
+def write_school_calendar_cas(name: object, payload: object, expected_revision: object) -> dict:
+    """Persist a calendar only at its expected revision."""
+
+    if not isinstance(name, str):
+        raise ValueError("name deve essere una stringa.")
+    if not isinstance(payload, dict):
+        raise ValueError("calendar deve essere un oggetto.")
+    if not isinstance(expected_revision, str) or len(expected_revision) not in {0, 64}:
+        raise ValueError("expected_revision non valida.")
+    calendar, saved, revision = course_service().write_school_calendar_cas(
+        name, payload, expected_revision
+    )
+    return {"calendar": calendar, "saved": saved, "revision": revision}
 
 
 def read_secret_env() -> dict[str, str]:
@@ -5177,6 +5237,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_json(
                     {
                         "design": design,
+                        "revision": course_design_revision(design),
                         "headings": extract_headings(design, source_files),
                         "sources": catalog["sources"],
                     }
@@ -5377,8 +5438,18 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/course-design":
             try:
-                write_design(payload)
-                self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+                if isinstance(payload.get("design"), dict):
+                    result = write_design_cas(
+                        payload["design"],
+                        payload.get("expected_revision"),
+                        payload.get("preserve_actual"),
+                    )
+                    self.write_json({"ok": True, **result})
+                else:
+                    write_design(payload)
+                    self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+            except thebitlab_storage.RevisionConflictError as error:
+                self.write_error_json(409, str(error))
             except (course_source_catalog.CourseSourceCatalogError, ValueError) as error:
                 self.write_error_json(400, str(error))
             return
@@ -5404,7 +5475,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/saved-designs/load":
             try:
-                self.write_json({"design": read_saved_design(payload.get("name", ""))})
+                design = read_saved_design(payload.get("name", ""))
+                self.write_json({"design": design, "revision": course_design_revision(design)})
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -5413,14 +5485,30 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/saved-designs/save":
             try:
-                saved = write_saved_design(
-                    payload.get("name", ""),
-                    payload.get("design", {}),
-                    overwrite=payload.get("overwrite") is True,
-                )
-                self.write_json({"ok": True, "saved": saved, "designs": list_saved_designs()})
-            except FileExistsError:
-                self.write_error_json(409, "Esiste già un progetto con questo nome.")
+                if payload.get("overwrite") is True:
+                    result = write_saved_design_cas(
+                        payload.get("name", ""),
+                        payload.get("design", {}),
+                        payload.get("expected_revision"),
+                        payload.get("preserve_actual"),
+                    )
+                    self.write_json({"ok": True, **result, "designs": list_saved_designs()})
+                else:
+                    saved = write_saved_design(
+                        payload.get("name", ""),
+                        payload.get("design", {}),
+                        overwrite=payload.get("overwrite") is True,
+                    )
+                    saved_design = payload.get("design", {})
+                    self.write_json({
+                        "ok": True,
+                        "saved": saved,
+                        "design": saved_design,
+                        "revision": course_design_revision(saved_design),
+                        "designs": list_saved_designs(),
+                    })
+            except (FileExistsError, thebitlab_storage.RevisionConflictError) as error:
+                self.write_error_json(409, str(error) or "Esiste già un progetto con questo nome.")
             except Exception as error:  # noqa: BLE001
                 self.write_error_json(400, str(error))
             return
@@ -5439,7 +5527,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/school-calendars/load":
             try:
-                self.write_json({"calendar": read_school_calendar(payload.get("name", ""))})
+                calendar = read_school_calendar(payload.get("name", ""))
+                self.write_json({"calendar": calendar, "revision": course_design_revision(calendar)})
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -5622,13 +5711,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/school-calendars/save":
             try:
-                saved = write_school_calendar(payload.get("name", ""), payload.get("calendar", {}))
-                self.write_json({"ok": True, "saved": saved, "calendars": list_school_calendars()})
+                result = write_school_calendar_cas(
+                    payload.get("name", ""),
+                    payload.get("calendar", {}),
+                    payload.get("expected_revision"),
+                )
+                self.write_json({"ok": True, **result, "calendars": list_school_calendars()})
+            except thebitlab_storage.RevisionConflictError as error:
+                self.write_error_json(409, str(error))
             except Exception as error:  # noqa: BLE001
-                self.send_response(400)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+                self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/ai-config":
             try:

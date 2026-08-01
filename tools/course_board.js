@@ -4,6 +4,8 @@
   activities: [],
   activityCatalogError: "",
   design: null,
+  designRevision: "",
+  currentDesignRevision: "",
   savedDesigns: [],
   activeSavedDesign: "",
   isNewDesign: false,
@@ -410,6 +412,7 @@ async function fetchCourseContext(name = "") {
   const payload = await api(`/api/course-source-context${query}`);
   return {
     design: payload.design,
+    revision: payload.revision || "",
     headings: payload.headings || [],
     sources: payload.sources || [],
   };
@@ -438,6 +441,8 @@ async function loadAll() {
     state.activityCatalogError = "";
   }
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.currentDesignRevision = courseContext.revision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   state.aiConfig = aiConfig;
@@ -569,6 +574,8 @@ async function loadCurrentDesign() {
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.currentDesignRevision = courseContext.revision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = "";
@@ -610,6 +617,7 @@ async function loadSavedDesignByName(name, options = {}) {
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = name;
@@ -683,7 +691,16 @@ async function persistArchiveDesignWithName(name, options = {}) {
     opensSavedDesign = state.design !== design,
     boardContext = captureBoardContext(),
     courseContextGeneration = courseContextRequestId,
+    expectedRevision = "",
   } = options;
+  let targetRevision = expectedRevision;
+  if (overwrite && !targetRevision) {
+    if (state.activeSavedDesign === name) {
+      targetRevision = state.designRevision;
+    } else {
+      targetRevision = (await api(`/api/course-calendar-context?design=${encodeURIComponent(name)}`)).revision;
+    }
+  }
   normalizeCourseDesignFrames(design);
   const designToSave = JSON.parse(JSON.stringify(design));
   const savedSnapshot = JSON.stringify(designToSave);
@@ -692,10 +709,18 @@ async function persistArchiveDesignWithName(name, options = {}) {
   try {
     payload = await api("/api/saved-designs/save", {
       method: "POST",
-      body: JSON.stringify({ name, design: designToSave, overwrite }),
+      body: JSON.stringify({
+        name,
+        design: designToSave,
+        overwrite,
+        ...(overwrite ? {
+          expected_revision: targetRevision,
+          preserve_actual: state.activeSavedDesign === name,
+        } : {}),
+      }),
     });
   } catch (error) {
-    if (error.status === 409 && confirmOverwrite) {
+    if (error.status === 409 && confirmOverwrite && !overwrite) {
       const confirmed = await DashboardDialogs.confirm({
         title: "Sostituisci progetto esistente",
         message: `Esiste già un progetto chiamato "${name}". Vuoi sostituirlo?`,
@@ -713,6 +738,7 @@ async function persistArchiveDesignWithName(name, options = {}) {
         opensSavedDesign,
         boardContext,
         courseContextGeneration,
+        expectedRevision: "",
       });
     }
     setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
@@ -728,11 +754,12 @@ async function persistArchiveDesignWithName(name, options = {}) {
     setStatus(`Progetto salvato in archivio: ${payload.saved?.name || name}. La vista aperta non e stata cambiata.`);
     return !opensSavedDesign;
   }
-  if (opensSavedDesign) state.design = designToSave;
+  if (opensSavedDesign) state.design = payload.design || designToSave;
+  state.designRevision = payload.revision || state.designRevision;
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
   state.isNewDesign = false;
-  markDesignClean(savedSnapshot);
+  markDesignClean(JSON.stringify(payload.design || designToSave));
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   renderSavedDesigns();
@@ -757,12 +784,16 @@ async function persistCurrentProject() {
   const boardContext = captureBoardContext();
   const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio progetto corrente in doc/course_design.json...");
-  await api("/api/course-design", {
+  const payload = await api("/api/course-design", {
     method: "POST",
-    body: savedSnapshot,
+    body: JSON.stringify({
+      design: JSON.parse(savedSnapshot),
+      expected_revision: state.currentDesignRevision,
+      preserve_actual: true,
+    }),
   });
   if (
-    !isBoardContextCurrent(boardContext)
+    !isBoardContextUnchanged(boardContext)
     || courseContextGeneration !== courseContextRequestId
   ) {
     setStatus("Progetto corrente salvato. La vista aperta non e stata cambiata.");
@@ -770,9 +801,12 @@ async function persistCurrentProject() {
   }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.design = payload.design;
+  state.designRevision = payload.revision;
+  state.currentDesignRevision = payload.revision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
-  markDesignClean(savedSnapshot);
+  markDesignClean(JSON.stringify(payload.design));
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
@@ -918,6 +952,8 @@ async function deleteArchiveDesignOnce() {
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.currentDesignRevision = courseContext.revision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = "";
@@ -967,6 +1003,7 @@ async function newCourseDesign() {
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   markDesignClean();
@@ -3032,12 +3069,16 @@ async function persistDesignAsCurrent() {
   const boardContext = captureBoardContext();
   const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio...");
-  await api("/api/course-design", {
+  const payload = await api("/api/course-design", {
     method: "POST",
-    body: savedSnapshot,
+    body: JSON.stringify({
+      design: JSON.parse(savedSnapshot),
+      expected_revision: state.currentDesignRevision,
+      preserve_actual: false,
+    }),
   });
   if (
-    !isBoardContextCurrent(boardContext)
+    !isBoardContextUnchanged(boardContext)
     || courseContextGeneration !== courseContextRequestId
   ) {
     setStatus("Progetto impostato come corrente. La vista aperta non e stata cambiata.");
@@ -3045,9 +3086,12 @@ async function persistDesignAsCurrent() {
   }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.design = payload.design;
+  state.designRevision = payload.revision;
+  state.currentDesignRevision = payload.revision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
-  markDesignClean(savedSnapshot);
+  markDesignClean(JSON.stringify(payload.design));
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();

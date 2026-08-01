@@ -62,6 +62,7 @@ const state = {
   calendars: [],
   savedDesigns: [],
   calendar: defaultCalendar(),
+  calendarRevision: "",
   courseDesign: null,
   activityEvents: [],
   visibleTrackIds: null,
@@ -353,6 +354,7 @@ async function loadCalendarForActiveCourseDesign() {
     return true;
   }
   state.calendar = emptyCalendar(activeDesign);
+  state.calendarRevision = "";
   state.visibleTrackIds = null;
   els.fileName.value = "";
   const courseLoaded = await loadCourseDesign();
@@ -397,6 +399,7 @@ async function loadCalendarByName(name) {
     }
     if (requestId !== state.calendarRequestId || courseRequestId !== state.courseDesignRequestId) return false;
     state.calendar = candidate;
+    state.calendarRevision = payload.revision || "";
     state.courseDesign = context?.design || null;
     state.activityEvents = context?.activity_events || [];
     state.visibleTrackIds = null;
@@ -446,9 +449,15 @@ async function saveCalendar() {
     els.fileName.value = name;
     const payload = await api("/api/school-calendars/save", {
       method: "POST",
-      body: JSON.stringify({ name, calendar: state.calendar }),
+      body: JSON.stringify({
+        name,
+        calendar: state.calendar,
+        expected_revision: state.calendarRevision,
+      }),
     });
     if (requestId !== state.calendarRequestId || saveRequestId !== state.calendarSaveRequestId) return;
+    state.calendar = payload.calendar || state.calendar;
+    state.calendarRevision = payload.revision || state.calendarRevision;
     state.calendars = payload.calendars || [];
     renderCalendarList();
     els.calendarSelect.value = payload.saved?.name || name;

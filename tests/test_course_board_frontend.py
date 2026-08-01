@@ -645,7 +645,8 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
         """
         let requests = 0;
         let confirmationOptions = null;
-        api = async (_path, options) => {
+        api = async (path, options) => {
+          if (path.startsWith("/api/course-calendar-context")) return { revision: "target-revision" };
           requests += 1;
           const body = JSON.parse(options.body);
           if (requests === 1) {
@@ -654,7 +655,13 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
             throw error;
           }
           assert.equal(body.overwrite, true);
-          return { saved: { name: body.name }, designs: [{ name: body.name }] };
+          assert.equal(body.expected_revision, "target-revision");
+          return {
+            saved: { name: body.name },
+            design: body.design,
+            revision: "saved-revision",
+            designs: [{ name: body.name }],
+          };
         };
         DashboardDialogs.confirm = async (options) => {
           confirmationOptions = options;
@@ -966,12 +973,25 @@ def test_newer_load_wins_over_an_earlier_save_copy_response() -> None:
         state.design = { years: [{ id: "origin" }] };
         state.activeSavedDesign = "origin.json";
 
-        const saving = saveArchiveDesignWithName("copy.json", { overwrite: true });
+        const saving = saveArchiveDesignWithName("copy.json", {
+          overwrite: true,
+          expectedRevision: "copy-revision",
+        });
         const loading = loadSavedDesignByName("target.json", { confirmFirst: false });
-        completeSave({ saved: { name: "copy.json" }, designs: [{ name: "copy.json" }] });
+        completeSave({
+          saved: { name: "copy.json" },
+          design: { years: [{ id: "origin" }] },
+          revision: "saved-copy-revision",
+          designs: [{ name: "copy.json" }],
+        });
         saving.then(() => {
           assert.equal(state.activeSavedDesign, "origin.json");
-          completeLoad({ design: { years: [{ id: "target" }] }, headings: [], sources: [] });
+          completeLoad({
+            design: { years: [{ id: "target" }] },
+            revision: "target-revision",
+            headings: [],
+            sources: [],
+          });
           return loading.then(() => {
             assert.equal(state.activeSavedDesign, "target.json");
             assert.equal(state.design.years[0].id, "target");

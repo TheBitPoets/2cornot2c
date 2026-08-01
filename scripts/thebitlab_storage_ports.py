@@ -17,6 +17,13 @@ class CourseStorage(Protocol):
 
     def write_design(self, payload: dict[str, Any]) -> None: ...
 
+    def write_design_cas(
+        self,
+        payload: dict[str, Any],
+        expected_revision: str,
+        preserve_actual: bool,
+    ) -> tuple[dict[str, Any], str]: ...
+
     def list_saved_designs(self) -> list[dict[str, str]]: ...
 
     def read_saved_design(self, name: str) -> dict[str, Any]: ...
@@ -27,6 +34,14 @@ class CourseStorage(Protocol):
         payload: dict[str, Any],
         overwrite: bool = True,
     ) -> dict[str, str]: ...
+
+    def write_saved_design_cas(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        expected_revision: str,
+        preserve_actual: bool,
+    ) -> tuple[dict[str, Any], dict[str, str], str]: ...
 
     def update_uda_actual(
         self,
@@ -48,6 +63,13 @@ class CourseStorage(Protocol):
     def read_school_calendar(self, name: str) -> dict[str, Any]: ...
 
     def write_school_calendar(self, name: str, payload: dict[str, Any]) -> dict[str, str]: ...
+
+    def write_school_calendar_cas(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        expected_revision: str,
+    ) -> tuple[dict[str, Any], dict[str, str], str]: ...
 
 
 class AssignmentStorage(Protocol):
