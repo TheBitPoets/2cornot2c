@@ -710,6 +710,23 @@ def course_design_revision(design: dict) -> str:
     return thebitlab_storage.JsonCourseStorage.design_revision(design)
 
 
+def course_design_editable_revision(design: dict) -> str:
+    """Return a revision that excludes calendar-owned actual records."""
+
+    return thebitlab_storage.JsonCourseStorage.editable_design_revision(design)
+
+
+def uda_actual_revisions(design: dict) -> dict[str, str]:
+    """Return stable record revisions keyed by year and UDA IDs."""
+
+    revisions: dict[str, str] = {}
+    for year in design.get("years", []):
+        for uda in year.get("udas", []):
+            key = json.dumps([year.get("id", ""), uda.get("id", "")], separators=(",", ":"))
+            revisions[key] = thebitlab_storage.JsonCourseStorage.value_revision(uda.get("actual"))
+    return revisions
+
+
 def course_calendar_context(raw_query: str) -> dict:
     """Return one design and its derived activity events from one snapshot."""
 
@@ -717,6 +734,8 @@ def course_calendar_context(raw_query: str) -> dict:
     return {
         "design": design,
         "revision": course_design_revision(design),
+        "editable_revision": course_design_editable_revision(design),
+        "actual_revisions": uda_actual_revisions(design),
         "activity_events": list(course_activity_links.iter_scheduled_activity_links(design)),
     }
 
@@ -757,7 +776,13 @@ def validate_uda_actual(payload: object) -> dict:
     return {"status": status, **dates, "hours_done": hours, "notes": notes}
 
 
-def update_course_uda_actual(name: str, year_id: object, uda_id: object, actual: object) -> dict:
+def update_course_uda_actual(
+    name: str,
+    year_id: object,
+    uda_id: object,
+    actual: object,
+    expected_actual_revision: object,
+) -> dict:
     """Merge one actual-progress record without replacing concurrent design edits."""
 
     if not isinstance(name, str):
@@ -766,8 +791,12 @@ def update_course_uda_actual(name: str, year_id: object, uda_id: object, actual:
         raise ValueError("year_id non valido.")
     if not isinstance(uda_id, str) or not uda_id or len(uda_id) > 160:
         raise ValueError("uda_id non valido.")
+    if not isinstance(expected_actual_revision, str) or len(expected_actual_revision) != 64:
+        raise ValueError("expected_actual_revision non valida.")
     normalized_actual = validate_uda_actual(actual)
-    design, path = course_service().update_uda_actual(name, year_id, uda_id, normalized_actual)
+    design, path = course_service().update_uda_actual(
+        name, year_id, uda_id, normalized_actual, expected_actual_revision
+    )
     try:
         activity_events = list(course_activity_links.iter_scheduled_activity_links(design))
     except ValueError:
@@ -775,6 +804,8 @@ def update_course_uda_actual(name: str, year_id: object, uda_id: object, actual:
     return {
         "design": design,
         "revision": course_design_revision(design),
+        "editable_revision": course_design_editable_revision(design),
+        "actual_revisions": uda_actual_revisions(design),
         "activity_events": activity_events,
         "path": path,
     }
@@ -792,7 +823,12 @@ def write_design_cas(payload: dict, expected_revision: object, preserve_actual: 
         course_activity_links.validate_course_activity_links(payload)
         course_activity_links.validate_course_activity_targets(payload, ROOT)
         design, revision = course_service().write_design_cas(payload, expected_revision, preserve_actual)
-    return {"design": design, "revision": revision, "path": str(DESIGN_PATH.relative_to(ROOT))}
+    return {
+        "design": design,
+        "revision": revision,
+        "editable_revision": course_design_editable_revision(design),
+        "path": str(DESIGN_PATH.relative_to(ROOT)),
+    }
 
 
 def write_saved_design_cas(
@@ -814,7 +850,12 @@ def write_saved_design_cas(
         design, saved, revision = course_service().write_saved_design_cas(
             name, payload, expected_revision, preserve_actual
         )
-    return {"design": design, "saved": saved, "revision": revision}
+    return {
+        "design": design,
+        "saved": saved,
+        "revision": revision,
+        "editable_revision": course_design_editable_revision(design),
+    }
 
 
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
@@ -5238,6 +5279,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     {
                         "design": design,
                         "revision": course_design_revision(design),
+                        "editable_revision": course_design_editable_revision(design),
                         "headings": extract_headings(design, source_files),
                         "sources": catalog["sources"],
                     }
@@ -5476,7 +5518,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/saved-designs/load":
             try:
                 design = read_saved_design(payload.get("name", ""))
-                self.write_json({"design": design, "revision": course_design_revision(design)})
+                self.write_json({
+                    "design": design,
+                    "revision": course_design_revision(design),
+                    "editable_revision": course_design_editable_revision(design),
+                })
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -5505,6 +5551,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                         "saved": saved,
                         "design": saved_design,
                         "revision": course_design_revision(saved_design),
+                        "editable_revision": course_design_editable_revision(saved_design),
                         "designs": list_saved_designs(),
                     })
             except (FileExistsError, thebitlab_storage.RevisionConflictError) as error:
@@ -5704,8 +5751,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     payload.get("year_id"),
                     payload.get("uda_id"),
                     payload.get("actual"),
+                    payload.get("expected_actual_revision"),
                 )
                 self.write_json({"ok": True, **result})
+            except thebitlab_storage.RevisionConflictError as error:
+                self.write_error_json(409, str(error))
             except (FileNotFoundError, ValueError) as error:
                 self.write_error_json(400, str(error))
             return

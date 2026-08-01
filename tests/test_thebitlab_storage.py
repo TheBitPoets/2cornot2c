@@ -243,6 +243,7 @@ def test_update_uda_actual_preserves_latest_activity_links(tmp_path) -> None:
         "third",
         "uda-1",
         {"status": "done", "notes": "Completata"},
+        storage.value_revision(None),
     )
 
     uda = design["years"][0]["udas"][0]
@@ -250,11 +251,19 @@ def test_update_uda_actual_preserves_latest_activity_links(tmp_path) -> None:
     assert uda["actual"] == {"status": "done", "notes": "Completata"}
     assert path == "doc/course_designs/course.json"
     assert storage.read_saved_design("course.json") == design
+    with pytest.raises(RevisionConflictError):
+        storage.update_uda_actual(
+            "course.json",
+            "third",
+            "uda-1",
+            {"status": "skipped", "notes": "Stale"},
+            storage.value_revision(None),
+        )
 
     stale_board_copy = copy.deepcopy(design)
     stale_board_copy["years"][0]["udas"][0]["activity_links"] = [{"activity_id": "board-new"}]
     stale_board_copy["years"][0]["udas"][0]["actual"] = {"status": "todo"}
-    expected_revision = storage.design_revision(storage.read_saved_design("course.json"))
+    expected_revision = storage.editable_design_revision(storage.read_saved_design("course.json"))
     storage.write_saved_design_cas(
         "course.json",
         stale_board_copy,

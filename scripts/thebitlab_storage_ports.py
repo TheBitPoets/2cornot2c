@@ -49,6 +49,7 @@ class CourseStorage(Protocol):
         year_id: str,
         uda_id: str,
         actual: dict[str, Any],
+        expected_actual_revision: str,
     ) -> tuple[dict[str, Any], str]: ...
 
     def delete_saved_design(

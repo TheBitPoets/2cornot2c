@@ -403,6 +403,24 @@ class JsonCourseStorage:
         with self.operation_lock:
             self.write_json(self.design_path, payload)
 
+    @classmethod
+    def editable_design_revision(cls, payload: dict[str, Any]) -> str:
+        """Return a revision excluding calendar-owned UDA actual records."""
+
+        editable = copy.deepcopy(payload)
+        for year in editable.get("years", []):
+            if not isinstance(year, dict):
+                continue
+            for uda in year.get("udas", []):
+                if isinstance(uda, dict):
+                    uda.pop("actual", None)
+        return cls.design_revision(editable)
+
+    @staticmethod
+    def value_revision(payload: object) -> str:
+        encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
     def write_design_cas(
         self,
         payload: dict[str, Any],
@@ -417,7 +435,12 @@ class JsonCourseStorage:
                 "source_files": self.default_sources,
                 "years": [],
             }
-            if self.design_revision(latest) != expected_revision:
+            current_revision = (
+                self.editable_design_revision(latest)
+                if preserve_actual
+                else self.design_revision(latest)
+            )
+            if current_revision != expected_revision:
                 raise RevisionConflictError("Il progetto e stato modificato da un'altra sessione.")
             persisted = self._preserve_latest_uda_actual(latest, payload) if preserve_actual else copy.deepcopy(payload)
             self.write_json(self.design_path, persisted)
@@ -472,7 +495,12 @@ class JsonCourseStorage:
             if not path.is_file():
                 raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
             latest = self.read_json(path)
-            if self.design_revision(latest) != expected_revision:
+            current_revision = (
+                self.editable_design_revision(latest)
+                if preserve_actual
+                else self.design_revision(latest)
+            )
+            if current_revision != expected_revision:
                 raise RevisionConflictError("Il progetto e stato modificato da un'altra sessione.")
             persisted = self._preserve_latest_uda_actual(latest, payload) if preserve_actual else copy.deepcopy(payload)
             self.write_json(path, persisted)
@@ -485,6 +513,7 @@ class JsonCourseStorage:
         year_id: str,
         uda_id: str,
         actual: dict[str, Any],
+        expected_actual_revision: str,
     ) -> tuple[dict[str, Any], str]:
         """Atomically merge one UDA actual record into the latest design."""
 
@@ -499,6 +528,8 @@ class JsonCourseStorage:
             udas = [uda for uda in years[0].get("udas", []) if uda.get("id") == uda_id]
             if len(udas) != 1:
                 raise ValueError(f"UDA non univoca o non trovata: {uda_id}")
+            if self.value_revision(udas[0].get("actual")) != expected_actual_revision:
+                raise RevisionConflictError("Il consuntivo UDA e stato modificato da un'altra sessione.")
             udas[0]["actual"] = dict(actual)
             self.write_json(path, design)
             return design, self.relative_path(path)

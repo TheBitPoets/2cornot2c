@@ -84,10 +84,13 @@ class CourseService:
         year_id: str,
         uda_id: str,
         actual: dict[str, Any],
+        expected_actual_revision: str,
     ) -> tuple[dict[str, Any], str]:
-        """Update only one UDA actual-progress record in the latest design."""
+        """Update one UDA actual-progress record with record-level CAS."""
 
-        return self.storage.update_uda_actual(name, year_id, uda_id, actual)
+        return self.storage.update_uda_actual(
+            name, year_id, uda_id, actual, expected_actual_revision
+        )
 
     def delete_saved_design(
         self,

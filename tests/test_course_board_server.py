@@ -397,8 +397,8 @@ def test_update_course_uda_actual_validates_and_returns_latest_design(monkeypatc
     calls = []
 
     class Service:
-        def update_uda_actual(self, name, year_id, uda_id, actual):
-            calls.append((name, year_id, uda_id, actual))
+        def update_uda_actual(self, name, year_id, uda_id, actual, expected_actual_revision):
+            calls.append((name, year_id, uda_id, actual, expected_actual_revision))
             return latest, "doc/course_designs/course.json"
 
     monkeypatch.setattr(course_board_server, "course_service", Service)
@@ -414,6 +414,7 @@ def test_update_course_uda_actual_validates_and_returns_latest_design(monkeypatc
             "hours_done": 4,
             "notes": "Completata",
         },
+        "a" * 64,
     )
 
     assert calls[0][0:3] == ("course.json", "third", "uda-1")

@@ -227,6 +227,15 @@ def test_stale_calendar_save_response_does_not_replace_newer_selection() -> None
     subprocess.run(["node", "-e", script], check=True)
 
 
+def test_calendar_save_uses_loaded_filename_revision_and_surfaces_conflicts() -> None:
+    source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
+    function_source = source.split("async function saveCalendar", 1)[1].split("\nfunction renderAll", 1)[0]
+
+    assert 'name === state.loadedCalendarName ? state.calendarRevision : ""' in function_source
+    assert "Calendario non salvato" in function_source
+    assert "Ricarica prima di riprovare" in function_source
+
+
 def test_calendar_save_is_blocked_while_course_context_is_loading() -> None:
     source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
     start = source.index("async function saveCalendar")

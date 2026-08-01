@@ -5,7 +5,9 @@
   activityCatalogError: "",
   design: null,
   designRevision: "",
+  designEditableRevision: "",
   currentDesignRevision: "",
+  currentDesignEditableRevision: "",
   savedDesigns: [],
   activeSavedDesign: "",
   isNewDesign: false,
@@ -413,6 +415,7 @@ async function fetchCourseContext(name = "") {
   return {
     design: payload.design,
     revision: payload.revision || "",
+    editableRevision: payload.editable_revision || payload.revision || "",
     headings: payload.headings || [],
     sources: payload.sources || [],
   };
@@ -442,7 +445,9 @@ async function loadAll() {
   }
   state.design = courseContext.design;
   state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
   state.currentDesignRevision = courseContext.revision;
+  state.currentDesignEditableRevision = courseContext.editableRevision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   state.aiConfig = aiConfig;
@@ -575,7 +580,9 @@ async function loadCurrentDesign() {
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
   state.currentDesignRevision = courseContext.revision;
+  state.currentDesignEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = "";
@@ -618,6 +625,7 @@ async function loadSavedDesignByName(name, options = {}) {
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = name;
@@ -693,12 +701,14 @@ async function persistArchiveDesignWithName(name, options = {}) {
     courseContextGeneration = courseContextRequestId,
     expectedRevision = "",
   } = options;
+  const preserveActual = state.activeSavedDesign === name;
   let targetRevision = expectedRevision;
   if (overwrite && !targetRevision) {
-    if (state.activeSavedDesign === name) {
-      targetRevision = state.designRevision;
+    if (preserveActual) {
+      targetRevision = state.designEditableRevision;
     } else {
-      targetRevision = (await api(`/api/course-calendar-context?design=${encodeURIComponent(name)}`)).revision;
+      const target = await api(`/api/course-calendar-context?design=${encodeURIComponent(name)}`);
+      targetRevision = target.revision;
     }
   }
   normalizeCourseDesignFrames(design);
@@ -715,10 +725,14 @@ async function persistArchiveDesignWithName(name, options = {}) {
         overwrite,
         ...(overwrite ? {
           expected_revision: targetRevision,
-          preserve_actual: state.activeSavedDesign === name,
+          preserve_actual: preserveActual,
         } : {}),
       }),
     });
+    if (state.activeSavedDesign === name) {
+      state.designRevision = payload.revision || state.designRevision;
+      state.designEditableRevision = payload.editable_revision || state.designEditableRevision;
+    }
   } catch (error) {
     if (error.status === 409 && confirmOverwrite && !overwrite) {
       const confirmed = await DashboardDialogs.confirm({
@@ -756,6 +770,7 @@ async function persistArchiveDesignWithName(name, options = {}) {
   }
   if (opensSavedDesign) state.design = payload.design || designToSave;
   state.designRevision = payload.revision || state.designRevision;
+  state.designEditableRevision = payload.editable_revision || state.designEditableRevision;
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
   state.isNewDesign = false;
@@ -788,10 +803,12 @@ async function persistCurrentProject() {
     method: "POST",
     body: JSON.stringify({
       design: JSON.parse(savedSnapshot),
-      expected_revision: state.currentDesignRevision,
+      expected_revision: state.currentDesignEditableRevision,
       preserve_actual: true,
     }),
   });
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   if (
     !isBoardContextUnchanged(boardContext)
     || courseContextGeneration !== courseContextRequestId
@@ -803,7 +820,9 @@ async function persistCurrentProject() {
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.design = payload.design;
   state.designRevision = payload.revision;
+  state.designEditableRevision = payload.editable_revision || payload.revision;
   state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean(JSON.stringify(payload.design));
@@ -953,7 +972,9 @@ async function deleteArchiveDesignOnce() {
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
   state.currentDesignRevision = courseContext.revision;
+  state.currentDesignEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = "";
@@ -1004,6 +1025,7 @@ async function newCourseDesign() {
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
   state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   markDesignClean();
@@ -3077,6 +3099,8 @@ async function persistDesignAsCurrent() {
       preserve_actual: false,
     }),
   });
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   if (
     !isBoardContextUnchanged(boardContext)
     || courseContextGeneration !== courseContextRequestId
@@ -3088,7 +3112,9 @@ async function persistDesignAsCurrent() {
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.design = payload.design;
   state.designRevision = payload.revision;
+  state.designEditableRevision = payload.editable_revision || payload.revision;
   state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean(JSON.stringify(payload.design));

@@ -63,7 +63,9 @@ const state = {
   savedDesigns: [],
   calendar: defaultCalendar(),
   calendarRevision: "",
+  loadedCalendarName: "",
   courseDesign: null,
+  actualRevisions: {},
   activityEvents: [],
   visibleTrackIds: null,
   calendarView: {
@@ -318,6 +320,7 @@ async function loadCourseDesign() {
       return null;
     }
     state.courseDesign = payload.design;
+    state.actualRevisions = payload.actual_revisions || {};
     state.activityEvents = payload.activity_events || [];
     state.courseDesignLoading = false;
     setCalendarInteractionLocked(false);
@@ -331,6 +334,7 @@ async function loadCourseDesign() {
       return null;
     }
     state.courseDesign = null;
+    state.actualRevisions = {};
     state.activityEvents = [];
     state.courseDesignLoading = false;
     setCalendarInteractionLocked(false);
@@ -355,6 +359,7 @@ async function loadCalendarForActiveCourseDesign() {
   }
   state.calendar = emptyCalendar(activeDesign);
   state.calendarRevision = "";
+  state.loadedCalendarName = "";
   state.visibleTrackIds = null;
   els.fileName.value = "";
   const courseLoaded = await loadCourseDesign();
@@ -400,7 +405,9 @@ async function loadCalendarByName(name) {
     if (requestId !== state.calendarRequestId || courseRequestId !== state.courseDesignRequestId) return false;
     state.calendar = candidate;
     state.calendarRevision = payload.revision || "";
+    state.loadedCalendarName = name;
     state.courseDesign = context?.design || null;
+    state.actualRevisions = context?.actual_revisions || {};
     state.activityEvents = context?.activity_events || [];
     state.visibleTrackIds = null;
     state.courseDesignLoading = false;
@@ -452,12 +459,13 @@ async function saveCalendar() {
       body: JSON.stringify({
         name,
         calendar: state.calendar,
-        expected_revision: state.calendarRevision,
+        expected_revision: name === state.loadedCalendarName ? state.calendarRevision : "",
       }),
     });
     if (requestId !== state.calendarRequestId || saveRequestId !== state.calendarSaveRequestId) return;
     state.calendar = payload.calendar || state.calendar;
     state.calendarRevision = payload.revision || state.calendarRevision;
+    state.loadedCalendarName = payload.saved?.name || name;
     state.calendars = payload.calendars || [];
     renderCalendarList();
     els.calendarSelect.value = payload.saved?.name || name;
@@ -470,6 +478,10 @@ async function saveCalendar() {
       sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
     }
     setStatus(`Calendario salvato: ${payload.saved?.path || name}.`);
+  } catch (error) {
+    if (saveRequestId === state.calendarSaveRequestId) {
+      setStatus(`Calendario non salvato: ${error.message}. Ricarica prima di riprovare.`, "error");
+    }
   } finally {
     if (saveRequestId === state.calendarSaveRequestId) {
       state.calendarSaveInProgress = false;
@@ -1325,7 +1337,7 @@ function ganttSegmentTooltip(segment) {
   ].join("\n");
 }
 
-async function saveAssociatedCourseDesign(yearId, udaId, actual) {
+async function saveAssociatedCourseDesign(yearId, udaId, actual, expectedActualRevision) {
   if (!state.courseDesign) {
     throw new Error("Nessun progetto didattico associato caricato.");
   }
@@ -1336,6 +1348,7 @@ async function saveAssociatedCourseDesign(yearId, udaId, actual) {
       year_id: yearId,
       uda_id: udaId,
       actual,
+      expected_actual_revision: expectedActualRevision,
     }),
   });
 }
@@ -1362,7 +1375,15 @@ async function saveActualProgress(segment) {
   saveButton.disabled = true;
   try {
     const yearId = segment.track.course_year_id || segment.track.id;
-    const payload = await saveAssociatedCourseDesign(yearId, segment.uda.id, nextActual);
+    const actualKey = JSON.stringify([yearId, segment.uda.id]);
+    const expectedActualRevision = state.actualRevisions[actualKey];
+    if (!expectedActualRevision) throw new Error("Revisione consuntivo UDA non disponibile: ricarica il percorso.");
+    const payload = await saveAssociatedCourseDesign(
+      yearId,
+      segment.uda.id,
+      nextActual,
+      expectedActualRevision,
+    );
     if (
       requestId !== state.actualSaveRequestId
       || calendarRequestId !== state.calendarRequestId
@@ -1370,6 +1391,7 @@ async function saveActualProgress(segment) {
       || designName !== (state.calendar.course_design_name || "")
     ) return;
     state.courseDesign = payload.design;
+    state.actualRevisions = payload.actual_revisions || {};
     state.activityEvents = payload.activity_events || [];
     renderAll();
     setStatus(`Programmazione svolta salvata in ${payload.path}.`);
