@@ -300,6 +300,132 @@ def test_write_design_rejects_invalid_activity_link_before_persistence(tmp_path,
         )
 
 
+def test_course_linkable_activity_catalog_fails_closed_on_course_validation(monkeypatch) -> None:
+    activities = [
+        {"id": "valid", "path": "activities/valid.json", "title": "Valid", "kind": "lab"},
+        {"id": "outside", "path": "examples/outside.json", "title": "Outside", "kind": "lab"},
+    ]
+    validated = []
+
+    def validate(candidate, root):
+        path = candidate["years"][0]["udas"][0]["activity_links"][0]["activity_path"]
+        validated.append((path, root))
+        if not path.startswith("activities/"):
+            raise ValueError("outside")
+
+    monkeypatch.setattr(course_board_server, "list_activities", lambda: activities)
+    monkeypatch.setattr(
+        course_board_server.course_activity_links,
+        "validate_course_activity_targets",
+        validate,
+    )
+
+    assert course_board_server.list_course_linkable_activities() == [activities[0]]
+    assert [entry[0] for entry in validated] == ["activities/valid.json", "examples/outside.json"]
+
+
+def test_course_calendar_context_derives_activity_events_from_one_design_snapshot(monkeypatch) -> None:
+    design = {
+        "years": [
+            {
+                "id": "terzo",
+                "title": "Terzo anno",
+                "udas": [
+                    {
+                        "id": "uda-1",
+                        "title": "Funzioni",
+                        "activity_links": [
+                            {
+                                "activity_id": "functions-001",
+                                "activity_path": "activities/functions.json",
+                                "title": "Funzioni",
+                                "kind": "laboratorio",
+                                "role": "verification",
+                                "scheduled_on": "2026-11-10",
+                                "due_on": "2026-11-17",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    queries = []
+    monkeypatch.setattr(
+        course_board_server,
+        "source_request_design",
+        lambda query: queries.append(query) or design,
+    )
+
+    payload = course_board_server.course_calendar_context("design=archive.json")
+
+    assert queries == ["design=archive.json"]
+    assert payload["design"] is design
+    assert payload["activity_events"] == [
+        {
+            "year_id": "terzo",
+            "year_title": "Terzo anno",
+            "uda_id": "uda-1",
+            "uda_title": "Funzioni",
+            "activity_id": "functions-001",
+            "activity_path": "activities/functions.json",
+            "title": "Funzioni",
+            "kind": "laboratorio",
+            "role": "verification",
+            "scheduled_on": "2026-11-10",
+            "due_on": "2026-11-17",
+        }
+    ]
+    assert "activity_events" not in design
+
+
+def test_update_course_uda_actual_validates_and_returns_latest_design(monkeypatch) -> None:
+    latest = {
+        "years": [
+            {
+                "id": "third",
+                "udas": [
+                    {
+                        "id": "uda-1",
+                        "activity_links": [],
+                        "actual": {"status": "done"},
+                    }
+                ],
+            }
+        ]
+    }
+    calls = []
+
+    class Service:
+        def update_uda_actual(self, name, year_id, uda_id, actual, expected_actual_revision):
+            calls.append((name, year_id, uda_id, actual, expected_actual_revision))
+            return latest, "doc/course_designs/course.json"
+
+    monkeypatch.setattr(course_board_server, "course_service", Service)
+
+    payload = course_board_server.update_course_uda_actual(
+        "course.json",
+        "third",
+        "uda-1",
+        {
+            "status": "done",
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-02",
+            "hours_done": 4,
+            "notes": "Completata",
+        },
+        "a" * 64,
+    )
+
+    assert calls[0][0:3] == ("course.json", "third", "uda-1")
+    assert payload["design"] is latest
+    assert payload["path"] == "doc/course_designs/course.json"
+    with pytest.raises(ValueError, match="non puo precedere"):
+        course_board_server.validate_uda_actual(
+            {"start_date": "2026-10-02", "end_date": "2026-10-01"}
+        )
+
+
 def test_ai_config_uses_one_provider_model_snapshot(monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")
@@ -4905,7 +5031,16 @@ def test_teacher_post_rejects_invalid_and_oversized_json_bodies(tmp_path) -> Non
             ]
         }
         for path, payload in (
-            ("/api/course-design", invalid_design),
+            (
+                "/api/course-design",
+                {
+                    "design": invalid_design,
+                    "expected_revision": course_board_server.course_design_revision(
+                        course_board_server.read_design()
+                    ),
+                    "preserve_actual": False,
+                },
+            ),
             ("/api/course-plan-md", {"design": invalid_design}),
         ):
             body = json.dumps(payload).encode("utf-8")

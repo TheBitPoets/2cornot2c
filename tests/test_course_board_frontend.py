@@ -127,6 +127,157 @@ def test_source_catalog_summary_reports_indexed_pending_and_providers() -> None:
     )
 
 
+def test_activity_link_dialog_adds_authoritative_activity_and_validates_dates() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        state.activities = [{
+          id: "python-somma-001",
+          path: "activities/drafts/python-somma-001.json",
+          title: "Somma",
+          kind: "laboratorio",
+        }];
+        const year = { id: "terzo", udas: [] };
+        const uda = { id: "uda-1", activity_links: [] };
+        year.udas.push(uda);
+        state.design = { years: [year] };
+        state.activityLinkEditor = { year, uda, link: null };
+        els.activityLinkSelect.value = state.activities[0].path;
+        els.activityLinkRole.value = "verification";
+        els.activityLinkScheduledOn.value = "2026-11-10";
+        els.activityLinkDueOn.value = "2026-11-09";
+
+        saveActivityLink({ preventDefault() {} });
+        assert.equal(uda.activity_links.length, 0);
+        assert.match(els.activityLinkError.textContent, /non può precedere/);
+
+        els.activityLinkDueOn.value = "2026-11-17";
+        saveActivityLink({ preventDefault() {} });
+        assert.deepEqual(uda.activity_links, [{
+          activity_id: "python-somma-001",
+          activity_path: "activities/drafts/python-somma-001.json",
+          title: "Somma",
+          kind: "laboratorio",
+          role: "verification",
+          scheduled_on: "2026-11-10",
+          due_on: "2026-11-17",
+        }]);
+        """
+    )
+
+
+def test_activity_link_dialog_rejects_detached_design_context() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        state.activities = [{ id: "a", path: "activities/a.json", title: "A", kind: "lab" }];
+        const oldYear = { id: "old", udas: [{ id: "uda", activity_links: [] }] };
+        const oldUda = oldYear.udas[0];
+        state.design = { years: [{ id: "new", udas: [] }] };
+        state.activityLinkEditor = { year: oldYear, uda: oldUda, link: null };
+        els.activityLinkSelect.value = "activities/a.json";
+        els.activityLinkRole.value = "practice";
+
+        saveActivityLink({ preventDefault() {} });
+
+        assert.equal(oldUda.activity_links.length, 0);
+        assert.match(els.status.textContent, /UDA aperta è cambiata/);
+        """
+    )
+
+
+def test_activity_link_removal_ignores_detached_design_context() -> None:
+    run_course_board_js(
+        """
+        (async () => {
+          renderCourse = () => { throw new Error("detached removal must not render"); };
+          const link = { title: "A" };
+          const oldUda = { activity_links: [link] };
+          const oldYear = { udas: [oldUda] };
+          state.design = { years: [{ id: "new", udas: [] }] };
+
+          await removeActivityLink(oldYear, oldUda, link);
+
+          assert.equal(oldUda.activity_links.length, 1);
+        })();
+        """
+    )
+
+
+def test_existing_activity_link_remains_editable_when_catalog_is_unavailable() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        state.activities = [];
+        state.activityCatalogError = "temporaneamente non disponibile";
+        const link = {
+          activity_id: "a",
+          activity_path: "activities/a.json",
+          title: "A",
+          kind: "lab",
+          role: "practice",
+        };
+        const uda = { activity_links: [link] };
+        const year = { udas: [uda] };
+        state.design = { years: [year] };
+        state.activityLinkEditor = { year, uda, link };
+        els.activityLinkSelect.value = link.activity_path;
+        els.activityLinkRole.value = "verification";
+        els.activityLinkScheduledOn.value = "2026-10-01";
+        els.activityLinkDueOn.value = "";
+
+        saveActivityLink({ preventDefault() {} });
+
+        assert.equal(uda.activity_links[0].role, "verification");
+        assert.equal(uda.activity_links[0].scheduled_on, "2026-10-01");
+        """
+    )
+
+
+def test_activity_link_dialog_rejects_duplicate_activity_in_same_uda() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        const activity = {
+          id: "python-somma-001",
+          path: "activities/drafts/python-somma-001.json",
+          title: "Somma",
+          kind: "laboratorio",
+        };
+        state.activities = [activity];
+        const existing = {
+          activity_id: activity.id,
+          activity_path: activity.path,
+          title: activity.title,
+          kind: activity.kind,
+          role: "practice",
+        };
+        const year = { id: "terzo", udas: [] };
+        const uda = { id: "uda-1", activity_links: [existing] };
+        year.udas.push(uda);
+        state.design = { years: [year] };
+        state.activityLinkEditor = { year, uda, link: null };
+        els.activityLinkSelect.value = activity.path;
+        els.activityLinkRole.value = "practice";
+
+        saveActivityLink({ preventDefault() {} });
+
+        assert.equal(uda.activity_links.length, 1);
+        assert.match(els.activityLinkError.textContent, /già collegata/);
+        """
+    )
+
+
+def test_course_board_declares_activity_link_controls() -> None:
+    html = Path("tools/course_board.html").read_text(encoding="utf-8")
+    source = Path("tools/course_board.js").read_text(encoding="utf-8")
+
+    assert 'id="activityLinkDialog"' in html
+    assert 'id="activityLinkScheduledOn"' in html
+    assert 'id="activityLinkDueOn"' in html
+    assert 'addButton.dataset.action = "add-activity-link"' in source
+
+
 def test_course_board_declares_source_catalog_summary() -> None:
     html = Path("tools/course_board.html").read_text(encoding="utf-8")
 
@@ -494,7 +645,8 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
         """
         let requests = 0;
         let confirmationOptions = null;
-        api = async (_path, options) => {
+        api = async (path, options) => {
+          if (path.startsWith("/api/course-calendar-context")) return { revision: "target-revision" };
           requests += 1;
           const body = JSON.parse(options.body);
           if (requests === 1) {
@@ -503,7 +655,13 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
             throw error;
           }
           assert.equal(body.overwrite, true);
-          return { saved: { name: body.name }, designs: [{ name: body.name }] };
+          assert.equal(body.expected_revision, "target-revision");
+          return {
+            saved: { name: body.name },
+            design: body.design,
+            revision: "saved-revision",
+            designs: [{ name: body.name }],
+          };
         };
         DashboardDialogs.confirm = async (options) => {
           confirmationOptions = options;
@@ -815,12 +973,25 @@ def test_newer_load_wins_over_an_earlier_save_copy_response() -> None:
         state.design = { years: [{ id: "origin" }] };
         state.activeSavedDesign = "origin.json";
 
-        const saving = saveArchiveDesignWithName("copy.json", { overwrite: true });
+        const saving = saveArchiveDesignWithName("copy.json", {
+          overwrite: true,
+          expectedRevision: "copy-revision",
+        });
         const loading = loadSavedDesignByName("target.json", { confirmFirst: false });
-        completeSave({ saved: { name: "copy.json" }, designs: [{ name: "copy.json" }] });
+        completeSave({
+          saved: { name: "copy.json" },
+          design: { years: [{ id: "origin" }] },
+          revision: "saved-copy-revision",
+          designs: [{ name: "copy.json" }],
+        });
         saving.then(() => {
           assert.equal(state.activeSavedDesign, "origin.json");
-          completeLoad({ design: { years: [{ id: "target" }] }, headings: [], sources: [] });
+          completeLoad({
+            design: { years: [{ id: "target" }] },
+            revision: "target-revision",
+            headings: [],
+            sources: [],
+          });
           return loading.then(() => {
             assert.equal(state.activeSavedDesign, "target.json");
             assert.equal(state.design.years[0].id, "target");

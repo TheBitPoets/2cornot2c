@@ -1,7 +1,13 @@
 ﻿const state = {
   headings: [],
   sources: [],
+  activities: [],
+  activityCatalogError: "",
   design: null,
+  designRevision: "",
+  designEditableRevision: "",
+  currentDesignRevision: "",
+  currentDesignEditableRevision: "",
   savedDesigns: [],
   activeSavedDesign: "",
   isNewDesign: false,
@@ -12,6 +18,7 @@
   courseAiYearId: null,
   courseAiProposal: null,
   activeFrameTextarea: null,
+  activityLinkEditor: null,
 };
 
 const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
@@ -58,6 +65,16 @@ const els = {
   paragraphDialogMeta: document.querySelector("#paragraphDialogMeta"),
   paragraphContent: document.querySelector("#paragraphContent"),
   paragraphSourceLink: document.querySelector("#paragraphSourceLink"),
+  activityLinkDialog: document.querySelector("#activityLinkDialog"),
+  activityLinkForm: document.querySelector("#activityLinkForm"),
+  activityLinkDialogTitle: document.querySelector("#activityLinkDialogTitle"),
+  activityLinkCloseBtn: document.querySelector("#activityLinkCloseBtn"),
+  activityLinkSelect: document.querySelector("#activityLinkSelect"),
+  activityLinkRole: document.querySelector("#activityLinkRole"),
+  activityLinkScheduledOn: document.querySelector("#activityLinkScheduledOn"),
+  activityLinkDueOn: document.querySelector("#activityLinkDueOn"),
+  activityLinkError: document.querySelector("#activityLinkError"),
+  activityLinkCancelBtn: document.querySelector("#activityLinkCancelBtn"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
   courseAiTitle: document.querySelector("#courseAiTitle"),
   courseAiCloseBtn: document.querySelector("#courseAiCloseBtn"),
@@ -397,6 +414,8 @@ async function fetchCourseContext(name = "") {
   const payload = await api(`/api/course-source-context${query}`);
   return {
     design: payload.design,
+    revision: payload.revision || "",
+    editableRevision: payload.editable_revision || payload.revision || "",
     headings: payload.headings || [],
     sources: payload.sources || [],
   };
@@ -407,15 +426,28 @@ async function loadAll() {
   const boardContext = captureBoardContext();
   const requestId = ++courseContextRequestId;
   courseContextRequestName = "";
-  const [courseContext, aiConfig, savedDesigns] = await Promise.all([
+  const [courseContext, aiConfig, savedDesigns, activities] = await Promise.all([
     fetchCourseContext(),
     api("/api/ai-config"),
     api("/api/saved-designs"),
+    api("/api/course-linkable-activities")
+      .then((payload) => ({ payload, error: null }))
+      .catch((error) => ({ payload: null, error })),
   ]);
   if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) return;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
+  if (activities.error) {
+    state.activityCatalogError = activities.error.message || "errore sconosciuto";
+  } else {
+    state.activities = activities.payload?.activities || [];
+    state.activityCatalogError = "";
+  }
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
+  state.currentDesignRevision = courseContext.revision;
+  state.currentDesignEditableRevision = courseContext.editableRevision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   state.aiConfig = aiConfig;
@@ -434,7 +466,9 @@ async function loadAll() {
   renderHeadings();
   renderCourse();
   markDesignClean();
-  if (state.activeSavedDesign || state.isNewDesign) {
+  if (state.activityCatalogError) {
+    setStatus(`Catalogo activity non disponibile: ${state.activityCatalogError}. Usa Ricarica per riprovare.`);
+  } else if (state.activeSavedDesign || state.isNewDesign) {
     setStatus("Pronto.");
   } else {
     renderCourseActions();
@@ -545,6 +579,10 @@ async function loadCurrentDesign() {
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
+  state.currentDesignRevision = courseContext.revision;
+  state.currentDesignEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = "";
@@ -586,6 +624,8 @@ async function loadSavedDesignByName(name, options = {}) {
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = name;
@@ -659,7 +699,18 @@ async function persistArchiveDesignWithName(name, options = {}) {
     opensSavedDesign = state.design !== design,
     boardContext = captureBoardContext(),
     courseContextGeneration = courseContextRequestId,
+    expectedRevision = "",
   } = options;
+  const preserveActual = state.activeSavedDesign === name;
+  let targetRevision = expectedRevision;
+  if (overwrite && !targetRevision) {
+    if (preserveActual) {
+      targetRevision = state.designEditableRevision;
+    } else {
+      const target = await api(`/api/course-calendar-context?design=${encodeURIComponent(name)}`);
+      targetRevision = target.revision;
+    }
+  }
   normalizeCourseDesignFrames(design);
   const designToSave = JSON.parse(JSON.stringify(design));
   const savedSnapshot = JSON.stringify(designToSave);
@@ -668,10 +719,22 @@ async function persistArchiveDesignWithName(name, options = {}) {
   try {
     payload = await api("/api/saved-designs/save", {
       method: "POST",
-      body: JSON.stringify({ name, design: designToSave, overwrite }),
+      body: JSON.stringify({
+        name,
+        design: designToSave,
+        overwrite,
+        ...(overwrite ? {
+          expected_revision: targetRevision,
+          preserve_actual: preserveActual,
+        } : {}),
+      }),
     });
+    if (state.activeSavedDesign === name) {
+      state.designRevision = payload.revision || state.designRevision;
+      state.designEditableRevision = payload.editable_revision || state.designEditableRevision;
+    }
   } catch (error) {
-    if (error.status === 409 && confirmOverwrite) {
+    if (error.status === 409 && confirmOverwrite && !overwrite) {
       const confirmed = await DashboardDialogs.confirm({
         title: "Sostituisci progetto esistente",
         message: `Esiste già un progetto chiamato "${name}". Vuoi sostituirlo?`,
@@ -689,6 +752,7 @@ async function persistArchiveDesignWithName(name, options = {}) {
         opensSavedDesign,
         boardContext,
         courseContextGeneration,
+        expectedRevision: "",
       });
     }
     setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
@@ -704,11 +768,13 @@ async function persistArchiveDesignWithName(name, options = {}) {
     setStatus(`Progetto salvato in archivio: ${payload.saved?.name || name}. La vista aperta non e stata cambiata.`);
     return !opensSavedDesign;
   }
-  if (opensSavedDesign) state.design = designToSave;
+  if (opensSavedDesign) state.design = payload.design || designToSave;
+  state.designRevision = payload.revision || state.designRevision;
+  state.designEditableRevision = payload.editable_revision || state.designEditableRevision;
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
   state.isNewDesign = false;
-  markDesignClean(savedSnapshot);
+  markDesignClean(JSON.stringify(payload.design || designToSave));
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   renderSavedDesigns();
@@ -733,12 +799,18 @@ async function persistCurrentProject() {
   const boardContext = captureBoardContext();
   const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio progetto corrente in doc/course_design.json...");
-  await api("/api/course-design", {
+  const payload = await api("/api/course-design", {
     method: "POST",
-    body: savedSnapshot,
+    body: JSON.stringify({
+      design: JSON.parse(savedSnapshot),
+      expected_revision: state.currentDesignEditableRevision,
+      preserve_actual: true,
+    }),
   });
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   if (
-    !isBoardContextCurrent(boardContext)
+    !isBoardContextUnchanged(boardContext)
     || courseContextGeneration !== courseContextRequestId
   ) {
     setStatus("Progetto corrente salvato. La vista aperta non e stata cambiata.");
@@ -746,9 +818,14 @@ async function persistCurrentProject() {
   }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.design = payload.design;
+  state.designRevision = payload.revision;
+  state.designEditableRevision = payload.editable_revision || payload.revision;
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
-  markDesignClean(savedSnapshot);
+  markDesignClean(JSON.stringify(payload.design));
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
@@ -894,6 +971,10 @@ async function deleteArchiveDesignOnce() {
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
+  state.currentDesignRevision = courseContext.revision;
+  state.currentDesignEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = "";
@@ -943,6 +1024,8 @@ async function newCourseDesign() {
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   markDesignClean();
@@ -1490,8 +1573,207 @@ function renderUda(year, uda) {
   } else {
     items.forEach((item, index) => dropzone.append(renderItem(year, uda, uda.items, item, index, 0)));
   }
-  details.append(dropzone);
+  details.append(dropzone, renderUdaActivities(year, uda));
   return details;
+}
+
+function renderUdaActivities(year, uda) {
+  const section = document.createElement("section");
+  section.className = "udaActivities";
+  const heading = document.createElement("div");
+  heading.className = "udaActivitiesHead";
+  heading.innerHTML = `<strong>Activity</strong><span>${(uda.activity_links || []).length} collegate</span>`;
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.dataset.action = "add-activity-link";
+  addButton.textContent = "Collega activity";
+  addButton.title = "Collega una activity disponibile a questa UDA.";
+  addButton.addEventListener("click", () => openActivityLinkDialog(year, uda));
+  heading.append(addButton);
+  section.append(heading);
+
+  const links = uda.activity_links || [];
+  if (!links.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "Nessuna activity collegata a questa UDA.";
+    section.append(empty);
+    return section;
+  }
+  for (const link of links) {
+    const card = document.createElement("article");
+    card.className = `activityLinkCard activityLink-${link.role}`;
+    const dates = [
+      link.scheduled_on ? `Pianificata: ${link.scheduled_on}` : "",
+      link.due_on ? `Scadenza: ${link.due_on}` : "",
+    ].filter(Boolean).join(" · ") || "Senza data";
+    card.innerHTML = `
+      <div>
+        <strong>${escapeHtml(link.title)}</strong>
+        <span>${escapeHtml(link.role === "verification" ? "Verifica" : "Esercitazione")} · ${escapeHtml(link.kind || "activity")}</span>
+        <code>${escapeHtml(link.activity_path)}</code>
+        <span>${escapeHtml(dates)}</span>
+      </div>
+      <div class="activityLinkActions">
+        <button type="button" data-action="edit-activity-link">Modifica</button>
+        <button type="button" data-action="remove-activity-link">Rimuovi</button>
+      </div>
+    `;
+    card.querySelector('[data-action="edit-activity-link"]').addEventListener("click", () => {
+      openActivityLinkDialog(year, uda, link);
+    });
+    card.querySelector('[data-action="remove-activity-link"]').addEventListener("click", () => {
+      removeActivityLink(year, uda, link);
+    });
+    section.append(card);
+  }
+  return section;
+}
+
+function openActivityLinkDialog(year, uda, link = null) {
+  if (!link && state.activityCatalogError) {
+    setStatus(`Catalogo activity non disponibile: ${state.activityCatalogError}. Usa Ricarica per riprovare.`);
+    return;
+  }
+  if (!link && !state.activities.length) {
+    setStatus("Nessuna activity disponibile: creane una dalla pagina Consegne.");
+    return;
+  }
+  state.activityLinkEditor = { year, uda, link };
+  els.activityLinkDialogTitle.textContent = link ? "Modifica collegamento activity" : "Collega activity";
+  els.activityLinkSelect.innerHTML = "";
+  const choices = [...state.activities];
+  if (link && !choices.some((activity) => activity.path === link.activity_path)) {
+    choices.push({
+      id: link.activity_id,
+      path: link.activity_path,
+      title: link.title,
+      kind: link.kind,
+    });
+  }
+  for (const activity of choices) {
+    const option = document.createElement("option");
+    option.value = activity.path;
+    option.textContent = `${activity.title || activity.id} (${activity.id})`;
+    els.activityLinkSelect.append(option);
+  }
+  els.activityLinkSelect.value = link?.activity_path || state.activities[0]?.path || "";
+  els.activityLinkSelect.disabled = Boolean(link);
+  els.activityLinkRole.value = link?.role || "practice";
+  els.activityLinkScheduledOn.value = link?.scheduled_on || "";
+  els.activityLinkDueOn.value = link?.due_on || "";
+  clearActivityLinkError();
+  if (typeof els.activityLinkDialog.showModal === "function") els.activityLinkDialog.showModal();
+  else els.activityLinkDialog.setAttribute("open", "");
+}
+
+function closeActivityLinkDialog() {
+  state.activityLinkEditor = null;
+  els.activityLinkSelect.disabled = false;
+  if (els.activityLinkDialog.open) els.activityLinkDialog.close();
+  else els.activityLinkDialog.removeAttribute("open");
+  clearActivityLinkError();
+}
+
+function clearActivityLinkError() {
+  els.activityLinkError.textContent = "";
+  els.activityLinkError.hidden = true;
+  for (const input of [els.activityLinkSelect, els.activityLinkRole, els.activityLinkScheduledOn, els.activityLinkDueOn]) {
+    input.removeAttribute("aria-invalid");
+  }
+}
+
+function showActivityLinkError(message, input) {
+  els.activityLinkError.textContent = message;
+  els.activityLinkError.hidden = false;
+  input?.setAttribute("aria-invalid", "true");
+  input?.focus();
+}
+
+function saveActivityLink(event) {
+  event.preventDefault();
+  const editor = state.activityLinkEditor;
+  if (
+    !editor
+    || !(state.design?.years || []).includes(editor.year)
+    || !(editor.year.udas || []).includes(editor.uda)
+  ) {
+    closeActivityLinkDialog();
+    setStatus("Collegamento annullato: la UDA aperta è cambiata.");
+    return;
+  }
+  clearActivityLinkError();
+  const activity = state.activities.find((candidate) => candidate.path === els.activityLinkSelect.value) || (
+    editor.link?.activity_path === els.activityLinkSelect.value
+      ? {
+          id: editor.link.activity_id,
+          path: editor.link.activity_path,
+          title: editor.link.title,
+          kind: editor.link.kind,
+        }
+      : null
+  );
+  if (!activity) {
+    showActivityLinkError("Seleziona un'activity disponibile.", els.activityLinkSelect);
+    return;
+  }
+  const scheduledOn = els.activityLinkScheduledOn.value;
+  const dueOn = els.activityLinkDueOn.value;
+  if (scheduledOn && dueOn && dueOn < scheduledOn) {
+    showActivityLinkError("La scadenza non può precedere la data pianificata.", els.activityLinkDueOn);
+    return;
+  }
+  editor.uda.activity_links ||= [];
+  const duplicate = editor.uda.activity_links.find((candidate) => candidate !== editor.link && (
+    candidate.activity_id.toLocaleLowerCase("en-US") === String(activity.id).toLocaleLowerCase("en-US")
+    || candidate.activity_path.toLocaleLowerCase("en-US") === String(activity.path).toLocaleLowerCase("en-US")
+  ));
+  if (duplicate) {
+    showActivityLinkError("Questa activity è già collegata alla UDA.", els.activityLinkSelect);
+    return;
+  }
+  const saved = {
+    activity_id: activity.id,
+    activity_path: activity.path,
+    title: activity.title || activity.id,
+    kind: activity.kind || "activity",
+    role: els.activityLinkRole.value,
+  };
+  if (scheduledOn) saved.scheduled_on = scheduledOn;
+  if (dueOn) saved.due_on = dueOn;
+  if (editor.link) {
+    const index = editor.uda.activity_links.indexOf(editor.link);
+    if (index < 0) {
+      closeActivityLinkDialog();
+      setStatus("Modifica annullata: il collegamento non esiste più.");
+      return;
+    }
+    editor.uda.activity_links[index] = saved;
+  } else {
+    editor.uda.activity_links.push(saved);
+  }
+  closeActivityLinkDialog();
+  renderCourse();
+  setStatus(`Activity "${saved.title}" ${editor.link ? "aggiornata" : "collegata"}.`);
+}
+
+async function removeActivityLink(year, uda, link) {
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Rimuovi collegamento activity",
+    message: `Rimuovere "${link.title}" dalla UDA? L'activity originale e le consegne non verranno eliminate.`,
+    confirmLabel: "Rimuovi collegamento",
+    cancelLabel: "Mantieni",
+    danger: true,
+  });
+  if (
+    !confirmed
+    || !(state.design?.years || []).includes(year)
+    || !(year.udas || []).includes(uda)
+    || !(uda.activity_links || []).includes(link)
+  ) return;
+  uda.activity_links = uda.activity_links.filter((candidate) => candidate !== link);
+  renderCourse();
+  setStatus(`Collegamento a "${link.title}" rimosso.`);
 }
 
 function isAssignedToYear(itemId, yearId) {
@@ -2809,12 +3091,18 @@ async function persistDesignAsCurrent() {
   const boardContext = captureBoardContext();
   const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio...");
-  await api("/api/course-design", {
+  const payload = await api("/api/course-design", {
     method: "POST",
-    body: savedSnapshot,
+    body: JSON.stringify({
+      design: JSON.parse(savedSnapshot),
+      expected_revision: state.currentDesignRevision,
+      preserve_actual: false,
+    }),
   });
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   if (
-    !isBoardContextCurrent(boardContext)
+    !isBoardContextUnchanged(boardContext)
     || courseContextGeneration !== courseContextRequestId
   ) {
     setStatus("Progetto impostato come corrente. La vista aperta non e stata cambiata.");
@@ -2822,9 +3110,14 @@ async function persistDesignAsCurrent() {
   }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.design = payload.design;
+  state.designRevision = payload.revision;
+  state.designEditableRevision = payload.editable_revision || payload.revision;
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
-  markDesignClean(savedSnapshot);
+  markDesignClean(JSON.stringify(payload.design));
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
@@ -2886,6 +3179,14 @@ els.addYearBtn.addEventListener("click", openYearDialog);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCreateBtn.addEventListener("click", createYearFromDialog);
+els.activityLinkForm.addEventListener("submit", saveActivityLink);
+els.activityLinkCloseBtn.addEventListener("click", closeActivityLinkDialog);
+els.activityLinkCancelBtn.addEventListener("click", closeActivityLinkDialog);
+els.activityLinkDialog.addEventListener("close", () => {
+  state.activityLinkEditor = null;
+  els.activityLinkSelect.disabled = false;
+  clearActivityLinkError();
+});
 els.paragraphCloseBtn.addEventListener("click", () => {
   invalidateParagraphPreview();
   els.paragraphDialog.close();

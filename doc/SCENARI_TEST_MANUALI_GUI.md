@@ -814,6 +814,7 @@ della pagina Percorso. Nessun passaggio deve aprire i dialog nativi del browser 
 5. Nel catalogo a sinistra usa il pulsante `+` su un paragrafo, poi premilo di nuovo sullo stesso paragrafo.
 5a. Clicca il titolo di un paragrafo e poi il comando `Testo`: verifica che si apra il modal con il contenuto completo.
 5b. Dentro una UDA ripeti dal titolo e dal comando `Testo`, poi usa `Apri sorgente su GitHub` e verifica l'ancora del paragrafo.
+5c. Nella stessa UDA usa `Collega activity`, scegli un'activity disponibile, il ruolo `Verifica`, una data pianificata e una scadenza successiva. Verifica l'errore inline provando prima una scadenza precedente. Salva, riapri `Modifica`, cambia il ruolo e controlla che una seconda aggiunta della stessa activity venga rifiutata. Mantieni il collegamento per lo Scenario 10.
 6. Modifica una cornice e premi `Ricarica`: nel dialog grafico premi `Resta qui` e verifica che la modifica
    resti visibile e che il focus torni al comando precedente. Ripeti accettando `Scarta modifiche` e verifica
    che torni l'ultimo stato salvato.
@@ -829,7 +830,8 @@ della pagina Percorso. Nessun passaggio deve aprire i dialog nativi del browser 
 Risultato atteso:
 
 - I dati non validi non entrano nel progetto.
-- Lo stesso paragrafo non viene duplicato nello stesso percorso.
+- Lo stesso paragrafo e la stessa activity non vengono duplicati nella medesima UDA.
+- Il collegamento activity conserva ruolo e date; la scadenza non puo precedere la pianificazione.
 - Il titolo e il comando `Testo` aprono il modal con contenuto, fonte, riga e link GitHub coerenti.
 - Ricarica e navigazione non scartano modifiche senza conferma.
 - Un nome già esistente richiede conferma prima della sovrascrittura.
@@ -873,6 +875,7 @@ Obiettivo: verificare che il calendario docente resti coerente con il percorso e
 5. Se il percorso contiene UDA programmate o reali, verifica che compaiano nel calendario e nel Gantt.
    Se non sono presenti, annota esplicitamente il dato come prerequisito non disponibile invece di
    considerare superato il controllo.
+5a. Verifica che l'activity collegata nello Scenario 9 compaia nel giorno pianificato e che la relativa scadenza compaia nel giorno previsto. Apri entrambi i dettagli e controlla titolo, ruolo, UDA e percorso. Disattiva il filtro del percorso e verifica che anche gli eventi activity vengano nascosti, poi riattivalo.
 6. Prova modalità `settimana`, `mese` e `anno`.
 7. Prova frecce avanti/indietro e filtri visibili, verificando che interruzioni e UDA restino distinguibili.
 8. Torna a `course_board.html`, seleziona `test-manuale-percorso.json` e cancellalo. Nel dialog dei calendari
@@ -884,6 +887,7 @@ Risultato atteso:
 - Il calendario mantiene le date salvate e il percorso associato dopo ricarica.
 - I filtri non nascondono dati senza indicarlo.
 - Le UDA reali e programmate sono distinguibili quando presenti.
+- Activity pianificate, verifiche e scadenze sono derivate dal percorso, distinguibili e seguono i filtri senza essere salvate come copie nel calendario.
 - Le interruzioni sono visibili e non si confondono con consegne mancanti.
 - La pulizia finale elimina il progetto e il calendario di prova associato, senza coinvolgere altri calendari.
 
