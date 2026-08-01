@@ -550,10 +550,38 @@ def _posix_exchange(directory_fd: int, first: str, second: str) -> None:
         os.fsencode(first),
         directory_fd,
         os.fsencode(second),
-        0x2,  # Linux RENAME_EXCHANGE / Darwin-BSD RENAME_SWAP
+        0x2,  # Linux RENAME_EXCHANGE / Darwin RENAME_SWAP
     ) != 0:
         error = ctypes.get_errno()
         raise OSError(error, "atomic rename exchange failed")
+
+
+def _probe_posix_exchange(directory_fd: int, staged_name: str) -> None:
+    """Fail before first publication if this filesystem cannot swap names atomically."""
+
+    probe_name = f".atomic-exchange-probe-{secrets.token_hex(16)}"
+    descriptor = None
+    try:
+        descriptor = os.open(
+            probe_name,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+            dir_fd=directory_fd,
+        )
+        os.write(descriptor, b"probe")
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+        _posix_exchange(directory_fd, staged_name, probe_name)
+        _posix_exchange(directory_fd, staged_name, probe_name)
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        for entry in (probe_name,):
+            try:
+                os.unlink(entry, dir_fd=directory_fd)
+            except OSError:
+                pass
 
 
 def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]]:
@@ -616,6 +644,8 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
                         backup_path = temp
                     backup_active = True
                 else:
+                    if directory_fd is not None:
+                        _probe_posix_exchange(directory_fd, temp_name)
                     os.replace(
                         temp_entry,
                         token_entry,
@@ -1016,7 +1046,6 @@ class GitHubAppTokenRuntime:
                 self._shutdown_remove_token = (
                     self._shutdown_remove_token or remove_token
                 )
-            existing_reaper.join(timeout=SHUTDOWN_WAIT_SECONDS)
             return
         if thread is not None:
             thread.join(timeout=SHUTDOWN_WAIT_SECONDS)
