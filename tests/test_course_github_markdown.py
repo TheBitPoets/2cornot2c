@@ -51,11 +51,13 @@ def test_fetches_every_file_from_one_resolved_commit() -> None:
         "/repos/TheBitPoets/course/commits/main": {"sha": commit},
         f"/repos/TheBitPoets/course/contents/README.md?ref={commit}": {
             "type": "file",
+            "size": intro_blob["size"],
             "sha": intro_id,
         },
         f"/repos/TheBitPoets/course/git/blobs/{intro_id}": intro_blob,
         f"/repos/TheBitPoets/course/contents/lessons/one.md?ref={commit}": {
             "type": "file",
+            "size": lesson_blob["size"],
             "sha": lesson_id,
         },
         f"/repos/TheBitPoets/course/git/blobs/{lesson_id}": lesson_blob,
@@ -89,6 +91,7 @@ def test_quotes_declared_ref_and_file_segments_without_changing_repository() -> 
             "/repos/owner/repo/commits/feature%2F2026": {"sha": commit},
             f"/repos/owner/repo/contents/lezioni/reti%20uno.md?ref={commit}": {
                 "type": "file",
+                "size": blob["size"],
                 "sha": blob_id,
             },
             f"/repos/owner/repo/git/blobs/{blob_id}": blob,
@@ -124,6 +127,7 @@ def test_content_cache_reuses_verified_blob_but_rechecks_repository_access() -> 
             "/repos/owner/repo/commits/main": {"sha": commit},
             f"/repos/owner/repo/contents/README.md?ref={commit}": {
                 "type": "file",
+                "size": blob["size"],
                 "sha": blob_id,
             },
             f"/repos/owner/repo/git/blobs/{blob_id}": blob,
@@ -143,6 +147,28 @@ def test_content_cache_reuses_verified_blob_but_rechecks_repository_access() -> 
     assert paths.count(f"/repos/owner/repo/git/blobs/{blob_id}") == 1
 
 
+def test_rejects_snapshot_byte_budget_before_blob_download() -> None:
+    commit = "9" * 40
+    content = b"# Budget\n"
+    blob_id, _blob = blob_payload(content)
+    transport = FakeTransport(
+        {
+            "/repos/owner/repo/commits/main": {"sha": commit},
+            f"/repos/owner/repo/contents/README.md?ref={commit}": {
+                "type": "file",
+                "size": len(content),
+                "sha": blob_id,
+            },
+        }
+    )
+
+    with pytest.raises(RemoteMarkdownError, match="Snapshot Markdown remoto troppo grande"):
+        GitHubMarkdownAdapter(transport).fetch_snapshot(
+            "owner/repo", "main", ("README.md",), byte_budget=len(content) - 1
+        )
+    assert all("/git/blobs/" not in path for path, _timeout in transport.calls)
+
+
 def test_rejects_blob_whose_git_object_digest_does_not_match() -> None:
     commit = "d" * 40
     forged_id = "e" * 40
@@ -152,6 +178,7 @@ def test_rejects_blob_whose_git_object_digest_does_not_match() -> None:
             "/repos/owner/repo/commits/main": {"sha": commit},
             f"/repos/owner/repo/contents/README.md?ref={commit}": {
                 "type": "file",
+                "size": blob["size"],
                 "sha": forged_id,
             },
             f"/repos/owner/repo/git/blobs/{forged_id}": blob,
@@ -172,6 +199,7 @@ def test_rejects_declared_blob_over_per_file_limit_without_decoding() -> None:
             "/repos/owner/repo/commits/main": {"sha": commit},
             f"/repos/owner/repo/contents/README.md?ref={commit}": {
                 "type": "file",
+                "size": MAX_REMOTE_MARKDOWN_BYTES + 1,
                 "sha": blob_id,
             },
             f"/repos/owner/repo/git/blobs/{blob_id}": {
@@ -182,7 +210,7 @@ def test_rejects_declared_blob_over_per_file_limit_without_decoding() -> None:
         }
     )
 
-    with pytest.raises(RemoteMarkdownError, match="Blob GitHub non valido"):
+    with pytest.raises(RemoteMarkdownError, match="Dimensione file GitHub non valida"):
         GitHubMarkdownAdapter(transport).fetch_snapshot(
             "owner/repo", "main", ("README.md",)
         )

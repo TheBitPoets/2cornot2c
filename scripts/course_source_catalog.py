@@ -103,6 +103,7 @@ class RemoteMarkdownAdapter(Protocol):
         files: tuple[str, ...],
         *,
         deadline: float | None = None,
+        byte_budget: int = MAX_TOTAL_LOCAL_MARKDOWN_BYTES,
     ) -> RemoteMarkdownSnapshot: ...
 
 
@@ -249,6 +250,8 @@ def remote_markdown_source_files(
     adapters: dict[str, RemoteMarkdownAdapter],
     *,
     default_files: Iterable[str] = (),
+    deadline: float | None = None,
+    max_total_bytes: int = MAX_TOTAL_LOCAL_MARKDOWN_BYTES,
 ) -> tuple[RemoteCourseSourceFile, ...]:
     """Fetch ready remote sources as provider-pinned immutable snapshots."""
 
@@ -262,7 +265,9 @@ def remote_markdown_source_files(
         raise CourseSourceCatalogError(
             "Troppi file Markdown pronti per l'indicizzazione."
         )
-    deadline = time.monotonic() + 30.0
+    operation_deadline = time.monotonic() + 30.0 if deadline is None else deadline
+    if max_total_bytes < 0 or max_total_bytes > MAX_TOTAL_LOCAL_MARKDOWN_BYTES:
+        raise CourseSourceCatalogError("Budget Markdown remoto non valido.")
     files: list[RemoteCourseSourceFile] = []
     total_bytes = 0
     for source in sources:
@@ -279,7 +284,8 @@ def remote_markdown_source_files(
             source.repository,
             source.ref,
             source.files,
-            deadline=deadline,
+            deadline=operation_deadline,
+            byte_budget=max_total_bytes - total_bytes,
         )
         if (
             snapshot.provider != source.provider
@@ -304,7 +310,7 @@ def remote_markdown_source_files(
                     f"Blob remoto incoerente per la fonte {source.source_id}."
                 )
             total_bytes += len(item.content)
-            if total_bytes > MAX_TOTAL_LOCAL_MARKDOWN_BYTES:
+            if total_bytes > max_total_bytes:
                 raise CourseSourceCatalogError(
                     "Le fonti Markdown remote superano il limite complessivo."
                 )
@@ -329,6 +335,7 @@ def markdown_source_files(
 ) -> tuple[CourseMarkdownSourceFile, ...]:
     """Return local and configured remote Markdown snapshots in catalog order."""
 
+    operation_deadline = time.monotonic() + 30.0
     sources = normalize_course_sources(design, default_files=default_files)
     ready_count = sum(
         len(source.files)
@@ -342,9 +349,22 @@ def markdown_source_files(
     local_by_id: dict[str, list[LocalCourseSourceFile]] = {}
     for item in local_markdown_source_files(design, root, default_files=default_files):
         local_by_id.setdefault(item.source.source_id, []).append(item)
+    local_bytes = sum(
+        item.expected_size or 0 for items in local_by_id.values() for item in items
+    )
+    has_ready_remote = any(
+        source.provider != "local" and source.indexing_status == "ready"
+        for source in sources
+    )
+    if has_ready_remote and time.monotonic() >= operation_deadline:
+        raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
     remote_by_id: dict[str, list[RemoteCourseSourceFile]] = {}
     for item in remote_markdown_source_files(
-        design, adapters or {}, default_files=default_files
+        design,
+        adapters or {},
+        default_files=default_files,
+        deadline=operation_deadline,
+        max_total_bytes=MAX_TOTAL_LOCAL_MARKDOWN_BYTES - local_bytes,
     ):
         remote_by_id.setdefault(item.source.source_id, []).append(item)
     selected: list[CourseMarkdownSourceFile] = []

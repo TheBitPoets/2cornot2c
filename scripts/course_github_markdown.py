@@ -212,6 +212,7 @@ class GitHubMarkdownAdapter:
         files: tuple[str, ...],
         *,
         deadline: float | None = None,
+        byte_budget: int = MAX_REMOTE_TOTAL_BYTES,
     ) -> RemoteMarkdownSnapshot:
         if (
             REPOSITORY_RE.fullmatch(repository) is None
@@ -227,6 +228,8 @@ class GitHubMarkdownAdapter:
             raise RemoteMarkdownError("Ref GitHub non valida.")
         if not files or len(files) > MAX_REMOTE_FILES:
             raise RemoteMarkdownError("Numero di file Markdown remoti non valido.")
+        if byte_budget < 0 or byte_budget > MAX_REMOTE_TOTAL_BYTES:
+            raise RemoteMarkdownError("Budget Markdown remoto non valido.")
         seen_paths: set[str] = set()
         for relative_path in files:
             path = PurePosixPath(relative_path)
@@ -255,6 +258,7 @@ class GitHubMarkdownAdapter:
 
         snapshots: list[RemoteMarkdownFile] = []
         total_bytes = 0
+        planned_bytes = 0
         for relative_path in files:
             encoded_path = "/".join(
                 parse.quote(part, safe="") for part in relative_path.split("/")
@@ -266,6 +270,17 @@ class GitHubMarkdownAdapter:
             )
             if not isinstance(metadata, dict) or metadata.get("type") != "file":
                 raise RemoteMarkdownError(f"File GitHub non valido: {relative_path}.")
+            declared_size = metadata.get("size")
+            if (
+                not isinstance(declared_size, int)
+                or isinstance(declared_size, bool)
+                or declared_size < 0
+                or declared_size > MAX_REMOTE_MARKDOWN_BYTES
+            ):
+                raise RemoteMarkdownError(f"Dimensione file GitHub non valida: {relative_path}.")
+            planned_bytes += declared_size
+            if planned_bytes > byte_budget:
+                raise RemoteMarkdownError("Snapshot Markdown remoto troppo grande.")
             blob_id = _required_object_id(metadata, "sha", f"file {relative_path}")
             content = None if self._blob_cache is None else self._blob_cache.get(blob_id)
             if content is None:
@@ -275,8 +290,12 @@ class GitHubMarkdownAdapter:
                 content = _decode_blob(blob, blob_id, relative_path)
                 if self._blob_cache is not None:
                     self._blob_cache.put(blob_id, content)
+            if len(content) != declared_size:
+                raise RemoteMarkdownError(
+                    f"Dimensione file GitHub incoerente: {relative_path}."
+                )
             total_bytes += len(content)
-            if total_bytes > MAX_REMOTE_TOTAL_BYTES:
+            if total_bytes > byte_budget:
                 raise RemoteMarkdownError("Snapshot Markdown remoto troppo grande.")
             snapshots.append(
                 RemoteMarkdownFile(

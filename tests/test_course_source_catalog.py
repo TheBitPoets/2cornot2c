@@ -245,8 +245,11 @@ def test_indexes_ready_github_snapshot_with_resolved_commit_provenance(tmp_path)
     class Adapter:
         provider_name = "github"
 
-        def fetch_snapshot(self, repository, declared_ref, files, *, deadline=None):
+        def fetch_snapshot(
+            self, repository, declared_ref, files, *, deadline=None, byte_budget=None
+        ):
             assert deadline is not None
+            assert byte_budget is not None
             assert (repository, declared_ref, files) == (
                 "TheBitPoets/c-course",
                 "main",

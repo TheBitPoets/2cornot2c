@@ -1986,10 +1986,14 @@ async function openParagraphPreview(paragraph) {
     const payload = state.isNewDesign
       ? await api("/api/heading-content", {
           method: "POST",
-          body: JSON.stringify({ id: paragraph.id, design: state.design }),
+          body: JSON.stringify({
+            id: paragraph.id,
+            source_commit: paragraph.source_commit || "",
+            design: state.design,
+          }),
         })
       : await api(
-          `/api/heading-content?id=${encodeURIComponent(paragraph.id)}${
+          `/api/heading-content?id=${encodeURIComponent(paragraph.id)}&source_commit=${encodeURIComponent(paragraph.source_commit || "")}${
             state.activeSavedDesign ? `&design=${encodeURIComponent(state.activeSavedDesign)}` : ""
           }`,
         );

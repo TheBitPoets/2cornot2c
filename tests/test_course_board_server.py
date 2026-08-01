@@ -792,6 +792,23 @@ def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monk
     assert context["target_topic"]["text"] == ""
 
 
+def test_local_catalog_does_not_read_configured_github_token(tmp_path, monkeypatch) -> None:
+    lesson = tmp_path / "lesson.md"
+    lesson.write_text("# Local\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_github_markdown_token",
+        lambda: (_ for _ in ()).throw(AssertionError("token must not be read")),
+    )
+
+    files = course_board_server.course_markdown_source_files(
+        {"source_files": ["lesson.md"]}
+    )
+
+    assert [item.relative_path for item in files] == ["lesson.md"]
+
+
 def test_persistence_validation_rejects_ready_provider_without_adapter(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     design = {
@@ -890,8 +907,11 @@ def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
         ]
     }
 
-    def fetch_snapshot(_adapter, repository, declared_ref, files, *, deadline=None):
+    def fetch_snapshot(
+        _adapter, repository, declared_ref, files, *, deadline=None, byte_budget=None
+    ):
         assert deadline is not None
+        assert byte_budget is not None
         return course_board_server.course_github_markdown.RemoteMarkdownSnapshot(
             provider="github",
             repository=repository,
@@ -927,6 +947,13 @@ def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
         + "a" * 40
         + "/lessons/intro.md#private-lesson"
     )
+    assert course_board_server.heading_content_snapshot(
+        design, heading["id"], heading["source_commit"]
+    )[1] == "Pinned content."
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.heading_content_snapshot(
+            design, heading["id"], "c" * 40
+        )
     assert course_board_server.section_text(
         heading["source"],
         heading["line"],

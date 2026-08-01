@@ -661,14 +661,22 @@ def course_markdown_source_files(
 ) -> tuple[course_source_catalog.CourseMarkdownSourceFile, ...]:
     """Resolve local files and commit-pinned GitHub snapshots for one operation."""
 
-    adapter = course_github_markdown.GitHubMarkdownAdapter(
-        course_github_markdown.GitHubApiTransport(read_github_markdown_token()),
-        blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
+    sources = course_source_catalog.normalize_course_sources(
+        design, default_files=DEFAULT_SOURCES
     )
+    adapters: dict[str, course_source_catalog.RemoteMarkdownAdapter] = {}
+    if any(
+        source.provider == "github" and source.indexing_status == "ready"
+        for source in sources
+    ):
+        adapters["github"] = course_github_markdown.GitHubMarkdownAdapter(
+            course_github_markdown.GitHubApiTransport(read_github_markdown_token()),
+            blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
+        )
     return course_source_catalog.markdown_source_files(
         design,
         ROOT,
-        adapters={"github": adapter},
+        adapters=adapters,
         default_files=DEFAULT_SOURCES,
     )
 
@@ -2968,8 +2976,16 @@ def headings_from_source_snapshot(
     return headings
 
 
-def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] | None:
-    """Return heading metadata and section from one bounded source read."""
+class CourseSourceRevisionConflictError(ValueError):
+    """Raised when a preview no longer matches its saved remote commit."""
+
+
+def heading_content_snapshot(
+    design: dict,
+    heading_id: str,
+    expected_source_commit: str = "",
+) -> tuple[dict, str] | None:
+    """Return heading content only when immutable remote provenance still matches."""
 
     total_headings = 0
     for source_file in course_markdown_source_files(design):
@@ -2982,6 +2998,13 @@ def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] 
             )
         for heading in source_headings:
             if heading["id"] == heading_id:
+                if (
+                    heading.get("source_provider") != "local"
+                    and heading.get("source_commit") != expected_source_commit
+                ):
+                    raise CourseSourceRevisionConflictError(
+                        "La fonte remota è cambiata: riallinea il paragrafo prima della preview."
+                    )
                 return heading, section_text_from_source(
                     source_text,
                     heading["line"],
@@ -5470,11 +5493,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/heading-content":
             query = parse_qs(parsed.query)
             heading_id = query.get("id", [""])[0]
+            expected_source_commit = query.get("source_commit", [""])[0]
             try:
                 design = source_request_design(parsed.query)
-                snapshot = heading_content_snapshot(design, heading_id)
+                snapshot = heading_content_snapshot(
+                    design, heading_id, expected_source_commit
+                )
             except course_github_markdown.RemoteMarkdownError as error:
                 self.write_error_json(502, str(error))
+                return
+            except CourseSourceRevisionConflictError as error:
+                self.write_error_json(409, str(error))
                 return
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
@@ -5625,9 +5654,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_error_json(400, "Richiesta contenuto paragrafo non valida.")
                 return
             try:
-                snapshot = heading_content_snapshot(design, heading_id)
+                snapshot = heading_content_snapshot(
+                    design,
+                    heading_id,
+                    str(payload.get("source_commit", "")),
+                )
             except course_github_markdown.RemoteMarkdownError as error:
                 self.write_error_json(502, str(error))
+                return
+            except CourseSourceRevisionConflictError as error:
+                self.write_error_json(409, str(error))
                 return
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
