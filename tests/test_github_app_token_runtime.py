@@ -256,6 +256,27 @@ def test_atomic_write_removes_unowned_publication_when_final_verification_fails(
     assert not path.exists()
 
 
+def test_failed_replacement_restores_the_previous_valid_token(tmp_path, monkeypatch) -> None:
+    enable_test_writes(monkeypatch)
+    path = (tmp_path / "installation-token.txt").resolve()
+    path.write_bytes(b"ghs_previous")
+
+    target_checks = 0
+
+    def verify(candidate, metadata, *, directory=False):
+        nonlocal target_checks
+        if candidate == path:
+            target_checks += 1
+            if target_checks >= 3:
+                raise runtime.GitHubAppRuntimeError("final verification failed")
+
+    monkeypatch.setattr(runtime, "_verify_permissions", verify)
+
+    with pytest.raises(runtime.GitHubAppRuntimeError):
+        runtime._secure_atomic_write(path, b"ghs_replacement")
+    assert path.read_bytes() == b"ghs_previous"
+
+
 def test_runtime_file_lock_rejects_a_second_process_owner(tmp_path, monkeypatch) -> None:
     enable_test_writes(monkeypatch)
     path = (tmp_path / ".runtime.lock").resolve()

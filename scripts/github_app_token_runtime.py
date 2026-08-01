@@ -510,12 +510,18 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
     if not value or len(value) > MAX_TOKEN_BYTES or b"\n" in value or b"\r" in value:
         raise GitHubAppRuntimeError("Installation token non valido.")
     temp_name = f".{path.name}.{secrets.token_hex(16)}.tmp"
+    backup_name = f".{path.name}.previous-{secrets.token_hex(16)}"
     try:
         with _pinned_directory(path.parent) as (parent, directory_fd):
             descriptor = None
             published_identity: tuple[int, int] | None = None
+            backup_active = False
             completed = False
             temp = parent / temp_name
+            backup = parent / backup_name
+            token_entry: str | Path = path if directory_fd is None else path.name
+            temp_entry: str | Path = temp if directory_fd is None else temp_name
+            backup_entry: str | Path = backup if directory_fd is None else backup_name
             try:
                 flags = (
                     os.O_WRONLY
@@ -524,10 +530,7 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
                     | getattr(os, "O_NOFOLLOW", 0)
                 )
                 descriptor = os.open(
-                    temp_name if directory_fd is not None else temp,
-                    flags,
-                    0o600,
-                    dir_fd=directory_fd,
+                    temp_entry, flags, 0o600, dir_fd=directory_fd
                 )
                 with os.fdopen(descriptor, "wb", closefd=True) as stream:
                     descriptor = None
@@ -544,56 +547,101 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
                             "ACL del token GitHub App non applicabile."
                         ) from exc
                 else:
-                    os.chmod(temp_name, 0o600, dir_fd=directory_fd)
+                    os.chmod(temp_entry, 0o600, dir_fd=directory_fd)
                 metadata = os.stat(
-                    temp_name if directory_fd is not None else temp,
-                    dir_fd=directory_fd,
-                    follow_symlinks=False,
+                    temp_entry, dir_fd=directory_fd, follow_symlinks=False
                 )
                 _verify_permissions(temp, metadata)
-                if directory_fd is None:
-                    os.replace(temp, path)
-                    published_identity = (metadata.st_dev, metadata.st_ino)
-                    final = path.stat()
-                else:
+                try:
+                    old = os.stat(
+                        token_entry, dir_fd=directory_fd, follow_symlinks=False
+                    )
+                except FileNotFoundError:
+                    old = None
+                if old is not None:
+                    _read_secure_file(path, max_bytes=MAX_TOKEN_BYTES)
                     os.replace(
-                        temp_name,
-                        path.name,
+                        token_entry,
+                        backup_entry,
                         src_dir_fd=directory_fd,
                         dst_dir_fd=directory_fd,
                     )
-                    published_identity = (metadata.st_dev, metadata.st_ino)
-                    final = os.stat(
-                        path.name, dir_fd=directory_fd, follow_symlinks=False
+                    backup_active = True
+                os.replace(
+                    temp_entry,
+                    token_entry,
+                    src_dir_fd=directory_fd,
+                    dst_dir_fd=directory_fd,
+                )
+                published_identity = (metadata.st_dev, metadata.st_ino)
+                final = os.stat(
+                    token_entry, dir_fd=directory_fd, follow_symlinks=False
+                )
+                if (final.st_dev, final.st_ino) != published_identity:
+                    raise GitHubAppRuntimeError(
+                        "Generazione installation token sostituita durante la pubblicazione."
                     )
-                    os.fsync(directory_fd)
                 _verify_permissions(path, final)
-                completed = True
-                return hashlib.sha256(value).hexdigest(), (final.st_dev, final.st_ino)
-            finally:
-                if published_identity is not None and not completed:
-                    published_entry: str | Path = (
-                        path if directory_fd is None else path.name
+                published_value = _read_secure_file(path, max_bytes=MAX_TOKEN_BYTES)
+                if not secrets.compare_digest(published_value, value):
+                    raise GitHubAppRuntimeError(
+                        "Generazione installation token incoerente."
                     )
-                    try:
-                        published = os.stat(
-                            published_entry,
-                            dir_fd=directory_fd,
-                            follow_symlinks=False,
-                        )
-                        if (published.st_dev, published.st_ino) == published_identity:
-                            os.unlink(published_entry, dir_fd=directory_fd)
-                            if directory_fd is not None:
-                                os.fsync(directory_fd)
-                    except OSError:
-                        pass
+                if directory_fd is not None:
+                    os.fsync(directory_fd)
+                if backup_active:
+                    os.unlink(backup_entry, dir_fd=directory_fd)
+                    backup_active = False
+                    if directory_fd is not None:
+                        try:
+                            os.fsync(directory_fd)
+                        except OSError:
+                            pass
+                completed = True
+                return hashlib.sha256(value).hexdigest(), published_identity
+            finally:
+                if not completed:
+                    if published_identity is not None:
+                        try:
+                            published = os.stat(
+                                token_entry,
+                                dir_fd=directory_fd,
+                                follow_symlinks=False,
+                            )
+                            if (
+                                published.st_dev,
+                                published.st_ino,
+                            ) == published_identity:
+                                os.unlink(token_entry, dir_fd=directory_fd)
+                        except OSError:
+                            pass
+                    if backup_active:
+                        try:
+                            os.stat(
+                                token_entry,
+                                dir_fd=directory_fd,
+                                follow_symlinks=False,
+                            )
+                        except FileNotFoundError:
+                            try:
+                                os.replace(
+                                    backup_entry,
+                                    token_entry,
+                                    src_dir_fd=directory_fd,
+                                    dst_dir_fd=directory_fd,
+                                )
+                                backup_active = False
+                            except OSError:
+                                pass
+                    if directory_fd is not None:
+                        try:
+                            os.fsync(directory_fd)
+                        except OSError:
+                            pass
                 if descriptor is not None:
                     os.close(descriptor)
                 try:
-                    if directory_fd is None:
-                        temp.unlink(missing_ok=True)
-                    else:
-                        os.unlink(temp_name, dir_fd=directory_fd)
+                    os.unlink(temp_entry, dir_fd=directory_fd)
                 except OSError:
                     pass
     except GitHubAppRuntimeError:
@@ -855,9 +903,10 @@ class GitHubAppTokenRuntime:
                 with self._lock:
                     self._last_error = str(exc)
                     expired = self._expires_at <= self._wall_clock()
+                    failed_identity = self._owned_identity
                 LOGGER.error("Rinnovo GitHub App non riuscito: %s", exc)
                 if expired:
-                    self._remove_owned_token()
+                    self._remove_owned_token(expected_identity=failed_identity)
                 if self._stop.wait(retry_seconds):
                     return
                 retry_seconds = min(retry_seconds * 2, 60.0)
@@ -879,7 +928,9 @@ class GitHubAppTokenRuntime:
             self._remove_owned_token()
         self._process_lock.release()
 
-    def _remove_owned_token(self) -> bool:
+    def _remove_owned_token(
+        self, *, expected_identity: tuple[int, int] | None = None
+    ) -> bool:
         self._refresh_lock.acquire()
         try:
             self._process_lock.acquire()
@@ -887,6 +938,8 @@ class GitHubAppTokenRuntime:
                 digest = self._owned_digest
                 identity = self._owned_identity
             if digest is None or identity is None:
+                return False
+            if expected_identity is not None and identity != expected_identity:
                 return False
             try:
                 with _pinned_directory(self.config.token_file.parent) as (
