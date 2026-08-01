@@ -54,6 +54,44 @@ def test_activity_events_are_derived_from_visible_course_year_without_calendar_c
     assert payload["due"][0]["event_type"] == "due"
 
 
+def test_course_design_loader_ignores_stale_out_of_order_response() -> None:
+    source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
+    start = source.index("async function loadCourseDesign")
+    end = source.index("\nasync function loadCalendarForActiveCourseDesign", start)
+    function_source = source[start:end]
+    script = f"""
+    const assert = require("node:assert/strict");
+    const state = {{
+      calendar: {{ course_design_name: "a.json" }},
+      courseDesign: null,
+      activityEvents: [],
+      courseDesignRequestId: 0,
+    }};
+    const pending = new Map();
+    function api(path) {{
+      return new Promise((resolve) => pending.set(path, resolve));
+    }}
+    function setStatus() {{}}
+    {function_source}
+    (async () => {{
+      const first = loadCourseDesign();
+      state.calendar.course_design_name = "b.json";
+      const second = loadCourseDesign();
+      pending.get("/api/course-calendar-context?design=b.json")({{
+        design: {{ id: "b" }}, activity_events: [{{ activity_id: "b" }}],
+      }});
+      assert.equal(await second, true);
+      pending.get("/api/course-calendar-context?design=a.json")({{
+        design: {{ id: "a" }}, activity_events: [{{ activity_id: "a" }}],
+      }});
+      assert.equal(await first, false);
+      assert.equal(state.courseDesign.id, "b");
+      assert.equal(state.activityEvents[0].activity_id, "b");
+    }})().catch((error) => {{ console.error(error); process.exit(1); }});
+    """
+    subprocess.run(["node", "-e", script], check=True)
+
+
 def test_calendar_declares_activity_event_rendering_without_persisted_event_field() -> None:
     source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
 
