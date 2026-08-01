@@ -1953,7 +1953,7 @@ def _save_activity_locked(payload: dict) -> dict:
         if previous_id and previous_id != activity_id:
             raise ValueError("L'overwrite non puo cambiare l'identita dell'activity esistente.")
     proposed_files = payload.get("files")
-    if proposed_files:
+    if proposed_files is not None:
         normalized_activity = normalize_activity(activity)
         selected_language = create_submission_scaffold.language_for(
             {"language": normalized_activity.get("language", "c") or "c"}

@@ -5109,10 +5109,13 @@ def test_save_activity_revalidates_preserved_assets_when_source_name_changes(tmp
             }
         )
 
-    saved = json.loads(
-        (tmp_path / "activities" / "drafts" / "preserved-assets.json").read_text(encoding="utf-8")
-    )
+    saved_path = tmp_path / "activities" / "drafts" / "preserved-assets.json"
+    saved = json.loads(saved_path.read_text(encoding="utf-8"))
     assert saved["contesto"]["source_name"] == "main.py"
+
+    course_board_server.save_activity({**payload, "files": [], "overwrite": True})
+    without_assets = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert without_assets["assets"] == []
 
 
 def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> None:

@@ -278,6 +278,7 @@ def test_create_scaffold_rejects_asset_target_reserved_for_scaffold(
         "PROGRA~1/file.txt",
         "README.md/nested.txt",
         "activity.json/data",
+        "e\u0301.txt",
     ],
 )
 def test_create_scaffold_rejects_nonportable_asset_target(tmp_path, target) -> None:

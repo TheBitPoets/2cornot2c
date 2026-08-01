@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import tempfile
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -163,7 +164,10 @@ STUDENT_ACTIVITY_FIELDS = {
 
 def portable_path_key(path: Path) -> tuple[str, ...]:
     """Return a conservative path identity compatible with Windows."""
-    return tuple(part.rstrip(" .").casefold() for part in path.parts)
+    return tuple(
+        unicodedata.normalize("NFC", unicodedata.normalize("NFC", part.rstrip(" .")).casefold())
+        for part in path.parts
+    )
 
 
 def portable_paths_overlap(left: Path, right: Path) -> bool:
@@ -269,6 +273,7 @@ def validate_portable_path_component(component: str, field_name: str) -> None:
         not component
         or component in {".", ".."}
         or component != component.rstrip(" .")
+        or component != unicodedata.normalize("NFC", component)
         or basename in WINDOWS_RESERVED_NAMES
         or any(character in WINDOWS_INVALID_PATH_CHARACTERS for character in component)
         or any(ord(character) < 32 for character in component)
