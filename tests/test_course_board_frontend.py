@@ -322,7 +322,7 @@ def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> No
         state.sources = [{ id: "legacy-abc", legacy: true }];
         state.headings = [{
           id: "README.md#intro", source_id: "legacy-abc", source: "README.md",
-          anchor: "intro", line: 1, level: 1,
+          anchor: "intro", line: 1, level: 1, content_sha256: "c".repeat(64),
         }];
         const design = { years: [{ udas: [{ items: [{
           id: "README.md#intro", title: "Intro", source: "README.md",
@@ -332,10 +332,10 @@ def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> No
           id: "legacy-abc:README.md#intro", title: "Intro", source: "README.md",
           source_id: "legacy-abc", source_label: "README.md", source_provider: "local",
           source_repository: null, source_ref: null, source_commit: null,
-          anchor: "intro", line: 1, level: 1, href: "../README.md#intro",
+          content_sha256: "c".repeat(64), anchor: "intro", line: 1, level: 1, href: "../README.md#intro",
         }];
 
-        reconcileSourceItems(design, preview);
+        reconcileSourceItems(design, preview, [{ id: "legacy-abc", indexing_status: "ready" }]);
 
         const item = design.years[0].udas[0].items[0];
         assert.equal(item.id, "legacy-abc:README.md#intro");
@@ -354,6 +354,7 @@ def test_source_editor_updates_assigned_remote_commit_from_preview() -> None:
         state.headings = [{
           id: "remote:README.md#intro", source_id: "remote", source: "README.md",
           anchor: "intro", line: 1, level: 1, source_commit: "a".repeat(40),
+          content_sha256: "c".repeat(64),
         }];
         const design = { years: [{ udas: [{ items: [{
           id: "remote:README.md#intro", source_id: "remote", source: "README.md",
@@ -363,16 +364,41 @@ def test_source_editor_updates_assigned_remote_commit_from_preview() -> None:
           id: "remote:README.md#intro", title: "Intro", source: "README.md",
           source_id: "remote", source_label: "Remote", source_provider: "github",
           source_repository: "school/course", source_ref: "main",
-          source_commit: "b".repeat(40), anchor: "intro", line: 2, level: 1,
+          source_commit: "b".repeat(40), content_sha256: "c".repeat(64),
+          anchor: "intro", line: 2, level: 1,
           href: "https://example.invalid/" + "b".repeat(40) + "/README.md#intro",
         }];
 
-        reconcileSourceItems(design, preview);
+        reconcileSourceItems(design, preview, [{ id: "remote", indexing_status: "ready" }]);
 
         const item = design.years[0].udas[0].items[0];
         assert.equal(item.source_commit, "b".repeat(40));
         assert.equal(item.line, 2);
         assert.match(item.href, /bbbbbbbbbbbb/);
+        """
+    )
+
+
+def test_source_editor_blocks_removed_used_source_but_allows_pending_source() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "remote" }];
+        state.headings = [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          content_sha256: "a".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          content_sha256: "a".repeat(64), source_commit: "b".repeat(40),
+        }] }] }] };
+
+        assert.throws(
+          () => reconcileSourceItems(JSON.parse(JSON.stringify(design)), [], []),
+          /rimossa o rinominata/,
+        );
+        const pending = JSON.parse(JSON.stringify(design));
+        reconcileSourceItems(pending, [], [{ id: "remote", indexing_status: "pending" }]);
+        assert.equal(pending.years[0].udas[0].items[0].source_commit, "b".repeat(40));
         """
     )
 
@@ -387,6 +413,8 @@ def test_source_editor_requires_preview_and_context_before_apply() -> None:
     assert "isBoardContextUnchanged(editor.boardContext)" in source
     assert "state.isNewDesign || hasUnsavedChanges()" in source
     assert "editor.pendingPreviewRequests = Math.max" in source
+    assert "verified.snapshot_revision !== editor.preview.snapshotRevision" in source
+    assert "applied.ref = resolvedRef" in source
 
 
 def test_item_from_heading_preserves_source_provenance() -> None:

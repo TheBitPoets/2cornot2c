@@ -604,6 +604,11 @@ def test_source_preview_resolves_in_memory_design_without_persisting(tmp_path, m
         "Preview",
         "Topic",
     ]
+    assert len(payload["snapshot_revision"]) == 64
+    assert all(len(heading["content_sha256"]) == 64 for heading in payload["headings"])
+    lesson.write_text("# Preview\n\n## Topic\n\nChanged.\n", encoding="utf-8")
+    changed = course_board_server.preview_course_sources(design)
+    assert changed["snapshot_revision"] != payload["snapshot_revision"]
     assert not (tmp_path / "doc" / "course_design.json").exists()
 
 

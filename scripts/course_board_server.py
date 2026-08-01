@@ -993,9 +993,28 @@ def preview_course_sources(design: object) -> dict:
         default_files=DEFAULT_SOURCES,
         local_files=source_files,
     )
+    snapshot_manifest = [
+        {
+            "source_id": item.source.source_id,
+            "provider": item.source.provider,
+            "path": item.relative_path,
+            "resolved_ref": getattr(item, "resolved_ref", None),
+            "sha256": item.expected_sha256,
+        }
+        for item in source_files
+    ]
+    snapshot_revision = hashlib.sha256(
+        json.dumps(
+            snapshot_manifest,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
     return {
         "sources": catalog["sources"],
         "headings": extract_headings(design, source_files),
+        "snapshot_revision": snapshot_revision,
     }
 
 
@@ -3112,6 +3131,23 @@ def headings_from_source_snapshot(
                 "line": lineno,
             }
         )
+    source_lines = source_text.splitlines()
+    end_lines = [len(source_lines) + 1] * len(headings)
+    open_headings: list[int] = []
+    for index, heading in enumerate(headings):
+        while (
+            open_headings
+            and heading["level"] <= headings[open_headings[-1]]["level"]
+        ):
+            end_lines[open_headings.pop()] = heading["line"]
+        open_headings.append(index)
+    for index, heading in enumerate(headings):
+        section = "\n".join(
+            source_lines[heading["line"] : end_lines[index] - 1]
+        ).strip()
+        heading["content_sha256"] = hashlib.sha256(
+            section.encode("utf-8")
+        ).hexdigest()
     return headings
 
 
@@ -3376,6 +3412,7 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
             "source_repository": heading.get("source_repository"),
             "source_ref": heading.get("source_ref"),
             "source_commit": heading.get("source_commit"),
+            "content_sha256": heading.get("content_sha256"),
             "level": heading["level"],
             "line": heading["line"],
             "anchor": heading["anchor"],
@@ -3423,6 +3460,7 @@ def topic_summary(
         "source_repository": item.get("source_repository"),
         "source_ref": item.get("source_ref"),
         "source_commit": item.get("source_commit"),
+        "content_sha256": item.get("content_sha256"),
         "level": item.get("level", ""),
         "href": item.get("href", ""),
         "source_url": (
@@ -3509,6 +3547,7 @@ def board_item_from_heading(heading: dict) -> dict:
         "source_repository": heading.get("source_repository"),
         "source_ref": heading.get("source_ref"),
         "source_commit": heading.get("source_commit"),
+        "content_sha256": heading.get("content_sha256"),
         "href": heading["href"],
         "level": heading["level"],
         "line": heading["line"],

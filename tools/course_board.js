@@ -1359,6 +1359,7 @@ async function previewSourceEditor() {
       signature: sourcePreviewSignature(sources),
       sources: payload.sources || [],
       headings: payload.headings || [],
+      snapshotRevision: payload.snapshot_revision || "",
     };
     for (const card of els.sourceEditorList.querySelectorAll(".sourceEditorCard")) {
       const source = editor.preview.sources.find((item) => item.id === card.querySelector('[data-field="id"]').value.trim());
@@ -1382,24 +1383,36 @@ async function previewSourceEditor() {
   }
 }
 
-function reconcileSourceItems(design, previewHeadings) {
+function reconcileSourceItems(design, previewHeadings, nextSources) {
   const managedSourceIds = new Set((state.sources || []).map((source) => source.id));
+  const nextSourceById = new Map(nextSources.map((source) => [source.id, source]));
   const oldById = new Map((state.headings || []).map((heading) => [heading.id, heading]));
-  const newByKey = new Map(
-    previewHeadings.map((heading) => [
-      JSON.stringify([heading.source_id, heading.source, heading.anchor]),
-      heading,
-    ]),
-  );
+  const newByKey = new Map();
+  for (const heading of previewHeadings) {
+    const key = JSON.stringify([
+      heading.source_id,
+      heading.source,
+      heading.content_sha256,
+    ]);
+    newByKey.set(key, newByKey.has(key) ? null : heading);
+  }
   const visit = (items) => {
     for (const item of items || []) {
       const oldHeading = oldById.get(item.id);
       const sourceId = item.source_id || oldHeading?.source_id || "";
       if (oldHeading || managedSourceIds.has(sourceId)) {
+        const nextSource = nextSourceById.get(sourceId);
+        if (!nextSource) {
+          throw new Error(`La fonte usata dal paragrafo ${item.id} è stata rimossa o rinominata.`);
+        }
+        if (nextSource.indexing_status !== "ready") {
+          visit(item.children);
+          continue;
+        }
         const key = JSON.stringify([
           sourceId,
           item.source || oldHeading?.source || "",
-          oldHeading?.anchor || String(item.href || "").split("#").at(-1),
+          item.content_sha256 || oldHeading?.content_sha256 || "",
         ]);
         const replacement = newByKey.get(key);
         if (!replacement) {
@@ -1415,6 +1428,7 @@ function reconcileSourceItems(design, previewHeadings) {
           source_repository: replacement.source_repository,
           source_ref: replacement.source_ref,
           source_commit: replacement.source_commit,
+          content_sha256: replacement.content_sha256,
           href: replacement.href,
           level: replacement.level,
           line: replacement.line,
@@ -1428,7 +1442,7 @@ function reconcileSourceItems(design, previewHeadings) {
   }
 }
 
-function applySourceEditor(event) {
+async function applySourceEditor(event) {
   event.preventDefault();
   const editor = state.sourceEditor;
   if (!editor?.preview) return;
@@ -1442,25 +1456,77 @@ function applySourceEditor(event) {
     showSourceDialogError("La board è cambiata: chiudi e riapri il dialog.");
     return;
   }
-  const nextDesign = JSON.parse(JSON.stringify(state.design));
+
+  const candidate = JSON.parse(JSON.stringify(state.design));
+  candidate.sources = sources;
+  delete candidate.source_files;
+  const requestId = ++editor.requestId;
+  editor.pendingPreviewRequests += 1;
+  els.sourceApplyBtn.disabled = true;
+  els.sourcePreviewBtn.disabled = true;
+  els.sourcePreviewStatus.textContent = "Verifica finale dello snapshot...";
   try {
-    reconcileSourceItems(nextDesign, editor.preview.headings);
+    const verified = await api("/api/course-sources/preview", {
+      method: "POST",
+      body: JSON.stringify({ design: candidate }),
+    });
+    if (state.sourceEditor !== editor || requestId !== editor.requestId) return;
+    if (!isBoardContextUnchanged(editor.boardContext)) {
+      throw new Error("La board è cambiata durante la verifica finale.");
+    }
+    if (
+      !verified.snapshot_revision
+      || verified.snapshot_revision !== editor.preview.snapshotRevision
+    ) {
+      editor.preview = null;
+      els.sourceApplyBtn.disabled = true;
+      throw new Error("Lo snapshot delle fonti è cambiato: sincronizza di nuovo.");
+    }
+
+    const verifiedById = new Map((verified.sources || []).map((source) => [source.id, source]));
+    const appliedSources = sources.map((source) => {
+      const applied = JSON.parse(JSON.stringify(source));
+      if (source.provider !== "local" && source.indexing_status === "ready") {
+        const resolvedRef = verifiedById.get(source.id)?.resolved_ref;
+        if (!resolvedRef) throw new Error(`Commit risolto non disponibile per ${source.id}.`);
+        applied.ref = resolvedRef;
+      }
+      return applied;
+    });
+    const appliedHeadings = (verified.headings || []).map((heading) => ({
+      ...heading,
+      source_ref: appliedSources.find((source) => source.id === heading.source_id)?.ref || heading.source_ref,
+    }));
+    const appliedCatalog = (verified.sources || []).map((source) => ({
+      ...source,
+      ref: appliedSources.find((item) => item.id === source.id)?.ref || source.ref,
+    }));
+    const nextDesign = JSON.parse(JSON.stringify(state.design));
+    reconcileSourceItems(nextDesign, appliedHeadings, appliedSources);
+    nextDesign.sources = JSON.parse(JSON.stringify(appliedSources));
+    delete nextDesign.source_files;
+    state.design = nextDesign;
+    state.sources = appliedCatalog;
+    state.headings = appliedHeadings;
+    closeSourceDialog();
+    populateFilters();
+    renderSourceCatalogSummary();
+    renderHeadings();
+    renderCourse();
+    renderCourseActions();
+    setStatus("Catalogo fonti applicato e fissato allo snapshot verificato. Salva il progetto per renderlo persistente.");
   } catch (error) {
-    showSourceDialogError(error.message);
-    return;
+    if (state.sourceEditor === editor && requestId === editor.requestId) {
+      showSourceDialogError(error.message);
+      els.sourcePreviewStatus.textContent = "Applicazione non riuscita.";
+      els.sourceApplyBtn.disabled = !editor.preview;
+    }
+  } finally {
+    if (state.sourceEditor === editor) {
+      editor.pendingPreviewRequests = Math.max(0, editor.pendingPreviewRequests - 1);
+      els.sourcePreviewBtn.disabled = editor.pendingPreviewRequests > 0;
+    }
   }
-  nextDesign.sources = JSON.parse(JSON.stringify(sources));
-  delete nextDesign.source_files;
-  state.design = nextDesign;
-  state.sources = editor.preview.sources;
-  state.headings = editor.preview.headings;
-  closeSourceDialog();
-  populateFilters();
-  renderSourceCatalogSummary();
-  renderHeadings();
-  renderCourse();
-  renderCourseActions();
-  setStatus("Catalogo fonti applicato alla board. Salva il progetto per renderlo persistente.");
 }
 
 function renderSourceCatalogSummary() {
@@ -1672,6 +1738,7 @@ function itemFromHeading(heading) {
     source_repository: heading.source_repository,
     source_ref: heading.source_ref,
     source_commit: heading.source_commit,
+    content_sha256: heading.content_sha256,
     href: heading.href,
     level: heading.level,
     line: heading.line,
@@ -1700,6 +1767,7 @@ function childItemsFromHeading(parentHeading) {
       source_repository: heading.source_repository,
       source_ref: heading.source_ref,
       source_commit: heading.source_commit,
+      content_sha256: heading.content_sha256,
       href: heading.href,
       level: heading.level,
       line: heading.line,
