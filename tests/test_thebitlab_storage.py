@@ -284,6 +284,17 @@ def test_update_uda_actual_preserves_latest_activity_links(tmp_path) -> None:
         preserve_actual=False,
     )
     assert "actual" not in storage.read_saved_design("course.json")["years"][0]["udas"][0]
+
+    obsolete_actual = copy.deepcopy(replacement)
+    obsolete_actual["years"][0]["udas"][0]["actual"] = {"status": "todo"}
+    storage.write_saved_design_cas(
+        "course.json",
+        obsolete_actual,
+        storage.editable_design_revision(storage.read_saved_design("course.json")),
+        preserve_actual=True,
+    )
+    assert "actual" not in storage.read_saved_design("course.json")["years"][0]["udas"][0]
+
     with pytest.raises(RevisionConflictError):
         storage.write_saved_design_cas(
             "course.json",

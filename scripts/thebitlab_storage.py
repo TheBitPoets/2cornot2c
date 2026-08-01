@@ -383,11 +383,15 @@ class JsonCourseStorage:
                 if isinstance(uda, dict) and isinstance(uda.get("id"), str)
             }
             for latest_uda in latest_year.get("udas", []):
-                if not isinstance(latest_uda, dict) or "actual" not in latest_uda:
+                if not isinstance(latest_uda, dict):
                     continue
                 proposed_uda = proposed_udas.get(latest_uda.get("id"))
-                if isinstance(proposed_uda, dict):
+                if not isinstance(proposed_uda, dict):
+                    continue
+                if "actual" in latest_uda:
                     proposed_uda["actual"] = copy.deepcopy(latest_uda["actual"])
+                else:
+                    proposed_uda.pop("actual", None)
         return merged
 
     @staticmethod

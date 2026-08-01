@@ -5480,16 +5480,14 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/course-design":
             try:
-                if isinstance(payload.get("design"), dict):
-                    result = write_design_cas(
-                        payload["design"],
-                        payload.get("expected_revision"),
-                        payload.get("preserve_actual"),
-                    )
-                    self.write_json({"ok": True, **result})
-                else:
-                    write_design(payload)
-                    self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+                if not isinstance(payload.get("design"), dict):
+                    raise ValueError("Il salvataggio richiede design, expected_revision e preserve_actual.")
+                result = write_design_cas(
+                    payload["design"],
+                    payload.get("expected_revision"),
+                    payload.get("preserve_actual"),
+                )
+                self.write_json({"ok": True, **result})
             except thebitlab_storage.RevisionConflictError as error:
                 self.write_error_json(409, str(error))
             except (course_source_catalog.CourseSourceCatalogError, ValueError) as error:

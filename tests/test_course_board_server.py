@@ -5031,7 +5031,16 @@ def test_teacher_post_rejects_invalid_and_oversized_json_bodies(tmp_path) -> Non
             ]
         }
         for path, payload in (
-            ("/api/course-design", invalid_design),
+            (
+                "/api/course-design",
+                {
+                    "design": invalid_design,
+                    "expected_revision": course_board_server.course_design_revision(
+                        course_board_server.read_design()
+                    ),
+                    "preserve_actual": False,
+                },
+            ),
             ("/api/course-plan-md", {"design": invalid_design}),
         ):
             body = json.dumps(payload).encode("utf-8")
