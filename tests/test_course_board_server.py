@@ -579,6 +579,94 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         thread.join(timeout=5)
 
 
+def test_heading_content_digest_includes_title_identity(tmp_path) -> None:
+    descriptor = course_board_server.course_source_catalog.CourseSource(
+        source_id="course",
+        label="Course",
+        source_type="markdown",
+        provider="local",
+        path="",
+        repository=None,
+        ref=None,
+        files=("lesson.md",),
+        updated_at=None,
+        indexing_status="ready",
+    )
+    source_file = course_board_server.course_source_catalog.LocalCourseSourceFile(
+        source=descriptor,
+        relative_path="lesson.md",
+        resolved_path=tmp_path / "lesson.md",
+        expected_size=None,
+        expected_identity=None,
+        expected_sha256=None,
+    )
+
+    headings = course_board_server.headings_from_source_snapshot(
+        source_file,
+        "# Include <stdio.h>\n\nSame body.\n\n# Include <stdlib.h>\n\nSame body.\n",
+    )
+
+    assert headings[0]["title"] == headings[1]["title"] == "Include"
+    assert headings[0]["content_sha256"] != headings[1]["content_sha256"]
+
+
+def test_source_preview_resolves_in_memory_design_without_persisting(tmp_path, monkeypatch) -> None:
+    lesson = tmp_path / "lesson.md"
+    lesson.write_text("# Preview\n\n## Topic\n\nText.\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {
+        "sources": [
+            {
+                "id": "preview-source",
+                "label": "Preview source",
+                "type": "markdown",
+                "provider": "local",
+                "files": ["lesson.md"],
+                "indexing_status": "ready",
+            }
+        ],
+        "years": [],
+    }
+
+    payload = course_board_server.preview_course_sources(design)
+
+    assert payload["sources"][0]["indexed_files"] == ["lesson.md"]
+    assert [heading["title"] for heading in payload["headings"]] == [
+        "Preview",
+        "Topic",
+    ]
+    assert len(payload["snapshot_revision"]) == 64
+    assert all(len(heading["content_sha256"]) == 64 for heading in payload["headings"])
+    lesson.write_text("# Preview\n\n## Topic\n\nChanged.\n", encoding="utf-8")
+    changed = course_board_server.preview_course_sources(design)
+    assert changed["snapshot_revision"] != payload["snapshot_revision"]
+    topic = next(heading for heading in payload["headings"] if heading["title"] == "Topic")
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.heading_content_snapshot(design, topic["id"])
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.heading_content_snapshot(
+            design,
+            topic["id"],
+            "",
+            topic["content_sha256"],
+        )
+    changed_files = course_board_server.course_markdown_source_files(design)
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.section_text(
+            topic["source"],
+            topic["line"],
+            topic["level"],
+            design,
+            {},
+            changed_files,
+            topic["source_id"],
+            topic["id"],
+            "",
+            topic["content_sha256"],
+        )
+    assert not (tmp_path / "doc" / "course_design.json").exists()
+
+
 def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, monkeypatch) -> None:
     (tmp_path / "lesson.md").write_text(
         "## Before\n\nOne.\n\n## Target\n\nTwo.\n\n## After\n\nThree.\n",
@@ -599,6 +687,12 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
             }],
         }],
     }
+    heading_digests = {
+        heading["id"]: heading["content_sha256"]
+        for heading in course_board_server.extract_headings(design)
+    }
+    for item in design["years"][0]["udas"][0]["items"]:
+        item["content_sha256"] = heading_digests[item["id"]]
     original_read = course_board_server.course_source_catalog.read_markdown_text
     reads = []
 
@@ -618,6 +712,12 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
     assert context["target_topic"]["text"] == "Two."
     assert context["next_topics"][0]["text"] == "Three."
     assert reads == ["lesson.md"]
+
+    design["years"][0]["udas"][0]["items"][1]["title"] = "Forged title"
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(design, "year", "uda", "lesson.md#target")
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.compact_design(design, verify_provenance=True)
 
 
 def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeypatch) -> None:
@@ -648,24 +748,22 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
         }],
     }
 
-    context = course_board_server.target_context(
-        design,
-        "year",
-        "uda",
-        "source-a:lesson.md#current",
-    )
-
-    assert context["target_topic"]["source_id"] == "source-a"
-    assert context["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            design,
+            "year",
+            "uda",
+            "source-a:lesson.md#current",
+        )
 
     design["years"][0]["udas"][0]["items"][0].pop("source_id")
-    missing_provenance = course_board_server.target_context(
-        design,
-        "year",
-        "uda",
-        "source-a:lesson.md#current",
-    )
-    assert missing_provenance["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            design,
+            "year",
+            "uda",
+            "source-a:lesson.md#current",
+        )
 
     stale_item = design["years"][0]["udas"][0]["items"][0]
     stale_item.update({
@@ -673,13 +771,13 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
         "source_id": "source-b",
         "line": 2,
     })
-    shifted = course_board_server.target_context(
-        design,
-        "year",
-        "uda",
-        "source-b:lesson.md#current",
-    )
-    assert shifted["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            design,
+            "year",
+            "uda",
+            "source-b:lesson.md#current",
+        )
 
 
 def test_ai_catalog_rejects_excessive_heading_count(tmp_path, monkeypatch) -> None:
@@ -783,13 +881,13 @@ def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monk
             }
         ],
     }
-    context = course_board_server.target_context(
-        framed_design,
-        "year",
-        "uda-1",
-        "archive:archived.md#archived",
-    )
-    assert context["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            framed_design,
+            "year",
+            "uda-1",
+            "archive:archived.md#archived",
+        )
 
 
 def test_local_catalog_does_not_read_configured_github_token(tmp_path, monkeypatch) -> None:
@@ -950,11 +1048,11 @@ def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
         + "/lessons/intro.md#private-lesson"
     )
     assert course_board_server.heading_content_snapshot(
-        design, heading["id"], heading["source_commit"]
+        design, heading["id"], heading["source_commit"], heading["content_sha256"]
     )[1] == "Pinned content."
     with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
         course_board_server.heading_content_snapshot(
-            design, heading["id"], "c" * 40
+            design, heading["id"], "c" * 40, heading["content_sha256"]
         )
 
     (tmp_path / "lessons").mkdir()
@@ -974,7 +1072,7 @@ def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
     }
     with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
         course_board_server.heading_content_snapshot(
-            local_replacement, heading["id"], heading["source_commit"]
+            local_replacement, heading["id"], heading["source_commit"], heading["content_sha256"]
         )
     local_files = course_board_server.course_markdown_source_files(local_replacement)
     assert course_board_server.section_text(
@@ -1073,7 +1171,7 @@ def test_gitlab_heading_uses_commit_pinned_snapshot(tmp_path, monkeypatch) -> No
         + "/README.md#lesson"
     )
     assert course_board_server.heading_content_snapshot(
-        design, heading["id"], heading["source_commit"]
+        design, heading["id"], heading["source_commit"], heading["content_sha256"]
     )[1] == "Private GitLab content."
     summary = course_board_server.topic_summary(
         course_board_server.board_item_from_heading(heading)
@@ -1111,8 +1209,12 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
         )
         authorization = "Basic " + base64.b64encode(f"teacher:{teacher_token}".encode("utf-8")).decode("ascii")
         request = urllib.request.Request(
-            "http://127.0.0.1:%s/api/heading-content?id=%s"
-            % (server.server_address[1], urllib.parse.quote(heading["id"], safe="")),
+            "http://127.0.0.1:%s/api/heading-content?id=%s&content_sha256=%s"
+            % (
+                server.server_address[1],
+                urllib.parse.quote(heading["id"], safe=""),
+                heading["content_sha256"],
+            ),
             headers={"Authorization": authorization},
         )
         with urllib.request.urlopen(request, timeout=5) as response:
@@ -1123,6 +1225,7 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
             "http://127.0.0.1:%s/api/heading-content" % server.server_address[1],
             data=json.dumps({
                 "id": heading["id"],
+                "content_sha256": heading["content_sha256"],
                 "design": {"source_files": ["lesson.md"]},
             }).encode("utf-8"),
             headers={

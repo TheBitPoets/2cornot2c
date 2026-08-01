@@ -294,6 +294,242 @@ def test_catalog_paragraph_preview_uses_keyboard_accessible_button() -> None:
     assert ".headingPreviewTrigger" in css
 
 
+def test_loaded_legacy_item_hydrates_missing_content_digest() -> None:
+    run_course_board_js(
+        """
+        const design = { years: [{ udas: [{ items: [{
+          id: "README.md#intro", title: "Intro", source: "README.md", line: 1, level: 1,
+        }] }] }] };
+        const headings = [{
+          id: "README.md#intro", title: "Intro", source: "README.md", source_id: "legacy",
+          source_provider: "local", href: "README.md#intro",
+          line: 1, level: 1, content_sha256: "d".repeat(64),
+        }];
+
+        const hydrated = hydrateMissingItemContentDigests(design, headings);
+
+        assert.equal(hydrated, 1);
+        assert.equal(design.years[0].udas[0].items[0].content_sha256, "d".repeat(64));
+        assert.equal(design.years[0].udas[0].items[0].source_id, "legacy");
+        """
+    )
+
+
+def test_source_editor_projects_catalog_without_runtime_fields() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{
+          id: "remote", label: "Remote", provider: "gitlab", path: "",
+          repository: "school/course", ref: "main", files: ["README.md"],
+          updated_at: null, indexing_status: "ready", resolved_ref: "a".repeat(40),
+          indexed_files: ["README.md"], legacy: false,
+        }];
+
+        const editable = editableCourseSources();
+
+        assert.deepEqual(JSON.parse(JSON.stringify(editable)), [{
+          id: "remote", label: "Remote", type: "markdown", provider: "gitlab",
+          path: "", repository: "school/course", ref: "main", files: ["README.md"],
+          updated_at: null, indexing_status: "ready",
+        }]);
+        assert.equal(nextSourceId(editable), "source-2");
+        """
+    )
+
+
+def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "legacy-abc", legacy: true }];
+        state.headings = [{
+          id: "README.md#intro", source_id: "legacy-abc", source: "README.md",
+          anchor: "intro", line: 1, level: 1, content_sha256: "c".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "README.md#intro", title: "Intro", source: "README.md",
+          line: 99, level: 3, frame: { status: "done" },
+        }] }] }] };
+        const preview = [{
+          id: "legacy-abc:README.md#intro", title: "Intro", source: "README.md",
+          source_id: "legacy-abc", source_label: "README.md", source_provider: "local",
+          source_repository: null, source_ref: null, source_commit: null,
+          content_sha256: "c".repeat(64), anchor: "intro", line: 1, level: 1, href: "../README.md#intro",
+        }];
+
+        assert.throws(
+          () => reconcileSourceItems(
+            JSON.parse(JSON.stringify(design)),
+            [],
+            [{ id: "legacy-abc", indexing_status: "pending" }],
+          ),
+          /deve restare ready/,
+        );
+        reconcileSourceItems(design, preview, [{ id: "legacy-abc", indexing_status: "ready" }]);
+
+        const item = design.years[0].udas[0].items[0];
+        assert.equal(item.id, "legacy-abc:README.md#intro");
+        assert.equal(item.source_id, "legacy-abc");
+        assert.equal(item.line, 1);
+        assert.equal(item.level, 1);
+        assert.equal(item.frame.status, "done");
+        """
+    )
+
+
+def test_source_editor_detects_orphaned_legacy_item_after_heading_rename() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{
+          id: "legacy-abc", legacy: true, path: "", files: ["README.md"],
+        }];
+        state.headings = [];
+        const design = { years: [{ udas: [{ items: [{
+          id: "README.md#old", source: "README.md", href: "../README.md#old",
+        }] }] }] };
+        const preview = [{
+          id: "legacy-abc:README.md#new", source_id: "legacy-abc", source: "README.md",
+          content_sha256: "a".repeat(64),
+        }];
+
+        assert.throws(
+          () => reconcileSourceItems(
+            design,
+            preview,
+            [{ id: "legacy-abc", indexing_status: "ready" }],
+          ),
+          /non è presente/,
+        );
+        """
+    )
+
+
+def test_source_editor_updates_assigned_remote_commit_from_preview() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "remote", legacy: false }];
+        state.headings = [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          anchor: "intro", line: 1, level: 1, source_commit: "a".repeat(40),
+          content_sha256: "c".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          source_commit: "a".repeat(40), line: 1, level: 1,
+        }] }] }] };
+        const preview = [{
+          id: "remote:README.md#intro", title: "Intro", source: "README.md",
+          source_id: "remote", source_label: "Remote", source_provider: "github",
+          source_repository: "school/course", source_ref: "main",
+          source_commit: "b".repeat(40), content_sha256: "c".repeat(64),
+          anchor: "intro", line: 2, level: 1,
+          href: "https://example.invalid/" + "b".repeat(40) + "/README.md#intro",
+        }];
+
+        reconcileSourceItems(design, preview, [{ id: "remote", indexing_status: "ready" }]);
+
+        const item = design.years[0].udas[0].items[0];
+        assert.equal(item.source_commit, "b".repeat(40));
+        assert.equal(item.line, 2);
+        assert.match(item.href, /bbbbbbbbbbbb/);
+        """
+    )
+
+
+def test_source_editor_rejects_pre_digest_item_from_stale_remote_commit() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "remote" }];
+        state.headings = [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          source_provider: "github", source_commit: "b".repeat(40),
+          content_sha256: "c".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          source_provider: "github", source_commit: "a".repeat(40),
+        }] }] }] };
+
+        assert.throws(
+          () => reconcileSourceItems(
+            design,
+            [{
+              id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+              source_provider: "github", source_commit: "b".repeat(40),
+              content_sha256: "c".repeat(64),
+            }],
+            [{ id: "remote", indexing_status: "ready" }],
+          ),
+          /vecchio commit senza digest/,
+        );
+        """
+    )
+
+
+def test_source_editor_keeps_direct_id_when_heading_content_digests_repeat() -> None:
+    run_course_board_js(
+        """
+        const emptyHash = "e".repeat(64);
+        state.sources = [{ id: "course" }];
+        state.headings = [
+          { id: "course:README.md#one", source_id: "course", source: "README.md", content_sha256: emptyHash },
+          { id: "course:README.md#two", source_id: "course", source: "README.md", content_sha256: emptyHash },
+        ];
+        const design = { years: [{ udas: [{ items: [{
+          id: "course:README.md#two", source_id: "course", source: "README.md",
+          content_sha256: emptyHash,
+        }] }] }] };
+        const preview = [
+          { id: "course:README.md#one", source_id: "course", source: "README.md", content_sha256: emptyHash, title: "One" },
+          { id: "course:README.md#two", source_id: "course", source: "README.md", content_sha256: emptyHash, title: "Two" },
+        ];
+
+        reconcileSourceItems(design, preview, [{ id: "course", indexing_status: "ready" }]);
+
+        assert.equal(design.years[0].udas[0].items[0].id, "course:README.md#two");
+        assert.equal(design.years[0].udas[0].items[0].title, "Two");
+        """
+    )
+
+
+def test_source_editor_blocks_removed_used_source_but_allows_pending_source() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "remote" }];
+        state.headings = [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          content_sha256: "a".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          content_sha256: "a".repeat(64), source_commit: "b".repeat(40),
+        }] }] }] };
+
+        assert.throws(
+          () => reconcileSourceItems(JSON.parse(JSON.stringify(design)), [], []),
+          /rimossa o rinominata/,
+        );
+        const pending = JSON.parse(JSON.stringify(design));
+        reconcileSourceItems(pending, [], [{ id: "remote", indexing_status: "pending" }]);
+        assert.equal(pending.years[0].udas[0].items[0].source_commit, "b".repeat(40));
+        """
+    )
+
+
+def test_source_editor_requires_preview_and_context_before_apply() -> None:
+    source = Path("tools/course_board.js").read_text(encoding="utf-8")
+
+    assert 'api("/api/course-sources/preview"' in source
+    assert "delete candidate.source_files" in source
+    assert "delete nextDesign.source_files" in source
+    assert "sourcePreviewSignature(sources) !== editor.preview.signature" in source
+    assert "isBoardContextUnchanged(editor.boardContext)" in source
+    assert "state.isNewDesign || hasUnsavedChanges()" in source
+    assert "editor.pendingPreviewRequests = Math.max" in source
+    assert "verified.snapshot_revision !== editor.preview.snapshotRevision" in source
+    assert "sourcePreviewSignature(collectSourceEditorSources()) !== sourcePreviewSignature(sources)" in source
+    assert "applied.ref = resolvedRef" in source
+
+
 def test_item_from_heading_preserves_source_provenance() -> None:
     run_course_board_js(
         """
@@ -1469,7 +1705,7 @@ def test_detached_draft_preview_posts_its_in_memory_design() -> None:
           return { heading: { title: "Draft", content: "Detached content" } };
         };
 
-        openParagraphPreview({ id: "draft-heading", title: "Draft", source: "draft.md" })
+        openParagraphPreview({ id: "draft-heading", title: "Draft", source: "draft.md", content_sha256: "d".repeat(64) })
           .then(() => assert.match(els.paragraphContent.innerHTML, /Detached content/));
         """
     )
@@ -1488,8 +1724,8 @@ def test_late_paragraph_preview_cannot_overwrite_newer_dialog() -> None:
             else resolveSecond = resolve;
           });
         };
-        const first = openParagraphPreview({ id: "first", title: "Primo", source: "a.md" });
-        const second = openParagraphPreview({ id: "second", title: "Secondo", source: "b.md" });
+        const first = openParagraphPreview({ id: "first", title: "Primo", source: "a.md", content_sha256: "a".repeat(64) });
+        const second = openParagraphPreview({ id: "second", title: "Secondo", source: "b.md", content_sha256: "b".repeat(64) });
         resolveSecond({ heading: { title: "Secondo", content: "Nuovo" } });
         second.then(() => {
           assert.equal(els.paragraphDialogTitle.textContent, "Secondo");

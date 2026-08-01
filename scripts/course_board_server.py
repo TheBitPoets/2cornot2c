@@ -980,6 +980,44 @@ def uda_actual_revisions(design: dict) -> dict[str, str]:
     return revisions
 
 
+def preview_course_sources(design: object) -> dict:
+    """Resolve an in-memory source catalog without persisting the design."""
+
+    if not isinstance(design, dict):
+        raise ValueError("design deve essere un oggetto.")
+    validate_course_source_catalog(design)
+    source_files = course_markdown_source_files(design)
+    catalog = course_source_catalog.course_source_catalog_payload(
+        design,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+        local_files=source_files,
+    )
+    snapshot_manifest = [
+        {
+            "source_id": item.source.source_id,
+            "provider": item.source.provider,
+            "path": item.relative_path,
+            "resolved_ref": getattr(item, "resolved_ref", None),
+            "sha256": item.expected_sha256,
+        }
+        for item in source_files
+    ]
+    snapshot_revision = hashlib.sha256(
+        json.dumps(
+            snapshot_manifest,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    return {
+        "sources": catalog["sources"],
+        "headings": extract_headings(design, source_files),
+        "snapshot_revision": snapshot_revision,
+    }
+
+
 def course_calendar_context(raw_query: str) -> dict:
     """Return one design and its derived activity events from one snapshot."""
 
@@ -3086,6 +3124,7 @@ def headings_from_source_snapshot(
                 "source_commit": resolved_ref,
                 "level": len(match.group(1)),
                 "title": TAG_RE.sub("", title).strip(),
+                "_identity_title": title,
                 "anchor": anchor,
                 "href": source_url if descriptor.provider in {"github", "gitlab"} else f"../{source}#{anchor}",
                 "source_url": source_url,
@@ -3093,6 +3132,27 @@ def headings_from_source_snapshot(
                 "line": lineno,
             }
         )
+    source_lines = source_text.splitlines()
+    end_lines = [len(source_lines) + 1] * len(headings)
+    open_headings: list[int] = []
+    for index, heading in enumerate(headings):
+        while (
+            open_headings
+            and heading["level"] <= headings[open_headings[-1]]["level"]
+        ):
+            end_lines[open_headings.pop()] = heading["line"]
+        open_headings.append(index)
+    for index, heading in enumerate(headings):
+        section = "\n".join(
+            source_lines[heading["line"] : end_lines[index] - 1]
+        ).strip()
+        identity_title = heading.pop("_identity_title")
+        identity_text = (
+            f"{heading['level']}\0{identity_title}\0{section}"
+        )
+        heading["content_sha256"] = hashlib.sha256(
+            identity_text.encode("utf-8")
+        ).hexdigest()
     return headings
 
 
@@ -3104,9 +3164,14 @@ def heading_content_snapshot(
     design: dict,
     heading_id: str,
     expected_source_commit: str = "",
+    expected_content_sha256: str = "",
 ) -> tuple[dict, str] | None:
-    """Return heading content only when immutable remote provenance still matches."""
+    """Return heading content only when immutable provenance still matches."""
 
+    if re.fullmatch(r"[0-9a-f]{64}", expected_content_sha256) is None:
+        raise CourseSourceRevisionConflictError(
+            "Digest del paragrafo mancante o non valido: riallinealo prima della preview."
+        )
     total_headings = 0
     for source_file in course_markdown_source_files(design):
         source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
@@ -3124,6 +3189,13 @@ def heading_content_snapshot(
                 ) and heading.get("source_commit") != expected_source_commit:
                     raise CourseSourceRevisionConflictError(
                         "La fonte remota è cambiata: riallinea il paragrafo prima della preview."
+                    )
+                if (
+                    expected_content_sha256
+                    and heading.get("content_sha256") != expected_content_sha256
+                ):
+                    raise CourseSourceRevisionConflictError(
+                        "Il contenuto del paragrafo è cambiato: riallinealo prima della preview."
                     )
                 return heading, section_text_from_source(
                     source_text,
@@ -3198,6 +3270,8 @@ def section_text(
     source_id: str = "",
     heading_id: str = "",
     source_commit: str = "",
+    content_sha256: str = "",
+    expected_title: str = "",
 ) -> str:
     """Extract local Markdown text for one heading section."""
 
@@ -3226,12 +3300,20 @@ def section_text(
         None,
     )
     if source_file is None:
+        if content_sha256:
+            raise CourseSourceRevisionConflictError(
+                "La fonte del paragrafo non è disponibile: riattivala o riallinea l'item prima di usare l'AI."
+            )
         return ""
     resolved_ref = getattr(source_file, "resolved_ref", None)
     if (
         (source_commit or source_file.source.provider != "local")
         and source_commit != resolved_ref
     ):
+        if content_sha256:
+            raise CourseSourceRevisionConflictError(
+                "Il commit della fonte è cambiato: riallinea il paragrafo prima di usare l'AI."
+            )
         return ""
     snapshot_key = f"{source_id}\0{source}"
     source_text = None if source_snapshots is None else source_snapshots.get(snapshot_key)
@@ -3253,7 +3335,22 @@ def section_text(
             or matching_heading["line"] != start_line
             or matching_heading["level"] != start_level
         ):
+            if content_sha256:
+                raise CourseSourceRevisionConflictError(
+                    "Il paragrafo è stato rinominato, rimosso o spostato: riallinealo prima di usare l'AI."
+                )
             return ""
+        if expected_title and matching_heading.get("title") != expected_title:
+            raise CourseSourceRevisionConflictError(
+                "Il titolo del paragrafo è cambiato: riallinealo prima di usare l'AI."
+            )
+        if (
+            content_sha256
+            and matching_heading.get("content_sha256") != content_sha256
+        ):
+            raise CourseSourceRevisionConflictError(
+                "Il contenuto del paragrafo è cambiato: riallinealo prima di usare l'AI."
+            )
     return section_text_from_source(source_text, start_line, start_level)
 
 
@@ -3357,6 +3454,7 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
             "source_repository": heading.get("source_repository"),
             "source_ref": heading.get("source_ref"),
             "source_commit": heading.get("source_commit"),
+            "content_sha256": heading.get("content_sha256"),
             "level": heading["level"],
             "line": heading["line"],
             "anchor": heading["anchor"],
@@ -3404,6 +3502,7 @@ def topic_summary(
         "source_repository": item.get("source_repository"),
         "source_ref": item.get("source_ref"),
         "source_commit": item.get("source_commit"),
+        "content_sha256": item.get("content_sha256"),
         "level": item.get("level", ""),
         "href": item.get("href", ""),
         "source_url": (
@@ -3428,6 +3527,10 @@ def topic_summary(
         ],
     }
     if include_text:
+        if not item.get("content_sha256"):
+            raise CourseSourceRevisionConflictError(
+                "Il paragrafo non ha una provenienza verificabile: riallinealo prima di usare l'AI."
+            )
         summary["text"] = section_text(
             item.get("source", ""),
             item.get("line", ""),
@@ -3437,7 +3540,9 @@ def topic_summary(
             source_files,
             str(item.get("source_id", "")),
             str(item.get("id", "")),
-            str(item.get("source_commit", "")),
+            str(item.get("source_commit") or ""),
+            str(item.get("content_sha256", "")),
+            str(item.get("title", "")),
         )
     return summary
 
@@ -3490,6 +3595,7 @@ def board_item_from_heading(heading: dict) -> dict:
         "source_repository": heading.get("source_repository"),
         "source_ref": heading.get("source_ref"),
         "source_commit": heading.get("source_commit"),
+        "content_sha256": heading.get("content_sha256"),
         "href": heading["href"],
         "level": heading["level"],
         "line": heading["line"],
@@ -3497,9 +3603,38 @@ def board_item_from_heading(heading: dict) -> dict:
     }
 
 
-def compact_design(design: dict) -> dict:
+def validate_course_item_provenance(design: dict) -> None:
+    """Reject board items whose immutable heading provenance is incomplete or stale."""
+
+    headings = {heading["id"]: heading for heading in extract_headings(design)}
+    keys = (
+        "title", "source", "source_id", "source_provider", "source_repository",
+        "source_ref", "source_commit", "content_sha256", "level", "line", "href",
+    )
+
+    def validate(items: list[dict]) -> None:
+        for item in items:
+            heading = headings.get(str(item.get("id", "")))
+            if not item.get("content_sha256") or heading is None:
+                raise CourseSourceRevisionConflictError(
+                    "Un paragrafo del corso non ha una provenienza verificabile: riallinealo prima di usare l'AI."
+                )
+            if any(item.get(key) != heading.get(key) for key in keys):
+                raise CourseSourceRevisionConflictError(
+                    "Un paragrafo del corso non coincide più con la fonte: riallinealo prima di usare l'AI."
+                )
+            validate(item.get("children", []))
+
+    for year in design.get("years", []):
+        for uda in year.get("udas", []):
+            validate(uda.get("items", []))
+
+
+def compact_design(design: dict, *, verify_provenance: bool = False) -> dict:
     """Return the full course structure without verbose frame text."""
 
+    if verify_provenance:
+        validate_course_item_provenance(design)
     return {
         "years": [
             {
@@ -5633,10 +5768,14 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             query = parse_qs(parsed.query)
             heading_id = query.get("id", [""])[0]
             expected_source_commit = query.get("source_commit", [""])[0]
+            expected_content_sha256 = query.get("content_sha256", [""])[0]
             try:
                 design = source_request_design(parsed.query)
                 snapshot = heading_content_snapshot(
-                    design, heading_id, expected_source_commit
+                    design,
+                    heading_id,
+                    expected_source_commit,
+                    expected_content_sha256,
                 )
             except course_github_markdown.RemoteMarkdownError as error:
                 self.write_error_json(502, str(error))
@@ -5786,6 +5925,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         payload = self.read_teacher_json()
         if payload is None:
             return
+        if parsed.path == "/api/course-sources/preview":
+            try:
+                self.write_json(preview_course_sources(payload.get("design")))
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+            except ValueError as error:
+                self.write_error_json(400, str(error))
+            return
         if parsed.path == "/api/heading-content":
             heading_id = payload.get("id", "")
             design = payload.get("design")
@@ -5796,7 +5945,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 snapshot = heading_content_snapshot(
                     design,
                     heading_id,
-                    str(payload.get("source_commit", "")),
+                    str(payload.get("source_commit") or ""),
+                    str(payload.get("content_sha256", "")),
                 )
             except course_github_markdown.RemoteMarkdownError as error:
                 self.write_error_json(502, str(error))
@@ -6117,7 +6267,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/ai-frame":
             try:
                 context = {
-                    "course": compact_design(payload.get("design", {})),
+                    "course": compact_design(payload.get("design", {}), verify_provenance=True),
                     "target": target_context(
                         payload.get("design", {}),
                         payload.get("year_id", ""),
@@ -6126,6 +6276,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     ),
                 }
                 self.write_json({"frame": call_ai_didactic_frame(context)})
+            except CourseSourceRevisionConflictError as error:
+                self.write_error_json(409, str(error))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -6158,7 +6310,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     "selection_objectives": brief.get("description", ""),
                     "selection_rule": "Usa selection_objectives come criterio principale per scegliere quali paragrafi e sottoparagrafi inserire nelle UDA.",
                     "target_year_id": year_id,
-                    "current_course": compact_design(design),
+                    "current_course": compact_design(design, verify_provenance=True),
                     "available_topics": available_topics,
                     "constraints": {
                         "use_only_available_topic_ids": True,

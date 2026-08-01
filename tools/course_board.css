@@ -973,12 +973,34 @@ input[aria-invalid="true"] {
   font-size: .72rem;
 }
 
+.sourceCatalogActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  margin-bottom: .8rem;
+}
+
+.sourceCatalogActions .sourceCatalogSummary { margin: 0; }
+
+.sourceDialog { width: min(980px, calc(100vw - 2rem)); }
+.sourceDialog .courseAiPanel { max-width: none; }
+.sourceDialogHelp { color: var(--muted); font-size: .8rem; }
+.sourceEditorList { display: grid; gap: .8rem; max-height: 58vh; overflow: auto; padding-right: .25rem; }
+.sourceEditorCard { border: 1px solid var(--line); border-radius: .8rem; background: #fafafa; padding: .8rem; }
+.sourceEditorCard > header { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-bottom: .7rem; }
+.sourceEditorGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.sourceEditorGrid label { display: grid; gap: .3rem; font-size: .72rem; font-weight: 700; }
+.sourceEditorGrid input, .sourceEditorGrid select, .sourceEditorGrid textarea { width: 100%; }
+.sourceEditorGrid label:last-child { grid-column: 1 / -1; }
+.sourceSyncMeta { margin: .65rem 0 0; color: var(--muted); font-size: .72rem; }
+
 @media (max-width: 860px) {
   .hero { align-items: flex-start; flex-direction: column; }
   .board { grid-template-columns: 1fr; }
   .panel { min-height: auto; }
   .headingList, .courseTree { height: auto; max-height: 60vh; }
   .frameGrid { grid-template-columns: 1fr; }
-  .briefGrid { grid-template-columns: 1fr; }
+  .briefGrid, .sourceEditorGrid { grid-template-columns: 1fr; }
   .courseAiHead, .courseAiActions { align-items: flex-start; flex-direction: column; }
 }

@@ -56,7 +56,10 @@
           <option value="4">H4</option>
         </select>
       </div>
-      <p id="sourceCatalogSummary" class="status sourceCatalogSummary">Catalogo fonti non caricato.</p>
+      <div class="sourceCatalogActions">
+        <p id="sourceCatalogSummary" class="status sourceCatalogSummary">Catalogo fonti non caricato.</p>
+        <button id="manageSourcesBtn" type="button">Gestisci fonti</button>
+      </div>
       <div id="headingList" class="headingList"></div>
     </section>
 
@@ -240,6 +243,28 @@
       <div class="courseAiActions">
         <button id="activityLinkSaveBtn" type="submit" class="primary">Salva collegamento</button>
         <button id="activityLinkCancelBtn" type="button">Annulla</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="sourceDialog" class="courseAiDialog sourceDialog" aria-labelledby="sourceDialogTitle">
+    <form id="sourceForm" class="courseAiPanel">
+      <header class="courseAiHead">
+        <div>
+          <p class="eyebrow">Catalogo Markdown</p>
+          <h2 id="sourceDialogTitle">Gestisci fonti</h2>
+        </div>
+        <button id="sourceCloseBtn" type="button">Chiudi</button>
+      </header>
+      <p class="sourceDialogHelp">Le credenziali restano nel runtime del server e non vengono salvate nel progetto.</p>
+      <div id="sourceEditorList" class="sourceEditorList"></div>
+      <p id="sourceDialogError" class="dialogInlineError" role="alert" hidden></p>
+      <p id="sourcePreviewStatus" class="status" role="status">Sincronizza per verificare file e commit prima di applicare.</p>
+      <div class="courseAiActions sourceDialogActions">
+        <button id="sourceAddBtn" type="button">Aggiungi fonte</button>
+        <button id="sourcePreviewBtn" type="button">Sincronizza anteprima</button>
+        <button id="sourceApplyBtn" type="submit" class="primary" disabled>Applica alla board</button>
+        <button id="sourceCancelBtn" type="button">Annulla</button>
       </div>
     </form>
   </dialog>
