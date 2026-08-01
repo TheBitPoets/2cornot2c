@@ -676,6 +676,7 @@ class GitHubAppTokenRuntime:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._lock = threading.RLock()
+        self._lifecycle_lock = threading.Lock()
         self._refresh_lock = threading.Lock()
         self._owned_digest: str | None = None
         self._owned_identity: tuple[int, int] | None = None
@@ -728,7 +729,7 @@ class GitHubAppTokenRuntime:
         if error is not None:
             raise GitHubAppRuntimeError(
                 "Rinnovo credenziali GitHub App non riuscito."
-            ) from error
+            ) from None
         payload = result.get("value")
         if not isinstance(payload, dict):
             raise GitHubAppRuntimeError("Risposta installation token non valida.")
@@ -744,7 +745,7 @@ class GitHubAppTokenRuntime:
                 app_jwt = create_app_jwt(self.config.app_id, self._private_key, now=now)
                 payload = self._request_token_payload(app_jwt)
                 token = parse_installation_token(payload, now=self._wall_clock())
-                if self._stop.is_set() and self._thread is not None:
+                if self._stop.is_set():
                     raise GitHubAppRuntimeError("Runtime GitHub App in arresto.")
                 digest, identity = _secure_atomic_write(
                     self.config.token_file, token.value.encode("ascii")
@@ -760,26 +761,29 @@ class GitHubAppTokenRuntime:
                     self._process_lock.release()
 
     def start(self) -> None:
-        with self._lock:
-            if self._thread is not None or self._starting:
-                raise GitHubAppRuntimeError("Runtime GitHub App già avviato.")
-            self._starting = True
-        try:
-            self._process_lock.acquire()
-            self.refresh()
-            thread = threading.Thread(
-                target=self._run, name="github-app-token-runtime", daemon=True
-            )
+        with self._lifecycle_lock:
             with self._lock:
-                self._thread = thread
-            thread.start()
-        except BaseException:
-            self._remove_owned_token()
-            self._process_lock.release()
-            raise
-        finally:
-            with self._lock:
-                self._starting = False
+                if self._thread is not None or self._starting or self._stop.is_set():
+                    raise GitHubAppRuntimeError("Runtime GitHub App già avviato o arrestato.")
+                self._starting = True
+            try:
+                self._process_lock.acquire()
+                self.refresh()
+                thread = threading.Thread(
+                    target=self._run, name="github-app-token-runtime", daemon=True
+                )
+                with self._lock:
+                    self._thread = thread
+                thread.start()
+            except BaseException:
+                with self._lock:
+                    self._thread = None
+                self._remove_owned_token()
+                self._process_lock.release()
+                raise
+            finally:
+                with self._lock:
+                    self._starting = False
 
     def _run(self) -> None:
         retry_seconds = 5.0
@@ -811,6 +815,10 @@ class GitHubAppTokenRuntime:
                 retry_seconds = min(retry_seconds * 2, 60.0)
 
     def stop(self, *, remove_token: bool = True) -> None:
+        with self._lifecycle_lock:
+            self._stop_locked(remove_token=remove_token)
+
+    def _stop_locked(self, *, remove_token: bool) -> None:
         self._stop.set()
         with self._lock:
             thread = self._thread

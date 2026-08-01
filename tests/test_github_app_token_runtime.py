@@ -305,6 +305,8 @@ def test_runtime_sanitizes_even_domain_errors_from_custom_transport(
     with pytest.raises(runtime.GitHubAppRuntimeError) as raised:
         service.refresh()
     assert "secret-token" not in str(raised.value)
+    assert raised.value.__cause__ is None
+    assert raised.value.__suppress_context__ is True
 
 
 def test_runtime_removes_initial_token_when_worker_start_fails(tmp_path, monkeypatch) -> None:
@@ -335,6 +337,45 @@ def test_runtime_removes_initial_token_when_worker_start_fails(tmp_path, monkeyp
 
     with pytest.raises(RuntimeError):
         service.start()
+    assert not config.token_file.exists()
+    assert not service._process_lock.held
+    assert service._thread is None
+
+
+def test_stop_waits_for_initial_start_and_removes_the_token(tmp_path, monkeypatch) -> None:
+    enable_test_writes(monkeypatch)
+    config = runtime.GitHubAppRuntimeConfig(
+        app_id="12345",
+        installation_id="67890",
+        private_key_file=tmp_path / "private-key.pem",
+        token_file=(tmp_path / "installation-token.txt").resolve(),
+    )
+    service = runtime.GitHubAppTokenRuntime(config, rsa_key(), FakeTransport({}))
+    refresh_entered = threading.Event()
+    allow_refresh = threading.Event()
+
+    def publish() -> float:
+        refresh_entered.set()
+        allow_refresh.wait(2)
+        digest, identity = runtime._secure_atomic_write(config.token_file, b"ghs_start")
+        service._owned_digest = digest
+        service._owned_identity = identity
+        service._expires_at = 1_900_000_000.0
+        return service._expires_at
+
+    monkeypatch.setattr(service, "refresh", publish)
+    starter = threading.Thread(target=service.start)
+    stopper = threading.Thread(target=service.stop)
+    starter.start()
+    assert refresh_entered.wait(1)
+    stopper.start()
+    time.sleep(0.03)
+    assert stopper.is_alive()
+    allow_refresh.set()
+    starter.join(timeout=2)
+    stopper.join(timeout=2)
+
+    assert not starter.is_alive() and not stopper.is_alive()
     assert not config.token_file.exists()
     assert not service._process_lock.held
 
