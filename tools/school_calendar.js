@@ -288,7 +288,7 @@ async function loadCourseDesign() {
     const query = name ? `?design=${encodeURIComponent(name)}` : "";
     const payload = await api(`/api/course-calendar-context${query}`);
     if (requestId !== state.courseDesignRequestId || (state.calendar.course_design_name || "") !== name) {
-      return false;
+      return null;
     }
     state.courseDesign = payload.design;
     state.activityEvents = payload.activity_events || [];
@@ -296,7 +296,7 @@ async function loadCourseDesign() {
     return true;
   } catch (error) {
     if (requestId !== state.courseDesignRequestId || (state.calendar.course_design_name || "") !== name) {
-      return false;
+      return null;
     }
     state.courseDesign = null;
     state.activityEvents = [];
@@ -322,10 +322,13 @@ async function loadCalendarForActiveCourseDesign() {
   state.calendar = emptyCalendar(activeDesign);
   state.visibleTrackIds = null;
   els.fileName.value = "";
-  if (!await loadCourseDesign()) return false;
-  syncTracksFromCourseDesign();
+  const courseLoaded = await loadCourseDesign();
+  if (courseLoaded === null) return false;
+  if (courseLoaded) syncTracksFromCourseDesign();
   renderAll();
-  setStatus(`Nessun calendario associato a ${activeDesign || "percorso corrente"}: vista vuota pronta per la configurazione.`);
+  if (courseLoaded) {
+    setStatus(`Nessun calendario associato a ${activeDesign || "percorso corrente"}: vista vuota pronta per la configurazione.`);
+  }
   return true;
 }
 
@@ -354,9 +357,10 @@ async function loadCalendarByName(name) {
     localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
     sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   }
-  if (!await loadCourseDesign()) return;
+  const courseLoaded = await loadCourseDesign();
+  if (courseLoaded === null) return;
   renderAll();
-  setStatus(`Calendario caricato: ${name}.`);
+  if (courseLoaded) setStatus(`Calendario caricato: ${name}.`);
 }
 
 async function saveCalendar() {
@@ -1942,8 +1946,9 @@ els.courseDesignSelect.addEventListener("change", async () => {
     localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
     sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   }
-  if (!await loadCourseDesign()) return;
-  syncTracksFromCourseDesign();
+  const courseLoaded = await loadCourseDesign();
+  if (courseLoaded === null) return;
+  if (courseLoaded) syncTracksFromCourseDesign();
   renderAll();
 });
 

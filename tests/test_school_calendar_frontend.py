@@ -54,6 +54,36 @@ def test_activity_events_are_derived_from_visible_course_year_without_calendar_c
     assert payload["due"][0]["event_type"] == "due"
 
 
+def test_calendar_load_renders_new_calendar_when_course_context_fails() -> None:
+    source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
+    start = source.index("async function loadCalendarByName")
+    end = source.index("\nasync function saveCalendar", start)
+    function_source = source[start:end]
+    script = f"""
+    const assert = require("node:assert/strict");
+    const state = {{ calendar: {{ school_year: "old" }}, visibleTrackIds: new Set() }};
+    const els = {{ fileName: {{ value: "" }} }};
+    const localStorage = {{ setItem() {{}}, removeItem() {{}} }};
+    const sessionStorage = {{ setItem() {{}}, removeItem() {{}} }};
+    const ACTIVE_SCHOOL_CALENDAR_KEY = "calendar";
+    const ACTIVE_COURSE_DESIGN_KEY = "design";
+    const ACTIVE_COURSE_SESSION_KEY = "session";
+    async function api() {{ return {{ calendar: {{ school_year: "new", course_design_name: "missing.json" }} }}; }}
+    async function loadCourseDesign() {{ return false; }}
+    let renders = 0;
+    function renderAll() {{ renders += 1; }}
+    function setStatus() {{}}
+    {function_source}
+    (async () => {{
+      await loadCalendarByName("new-calendar.json");
+      assert.equal(state.calendar.school_year, "new");
+      assert.equal(els.fileName.value, "new-calendar.json");
+      assert.equal(renders, 1);
+    }})().catch((error) => {{ console.error(error); process.exit(1); }});
+    """
+    subprocess.run(["node", "-e", script], check=True)
+
+
 def test_course_design_loader_ignores_stale_out_of_order_response() -> None:
     source = Path("tools/school_calendar.js").read_text(encoding="utf-8")
     start = source.index("async function loadCourseDesign")
@@ -84,7 +114,7 @@ def test_course_design_loader_ignores_stale_out_of_order_response() -> None:
       pending.get("/api/course-calendar-context?design=a.json")({{
         design: {{ id: "a" }}, activity_events: [{{ activity_id: "a" }}],
       }});
-      assert.equal(await first, false);
+      assert.equal(await first, null);
       assert.equal(state.courseDesign.id, "b");
       assert.equal(state.activityEvents[0].activity_id, "b");
     }})().catch((error) => {{ console.error(error); process.exit(1); }});
