@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 import hashlib
 import os
@@ -31,6 +31,7 @@ ALLOWED_PROVIDERS = frozenset({"local", "github", "gitlab"})
 ALLOWED_TYPES = frozenset({"markdown"})
 ALLOWED_INDEXING_STATUSES = frozenset({"ready", "pending", "error", "disabled"})
 LOCAL_ACQUISITION_SLOTS = threading.BoundedSemaphore(4)
+SNAPSHOT_MEMORY_SLOTS = threading.BoundedSemaphore(4)
 
 
 class CourseSourceCatalogError(ValueError):
@@ -80,6 +81,7 @@ class LocalCourseSourceFile:
     expected_identity: tuple[int, int] | None
     expected_sha256: str | None
     snapshot_content: bytes | None = None
+    snapshot_lease: object | None = None
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,7 @@ class RemoteCourseSourceFile:
     resolved_ref: str
     expected_sha256: str
     content: bytes
+    snapshot_lease: object | None = None
 
 
 CourseMarkdownSourceFile = LocalCourseSourceFile | RemoteCourseSourceFile
@@ -382,7 +385,7 @@ def _bounded_local_markdown_source_files(
     return result.get("value", ())
 
 
-def markdown_source_files(
+def _acquire_markdown_source_files(
     design: dict[str, Any],
     root: Path,
     *,
@@ -444,6 +447,55 @@ def markdown_source_files(
             "Le fonti Markdown superano il limite complessivo."
         )
     return tuple(selected)
+
+
+class _SnapshotMemoryLease:
+    def __init__(self, slot_guard: threading.BoundedSemaphore) -> None:
+        self._slot_guard = slot_guard
+        self._released = False
+        self._lock = threading.Lock()
+
+    def release(self) -> None:
+        with self._lock:
+            if not self._released:
+                self._released = True
+                self._slot_guard.release()
+
+    def __del__(self) -> None:
+        self.release()
+
+
+def markdown_source_files(
+    design: dict[str, Any],
+    root: Path,
+    *,
+    adapters: dict[str, RemoteMarkdownAdapter] | None = None,
+    default_files: Iterable[str] = (),
+    deadline: float | None = None,
+) -> tuple[CourseMarkdownSourceFile, ...]:
+    """Acquire a globally bounded live snapshot set."""
+
+    operation_deadline = time.monotonic() + 30.0 if deadline is None else deadline
+    remaining = operation_deadline - time.monotonic()
+    slot_guard = SNAPSHOT_MEMORY_SLOTS
+    if remaining <= 0 or not slot_guard.acquire(timeout=max(0.0, remaining)):
+        raise CourseSourceCatalogError("Memoria snapshot Markdown satura.")
+    lease = _SnapshotMemoryLease(slot_guard)
+    try:
+        selected = _acquire_markdown_source_files(
+            design,
+            root,
+            adapters=adapters,
+            default_files=default_files,
+            deadline=operation_deadline,
+        )
+        if not selected:
+            lease.release()
+            return ()
+        return tuple(replace(item, snapshot_lease=lease) for item in selected)
+    except BaseException:
+        lease.release()
+        raise
 
 
 def read_markdown_text(item: CourseMarkdownSourceFile, root: Path) -> str:

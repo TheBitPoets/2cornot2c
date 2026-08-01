@@ -222,6 +222,31 @@ def test_rejects_excess_ready_remote_files_before_adapter_calls(tmp_path) -> Non
     assert calls == []
 
 
+def test_live_snapshot_memory_uses_bounded_slots(tmp_path, monkeypatch) -> None:
+    import gc
+    import threading
+    import time
+    from scripts import course_source_catalog
+
+    (tmp_path / "lesson.md").write_text("# Lesson\n", encoding="utf-8")
+    monkeypatch.setattr(
+        course_source_catalog, "SNAPSHOT_MEMORY_SLOTS", threading.BoundedSemaphore(1)
+    )
+    first = markdown_source_files({"source_files": ["lesson.md"]}, tmp_path)
+
+    with pytest.raises(CourseSourceCatalogError, match="Memoria snapshot Markdown satura"):
+        markdown_source_files(
+            {"source_files": ["lesson.md"]},
+            tmp_path,
+            deadline=time.monotonic() + 0.05,
+        )
+
+    del first
+    gc.collect()
+    second = markdown_source_files({"source_files": ["lesson.md"]}, tmp_path)
+    assert len(second) == 1
+
+
 def test_stalled_local_acquisitions_use_bounded_slots(tmp_path, monkeypatch) -> None:
     import threading
     import time
@@ -279,7 +304,7 @@ def test_mixed_catalog_checks_global_deadline_before_local_acquisition(
 ) -> None:
     design = explicit_design()
     design["sources"][1]["indexing_status"] = "ready"
-    times = iter([100.0, 131.0])
+    times = iter([100.0, 100.0, 131.0])
     monkeypatch.setattr(
         "scripts.course_source_catalog.time.monotonic", lambda: next(times)
     )
