@@ -586,13 +586,20 @@ class RuntimeFileLock:
     def __init__(self, path: Path) -> None:
         self._path = path
         self._stream: Any = None
+        self._depth = 0
+        self._state_lock = threading.RLock()
 
     @property
     def held(self) -> bool:
         return self._stream is not None
 
     def acquire(self) -> None:
+        with self._state_lock:
+            self._acquire_locked()
+
+    def _acquire_locked(self) -> None:
         if self._stream is not None:
+            self._depth += 1
             return
         parent = _resolve_external_path(self._path.parent, must_exist=True)
         _verify_permissions(parent, parent.stat(), directory=True)
@@ -627,6 +634,7 @@ class RuntimeFileLock:
                 fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             _verify_permissions(self._path, os.fstat(stream.fileno()))
             self._stream = stream
+            self._depth = 1
         except GitHubAppRuntimeError:
             if "stream" in locals():
                 stream.close()
@@ -637,9 +645,17 @@ class RuntimeFileLock:
             raise GitHubAppRuntimeError("Un altro runtime GitHub App è già attivo.") from exc
 
     def release(self) -> None:
-        stream, self._stream = self._stream, None
-        if stream is None:
+        with self._state_lock:
+            self._release_locked()
+
+    def _release_locked(self) -> None:
+        if self._stream is None:
             return
+        if self._depth > 1:
+            self._depth -= 1
+            return
+        stream, self._stream = self._stream, None
+        self._depth = 0
         try:
             if os.name == "nt":
                 import msvcrt
@@ -735,30 +751,30 @@ class GitHubAppTokenRuntime:
             raise GitHubAppRuntimeError("Risposta installation token non valida.")
         return payload
 
+    def _refresh_locked(self) -> float:
+        now = self._wall_clock()
+        app_jwt = create_app_jwt(self.config.app_id, self._private_key, now=now)
+        payload = self._request_token_payload(app_jwt)
+        token = parse_installation_token(payload, now=self._wall_clock())
+        if self._stop.is_set():
+            raise GitHubAppRuntimeError("Runtime GitHub App in arresto.")
+        digest, identity = _secure_atomic_write(
+            self.config.token_file, token.value.encode("ascii")
+        )
+        with self._lock:
+            self._owned_digest = digest
+            self._owned_identity = identity
+            self._expires_at = token.expires_at
+            self._last_error = None
+        return token.expires_at
+
     def refresh(self) -> float:
         with self._refresh_lock:
-            acquired_here = not self._process_lock.held
-            if acquired_here:
-                self._process_lock.acquire()
+            self._process_lock.acquire()
             try:
-                now = self._wall_clock()
-                app_jwt = create_app_jwt(self.config.app_id, self._private_key, now=now)
-                payload = self._request_token_payload(app_jwt)
-                token = parse_installation_token(payload, now=self._wall_clock())
-                if self._stop.is_set():
-                    raise GitHubAppRuntimeError("Runtime GitHub App in arresto.")
-                digest, identity = _secure_atomic_write(
-                    self.config.token_file, token.value.encode("ascii")
-                )
-                with self._lock:
-                    self._owned_digest = digest
-                    self._owned_identity = identity
-                    self._expires_at = token.expires_at
-                    self._last_error = None
-                return token.expires_at
+                return self._refresh_locked()
             finally:
-                if acquired_here:
-                    self._process_lock.release()
+                self._process_lock.release()
 
     def start(self) -> None:
         with self._lifecycle_lock:
@@ -766,9 +782,11 @@ class GitHubAppTokenRuntime:
                 if self._thread is not None or self._starting or self._stop.is_set():
                     raise GitHubAppRuntimeError("Runtime GitHub App già avviato o arrestato.")
                 self._starting = True
+            thread = None
             try:
-                self._process_lock.acquire()
-                self.refresh()
+                with self._refresh_lock:
+                    self._process_lock.acquire()
+                    self._refresh_locked()
                 thread = threading.Thread(
                     target=self._run, name="github-app-token-runtime", daemon=True
                 )
@@ -776,10 +794,17 @@ class GitHubAppTokenRuntime:
                     self._thread = thread
                 thread.start()
             except BaseException:
+                self._stop.set()
+                if thread is not None and thread.ident is not None:
+                    thread.join(
+                        timeout=max(180.0, self._request_timeout_seconds + 90.0)
+                    )
+                worker_alive = thread is not None and thread.is_alive()
+                if not worker_alive:
+                    self._remove_owned_token()
+                    self._process_lock.release()
                 with self._lock:
-                    self._thread = None
-                self._remove_owned_token()
-                self._process_lock.release()
+                    self._thread = thread if worker_alive else None
                 raise
             finally:
                 with self._lock:
@@ -851,22 +876,60 @@ class GitHubAppTokenRuntime:
                         if directory_fd is None
                         else self.config.token_file.name
                     )
-                    metadata = os.stat(
-                        token_entry, dir_fd=directory_fd, follow_symlinks=False
+                    claim_name = f".{self.config.token_file.name}.revoke-{secrets.token_hex(16)}"
+                    claim_path = self.config.token_file.parent / claim_name
+                    claim_entry: str | Path = (
+                        claim_path if directory_fd is None else claim_name
                     )
-                    if (metadata.st_dev, metadata.st_ino) != identity:
-                        return False
-                    value = _read_secure_file(
-                        self.config.token_file, max_bytes=MAX_TOKEN_BYTES
+                    os.replace(
+                        token_entry,
+                        claim_entry,
+                        src_dir_fd=directory_fd,
+                        dst_dir_fd=directory_fd,
                     )
-                    if hashlib.sha256(value).hexdigest() != digest:
+                    try:
+                        claimed = os.stat(
+                            claim_entry, dir_fd=directory_fd, follow_symlinks=False
+                        )
+                        claimed_is_owned = (claimed.st_dev, claimed.st_ino) == identity
+                        if claimed_is_owned:
+                            value = _read_secure_file(
+                                claim_path, max_bytes=MAX_TOKEN_BYTES
+                            )
+                            claimed_is_owned = (
+                                hashlib.sha256(value).hexdigest() == digest
+                            )
+                    except (OSError, GitHubAppRuntimeError):
+                        try:
+                            os.stat(
+                                token_entry,
+                                dir_fd=directory_fd,
+                                follow_symlinks=False,
+                            )
+                        except FileNotFoundError:
+                            os.replace(
+                                claim_entry,
+                                token_entry,
+                                src_dir_fd=directory_fd,
+                                dst_dir_fd=directory_fd,
+                            )
+                        raise
+                    if not claimed_is_owned:
+                        try:
+                            os.stat(
+                                token_entry,
+                                dir_fd=directory_fd,
+                                follow_symlinks=False,
+                            )
+                        except FileNotFoundError:
+                            os.replace(
+                                claim_entry,
+                                token_entry,
+                                src_dir_fd=directory_fd,
+                                dst_dir_fd=directory_fd,
+                            )
                         return False
-                    current = os.stat(
-                        token_entry, dir_fd=directory_fd, follow_symlinks=False
-                    )
-                    if (current.st_dev, current.st_ino) != identity:
-                        return False
-                    os.unlink(token_entry, dir_fd=directory_fd)
+                    os.unlink(claim_entry, dir_fd=directory_fd)
                     if directory_fd is not None:
                         os.fsync(directory_fd)
             except FileNotFoundError:

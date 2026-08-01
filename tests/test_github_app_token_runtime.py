@@ -328,12 +328,14 @@ def test_runtime_removes_initial_token_when_worker_start_fails(tmp_path, monkeyp
         service._expires_at = 1_900_000_000.0
         return service._expires_at
 
-    monkeypatch.setattr(service, "refresh", publish)
-    monkeypatch.setattr(
-        runtime.threading.Thread,
-        "start",
-        lambda self: (_ for _ in ()).throw(RuntimeError("thread unavailable")),
-    )
+    monkeypatch.setattr(service, "_refresh_locked", publish)
+    original_start = runtime.threading.Thread.start
+
+    def start_then_fail(thread):
+        original_start(thread)
+        raise RuntimeError("thread start reported failure")
+
+    monkeypatch.setattr(runtime.threading.Thread, "start", start_then_fail)
 
     with pytest.raises(RuntimeError):
         service.start()
@@ -363,7 +365,7 @@ def test_stop_waits_for_initial_start_and_removes_the_token(tmp_path, monkeypatc
         service._expires_at = 1_900_000_000.0
         return service._expires_at
 
-    monkeypatch.setattr(service, "refresh", publish)
+    monkeypatch.setattr(service, "_refresh_locked", publish)
     starter = threading.Thread(target=service.start)
     stopper = threading.Thread(target=service.stop)
     starter.start()
@@ -406,6 +408,36 @@ def test_runtime_refresh_writes_token_and_cleanup_is_generation_safe(
     config.token_file.write_text("replacement-from-another-process", encoding="ascii")
     assert service._remove_owned_token() is False
     assert config.token_file.exists()
+
+
+def test_started_runtime_keeps_process_lock_across_manual_refresh(
+    tmp_path, monkeypatch
+) -> None:
+    enable_test_writes(monkeypatch)
+    now = 1_800_000_000.0
+    expiry = datetime.fromtimestamp(now + 3600, tz=timezone.utc).isoformat().replace(
+        "+00:00", "Z"
+    )
+    config = runtime.GitHubAppRuntimeConfig(
+        app_id="12345",
+        installation_id="67890",
+        private_key_file=tmp_path / "private-key.pem",
+        token_file=(tmp_path / "installation-token.txt").resolve(),
+    )
+    service = runtime.GitHubAppTokenRuntime(
+        config,
+        rsa_key(),
+        FakeTransport({"token": "ghs_locked", "expires_at": expiry}),
+        wall_clock=lambda: now,
+    )
+    service.start()
+    try:
+        service.refresh()
+        competing = runtime.RuntimeFileLock(config.token_file.parent / ".runtime.lock")
+        with pytest.raises(runtime.GitHubAppRuntimeError):
+            competing.acquire()
+    finally:
+        service.stop()
 
 
 def test_runtime_serializes_concurrent_refreshes(tmp_path, monkeypatch) -> None:
