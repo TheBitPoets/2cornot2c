@@ -30,6 +30,7 @@ import secrets
 import shutil
 import socket
 import ssl
+import unicodedata
 import subprocess
 import sys
 import tempfile
@@ -56,6 +57,7 @@ from scripts import (
     assignment_records,
     assign_activity,
     codex_activity_adapter,
+    course_activity_links,
     course_source_catalog,
     create_activity,
     create_submission_scaffold,
@@ -457,7 +459,11 @@ def configure_data_root(root: Path) -> Path:
     AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
     AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
     LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
+    with thebitlab_storage.course_storage_lock(ROOT):
+        thebitlab_storage.recover_json_rollbacks(ROOT / "activities" / "drafts")
+        thebitlab_storage.recover_json_rollbacks(TEACHER_REPORTS_DIR, recursive=True)
     recover_interrupted_assignment_deletions()
+    recover_interrupted_activity_deletions()
     return ROOT
 
 
@@ -553,7 +559,7 @@ def read_design() -> dict:
 
 
 def validate_course_source_catalog(payload: dict) -> None:
-    """Validate source descriptors and repository confinement before persistence."""
+    """Validate source and activity-link boundaries before persistence."""
 
     course_source_catalog.local_markdown_source_files(
         payload,
@@ -561,13 +567,16 @@ def validate_course_source_catalog(payload: dict) -> None:
         default_files=DEFAULT_SOURCES,
         existing_only=False,
     )
+    course_activity_links.validate_course_activity_links(payload)
+    course_activity_links.validate_course_activity_targets(payload, ROOT)
 
 
 def write_design(payload: dict) -> None:
     """Persist the course design JSON with stable formatting."""
 
-    validate_course_source_catalog(payload)
-    course_service().write_design(payload)
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        course_service().write_design(payload)
 
 
 def generate_course_plan_md(payload: dict) -> dict:
@@ -698,8 +707,9 @@ def source_request_design(raw_query: str) -> dict:
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
     """Persist a named course design in the archive folder."""
 
-    validate_course_source_catalog(payload)
-    return course_service().write_saved_design(name, payload, overwrite=overwrite)
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        return course_service().write_saved_design(name, payload, overwrite=overwrite)
 
 
 def delete_saved_design(name: str, delete_calendars: bool = False, calendars: list[str] | None = None) -> dict:
@@ -820,8 +830,8 @@ def sync_file_tree(root: Path) -> None:
                 os.fsync(stream.fileno())
             directories.add(candidate.parent)
     for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
-        assignment_records.sync_directory(directory)
-    assignment_records.sync_directory(root.parent)
+        thebitlab_storage.sync_directory(directory)
+    thebitlab_storage.sync_directory(root.parent)
 
 
 def update_help_deletion_manifest(trash_root: Path, **updates: Any) -> dict[str, Any]:
@@ -998,6 +1008,13 @@ def stage_help_logs_for_deletion(
 def recover_interrupted_assignment_deletions() -> None:
     """Recover or complete journaled help-log deletions after a server restart."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        _recover_interrupted_assignment_deletions_locked()
+
+
+def _recover_interrupted_assignment_deletions_locked() -> None:
+    """Recover deletion journals while activity lifecycle changes are excluded."""
+
     trash_base = ROOT / "teacher-help-events" / ".trash"
     if not trash_base.is_dir():
         return
@@ -1078,6 +1095,13 @@ def rollback_help_deletion(
 
 def delete_assignment_record(payload: dict) -> dict:
     """Delete one assignment, including its authoritative student help logs."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _delete_assignment_record_locked(payload)
+
+
+def _delete_assignment_record_locked(payload: dict) -> dict:
+    """Delete one assignment while activity lifecycle changes are excluded."""
 
     requested_assignment_id = str(payload.get("assignment_id", "")).strip()
     if not requested_assignment_id:
@@ -1171,22 +1195,77 @@ def ensure_activity_draft_path(path: Path) -> None:
     """Reject deletion targets outside activities/drafts."""
 
     drafts_dir = (ROOT / "activities" / "drafts").resolve()
-    try:
-        path.resolve().relative_to(drafts_dir)
-    except ValueError as error:
-        raise ValueError("Puoi cancellare solo bozze activity dentro activities/drafts.") from error
+    resolved = path.resolve()
+    if resolved.parent != drafts_dir or resolved.suffix.casefold() != ".json":
+        raise ValueError("Puoi cancellare solo file activity JSON direttamente dentro activities/drafts.")
+
+
+def course_design_activity_dependencies(activity_id: str, activity_path: str) -> list[dict]:
+    """Return current and archived course-design links to one activity."""
+
+    current_path = ROOT / "doc" / "course_design.json"
+    if current_path.is_symlink():
+        raise ValueError("Course design corrente non verificabile: symlink non consentito.")
+    designs = [("doc/course_design.json", read_design())]
+    archived_dir = ROOT / "doc" / "course_designs"
+    if (ROOT / "doc").is_symlink() or archived_dir.is_symlink():
+        raise ValueError("Directory course design non verificabile: symlink non consentito.")
+    archived_paths = sorted(archived_dir.glob("*.json")) if archived_dir.is_dir() else []
+    for archived_path in archived_paths:
+        if archived_path.is_symlink():
+            raise ValueError(f"Course design archiviato non verificabile: {archived_path.name}.")
+        name = safe_design_name(archived_path.name)
+        designs.append((f"doc/course_designs/{name}", read_saved_design(name)))
+
+    dependencies = []
+    path_key = activity_path.casefold()
+    for design_name, design in designs:
+        course_activity_links.validate_course_activity_links(design)
+        for year in design.get("years", []):
+            for uda in year.get("udas", []):
+                for link in uda.get("activity_links", []):
+                    linked_id = str(link.get("activity_id", ""))
+                    linked_path = str(link.get("activity_path", ""))
+                    if (
+                        activity_id and linked_id.casefold() == activity_id.casefold()
+                    ) or linked_path.casefold() == path_key:
+                        dependencies.append(
+                            {
+                                "design": design_name,
+                                "year_id": str(year.get("id", "")),
+                                "uda_id": str(uda.get("id", "")),
+                                "activity_id": linked_id,
+                                "activity_path": linked_path,
+                            }
+                        )
+    return dependencies
 
 
 def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
-    """Return assignments and registers that still reference an activity."""
+    """Return persisted objects that still reference an activity."""
 
     activity_id = str(activity.get("id", "")).strip()
     relative_activity_path = repository_relative_path(activity_path.resolve())
+    activity_path_key = create_submission_scaffold.portable_path_key(Path(relative_activity_path))
     assignments = []
-    for assignment in assignment_record_storage().list_assignments():
+    record_storage = assignment_record_storage()
+    if record_storage.assignments_dir.is_symlink():
+        raise ValueError("Directory assegnazioni non verificabile: symlink non consentito.")
+    assignment_paths = (
+        sorted(record_storage.assignments_dir.glob("*.json"))
+        if record_storage.assignments_dir.is_dir()
+        else []
+    )
+    for assignment_file in assignment_paths:
+        if assignment_file.is_symlink():
+            raise ValueError(f"Record assegnazione non verificabile: {assignment_file.name}.")
+        assignment = assignment_records.validate_assignment_record(record_storage.read_json(assignment_file))
         assignment_activity_id = str(assignment.get("activity_id", "")).strip()
         assignment_activity_path = str(assignment.get("activity_path", "")).strip().replace("\\", "/")
-        if (activity_id and assignment_activity_id == activity_id) or assignment_activity_path == relative_activity_path:
+        assignment_path_key = create_submission_scaffold.portable_path_key(Path(assignment_activity_path))
+        if (
+            activity_id and assignment_activity_id.casefold() == activity_id.casefold()
+        ) or assignment_path_key == activity_path_key:
             assignments.append(
                 {
                     "id": assignment.get("id", ""),
@@ -1201,17 +1280,28 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
 
     storage = assignment_storage()
     reports = []
-    for report_summary in storage.list_assignment_reports():
-        name = str(report_summary.get("name", "")).strip()
-        if not name:
-            continue
-        try:
-            report = storage.read_assignment_report(name)
-        except Exception:  # noqa: BLE001
-            continue
+    if storage.teacher_reports_dir.is_symlink():
+        raise ValueError("Directory registri non verificabile: symlink non consentito.")
+    if storage.teacher_reports_dir.is_dir():
+        for descendant in storage.teacher_reports_dir.rglob("*"):
+            if descendant.is_symlink():
+                raise ValueError(f"Percorso registro non verificabile: {descendant.name}.")
+    report_paths = (
+        sorted(storage.teacher_reports_dir.rglob("*.json"))
+        if storage.teacher_reports_dir.is_dir()
+        else []
+    )
+    for report_path in report_paths:
+        if report_path.is_symlink():
+            raise ValueError(f"Registro non verificabile: {report_path.name}.")
+        name = report_path.relative_to(storage.teacher_reports_dir).as_posix()
+        report = storage.read_assignment_report(name)
         report_activity_id = str(report.get("activity_id", "")).strip()
         report_activity_path = str(report.get("activity_path", "")).strip().replace("\\", "/")
-        if (activity_id and report_activity_id == activity_id) or report_activity_path == relative_activity_path:
+        report_path_key = create_submission_scaffold.portable_path_key(Path(report_activity_path))
+        if (
+            activity_id and report_activity_id.casefold() == activity_id.casefold()
+        ) or report_path_key == activity_path_key:
             reports.append(
                 {
                     "name": name,
@@ -1222,34 +1312,191 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
                     "due_at": report.get("due_at", ""),
                 }
             )
-    return {"assignments": assignments, "reports": reports}
+    return {
+        "assignments": assignments,
+        "reports": reports,
+        "course_designs": course_design_activity_dependencies(activity_id, relative_activity_path),
+    }
+
+
+def recover_interrupted_activity_deletions() -> None:
+    """Recover prepared deletions and purge committed activity tombstones."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        drafts_dir = ROOT / "activities" / "drafts"
+        if drafts_dir.is_symlink():
+            raise RuntimeError("Directory bozze activity non valida: symlink non consentito.")
+        if not drafts_dir.is_dir():
+            return
+        storage = assignment_storage()
+        referenced_tombstones: set[str] = set()
+        for journal in sorted(drafts_dir.glob(".activity-delete-*.txn")):
+            if journal.is_symlink() or not journal.is_file():
+                raise RuntimeError(f"Journal activity non valido: {journal.name}")
+            transaction = storage.read_json(journal)
+            if transaction.get("schema_version") != "activity_deletion.v1":
+                raise RuntimeError(f"Schema journal activity non supportato: {journal.name}")
+            state = transaction.get("state")
+            original_name = str(transaction.get("original", ""))
+            tombstone_name = str(transaction.get("tombstone", ""))
+            if (
+                state not in {"prepared", "rolling_back", "committed", "cleanup"}
+                or Path(original_name).name != original_name
+                or Path(tombstone_name).name != tombstone_name
+                or not tombstone_name.endswith(".tombstone")
+            ):
+                raise RuntimeError(f"Journal activity non valido: {journal.name}")
+            original = drafts_dir / original_name
+            tombstone = drafts_dir / tombstone_name
+            referenced_tombstones.add(tombstone_name)
+            if original.is_symlink() or tombstone.is_symlink():
+                raise RuntimeError(f"Path journal activity non valido: {journal.name}")
+            if state in {"prepared", "rolling_back"}:
+                if tombstone.is_file() and not original.exists():
+                    os.replace(tombstone, original)
+                    thebitlab_storage.sync_directory(drafts_dir)
+                elif tombstone.is_file() and original.is_file():
+                    tombstone.unlink()
+                    thebitlab_storage.sync_directory(drafts_dir)
+                elif not original.is_file():
+                    raise RuntimeError(f"Activity e tombstone mancanti: {journal.name}")
+            elif state == "committed":
+                # A committed transaction without cleanup intent never produced
+                # a confirmed response. Prefer recoverability.
+                if original.is_file() and tombstone.is_file():
+                    tombstone.unlink()
+                    thebitlab_storage.sync_directory(drafts_dir)
+                elif tombstone.is_file():
+                    os.replace(tombstone, original)
+                    thebitlab_storage.sync_directory(drafts_dir)
+            else:
+                # Cleanup intent is durable, so recovery preserves deletion.
+                if original.exists():
+                    raise RuntimeError(f"Activity cleanup riapparsa: {journal.name}")
+                if tombstone.is_file():
+                    tombstone.unlink()
+                    thebitlab_storage.sync_directory(drafts_dir)
+            journal.unlink()
+            thebitlab_storage.sync_directory(drafts_dir)
+        orphan_tombstones = [
+            path.name
+            for path in drafts_dir.glob(".*.tombstone")
+            if path.name not in referenced_tombstones
+        ]
+        if orphan_tombstones:
+            raise RuntimeError(f"Tombstone activity senza journal: {orphan_tombstones[0]}")
 
 
 def delete_activity_record(payload: dict) -> dict:
     """Delete one unlinked teacher-authored activity draft."""
 
-    activity_path = resolve_local_path(str(payload.get("activity_path", "")), "activity_path")
-    if not activity_path.is_file():
-        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
-    ensure_activity_draft_path(activity_path)
-    storage = assignment_storage()
-    activity = normalize_activity(storage.read_json(activity_path))
-    dependencies = activity_delete_dependencies(activity_path, activity)
-    if dependencies["assignments"] or dependencies["reports"]:
-        assignment_count = len(dependencies["assignments"])
-        report_count = len(dependencies["reports"])
-        raise ValueError(
-            "Activity collegata a "
-            f"{assignment_count} assegnazioni e {report_count} registri: cancellazione bloccata. "
-            "Cancella prima le assegnazioni o i registri collegati."
-        )
-    deleted = {
-        "id": activity.get("id", ""),
-        "title": activity.get("title", ""),
-        "path": repository_relative_path(activity_path),
-    }
-    activity_path.unlink()
-    return {"ok": True, "deleted": deleted, "dependencies": dependencies, "activities": list_activities()}
+    with thebitlab_storage.course_storage_lock(ROOT):
+        raw_activity_path = str(payload.get("activity_path", "")).strip().replace("\\", "/")
+        relative_path = Path(raw_activity_path)
+        if (
+            not raw_activity_path
+            or relative_path.is_absolute()
+            or relative_path.as_posix() != raw_activity_path
+            or any(part in {"", ".", ".."} for part in relative_path.parts)
+        ):
+            raise ValueError("activity_path deve essere un percorso relativo canonico.")
+        lexical_path = ROOT
+        for part in relative_path.parts:
+            lexical_path /= part
+            if lexical_path.is_symlink():
+                raise ValueError("activity_path non puo attraversare symlink.")
+        activity_path = resolve_local_path(raw_activity_path, "activity_path")
+        if not activity_path.is_file():
+            raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+        ensure_activity_draft_path(activity_path)
+        storage = assignment_storage()
+        activity = normalize_activity(storage.read_json(activity_path))
+        dependencies = activity_delete_dependencies(activity_path, activity)
+        if dependencies["assignments"] or dependencies["reports"] or dependencies["course_designs"]:
+            assignment_count = len(dependencies["assignments"])
+            report_count = len(dependencies["reports"])
+            design_count = len(dependencies["course_designs"])
+            raise ValueError(
+                "Activity collegata a "
+                f"{assignment_count} assegnazioni, {report_count} registri e {design_count} percorsi: "
+                "cancellazione bloccata. Rimuovi prima tutti i collegamenti."
+            )
+        deleted = {
+            "id": activity.get("id", ""),
+            "title": activity.get("title", ""),
+            "path": repository_relative_path(activity_path),
+        }
+        transaction_id = uuid.uuid4().hex
+        tombstone = activity_path.with_name(f".{activity_path.name}.{transaction_id}.tombstone")
+        journal = activity_path.with_name(f".activity-delete-{transaction_id}.txn")
+        transaction = {
+            "schema_version": "activity_deletion.v1",
+            "state": "prepared",
+            "original": activity_path.name,
+            "tombstone": tombstone.name,
+        }
+        storage.write_json(journal, transaction)
+        os.replace(activity_path, tombstone)
+        try:
+            thebitlab_storage.sync_directory(activity_path.parent)
+        except Exception:
+            recover_interrupted_activity_deletions()
+            raise
+        try:
+            storage.write_json(journal, {**transaction, "state": "committed"})
+        except Exception:
+            # Publish rollback intent before restoring the original. Recovery
+            # always restores rolling_back transactions, regardless of which
+            # side of the rename survived a crash.
+            try:
+                storage.write_json(journal, {**transaction, "state": "rolling_back"})
+            except Exception:
+                # Even if the marker cannot be updated, restore the original:
+                # recovery deliberately prefers original+committed over deletion.
+                if tombstone.is_file() and not activity_path.exists():
+                    restore_temp = activity_path.with_name(f".{activity_path.name}.{uuid.uuid4().hex}.restore")
+                    try:
+                        shutil.copy2(tombstone, restore_temp)
+                        with restore_temp.open("r+b") as restored:
+                            os.fsync(restored.fileno())
+                        os.replace(restore_temp, activity_path)
+                        thebitlab_storage.sync_directory(activity_path.parent)
+                    finally:
+                        restore_temp.unlink(missing_ok=True)
+                raise
+            if tombstone.is_file() and not activity_path.exists():
+                os.replace(tombstone, activity_path)
+                thebitlab_storage.sync_directory(activity_path.parent)
+            recover_interrupted_activity_deletions()
+            raise
+        try:
+            storage.write_json(journal, {**transaction, "state": "cleanup"})
+        except Exception:
+            # Atomic replace may have published cleanup before a failing parent
+            # flush. If the authoritative journal already says cleanup, finish
+            # and report success instead of returning an error after deletion.
+            current_state = storage.read_json(journal).get("state")
+            if current_state != "cleanup":
+                recover_interrupted_activity_deletions()
+                raise
+            # Retry the exact durability barrier before treating the visible
+            # cleanup marker as authoritative.
+            thebitlab_storage.sync_directory(journal.parent)
+        cleanup_pending = False
+        try:
+            tombstone.unlink()
+            thebitlab_storage.sync_directory(tombstone.parent)
+            journal.unlink()
+            thebitlab_storage.sync_directory(journal.parent)
+        except OSError:
+            cleanup_pending = True
+        return {
+            "ok": True,
+            "deleted": deleted,
+            "dependencies": dependencies,
+            "cleanup_pending": cleanup_pending,
+            "activities": list_activities(),
+        }
 
 
 def list_class_rosters() -> list[dict]:
@@ -1410,9 +1657,28 @@ def list_activities() -> list[dict]:
     return assignment_service().list_activities()
 
 
+def immutable_bundle_snapshot(root: Path) -> dict[str, str]:
+    """Return a bounded-structure digest map while rejecting symlinks."""
+
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError(f"Bundle asset non valido: {root.name}.")
+    snapshot: dict[str, str] = {}
+    for candidate in sorted(root.rglob("*")):
+        if candidate.is_symlink():
+            raise ValueError(f"Bundle asset con symlink non consentito: {candidate.name}.")
+        if candidate.is_dir():
+            continue
+        if not candidate.is_file():
+            raise ValueError(f"Elemento bundle non valido: {candidate.name}.")
+        relative = candidate.relative_to(root).as_posix()
+        snapshot[relative] = create_submission_scaffold.file_sha256(candidate)
+    return snapshot
+
+
 def persist_activity_draft_files(
     *,
     activity_id: str,
+    source_name: str,
     files: Any,
     drafts_dir: Path,
 ) -> list[dict[str, str]]:
@@ -1433,16 +1699,17 @@ def persist_activity_draft_files(
     }
     allowed_types = set(validate_activity.ALLOWED_ASSET_TYPES)
     allowed_visibility = set(validate_activity.ALLOWED_ASSET_VISIBILITIES)
-    normalized: list[tuple[Path, Path, dict[str, str]]] = []
-    seen: set[str] = set()
+    normalized: list[tuple[Path, str, dict[str, str]]] = []
+    source_paths: list[Path] = []
+    target_paths: list[Path] = []
     for index, file in enumerate(files):
         if not isinstance(file, dict):
             raise ValueError(f"files[{index}] deve essere un oggetto.")
         source_rel = create_submission_scaffold.validate_relative_path(file.get("path"), f"files[{index}].path")
         source_key = source_rel.as_posix()
-        if source_key in seen:
-            raise ValueError(f"File AI duplicato: {source_key}.")
-        seen.add(source_key)
+        if any(create_submission_scaffold.portable_paths_overlap(source_rel, existing) for existing in source_paths):
+            raise ValueError(f"File AI duplicato, equivalente o sovrapposto: {source_key}.")
+        source_paths.append(source_rel)
         content = file.get("content", "")
         if not isinstance(content, str):
             raise ValueError(f"files[{index}].content deve essere una stringa.")
@@ -1456,28 +1723,220 @@ def persist_activity_draft_files(
             file.get("target_path") or source_key,
             f"files[{index}].target_path",
         )
-        asset_rel = Path("assets") / create_activity.slugify(activity_id) / source_rel
+        if any(create_submission_scaffold.portable_paths_overlap(target_path, existing) for existing in target_paths):
+            raise ValueError(f"Target AI duplicato, equivalente o sovrapposto: {target_path.as_posix()}.")
+        if create_submission_scaffold.is_reserved_scaffold_target(target_path):
+            raise ValueError(f"Target asset riservato allo scaffold: {target_path.as_posix()}.")
+        target_key = create_submission_scaffold.portable_path_key(target_path)
+        source_name_path = Path(source_name)
+        source_name_key = create_submission_scaffold.portable_path_key(source_name_path)
+        if target_key != source_name_key and create_submission_scaffold.portable_paths_overlap(
+            target_path,
+            source_name_path,
+        ):
+            raise ValueError(f"Target asset sovrapposto al file sorgente: {target_path.as_posix()}.")
+        if target_key == source_name_key and target_path.as_posix() != source_name_path.as_posix():
+            raise ValueError(f"Target sorgente non canonico: {target_path.as_posix()}.")
+        target_paths.append(target_path)
         metadata = {
             "type": asset_type,
-            "path": asset_rel.as_posix(),
             "target_path": target_path.as_posix(),
             "visibility": visibility,
             "description": str(file.get("description") or "File proposto dal docente o dall'assistente AI."),
         }
-        normalized.append((source_rel, drafts_dir / asset_rel, metadata))
+        normalized.append((source_rel, content, metadata))
 
-    for _, destination, _ in normalized:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-    for file, (_, destination, _) in zip(files, normalized):
-        destination.write_text(str(file.get("content", "")), encoding="utf-8", newline="\n")
-    return [metadata for _, _, metadata in normalized]
+    fingerprint = [
+        {"source": source.as_posix(), "content": content, **metadata}
+        for source, content, metadata in normalized
+    ]
+    bundle_id = hashlib.sha256(
+        json.dumps(fingerprint, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()[:32]
+    assets_root = drafts_dir / "assets"
+    bundle_parent = assets_root / create_activity.slugify(activity_id)
+    bundle_dir = bundle_parent / bundle_id
+    thebitlab_storage.ensure_directory_durable(bundle_parent, ROOT)
+    # Sync every level even on retries: a previous attempt may have created it
+    # and then failed before its directory entry became durable.
+    thebitlab_storage.sync_directory(drafts_dir.parent)
+    thebitlab_storage.sync_directory(drafts_dir)
+    thebitlab_storage.sync_directory(assets_root)
+    thebitlab_storage.sync_directory(bundle_parent)
+    staging_dir = Path(tempfile.mkdtemp(prefix=f".{bundle_id}.", dir=bundle_parent))
+    try:
+        for source, content, _ in normalized:
+            destination = staging_dir / source
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(content, encoding="utf-8", newline="\n")
+        sync_file_tree(staging_dir)
+        if bundle_dir.exists():
+            if immutable_bundle_snapshot(bundle_dir) != immutable_bundle_snapshot(staging_dir):
+                raise ValueError("Collisione o corruzione del bundle asset immutabile.")
+            shutil.rmtree(staging_dir)
+        else:
+            os.replace(staging_dir, bundle_dir)
+        # Required in both branches: an earlier post-rename fsync may have failed.
+        thebitlab_storage.sync_directory(bundle_parent)
+    finally:
+        if staging_dir.exists():
+            shutil.rmtree(staging_dir)
+
+    return [
+        {
+            **metadata,
+            "path": (Path("assets") / create_activity.slugify(activity_id) / bundle_id / source).as_posix(),
+        }
+        for source, _, metadata in normalized
+    ]
+
+
+def save_activity_with_proposed_files(
+    *,
+    activity_id: str,
+    source_name: str,
+    activity: dict,
+    files: Any,
+    overwrite: bool,
+    storage: thebitlab_storage.JsonAssignmentStorage,
+) -> dict:
+    """Publish an immutable bundle before atomically replacing its activity JSON."""
+
+    drafts_dir = storage.activity_drafts_dir()
+    assets_dir = drafts_dir / "assets" / create_activity.slugify(activity_id)
+    if assets_dir.is_symlink() or (assets_dir.exists() and not assets_dir.is_dir()):
+        raise ValueError("Directory asset dell'activity non valida.")
+    activity["assets"] = persist_activity_draft_files(
+        activity_id=activity_id,
+        source_name=source_name,
+        files=files,
+        drafts_dir=drafts_dir,
+    )
+    # A failure with an uncertain JSON commit deliberately leaves the immutable
+    # bundle behind: an orphan is safe, deleting a possibly referenced bundle is not.
+    return assignment_service().save_activity(activity, overwrite)
+
+
+def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> None:
+    """Validate every retained asset against updated scaffold metadata."""
+
+    normalized = create_submission_scaffold.validate_activity_contract_or_raise(
+        activity,
+        str(activity.get("id", "")),
+    )
+    language = create_submission_scaffold.language_for(normalized)
+    source_name = create_submission_scaffold.validate_source_name(
+        str(normalized.get("source_name", ""))
+        or create_submission_scaffold.default_source_name_for(language)
+    )
+    source_name_path = Path(source_name)
+    source_name_key = create_submission_scaffold.portable_path_key(source_name_path)
+    source_paths: list[Path] = []
+    target_paths: list[Path] = []
+    bundle_ids: set[str] = set()
+    bundle_modes: set[str] = set()
+    fingerprint: list[dict[str, str]] = []
+    activity_root = activity_path.parent.resolve(strict=True)
+    for index, asset in enumerate(activity.get("assets", [])):
+        source = create_submission_scaffold.validate_relative_path(asset.get("path"), f"assets[{index}].path")
+        target = create_submission_scaffold.validate_relative_path(
+            asset.get("target_path", asset.get("path")),
+            f"assets[{index}].target_path",
+        )
+        if any(create_submission_scaffold.portable_paths_overlap(source, item) for item in source_paths):
+            raise ValueError("Asset preservato duplicato o sovrapposto.")
+        if any(create_submission_scaffold.portable_paths_overlap(target, item) for item in target_paths):
+            raise ValueError("Target preservato duplicato o sovrapposto.")
+        if create_submission_scaffold.is_reserved_scaffold_target(target):
+            raise ValueError(f"Target asset riservato allo scaffold: {target.as_posix()}.")
+        target_key = create_submission_scaffold.portable_path_key(target)
+        if target_key != source_name_key and create_submission_scaffold.portable_paths_overlap(
+            target,
+            source_name_path,
+        ):
+            raise ValueError(f"Target asset sovrapposto al file sorgente: {target.as_posix()}.")
+        if target_key == source_name_key and target.as_posix() != source_name_path.as_posix():
+            raise ValueError(f"Target sorgente non canonico: {target.as_posix()}.")
+        source_file = activity_root
+        for part in source.parts:
+            try:
+                names = {entry.name for entry in source_file.iterdir()}
+            except OSError as error:
+                raise ValueError(f"Asset preservato non trovato: {source.as_posix()}.") from error
+            part_key = create_submission_scaffold.portable_path_key(Path(part))
+            matches = [
+                name
+                for name in names
+                if create_submission_scaffold.portable_path_key(Path(name)) == part_key
+            ]
+            if (
+                len(matches) != 1
+                or unicodedata.normalize("NFC", matches[0]) != part
+            ):
+                raise ValueError(f"Asset preservato non portabile o mancante: {source.as_posix()}.")
+            source_file /= matches[0]
+            if source_file.is_symlink():
+                raise ValueError(f"Asset preservato non puo attraversare symlink: {source.as_posix()}.")
+        try:
+            source_file.resolve(strict=True).relative_to(activity_root)
+        except (FileNotFoundError, RuntimeError, ValueError) as error:
+            raise ValueError(f"Asset preservato fuori dalla activity: {source.as_posix()}.") from error
+        if not source_file.is_file():
+            raise ValueError(f"Asset preservato non trovato: {source.as_posix()}.")
+        source_parts = source.parts
+        expected_slug = create_activity.slugify(str(activity.get("id", "")))
+        if (
+            len(source_parts) < 3
+            or source_parts[0] != "assets"
+            or source_parts[1] != expected_slug
+            or source_file.stat().st_size > MAX_TEACHER_REQUEST_BYTES
+        ):
+            raise ValueError(f"Asset preservato fuori dalla directory canonica: {source.as_posix()}.")
+        immutable = len(source_parts) >= 4 and bool(re.fullmatch(r"[0-9a-f]{32}", source_parts[2]))
+        bundle_modes.add("immutable" if immutable else "legacy")
+        if len(bundle_modes) > 1:
+            raise ValueError("Asset preservati legacy e immutabili non possono essere combinati.")
+        if immutable:
+            try:
+                content = source_file.read_bytes().decode("utf-8")
+            except (OSError, UnicodeError) as error:
+                raise ValueError(f"Asset preservato non leggibile: {source.as_posix()}.") from error
+            bundle_ids.add(source_parts[2])
+            fingerprint.append(
+                {
+                    "source": Path(*source_parts[3:]).as_posix(),
+                    "content": content,
+                    "type": str(asset.get("type", "")),
+                    "target_path": target.as_posix(),
+                    "visibility": str(asset.get("visibility", "")),
+                    "description": str(asset.get("description", "")),
+                }
+            )
+        source_paths.append(source)
+        target_paths.append(target)
+    if bundle_modes == {"immutable"}:
+        expected_bundle_id = hashlib.sha256(
+            json.dumps(fingerprint, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:32]
+        if bundle_ids != {expected_bundle_id}:
+            raise ValueError("Bundle asset preservato alterato o non canonico.")
 
 
 def save_activity(payload: dict) -> dict:
     """Create and persist a teacher-authored activity draft."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _save_activity_locked(payload)
+
+
+def _save_activity_locked(payload: dict) -> dict:
+    """Persist one activity while the shared course/activity lock is held."""
+
     title = str(payload.get("title", "")).strip()
     activity_id = str(payload.get("id", "")).strip() or create_activity.slugify(title)
+    activity_id = create_submission_scaffold.activity_id({"id": activity_id})
+    if len(activity_id) > course_activity_links.MAX_ID_LENGTH:
+        raise ValueError(f"activity_id supera il limite di {course_activity_links.MAX_ID_LENGTH} caratteri.")
     topics = create_activity.parse_topics(str(payload.get("topics", "")))
     activity = create_activity.build_activity(
         activity_id=activity_id,
@@ -1498,21 +1957,45 @@ def save_activity(payload: dict) -> dict:
     )
     storage = assignment_service().storage
     overwrite = bool(payload.get("overwrite", False))
-    proposed_files = payload.get("files")
-    if proposed_files:
-        activity["assets"] = persist_activity_draft_files(
-            activity_id=activity_id,
-            files=proposed_files,
-            drafts_dir=storage.activity_drafts_dir(),
-        )
-    elif overwrite:
+    previous = {}
+    if overwrite:
         try:
             previous = storage.read_json(storage.safe_activity_draft_path(activity_id))
         except FileNotFoundError:
             previous = {}
+        previous_id = str(normalize_activity(previous).get("id", "")) if previous else ""
+        if previous_id and previous_id != activity_id:
+            raise ValueError("L'overwrite non puo cambiare l'identita dell'activity esistente.")
+    proposed_files = payload.get("files")
+    clear_assets = payload.get("clear_assets", False)
+    if not isinstance(clear_assets, bool):
+        raise ValueError("clear_assets deve essere booleano.")
+    if proposed_files and clear_assets:
+        raise ValueError("clear_assets non puo essere combinato con files non vuoto.")
+    if proposed_files or clear_assets:
+        normalized_activity = normalize_activity(activity)
+        selected_language = create_submission_scaffold.language_for(
+            {"language": normalized_activity.get("language", "c") or "c"}
+        )
+        selected_source_name = str(normalized_activity.get("source_name", "")) or (
+            create_submission_scaffold.default_source_name_for(selected_language)
+        )
+        saved = save_activity_with_proposed_files(
+            activity_id=activity_id,
+            source_name=create_submission_scaffold.validate_source_name(selected_source_name),
+            activity=activity,
+            files=proposed_files if proposed_files is not None else [],
+            overwrite=overwrite,
+            storage=storage,
+        )
+    else:
         if isinstance(previous.get("assets"), list):
             activity["assets"] = previous["assets"]
-    saved = assignment_service().save_activity(activity, overwrite)
+            validate_preserved_activity_assets(
+                activity,
+                storage.safe_activity_draft_path(activity_id),
+            )
+        saved = assignment_service().save_activity(activity, overwrite)
     return {"ok": True, "activity": saved, "activities": list_activities()}
 
 
@@ -1752,6 +2235,13 @@ def validate_global_assignment_target_bindings(
 def save_assignment_record(payload: dict) -> dict:
     """Persist an explicit assignment record from the teacher dashboard."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _save_assignment_record_locked(payload)
+
+
+def _save_assignment_record_locked(payload: dict) -> dict:
+    """Persist one assignment while activity deletion is excluded."""
+
     activity_path_value = str(payload.get("activity_path", "")).strip()
     activity_path = resolve_local_path(activity_path_value, "activity_path")
     if not activity_path.is_file():
@@ -1855,9 +2345,21 @@ def preview_activity_ai_codex_draft(payload: dict) -> dict:
 def distribute_activity_assignment(payload: dict) -> dict:
     """Create activity scaffolds in the selected local target repositories."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _distribute_activity_assignment_locked(payload)
+
+
+def _distribute_activity_assignment_locked(payload: dict) -> dict:
+    """Distribute one stable activity snapshot while writes/deletion are excluded."""
+
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
     if not activity_path.is_file():
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    if activity_path.parent == (ROOT / "activities" / "drafts").resolve(strict=False):
+        validate_preserved_activity_assets(
+            assignment_storage().read_json(activity_path),
+            activity_path,
+        )
     targets = read_assignment_target_paths_from_text(str(payload.get("targets_text", "")))
     results = assign_activity.assign_activity_to_targets(
         activity_path=activity_path,
@@ -1891,6 +2393,13 @@ def distribute_activity_assignment(payload: dict) -> dict:
 
 def generate_assignment_report(payload: dict) -> dict:
     """Generate and persist an assignment tracking report from the local GUI."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _generate_assignment_report_locked(payload)
+
+
+def _generate_assignment_report_locked(payload: dict) -> dict:
+    """Persist one report while activity deletion is excluded."""
 
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
     if not activity_path.is_file():
@@ -4772,13 +5281,13 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 write_design(payload)
                 self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
-            except course_source_catalog.CourseSourceCatalogError as error:
+            except (course_source_catalog.CourseSourceCatalogError, ValueError) as error:
                 self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/course-plan-md":
             try:
                 self.write_json(generate_course_plan_md(payload.get("design", payload)))
-            except course_source_catalog.CourseSourceCatalogError as error:
+            except (course_source_catalog.CourseSourceCatalogError, ValueError) as error:
                 self.write_error_json(400, str(error))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)

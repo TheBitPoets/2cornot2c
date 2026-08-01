@@ -266,6 +266,40 @@ def test_write_design_rejects_unsafe_source_catalog_before_persistence(tmp_path,
         )
 
 
+def test_write_design_rejects_invalid_activity_link_before_persistence(tmp_path, monkeypatch) -> None:
+    class FailingCourseService:
+        def write_design(self, payload):
+            raise AssertionError("L'activity link non valido non deve essere persistito.")
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "course_service", lambda: FailingCourseService())
+
+    with pytest.raises(ValueError, match="activities"):
+        course_board_server.write_design(
+            {
+                "years": [
+                    {
+                        "id": "terzo-anno",
+                        "udas": [
+                            {
+                                "id": "uda-1",
+                                "activity_links": [
+                                    {
+                                        "activity_id": "unsafe",
+                                        "activity_path": "../outside.json",
+                                        "title": "Unsafe",
+                                        "kind": "laboratorio",
+                                        "role": "practice",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        )
+
+
 def test_ai_config_uses_one_provider_model_snapshot(monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")
@@ -1605,12 +1639,14 @@ def test_sync_file_tree_flushes_regular_files(tmp_path, monkeypatch) -> None:
     first.write_text("{}\n", encoding="utf-8")
     second.write_text("{}\n", encoding="utf-8")
     flushed = []
-    monkeypatch.setattr(course_board_server.assignment_records, "sync_directory", lambda path: None)
+    synced = []
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", synced.append)
     monkeypatch.setattr(course_board_server.os, "fsync", lambda descriptor: flushed.append(descriptor))
 
     course_board_server.sync_file_tree(root)
 
     assert len(flushed) == 2
+    assert set(synced) == {root, first.parent, second.parent, root.parent}
 
 
 def test_delete_assignment_uses_canonical_record_id_for_help_logs(tmp_path, monkeypatch) -> None:
@@ -2761,6 +2797,8 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
     write_demo_activity(activity_path)
+    synced_directories = []
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", synced_directories.append)
 
     payload = course_board_server.delete_activity_record({
         "activity_path": "activities/drafts/python-base-somma-001.json",
@@ -2768,9 +2806,241 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
 
     assert payload["ok"] is True
     assert payload["deleted"]["id"] == "python-base-somma-001"
-    assert payload["dependencies"] == {"assignments": [], "reports": []}
+    assert payload["dependencies"] == {"assignments": [], "reports": [], "course_designs": []}
     assert payload["activities"] == []
     assert not activity_path.exists()
+    assert activity_path.parent in synced_directories
+    assert payload["cleanup_pending"] is False
+
+
+def test_delete_activity_record_restores_file_when_commit_flush_fails(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    renamed = False
+    failed = False
+    real_replace = os.replace
+
+    def track_replace(source, destination):
+        nonlocal renamed
+        real_replace(source, destination)
+        if Path(source) == activity_path and str(destination).endswith(".tombstone"):
+            renamed = True
+
+    def fail_commit_sync(path):
+        nonlocal failed
+        if renamed and not failed:
+            failed = True
+            raise OSError("directory flush failed")
+
+    monkeypatch.setattr(course_board_server.os, "replace", track_replace)
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", fail_commit_sync)
+    with pytest.raises(OSError, match="directory flush failed"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+    assert failed is True
+
+
+def test_delete_activity_record_recovers_when_committed_journal_write_fails(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    original_write = course_board_server.thebitlab_storage.JsonAssignmentStorage.write_json
+
+    def fail_committed(self, path, payload):
+        if payload.get("schema_version") == "activity_deletion.v1" and payload.get("state") == "committed":
+            raise OSError("committed journal failed")
+        return original_write(self, path, payload)
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        fail_committed,
+    )
+    with pytest.raises(OSError, match="committed journal failed"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+
+
+def test_delete_activity_record_reports_success_when_cleanup_marker_was_published(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    original_write = course_board_server.thebitlab_storage.JsonAssignmentStorage.write_json
+
+    def fail_after_cleanup_publish(self, path, payload):
+        result = original_write(self, path, payload)
+        if payload.get("schema_version") == "activity_deletion.v1" and payload.get("state") == "cleanup":
+            raise OSError("cleanup directory flush failed")
+        return result
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        fail_after_cleanup_publish,
+    )
+    result = course_board_server.delete_activity_record(
+        {"activity_path": "activities/drafts/python-base-somma-001.json"}
+    )
+
+    assert result["ok"] is True
+    assert not activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+
+
+def test_delete_activity_record_keeps_recovery_state_when_commit_and_reset_fail(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    original_write = course_board_server.thebitlab_storage.JsonAssignmentStorage.write_json
+    commit_failed = False
+
+    def fail_commit_and_reset(self, path, payload):
+        nonlocal commit_failed
+        if payload.get("schema_version") != "activity_deletion.v1":
+            return original_write(self, path, payload)
+        if payload.get("state") == "committed":
+            original_write(self, path, payload)
+            commit_failed = True
+            raise OSError("commit marker failed")
+        if commit_failed:
+            raise OSError("reset marker failed")
+        return original_write(self, path, payload)
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        fail_commit_and_reset,
+    )
+    with pytest.raises(OSError, match="reset marker failed"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+    assert len(list(activity_path.parent.glob(".*.tombstone"))) == 1
+    assert len(list(activity_path.parent.glob(".activity-delete-*.txn"))) == 1
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        original_write,
+    )
+    course_board_server.recover_interrupted_activity_deletions()
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+
+
+def test_delete_activity_record_rejects_nested_json_asset(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    asset_path = tmp_path / "activities" / "drafts" / "assets" / "demo" / "fixture.json"
+    asset_path.parent.mkdir(parents=True)
+    asset_path.write_text('{"fixture": true}', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="direttamente"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/assets/demo/fixture.json"}
+        )
+
+    assert asset_path.exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="creazione symlink non disponibile nel runner locale Windows")
+def test_delete_activity_record_rejects_symlink_alias(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    target = tmp_path / "activities" / "drafts" / "target.json"
+    write_demo_activity(target, activity_id="target")
+    alias = target.with_name("alias.json")
+    alias.symlink_to(target.name)
+
+    with pytest.raises(ValueError, match="symlink"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/alias.json"}
+        )
+
+    assert alias.is_symlink()
+    assert target.exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="creazione symlink non disponibile nel runner locale Windows")
+def test_course_design_dependency_scan_rejects_archived_symlink(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    outside = tmp_path / "outside.json"
+    outside.write_text('{"years": []}', encoding="utf-8")
+    archived_dir = tmp_path / "doc" / "course_designs"
+    archived_dir.mkdir(parents=True)
+    (archived_dir / "linked.json").symlink_to(outside)
+
+    with pytest.raises(ValueError, match="non verificabile"):
+        course_board_server.course_design_activity_dependencies("demo", "activities/drafts/demo.json")
+
+
+def test_delete_activity_record_blocks_when_course_design_links_activity(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    design_path = tmp_path / "doc" / "course_design.json"
+    design_path.parent.mkdir(parents=True)
+    design_path.write_text(
+        json.dumps(
+            {
+                "years": [
+                    {
+                        "id": "terzo-anno",
+                        "udas": [
+                            {
+                                "id": "uda-1",
+                                "activity_links": [
+                                    {
+                                        "activity_id": "PYTHON-BASE-SOMMA-001",
+                                        "activity_path": "activities/drafts/obsolete.json",
+                                        "title": "Somma in Python",
+                                        "kind": "laboratorio",
+                                        "role": "practice",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="1 percorsi"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+
+
+def test_delete_activity_record_fails_closed_on_unreadable_dependency(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    assignments_dir = tmp_path / "teacher-assignments"
+    assignments_dir.mkdir()
+    (assignments_dir / "broken.json").write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(json.JSONDecodeError):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
 
 
 def test_delete_activity_record_blocks_when_assignment_exists(tmp_path, monkeypatch) -> None:
@@ -2780,8 +3050,8 @@ def test_delete_activity_record_blocks_when_assignment_exists(tmp_path, monkeypa
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
     storage.write_assignment(
         assignment_records.build_assignment_record(
-            activity_id="python-base-somma-001",
-            activity_path="activities/drafts/python-base-somma-001.json",
+            activity_id="PYTHON-BASE-SOMMA-001",
+            activity_path="activities/drafts/PYTHON-BASE-SOMMA-001.json",
             target_type="class",
             class_id="3A-TPSI",
             class_label="3A TPSI",
@@ -4612,6 +4882,48 @@ def test_teacher_post_rejects_invalid_and_oversized_json_bodies(tmp_path) -> Non
             "Richiesta docente troppo grande."
         )
         oversized.close()
+
+        invalid_design = {
+            "years": [
+                {
+                    "id": "terzo-anno",
+                    "udas": [
+                        {
+                            "id": "uda-1",
+                            "activity_links": [
+                                {
+                                    "activity_id": "unsafe",
+                                    "activity_path": "../outside.json",
+                                    "title": "Unsafe",
+                                    "kind": "laboratorio",
+                                    "role": "practice",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        for path, payload in (
+            ("/api/course-design", invalid_design),
+            ("/api/course-plan-md", {"design": invalid_design}),
+        ):
+            body = json.dumps(payload).encode("utf-8")
+            invalid = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+            invalid.request(
+                "POST",
+                path,
+                body=body,
+                headers={
+                    "Authorization": authorization,
+                    "Content-Type": "application/json",
+                    "Content-Length": str(len(body)),
+                },
+            )
+            invalid_response = invalid.getresponse()
+            assert invalid_response.status == 400
+            assert "activity_path" in json.loads(invalid_response.read().decode("utf-8"))["error"]
+            invalid.close()
     finally:
         if server is not None:
             server.shutdown()
@@ -4713,9 +5025,123 @@ def test_save_activity_builds_valid_draft_from_gui_payload(tmp_path, monkeypatch
     }
 
 
+def test_save_activity_rejects_noncanonical_or_oversized_id(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "Foo",
+        "title": "Prima activity",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "variabili",
+        "prompt": "Prima consegna.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+    }
+
+    with pytest.raises(ValueError, match="slug sicuro"):
+        course_board_server.save_activity(payload)
+    with pytest.raises(ValueError, match="limite"):
+        course_board_server.save_activity({**payload, "id": "a" * 161})
+
+    assert not (tmp_path / "activities" / "drafts").exists()
+
+
+def test_save_activity_overwrite_cannot_replace_legacy_colliding_identity(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    activity_path = tmp_path / "activities" / "drafts" / "foo.json"
+    write_demo_activity(activity_path, activity_id="Foo")
+
+    with pytest.raises(ValueError, match="identita"):
+        course_board_server.save_activity(
+            {
+                "id": "foo",
+                "title": "Activity sostitutiva",
+                "kind": "laboratorio",
+                "difficulty": "B",
+                "topics": "variabili",
+                "prompt": "Nuova consegna.",
+                "estimated_minutes": "20",
+                "language": "python",
+                "source_name": "main.py",
+                "overwrite": True,
+            }
+        )
+
+    saved = json.loads(activity_path.read_text(encoding="utf-8"))
+    assert saved["id"] == "Foo"
+
+
+def test_save_activity_revalidates_preserved_assets_when_source_name_changes(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "preserved-assets",
+        "title": "Preserved assets",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il sorgente.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [
+            {
+                "path": "starter.py",
+                "target_path": "main.py",
+                "type": "hidden_test",
+                "content": "print('ok')\n",
+                "visibility": "grading",
+            }
+        ],
+    }
+    course_board_server.save_activity(payload)
+
+    with pytest.raises(ValueError, match="non canonico"):
+        course_board_server.save_activity(
+            {
+                **payload,
+                "source_name": "Main.py",
+                "files": None,
+                "overwrite": True,
+            }
+        )
+
+    saved_path = tmp_path / "activities" / "drafts" / "preserved-assets.json"
+    saved = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert saved["contesto"]["source_name"] == "main.py"
+
+    asset_path = saved_path.parent / saved["assets"][0]["path"]
+    mismatched_asset_path = asset_path.with_name("Starter.py")
+    asset_path.rename(mismatched_asset_path)
+    with pytest.raises(ValueError, match="non portabile"):
+        course_board_server.save_activity({**payload, "files": None, "overwrite": True})
+    mismatched_asset_path.rename(asset_path)
+
+    legacy_asset_path = saved_path.parent / "assets" / "preserved-assets" / "starter.py"
+    legacy_asset_path.parent.mkdir(parents=True, exist_ok=True)
+    legacy_asset_path.write_bytes(b"\xff\x00legacy-binary")
+    saved["assets"][0]["path"] = "assets/preserved-assets/starter.py"
+    saved_path.write_text(json.dumps(saved), encoding="utf-8")
+
+    course_board_server.save_activity({**payload, "files": [], "overwrite": True})
+    preserved_after_empty_ui_draft = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert preserved_after_empty_ui_draft["assets"][0]["path"] == "assets/preserved-assets/starter.py"
+
+    course_board_server.save_activity(
+        {**payload, "files": [], "clear_assets": True, "overwrite": True}
+    )
+    without_assets = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert without_assets["assets"] == []
+
+
 def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    synced_directories = []
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", synced_directories.append)
     result = course_board_server.save_activity({
         "title": "Asset AI",
         "kind": "laboratorio",
@@ -4738,9 +5164,158 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
     saved = json.loads(activity_path.read_text(encoding="utf-8"))
     asset = saved["assets"][0]
     assert result["ok"] is True
-    assert asset["path"] == "assets/asset-ai/starter/main.py"
+    assert asset["path"].startswith("assets/asset-ai/")
+    assert asset["path"].endswith("/starter/main.py")
+    assert len(asset["path"].split("/")[2]) == 32
     assert asset["target_path"] == "starter/main.py"
     assert (tmp_path / "activities" / "drafts" / asset["path"]).read_text(encoding="utf-8") == "print('ok')\n"
+    drafts_dir = tmp_path / "activities" / "drafts"
+    assert drafts_dir.parent in synced_directories
+    assert drafts_dir in synced_directories
+    assert drafts_dir / "assets" in synced_directories
+    assert drafts_dir / "assets" / "asset-ai" in synced_directories
+
+
+def test_save_activity_rejects_corrupted_existing_immutable_bundle(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "immutable-bundle",
+        "title": "Immutable bundle",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il file.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [{"path": "starter.py", "content": "original\r\n", "visibility": "student"}],
+    }
+    result = course_board_server.save_activity(payload)
+    course_board_server.save_activity({**payload, "files": None, "overwrite": True})
+    asset_path = tmp_path / result["activity"]["path"]
+    saved = json.loads(asset_path.read_text(encoding="utf-8"))
+    bundle_file = asset_path.parent / saved["assets"][0]["path"]
+    bundle_file.write_text("corrupted\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="corruzione"):
+        course_board_server.save_activity({**payload, "overwrite": True})
+    with pytest.raises(ValueError, match="alterato"):
+        course_board_server.save_activity({**payload, "files": None, "overwrite": True})
+    with pytest.raises(ValueError, match="alterato"):
+        course_board_server.distribute_activity_assignment(
+            {"activity_path": result["activity"]["path"], "targets_text": ""}
+        )
+
+
+@pytest.mark.parametrize(
+    ("files", "message"),
+    [
+        (
+            [
+                {"path": "starter/Main.py", "content": "one", "visibility": "student"},
+                {"path": "starter/main.py", "content": "two", "visibility": "student"},
+            ],
+            "File AI duplicato",
+        ),
+        (
+            [
+                {"path": "one.py", "target_path": "output", "content": "one", "visibility": "student"},
+                {
+                    "path": "two.py",
+                    "target_path": "output/nested.py",
+                    "content": "two",
+                    "visibility": "student",
+                },
+            ],
+            "Target AI duplicato",
+        ),
+        (
+            [{"path": "one.py", "target_path": "README.md", "content": "one", "visibility": "student"}],
+            "Target asset riservato",
+        ),
+        (
+            [{"path": "one.py", "target_path": "main.py/nested", "content": "one", "visibility": "student"}],
+            "sovrapposto al file sorgente",
+        ),
+    ],
+)
+def test_save_activity_rejects_nonportable_or_overlapping_asset_paths(tmp_path, monkeypatch, files, message) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+
+    with pytest.raises(ValueError, match=message):
+        course_board_server.save_activity(
+            {
+                "id": "asset-paths",
+                "title": "Asset paths",
+                "kind": "laboratorio",
+                "difficulty": "B",
+                "topics": "file",
+                "prompt": "Completa i file.",
+                "estimated_minutes": "20",
+                "language": "python",
+                "source_name": "main.py",
+                "files": files,
+            }
+        )
+
+
+def test_save_activity_keeps_old_and_orphan_bundles_when_json_save_fails(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "asset-rollback",
+        "title": "Asset rollback",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il file.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [
+            {
+                "path": "starter/main.py",
+                "role": "starter",
+                "content": "print('original')\n",
+                "visibility": "student",
+            }
+        ],
+    }
+    course_board_server.save_activity(payload)
+    activity_json_path = tmp_path / "activities" / "drafts" / "asset-rollback.json"
+    original_json = activity_json_path.read_bytes()
+    original_payload = json.loads(original_json)
+    asset_path = tmp_path / "activities" / "drafts" / original_payload["assets"][0]["path"]
+    real_service = course_board_server.assignment_service()
+
+    class FailingService:
+        storage = real_service.storage
+
+        @staticmethod
+        def save_activity(activity, overwrite):
+            raise ValueError("salvataggio JSON rifiutato")
+
+    monkeypatch.setattr(course_board_server, "assignment_service", lambda: FailingService())
+    with pytest.raises(ValueError, match="salvataggio JSON rifiutato"):
+        course_board_server.save_activity(
+            {
+                **payload,
+                "overwrite": True,
+                "files": [{**payload["files"][0], "content": "print('changed')\n"}],
+            }
+        )
+
+    assert asset_path.read_text(encoding="utf-8") == "print('original')\n"
+    assert activity_json_path.read_bytes() == original_json
+    bundle_parent = tmp_path / "activities" / "drafts" / "assets" / "asset-rollback"
+    bundles = sorted(path for path in bundle_parent.iterdir() if path.is_dir())
+    assert len(bundles) == 2
+    assert asset_path.parents[1] in bundles
+    orphan_files = [path for bundle in bundles if bundle != asset_path.parents[1] for path in bundle.rglob("main.py")]
+    assert len(orphan_files) == 1
+    assert orphan_files[0].read_text(encoding="utf-8") == "print('changed')\n"
 
 
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
