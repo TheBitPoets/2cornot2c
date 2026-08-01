@@ -155,6 +155,7 @@ def local_markdown_source_files(
     *,
     default_files: Iterable[str] = (),
     existing_only: bool = True,
+    capture_content: bool = True,
 ) -> tuple[LocalCourseSourceFile, ...]:
     """Resolve ready local Markdown sources without allowing repository escape."""
 
@@ -236,7 +237,7 @@ def local_markdown_source_files(
                 expected_sha256=None,
                 snapshot_content=None,
             )
-            if metadata is not None:
+            if metadata is not None and capture_content:
                 snapshot_content = _read_local_markdown_bytes(candidate, repository_root)
                 snapshot_digest = hashlib.sha256(snapshot_content).hexdigest()
                 candidate = LocalCourseSourceFile(
@@ -338,16 +339,23 @@ def _bounded_local_markdown_source_files(
     root: Path,
     default_files: Iterable[str],
     deadline: float,
+    *,
+    capture_content: bool = True,
+    snapshot_lease: _SnapshotMemoryLease | None = None,
 ) -> tuple[LocalCourseSourceFile, ...]:
     """Keep a mixed-source request bounded even if local filesystem I/O stalls."""
 
     result: dict[str, Any] = {}
     done = threading.Event()
+    abandoned = threading.Event()
 
     def worker() -> None:
         try:
             result["value"] = local_markdown_source_files(
-                design, root, default_files=default_files
+                design,
+                root,
+                default_files=default_files,
+                capture_content=capture_content,
             )
         except BaseException as exc:  # noqa: BLE001
             result["error"] = exc
@@ -361,10 +369,17 @@ def _bounded_local_markdown_source_files(
     if not slot_guard.acquire(timeout=remaining):
         raise CourseSourceCatalogError("Acquisizione fonti Markdown satura.")
 
+    if snapshot_lease is not None:
+        snapshot_lease.retain()
+
     def bounded_worker() -> None:
         try:
             worker()
         finally:
+            if abandoned.is_set():
+                result.clear()
+            if snapshot_lease is not None:
+                snapshot_lease.release()
             slot_guard.release()
 
     remaining = deadline - time.monotonic()
@@ -375,14 +390,38 @@ def _bounded_local_markdown_source_files(
     try:
         thread.start()
     except RuntimeError:
+        if snapshot_lease is not None:
+            snapshot_lease.release()
         slot_guard.release()
         raise
     if not done.wait(remaining):
+        abandoned.set()
+        if done.is_set():
+            result.clear()
         raise CourseSourceCatalogError("Timeout acquisizione fonti Markdown esaurito.")
     error_value = result.get("error")
     if error_value is not None:
         raise error_value
     return result.get("value", ())
+
+
+def validate_local_markdown_sources(
+    design: dict[str, Any],
+    root: Path,
+    *,
+    default_files: Iterable[str] = (),
+    deadline: float | None = None,
+) -> None:
+    """Validate local declarations without retaining Markdown payload bytes."""
+
+    operation_deadline = time.monotonic() + 30.0 if deadline is None else deadline
+    _bounded_local_markdown_source_files(
+        design,
+        root,
+        default_files,
+        operation_deadline,
+        capture_content=False,
+    )
 
 
 def _acquire_markdown_source_files(
@@ -392,6 +431,7 @@ def _acquire_markdown_source_files(
     adapters: dict[str, RemoteMarkdownAdapter] | None = None,
     default_files: Iterable[str] = (),
     deadline: float | None = None,
+    snapshot_lease: _SnapshotMemoryLease | None = None,
 ) -> tuple[CourseMarkdownSourceFile, ...]:
     """Return local and configured remote Markdown snapshots in catalog order."""
 
@@ -411,7 +451,11 @@ def _acquire_markdown_source_files(
         for source in sources
     )
     local_items = _bounded_local_markdown_source_files(
-        design, root, default_files, operation_deadline
+        design,
+        root,
+        default_files,
+        operation_deadline,
+        snapshot_lease=snapshot_lease,
     )
     local_by_id: dict[str, list[LocalCourseSourceFile]] = {}
     for item in local_items:
@@ -452,13 +496,21 @@ def _acquire_markdown_source_files(
 class _SnapshotMemoryLease:
     def __init__(self, slot_guard: threading.BoundedSemaphore) -> None:
         self._slot_guard = slot_guard
-        self._released = False
+        self._references = 1
         self._lock = threading.Lock()
+
+    def retain(self) -> None:
+        with self._lock:
+            if self._references <= 0:
+                raise RuntimeError("Lease snapshot già rilasciata.")
+            self._references += 1
 
     def release(self) -> None:
         with self._lock:
-            if not self._released:
-                self._released = True
+            if self._references <= 0:
+                return
+            self._references -= 1
+            if self._references == 0:
                 self._slot_guard.release()
 
     def __del__(self) -> None:
@@ -488,6 +540,7 @@ def markdown_source_files(
             adapters=adapters,
             default_files=default_files,
             deadline=operation_deadline,
+            snapshot_lease=lease,
         )
         if not selected:
             lease.release()

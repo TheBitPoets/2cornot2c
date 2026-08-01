@@ -93,6 +93,7 @@ class GitHubApiTransport:
         """Run one request in an abortable daemon so callers return at the deadline."""
 
         started = time.monotonic()
+        operation_deadline = self._clock() + timeout_seconds
         slot_guard = GITHUB_NETWORK_SLOTS
         if not slot_guard.acquire(timeout=timeout_seconds):
             raise RemoteMarkdownError("Sincronizzazione GitHub satura.")
@@ -108,7 +109,7 @@ class GitHubApiTransport:
         def worker() -> None:
             try:
                 result["value"] = self._get_json_blocking(
-                    api_path, remaining_timeout, resources, lock
+                    api_path, operation_deadline, resources, lock
                 )
             except BaseException as exc:  # noqa: BLE001
                 result["error"] = exc
@@ -150,7 +151,7 @@ class GitHubApiTransport:
     def _get_json_blocking(
         self,
         api_path: str,
-        timeout_seconds: float,
+        deadline: float,
         resources: dict[str, Any],
         lock: threading.Lock,
     ) -> Any:
@@ -163,9 +164,9 @@ class GitHubApiTransport:
             or (parsed_path.query and re.fullmatch(r"ref=[0-9a-f]{40}(?:[0-9a-f]{24})?", parsed_path.query) is None)
         ):
             raise RemoteMarkdownError("Path GitHub API non valido.")
-        if timeout_seconds <= 0:
+        remaining = deadline - self._clock()
+        if remaining <= 0:
             raise RemoteMarkdownError("Timeout sincronizzazione GitHub esaurito.")
-        deadline = self._clock() + timeout_seconds
         headers = {
             "Accept": "application/vnd.github+json",
             "User-Agent": "TheBitLab-course-source/1",
@@ -173,7 +174,7 @@ class GitHubApiTransport:
         }
         if self._token is not None:
             headers["Authorization"] = f"Bearer {self._token}"
-        connection = self._connection_factory("api.github.com", timeout=timeout_seconds)
+        connection = self._connection_factory("api.github.com", timeout=remaining)
         with lock:
             resources["connection"] = connection
         payload = bytearray()

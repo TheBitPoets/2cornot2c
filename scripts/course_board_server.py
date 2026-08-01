@@ -762,11 +762,10 @@ def validate_course_source_catalog(payload: dict) -> None:
             raise course_source_catalog.CourseSourceCatalogError(
                 f"Adapter Markdown non configurato per {source.provider}."
             )
-    course_source_catalog.local_markdown_source_files(
+    course_source_catalog.validate_local_markdown_sources(
         payload,
         ROOT,
         default_files=DEFAULT_SOURCES,
-        existing_only=False,
     )
     course_activity_links.validate_course_activity_links(payload)
     course_activity_links.validate_course_activity_targets(payload, ROOT)

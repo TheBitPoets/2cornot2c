@@ -14,6 +14,7 @@ from scripts.course_source_catalog import (
     normalize_course_sources,
     read_local_markdown_text,
     read_markdown_text,
+    validate_local_markdown_sources,
 )
 
 
@@ -276,6 +277,38 @@ def test_stalled_local_acquisitions_use_bounded_slots(tmp_path, monkeypatch) -> 
     release.set()
 
 
+def test_timed_out_local_worker_keeps_snapshot_memory_reserved(
+    tmp_path, monkeypatch
+) -> None:
+    import threading
+    import time
+    from scripts import course_source_catalog
+
+    release = threading.Event()
+    monkeypatch.setattr(
+        course_source_catalog,
+        "local_markdown_source_files",
+        lambda *_args, **_kwargs: (release.wait(1.0) or ()),
+    )
+    memory_slots = threading.BoundedSemaphore(1)
+    assert memory_slots.acquire(blocking=False)
+    lease = course_source_catalog._SnapshotMemoryLease(memory_slots)
+
+    with pytest.raises(CourseSourceCatalogError, match="Timeout acquisizione"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {},
+            tmp_path,
+            (),
+            time.monotonic() + 0.05,
+            snapshot_lease=lease,
+        )
+    lease.release()
+    assert not memory_slots.acquire(blocking=False)
+    release.set()
+    assert memory_slots.acquire(timeout=1.0)
+    memory_slots.release()
+
+
 def test_local_acquisition_releases_slot_when_thread_cannot_start(
     tmp_path, monkeypatch
 ) -> None:
@@ -311,6 +344,16 @@ def test_mixed_catalog_checks_global_deadline_before_local_acquisition(
 
     with pytest.raises(CourseSourceCatalogError, match="Timeout acquisizione"):
         markdown_source_files(design, tmp_path, adapters={"github": object()})
+
+
+def test_validation_does_not_materialize_local_markdown(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lesson.md").write_text("# Lesson\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "scripts.course_source_catalog._read_local_markdown_bytes",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("content must not be read")),
+    )
+
+    validate_local_markdown_sources({"source_files": ["lesson.md"]}, tmp_path)
 
 
 def test_local_catalog_keeps_immutable_content_snapshot(tmp_path) -> None:
