@@ -220,6 +220,14 @@ def test_validate_course_activity_targets_requires_matching_authoritative_file(t
     with pytest.raises(ValueError, match="non trovato"):
         validate_course_activity_targets(design(link()), tmp_path)
 
+    asset_directory = activity_path.parent / "assets"
+    asset_directory.mkdir()
+    (asset_directory / "missing.txt").write_text("fixture", encoding="utf-8")
+    payload["assets"][0]["path"] = "assets/Missing.txt"
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="non portabile"):
+        validate_course_activity_targets(design(link()), tmp_path)
+
 
 def test_validate_course_activity_targets_rejects_missing_file(tmp_path) -> None:
     with pytest.raises(ValueError, match="non trovata"):

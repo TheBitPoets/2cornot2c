@@ -5113,6 +5113,13 @@ def test_save_activity_revalidates_preserved_assets_when_source_name_changes(tmp
     saved = json.loads(saved_path.read_text(encoding="utf-8"))
     assert saved["contesto"]["source_name"] == "main.py"
 
+    asset_path = saved_path.parent / saved["assets"][0]["path"]
+    mismatched_asset_path = asset_path.with_name("Starter.py")
+    asset_path.rename(mismatched_asset_path)
+    with pytest.raises(ValueError, match="non portabile"):
+        course_board_server.save_activity({**payload, "files": None, "overwrite": True})
+    mismatched_asset_path.rename(asset_path)
+
     course_board_server.save_activity({**payload, "files": [], "overwrite": True})
     without_assets = json.loads(saved_path.read_text(encoding="utf-8"))
     assert without_assets["assets"] == []

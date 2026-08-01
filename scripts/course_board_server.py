@@ -30,6 +30,7 @@ import secrets
 import shutil
 import socket
 import ssl
+import unicodedata
 import subprocess
 import sys
 import tempfile
@@ -1867,7 +1868,10 @@ def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> N
                 for name in names
                 if create_submission_scaffold.portable_path_key(Path(name)) == part_key
             ]
-            if len(matches) != 1:
+            if (
+                len(matches) != 1
+                or unicodedata.normalize("NFC", matches[0]) != part
+            ):
                 raise ValueError(f"Asset preservato non portabile o mancante: {source.as_posix()}.")
             source_file /= matches[0]
             if source_file.is_symlink():

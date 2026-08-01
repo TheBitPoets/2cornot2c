@@ -6,6 +6,7 @@ from datetime import date
 import json
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterator, Mapping
+import unicodedata
 
 from scripts import create_submission_scaffold, validate_activity
 from scripts.thebitlab_contracts import normalize_activity
@@ -245,7 +246,10 @@ def validate_course_activity_targets(design: Any, root: Path) -> None:
                             for name in names
                             if create_submission_scaffold.portable_path_key(Path(name)) == part_key
                         ]
-                        if len(matches) != 1:
+                        if (
+                            len(matches) != 1
+                            or unicodedata.normalize("NFC", matches[0]) != part
+                        ):
                             raise ValueError(f"Asset non portabile o non trovato: {source.as_posix()}.")
                         source_path /= matches[0]
                         if source_path.is_symlink():
