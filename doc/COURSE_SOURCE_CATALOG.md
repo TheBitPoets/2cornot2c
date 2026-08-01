@@ -88,7 +88,7 @@ I repository pubblici non richiedono credenziali. Per repository privati il proc
 
 ## Gestione dalla Course Board
 
-Il comando **Gestisci fonti** apre un editor provider-independent. Il docente può aggiungere, modificare o rimuovere fonti locali, GitHub e GitLab, indicare repository/ref e file Markdown, e scegliere `ready`, `pending` o `disabled`. **Sincronizza anteprima** invia soltanto la bozza in memoria a `POST /api/course-sources/preview`: il server applica gli stessi limiti del catalogo, risolve i commit e restituisce file indicizzati e heading senza scrivere il progetto. **Applica alla board** è disponibile soltanto per la stessa anteprima e lo stesso snapshot della board; il salvataggio del progetto resta un'azione separata protetta da CAS.
+Il comando **Gestisci fonti** apre un editor provider-independent. Il docente può aggiungere, modificare o rimuovere fonti locali, GitHub e GitLab, indicare repository/ref e file Markdown, e scegliere `ready`, `pending` o `disabled`. **Sincronizza anteprima** invia soltanto la bozza in memoria a `POST /api/course-sources/preview`: il server applica gli stessi limiti del catalogo, risolve i commit e restituisce file indicizzati e heading senza scrivere il progetto. Ogni heading riceve inoltre un digest d'identità che comprende livello, titolo e corpo della sezione, così rinominazioni o slittamenti non possono riallineare silenziosamente una cornice didattica. **Applica alla board** è disponibile soltanto per la stessa anteprima e lo stesso snapshot della board; il salvataggio del progetto resta un'azione separata protetta da CAS.
 
 La prima applicazione dell'editor migra intenzionalmente il vecchio `source_files` nella forma canonica `sources`. Credenziali e token non compaiono mai nei campi GUI.
 

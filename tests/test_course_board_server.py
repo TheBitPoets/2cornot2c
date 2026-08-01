@@ -579,6 +579,36 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         thread.join(timeout=5)
 
 
+def test_heading_content_digest_includes_title_identity(tmp_path) -> None:
+    descriptor = course_board_server.course_source_catalog.CourseSource(
+        source_id="course",
+        label="Course",
+        source_type="markdown",
+        provider="local",
+        path="",
+        repository=None,
+        ref=None,
+        files=("lesson.md",),
+        updated_at=None,
+        indexing_status="ready",
+    )
+    source_file = course_board_server.course_source_catalog.LocalCourseSourceFile(
+        source=descriptor,
+        relative_path="lesson.md",
+        resolved_path=tmp_path / "lesson.md",
+        expected_size=None,
+        expected_identity=None,
+        expected_sha256=None,
+    )
+
+    headings = course_board_server.headings_from_source_snapshot(
+        source_file,
+        "# Allow anonymous access\n\nSame body.\n\n# Deny anonymous access\n\nSame body.\n",
+    )
+
+    assert headings[0]["content_sha256"] != headings[1]["content_sha256"]
+
+
 def test_source_preview_resolves_in_memory_design_without_persisting(tmp_path, monkeypatch) -> None:
     lesson = tmp_path / "lesson.md"
     lesson.write_text("# Preview\n\n## Topic\n\nText.\n", encoding="utf-8")

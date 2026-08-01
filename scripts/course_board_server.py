@@ -3145,8 +3145,11 @@ def headings_from_source_snapshot(
         section = "\n".join(
             source_lines[heading["line"] : end_lines[index] - 1]
         ).strip()
+        identity_text = (
+            f"{heading['level']}\0{heading['title']}\0{section}"
+        )
         heading["content_sha256"] = hashlib.sha256(
-            section.encode("utf-8")
+            identity_text.encode("utf-8")
         ).hexdigest()
     return headings
 
