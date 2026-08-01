@@ -3271,6 +3271,7 @@ def section_text(
     heading_id: str = "",
     source_commit: str = "",
     content_sha256: str = "",
+    expected_title: str = "",
 ) -> str:
     """Extract local Markdown text for one heading section."""
 
@@ -3339,6 +3340,10 @@ def section_text(
                     "Il paragrafo è stato rinominato, rimosso o spostato: riallinealo prima di usare l'AI."
                 )
             return ""
+        if expected_title and matching_heading.get("title") != expected_title:
+            raise CourseSourceRevisionConflictError(
+                "Il titolo del paragrafo è cambiato: riallinealo prima di usare l'AI."
+            )
         if (
             content_sha256
             and matching_heading.get("content_sha256") != content_sha256
@@ -3537,6 +3542,7 @@ def topic_summary(
             str(item.get("id", "")),
             str(item.get("source_commit") or ""),
             str(item.get("content_sha256", "")),
+            str(item.get("title", "")),
         )
     return summary
 
@@ -3597,9 +3603,38 @@ def board_item_from_heading(heading: dict) -> dict:
     }
 
 
-def compact_design(design: dict) -> dict:
+def validate_course_item_provenance(design: dict) -> None:
+    """Reject board items whose immutable heading provenance is incomplete or stale."""
+
+    headings = {heading["id"]: heading for heading in extract_headings(design)}
+    keys = (
+        "title", "source", "source_id", "source_provider", "source_repository",
+        "source_ref", "source_commit", "content_sha256", "level", "line", "href",
+    )
+
+    def validate(items: list[dict]) -> None:
+        for item in items:
+            heading = headings.get(str(item.get("id", "")))
+            if not item.get("content_sha256") or heading is None:
+                raise CourseSourceRevisionConflictError(
+                    "Un paragrafo del corso non ha una provenienza verificabile: riallinealo prima di usare l'AI."
+                )
+            if any(item.get(key) != heading.get(key) for key in keys):
+                raise CourseSourceRevisionConflictError(
+                    "Un paragrafo del corso non coincide più con la fonte: riallinealo prima di usare l'AI."
+                )
+            validate(item.get("children", []))
+
+    for year in design.get("years", []):
+        for uda in year.get("udas", []):
+            validate(uda.get("items", []))
+
+
+def compact_design(design: dict, *, verify_provenance: bool = False) -> dict:
     """Return the full course structure without verbose frame text."""
 
+    if verify_provenance:
+        validate_course_item_provenance(design)
     return {
         "years": [
             {
@@ -6232,7 +6267,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/ai-frame":
             try:
                 context = {
-                    "course": compact_design(payload.get("design", {})),
+                    "course": compact_design(payload.get("design", {}), verify_provenance=True),
                     "target": target_context(
                         payload.get("design", {}),
                         payload.get("year_id", ""),
@@ -6275,7 +6310,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     "selection_objectives": brief.get("description", ""),
                     "selection_rule": "Usa selection_objectives come criterio principale per scegliere quali paragrafi e sottoparagrafi inserire nelle UDA.",
                     "target_year_id": year_id,
-                    "current_course": compact_design(design),
+                    "current_course": compact_design(design, verify_provenance=True),
                     "available_topics": available_topics,
                     "constraints": {
                         "use_only_available_topic_ids": True,

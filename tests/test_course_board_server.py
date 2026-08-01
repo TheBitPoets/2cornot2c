@@ -713,6 +713,12 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
     assert context["next_topics"][0]["text"] == "Three."
     assert reads == ["lesson.md"]
 
+    design["years"][0]["udas"][0]["items"][1]["title"] = "Forged title"
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(design, "year", "uda", "lesson.md#target")
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.compact_design(design, verify_provenance=True)
+
 
 def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeypatch) -> None:
     (tmp_path / "lesson.md").write_text("## Current\n\nNew content.\n", encoding="utf-8")
