@@ -465,6 +465,44 @@ def test_stop_waits_for_initial_start_and_removes_the_token(tmp_path, monkeypatc
     assert not service._process_lock.held
 
 
+def test_late_worker_delegates_cleanup_without_releasing_lock_early(
+    tmp_path, monkeypatch
+) -> None:
+    enable_test_writes(monkeypatch)
+    monkeypatch.setattr(runtime, "SHUTDOWN_WAIT_SECONDS", 0.03)
+    config = runtime.GitHubAppRuntimeConfig(
+        app_id="12345",
+        installation_id="67890",
+        private_key_file=tmp_path / "private-key.pem",
+        token_file=(tmp_path / "installation-token.txt").resolve(),
+    )
+    service = runtime.GitHubAppTokenRuntime(config, rsa_key(), FakeTransport({}))
+    release_worker = threading.Event()
+
+    def publish() -> float:
+        digest, identity = runtime._secure_atomic_write(config.token_file, b"ghs_late")
+        service._owned_digest = digest
+        service._owned_identity = identity
+        service._expires_at = 1_900_000_000.0
+        return service._expires_at
+
+    monkeypatch.setattr(service, "_refresh_locked", publish)
+    monkeypatch.setattr(service, "_run", lambda: release_worker.wait(2))
+    service.start()
+    service.stop()
+    with service._lock:
+        reaper = service._shutdown_reaper
+
+    assert reaper is not None and reaper.is_alive()
+    assert service._process_lock.held
+    assert config.token_file.exists()
+    release_worker.set()
+    reaper.join(timeout=2)
+    assert not reaper.is_alive()
+    assert not service._process_lock.held
+    assert not config.token_file.exists()
+
+
 def test_runtime_refresh_writes_token_and_cleanup_is_generation_safe(
     tmp_path, monkeypatch
 ) -> None:

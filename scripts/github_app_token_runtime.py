@@ -46,6 +46,7 @@ JWT_LIFETIME_SECONDS = 9 * 60
 JWT_BACKDATE_SECONDS = 60
 RENEWAL_MARGIN_SECONDS = 5 * 60
 MIN_TOKEN_LIFETIME_SECONDS = 2 * 60
+SHUTDOWN_WAIT_SECONDS = 180.0
 APP_ID_RE = re.compile(r"^[1-9][0-9]{0,19}$")
 TOKEN_RE = re.compile(r"^[\x21-\x7e]+$")
 TOKEN_NETWORK_SLOTS = threading.BoundedSemaphore(2)
@@ -814,6 +815,7 @@ class GitHubAppTokenRuntime:
         self._request_timeout_seconds = request_timeout_seconds
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._shutdown_reaper: threading.Thread | None = None
         self._lock = threading.RLock()
         self._lifecycle_lock = threading.Lock()
         self._refresh_lock = threading.Lock()
@@ -921,7 +923,7 @@ class GitHubAppTokenRuntime:
                 self._stop.set()
                 if thread is not None and thread.ident is not None:
                     thread.join(
-                        timeout=max(180.0, self._request_timeout_seconds + 90.0)
+                        timeout=SHUTDOWN_WAIT_SECONDS
                     )
                 worker_alive = thread is not None and thread.is_alive()
                 if not worker_alive:
@@ -973,13 +975,39 @@ class GitHubAppTokenRuntime:
         with self._lock:
             thread = self._thread
         if thread is not None:
-            thread.join(timeout=max(180.0, self._request_timeout_seconds + 90.0))
+            thread.join(timeout=SHUTDOWN_WAIT_SECONDS)
         if thread is not None and thread.is_alive():
-            LOGGER.error("Arresto runtime GitHub App non completato entro la deadline.")
+            LOGGER.error(
+                "Arresto runtime GitHub App oltre la deadline; cleanup differito."
+            )
+
+            def finish_shutdown() -> None:
+                thread.join()
+                if remove_token:
+                    self._remove_owned_token()
+                self._process_lock.release()
+                with self._lock:
+                    self._thread = None
+                    self._shutdown_reaper = None
+
+            reaper = threading.Thread(
+                target=finish_shutdown,
+                name="github-app-token-shutdown",
+                daemon=False,
+            )
+            with self._lock:
+                self._shutdown_reaper = reaper
+            try:
+                reaper.start()
+            except RuntimeError:
+                if reaper.ident is None:
+                    finish_shutdown()
             return
         if remove_token:
             self._remove_owned_token()
         self._process_lock.release()
+        with self._lock:
+            self._thread = None
 
     def _remove_owned_token(
         self, *, expected_identity: tuple[int, int] | None = None
