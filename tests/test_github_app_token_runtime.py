@@ -181,6 +181,17 @@ def test_load_config_requires_exact_schema_absolute_colocated_paths(tmp_path, mo
         runtime.load_runtime_config(config.resolve())
 
 
+@pytest.mark.parametrize("alias_name", ["runtime.json", "private-key.pem", ".runtime.lock"])
+def test_load_config_rejects_token_path_aliases(tmp_path, monkeypatch, alias_name) -> None:
+    config, payload = make_config(tmp_path)
+    payload["token_file"] = str((tmp_path / alias_name).resolve())
+    config.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(runtime, "_verify_permissions", lambda *args, **kwargs: None)
+
+    with pytest.raises(runtime.GitHubAppRuntimeError, match="path distinti"):
+        runtime.load_runtime_config(config.resolve())
+
+
 def test_load_config_rejects_linked_private_key(tmp_path, monkeypatch) -> None:
     config, payload = make_config(tmp_path)
     target = tmp_path / "target.pem"

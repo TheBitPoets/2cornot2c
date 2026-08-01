@@ -390,6 +390,13 @@ def load_runtime_config(path: Path | None = None) -> GitHubAppRuntimeConfig:
     config_resolved = _resolve_external_path(config_path, must_exist=True)
     if key_path.parent != config_resolved.parent or token_path.parent != config_resolved.parent:
         raise GitHubAppRuntimeError("I file GitHub App devono condividere la directory protetta.")
+    lock_path = config_resolved.parent / ".runtime.lock"
+    distinct_paths = {
+        os.path.normcase(str(item.absolute()))
+        for item in (config_resolved, key_path, token_path, lock_path)
+    }
+    if len(distinct_paths) != 4:
+        raise GitHubAppRuntimeError("I file GitHub App devono avere path distinti.")
     parent_metadata = config_resolved.parent.stat()
     if not stat.S_ISDIR(parent_metadata.st_mode):
         raise GitHubAppRuntimeError("Directory GitHub App non valida.")
