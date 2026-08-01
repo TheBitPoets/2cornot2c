@@ -166,8 +166,9 @@ class GitHubInstallationTokenTransport:
         try:
             thread.start()
         except RuntimeError:
-            TOKEN_NETWORK_SLOTS.release()
-            raise
+            if thread.ident is None:
+                TOKEN_NETWORK_SLOTS.release()
+                raise
         remaining_wait = timeout_seconds - (time.monotonic() - wait_started)
         if remaining_wait <= 0 or not done.wait(remaining_wait):
             with resource_lock:
@@ -736,8 +737,9 @@ class GitHubAppTokenRuntime:
         try:
             thread.start()
         except RuntimeError:
-            RUNTIME_TRANSPORT_SLOTS.release()
-            raise
+            if thread.ident is None:
+                RUNTIME_TRANSPORT_SLOTS.release()
+                raise
         remaining = timeout - (time.monotonic() - started)
         if remaining <= 0 or not done.wait(remaining):
             raise GitHubAppRuntimeError("Timeout rinnovo credenziali GitHub App.")
@@ -857,10 +859,9 @@ class GitHubAppTokenRuntime:
         self._process_lock.release()
 
     def _remove_owned_token(self) -> bool:
-        if not self._refresh_lock.acquire(timeout=10.0):
-            LOGGER.error("Pulizia installation token non disponibile entro la deadline.")
-            return False
+        self._refresh_lock.acquire()
         try:
+            self._process_lock.acquire()
             with self._lock:
                 digest = self._owned_digest
                 identity = self._owned_identity
@@ -881,6 +882,16 @@ class GitHubAppTokenRuntime:
                     claim_entry: str | Path = (
                         claim_path if directory_fd is None else claim_name
                     )
+                    current = os.stat(
+                        token_entry, dir_fd=directory_fd, follow_symlinks=False
+                    )
+                    if (current.st_dev, current.st_ino) != identity:
+                        return False
+                    current_value = _read_secure_file(
+                        self.config.token_file, max_bytes=MAX_TOKEN_BYTES
+                    )
+                    if hashlib.sha256(current_value).hexdigest() != digest:
+                        return False
                     os.replace(
                         token_entry,
                         claim_entry,
@@ -943,6 +954,7 @@ class GitHubAppTokenRuntime:
                 self._expires_at = 0.0
             return True
         finally:
+            self._process_lock.release()
             self._refresh_lock.release()
 
 

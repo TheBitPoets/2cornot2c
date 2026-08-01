@@ -117,6 +117,26 @@ def test_transport_returns_at_wall_deadline_when_connection_blocks() -> None:
         release.set()
 
 
+def test_transport_keeps_slot_when_thread_start_reports_after_start(monkeypatch) -> None:
+    response = FakeResponse(201, b'{"token":"example","expires_at":"2027-01-01T00:00:00Z"}')
+    connection = FakeConnection(response)
+    transport = runtime.GitHubInstallationTokenTransport(
+        connection_factory=lambda _host, timeout: connection
+    )
+    original_start = runtime.threading.Thread.start
+
+    def start_then_report(thread):
+        original_start(thread)
+        raise RuntimeError("late start report")
+
+    monkeypatch.setattr(runtime.threading.Thread, "start", start_then_report)
+
+    payload = transport.create_token(
+        "67890", "header.payload.signature", timeout_seconds=1.0
+    )
+    assert payload["token"] == "example"
+
+
 def test_transport_rejects_non_201_without_returning_provider_body() -> None:
     connection = FakeConnection(FakeResponse(401, b'{"message":"sensitive provider detail"}'))
     transport = runtime.GitHubInstallationTokenTransport(
@@ -253,6 +273,31 @@ class FakeTransport:
     def create_token(self, installation_id, app_jwt, *, timeout_seconds):
         self.calls.append((installation_id, app_jwt, timeout_seconds))
         return self.payload
+
+
+def test_runtime_transport_wrapper_keeps_slot_on_late_start_report(
+    tmp_path, monkeypatch
+) -> None:
+    config = runtime.GitHubAppRuntimeConfig(
+        app_id="12345",
+        installation_id="67890",
+        private_key_file=tmp_path / "private-key.pem",
+        token_file=(tmp_path / "installation-token.txt").resolve(),
+    )
+    service = runtime.GitHubAppTokenRuntime(
+        config, rsa_key(), FakeTransport({"token": "value"})
+    )
+    original_start = runtime.threading.Thread.start
+
+    def start_then_report(thread):
+        original_start(thread)
+        raise RuntimeError("late start report")
+
+    monkeypatch.setattr(runtime.threading.Thread, "start", start_then_report)
+
+    assert service._request_token_payload("header.payload.signature") == {
+        "token": "value"
+    }
 
 
 def test_runtime_bounds_an_untrusted_transport_and_sanitizes_errors(
