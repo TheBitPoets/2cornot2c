@@ -1314,10 +1314,12 @@ function openSourceDialog() {
     draft: editableCourseSources(),
     preview: null,
     requestId: 0,
+    pendingPreviewRequests: 0,
     boardContext: captureBoardContext(),
   };
   showSourceDialogError();
   els.sourceApplyBtn.disabled = true;
+  els.sourcePreviewBtn.disabled = false;
   els.sourcePreviewStatus.textContent = "Sincronizza per verificare file e commit prima di applicare.";
   renderSourceEditor();
   els.sourceDialog.showModal();
@@ -1337,6 +1339,7 @@ async function previewSourceEditor() {
   editor.preview = null;
   showSourceDialogError();
   els.sourceApplyBtn.disabled = true;
+  editor.pendingPreviewRequests += 1;
   els.sourcePreviewBtn.disabled = true;
   els.sourcePreviewStatus.textContent = "Sincronizzazione in corso...";
   const requestId = ++editor.requestId;
@@ -1372,9 +1375,61 @@ async function previewSourceEditor() {
       els.sourcePreviewStatus.textContent = "Sincronizzazione non riuscita.";
     }
   } finally {
-    if (state.sourceEditor === editor && requestId === editor.requestId) {
-      els.sourcePreviewBtn.disabled = false;
+    if (state.sourceEditor === editor) {
+      editor.pendingPreviewRequests = Math.max(0, editor.pendingPreviewRequests - 1);
+      els.sourcePreviewBtn.disabled = editor.pendingPreviewRequests > 0;
     }
+  }
+}
+
+function migrateLegacySourceItems(design, previewHeadings) {
+  const legacySourceIds = new Set(
+    (state.sources || []).filter((source) => source.legacy).map((source) => source.id),
+  );
+  if (!legacySourceIds.size) return;
+  const oldById = new Map((state.headings || []).map((heading) => [heading.id, heading]));
+  const newByKey = new Map(
+    previewHeadings.map((heading) => [
+      JSON.stringify([heading.source_id, heading.source, heading.anchor, heading.line, heading.level]),
+      heading,
+    ]),
+  );
+  const visit = (items) => {
+    for (const item of items || []) {
+      const oldHeading = oldById.get(item.id);
+      const sourceId = item.source_id || oldHeading?.source_id || "";
+      if (legacySourceIds.has(sourceId)) {
+        const key = JSON.stringify([
+          sourceId,
+          item.source || oldHeading?.source || "",
+          oldHeading?.anchor || String(item.href || "").split("#").at(-1),
+          Number(item.line || oldHeading?.line || 0),
+          Number(item.level || oldHeading?.level || 0),
+        ]);
+        const replacement = newByKey.get(key);
+        if (!replacement) {
+          throw new Error(`Il paragrafo legacy ${item.id} non è presente nell'anteprima sincronizzata.`);
+        }
+        Object.assign(item, {
+          id: replacement.id,
+          title: replacement.title,
+          source: replacement.source,
+          source_id: replacement.source_id,
+          source_label: replacement.source_label,
+          source_provider: replacement.source_provider,
+          source_repository: replacement.source_repository,
+          source_ref: replacement.source_ref,
+          source_commit: replacement.source_commit,
+          href: replacement.href,
+          level: replacement.level,
+          line: replacement.line,
+        });
+      }
+      visit(item.children);
+    }
+  };
+  for (const year of design.years || []) {
+    for (const uda of year.udas || []) visit(uda.items);
   }
 }
 
@@ -1392,8 +1447,16 @@ function applySourceEditor(event) {
     showSourceDialogError("La board è cambiata: chiudi e riapri il dialog.");
     return;
   }
-  state.design.sources = JSON.parse(JSON.stringify(sources));
-  delete state.design.source_files;
+  const nextDesign = JSON.parse(JSON.stringify(state.design));
+  try {
+    migrateLegacySourceItems(nextDesign, editor.preview.headings);
+  } catch (error) {
+    showSourceDialogError(error.message);
+    return;
+  }
+  nextDesign.sources = JSON.parse(JSON.stringify(sources));
+  delete nextDesign.source_files;
+  state.design = nextDesign;
   state.sources = editor.preview.sources;
   state.headings = editor.preview.headings;
   closeSourceDialog();

@@ -316,14 +316,44 @@ def test_source_editor_projects_catalog_without_runtime_fields() -> None:
     )
 
 
+def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "legacy-abc", legacy: true }];
+        state.headings = [{
+          id: "README.md#intro", source_id: "legacy-abc", source: "README.md",
+          anchor: "intro", line: 1, level: 1,
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "README.md#intro", title: "Intro", source: "README.md",
+          line: 1, level: 1, frame: { status: "done" },
+        }] }] }] };
+        const preview = [{
+          id: "legacy-abc:README.md#intro", title: "Intro", source: "README.md",
+          source_id: "legacy-abc", source_label: "README.md", source_provider: "local",
+          source_repository: null, source_ref: null, source_commit: null,
+          anchor: "intro", line: 1, level: 1, href: "../README.md#intro",
+        }];
+
+        migrateLegacySourceItems(design, preview);
+
+        const item = design.years[0].udas[0].items[0];
+        assert.equal(item.id, "legacy-abc:README.md#intro");
+        assert.equal(item.source_id, "legacy-abc");
+        assert.equal(item.frame.status, "done");
+        """
+    )
+
+
 def test_source_editor_requires_preview_and_context_before_apply() -> None:
     source = Path("tools/course_board.js").read_text(encoding="utf-8")
 
     assert 'api("/api/course-sources/preview"' in source
     assert "delete candidate.source_files" in source
-    assert "delete state.design.source_files" in source
+    assert "delete nextDesign.source_files" in source
     assert "sourcePreviewSignature(sources) !== editor.preview.signature" in source
     assert "isBoardContextUnchanged(editor.boardContext)" in source
+    assert "editor.pendingPreviewRequests = Math.max" in source
 
 
 def test_item_from_heading_preserves_source_provenance() -> None:
