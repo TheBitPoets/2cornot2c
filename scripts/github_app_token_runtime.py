@@ -506,6 +506,53 @@ def _pinned_directory(path: Path):
         kernel32.CloseHandle(handle)
 
 
+def _windows_replace_with_backup(target: Path, replacement: Path, backup: Path) -> None:
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    replace_file = kernel32.ReplaceFileW
+    replace_file.argtypes = (
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.LPVOID,
+    )
+    replace_file.restype = wintypes.BOOL
+    if not replace_file(str(target), str(replacement), str(backup), 0x1, None, None):
+        raise OSError(ctypes.get_last_error(), "ReplaceFileW failed")
+
+
+def _posix_exchange(directory_fd: int, first: str, second: str) -> None:
+    import ctypes
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = getattr(libc, "renameat2", None)
+    if renameat2 is None:
+        raise GitHubAppRuntimeError(
+            "Rotazione atomica installation token non disponibile."
+        )
+    renameat2.argtypes = (
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    )
+    renameat2.restype = ctypes.c_int
+    if renameat2(
+        directory_fd,
+        os.fsencode(first),
+        directory_fd,
+        os.fsencode(second),
+        0x2,  # RENAME_EXCHANGE
+    ) != 0:
+        error = ctypes.get_errno()
+        raise OSError(error, "renameat2 exchange failed")
+
+
 def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]]:
     if not value or len(value) > MAX_TOKEN_BYTES or b"\n" in value or b"\r" in value:
         raise GitHubAppRuntimeError("Installation token non valido.")
@@ -522,6 +569,7 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
             token_entry: str | Path = path if directory_fd is None else path.name
             temp_entry: str | Path = temp if directory_fd is None else temp_name
             backup_entry: str | Path = backup if directory_fd is None else backup_name
+            backup_path = backup
             try:
                 flags = (
                     os.O_WRONLY
@@ -529,9 +577,7 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
                     | os.O_EXCL
                     | getattr(os, "O_NOFOLLOW", 0)
                 )
-                descriptor = os.open(
-                    temp_entry, flags, 0o600, dir_fd=directory_fd
-                )
+                descriptor = os.open(temp_entry, flags, 0o600, dir_fd=directory_fd)
                 with os.fdopen(descriptor, "wb", closefd=True) as stream:
                     descriptor = None
                     stream.write(value)
@@ -553,26 +599,26 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
                 )
                 _verify_permissions(temp, metadata)
                 try:
-                    old = os.stat(
-                        token_entry, dir_fd=directory_fd, follow_symlinks=False
-                    )
+                    os.stat(token_entry, dir_fd=directory_fd, follow_symlinks=False)
+                    has_previous = True
                 except FileNotFoundError:
-                    old = None
-                if old is not None:
+                    has_previous = False
+                if has_previous:
                     _read_secure_file(path, max_bytes=MAX_TOKEN_BYTES)
+                    if directory_fd is None:
+                        _windows_replace_with_backup(path, temp, backup)
+                    else:
+                        _posix_exchange(directory_fd, temp_name, path.name)
+                        backup_entry = temp_name
+                        backup_path = temp
+                    backup_active = True
+                else:
                     os.replace(
+                        temp_entry,
                         token_entry,
-                        backup_entry,
                         src_dir_fd=directory_fd,
                         dst_dir_fd=directory_fd,
                     )
-                    backup_active = True
-                os.replace(
-                    temp_entry,
-                    token_entry,
-                    src_dir_fd=directory_fd,
-                    dst_dir_fd=directory_fd,
-                )
                 published_identity = (metadata.st_dev, metadata.st_ino)
                 final = os.stat(
                     token_entry, dir_fd=directory_fd, follow_symlinks=False
@@ -599,51 +645,58 @@ def _secure_atomic_write(path: Path, value: bytes) -> tuple[str, tuple[int, int]
                             pass
                 completed = True
                 return hashlib.sha256(value).hexdigest(), published_identity
-            finally:
-                if not completed:
-                    if published_identity is not None:
-                        try:
-                            published = os.stat(
-                                token_entry,
-                                dir_fd=directory_fd,
-                                follow_symlinks=False,
-                            )
-                            if (
-                                published.st_dev,
-                                published.st_ino,
-                            ) == published_identity:
-                                os.unlink(token_entry, dir_fd=directory_fd)
-                        except OSError:
-                            pass
-                    if backup_active:
-                        try:
-                            os.stat(
-                                token_entry,
-                                dir_fd=directory_fd,
-                                follow_symlinks=False,
-                            )
-                        except FileNotFoundError:
-                            try:
-                                os.replace(
-                                    backup_entry,
-                                    token_entry,
-                                    src_dir_fd=directory_fd,
-                                    dst_dir_fd=directory_fd,
+            except BaseException:
+                if published_identity is not None:
+                    try:
+                        published = os.stat(
+                            token_entry, dir_fd=directory_fd, follow_symlinks=False
+                        )
+                        owns_published = (
+                            published.st_dev,
+                            published.st_ino,
+                        ) == published_identity
+                    except OSError:
+                        owns_published = False
+                    try:
+                        if backup_active and owns_published:
+                            if directory_fd is None:
+                                rollback_spare = parent / (
+                                    f".{path.name}.failed-{secrets.token_hex(16)}"
                                 )
-                                backup_active = False
-                            except OSError:
-                                pass
-                    if directory_fd is not None:
-                        try:
+                                _windows_replace_with_backup(
+                                    path, backup_path, rollback_spare
+                                )
+                                try:
+                                    rollback_spare.unlink(missing_ok=True)
+                                except OSError:
+                                    pass
+                            else:
+                                _posix_exchange(
+                                    directory_fd, path.name, str(backup_entry)
+                                )
+                                os.unlink(backup_entry, dir_fd=directory_fd)
+                            backup_active = False
+                        elif not backup_active and owns_published:
+                            os.unlink(token_entry, dir_fd=directory_fd)
+                        if directory_fd is not None:
                             os.fsync(directory_fd)
-                        except OSError:
-                            pass
+                    except (OSError, GitHubAppRuntimeError) as rollback_error:
+                        raise GitHubAppRuntimeError(
+                            "Rollback installation token non riuscito."
+                        ) from None
+                raise
+            finally:
                 if descriptor is not None:
                     os.close(descriptor)
-                try:
-                    os.unlink(temp_entry, dir_fd=directory_fd)
-                except OSError:
-                    pass
+                if not backup_active:
+                    try:
+                        os.unlink(temp_entry, dir_fd=directory_fd)
+                    except OSError:
+                        pass
+                if completed and backup_active:
+                    raise GitHubAppRuntimeError(
+                        "Pulizia backup installation token non riuscita."
+                    )
     except GitHubAppRuntimeError:
         raise
     except OSError as exc:
