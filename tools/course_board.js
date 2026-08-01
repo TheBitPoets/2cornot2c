@@ -2002,8 +2002,10 @@ async function openParagraphPreview(paragraph) {
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
     els.paragraphDialogMeta.textContent = `${heading.source_label || heading.source || "Sorgente n/d"} (${heading.source_provider || "local"}) · riga ${heading.line || "?"} · H${heading.level || "?"}`;
     els.paragraphContent.innerHTML = renderParagraphContent(heading.content);
-    if (heading.github_url) {
-      els.paragraphSourceLink.href = heading.github_url;
+    const sourceUrl = heading.source_url || heading.github_url;
+    if (sourceUrl) {
+      els.paragraphSourceLink.href = sourceUrl;
+      els.paragraphSourceLink.textContent = `Apri sorgente su ${heading.source_provider === "gitlab" ? "GitLab" : "GitHub"}`;
       els.paragraphSourceLink.hidden = false;
     }
   } catch (error) {

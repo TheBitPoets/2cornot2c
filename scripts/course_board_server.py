@@ -61,6 +61,7 @@ from scripts import (
     codex_activity_adapter,
     course_activity_links,
     course_github_markdown,
+    course_gitlab_markdown,
     course_source_catalog,
     create_activity,
     create_submission_scaffold,
@@ -99,6 +100,7 @@ README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
 AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
 GITHUB_MARKDOWN_TOKEN_FILE = os.environ.get("THEBITLAB_GITHUB_TOKEN_FILE", "").strip()
+GITLAB_MARKDOWN_TOKEN_FILE = os.environ.get("THEBITLAB_GITLAB_TOKEN_FILE", "").strip()
 GITHUB_MARKDOWN_BLOB_CACHE = course_github_markdown.InMemoryGitHubBlobCache()
 GITHUB_TOKEN_ACQUISITION_SLOTS = threading.BoundedSemaphore(2)
 LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
@@ -564,7 +566,9 @@ def read_design() -> dict:
     return course_service().read_design()
 
 
-def verify_github_token_file_permissions(path: Path, metadata: os.stat_result) -> None:
+def verify_provider_token_file_permissions(
+    path: Path, metadata: os.stat_result, provider: str
+) -> None:
     """Fail closed unless the token file is owner-only on this platform."""
 
     if os.name != "nt":
@@ -572,7 +576,7 @@ def verify_github_token_file_permissions(path: Path, metadata: os.stat_result) -
             hasattr(os, "getuid") and metadata.st_uid != os.getuid()
         ):
             raise course_github_markdown.RemoteMarkdownError(
-                "Il file token GitHub deve essere accessibile solo al proprietario."
+                f"Il file token {provider} deve essere accessibile solo al proprietario."
             )
         return
     try:
@@ -598,30 +602,32 @@ def verify_github_token_file_permissions(path: Path, metadata: os.stat_result) -
         )
     except (OSError, subprocess.SubprocessError, UnicodeError) as exc:
         raise course_github_markdown.RemoteMarkdownError(
-            "ACL del file token GitHub non sicura."
+            f"ACL del file token {provider} non sicura."
         ) from exc
 
 
-def _read_github_markdown_token_blocking() -> str | None:
-    """Read an optional short-lived GitHub token from an external regular file."""
+def _read_provider_markdown_token_blocking(
+    configured_value: str, provider: str
+) -> str | None:
+    """Read one optional provider token from an external regular file."""
 
-    if not GITHUB_MARKDOWN_TOKEN_FILE:
+    if not configured_value:
         return None
-    configured = Path(GITHUB_MARKDOWN_TOKEN_FILE)
+    configured = Path(configured_value)
     if not configured.is_absolute():
         raise course_github_markdown.RemoteMarkdownError(
-            "Il file token GitHub deve avere un path assoluto."
+            f"Il file token {provider} deve avere un path assoluto."
         )
     try:
         resolved = configured.resolve(strict=True)
         if os.path.normcase(str(configured.absolute())) != os.path.normcase(str(resolved)):
             raise course_github_markdown.RemoteMarkdownError(
-                "Il file token GitHub non può essere un collegamento."
+                f"Il file token {provider} non può essere un collegamento."
             )
         metadata = resolved.stat()
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 2:
-            raise course_github_markdown.RemoteMarkdownError("File token GitHub non valido.")
-        verify_github_token_file_permissions(resolved, metadata)
+            raise course_github_markdown.RemoteMarkdownError(f"File token {provider} non valido.")
+        verify_provider_token_file_permissions(resolved, metadata, provider)
         with resolved.open("rb") as stream:
             before = os.fstat(stream.fileno())
             opened_path = course_source_catalog._opened_file_path(stream.fileno()).resolve()
@@ -635,7 +641,7 @@ def _read_github_markdown_token_blocking() -> str | None:
                 or getattr(before, "st_uid", None) != getattr(metadata, "st_uid", None)
             ):
                 raise course_github_markdown.RemoteMarkdownError(
-                    "File token GitHub sostituito durante l'apertura."
+                    f"File token {provider} sostituito durante l'apertura."
                 )
             raw = stream.read(course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 3)
             after = os.fstat(stream.fileno())
@@ -647,8 +653,8 @@ def _read_github_markdown_token_blocking() -> str | None:
             or getattr(before, "st_uid", None) != getattr(after, "st_uid", None)
             or (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)
         ):
-            raise course_github_markdown.RemoteMarkdownError("File token GitHub instabile.")
-        verify_github_token_file_permissions(resolved, after)
+            raise course_github_markdown.RemoteMarkdownError(f"File token {provider} instabile.")
+        verify_provider_token_file_permissions(resolved, after, provider)
         final_metadata = resolved.stat()
         if (
             (final_metadata.st_dev, final_metadata.st_ino)
@@ -657,7 +663,7 @@ def _read_github_markdown_token_blocking() -> str | None:
             or getattr(final_metadata, "st_uid", None)
             != getattr(after, "st_uid", None)
         ):
-            raise course_github_markdown.RemoteMarkdownError("File token GitHub instabile.")
+            raise course_github_markdown.RemoteMarkdownError(f"File token {provider} instabile.")
         if raw.endswith(b"\r\n"):
             raw = raw[:-2]
         elif raw.endswith((b"\r", b"\n")):
@@ -667,30 +673,34 @@ def _read_github_markdown_token_blocking() -> str | None:
         raise
     except (OSError, UnicodeDecodeError) as exc:
         raise course_github_markdown.RemoteMarkdownError(
-            "File token GitHub non leggibile."
+            f"File token {provider} non leggibile."
         ) from exc
 
 
-def read_github_markdown_token(deadline: float | None = None) -> str | None:
-    """Bound secret-file and ACL operations within the source-operation deadline."""
+def _read_provider_markdown_token(
+    configured_value: str, provider: str, deadline: float | None = None
+) -> str | None:
+    """Bound provider secret-file and ACL operations within one deadline."""
 
     operation_deadline = time.monotonic() + 30.0 if deadline is None else deadline
     remaining = operation_deadline - time.monotonic()
     if remaining <= 0:
         raise course_github_markdown.RemoteMarkdownError(
-            "Timeout lettura token GitHub esaurito."
+            f"Timeout lettura token {provider} esaurito."
         )
     slot_guard = GITHUB_TOKEN_ACQUISITION_SLOTS
     if not slot_guard.acquire(timeout=remaining):
         raise course_github_markdown.RemoteMarkdownError(
-            "Lettura token GitHub satura."
+            f"Lettura token {provider} satura."
         )
     result: dict[str, Any] = {}
     done = threading.Event()
 
     def worker() -> None:
         try:
-            result["value"] = _read_github_markdown_token_blocking()
+            result["value"] = _read_provider_markdown_token_blocking(
+                configured_value, provider
+            )
         except BaseException as exc:  # noqa: BLE001
             result["error"] = exc
         finally:
@@ -701,7 +711,7 @@ def read_github_markdown_token(deadline: float | None = None) -> str | None:
     if remaining <= 0:
         slot_guard.release()
         raise course_github_markdown.RemoteMarkdownError(
-            "Timeout lettura token GitHub esaurito."
+            f"Timeout lettura token {provider} esaurito."
         )
     thread = threading.Thread(target=worker, daemon=True)
     try:
@@ -711,7 +721,7 @@ def read_github_markdown_token(deadline: float | None = None) -> str | None:
         raise
     if not done.wait(remaining):
         raise course_github_markdown.RemoteMarkdownError(
-            "Timeout lettura token GitHub esaurito."
+            f"Timeout lettura token {provider} esaurito."
         )
     error_value = result.get("error")
     if error_value is not None:
@@ -719,10 +729,22 @@ def read_github_markdown_token(deadline: float | None = None) -> str | None:
     return result.get("value")
 
 
+def read_github_markdown_token(deadline: float | None = None) -> str | None:
+    return _read_provider_markdown_token(
+        GITHUB_MARKDOWN_TOKEN_FILE, "GitHub", deadline
+    )
+
+
+def read_gitlab_markdown_token(deadline: float | None = None) -> str | None:
+    return _read_provider_markdown_token(
+        GITLAB_MARKDOWN_TOKEN_FILE, "GitLab", deadline
+    )
+
+
 def course_markdown_source_files(
     design: dict,
 ) -> tuple[course_source_catalog.CourseMarkdownSourceFile, ...]:
-    """Resolve local files and commit-pinned GitHub snapshots for one operation."""
+    """Resolve local files and commit-pinned provider snapshots for one operation."""
 
     operation_deadline = time.monotonic() + 30.0
     sources = course_source_catalog.normalize_course_sources(
@@ -736,6 +758,16 @@ def course_markdown_source_files(
         adapters["github"] = course_github_markdown.GitHubMarkdownAdapter(
             course_github_markdown.GitHubApiTransport(
                 read_github_markdown_token(operation_deadline)
+            ),
+            blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
+        )
+    if any(
+        source.provider == "gitlab" and source.indexing_status == "ready"
+        for source in sources
+    ):
+        adapters["gitlab"] = course_gitlab_markdown.GitLabMarkdownAdapter(
+            course_gitlab_markdown.GitLabApiTransport(
+                read_gitlab_markdown_token(operation_deadline)
             ),
             blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
         )
@@ -757,7 +789,7 @@ def validate_course_source_catalog(payload: dict) -> None:
         if (
             source.provider != "local"
             and source.indexing_status == "ready"
-            and source.provider != "github"
+            and source.provider not in {"github", "gitlab"}
         ):
             raise course_source_catalog.CourseSourceCatalogError(
                 f"Adapter Markdown non configurato per {source.provider}."
@@ -3055,7 +3087,8 @@ def headings_from_source_snapshot(
                 "level": len(match.group(1)),
                 "title": TAG_RE.sub("", title).strip(),
                 "anchor": anchor,
-                "href": source_url if descriptor.provider == "github" else f"../{source}#{anchor}",
+                "href": source_url if descriptor.provider in {"github", "gitlab"} else f"../{source}#{anchor}",
+                "source_url": source_url,
                 "github_url": source_url,
                 "line": lineno,
             }
@@ -3121,6 +3154,19 @@ def markdown_source_url(
             for part in source_file.relative_path.split("/")
         )
         base = f"https://github.com/{encoded_repository}/blob/{resolved_ref}/{encoded_source}"
+    elif descriptor.provider == "gitlab":
+        resolved_ref = getattr(source_file, "resolved_ref", None)
+        if descriptor.repository is None or resolved_ref is None:
+            return ""
+        encoded_repository = "/".join(
+            urllib.parse.quote(part, safe="")
+            for part in descriptor.repository.split("/")
+        )
+        encoded_source = "/".join(
+            urllib.parse.quote(part, safe="")
+            for part in source_file.relative_path.split("/")
+        )
+        base = f"https://gitlab.com/{encoded_repository}/-/blob/{resolved_ref}/{encoded_source}"
     else:
         base = (
             "https://github.com/TheBitPoets/2cornot2c/blob/main/"
@@ -3360,9 +3406,14 @@ def topic_summary(
         "source_commit": item.get("source_commit"),
         "level": item.get("level", ""),
         "href": item.get("href", ""),
+        "source_url": (
+            item.get("href", "")
+            if item.get("source_provider") in {"github", "gitlab"}
+            else github_blob_url(item.get("source", ""), anchor)
+        ),
         "github_url": (
             item.get("href", "")
-            if item.get("source_provider") == "github"
+            if item.get("source_provider") in {"github", "gitlab"}
             else github_blob_url(item.get("source", ""), anchor)
         ),
         "children": [

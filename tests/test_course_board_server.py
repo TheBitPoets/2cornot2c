@@ -809,7 +809,7 @@ def test_local_catalog_does_not_read_configured_github_token(tmp_path, monkeypat
     assert [item.relative_path for item in files] == ["lesson.md"]
 
 
-def test_persistence_validation_rejects_ready_provider_without_adapter(tmp_path, monkeypatch) -> None:
+def test_persistence_validation_accepts_ready_gitlab_provider(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     design = {
         "sources": [
@@ -826,11 +826,7 @@ def test_persistence_validation_rejects_ready_provider_without_adapter(tmp_path,
         ]
     }
 
-    with pytest.raises(
-        course_board_server.course_source_catalog.CourseSourceCatalogError,
-        match="Adapter Markdown non configurato per gitlab",
-    ):
-        course_board_server.validate_course_source_catalog(design)
+    course_board_server.validate_course_source_catalog(design)
 
 
 def test_github_token_is_read_only_from_stable_absolute_file(tmp_path, monkeypatch) -> None:
@@ -844,11 +840,17 @@ def test_github_token_is_read_only_from_stable_absolute_file(tmp_path, monkeypat
     if os.name == "nt":
         monkeypatch.setattr(
             course_board_server,
-            "verify_github_token_file_permissions",
-            lambda _path, _metadata: None,
+            "verify_provider_token_file_permissions",
+            lambda _path, _metadata, _provider: None,
         )
 
     assert course_board_server.read_github_markdown_token() == (
+        "short-lived-installation-token"
+    )
+    monkeypatch.setattr(
+        course_board_server, "GITLAB_MARKDOWN_TOKEN_FILE", str(token_file.resolve())
+    )
+    assert course_board_server.read_gitlab_markdown_token() == (
         "short-lived-installation-token"
     )
 
@@ -1009,6 +1011,75 @@ def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
         heading["id"],
         "c" * 40,
     ) == ""
+
+
+def test_gitlab_heading_uses_commit_pinned_snapshot(tmp_path, monkeypatch) -> None:
+    content = b"# GitLab course\n\n## Lesson\n\nPrivate GitLab content.\n"
+    design = {
+        "sources": [
+            {
+                "id": "gitlab-course",
+                "label": "GitLab course",
+                "type": "markdown",
+                "provider": "gitlab",
+                "repository": "school/group/course",
+                "ref": "main",
+                "files": ["README.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+
+    def fetch_snapshot(
+        _adapter, repository, declared_ref, files, *, deadline=None, byte_budget=None
+    ):
+        blob_id = hashlib.sha1(
+            f"blob {len(content)}\0".encode("ascii") + content
+        ).hexdigest()
+        return course_board_server.course_github_markdown.RemoteMarkdownSnapshot(
+            provider="gitlab",
+            repository=repository,
+            declared_ref=declared_ref,
+            commit_sha="d" * 40,
+            files=(
+                course_board_server.course_github_markdown.RemoteMarkdownFile(
+                    relative_path=files[0],
+                    git_object_id=blob_id,
+                    sha256=hashlib.sha256(content).hexdigest(),
+                    content=content,
+                ),
+            ),
+        )
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server.course_gitlab_markdown.GitLabMarkdownAdapter,
+        "fetch_snapshot",
+        fetch_snapshot,
+    )
+
+    files = course_board_server.course_markdown_source_files(design)
+    heading = next(
+        item
+        for item in course_board_server.extract_headings(design, files)
+        if item["title"] == "Lesson"
+    )
+
+    assert heading["source_provider"] == "gitlab"
+    assert heading["source_commit"] == "d" * 40
+    assert heading["source_url"] == (
+        "https://gitlab.com/school/group/course/-/blob/"
+        + "d" * 40
+        + "/README.md#lesson"
+    )
+    assert course_board_server.heading_content_snapshot(
+        design, heading["id"], heading["source_commit"]
+    )[1] == "Private GitLab content."
+    summary = course_board_server.topic_summary(
+        course_board_server.board_item_from_heading(heading)
+    )
+    assert summary["source_url"] == heading["source_url"]
+    assert summary["github_url"] == heading["source_url"]
 
 
 def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:
