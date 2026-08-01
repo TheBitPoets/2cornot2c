@@ -6,6 +6,7 @@ import hashlib
 import pytest
 
 from scripts.course_github_markdown import (
+    GitHubApiTransport,
     GitHubMarkdownAdapter,
     MAX_REMOTE_MARKDOWN_BYTES,
     RemoteMarkdownError,
@@ -156,6 +157,48 @@ def test_rejects_declared_blob_over_per_file_limit_without_decoding() -> None:
         GitHubMarkdownAdapter(transport).fetch_snapshot(
             "owner/repo", "main", ("README.md",)
         )
+
+
+def test_transport_enforces_absolute_deadline_during_slow_response() -> None:
+    now = [10.0]
+
+    class Socket:
+        def settimeout(self, _timeout):
+            pass
+
+    class Response:
+        status = 200
+
+        def read(self, _size):
+            now[0] += 2.0
+            return b"{}"
+
+    class Connection:
+        sock = Socket()
+
+        def __init__(self, host, *, timeout):
+            assert host == "api.github.com"
+            assert timeout == 1.0
+
+        def request(self, method, path, *, headers):
+            assert method == "GET"
+            assert path == "/rate_limit"
+            assert headers["Authorization"] == "Bearer private-token"
+
+        def getresponse(self):
+            return Response()
+
+        def close(self):
+            pass
+
+    transport = GitHubApiTransport(
+        "private-token",
+        clock=lambda: now[0],
+        connection_factory=Connection,
+    )
+
+    with pytest.raises(RemoteMarkdownError, match="Timeout"):
+        transport.get_json("/rate_limit", timeout_seconds=1.0)
 
 
 def test_uses_one_absolute_deadline_across_all_requests() -> None:

@@ -4,12 +4,14 @@ from dataclasses import dataclass
 import base64
 import binascii
 import hashlib
+import http.client
 import json
 import re
+import socket
 import time
 from pathlib import PurePosixPath
 from typing import Any, Callable, Protocol
-from urllib import error, parse, request
+from urllib import parse
 
 
 MAX_REMOTE_MARKDOWN_BYTES = 8 * 1024 * 1024
@@ -52,25 +54,28 @@ class RemoteMarkdownSnapshot:
     files: tuple[RemoteMarkdownFile, ...]
 
 
-class _NoRedirectHandler(request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
-        return None
-
-
 class GitHubApiTransport:
-    """Bounded HTTPS transport with an injected short-lived token provider."""
+    """Fixed-origin HTTPS transport bounded by one absolute response deadline."""
 
     def __init__(
         self,
-        token_provider: Callable[[], str | None],
+        token: str | None,
         *,
-        api_origin: str = "https://api.github.com",
+        clock: Callable[[], float] = time.monotonic,
+        connection_factory: Callable[..., Any] = http.client.HTTPSConnection,
     ) -> None:
-        if api_origin != "https://api.github.com":
-            raise ValueError("Origin GitHub API non consentita.")
-        self._token_provider = token_provider
-        self._api_origin = api_origin
-        self._opener = request.build_opener(_NoRedirectHandler())
+        if token is not None:
+            encoded_token = token.encode("utf-8")
+            if (
+                not token
+                or token != token.strip()
+                or len(encoded_token) > MAX_GITHUB_TOKEN_BYTES
+                or any(ord(character) < 33 or ord(character) == 127 for character in token)
+            ):
+                raise RemoteMarkdownError("Credenziale GitHub non valida.")
+        self._token = token
+        self._clock = clock
+        self._connection_factory = connection_factory
 
     def get_json(self, api_path: str, *, timeout_seconds: float) -> Any:
         parsed_path = parse.urlsplit(api_path)
@@ -84,45 +89,48 @@ class GitHubApiTransport:
             raise RemoteMarkdownError("Path GitHub API non valido.")
         if timeout_seconds <= 0:
             raise RemoteMarkdownError("Timeout sincronizzazione GitHub esaurito.")
-        token = self._token_provider()
-        if token is not None:
-            encoded_token = token.encode("utf-8")
-            if (
-                not token
-                or token != token.strip()
-                or len(encoded_token) > MAX_GITHUB_TOKEN_BYTES
-                or any(ord(character) < 33 or ord(character) == 127 for character in token)
-            ):
-                raise RemoteMarkdownError("Credenziale GitHub non valida.")
+        deadline = self._clock() + timeout_seconds
         headers = {
             "Accept": "application/vnd.github+json",
             "User-Agent": "TheBitLab-course-source/1",
             "X-GitHub-Api-Version": "2022-11-28",
         }
-        if token is not None:
-            headers["Authorization"] = f"Bearer {token}"
-        api_request = request.Request(
-            self._api_origin + api_path,
-            headers=headers,
-            method="GET",
-        )
+        if self._token is not None:
+            headers["Authorization"] = f"Bearer {self._token}"
+        connection = self._connection_factory("api.github.com", timeout=timeout_seconds)
+        payload = bytearray()
         try:
-            with self._opener.open(api_request, timeout=timeout_seconds) as response:
-                if response.status != 200:
-                    raise RemoteMarkdownError(
-                        f"GitHub API ha restituito HTTP {response.status}."
-                    )
-                payload = response.read(MAX_GITHUB_RESPONSE_BYTES + 1)
-        except error.HTTPError as exc:
-            raise RemoteMarkdownError(
-                f"GitHub API ha restituito HTTP {exc.code}."
-            ) from exc
-        except (error.URLError, TimeoutError, OSError) as exc:
+            connection.request("GET", api_path, headers=headers)
+            remaining = deadline - self._clock()
+            if remaining <= 0:
+                raise RemoteMarkdownError("Timeout sincronizzazione GitHub esaurito.")
+            if connection.sock is not None:
+                connection.sock.settimeout(remaining)
+            response = connection.getresponse()
+            if response.status != 200:
+                raise RemoteMarkdownError(
+                    f"GitHub API ha restituito HTTP {response.status}."
+                )
+            while True:
+                remaining = deadline - self._clock()
+                if remaining <= 0:
+                    raise RemoteMarkdownError("Timeout sincronizzazione GitHub esaurito.")
+                if connection.sock is not None:
+                    connection.sock.settimeout(remaining)
+                chunk = response.read(min(64 * 1024, MAX_GITHUB_RESPONSE_BYTES + 1 - len(payload)))
+                if not chunk:
+                    break
+                payload.extend(chunk)
+                if len(payload) > MAX_GITHUB_RESPONSE_BYTES:
+                    raise RemoteMarkdownError("Risposta GitHub API troppo grande.")
+        except RemoteMarkdownError:
+            raise
+        except (TimeoutError, socket.timeout, OSError, http.client.HTTPException) as exc:
             raise RemoteMarkdownError("GitHub API non raggiungibile entro il timeout.") from exc
-        if len(payload) > MAX_GITHUB_RESPONSE_BYTES:
-            raise RemoteMarkdownError("Risposta GitHub API troppo grande.")
+        finally:
+            connection.close()
         try:
-            return json.loads(payload.decode("utf-8"))
+            return json.loads(bytes(payload).decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise RemoteMarkdownError("Risposta GitHub API JSON non valida.") from exc
 
