@@ -5,8 +5,12 @@ require "rbconfig"
 
 box_file = File.join(__dir__, ".classroom-box")
 image_state_file = File.join(__dir__, "packer", "classroom-images.state")
-packer_images_active = File.file?(image_state_file) &&
-  File.read(image_state_file, encoding: "UTF-8").strip == "active"
+raise "Stato immagini classroom mancante." unless File.file?(image_state_file)
+image_state = File.read(image_state_file, encoding: "UTF-8").strip
+unless ["pending", "active"].include?(image_state)
+  raise "Stato immagini classroom non valido: #{image_state.inspect}."
+end
+packer_images_active = image_state == "active"
 box_name = ENV["CLASSROOM_BOX_NAME"]
 box_name = File.read(box_file, encoding: "UTF-8").strip if box_name.to_s.empty? && File.file?(box_file)
 if box_name.to_s.empty?

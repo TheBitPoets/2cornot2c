@@ -8,7 +8,11 @@ from installer.executor import execute_plan
 from installer.model import Check
 from installer.model import Host, Provider
 from installer.platforms import detect_host
-from installer.plans import install_plan, supported_providers
+from installer.plans import (
+    classroom_images_active as read_classroom_images_active,
+    install_plan,
+    supported_providers,
+)
 from installer.resources import LOW_MEMORY_LIMIT_BYTES, order_by_recommendation
 from installer.student_dev import immutable_reference, load_lock
 
@@ -26,6 +30,17 @@ def test_detects_supported_hosts() -> None:
 def test_rejects_unsupported_host() -> None:
     with pytest.raises(RuntimeError, match="Host non supportato"):
         detect_host("Linux", "x86_64")
+
+
+def test_invalid_packer_activation_state_fails_closed(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = tmp_path / "classroom-images.state"
+    state.write_text("typo\n", encoding="utf-8")
+    monkeypatch.setattr(plans, "CLASSROOM_IMAGES_STATE", state)
+
+    with pytest.raises(RuntimeError, match="Stato immagini classroom non valido"):
+        read_classroom_images_active()
 
 
 def test_pending_packer_release_keeps_vm_image_steps_dormant(

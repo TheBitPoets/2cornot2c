@@ -68,9 +68,28 @@ function Find-ExistingProvider {
         }
     }
 
-    if ((Test-Path (Join-Path $InstallDir ".vagrant")) -and
+    $MachinesPath = Join-Path $InstallDir ".vagrant\machines"
+    $HasVirtualBoxVm = $false
+    if (Test-Path $MachinesPath) {
+        $HasVirtualBoxVm = @(
+            Get-ChildItem -LiteralPath $MachinesPath -Filter id -File -Recurse `
+                -ErrorAction SilentlyContinue | Where-Object {
+                    ([string](Get-Content -LiteralPath $_.FullName -Raw `
+                        -ErrorAction SilentlyContinue)).Trim()
+                }
+        ).Count -gt 0
+    }
+    $HasPackerMarkers = (
         (Test-Path (Join-Path $InstallDir ".classroom-box")) -and
-        (Test-Path (Join-Path $InstallDir ".classroom-provider"))) {
+        (Test-Path (Join-Path $InstallDir ".classroom-provider"))
+    )
+    $ImageStatePath = Join-Path $InstallDir "packer\classroom-images.state"
+    $ImageState = if (Test-Path $ImageStatePath) {
+        (Get-Content $ImageStatePath -Raw).Trim()
+    } else {
+        ""
+    }
+    if ($HasVirtualBoxVm -and ($HasPackerMarkers -or $ImageState -eq "pending")) {
         return "virtualbox"
     }
     return $null

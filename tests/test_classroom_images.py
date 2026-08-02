@@ -218,6 +218,8 @@ def test_vagrantfile_disables_implicit_bento_fallback() -> None:
     ).read_text(encoding="utf-8")
 
     assert "CLASSROOM_ALLOW_LEGACY_PROVISIONING" in source
+    assert '["pending", "active"].include?(image_state)' in source
+    assert "Stato immagini classroom non valido" in source
     assert "Box Packer 2cornot2c non configurata" in source
 
 
@@ -226,6 +228,20 @@ def test_pending_activation_does_not_claim_an_unpublished_manifest_digest() -> N
         encoding="utf-8"
     ).strip() == "pending"
     assert classroom_images._official_manifest_digest() is None
+
+
+def test_invalid_activation_state_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = tmp_path / "classroom-images.state"
+    state.write_text("typo\n", encoding="utf-8")
+    monkeypatch.setattr(classroom_images, "CLASSROOM_IMAGES_STATE", state)
+
+    with pytest.raises(
+        classroom_images.ClassroomImageError,
+        match="Stato immagini classroom non valido",
+    ):
+        classroom_images._official_manifest_digest()
 
 
 def test_active_manifest_requires_revision_pinned_digest(

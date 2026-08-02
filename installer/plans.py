@@ -19,9 +19,12 @@ def classroom_images_active() -> bool:
     """Enable mandatory Packer images only after the first release exists."""
 
     try:
-        return CLASSROOM_IMAGES_STATE.read_text(encoding="utf-8").strip() == "active"
-    except OSError:
-        return False
+        state = CLASSROOM_IMAGES_STATE.read_text(encoding="utf-8").strip()
+    except OSError as error:
+        raise RuntimeError("Stato immagini classroom non leggibile.") from error
+    if state not in {"pending", "active"}:
+        raise RuntimeError(f"Stato immagini classroom non valido: {state!r}.")
+    return state == "active"
 
 
 def _winget_ensure(package_id: str) -> tuple[str, ...]:

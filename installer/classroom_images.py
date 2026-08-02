@@ -87,8 +87,12 @@ def _official_manifest_digest() -> str | None:
         active = CLASSROOM_IMAGES_STATE.read_text(encoding="utf-8").strip()
     except OSError as error:
         raise ClassroomImageError("Stato immagini classroom non leggibile.") from error
-    if active != "active":
+    if active == "pending":
         return None
+    if active != "active":
+        raise ClassroomImageError(
+            f"Stato immagini classroom non valido: {active!r}."
+        )
     try:
         digest = OFFICIAL_MANIFEST_DIGEST.read_text(encoding="ascii").strip()
     except OSError as error:
