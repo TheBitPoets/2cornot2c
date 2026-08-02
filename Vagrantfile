@@ -29,6 +29,13 @@ unless release_lock.is_a?(Hash) &&
        !release_lock["targets"].empty?
   raise "Schema lock release classroom non valido."
 end
+expected_identities = {
+  "windows-amd64-virtualbox" => ["windows-amd64", "virtualbox"],
+  "macos-arm64-vmware" => ["macos-arm64", "vmware_desktop"]
+}
+unless release_lock["targets"].keys.sort == expected_identities.keys.sort
+  raise "Insieme target del lock release classroom non valido."
+end
 release_lock["targets"].each do |locked_target_id, locked_target|
   unless locked_target_id.match?(/\A[a-z0-9-]+\z/) &&
          locked_target.is_a?(Hash) &&
@@ -36,6 +43,9 @@ release_lock["targets"].each do |locked_target_id, locked_target|
          locked_target["host"].is_a?(String) && !locked_target["host"].empty? &&
          locked_target["provider"].is_a?(String) && !locked_target["provider"].empty?
     raise "Target #{locked_target_id.inspect} non valido nel lock release classroom."
+  end
+  unless [locked_target["host"], locked_target["provider"]] == expected_identities.fetch(locked_target_id)
+    raise "Identità target #{locked_target_id} non valida."
   end
   candidate = locked_target["candidate_version"]
   unless candidate.nil? || (
@@ -74,11 +84,7 @@ target_id = if host_os.match?(/mswin|mingw|cygwin/i) && host_cpu.match?(/x86_64|
 target_release = target_id.nil? ? nil : release_lock["targets"][target_id]
 if !target_id.nil?
   raise "Target #{target_id} mancante nel lock release classroom." if target_release.nil?
-  expected_identity = {
-    "windows-amd64-virtualbox" => ["windows-amd64", "virtualbox"],
-    "macos-arm64-vmware" => ["macos-arm64", "vmware_desktop"]
-  }.fetch(target_id)
-  unless [target_release["host"], target_release["provider"]] == expected_identity
+  unless [target_release["host"], target_release["provider"]] == expected_identities.fetch(target_id)
     raise "Identità target #{target_id} non valida."
   end
   active_release = target_release["active_release"]

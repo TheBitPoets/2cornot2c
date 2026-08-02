@@ -312,6 +312,7 @@ def test_vagrantfile_disables_implicit_bento_fallback() -> None:
     assert 'active.keys.sort ==' in source
     assert "DuplicateRejectingHash" in source
     assert 'release_lock.keys.sort ==' in source
+    assert 'release_lock["targets"].keys.sort == expected_identities.keys.sort' in source
     assert "Release classroom attiva non valida" in source
     assert "Box Packer 2cornot2c non configurata" in source
 
