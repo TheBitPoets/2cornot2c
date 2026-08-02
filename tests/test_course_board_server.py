@@ -143,6 +143,16 @@ def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, 
     assert base64.b64decode(payload["content_base64"]) == image
     assert payload["sha256"] == hashlib.sha256(image).hexdigest()
 
+    (tmp_path / "lessons" / "images" / "unreferenced.png").write_bytes(image)
+    with pytest.raises(ValueError, match="non è referenziata"):
+        course_board_server.heading_asset_snapshot(
+            design,
+            heading["id"],
+            "",
+            heading["content_sha256"],
+            "images/unreferenced.png",
+        )
+
 
 @pytest.mark.parametrize(
     "target",
@@ -151,6 +161,22 @@ def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, 
 def test_heading_asset_rejects_unsafe_or_non_image_paths(target) -> None:
     with pytest.raises(ValueError):
         course_board_server.normalized_heading_asset_path("lessons/intro.md", target)
+
+
+def test_local_heading_asset_rechecks_final_open_handle_path(tmp_path, monkeypatch) -> None:
+    (tmp_path / "images").mkdir()
+    (tmp_path / "images" / "safe.png").write_bytes(b"safe")
+    outside = tmp_path.parent / f"outside-{tmp_path.name}.png"
+    outside.write_bytes(b"outside")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server.course_source_catalog,
+        "opened_file_path",
+        lambda _descriptor: outside,
+    )
+
+    with pytest.raises(ValueError, match="aperta esce"):
+        course_board_server._read_local_heading_asset("images/safe.png")
 
 
 def test_markdown_line_iteration_is_streaming_and_preserves_line_endings() -> None:

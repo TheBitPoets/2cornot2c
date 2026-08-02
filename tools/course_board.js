@@ -2469,12 +2469,11 @@ async function loadParagraphImages(container, heading, isCurrent = () => true) {
   const allImages = Array.from(container.querySelectorAll("img[data-preview-image]"));
   const images = allImages.slice(0, 32);
   for (const image of allImages.slice(32)) showParagraphImageFallback(image);
-  let nextIndex = 0;
-  const worker = async () => {
-    while (nextIndex < images.length) {
-      const image = images[nextIndex++];
-      image.addEventListener("error", () => showParagraphImageFallback(image), { once: true });
-      try {
+  const maxTotalBase64Chars = 22_369_624;
+  let totalBase64Chars = 0;
+  for (const image of images) {
+    image.addEventListener("error", () => showParagraphImageFallback(image), { once: true });
+    try {
         const payload = await api("/api/heading-asset", {
           method: "POST",
           body: JSON.stringify({
@@ -2490,14 +2489,14 @@ async function loadParagraphImages(container, heading, isCurrent = () => true) {
           !/^image\/(?:png|jpeg|gif|webp|svg\+xml|x-icon)$/.test(payload.content_type || "")
           || !/^[A-Za-z0-9+/]*={0,2}$/.test(payload.content_base64 || "")
           || payload.content_base64.length > 11_184_812
-        ) throw new Error("Payload immagine non valido.");
+          || totalBase64Chars + payload.content_base64.length > maxTotalBase64Chars
+        ) throw new Error("Payload immagine non valido o budget preview esaurito.");
+        totalBase64Chars += payload.content_base64.length;
         image.src = `data:${payload.content_type};base64,${payload.content_base64}`;
-      } catch (_error) {
-        if (isCurrent()) showParagraphImageFallback(image);
-      }
+    } catch (_error) {
+      if (isCurrent()) showParagraphImageFallback(image);
     }
-  };
-  await Promise.all(Array.from({ length: Math.min(4, images.length) }, worker));
+  }
 }
 
 function renderParagraphContent(source, heading = {}) {

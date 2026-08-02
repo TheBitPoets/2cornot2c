@@ -913,6 +913,12 @@ def _optional_text(value: Any, field: str) -> str | None:
     return _text(value, field, required=True)
 
 
+def opened_file_path(file_descriptor: int) -> Path:
+    """Return the final filesystem path associated with an already open handle."""
+
+    return _opened_file_path(file_descriptor)
+
+
 def _opened_file_path(file_descriptor: int) -> Path:
     if os.name == "nt":
         import ctypes

@@ -118,6 +118,9 @@ STUDENT_API_BODY_DEADLINE_SECONDS = 15
 HTTP_HEADER_DEADLINE_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 MARKDOWN_LINE_ENDING_RE = re.compile(r"\r\n|\r|\n")
+MARKDOWN_IMAGE_RE = re.compile(
+    r"!\[[^\]\r\n]{0,500}\]\(([^)\s]+)(?:\s+(?:\"[^\"]*\"|'[^']*'))?\)"
+)
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
 SPACE_RE = re.compile(r"[\s_]+")
@@ -3282,6 +3285,11 @@ def _read_local_heading_asset(relative_path: str) -> bytes:
     except OSError as exc:
         raise FileNotFoundError("Immagine locale non disponibile.") from exc
     try:
+        try:
+            opened_path = course_source_catalog.opened_file_path(descriptor).resolve()
+            opened_path.relative_to(repository_root)
+        except (OSError, ValueError) as exc:
+            raise ValueError("L'immagine aperta esce dalla root configurata.") from exc
         metadata = os.fstat(descriptor)
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > MAX_HEADING_IMAGE_BYTES:
             raise ValueError("File immagine locale non valido o troppo grande.")
@@ -3309,6 +3317,7 @@ def heading_asset_snapshot(
         )
     selected_file = None
     selected_heading = None
+    selected_source_text = None
     total_headings = 0
     for source_file in course_markdown_source_files(design):
         source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
@@ -3322,8 +3331,9 @@ def heading_asset_snapshot(
         if match is not None:
             selected_file = source_file
             selected_heading = match
+            selected_source_text = source_text
             break
-    if selected_file is None or selected_heading is None:
+    if selected_file is None or selected_heading is None or selected_source_text is None:
         raise FileNotFoundError("Paragrafo non trovato.")
     if (
         (expected_source_commit or selected_heading["source_provider"] != "local")
@@ -3337,6 +3347,21 @@ def heading_asset_snapshot(
             "Il contenuto del paragrafo è cambiato: riallinealo prima della preview."
         )
     relative_path = normalized_heading_asset_path(selected_file.relative_path, target)
+    section = section_text_from_source(
+        selected_source_text,
+        selected_heading["line"],
+        selected_heading["level"],
+    )
+    referenced_assets = set()
+    for match in MARKDOWN_IMAGE_RE.finditer(section):
+        try:
+            referenced_assets.add(
+                normalized_heading_asset_path(selected_file.relative_path, match.group(1))
+            )
+        except ValueError:
+            continue
+    if relative_path not in referenced_assets:
+        raise ValueError("L'immagine non è referenziata dal paragrafo verificato.")
     content_type = HEADING_IMAGE_CONTENT_TYPES[PurePosixPath(relative_path).suffix.lower()]
     provider = selected_file.source.provider
     if provider == "local":
