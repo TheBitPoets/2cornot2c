@@ -25,12 +25,50 @@ target_id = if host_os.match?(/mswin|mingw|cygwin/i) && host_cpu.match?(/x86_64|
               "macos-arm64-vmware"
             end
 target_release = target_id.nil? ? nil : release_lock["targets"][target_id]
-if !target_id.nil? && !target_release.is_a?(Hash)
-  raise "Target #{target_id} mancante nel lock release classroom."
-end
-active_release = target_release.nil? ? nil : target_release["active_release"]
-unless active_release.nil? || active_release.is_a?(Hash)
-  raise "Release classroom attiva non valida per #{target_id}."
+if !target_id.nil?
+  unless target_release.is_a?(Hash) &&
+         target_release.keys.sort == ["active_release", "candidate_version", "host", "provider"] &&
+         target_release["host"].is_a?(String) &&
+         target_release["provider"].is_a?(String)
+    raise "Target #{target_id} non valido nel lock release classroom."
+  end
+  expected_identity = {
+    "windows-amd64-virtualbox" => ["windows-amd64", "virtualbox"],
+    "macos-arm64-vmware" => ["macos-arm64", "vmware_desktop"]
+  }.fetch(target_id)
+  unless [target_release["host"], target_release["provider"]] == expected_identity
+    raise "Identità target #{target_id} non valida."
+  end
+  candidate_version = target_release["candidate_version"]
+  unless candidate_version.nil? || (
+    candidate_version.is_a?(String) &&
+    candidate_version.match?(/\A\d+\.\d+\.\d+\z/)
+  )
+    raise "Versione candidata #{target_id} non valida."
+  end
+  active_release = target_release["active_release"]
+  active_valid = active_release.nil?
+  if active_release.is_a?(Hash) &&
+     active_release.keys.sort == ["manifest_sha256", "manifest_url", "version"] &&
+     active_release["version"].is_a?(String)
+    active_version = active_release["version"]
+    expected_manifest_url = "https://github.com/TheBitPoets/2cornot2c/releases/download/classroom-#{target_id}-v#{active_version}/release-manifest.json"
+    active_valid = active_version.match?(/\A\d+\.\d+\.\d+\z/) &&
+      active_release["manifest_url"] == expected_manifest_url &&
+      active_release["manifest_sha256"].is_a?(String) &&
+      active_release["manifest_sha256"].match?(/\A[0-9a-f]{64}\z/)
+  end
+  unless active_valid
+    raise "Release classroom attiva non valida per #{target_id}."
+  end
+  if candidate_version.nil? && active_release.nil?
+    raise "Target #{target_id} senza release attiva o candidata."
+  end
+  if !active_release.nil? && candidate_version == active_release["version"]
+    raise "Release candidata e attiva coincidono per #{target_id}."
+  end
+else
+  active_release = nil
 end
 packer_images_active = !active_release.nil?
 image_state = packer_images_active ? "active" : "pending"
