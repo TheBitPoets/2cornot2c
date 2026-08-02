@@ -14,8 +14,12 @@
     "macos-arm64-vmware": {
       "host": "macos-arm64",
       "provider": "vmware_desktop",
-      "candidate_version": "1.0.0",
-      "active_release": null
+      "candidate_version": null,
+      "active_release": {
+        "version": "1.0.0",
+        "manifest_url": "https://github.com/TheBitPoets/2cornot2c/releases/download/classroom-macos-arm64-vmware-v1.0.0/release-manifest.json",
+        "manifest_sha256": "9513c086e5218ab826c0a8710257750c21b9c4c59d025a215c78b46200f9505a"
+      }
     }
   }
 }
