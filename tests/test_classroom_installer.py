@@ -2,14 +2,24 @@ from __future__ import annotations
 
 import pytest
 
+from installer import plans
 from installer.diagnostics import CheckResult, run_check
 from installer.executor import execute_plan
 from installer.model import Check
 from installer.model import Host, Provider
 from installer.platforms import detect_host
-from installer.plans import install_plan, supported_providers
+from installer.plans import (
+    classroom_images_active as read_classroom_images_active,
+    install_plan,
+    supported_providers,
+)
 from installer.resources import LOW_MEMORY_LIMIT_BYTES, order_by_recommendation
 from installer.student_dev import immutable_reference, load_lock
+
+
+@pytest.fixture(autouse=True)
+def active_classroom_images(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(plans, "classroom_images_active", lambda: True)
 
 
 def test_detects_supported_hosts() -> None:
@@ -22,10 +32,34 @@ def test_rejects_unsupported_host() -> None:
         detect_host("Linux", "x86_64")
 
 
+def test_invalid_packer_activation_state_fails_closed(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = tmp_path / "classroom-images.state"
+    state.write_text("typo\n", encoding="utf-8")
+    monkeypatch.setattr(plans, "CLASSROOM_IMAGES_STATE", state)
+
+    with pytest.raises(RuntimeError, match="Stato immagini classroom non valido"):
+        read_classroom_images_active()
+
+
+def test_pending_packer_release_keeps_vm_image_steps_dormant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(plans, "classroom_images_active", lambda: False)
+
+    windows = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
+    macos = install_plan(Host.MACOS_ARM64, Provider.VMWARE)
+
+    assert all(step.key != "classroom-image" for step in windows.steps)
+    assert all(step.key != "classroom-image" for step in macos.steps)
+    assert all(check.key != "classroom-image" for check in windows.checks)
+    assert all(check.key != "classroom-image" for check in macos.checks)
+
+
 def test_hosts_support_vm_and_lightweight_docker_paths() -> None:
     assert supported_providers(Host.MACOS_ARM64) == (
         Provider.VMWARE,
-        Provider.VIRTUALBOX,
         Provider.DOCKER,
     )
     assert supported_providers(Host.WINDOWS_AMD64) == (
@@ -41,11 +75,13 @@ def test_windows_rejects_vmware() -> None:
 
 def test_plans_are_provider_specific() -> None:
     vmware = install_plan(Host.MACOS_ARM64, Provider.VMWARE)
-    virtualbox = install_plan(Host.MACOS_ARM64, Provider.VIRTUALBOX)
+    windows = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
 
     assert any(step.key == "fusion" for step in vmware.steps)
     assert not any(step.key == "virtualbox" for step in vmware.steps)
-    assert any(step.key == "virtualbox" for step in virtualbox.steps)
+    assert any(step.key == "virtualbox" for step in windows.steps)
+    assert any(step.key == "classroom-image" for step in vmware.steps)
+    assert any(step.key == "classroom-image" for step in windows.steps)
 
 
 def test_low_memory_recommends_docker_without_removing_vm_choices() -> None:
@@ -492,7 +528,12 @@ def test_low_memory_vm_warning_is_visible_but_does_not_block(
 
 def check_results(plan, *, missing: set[str] = set()):
     return tuple(
-        CheckResult(check, check.key not in missing, "manca")
+        CheckResult(
+            check,
+            check.key not in missing,
+            "manca",
+            check.key not in missing,
+        )
         for check in plan.checks
     )
 
@@ -508,12 +549,17 @@ def test_executor_skips_present_steps_and_applies_only_missing(tmp_path) -> None
         log_path=tmp_path / "installer.jsonl",
     )
 
-    assert [result.status for result in results] == ["skipped", "skipped", "succeeded"]
-    assert len(calls) == 1
+    assert [result.status for result in results] == [
+        "skipped",
+        "skipped",
+        "succeeded",
+        "updated",
+    ]
+    assert len(calls) == 2
     assert "Oracle.VirtualBox" in calls[0][-1]
     assert "winget upgrade" in calls[0][-1]
     assert "winget install" in calls[0][-1]
-    assert (tmp_path / "installer.jsonl").read_text(encoding="utf-8").count("\n") == 3
+    assert (tmp_path / "installer.jsonl").read_text(encoding="utf-8").count("\n") == 4
 
 
 def test_executor_reports_step_progress_without_inventing_percentages() -> None:
@@ -528,12 +574,14 @@ def test_executor_reports_step_progress_without_inventing_percentages() -> None:
     )
 
     assert events == [
-        ("started", 1, 3, "Installa o aggiorna Git"),
-        ("skipped", 1, 3, "Installa o aggiorna Git"),
-        ("started", 2, 3, "Installa o aggiorna Vagrant"),
-        ("skipped", 2, 3, "Installa o aggiorna Vagrant"),
-        ("started", 3, 3, "Installa o aggiorna VirtualBox"),
-        ("succeeded", 3, 3, "Installa o aggiorna VirtualBox"),
+        ("started", 1, 4, "Installa o aggiorna Git"),
+        ("skipped", 1, 4, "Installa o aggiorna Git"),
+        ("started", 2, 4, "Installa o aggiorna Vagrant"),
+        ("skipped", 2, 4, "Installa o aggiorna Vagrant"),
+        ("started", 3, 4, "Installa o aggiorna VirtualBox"),
+        ("succeeded", 3, 4, "Installa o aggiorna VirtualBox"),
+        ("started", 4, 4, "Verifica e reimporta la box Packer"),
+        ("updated", 4, 4, "Verifica e reimporta la box Packer"),
     ]
 
 
@@ -544,7 +592,7 @@ def test_executor_marks_preexisting_old_software_as_updated(tmp_path) -> None:
             check,
             check.key != "vagrant",
             "versione 2.3.7; serve almeno 2.4.0",
-            check.key == "vagrant",
+            True,
         )
         for check in plan.checks
     )
@@ -560,6 +608,7 @@ def test_executor_marks_preexisting_old_software_as_updated(tmp_path) -> None:
         "skipped",
         "updated",
         "skipped",
+        "updated",
     ]
     assert '"status": "updated"' in (
         tmp_path / "installer.jsonl"

@@ -139,7 +139,17 @@ def test_windows_launcher_hides_technical_start_commands() -> None:
 
     assert "selected-provider.txt" in launcher
     assert "student_dev_shell.py" in launcher
-    assert "vagrant up --provider=virtualbox" in launcher
+    assert "setup-vm.ps1" in launcher
+    setup_vm = (ROOT / "scripts" / "setup-vm.ps1").read_text(encoding="utf-8")
+    assert '"Vagrant\\bin\\vagrant.exe"' in setup_vm
+    assert '"Oracle\\VirtualBox\\VBoxManage.exe"' in setup_vm
+    assert "Invoke-Checked $VagrantCommand" in setup_vm
+    assert ".classroom-box" in launcher
+    assert "classroom-images.state" in launcher
+    assert 'Join-Path $InstallDir ".vagrant\\machines"' in launcher
+    assert '$ImageState -eq "pending"' in launcher
+    assert 'if ($ImageState -ne "pending")' in launcher
+    assert "avvio Bento transitorio" in launcher
     assert "AMBIENTE NON ANCORA PRONTO" in launcher
     assert "Find-ExistingProvider" in launcher
     assert 'Record.key -eq "student-image"' in launcher

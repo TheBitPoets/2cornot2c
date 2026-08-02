@@ -97,6 +97,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`MVP_2026_2027.md`](MVP_2026_2027.md) | Quando devi preparare o usare il pilot scolastico |
 | [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md) | Quando devi capire GUI, API, service, storage, provider, AI e Docker |
 | [`FRONTEND_ARCHITECTURE.md`](FRONTEND_ARCHITECTURE.md) | Quando devi modificare stato UI, endpoint o flussi asincroni |
+| [`packer/README.md`](../packer/README.md) | Quando devi modificare, costruire, collaudare o pubblicare le box classroom Packer |
 
 ## Script collegati
 

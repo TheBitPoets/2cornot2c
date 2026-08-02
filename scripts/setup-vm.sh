@@ -11,9 +11,9 @@ fail() {
 
 usage() {
   cat <<'EOF'
-Uso: ./scripts/setup-vm.sh [--virtualbox|--vmware]
+Uso: ./scripts/setup-vm.sh [--vmware]
 
-Su macOS senza opzioni viene mostrata la scelta del provider.
+Su macOS Apple Silicon VMware Fusion è l'unico provider VM supportato.
 Su Windows usa setup-vm.cmd: VirtualBox viene scelto automaticamente.
 EOF
 }
@@ -21,56 +21,35 @@ EOF
 command -v vagrant >/dev/null 2>&1 ||
   fail "Vagrant non è installato o non è disponibile nel PATH."
 
-provider=""
+provider="vmware_desktop"
 case "${1:-}" in
-  --virtualbox) provider="virtualbox" ;;
   --vmware) provider="vmware_desktop" ;;
+  --virtualbox)
+    fail "VirtualBox non è supportato su macOS Apple Silicon. Usa --vmware."
+    ;;
   --help|-h) usage; exit 0 ;;
   "") ;;
   *) usage; fail "Opzione non riconosciuta: $1" ;;
 esac
 
-if [ -z "$provider" ]; then
-  if [ -f ".classroom-provider" ]; then
-    provider="$(tr -d '\r\n' < .classroom-provider)"
-    case "$provider" in
-      virtualbox|vmware_desktop) ;;
-      *) fail "Provider non valido in .classroom-provider." ;;
-    esac
-  elif [ "$(uname -s)" = "Darwin" ] && [ -t 0 ]; then
-    printf 'Scegli il motore della macchina virtuale:\n'
-    printf '  1) VirtualBox (soluzione stabile con finestra scalata)\n'
-    printf '  2) VMware Fusion (ridimensionamento dinamico)\n'
-    printf 'Scelta [1]: '
-    read -r provider_choice
-    case "$provider_choice" in
-      ""|1) provider="virtualbox" ;;
-      2) provider="vmware_desktop" ;;
-      *) fail "Scelta non valida." ;;
-    esac
-  else
-    provider="virtualbox"
+if [ -f ".classroom-provider" ]; then
+  configured_provider="$(tr -d '\r\n' < .classroom-provider)"
+  if [ "$configured_provider" != "vmware_desktop" ]; then
+    fail "Provider non supportato in .classroom-provider: $configured_provider. Esegui la migrazione esplicita verso VMware."
   fi
 fi
 
-state_dir=".vagrant"
-provider_health_check='systemctl is-active --quiet vboxadd-service'
+[ "$(uname -s)" = "Darwin" ] ||
+  fail "Questo script supporta soltanto macOS. Su Windows usa setup-vm.cmd."
+[ -d "/Applications/VMware Fusion.app" ] ||
+  fail "VMware Fusion non è installato in /Applications."
+vagrant plugin list | grep -q '^vagrant-vmware-desktop ' ||
+  fail "Manca il plugin Vagrant VMware: vagrant plugin install vagrant-vmware-desktop"
+[ -x "/opt/vagrant-vmware-desktop/bin/vagrant-vmware-utility" ] ||
+  fail "Manca Vagrant VMware Utility."
 
-if [ "$provider" = "virtualbox" ]; then
-  command -v VBoxManage >/dev/null 2>&1 ||
-    fail "VirtualBox non è installato o non è disponibile nel PATH."
-else
-  [ "$(uname -s)" = "Darwin" ] ||
-    fail "VMware Fusion è abilitato soltanto su macOS."
-  [ -d "/Applications/VMware Fusion.app" ] ||
-    fail "VMware Fusion non è installato in /Applications."
-  vagrant plugin list | grep -q '^vagrant-vmware-desktop ' ||
-    fail "Manca il plugin Vagrant VMware: vagrant plugin install vagrant-vmware-desktop"
-  [ -x "/opt/vagrant-vmware-desktop/bin/vagrant-vmware-utility" ] ||
-    fail "Manca Vagrant VMware Utility."
-  state_dir=".vagrant-vmware"
-  provider_health_check='pgrep -x vmtoolsd >/dev/null'
-fi
+state_dir=".vagrant-vmware"
+provider_health_check='pgrep -x vmtoolsd >/dev/null'
 
 run_vagrant() {
   VAGRANT_DOTFILE_PATH="$state_dir" vagrant "$@"
@@ -103,8 +82,4 @@ fi
 
 printf '\nAMBIENTE PRONTO.\n'
 printf 'La finestra grafica si apre automaticamente.\n'
-if [ "$provider" = "vmware_desktop" ]; then
-  printf 'Per il terminale usa: VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant ssh\n'
-else
-  printf 'Per il terminale usa: vagrant ssh\n'
-fi
+printf 'Per il terminale usa: VAGRANT_DOTFILE_PATH=.vagrant-vmware vagrant ssh\n'

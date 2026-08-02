@@ -22,19 +22,33 @@ function Invoke-Checked {
 }
 
 try {
-    if (-not (Get-Command vagrant -ErrorAction SilentlyContinue)) {
-        Stop-WithMessage "Vagrant non è installato o non è disponibile nel PATH."
+    $VagrantLookup = Get-Command vagrant -ErrorAction SilentlyContinue
+    $VagrantCommand = if ($VagrantLookup) {
+        $VagrantLookup.Source
+    } else {
+        Join-Path $env:ProgramFiles "Vagrant\bin\vagrant.exe"
     }
-    if (-not (Get-Command VBoxManage -ErrorAction SilentlyContinue)) {
-        Stop-WithMessage "VirtualBox non è installato o non è disponibile nel PATH. Riavvia Windows dopo l'installazione."
+    if (-not (Test-Path $VagrantCommand)) {
+        Stop-WithMessage "Vagrant non è installato."
     }
 
+    $VBoxLookup = Get-Command VBoxManage -ErrorAction SilentlyContinue
+    $VBoxManageCommand = if ($VBoxLookup) {
+        $VBoxLookup.Source
+    } else {
+        Join-Path $env:ProgramFiles "Oracle\VirtualBox\VBoxManage.exe"
+    }
+    if (-not (Test-Path $VBoxManageCommand)) {
+        Stop-WithMessage "VirtualBox non è installato."
+    }
+    $env:Path = (Split-Path -Parent $VBoxManageCommand) + ";" + $env:Path
+
     Write-Host "Controllo della configurazione..."
-    Invoke-Checked "vagrant" @("validate")
+    Invoke-Checked $VagrantCommand @("validate")
 
     Write-Host ""
     Write-Host "Avvio dell'ambiente didattico (il primo avvio può richiedere alcuni minuti)..."
-    Invoke-Checked "vagrant" @("up", "--provider=virtualbox")
+    Invoke-Checked $VagrantCommand @("up", "--provider=virtualbox")
 
     $HealthCheck = @'
 set -eu
@@ -48,11 +62,11 @@ findmnt -rn /lab2 >/dev/null
 
     Write-Host ""
     Write-Host "Controllo automatico della macchina..."
-    & vagrant ssh -c $HealthCheck
+    & $VagrantCommand ssh -c $HealthCheck
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Primo controllo non riuscito: provo un riavvio automatico..."
-        Invoke-Checked "vagrant" @("reload")
-        & vagrant ssh -c $HealthCheck
+        Invoke-Checked $VagrantCommand @("reload")
+        & $VagrantCommand ssh -c $HealthCheck
         if ($LASTEXITCODE -ne 0) {
             Stop-WithMessage "La macchina è avviata, ma il controllo finale non è riuscito. Comunica questo messaggio al docente."
         }

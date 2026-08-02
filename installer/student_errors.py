@@ -123,6 +123,19 @@ ERRORS = {
             "Rilancia l'installer: non perderai quanto già scaricato.",
         ),
     ),
+    "classroom-image": StudentError(
+        "E25",
+        "La box Packer della macchina virtuale non è disponibile",
+        (
+            "La procedura non userà la box Bento generica e non eseguirà "
+            "installazioni lente al primo avvio."
+        ),
+        (
+            "Controlla Internet e rilancia Installa, completa o ripara.",
+            "Se esiste già una VM, segui la migrazione indicata nei dettagli.",
+            "Se ricompare, comunica E25 al docente.",
+        ),
+    ),
     "student-security": StudentError(
         "E22",
         "L'ambiente Linux non supera il controllo di sicurezza",

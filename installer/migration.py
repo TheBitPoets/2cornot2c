@@ -81,6 +81,16 @@ def state_directory(provider: Provider) -> str:
     return ".vagrant-vmware" if provider is Provider.VMWARE else ".vagrant"
 
 
+def legacy_environment(provider: Provider) -> dict[str, str]:
+    """Abilita Bento soltanto per ispezionare/rimuovere la VM da migrare."""
+
+    return {
+        "VAGRANT_DOTFILE_PATH": state_directory(provider),
+        "CLASSROOM_ALLOW_LEGACY_PROVISIONING": "1",
+        "CLASSROOM_BOX_NAME": "bento/ubuntu-24.04",
+    }
+
+
 def parse_machine_state(machine_output: str, provider: Provider) -> MachineState:
     """Legge lo stato della macchina `default` dall'output machine-readable."""
 
@@ -99,7 +109,7 @@ def inspect_machine(
 ) -> MachineState:
     """Ispeziona una sola VM senza modificarla."""
 
-    environment = {"VAGRANT_DOTFILE_PATH": state_directory(provider)}
+    environment = legacy_environment(provider)
     returncode, output = runner(
         ("vagrant", "status", "--machine-readable"),
         project,
@@ -127,6 +137,53 @@ def validate_shared_folders(project: Path) -> tuple[Path, Path]:
     return folders
 
 
+def project_selection_markers(project: Path) -> tuple[Path, Path]:
+    """Restituisce i marker validati della selezione box del progetto."""
+
+    project = project.resolve(strict=True)
+    markers = tuple(
+        project / name for name in (".classroom-box", ".classroom-provider")
+    )
+    for marker in markers:
+        if marker.is_dir() and not marker.is_symlink():
+            raise RuntimeError(f"Marker classroom non valido: {marker}")
+    return markers
+
+
+def project_selection_exists(project: Path) -> bool:
+    """Indica se esiste una selezione box, senza modificarla."""
+
+    return any(
+        marker.exists() or marker.is_symlink()
+        for marker in project_selection_markers(project)
+    )
+
+
+def project_selection_provider(project: Path) -> Provider | None:
+    """Legge il provider configurato, se il relativo marker è presente."""
+
+    provider_marker = project_selection_markers(project)[1]
+    if not provider_marker.is_file():
+        return None
+    value = provider_marker.read_text(encoding="utf-8").strip()
+    try:
+        return Provider(value)
+    except ValueError as error:
+        raise RuntimeError(
+            f"Provider non valido in {provider_marker}: {value or '<vuoto>'}"
+        ) from error
+
+
+def clear_project_selection(project: Path) -> bool:
+    """Rimuove in modo idempotente la selezione della box ormai migrata."""
+
+    markers = project_selection_markers(project)
+    removed = any(marker.exists() or marker.is_symlink() for marker in markers)
+    for marker in markers:
+        marker.unlink(missing_ok=True)
+    return removed
+
+
 def recreate_machine(
     project: Path,
     machine: MachineState,
@@ -136,15 +193,37 @@ def recreate_machine(
 ) -> MigrationResult:
     """Arresta e distrugge soltanto la VM confermata, mai i dati condivisi."""
 
+    selected_provider = project_selection_provider(project)
+    selection_belongs_to_other_provider = (
+        selected_provider is not None
+        and selected_provider is not machine.provider
+    )
     if not machine.exists:
-        return MigrationResult("skipped", "nessuna VM preesistente")
+        if selection_belongs_to_other_provider:
+            return MigrationResult(
+                "skipped",
+                "nessuna VM legacy per il provider richiesto; selezione "
+                f"{selected_provider.value} conservata",
+            )
+        if not project_selection_exists(project):
+            return MigrationResult("skipped", "nessuna VM preesistente")
+        if confirmation != CONFIRMATION:
+            return MigrationResult(
+                "blocked",
+                f"Conferma non valida: digitare esattamente {CONFIRMATION}",
+            )
+        clear_project_selection(project)
+        return MigrationResult(
+            "succeeded",
+            "nessuna VM preesistente; selezione box precedente rimossa",
+        )
     if confirmation != CONFIRMATION:
         return MigrationResult(
             "blocked",
             f"Conferma non valida: digitare esattamente {CONFIRMATION}",
         )
     validate_shared_folders(project)
-    environment = {"VAGRANT_DOTFILE_PATH": state_directory(machine.provider)}
+    environment = legacy_environment(machine.provider)
 
     if machine.running:
         returncode, output = runner(("vagrant", "halt"), project, environment)
@@ -158,9 +237,17 @@ def recreate_machine(
     )
     if returncode != 0:
         return MigrationResult("failed", output or "Rimozione VM non riuscita.")
+    if not selection_belongs_to_other_provider:
+        clear_project_selection(project)
+    selection_detail = (
+        f"; selezione {selected_provider.value} conservata"
+        if selection_belongs_to_other_provider
+        else ""
+    )
     return MigrationResult(
         "succeeded",
-        "VM precedente rimossa; lab e lab2 sono rimaste sull'host",
+        "VM precedente rimossa; lab e lab2 sono rimaste sull'host"
+        f"{selection_detail}",
     )
 
 
@@ -185,18 +272,30 @@ def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     provider = Provider(args.provider)
     try:
+        selection_exists = project_selection_exists(args.project)
+        selected_provider = project_selection_provider(args.project)
         machine = inspect_machine(args.project, provider)
         validate_shared_folders(args.project)
     except (OSError, RuntimeError, ValueError) as error:
         print(f"Migrazione non disponibile: {error}")
         return 1
-    if not machine.exists:
-        print("Nessuna VM preesistente da rimuovere.")
+    selection_belongs_to_other_provider = (
+        selected_provider is not None and selected_provider is not provider
+    )
+    if not machine.exists and (
+        not selection_exists or selection_belongs_to_other_provider
+    ):
+        result = recreate_machine(args.project, machine, "")
+        print(f"[{result.status.upper()}] {result.detail}")
         return 0
 
-    print(f"VM trovata: provider={provider.value}, stato={machine.state}")
-    print("Saranno conservate soltanto le cartelle host lab e lab2.")
-    print("I file salvati esclusivamente dentro la VM andranno persi.")
+    if machine.exists:
+        print(f"VM trovata: provider={provider.value}, stato={machine.state}")
+        print("Saranno conservate soltanto le cartelle host lab e lab2.")
+        print("I file salvati esclusivamente dentro la VM andranno persi.")
+    else:
+        print("Nessuna VM trovata, ma esiste una selezione box configurata.")
+        print("Saranno rimossi i marker .classroom-box e .classroom-provider.")
     confirmation = input(f"Digita esattamente {CONFIRMATION}: ")
     result = recreate_machine(args.project, machine, confirmation)
     print(f"[{result.status.upper()}] {result.detail}")

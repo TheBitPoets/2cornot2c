@@ -3,7 +3,7 @@
 Il codice in questa directory prepara il percorso unico per installare
 l'ambiente didattico:
 
-- macOS Apple Silicon: VMware Fusion raccomandato, VirtualBox opzionale;
+- macOS Apple Silicon: VMware Fusion per la VM completa;
 - Windows amd64: VirtualBox;
 - modalità Docker leggera: disponibile su entrambi e raccomandata
   automaticamente fino a 8 GiB di RAM.
@@ -57,7 +57,7 @@ Il bootstrap installa soltanto Git e Python 3.12, prepara il repository in
 `~/2cornot2c`, crea `.installer-venv` e avvia uTUI. La procedura guidata
 diagnostica e installa poi l'ambiente selezionato:
 
-- VMware Fusion o VirtualBox per una VM grafica completa;
+- VMware Fusion su macOS o VirtualBox su Windows per una VM grafica completa;
 - Docker Desktop e l'immagine pubblica `student-dev` per il percorso da 512 MB.
 
 Il bootstrap crea il collegamento **Ambiente 2cornot2c** sul desktop e nel
@@ -195,25 +195,39 @@ Elimina dalla cache esclusivamente box con namespace `2cornot2c/`; non tocca
 altre VM, box Bento o software preesistente. Il comando diretto richiede la
 frase distinta `DISINSTALLA TUTTO`.
 
-La parte VM non scarica ancora la box Packer reale e non avvia la VM. Questi
-passi verranno attivati dopo aver fissato URL, versione e checksum degli
-artefatti che superano il collaudo VirtualBox AMD64.
+La transizione è controllata da `packer/classroom-images.state`. Finché vale
+`pending`, l'installer mantiene il percorso Bento precedente e non propone
+ancora i passi immagine: questo consente di unire e avviare la workflow senza
+bloccare le installazioni se la prima build fisica fallisce. Dopo la
+pubblicazione e verifica di `classroom-v1.0.0`, una PR separata registra lo
+SHA-256 del manifest in `packer/release-manifest.sha256` e imposta lo stato ad
+`active`.
 
-Il contratto e il downloader verificato sono implementati in
-`installer/artifacts.py`; manca intenzionalmente il manifest reale finché la
-box VirtualBox AMD64 non supera il collaudo Windows.
+Con stato `active`, la parte VM usa esclusivamente box Packer pubblicate dalla
+workflow `publish-classroom-boxes.yml`. L'installer scarica senza discovery API
+il manifest della release fissata nel codice, seleziona host/provider, verifica
+dimensione e SHA-256, importa la box e configura il progetto. Un aggiornamento
+delle immagini richiede una modifica revisionata di
+`CLASSROOM_RELEASE_VERSION`, evitando il limite API condiviso delle aule dietro
+NAT. Se la release o la combinazione richiesta non è disponibile,
+l'installazione si ferma con E25. L'override `CLASSROOM_RELEASE_MANIFEST` è
+riservato a test isolati e viene rifiutato senza il secondo opt-in esplicito
+`CLASSROOM_ALLOW_UNTRUSTED_MANIFEST=1`; non va usato nel pilot.
 
 `installer/vagrant_box.py` completa il flusso locale:
 
 1. verifica nuovamente dimensione e SHA-256;
-2. controlla le box installate tramite output machine-readable;
-3. importa soltanto se nome e provider non sono già presenti, senza `--force`;
-4. salva box e provider in `.classroom-box` e `.classroom-provider`;
-5. usa gli script `setup-vm` esistenti per primo avvio e health check.
+2. durante **Installa, completa o ripara** reimporta sempre con `--force` la stessa identità versionata, così una box locale corrotta o sostituita viene riparata;
+3. salva box e provider in `.classroom-box` e `.classroom-provider`;
+4. usa gli script `setup-vm` esistenti per primo avvio e health check.
 
-Quando `.classroom-box` è presente, il `Vagrantfile` salta il provisioning
-legacy perché desktop, toolchain e Guest Tools sono già nella box Packer.
-Senza quel file continua a usare Bento e il provisioning attuale.
+Se il file in cache è invalido, il nuovo download viene verificato in un file temporaneo e sostituisce atomicamente la cache soltanto dopo checksum e dimensione corretti.
+
+Quando `.classroom-box` è presente, il `Vagrantfile` usa desktop, toolchain e
+Guest Tools già inclusi nella box Packer. Durante lo stato `pending`, senza quel
+file usa ancora Bento in modo transitorio. Dopo l'attivazione si ferma e Bento
+resta disponibile soltanto alla migrazione controllata tramite
+`CLASSROOM_ALLOW_LEGACY_PROVISIONING=1`.
 
 ## VM già esistente
 
@@ -224,7 +238,7 @@ e migrato esplicitamente:
 python -m installer.migration --provider vmware_desktop
 ```
 
-Su Windows usa `--provider virtualbox`. La procedura:
+Su Windows usa `--provider virtualbox`. Se sono presenti stati di più provider, esegui il comando per ciascuno di quelli indicati dall'installer. La procedura può eliminare una VM legacy VirtualBox conservando una selezione VMware già valida, e viceversa. In ogni caso:
 
 - non esegue nulla senza la frase esatta `RICREA VM`;
 - controlla che `lab` e `lab2` siano directory interne al progetto;

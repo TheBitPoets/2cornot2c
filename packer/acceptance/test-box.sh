@@ -13,26 +13,35 @@ case "$provider" in
 esac
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$script_dir/../.." && pwd)"
 box_file="$(cd "$(dirname "$box_file")" && pwd)/$(basename "$box_file")"
 box_name="2cornot2c/acceptance-${provider}"
 dotfile_path=".vagrant-${provider}"
+acceptance_share="$(mktemp -d "${TMPDIR:-/tmp}/2cornot2c-acceptance-share.XXXXXX")"
+printf 'isolated acceptance fixture\n' > "$acceptance_share/.acceptance-fixture"
+
+export CLASSROOM_BOX_NAME="$box_name"
+export CLASSROOM_ACCEPTANCE_SHARE="$acceptance_share"
+export CLASSROOM_MEMORY_MB="${CLASSROOM_MEMORY_MB:-2048}"
+export VAGRANT_DOTFILE_PATH="$dotfile_path"
+
+cd "$script_dir"
+
+cleanup() {
+  VAGRANT_DOTFILE_PATH="$dotfile_path" vagrant destroy --force >/dev/null 2>&1 || true
+  vagrant box remove "$box_name" --provider "$provider" --force >/dev/null 2>&1 || true
+  rm -rf -- "$acceptance_share"
+}
+trap cleanup EXIT
 
 test -f "$box_file"
 
 vagrant box add "$box_name" "$box_file" --provider "$provider" --force
 
-export CLASSROOM_BOX_NAME="$box_name"
-export CLASSROOM_REPO_ROOT="$repo_root"
-export CLASSROOM_MEMORY_MB="${CLASSROOM_MEMORY_MB:-2048}"
-export VAGRANT_DOTFILE_PATH="$dotfile_path"
-
-cd "$script_dir"
 vagrant up --provider "$provider"
 vagrant ssh -c '
   set -eu
   sudo /usr/local/bin/2cornot2c-health-check
-  test "$(stat -c %a /home/vagrant/2cornot2c)" != ""
+  test -f /home/vagrant/2cornot2c/.acceptance-fixture
   test -x /home/vagrant/cambia-risoluzione.sh || test "'"$provider"'" = virtualbox
   systemctl is-active --quiet display-manager
   pgrep -u vagrant -x xfce4-session >/dev/null

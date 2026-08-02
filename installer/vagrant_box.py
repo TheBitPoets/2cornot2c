@@ -7,6 +7,7 @@ import csv
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
@@ -23,6 +24,32 @@ class VagrantResult:
 
 
 Runner = Callable[[tuple[str, ...], Path | None], tuple[int, str]]
+
+
+def resolve_vagrant_executable(
+    *,
+    platform_name: str | None = None,
+    environment: dict[str, str] | None = None,
+    which: Callable[[str], str | None] = shutil.which,
+) -> str:
+    """Find Vagrant even before the current Windows process refreshes PATH."""
+
+    found = which("vagrant")
+    if found:
+        return found
+    platform_name = os.name if platform_name is None else platform_name
+    environment = os.environ if environment is None else environment
+    if platform_name == "nt":
+        roots = tuple(
+            value
+            for key in ("ProgramW6432", "ProgramFiles")
+            if (value := environment.get(key))
+        )
+        for root in roots:
+            candidate = Path(root) / "Vagrant" / "bin" / "vagrant.exe"
+            if candidate.is_file():
+                return str(candidate)
+    return "vagrant"
 
 
 def subprocess_runner(
@@ -67,31 +94,28 @@ def import_box(
     *,
     runner: Runner = subprocess_runner,
 ) -> VagrantResult:
-    """Verifica e importa la box senza forzare o sovrascrivere installazioni."""
+    """Verifica e reimporta la box, sostituendo la stessa identità locale."""
 
+    box_path = box_path.resolve(strict=True)
     verify_box(box_path, artifact)
-    returncode, output = runner(("vagrant", "box", "list", "--machine-readable"), None)
+    with tempfile.TemporaryDirectory(prefix="2cornot2c-vagrant-box-") as directory:
+        isolated_cwd = Path(directory)
+        returncode, output = runner(
+            (
+                resolve_vagrant_executable(),
+                "box",
+                "add",
+                artifact.box_name,
+                str(box_path),
+                "--provider",
+                artifact.provider.value,
+                "--force",
+            ),
+            isolated_cwd,
+        )
     if returncode != 0:
-        return VagrantResult("failed", output or "Impossibile elencare le box Vagrant.")
-    identity = (artifact.box_name, artifact.provider.value)
-    if identity in parse_installed_boxes(output):
-        return VagrantResult("skipped", "box già installata")
-
-    returncode, output = runner(
-        (
-            "vagrant",
-            "box",
-            "add",
-            artifact.box_name,
-            str(box_path),
-            "--provider",
-            artifact.provider.value,
-        ),
-        None,
-    )
-    if returncode != 0:
-        return VagrantResult("failed", output or "Importazione box non riuscita.")
-    return VagrantResult("succeeded", "box verificata e importata")
+        return VagrantResult("failed", output or "Reimportazione box non riuscita.")
+    return VagrantResult("succeeded", "box verificata e reimportata")
 
 
 def _atomic_text(path: Path, content: str) -> None:
@@ -124,9 +148,8 @@ def launch_command(project: Path, host: Host, provider: Provider) -> tuple[str, 
 
     if provider not in VM_PROVIDERS:
         raise ValueError(f"Provider non VM: {provider.value}")
-    if host is Host.MACOS_ARM64:
-        option = "--vmware" if provider is Provider.VMWARE else "--virtualbox"
-        return ("bash", str(project / "scripts" / "setup-vm.sh"), option)
+    if host is Host.MACOS_ARM64 and provider is Provider.VMWARE:
+        return ("bash", str(project / "scripts" / "setup-vm.sh"), "--vmware")
     if host is Host.WINDOWS_AMD64 and provider is Provider.VIRTUALBOX:
         return (
             "powershell.exe",

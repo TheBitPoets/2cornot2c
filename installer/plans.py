@@ -2,11 +2,29 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 import sys
 
 from installer.model import Check, Host, InstallPlan, Provider, Step
 from installer.student_dev import immutable_reference
 from installer.tool_versions import MINIMUM_TOOL_VERSIONS
+
+
+CLASSROOM_IMAGES_STATE = (
+    Path(__file__).resolve().parents[1] / "packer" / "classroom-images.state"
+)
+
+
+def classroom_images_active() -> bool:
+    """Enable mandatory Packer images only after the first release exists."""
+
+    try:
+        state = CLASSROOM_IMAGES_STATE.read_text(encoding="utf-8").strip()
+    except OSError as error:
+        raise RuntimeError("Stato immagini classroom non leggibile.") from error
+    if state not in {"pending", "active"}:
+        raise RuntimeError(f"Stato immagini classroom non valido: {state!r}.")
+    return state == "active"
 
 
 def _winget_ensure(package_id: str) -> tuple[str, ...]:
@@ -35,7 +53,7 @@ def supported_providers(host: Host) -> tuple[Provider, ...]:
     """Restituisce solo i provider ufficialmente supportati per l'host."""
 
     if host is Host.MACOS_ARM64:
-        return (Provider.VMWARE, Provider.VIRTUALBOX, Provider.DOCKER)
+        return (Provider.VMWARE, Provider.DOCKER)
     if host is Host.WINDOWS_AMD64:
         return (Provider.VIRTUALBOX, Provider.DOCKER)
     raise ValueError(f"Host non supportato: {host}")
@@ -93,11 +111,43 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
             ),
         )
     )
+    checks = (resources, connectivity, *plan.checks)
+    steps = plan.steps
+    if (
+        provider in {Provider.VMWARE, Provider.VIRTUALBOX}
+        and classroom_images_active()
+    ):
+        image_command = (
+            sys.executable,
+            "-m",
+            "installer.classroom_images",
+            "--provider",
+            provider.value,
+            "--host",
+            host.value,
+        )
+        checks = (
+            *checks,
+            Check(
+                "classroom-image",
+                "Box Packer preconfigurata",
+                (*image_command, "--check"),
+            ),
+        )
+        steps = (
+            *steps,
+            Step(
+                "classroom-image",
+                "Verifica e reimporta la box Packer",
+                (*image_command, "--install"),
+                always_run=True,
+            ),
+        )
     return InstallPlan(
         plan.host,
         plan.provider,
-        (resources, connectivity, *plan.checks),
-        plan.steps,
+        checks,
+        steps,
     )
 
 

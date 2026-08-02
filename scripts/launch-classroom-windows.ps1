@@ -68,7 +68,28 @@ function Find-ExistingProvider {
         }
     }
 
-    if (Test-Path (Join-Path $InstallDir ".vagrant")) {
+    $MachinesPath = Join-Path $InstallDir ".vagrant\machines"
+    $HasVirtualBoxVm = $false
+    if (Test-Path $MachinesPath) {
+        $HasVirtualBoxVm = @(
+            Get-ChildItem -LiteralPath $MachinesPath -Filter id -File -Recurse `
+                -ErrorAction SilentlyContinue | Where-Object {
+                    ([string](Get-Content -LiteralPath $_.FullName -Raw `
+                        -ErrorAction SilentlyContinue)).Trim()
+                }
+        ).Count -gt 0
+    }
+    $HasPackerMarkers = (
+        (Test-Path (Join-Path $InstallDir ".classroom-box")) -and
+        (Test-Path (Join-Path $InstallDir ".classroom-provider"))
+    )
+    $ImageStatePath = Join-Path $InstallDir "packer\classroom-images.state"
+    $ImageState = if (Test-Path $ImageStatePath) {
+        (Get-Content $ImageStatePath -Raw).Trim()
+    } else {
+        ""
+    }
+    if ($HasVirtualBoxVm -and ($HasPackerMarkers -or $ImageState -eq "pending")) {
         return "virtualbox"
     }
     return $null
@@ -101,7 +122,31 @@ try {
         exit $LASTEXITCODE
     }
     if ($Provider -eq "virtualbox") {
-        & vagrant up --provider=virtualbox
+        $BoxPath = Join-Path $InstallDir ".classroom-box"
+        $ProjectProviderPath = Join-Path $InstallDir ".classroom-provider"
+        if (-not (Test-Path $BoxPath) -or
+            -not (Test-Path $ProjectProviderPath)) {
+            $ImageStatePath = Join-Path $InstallDir `
+                "packer\classroom-images.state"
+            $ImageState = if (Test-Path $ImageStatePath) {
+                (Get-Content $ImageStatePath -Raw).Trim()
+            } else {
+                ""
+            }
+            if ($ImageState -ne "pending") {
+                Write-Host "ERRORE E25 - Box Packer non configurata" `
+                    -ForegroundColor Red
+                Write-Host (
+                    "Apri Ambiente 2cornot2c e scegli " +
+                    "Installa, completa o ripara."
+                ) -ForegroundColor Yellow
+                exit 1
+            }
+            Write-Host (
+                "Prima release Packer in attesa: avvio Bento transitorio."
+            ) -ForegroundColor Yellow
+        }
+        & (Join-Path $InstallDir "scripts\setup-vm.ps1")
         exit $LASTEXITCODE
     }
     Write-Host "ERRORE E31 - Ambiente da avviare non riconosciuto" `
