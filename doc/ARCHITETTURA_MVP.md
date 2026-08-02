@@ -80,22 +80,22 @@ Fonti remote, activity e calendario sono riferimenti a dati autorevoli. L'applic
 sequenceDiagram
     actor S as Studente
     participant T as TUI/Browser
-    participant A as Auth/session services
-    participant L as Student lab services
-    participant G as Grading runner
+    participant A as API auth e aiuto
+    participant G as Runner locale/sandbox
+    participant F as Root report locale o condivisa
     participant D as Dashboard docente
     S->>T: pairing nel browser
-    T->>A: approvazione sessione autorizzata
+    T->>A: approvazione sessione e lista consegne
     A-->>T: bearer consegnato solo al terminale
     S->>T: apre consegna ed esegue tentativo
-    T->>L: richiesta autenticata
-    L->>G: runner locale o sandbox
-    G-->>L: report strutturato dei test
-    L-->>T: esito e feedback consentito
-    L-->>D: tentativi, definitivo e richieste aiuto
+    T->>G: esecuzione sul workspace locale
+    G-->>F: report strutturato locale
+    F-->>T: esito e test
+    D->>F: lettura report solo sulla stessa root o dopo sincronizzazione
+    T->>A: richieste aiuto e operazioni API supportate
 ```
 
-Il bearer TUI resta in memoria e può essere revocato esattamente. Browser e terminale non si scambiano credenziali dell'altro canale.
+Il bearer TUI resta in memoria e può essere revocato esattamente. Browser e terminale non si scambiano credenziali dell'altro canale. L'MVP non implementa ancora l'upload autenticato dei report di tentativo da una macchina studente separata: dashboard docente e selezione definitiva vedono i report soltanto quando condividono la root dati o quando un processo esterno li sincronizza. Un pilot distribuito deve definire questa sincronizzazione prima di considerare autorevoli tentativi e grading remoti.
 
 ## Dati e storage
 

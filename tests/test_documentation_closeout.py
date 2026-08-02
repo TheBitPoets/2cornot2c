@@ -46,12 +46,17 @@ def test_architecture_has_current_diagrams_issues_and_limits() -> None:
 def test_student_and_admin_frontend_boundaries_are_explicit() -> None:
     frontend = (DOC / "FRONTEND_ARCHITECTURE.md").read_text(encoding="utf-8")
     roadmap = (DOC / "ROADMAP.md").read_text(encoding="utf-8-sig")
+    student_guide = (DOC / "DASHBOARD_STUDENTE_GUIDA.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "vista locale docente/demo" in frontend
     assert "SessionHttpRoutes" in frontend
     assert "non è un pannello della dashboard docente" in frontend
     assert "CLI/TUI role-aware è il canale studente reale" in roadmap
     assert "autenticazione e permessi reali" not in roadmap
+    assert "non è un self-service studente" in student_guide
+    assert "Non condividere la credenziale Basic" in student_guide
 
 
 def test_pilot_guide_covers_startup_security_and_shutdown() -> None:
