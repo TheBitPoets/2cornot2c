@@ -4,15 +4,15 @@
 
 Questo documento è la vista di insieme per sviluppatori e gestori del pilot. Le guide operative descrivono l'uso; gli ADR in `doc/architecture/` motivano le decisioni di sicurezza e storage.
 
-L'MVP è una singola installazione, inizialmente mono-scuola, con processi Python, frontend statici, SQLite per identità/sessioni e JSON per i dati didattici esistenti. Non è ancora un servizio orizzontalmente replicabile.
+L'MVP è una singola installazione, inizialmente mono-scuola, con processi Python, frontend statici, SQLite per identità/sessioni e JSON per i dati didattici esistenti. Non è ancora un servizio orizzontalmente replicabile. La CLI/TUI è l'interfaccia studente autenticata; `student_dashboard.html` resta una vista locale docente/demo protetta da Basic docente, non un self-service federato.
 
 ## Visione generale
 
 ```mermaid
 flowchart LR
     Teacher[Docente] --> Web[Dashboard e Course Board]
-    Student[Studente] --> StudentWeb[Dashboard studente]
-    Student --> TUI[CLI/TUI lab]
+    Teacher --> StudentWeb[Vista studente locale/demo]
+    Student[Studente] --> TUI[CLI/TUI lab]
     Web --> HTTP[Course Board HTTP edge]
     StudentWeb --> HTTP
     TUI --> API[API studente autenticate]

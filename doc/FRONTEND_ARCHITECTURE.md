@@ -11,7 +11,7 @@ I frontend sono pagine statiche servite da `scripts/course_board_server.py`. Non
 | Course Board | `course_board.*` | fonti, UDA, activity, cornici, progetti |
 | Calendario | `school_calendar.*` | eventi, orari, festività, Gantt |
 | Dashboard docente | `assignment_dashboard.*` | classi, registri, grading, feedback |
-| Dashboard studente | `student_dashboard.*` | consegne e feedback approvato |
+| Vista studente locale | `student_dashboard.*` | vista docente/demo di consegne e feedback approvato, protetta da Basic docente |
 | Amministrazione | componenti in `assignment_dashboard.*` | utenti pending, ruoli, membership |
 
 `dashboard_dialogs.js` fornisce dialoghi, conferme e toast condivisi. Le pagine mantengono fallback leggibili senza dipendere da credenziali browser-side.
@@ -97,9 +97,11 @@ La dashboard compone pannelli per:
 
 La logica di dominio rimane negli script/service Python; il JavaScript traduce form, filtri e viste.
 
-## Dashboard studente e TUI
+## Vista studente locale e TUI
 
-La dashboard mostra soltanto dati autorizzati per lo studente corrente. Il pairing TUI usa il browser per approvare il terminale, ma il bearer viene consegnato soltanto al client locale tramite il protocollo di pairing. Il frontend non lo salva.
+`student_dashboard.html` è ancora una vista locale docente/demo: usa endpoint protetti dalla Basic authentication docente e seleziona esplicitamente uno studente. Non deve essere esposta come self-service federato né deve ricevere la password docente nel browser di uno studente. Il self-service autenticato dell'MVP è la CLI/TUI, che usa API bearer role-aware.
+
+Il pairing TUI usa il browser per approvare il terminale, ma il bearer viene consegnato soltanto al client locale tramite il protocollo di pairing. Il frontend non lo salva. Una futura dashboard web studente dovrà consumare esclusivamente endpoint autorizzati sulla sessione corrente, senza `student_id` arbitrario.
 
 ## Errori e concorrenza
 
