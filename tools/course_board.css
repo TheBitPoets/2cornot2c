@@ -855,6 +855,31 @@ input[aria-invalid="true"] {
   font-weight: 700;
 }
 
+.paragraphImageFrame {
+  display: block;
+  margin: .8rem 0;
+}
+
+.paragraphImage {
+  display: block;
+  max-width: min(100%, 56rem);
+  max-height: 28rem;
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 10px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.paragraphImageFallback {
+  display: inline-block;
+  border: 1px dashed rgba(17, 17, 17, .28);
+  border-radius: 8px;
+  background: #f1f1f1;
+  color: var(--muted);
+  padding: .45rem .65rem;
+  font: .76rem/1.4 var(--mono);
+}
+
 .paragraphSourceLink {
   color: var(--ink);
   font-size: .78rem;

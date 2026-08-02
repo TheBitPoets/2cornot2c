@@ -27,6 +27,7 @@ def run_course_board_js(assertions: str) -> None:
       removeAttribute(name) {{ delete this[name]; }}
       focus() {{ this.focused = true; }}
       contains() {{ return false; }}
+      querySelectorAll() {{ return []; }}
       showModal() {{ this.open = true; }}
       close() {{
         this.open = false;
@@ -1686,6 +1687,75 @@ def test_late_new_project_context_cannot_replace_newly_opened_archive() -> None:
           assert.equal(state.activeSavedDesign, "other.json");
           assert.match(els.status.textContent, /vista aperta non è stata cambiata/);
         })();
+        """
+    )
+
+
+def test_paragraph_preview_resolves_local_and_commit_pinned_remote_images() -> None:
+    run_course_board_js(
+        """
+        assert.equal(
+          resolveParagraphImageSource("../images/schema rete.png", {
+            source: "doc/guide/chapter.md", source_provider: "local",
+          }),
+          "/doc/images/schema%20rete.png",
+        );
+        const commit = "a".repeat(40);
+        assert.equal(
+          resolveParagraphImageSource("assets/icon.svg", {
+            source: "lessons/intro.md",
+            source_provider: "github",
+            source_repository: "TheBitPoets/materials",
+            source_commit: commit,
+          }),
+          "https://raw.githubusercontent.com/TheBitPoets/materials/" + commit + "/lessons/assets/icon.svg",
+        );
+        assert.equal(
+          resolveParagraphImageSource("../media/map.webp", {
+            source: "course/unit/page.md",
+            source_provider: "gitlab",
+            source_repository: "school/group/materials",
+            source_commit: commit,
+          }),
+          "https://gitlab.com/school/group/materials/-/raw/" + commit + "/course/media/map.webp",
+        );
+        """
+    )
+
+
+def test_paragraph_preview_rejects_untrusted_or_escaping_image_references() -> None:
+    run_course_board_js(
+        """
+        const local = { source: "README.md", source_provider: "local" };
+        assert.equal(resolveParagraphImageSource("../outside.png", local), "");
+        assert.equal(resolveParagraphImageSource("https://tracker.example/pixel.png", local), "");
+        assert.equal(resolveParagraphImageSource("//tracker.example/pixel.png", local), "");
+        assert.equal(resolveParagraphImageSource("%2e%2e/secret.png", local), "");
+        assert.equal(resolveParagraphImageSource("script.html", local), "");
+        assert.equal(resolveParagraphImageSource("image.png?token=x", local), "");
+        assert.equal(resolveParagraphImageSource("image.png", {
+          source: "lesson.md",
+          source_provider: "github",
+          source_repository: "owner/repo",
+          source_commit: "main",
+        }), "");
+        """
+    )
+
+
+def test_paragraph_preview_renders_images_and_readable_fallbacks_safely() -> None:
+    run_course_board_js(
+        """
+        const heading = { source: "doc/lesson.md", source_provider: "local" };
+        const rendered = renderParagraphContent(
+          "Prima ![Schema **rete**](images/network.png) dopo.\\\\n\\\\n![Mancante <x>](../bad.txt)",
+          heading,
+        );
+        assert.match(rendered, /class="paragraphImage"/);
+        assert.ok(rendered.includes('src="/doc/images/network.png"'));
+        assert.ok(rendered.includes('alt="Schema **rete**"'));
+        assert.match(rendered, /Immagine non disponibile: Mancante/);
+        assert.doesNotMatch(rendered, /<x>/);
         """
     )
 

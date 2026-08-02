@@ -2363,7 +2363,76 @@ function normalizeParagraphSource(source) {
     .trim();
 }
 
-function renderParagraphInline(value) {
+const PARAGRAPH_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"]);
+
+function normalizedParagraphAssetPath(sourcePath, target) {
+  const rawSource = String(sourcePath || "");
+  const rawTarget = String(target || "");
+  if (
+    !rawSource
+    || !rawTarget
+    || rawTarget.startsWith("/")
+    || rawTarget.startsWith("//")
+    || rawTarget.includes("\\")
+    || rawTarget.includes("?")
+    || rawTarget.includes("#")
+    || /[\u0000-\u001f\u007f]/.test(rawTarget)
+    || /^[a-z][a-z0-9+.-]*:/i.test(rawTarget)
+  ) return "";
+  let decodedTarget;
+  try {
+    decodedTarget = decodeURIComponent(rawTarget);
+  } catch (_error) {
+    return "";
+  }
+  if (
+    decodedTarget.includes("\\")
+    || decodedTarget.includes("?")
+    || decodedTarget.includes("#")
+    || /[\u0000-\u001f\u007f]/.test(decodedTarget)
+  ) return "";
+  const parts = rawSource.split("/").slice(0, -1);
+  if (!parts.length && rawSource.includes("/")) return "";
+  if (parts.some((part) => !part || part === "." || part === "..")) return "";
+  for (const part of decodedTarget.split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      if (!parts.length) return "";
+      parts.pop();
+    } else {
+      parts.push(part);
+    }
+  }
+  if (!parts.length) return "";
+  const suffixMatch = parts.at(-1).toLowerCase().match(/\.[a-z0-9]+$/);
+  if (!suffixMatch || !PARAGRAPH_IMAGE_EXTENSIONS.has(suffixMatch[0])) return "";
+  return parts.map((part) => encodeURIComponent(part)).join("/");
+}
+
+function resolveParagraphImageSource(target, heading = {}) {
+  const assetPath = normalizedParagraphAssetPath(heading.source, target);
+  if (!assetPath) return "";
+  const provider = heading.source_provider || "local";
+  if (provider === "local") return `/${assetPath}`;
+  const repository = String(heading.source_repository || "");
+  const commit = String(heading.source_commit || "");
+  if (!/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(commit)) return "";
+  const repositoryParts = repository.split("/");
+  if (
+    repositoryParts.length < 2
+    || repositoryParts.some((part) => !/^[A-Za-z0-9_.-]+$/.test(part) || part === "." || part === "..")
+  ) return "";
+  const encodedRepository = repositoryParts.map((part) => encodeURIComponent(part)).join("/");
+  if (provider === "github" && repositoryParts.length === 2) {
+    return `https://raw.githubusercontent.com/${encodedRepository}/${commit}/${assetPath}`;
+  }
+  if (provider === "gitlab") {
+    return `https://gitlab.com/${encodedRepository}/-/raw/${commit}/${assetPath}`;
+  }
+  return "";
+}
+
+function renderParagraphInlineText(value) {
   let html = escapeHtml(value);
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
@@ -2372,7 +2441,40 @@ function renderParagraphInline(value) {
   return html;
 }
 
-function renderParagraphContent(source) {
+function renderParagraphInline(value, heading = {}) {
+  const source = String(value || "");
+  const imagePattern = /!\[([^\]\r\n]{0,500})\]\(([^)\s]+)(?:\s+(?:"[^"]*"|'[^']*'))?\)/g;
+  const parts = [];
+  let start = 0;
+  for (const match of source.matchAll(imagePattern)) {
+    parts.push(renderParagraphInlineText(source.slice(start, match.index)));
+    const alt = match[1].trim() || "immagine";
+    const resolved = resolveParagraphImageSource(match[2], heading);
+    const fallback = `Immagine non disponibile: ${alt}`;
+    if (resolved) {
+      parts.push(
+        `<span class="paragraphImageFrame"><img class="paragraphImage" data-preview-image src="${escapeHtml(resolved)}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer"><span class="paragraphImageFallback" hidden>${escapeHtml(fallback)}</span></span>`,
+      );
+    } else {
+      parts.push(`<span class="paragraphImageFallback" role="img" aria-label="${escapeHtml(fallback)}">[${escapeHtml(fallback)}]</span>`);
+    }
+    start = match.index + match[0].length;
+  }
+  parts.push(renderParagraphInlineText(source.slice(start)));
+  return parts.join("");
+}
+
+function bindParagraphImageFallbacks(container) {
+  for (const image of container.querySelectorAll("img[data-preview-image]")) {
+    image.addEventListener("error", () => {
+      image.hidden = true;
+      const fallback = image.parentElement?.querySelector(".paragraphImageFallback");
+      if (fallback) fallback.hidden = false;
+    }, { once: true });
+  }
+}
+
+function renderParagraphContent(source, heading = {}) {
   const lines = normalizeParagraphSource(source).split("\n");
   const blocks = [];
   let paragraph = [];
@@ -2382,13 +2484,13 @@ function renderParagraphContent(source) {
 
   const flushParagraph = () => {
     if (!paragraph.length) return;
-    blocks.push(`<p>${paragraph.map(renderParagraphInline).join("<br>")}</p>`);
+    blocks.push(`<p>${paragraph.map((line) => renderParagraphInline(line, heading)).join("<br>")}</p>`);
     paragraph = [];
   };
   const flushList = () => {
     if (!listItems.length) return;
     const tag = listType === "ordered" ? "ol" : "ul";
-    blocks.push(`<${tag}>${listItems.map((item) => `<li>${renderParagraphInline(item)}</li>`).join("")}</${tag}>`);
+    blocks.push(`<${tag}>${listItems.map((item) => `<li>${renderParagraphInline(item, heading)}</li>`).join("")}</${tag}>`);
     listType = "";
     listItems = [];
   };
@@ -2410,17 +2512,17 @@ function renderParagraphContent(source) {
       codeLines.push(line);
       continue;
     }
-    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     const unordered = line.match(/^\s*[-*]\s+(.+)$/);
     const ordered = line.match(/^\s*\d+\.\s+(.+)$/);
     if (!line.trim()) {
       flushParagraph();
       flushList();
-    } else if (heading) {
+    } else if (headingMatch) {
       flushParagraph();
       flushList();
-      const level = heading[1].length;
-      blocks.push(`<h${level}>${renderParagraphInline(heading[2])}</h${level}>`);
+      const level = headingMatch[1].length;
+      blocks.push(`<h${level}>${renderParagraphInline(headingMatch[2], heading)}</h${level}>`);
     } else if (unordered || ordered) {
       flushParagraph();
       const nextType = unordered ? "unordered" : "ordered";
@@ -2476,7 +2578,8 @@ async function openParagraphPreview(paragraph) {
     const heading = payload.heading || paragraph;
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
     els.paragraphDialogMeta.textContent = `${heading.source_label || heading.source || "Sorgente n/d"} (${heading.source_provider || "local"}) · riga ${heading.line || "?"} · H${heading.level || "?"}`;
-    els.paragraphContent.innerHTML = renderParagraphContent(heading.content);
+    els.paragraphContent.innerHTML = renderParagraphContent(heading.content, heading);
+    bindParagraphImageFallbacks(els.paragraphContent);
     const sourceUrl = heading.source_url || heading.github_url;
     if (sourceUrl) {
       els.paragraphSourceLink.href = sourceUrl;

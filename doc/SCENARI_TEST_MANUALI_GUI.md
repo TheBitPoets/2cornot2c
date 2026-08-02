@@ -814,7 +814,9 @@ della pagina Percorso. Nessun passaggio deve aprire i dialog nativi del browser 
 4a. Usa `Gestisci fonti`, verifica la proiezione delle fonti correnti e aggiungi una fonte locale `README.md`. Prova ID duplicato e file non Markdown, controllando che `Sincronizza anteprima` mostri l'errore senza modificare la board. Correggi, sincronizza, verifica il conteggio dei file/paragrafi e applica. Se un token runtime e configurato, ripeti facoltativamente con una fonte GitHub o GitLab privata e controlla il commit risolto abbreviato. Verifica che nessun campo chieda o mostri credenziali.
 5. Nel catalogo a sinistra usa il pulsante `+` su un paragrafo, poi premilo di nuovo sullo stesso paragrafo.
 5a. Clicca il titolo di un paragrafo e poi il comando `Testo`: verifica che si apra il modal con il contenuto completo.
-5b. Dentro una UDA ripeti dal titolo e dal comando `Testo`, poi usa `Apri sorgente su GitHub` e verifica l'ancora del paragrafo.
+5b. Usa un paragrafo con un'immagine Markdown relativa alla fonte: verifica un asset locale e, se disponibile, un asset GitHub al commit risolto. L'immagine deve restare entro il modal, mostrare il testo alternativo e non inviare referrer.
+5c. Prova un'immagine mancante, un percorso che esce dalla root, un URL esterno e un'estensione non grafica: il testo deve restare leggibile e deve apparire `Immagine non disponibile`, senza caricare l'asset.
+5d. Dentro una UDA ripeti dal titolo e dal comando `Testo`, poi usa `Apri sorgente su GitHub` e verifica l'ancora del paragrafo.
 5c. Nella stessa UDA usa `Collega activity`, scegli un'activity disponibile, il ruolo `Verifica`, una data pianificata e una scadenza successiva. Verifica l'errore inline provando prima una scadenza precedente. Salva, riapri `Modifica`, cambia il ruolo e controlla che una seconda aggiunta della stessa activity venga rifiutata. Mantieni il collegamento per lo Scenario 10.
 6. Modifica una cornice e premi `Ricarica`: nel dialog grafico premi `Resta qui` e verifica che la modifica
    resti visibile e che il focus torni al comando precedente. Ripeti accettando `Scarta modifiche` e verifica
@@ -835,6 +837,7 @@ Risultato atteso:
 - L'editor fonti applica soltanto anteprime sincronizzate sullo stesso snapshot della board e non espone credenziali.
 - Il collegamento activity conserva ruolo e date; la scadenza non puo precedere la pianificazione.
 - Il titolo e il comando `Testo` aprono il modal con contenuto, fonte, riga e link GitHub coerenti.
+- Immagini e icone Markdown locali restano confinate al repository; quelle GitHub/GitLab usano il commit immutabile della fonte. Asset mancanti o non consentiti degradano a un fallback testuale leggibile.
 - Ricarica e navigazione non scartano modifiche senza conferma.
 - Un nome già esistente richiede conferma prima della sovrascrittura.
 - I dialog sono integrati nella pagina, si chiudono con `Esc`, ripristinano il focus e mostrano gli errori
