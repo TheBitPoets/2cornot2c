@@ -103,7 +103,7 @@ jobs:
         run: ./ensure-source-box.sh virtualbox 202510.26.0
       - name: Build VirtualBox AMD64 box
         working-directory: packer
-        run: packer build -only=classroom.vagrant.virtualbox-amd64 classroom.pkr.hcl
+        run: packer build '-only=classroom.vagrant.virtualbox-amd64' classroom.pkr.hcl
       - name: Acceptance test
         shell: bash
         run: ./packer/acceptance/test-box.sh virtualbox packer/output/virtualbox-amd64/package.box
