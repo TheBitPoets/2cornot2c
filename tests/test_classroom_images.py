@@ -110,7 +110,9 @@ def test_repair_reconstructs_partial_packer_markers_without_destroying_vm(
 ) -> None:
     root = project(tmp_path)
     selected = artifact()
-    (root / ".classroom-provider").write_text("virtualbox\n", encoding="utf-8")
+    (root / ".classroom-box").write_text(
+        selected.box_name + "\n", encoding="utf-8"
+    )
     machine = root / ".vagrant" / "machines" / "default" / "virtualbox"
     machine.mkdir(parents=True)
     (machine / "id").write_text("packer-vm-id", encoding="utf-8")
@@ -141,6 +143,32 @@ def test_repair_reconstructs_partial_packer_markers_without_destroying_vm(
     assert (root / ".classroom-provider").read_text(encoding="utf-8").strip() == (
         "virtualbox"
     )
+
+
+def test_provider_only_marker_with_vm_is_ambiguous_not_migrated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = project(tmp_path)
+    (root / ".classroom-provider").write_text("virtualbox\n", encoding="utf-8")
+    machine = root / ".vagrant" / "machines" / "default" / "virtualbox"
+    machine.mkdir(parents=True)
+    (machine / "id").write_text("unknown-vm-id", encoding="utf-8")
+    monkeypatch.setattr(
+        classroom_images,
+        "resolve_artifact",
+        lambda host, provider, cache: artifact(),
+    )
+
+    with pytest.raises(
+        classroom_images.ClassroomImageError,
+        match="Stato VM ambiguo",
+    ):
+        classroom_images.install_image(
+            root, Host.WINDOWS_AMD64, Provider.VIRTUALBOX
+        )
+
+    assert not (root / ".classroom-box").exists()
+    assert (root / ".classroom-provider").is_file()
 
 
 def test_install_image_refuses_implicit_legacy_vm_migration(

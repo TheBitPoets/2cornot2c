@@ -307,8 +307,14 @@ def install_image(project: Path, host: Host, provider: Provider) -> str:
                 "Il progetto usa un'altra box. Avvia la migrazione esplicita "
                 "prima di cambiare immagine."
             )
-        # A single valid marker is enough to identify an interrupted Packer
-        # configuration. The verified import below reconstructs both markers.
+        if not configured_box and _legacy_vm_exists(project, provider):
+            raise ClassroomImageError(
+                "Stato VM ambiguo: esiste soltanto il marker provider insieme "
+                "a una VM. Ripristina il marker box da una fonte verificata o "
+                "richiedi assistenza; nessuna migrazione viene avviata."
+            )
+        # The immutable box marker identifies an interrupted Packer setup. A
+        # provider-only marker is recoverable only when no VM exists yet.
         configured = expected
     legacy_providers = _legacy_vm_providers(project)
     blocking_legacy = (
