@@ -46,6 +46,7 @@ def test_migration_explicitly_enables_legacy_vagrantfile_only_for_its_process() 
     assert legacy_environment(Provider.VIRTUALBOX) == {
         "VAGRANT_DOTFILE_PATH": ".vagrant",
         "CLASSROOM_ALLOW_LEGACY_PROVISIONING": "1",
+        "CLASSROOM_BOX_NAME": "bento/ubuntu-24.04",
     }
 
 
@@ -94,6 +95,7 @@ def test_running_machine_is_halted_then_destroyed(tmp_path: Path) -> None:
         == {
             "VAGRANT_DOTFILE_PATH": ".vagrant-vmware",
             "CLASSROOM_ALLOW_LEGACY_PROVISIONING": "1",
+            "CLASSROOM_BOX_NAME": "bento/ubuntu-24.04",
         }
         for call in calls
     )
@@ -207,6 +209,7 @@ def test_migration_destroys_legacy_other_provider_and_preserves_selection(
     assert result.status == "succeeded"
     assert calls[0][0] == ("vagrant", "destroy", "--force")
     assert calls[0][1]["VAGRANT_DOTFILE_PATH"] == ".vagrant"
+    assert calls[0][1]["CLASSROOM_BOX_NAME"] == "bento/ubuntu-24.04"
     assert "selezione vmware_desktop conservata" in result.detail
     assert (project / ".classroom-box").read_text(encoding="utf-8").strip() == (
         "2cornot2c/vmware-box"

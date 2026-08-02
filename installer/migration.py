@@ -87,6 +87,7 @@ def legacy_environment(provider: Provider) -> dict[str, str]:
     return {
         "VAGRANT_DOTFILE_PATH": state_directory(provider),
         "CLASSROOM_ALLOW_LEGACY_PROVISIONING": "1",
+        "CLASSROOM_BOX_NAME": "bento/ubuntu-24.04",
     }
 
 
