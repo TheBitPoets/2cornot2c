@@ -4,19 +4,66 @@
 require "json"
 require "rbconfig"
 
+class DuplicateRejectingHash < Hash
+  def []=(key, value)
+    raise JSON::ParserError, "Chiave duplicata: #{key}" if key?(key)
+    super
+  end
+end
+
 box_file = File.join(__dir__, ".classroom-box")
 release_lock_file = File.join(__dir__, "packer", "classroom-releases.lock.json")
 raise "Lock release classroom mancante." unless File.file?(release_lock_file)
 begin
-  release_lock = JSON.parse(File.read(release_lock_file, encoding: "UTF-8"))
+  release_lock = JSON.parse(
+    File.read(release_lock_file, encoding: "UTF-8"),
+    object_class: DuplicateRejectingHash
+  )
 rescue JSON::ParserError => error
   raise "Lock release classroom non valido: #{error.message}"
 end
 unless release_lock.is_a?(Hash) &&
+       release_lock.keys.sort == ["schema_version", "targets"] &&
        release_lock["schema_version"] == "2cornot2c.classroom-release-lock.v1" &&
-       release_lock["targets"].is_a?(Hash)
+       release_lock["targets"].is_a?(Hash) &&
+       !release_lock["targets"].empty?
   raise "Schema lock release classroom non valido."
 end
+release_lock["targets"].each do |locked_target_id, locked_target|
+  unless locked_target_id.match?(/\A[a-z0-9-]+\z/) &&
+         locked_target.is_a?(Hash) &&
+         locked_target.keys.sort == ["active_release", "candidate_version", "host", "provider"] &&
+         locked_target["host"].is_a?(String) && !locked_target["host"].empty? &&
+         locked_target["provider"].is_a?(String) && !locked_target["provider"].empty?
+    raise "Target #{locked_target_id.inspect} non valido nel lock release classroom."
+  end
+  candidate = locked_target["candidate_version"]
+  unless candidate.nil? || (
+    candidate.is_a?(String) && candidate.match?(/\A\d+\.\d+\.\d+\z/)
+  )
+    raise "Versione candidata #{locked_target_id} non valida."
+  end
+  active = locked_target["active_release"]
+  active_valid = active.nil?
+  if active.is_a?(Hash) &&
+     active.keys.sort == ["manifest_sha256", "manifest_url", "version"] &&
+     active["version"].is_a?(String)
+    active_version = active["version"]
+    expected_url = "https://github.com/TheBitPoets/2cornot2c/releases/download/classroom-#{locked_target_id}-v#{active_version}/release-manifest.json"
+    active_valid = active_version.match?(/\A\d+\.\d+\.\d+\z/) &&
+      active["manifest_url"] == expected_url &&
+      active["manifest_sha256"].is_a?(String) &&
+      active["manifest_sha256"].match?(/\A[0-9a-f]{64}\z/)
+  end
+  raise "Release classroom attiva non valida per #{locked_target_id}." unless active_valid
+  if candidate.nil? && active.nil?
+    raise "Target #{locked_target_id} senza release attiva o candidata."
+  end
+  if !active.nil? && candidate == active["version"]
+    raise "Release candidata e attiva coincidono per #{locked_target_id}."
+  end
+end
+
 host_os = RbConfig::CONFIG["host_os"]
 host_cpu = RbConfig::CONFIG["host_cpu"]
 target_id = if host_os.match?(/mswin|mingw|cygwin/i) && host_cpu.match?(/x86_64|amd64|x64/i)
@@ -26,12 +73,7 @@ target_id = if host_os.match?(/mswin|mingw|cygwin/i) && host_cpu.match?(/x86_64|
             end
 target_release = target_id.nil? ? nil : release_lock["targets"][target_id]
 if !target_id.nil?
-  unless target_release.is_a?(Hash) &&
-         target_release.keys.sort == ["active_release", "candidate_version", "host", "provider"] &&
-         target_release["host"].is_a?(String) &&
-         target_release["provider"].is_a?(String)
-    raise "Target #{target_id} non valido nel lock release classroom."
-  end
+  raise "Target #{target_id} mancante nel lock release classroom." if target_release.nil?
   expected_identity = {
     "windows-amd64-virtualbox" => ["windows-amd64", "virtualbox"],
     "macos-arm64-vmware" => ["macos-arm64", "vmware_desktop"]
@@ -39,34 +81,7 @@ if !target_id.nil?
   unless [target_release["host"], target_release["provider"]] == expected_identity
     raise "Identità target #{target_id} non valida."
   end
-  candidate_version = target_release["candidate_version"]
-  unless candidate_version.nil? || (
-    candidate_version.is_a?(String) &&
-    candidate_version.match?(/\A\d+\.\d+\.\d+\z/)
-  )
-    raise "Versione candidata #{target_id} non valida."
-  end
   active_release = target_release["active_release"]
-  active_valid = active_release.nil?
-  if active_release.is_a?(Hash) &&
-     active_release.keys.sort == ["manifest_sha256", "manifest_url", "version"] &&
-     active_release["version"].is_a?(String)
-    active_version = active_release["version"]
-    expected_manifest_url = "https://github.com/TheBitPoets/2cornot2c/releases/download/classroom-#{target_id}-v#{active_version}/release-manifest.json"
-    active_valid = active_version.match?(/\A\d+\.\d+\.\d+\z/) &&
-      active_release["manifest_url"] == expected_manifest_url &&
-      active_release["manifest_sha256"].is_a?(String) &&
-      active_release["manifest_sha256"].match?(/\A[0-9a-f]{64}\z/)
-  end
-  unless active_valid
-    raise "Release classroom attiva non valida per #{target_id}."
-  end
-  if candidate_version.nil? && active_release.nil?
-    raise "Target #{target_id} senza release attiva o candidata."
-  end
-  if !active_release.nil? && candidate_version == active_release["version"]
-    raise "Release candidata e attiva coincidono per #{target_id}."
-  end
 else
   active_release = nil
 end

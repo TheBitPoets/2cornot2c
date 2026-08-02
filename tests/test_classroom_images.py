@@ -308,8 +308,10 @@ def test_vagrantfile_disables_implicit_bento_fallback() -> None:
     assert "CLASSROOM_ALLOW_LEGACY_PROVISIONING" in source
     assert "x86_64|amd64|x64" in source
     assert 'target_release["active_release"]' in source
-    assert 'target_release.keys.sort ==' in source
-    assert 'active_release.keys.sort ==' in source
+    assert 'locked_target.keys.sort ==' in source
+    assert 'active.keys.sort ==' in source
+    assert "DuplicateRejectingHash" in source
+    assert 'release_lock.keys.sort ==' in source
     assert "Release classroom attiva non valida" in source
     assert "Box Packer 2cornot2c non configurata" in source
 
