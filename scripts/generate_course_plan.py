@@ -4,6 +4,7 @@ import argparse
 import html
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Any
 
@@ -15,6 +16,11 @@ from scripts import course_source_catalog
 DEFAULT_INPUT = ROOT / "doc" / "course_design.json"
 DEFAULT_OUTPUT = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 DEFAULT_SOURCES = ("README.md", "LINUX_PROGRAMMING.md")
+_ASSEMBLY_DOCUMENT = ROOT / "ASM_PROGRAMMING.md"
+_ASSEMBLY_INDEX = _ASSEMBLY_DOCUMENT.read_text(encoding="utf-8").split(
+    "## Sistema Operativo", 1
+)[0]
+ASSEMBLY_ANCHORS = frozenset(re.findall(r"\]\(#([^)]+)\)", _ASSEMBLY_INDEX))
 FRAME_FIELDS = [
     ("context", "Contesto"),
     ("prerequisites", "Prerequisiti"),
@@ -29,6 +35,20 @@ FRAME_FIELDS = [
 def load_design(path: Path) -> dict[str, Any]:
     """Load the course design JSON produced by the visual course board."""
     return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def relocate_readme_assembly_reference(value: str) -> str:
+    """Retarget legacy README references whose headings moved to the Assembly guide."""
+
+    anchors = re.findall(r"(?:\.\./)?README\.md#([^\s)\"<]+)", value)
+    if not any(anchor in ASSEMBLY_ANCHORS for anchor in anchors):
+        return value
+    return (
+        value.replace("../README.md#", "../ASM_PROGRAMMING.md#")
+        .replace("README.md#", "ASM_PROGRAMMING.md#")
+        .replace("Riferimento principale: README.md", "Riferimento principale: ASM_PROGRAMMING.md")
+        .replace("nel README", "nel documento Assembly")
+    )
 
 
 def markdown_link(label: str, href: str | None) -> str:
@@ -109,8 +129,12 @@ def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
     for item in items:
         indent = "  " * depth
         content_indent = "  " * (depth + 1)
-        title = html_link(item.get("title", "Argomento senza titolo"), item.get("href"))
+        original_href = str(item.get("href", ""))
+        href = relocate_readme_assembly_reference(original_href)
+        title = html_link(item.get("title", "Argomento senza titolo"), href)
         source = item.get("source", "sorgente sconosciuta")
+        if href != original_href and source == "README.md":
+            source = "ASM_PROGRAMMING.md"
         source_id = str(item.get("source_id", "")).strip()
         source_provider = str(item.get("source_provider", "local")).strip()
         source_badge = (
@@ -152,7 +176,7 @@ def render_frame(frame: dict[str, Any], depth: int) -> list[str]:
     indent = "  " * depth
     content_indent = "  " * (depth + 1)
     for key, label in FRAME_FIELDS:
-        value = str(frame.get(key, "")).strip()
+        value = relocate_readme_assembly_reference(str(frame.get(key, "")).strip())
         if not value:
             continue
         lines.extend([

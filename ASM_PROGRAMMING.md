@@ -4704,7 +4704,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Costruzione di librerie di pr
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Costruzione di librerie di procedure esterne" (../ASM_PROGRAMMING.md#costruzione-di-librerie-di-procedure-esterne). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Costruzione di librerie di procedure esterne" (#costruzione-di-librerie-di-procedure-esterne). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -5606,7 +5606,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Collegare le librerie nei tuo
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Collegare le librerie nei tuoi programmi" (../ASM_PROGRAMMING.md#collegare-le-librerie-nei-tuoi-programmi). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Collegare le librerie nei tuoi programmi" (#collegare-le-librerie-nei-tuoi-programmi). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8055,7 +8055,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Linking alla libreria standar
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Linking alla libreria standard del C" (../ASM_PROGRAMMING.md#linking-alla-libreria-standard-del-c). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Linking alla libreria standard del C" (#linking-alla-libreria-standard-del-c). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8314,7 +8314,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Testo formattato con printf()
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Testo formattato con printf()" (../ASM_PROGRAMMING.md#testo-formattato-con-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Testo formattato con printf()" (#testo-formattato-con-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8422,7 +8422,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Passaggio di parametri a prin
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Passaggio di parametri a printf()" (../ASM_PROGRAMMING.md#passaggio-di-parametri-a-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Passaggio di parametri a printf()" (#passaggio-di-parametri-a-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8532,7 +8532,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Gcc --no-pie", poi un piccolo
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Gcc --no-pie" (../ASM_PROGRAMMING.md#gcc---no-pie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Gcc --no-pie" (#gcc---no-pie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8586,7 +8586,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Dati in con fgets() e scanf()
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Dati in con fgets() e scanf()" (../ASM_PROGRAMMING.md#dati-in-con-fgets-e-scanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Dati in con fgets() e scanf()" (#dati-in-con-fgets-e-scanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8743,7 +8743,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Utilizzando scanf() per l'ins
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Utilizzando scanf() per l'inserimento di valori numerici" (../ASM_PROGRAMMING.md#utilizzando-scanf-per-linserimento-di-valori-numerici). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Utilizzando scanf() per l'inserimento di valori numerici" (#utilizzando-scanf-per-linserimento-di-valori-numerici). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -9758,7 +9758,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Semplici operazioni di I/O su
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Semplici operazioni di I/O sui file" (../ASM_PROGRAMMING.md#semplici-operazioni-di-io-sui-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Semplici operazioni di I/O sui file" (#semplici-operazioni-di-io-sui-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -9820,7 +9820,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Convertire le stringhe in num
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Convertire le stringhe in numeri con sscanf()" (../ASM_PROGRAMMING.md#convertire-le-stringhe-in-numeri-con-sscanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Convertire le stringhe in numeri con sscanf()" (#convertire-le-stringhe-in-numeri-con-sscanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -9925,7 +9925,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Creare ed Aprire i File", poi
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Creare ed Aprire i File" (../ASM_PROGRAMMING.md#creare-ed-aprire-i-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Creare ed Aprire i File" (#creare-ed-aprire-i-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -10022,7 +10022,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Leggere testo dai file con fg
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Leggere testo dai file con fgets()" (../ASM_PROGRAMMING.md#leggere-testo-dai-file-con-fgets). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Leggere testo dai file con fgets()" (#leggere-testo-dai-file-con-fgets). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -10139,7 +10139,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Scrivere testo su file con fp
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Scrivere testo su file con fprintf()" (../ASM_PROGRAMMING.md#scrivere-testo-su-file-con-fprintf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Scrivere testo su file con fprintf()" (#scrivere-testo-su-file-con-fprintf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -10244,7 +10244,7 @@ Dopo la spiegazione, proponi un esempio minimo su "Note sulla raccolta delle pro
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: ASM_PROGRAMMING.md sezione "Note sulla raccolta delle procedure in librerie" (../ASM_PROGRAMMING.md#note-sulla-raccolta-delle-procedure-in-librerie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Note sulla raccolta delle procedure in librerie" (#note-sulla-raccolta-delle-procedure-in-librerie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
