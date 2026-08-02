@@ -4665,7 +4665,7 @@ I principianti tendono a imbattersi in questo modo nell'errore "salto breve fuor
 
 ### Costruzione di librerie di procedure esterne
 
-<!-- COURSE-FRAME:START README.md#costruzione-di-librerie-di-procedure-esterne -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#costruzione-di-librerie-di-procedure-esterne -->
 <table align="center">
 <tr>
 <td>
@@ -4704,14 +4704,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Costruzione di librerie di pr
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Costruzione di librerie di procedure esterne" (../README.md#costruzione-di-librerie-di-procedure-esterne). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Costruzione di librerie di procedure esterne" (../ASM_PROGRAMMING.md#costruzione-di-librerie-di-procedure-esterne). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#costruzione-di-librerie-di-procedure-esterne -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#costruzione-di-librerie-di-procedure-esterne -->
 
 <p align=justify>
 Noterai che il programma hexdump2gcc fornito ha la maggior parte del suo codice separato in procedure. Questo è proprio come dovrebbe essere, per mantenere il programma comprensibile e manutenibile. Tuttavia, le procedure dichiarate all'interno del file hexdump2gcc.asm sono utilizzabili solo dal programma hexdump2gcc stesso. Se dovessi scrivere un programma più potente che, per qualche motivo, avesse bisogno di visualizzare un dump esadecimale/ASCII di alcuni dati, quelle procedure potrebbero essere riutilizzate, ma non finché sono all'interno del file hexdump2gcc.asm. La risposta è spostare le procedure di hexdump2gcc completamente fuori da hexdump2gcc.asm e collocarle in un file di codice sorgente separato, chiamato libreria. Potrebbe essere pieno di procedure, ma non ha alcuna porzione di programma principale e quindi nessun'etichetta _start: o main: per indicare dove inizia l'esecuzione. Contiene solo procedure (e forse alcune definizioni di dati), quindi non può essere tradotto dal linker in un programma eseguibile autonomo. Una volta creati i file di libreria contenenti procedure, ci sono due modi per usarli:
@@ -5567,7 +5567,7 @@ Se vuoi che vengano esportate, dichiara le variabili GLOBAL. Nota che gli esempi
 
 ### Collegare le librerie nei tuoi programmi
 
-<!-- COURSE-FRAME:START README.md#collegare-le-librerie-nei-tuoi-programmi -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#collegare-le-librerie-nei-tuoi-programmi -->
 <table align="center">
 <tr>
 <td>
@@ -5606,14 +5606,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Collegare le librerie nei tuo
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Collegare le librerie nei tuoi programmi" (../README.md#collegare-le-librerie-nei-tuoi-programmi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Collegare le librerie nei tuoi programmi" (../ASM_PROGRAMMING.md#collegare-le-librerie-nei-tuoi-programmi). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#collegare-le-librerie-nei-tuoi-programmi -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#collegare-le-librerie-nei-tuoi-programmi -->
 
 <p align=justify>
 Per tutti i precedenti programmi di esempio presentati in questo libro, i makefile sono abbastanza semplici. Qui, ad esempio, c'è il makefile per il programma hexdump2:
@@ -8016,7 +8016,7 @@ Se fosse così semplice, non menzionerei affatto il gas, poiché non è necessar
 
 ### Linking alla libreria standard del C
 
-<!-- COURSE-FRAME:START README.md#linking-alla-libreria-standard-del-c -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#linking-alla-libreria-standard-del-c -->
 <table align="center">
 <tr>
 <td>
@@ -8055,14 +8055,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Linking alla libreria standar
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Linking alla libreria standard del C" (../README.md#linking-alla-libreria-standard-del-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Linking alla libreria standard del C" (../ASM_PROGRAMMING.md#linking-alla-libreria-standard-del-c). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#linking-alla-libreria-standard-del-c -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#linking-alla-libreria-standard-del-c -->
 
 <p align=justify>
 Quando scrivi un programma interamente in assembly utilizzando un makefile e l'utility make, scrivi tutto. A parte un'occasionale immersione nei servizi del kernel Linux, tutto il codice che viene eseguito è solo il codice che scrivi. L'integrazione di librerie di procedure in linguaggio assembly esterno complica un po' questo quadro, soprattutto se non sei tu a aver scritto quelle librerie. L'integrazione di funzioni nella libreria standard C (che per Linux si chiama glibc) complica ulteriormente la situazione. Può essere un conforto sapere che l'integrazione delle routine di glibc è più semplice nel linguaggio assembly x64 rispetto a quanto lo fosse nell'assembly x86 a 32 bit. Come ho accennato in precedenza, scrivere un programma in assembly in SASM è molto simile a scrivere un programma C nel quale scrivi il corpo principale del programma in assembly. I programmi generati da SASM sono una sorta di ibrido tra C e linguaggio assembly. Se crei un programma in linguaggio assembly per Linux che integra le funzioni di glibc, stai facendo praticamente la stessa cosa. La struttura di questo ibrido è mostrata nella figura seguente
@@ -8275,7 +8275,7 @@ main:
 ```
 ### Testo formattato con printf()
 
-<!-- COURSE-FRAME:START README.md#testo-formattato-con-printf -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#testo-formattato-con-printf -->
 <table align="center">
 <tr>
 <td>
@@ -8314,14 +8314,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Testo formattato con printf()
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Testo formattato con printf()" (../README.md#testo-formattato-con-printf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Testo formattato con printf()" (../ASM_PROGRAMMING.md#testo-formattato-con-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#testo-formattato-con-printf -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#testo-formattato-con-printf -->
 
 <p align=justify>
 La routine della libreria puts() può sembrare piuttosto utile, ma rispetto ad alcuni dei suoi più sofisticati "fratelli", è roba da bambini. Con puts() puoi inviare solo una semplice stringa di testo a un file (per impostazione predefinita, stdout), senza alcun tipo di formattazione. Peggio ancora, puts() include sempre un carattere EOL alla fine della sua visualizzazione, sia che tu ne includa uno nei tuoi dati di stringa o meno. Questo ti impedisce di utilizzare più chiamate a puts() per stampare più stringhe di testo tutte sulla stessa riga nel terminale. Circa il meglio che puoi dire per puts() è che ha la virtù della semplicità. Per quasi tutte le tue necessità di output di caratteri, è molto meglio usare una funzione di libreria molto più potente chiamata printf(). La funzione printf() ti consente di fare un numero di cose davvero utili, il tutto con una sola chiamata di funzione:
@@ -8383,7 +8383,7 @@ Questo codice dice a printf() di visualizzare il valore allineato a destra all'i
 
 ### Passaggio di parametri a printf()
 
-<!-- COURSE-FRAME:START README.md#passaggio-di-parametri-a-printf -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#passaggio-di-parametri-a-printf -->
 <table align="center">
 <tr>
 <td>
@@ -8422,14 +8422,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Passaggio di parametri a prin
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Passaggio di parametri a printf()" (../README.md#passaggio-di-parametri-a-printf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Passaggio di parametri a printf()" (../ASM_PROGRAMMING.md#passaggio-di-parametri-a-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#passaggio-di-parametri-a-printf -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#passaggio-di-parametri-a-printf -->
 
 <p align=justify>
 Passare valori a printf() segue le convenzioni di chiamata x64. Se stai visualizzando una stringa con codici di formato incorporati, la stringa base dovrebbe essere il primo parametro, con il suo indirizzo passato in RDI. Dopo, il primo valore da unire alla stringa viene passato in RSI, il secondo in RDX e così via, nell'ordine standard dei registri dei parametri. I valori vengono inseriti nei codici della stringa in ordine, da sinistra a destra. Il programma seguente presenta una dimostrazione molto semplice del formato di printf(). Una cosa interessante da notare è che puoi passare numeri sia per riferimento che per valore. Il primo intero viene passato posizionando il suo indirizzo in RSI. Il secondo intero viene passato copiando un valore letterale in RDX. Il terzo intero è anch'esso passato come letterale in RCX. Il terzo valore è mostrato in notazione esadecimale, anche se il letterale era un semplice valore intero decimale caricato in RCX. La funzione printf() può effettuare molte conversioni di questo tipo. Puoi unire stringhe di testo alla stringa base in modo simile caricando gli indirizzi delle stringhe da unire nei registri e utilizzando il codice %s che istruisce printf() su dove inserire le stringhe secondarie. Ho eliminato l'intestazione del commento per risparmiare spazio sulla pagina. Il makefile per answer.asm è questo:
@@ -8493,7 +8493,7 @@ C'è un'altra piccola sottigliezza nell'uso di printf(). In quasi tutti i casi (
 
 ### Gcc --no-pie
 
-<!-- COURSE-FRAME:START README.md#gcc---no-pie -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#gcc---no-pie -->
 <table align="center">
 <tr>
 <td>
@@ -8532,14 +8532,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Gcc --no-pie", poi un piccolo
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Gcc --no-pie" (../README.md#gcc---no-pie). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Gcc --no-pie" (../ASM_PROGRAMMING.md#gcc---no-pie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#gcc---no-pie -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#gcc---no-pie -->
 
 <p align=justify>
 Nei makefile per i programmi di questo capitolo che usano gcc come linker, vedrai l'opzione gcc -no-pie. Lo scopo di questa opzione è impedire a gcc di collegare il tuo programma come un PIE. Spiegare in dettaglio il PIE sarebbe un argomento avanzato ben oltre lo scopo di questo libro. In breve: il PIE è un modo per prevenire certi tipi di exploit del codice, collocando porzioni del file eseguibile in posizioni casuali quando l'eseguibile viene caricato. Questo rende impossibile prevedere dove una determinata sezione di codice verrà eseguita. Gli attacchi di programmazione orientata al ritorno (ROP) dipendono dalla conoscenza di dove si trovano alcune porzioni di un programma nel sistema di memoria virtuale di Linux. I programmi PIE sono meno vulnerabili agli attacchi ROP. L'opzione -no-pie indica che il linker non genererà un PIE. Questo rende teoricamente vulnerabili ai attacchi i programmi di esempio -no-pie di questo libro. Teoricamente. Una volta che sei un programmatore esperto che produce software per uso generale (e non semplicemente apprendendo la programmazione), dovresti sapere abbastanza per comprendere le problematiche e dovresti informarti online. Il PIE complica qualche aspetto del debugging, motivo per cui non uso il PIE nei miei esempi qui. Ma una volta che un programma che stai scrivendo è stato debuggato e funziona bene, ricompilalo come PIE, che è il valore predefinito quando gcc funge da linker.
@@ -8547,7 +8547,7 @@ Nei makefile per i programmi di questo capitolo che usano gcc come linker, vedra
 
 ### Dati in con fgets() e scanf()
 
-<!-- COURSE-FRAME:START README.md#dati-in-con-fgets-e-scanf -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#dati-in-con-fgets-e-scanf -->
 <table align="center">
 <tr>
 <td>
@@ -8586,14 +8586,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Dati in con fgets() e scanf()
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Dati in con fgets() e scanf()" (../README.md#dati-in-con-fgets-e-scanf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Dati in con fgets() e scanf()" (../ASM_PROGRAMMING.md#dati-in-con-fgets-e-scanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#dati-in-con-fgets-e-scanf -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#dati-in-con-fgets-e-scanf -->
 
 <p align=justify>
 Leggere i caratteri dalla tastiera Linux utilizzando l'istruzione SYSCALL e la chiamata di sistema sys_read è semplice ma non molto versatile. La libreria standard C ha un modo migliore. Infatti, le funzioni della libreria C per leggere dati dalla tastiera (che è la sorgente di dati predefinita assegnata all'input standard) sono quasi l'inverso di quelle che visualizzano dati sull'output standard. Se fai un po' di ricerche in un riferimento della libreria C (e dovresti - ci sono una moltitudine di routine interessanti che puoi chiamare dai programmi in assembly), potresti scoprire la routine gets(). Potresti esserti chiesto (se non ho scelto di dirti qui) perché non l'ho trattata. La routine gets() è di una semplicità disarmante: gli passi il nome di un array di stringhe in cui posizionare i caratteri, e poi l'utente digita i caratteri sulla tastiera, che vengono collocati nell'array. Quando l'utente preme Invio, gets() aggiunge un null alla fine del testo inserito e restituisce. Cosa c'è da non amare? Ebbene, quanto è grande l'array? E quanto è stupido il tuo utente? Ecco il problema: non c'è modo di dire a gets() quando smettere di accettare caratteri. Se l'utente digita più caratteri di quanti ne hai allocato nello spazio per accettarli in un array, gets() continuerà felicemente ad accettare caratteri e sovrascriverà qualsiasi dato sia seduto accanto al tuo array in memoria. Se quel qualcosa è qualcosa di importante, il tuo programma malfunzionerà quasi certamente e potrebbe semplicemente bloccarsi. è per questo che, se provi a usare gets(), gcc ti avviserà che gets() è pericoloso. è un'antica routine, e molto meglio è stata creata negli (innumerevoli) decenni trascorsi da quando Unix e la libreria standard C furono progettati per la prima volta. Il successore designato di gets() è fgets(), che ha alcuni elementi di sicurezza incorporati - e anche alcune complicazioni. Le complicazioni derivano dal fatto che devi passare un handle di file a fgets(). In generale, le routine della libreria standard C i cui nomi iniziano con f agiscono su file. (Spiegherò come lavorare con i file su disco un po' più avanti in questo capitolo.) Puoi usare fgets() per leggere testo da un file su disco - ma ricorda, in termini Unix, la tua tastiera è già collegata a un file, il file chiamato input standard, stdin. Se possiamo collegare fgets() all'input standard, possiamo leggere testo dalla tastiera, che è ciò che la vecchia e pericolosa funzione gets() fa automaticamente.
@@ -8704,7 +8704,7 @@ Il programma fgetstest dimostra come incorporare un codice stringa %s nella stri
 
 ### Utilizzando scanf() per l'inserimento di valori numerici
 
-<!-- COURSE-FRAME:START README.md#utilizzando-scanf-per-linserimento-di-valori-numerici -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#utilizzando-scanf-per-linserimento-di-valori-numerici -->
 <table align="center">
 <tr>
 <td>
@@ -8743,14 +8743,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Utilizzando scanf() per l'ins
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Utilizzando scanf() per l'inserimento di valori numerici" (../README.md#utilizzando-scanf-per-linserimento-di-valori-numerici). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Utilizzando scanf() per l'inserimento di valori numerici" (../ASM_PROGRAMMING.md#utilizzando-scanf-per-linserimento-di-valori-numerici). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#utilizzando-scanf-per-linserimento-di-valori-numerici -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#utilizzando-scanf-per-linserimento-di-valori-numerici -->
 
 <p align="justify">
 In un modo peculiare, la funzione scanf() della libreria C è printf() che funziona all'indietro: invece di produrre dati formattati in un flusso di caratteri, scanf() prende un flusso di dati carattere dalla tastiera e lo converte in dati numerici memorizzati in una variabile numerica. La funzione scanf() funziona molto bene e comprende molti formati che non sarò in grado di spiegare qui, specialmente per l'inserimento di numeri in virgola mobile. (I valori in virgola mobile rappresentano un problema speciale nel lavoro in assembly e non li tratterò in questo libro.) La voce di Wikipedia è molto buona.
@@ -9719,7 +9719,7 @@ Il termine base è R13, che è l'indirizzo dell'inizio della tabella. Ogni indir
 
 ### Semplici operazioni di I/O sui file
 
-<!-- COURSE-FRAME:START README.md#semplici-operazioni-di-io-sui-file -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#semplici-operazioni-di-io-sui-file -->
 <table align="center">
 <tr>
 <td>
@@ -9758,14 +9758,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Semplici operazioni di I/O su
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Semplici operazioni di I/O sui file" (../README.md#semplici-operazioni-di-io-sui-file). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Semplici operazioni di I/O sui file" (../ASM_PROGRAMMING.md#semplici-operazioni-di-io-sui-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#semplici-operazioni-di-io-sui-file -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#semplici-operazioni-di-io-sui-file -->
 
 <p align="justify">
 L'ultimo programma di esempio che presento qui è nominalmente dedicato al lavoro con file di testo su disco. Tuttavia, raccoglie molti trucchi e funzionalità di assembly che ho spiegato in precedenza e ne aggiunge alcuni altri. è il programma più grande e complesso che ti ho mostrato, e se riesci a leggerlo e seguire il flusso della logica, hai appreso tutto ciò che mi ero ripromesso di insegnarti in questo libro. è più simile a un programma 'reale' rispetto a qualsiasi altra cosa in questo libro, in quanto lavora con argomenti da riga di comando, scrive l'output in un file su disco e fa altre cose utili che qualsiasi utility che intendi costruire richiederà probabilmente. Il programma textfile.asm (mostrato di seguito) crea e riempie un file di testo con del testo. Puoi specificare il numero di righe da riempire nel file, così come il testo per le righe. Se non specifichi il testo per il file, il programma genererà una riga di caratteri scelti casualmente e userà quella al suo posto. L'invocazione del programma avviene in questo modo: 
@@ -9781,7 +9781,7 @@ Questa invocazione crea un nuovo file (il cui nome è fissato nel programma come
 
 ### Convertire le stringhe in numeri con sscanf()
 
-<!-- COURSE-FRAME:START README.md#convertire-le-stringhe-in-numeri-con-sscanf -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#convertire-le-stringhe-in-numeri-con-sscanf -->
 <table align="center">
 <tr>
 <td>
@@ -9820,14 +9820,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Convertire le stringhe in num
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Convertire le stringhe in numeri con sscanf()" (../README.md#convertire-le-stringhe-in-numeri-con-sscanf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Convertire le stringhe in numeri con sscanf()" (../ASM_PROGRAMMING.md#convertire-le-stringhe-in-numeri-con-sscanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#convertire-le-stringhe-in-numeri-con-sscanf -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#convertire-le-stringhe-in-numeri-con-sscanf -->
 
 <p align="justify">
 Quando digiti un numero nella riga di comando mentre invochi un programma, puoi accedere a quel numero come uno degli argomenti della riga di comando, attraverso i meccanismi che ho descritto poco prima in questo capitolo. Tuttavia, c'è un problema: il numero è presente come testo, e non puoi semplicemente prendere la stringa testuale "o751" e caricarla in un registro o in una variabile intera. Per utilizzare gli argomenti numerici come numeri, devi prima convertire la loro espressione testuale in forma numerica. La libreria standard C ha diverse funzioni per affrontare questa sfida. Alcune di esse, come strtod(), sono abbastanza specifiche e limitate e convertono il testo solo in un tipo numerico. Tuttavia, una di esse ha la capacità di convertire quasi qualsiasi espressione testuale di un valore numerico legale in una forma numerica appropriata. Questa è sscanf(), e sarà quella che useremo nel programma seguente
@@ -9886,7 +9886,7 @@ Assumendo che l'utente abbia inserito almeno un argomento nella riga di comando 
 
 ### Creare ed Aprire i File
 
-<!-- COURSE-FRAME:START README.md#creare-ed-aprire-i-file -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#creare-ed-aprire-i-file -->
 <table align="center">
 <tr>
 <td>
@@ -9925,14 +9925,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Creare ed Aprire i File", poi
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Creare ed Aprire i File" (../README.md#creare-ed-aprire-i-file). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Creare ed Aprire i File" (../ASM_PROGRAMMING.md#creare-ed-aprire-i-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#creare-ed-aprire-i-file -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#creare-ed-aprire-i-file -->
 
 <p align="justify">
 A questo punto dovresti essere abbastanza a tuo agio con il meccanismo generale per effettuare chiamate alle librerie C dall'assembly. E che tu te ne renda conto o meno, sei già abbastanza a tuo agio con alcuni dei meccanismi per manipolare i file di testo. Hai già usato printf() per visualizzare testo formattato sullo schermo tramite l'output standard. Lo stesso meccanismo viene utilizzato per scrivere testo formattato nei file di testo su disco: stai praticamente sostituendo un file su disco reale con l'output standard. Quindi, capire l'I/O dei file di testo non dovrebbe essere un grande salto concettuale. Ma, a differenza dell'output standard, che è predefinito per te dalla libreria C ed è sempre disponibile, devi creare o aprire un file di testo su disco per usarlo. La funzione fopen() è quella che svolge il lavoro. Ci sono tre modi generali per aprire un file: per leggere, per scrivere e per aggiungere. Quando apri un file per la lettura, puoi leggere il testo da esso tramite funzioni come fgets(), ma non puoi scrivere nel file. Quando apri un file per scrivere, qualsiasi cosa ci fosse nel file prima viene scartata e nuovo materiale viene scritto all'inizio del file. Quando apri un file per aggiungere, puoi scrivere nel file, ma nuovo materiale viene scritto dopo qualsiasi materiale esistente e qualsiasi cosa fosse originariamente nel file viene mantenuta.
@@ -9983,7 +9983,7 @@ Il processo di creazione di un file e poi di scrittura su di esso è identico, t
 
 ### Leggere testo dai file con fgets()
 
-<!-- COURSE-FRAME:START README.md#leggere-testo-dai-file-con-fgets -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#leggere-testo-dai-file-con-fgets -->
 <table align="center">
 <tr>
 <td>
@@ -10022,14 +10022,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Leggere testo dai file con fg
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Leggere testo dai file con fgets()" (../README.md#leggere-testo-dai-file-con-fgets). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Leggere testo dai file con fgets()" (../ASM_PROGRAMMING.md#leggere-testo-dai-file-con-fgets). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#leggere-testo-dai-file-con-fgets -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#leggere-testo-dai-file-con-fgets -->
 
 <p align="justify">
 Quando fopen() crea o apre con successo un file per te, restituisce un handle del file in RAX. Tieni al sicuro quell'handle del file da qualche parte: ti consiglio di copiarlo in una variabile di memoria allocata per questo scopo o di metterlo in un registro che sai non verrà utilizzato per nient'altro. Questo è importante: se lo memorizzi in RAX, RCX o RDX e poi chiami quasi qualsiasi funzione della libreria C, l'handle del file nel registro verrà danneggiato e lo perderai. Una volta che un file è aperto per la lettura, puoi leggere le righe di testo da esso sequenzialmente con la funzione fgets(). Ogni volta che chiami fgets() su un file di testo aperto, leggerà una riga del file, che è definita come tutti i caratteri fino al prossimo carattere EOL ("onewline") (ASCII 10), che nel mondo Unix indica sempre la fine di una riga di testo. Ora, in un dato file non c'è modo di sapere quanti caratteri ci saranno fino al prossimo newline, quindi sarebbe pericoloso lasciare semplicemente fgets() libero di riportare i caratteri fino a quando non incontra un newline. Se tenti di aprire il tipo sbagliato di file (un file di codice binario è una possibilità, o un file di dati compressi), potresti portare dentro migliaia di byte prima di imbattersi nel valore binario 10 che il file system considera un newline. Qualunque buffer tu abbia allocato per contenere il testo in arrivo traboccherà e fgets() potrebbe forse distruggere dati adiacenti e/o far crashare il tuo programma.
@@ -10100,7 +10100,7 @@ Prima che venga chiamata la procedura diskhelp, il chiamante passa un puntatore 
 
 ### Scrivere testo su file con fprintf()
 
-<!-- COURSE-FRAME:START README.md#scrivere-testo-su-file-con-fprintf -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#scrivere-testo-su-file-con-fprintf -->
 <table align="center">
 <tr>
 <td>
@@ -10139,14 +10139,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Scrivere testo su file con fp
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Scrivere testo su file con fprintf()" (../README.md#scrivere-testo-su-file-con-fprintf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Scrivere testo su file con fprintf()" (../ASM_PROGRAMMING.md#scrivere-testo-su-file-con-fprintf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#scrivere-testo-su-file-con-fprintf -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#scrivere-testo-su-file-con-fprintf -->
 
 <p align="justify">
 In precedenza in questo capitolo, ho spiegato come scrivere testo formattato sul display tramite l'output standard, utilizzando la funzione printf(). La libreria standard C fornisce una funzione che scrive lo stesso testo formattato su qualsiasi file di testo aperto. La funzione fprintf() fa esattamente ciò che fa printf(), ma richiede un parametro aggiuntivo nello stack: il gestore del file di un file di testo aperto. Lo stesso flusso di testo che printf() invierebbe all'output standard viene inviato da fprintf() a quel file aperto. Quindi non mi prenderò la briga di riesplorare come formattare il testo per printf() utilizzando codici di formattazione e stringhe di base. Si fa nello stesso modo, con gli stessi identici codici. Invece, semplicemente riassumerò come impostare una chiamata a fprintf():
@@ -10205,7 +10205,7 @@ Ecco la chiamata fprintf() da textfile.asm:
 
 ### Note sulla raccolta delle procedure in librerie
 
-<!-- COURSE-FRAME:START README.md#note-sulla-raccolta-delle-procedure-in-librerie -->
+<!-- COURSE-FRAME:START ASM_PROGRAMMING.md#note-sulla-raccolta-delle-procedure-in-librerie -->
 <table align="center">
 <tr>
 <td>
@@ -10244,14 +10244,14 @@ Dopo la spiegazione, proponi un esempio minimo su "Note sulla raccolta delle pro
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Note sulla raccolta delle procedure in librerie" (../README.md#note-sulla-raccolta-delle-procedure-in-librerie). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: ASM_PROGRAMMING.md sezione "Note sulla raccolta delle procedure in librerie" (../ASM_PROGRAMMING.md#note-sulla-raccolta-delle-procedure-in-librerie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
 </td>
 </tr>
 </table>
-<!-- COURSE-FRAME:END README.md#note-sulla-raccolta-delle-procedure-in-librerie -->
+<!-- COURSE-FRAME:END ASM_PROGRAMMING.md#note-sulla-raccolta-delle-procedure-in-librerie -->
 
 <p align="justify">
 Ecco un riassunto su come raccogliere le procedure in librerie:

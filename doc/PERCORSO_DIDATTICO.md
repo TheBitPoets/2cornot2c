@@ -5540,7 +5540,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 #### Argomenti
 
 - <details>
-  <summary><a href="../README.md#semplici-operazioni-di-io-sui-file">Semplici operazioni di I/O sui file</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#semplici-operazioni-di-io-sui-file">Semplici operazioni di I/O sui file</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5578,12 +5578,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Semplici operazioni di I/O sui file" (../README.md#semplici-operazioni-di-io-sui-file). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Semplici operazioni di I/O sui file" (../ASM_PROGRAMMING.md#semplici-operazioni-di-io-sui-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#creare-ed-aprire-i-file">Creare ed Aprire i File</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#creare-ed-aprire-i-file">Creare ed Aprire i File</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5621,12 +5621,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Creare ed Aprire i File" (../README.md#creare-ed-aprire-i-file). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Creare ed Aprire i File" (../ASM_PROGRAMMING.md#creare-ed-aprire-i-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#leggere-testo-dai-file-con-fgets">Leggere testo dai file con fgets()</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#leggere-testo-dai-file-con-fgets">Leggere testo dai file con fgets()</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5664,12 +5664,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Leggere testo dai file con fgets()" (../README.md#leggere-testo-dai-file-con-fgets). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Leggere testo dai file con fgets()" (../ASM_PROGRAMMING.md#leggere-testo-dai-file-con-fgets). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#scrivere-testo-su-file-con-fprintf">Scrivere testo su file con fprintf()</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#scrivere-testo-su-file-con-fprintf">Scrivere testo su file con fprintf()</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5707,12 +5707,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Scrivere testo su file con fprintf()" (../README.md#scrivere-testo-su-file-con-fprintf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Scrivere testo su file con fprintf()" (../ASM_PROGRAMMING.md#scrivere-testo-su-file-con-fprintf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#dati-in-con-fgets-e-scanf">Dati in con fgets() e scanf()</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#dati-in-con-fgets-e-scanf">Dati in con fgets() e scanf()</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5750,12 +5750,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Dati in con fgets() e scanf()" (../README.md#dati-in-con-fgets-e-scanf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Dati in con fgets() e scanf()" (../ASM_PROGRAMMING.md#dati-in-con-fgets-e-scanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#utilizzando-scanf-per-linserimento-di-valori-numerici">Utilizzando scanf() per l'inserimento di valori numerici</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#utilizzando-scanf-per-linserimento-di-valori-numerici">Utilizzando scanf() per l'inserimento di valori numerici</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5793,12 +5793,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Utilizzando scanf() per l'inserimento di valori numerici" (../README.md#utilizzando-scanf-per-linserimento-di-valori-numerici). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Utilizzando scanf() per l'inserimento di valori numerici" (../ASM_PROGRAMMING.md#utilizzando-scanf-per-linserimento-di-valori-numerici). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#convertire-le-stringhe-in-numeri-con-sscanf">Convertire le stringhe in numeri con sscanf()</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#convertire-le-stringhe-in-numeri-con-sscanf">Convertire le stringhe in numeri con sscanf()</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5836,12 +5836,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Convertire le stringhe in numeri con sscanf()" (../README.md#convertire-le-stringhe-in-numeri-con-sscanf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Convertire le stringhe in numeri con sscanf()" (../ASM_PROGRAMMING.md#convertire-le-stringhe-in-numeri-con-sscanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#testo-formattato-con-printf">Testo formattato con printf()</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#testo-formattato-con-printf">Testo formattato con printf()</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5879,12 +5879,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Testo formattato con printf()" (../README.md#testo-formattato-con-printf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Testo formattato con printf()" (../ASM_PROGRAMMING.md#testo-formattato-con-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#passaggio-di-parametri-a-printf">Passaggio di parametri a printf()</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#passaggio-di-parametri-a-printf">Passaggio di parametri a printf()</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5922,12 +5922,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Passaggio di parametri a printf()" (../README.md#passaggio-di-parametri-a-printf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Passaggio di parametri a printf()" (../ASM_PROGRAMMING.md#passaggio-di-parametri-a-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#linking-alla-libreria-standard-del-c">Linking alla libreria standard del C</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#linking-alla-libreria-standard-del-c">Linking alla libreria standard del C</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -5965,12 +5965,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Linking alla libreria standard del C" (../README.md#linking-alla-libreria-standard-del-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Linking alla libreria standard del C" (../ASM_PROGRAMMING.md#linking-alla-libreria-standard-del-c). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#costruzione-di-librerie-di-procedure-esterne">Costruzione di librerie di procedure esterne</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#costruzione-di-librerie-di-procedure-esterne">Costruzione di librerie di procedure esterne</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -6008,12 +6008,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Costruzione di librerie di procedure esterne" (../README.md#costruzione-di-librerie-di-procedure-esterne). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Costruzione di librerie di procedure esterne" (../ASM_PROGRAMMING.md#costruzione-di-librerie-di-procedure-esterne). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#collegare-le-librerie-nei-tuoi-programmi">Collegare le librerie nei tuoi programmi</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#collegare-le-librerie-nei-tuoi-programmi">Collegare le librerie nei tuoi programmi</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -6051,12 +6051,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Collegare le librerie nei tuoi programmi" (../README.md#collegare-le-librerie-nei-tuoi-programmi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Collegare le librerie nei tuoi programmi" (../ASM_PROGRAMMING.md#collegare-le-librerie-nei-tuoi-programmi). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#note-sulla-raccolta-delle-procedure-in-librerie">Note sulla raccolta delle procedure in librerie</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#note-sulla-raccolta-delle-procedure-in-librerie">Note sulla raccolta delle procedure in librerie</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -6094,12 +6094,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Note sulla raccolta delle procedure in librerie" (../README.md#note-sulla-raccolta-delle-procedure-in-librerie). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Note sulla raccolta delle procedure in librerie" (../ASM_PROGRAMMING.md#note-sulla-raccolta-delle-procedure-in-librerie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
 - <details>
-  <summary><a href="../README.md#gcc---no-pie">Gcc --no-pie</a> <code>README.md</code> H3 <code>draft</code></summary>
+  <summary><a href="../ASM_PROGRAMMING.md#gcc---no-pie">Gcc --no-pie</a> <code>ASM_PROGRAMMING.md</code> H3 <code>draft</code></summary>
 
   - <details>
     <summary><strong>Cornice didattica</strong></summary>
@@ -6137,7 +6137,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Rimando</strong></summary>
 
-      Riferimento principale: README.md sezione "Gcc --no-pie" (../README.md#gcc---no-pie). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+      Riferimento principale: ASM_PROGRAMMING.md sezione "Gcc --no-pie" (../ASM_PROGRAMMING.md#gcc---no-pie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
     </details>
   </details>
