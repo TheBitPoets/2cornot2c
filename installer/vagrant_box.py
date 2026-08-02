@@ -7,6 +7,7 @@ import csv
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
@@ -23,6 +24,32 @@ class VagrantResult:
 
 
 Runner = Callable[[tuple[str, ...], Path | None], tuple[int, str]]
+
+
+def resolve_vagrant_executable(
+    *,
+    platform_name: str | None = None,
+    environment: dict[str, str] | None = None,
+    which: Callable[[str], str | None] = shutil.which,
+) -> str:
+    """Find Vagrant even before the current Windows process refreshes PATH."""
+
+    found = which("vagrant")
+    if found:
+        return found
+    platform_name = os.name if platform_name is None else platform_name
+    environment = os.environ if environment is None else environment
+    if platform_name == "nt":
+        roots = tuple(
+            value
+            for key in ("ProgramW6432", "ProgramFiles")
+            if (value := environment.get(key))
+        )
+        for root in roots:
+            candidate = Path(root) / "Vagrant" / "bin" / "vagrant.exe"
+            if candidate.is_file():
+                return str(candidate)
+    return "vagrant"
 
 
 def subprocess_runner(
@@ -75,7 +102,7 @@ def import_box(
         isolated_cwd = Path(directory)
         returncode, output = runner(
             (
-                "vagrant",
+                resolve_vagrant_executable(),
                 "box",
                 "add",
                 artifact.box_name,

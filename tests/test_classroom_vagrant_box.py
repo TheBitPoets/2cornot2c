@@ -14,6 +14,7 @@ from installer.vagrant_box import (
     import_box,
     launch_command,
     parse_installed_boxes,
+    resolve_vagrant_executable,
 )
 
 
@@ -60,8 +61,8 @@ def test_import_force_replaces_exact_installed_identity(tmp_path: Path) -> None:
 
     assert result.status == "succeeded"
     assert len(calls) == 1
-    assert calls[0][:4] == (
-        "vagrant",
+    assert Path(calls[0][0]).name.lower() in {"vagrant", "vagrant.exe"}
+    assert calls[0][1:4] == (
         "box",
         "add",
         "2cornot2c/ubuntu-vmware-0.1.0",
@@ -96,6 +97,21 @@ def test_import_uses_an_isolated_vagrant_context(
     assert [call[0][1:3] for call in calls] == [("box", "add")]
     assert Path(calls[0][0][4]).is_absolute()
     assert "--force" in calls[0][0]
+
+
+def test_windows_vagrant_is_found_before_path_refresh(tmp_path: Path) -> None:
+    program_files = tmp_path / "Program Files"
+    executable = program_files / "Vagrant" / "bin" / "vagrant.exe"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"exe")
+
+    resolved = resolve_vagrant_executable(
+        platform_name="nt",
+        environment={"ProgramFiles": str(program_files)},
+        which=lambda command: None,
+    )
+
+    assert resolved == str(executable)
 
 
 def test_configure_project_writes_local_selection(tmp_path: Path) -> None:

@@ -24,6 +24,7 @@ from installer.vagrant_box import (
     configure_project,
     import_box,
     parse_installed_boxes,
+    resolve_vagrant_executable,
     subprocess_runner,
 )
 
@@ -251,7 +252,12 @@ def _configured_identity(project: Path) -> tuple[str, str] | None:
 
 def _installed_boxes() -> set[tuple[str, str]]:
     returncode, output = subprocess_runner(
-        ("vagrant", "box", "list", "--machine-readable")
+        (
+            resolve_vagrant_executable(),
+            "box",
+            "list",
+            "--machine-readable",
+        )
     )
     if returncode != 0:
         raise ClassroomImageError(output or "Impossibile interrogare Vagrant.")
