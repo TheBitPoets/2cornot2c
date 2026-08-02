@@ -207,10 +207,11 @@ alcun provisioning desktop al primo avvio.
 `installer/vagrant_box.py` completa il flusso locale:
 
 1. verifica nuovamente dimensione e SHA-256;
-2. controlla le box installate tramite output machine-readable;
-3. importa soltanto se nome e provider non sono già presenti, senza `--force`;
-4. salva box e provider in `.classroom-box` e `.classroom-provider`;
-5. usa gli script `setup-vm` esistenti per primo avvio e health check.
+2. durante **Installa, completa o ripara** reimporta sempre con `--force` la stessa identità versionata, così una box locale corrotta o sostituita viene riparata;
+3. salva box e provider in `.classroom-box` e `.classroom-provider`;
+4. usa gli script `setup-vm` esistenti per primo avvio e health check.
+
+Se il file in cache è invalido, il nuovo download viene verificato in un file temporaneo e sostituisce atomicamente la cache soltanto dopo checksum e dimensione corretti.
 
 Quando `.classroom-box` è presente, il `Vagrantfile` usa desktop, toolchain e
 Guest Tools già inclusi nella box Packer. Senza quel file si ferma. Il fallback
@@ -226,7 +227,7 @@ e migrato esplicitamente:
 python -m installer.migration --provider vmware_desktop
 ```
 
-Su Windows usa `--provider virtualbox`. La procedura:
+Su Windows usa `--provider virtualbox`. Se sono presenti stati di più provider, esegui il comando per ciascuno di quelli indicati dall'installer. La procedura può eliminare una VM legacy VirtualBox conservando una selezione VMware già valida, e viceversa. In ogni caso:
 
 - non esegue nulla senza la frase esatta `RICREA VM`;
 - controlla che `lab` e `lab2` siano directory interne al progetto;

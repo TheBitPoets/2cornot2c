@@ -493,7 +493,12 @@ def test_low_memory_vm_warning_is_visible_but_does_not_block(
 
 def check_results(plan, *, missing: set[str] = set()):
     return tuple(
-        CheckResult(check, check.key not in missing, "manca")
+        CheckResult(
+            check,
+            check.key not in missing,
+            "manca",
+            check.key not in missing,
+        )
         for check in plan.checks
     )
 
@@ -513,9 +518,9 @@ def test_executor_skips_present_steps_and_applies_only_missing(tmp_path) -> None
         "skipped",
         "skipped",
         "succeeded",
-        "skipped",
+        "updated",
     ]
-    assert len(calls) == 1
+    assert len(calls) == 2
     assert "Oracle.VirtualBox" in calls[0][-1]
     assert "winget upgrade" in calls[0][-1]
     assert "winget install" in calls[0][-1]
@@ -540,8 +545,8 @@ def test_executor_reports_step_progress_without_inventing_percentages() -> None:
         ("skipped", 2, 4, "Installa o aggiorna Vagrant"),
         ("started", 3, 4, "Installa o aggiorna VirtualBox"),
         ("succeeded", 3, 4, "Installa o aggiorna VirtualBox"),
-        ("started", 4, 4, "Scarica e configura la box Packer"),
-        ("skipped", 4, 4, "Scarica e configura la box Packer"),
+        ("started", 4, 4, "Verifica e reimporta la box Packer"),
+        ("updated", 4, 4, "Verifica e reimporta la box Packer"),
     ]
 
 
@@ -552,7 +557,7 @@ def test_executor_marks_preexisting_old_software_as_updated(tmp_path) -> None:
             check,
             check.key != "vagrant",
             "versione 2.3.7; serve almeno 2.4.0",
-            check.key == "vagrant",
+            True,
         )
         for check in plan.checks
     )
@@ -568,7 +573,7 @@ def test_executor_marks_preexisting_old_software_as_updated(tmp_path) -> None:
         "skipped",
         "updated",
         "skipped",
-        "skipped",
+        "updated",
     ]
     assert '"status": "updated"' in (
         tmp_path / "installer.jsonl"

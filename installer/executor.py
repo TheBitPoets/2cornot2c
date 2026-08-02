@@ -114,7 +114,7 @@ def execute_plan(
             break
         if progress is not None:
             progress("started", index, total, step.label)
-        if step.key not in missing:
+        if step.key not in missing and not step.always_run:
             result = StepResult(step.key, step.label, "skipped", "già presente")
         elif step.command is None:
             result = StepResult(step.key, step.label, "blocked", step.detail)

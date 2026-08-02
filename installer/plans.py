@@ -117,8 +117,9 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
             *steps,
             Step(
                 "classroom-image",
-                "Scarica e configura la box Packer",
+                "Verifica e reimporta la box Packer",
                 (*image_command, "--install"),
+                always_run=True,
             ),
         )
     return InstallPlan(
