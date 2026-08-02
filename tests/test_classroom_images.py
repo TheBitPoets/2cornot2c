@@ -221,6 +221,44 @@ def test_vagrantfile_disables_implicit_bento_fallback() -> None:
     assert "Box Packer 2cornot2c non configurata" in source
 
 
+def test_pending_activation_does_not_claim_an_unpublished_manifest_digest() -> None:
+    assert classroom_images.CLASSROOM_IMAGES_STATE.read_text(
+        encoding="utf-8"
+    ).strip() == "pending"
+    assert classroom_images._official_manifest_digest() is None
+
+
+def test_active_manifest_requires_revision_pinned_digest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = tmp_path / "classroom-images.state"
+    digest = tmp_path / "release-manifest.sha256"
+    state.write_text("active\n", encoding="utf-8")
+    digest.write_text("a" * 64 + "\n", encoding="ascii")
+    monkeypatch.setattr(classroom_images, "CLASSROOM_IMAGES_STATE", state)
+    monkeypatch.setattr(classroom_images, "OFFICIAL_MANIFEST_DIGEST", digest)
+
+    assert classroom_images._official_manifest_digest() == "a" * 64
+
+    digest.write_text("pending\n", encoding="ascii")
+    with pytest.raises(
+        classroom_images.ClassroomImageError,
+        match="Digest manifest classroom non valido",
+    ):
+        classroom_images._official_manifest_digest()
+
+
+def test_cached_manifest_must_match_revision_pinned_digest(tmp_path: Path) -> None:
+    manifest = tmp_path / "release-manifest.json"
+    manifest.write_text(json.dumps(manifest_payload()), encoding="utf-8")
+
+    assert not classroom_images._cached_manifest_is_valid(
+        manifest,
+        expected_version="1.0.0",
+        expected_digest="0" * 64,
+    )
+
+
 def test_official_manifest_is_pinned_without_github_api_discovery() -> None:
     assert classroom_images.latest_manifest_url() == (
         "https://github.com/TheBitPoets/2cornot2c/releases/download/"

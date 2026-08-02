@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -28,6 +29,12 @@ from installer.vagrant_box import (
 
 
 CLASSROOM_RELEASE_VERSION = "1.0.0"
+CLASSROOM_IMAGES_STATE = (
+    Path(__file__).resolve().parents[1] / "packer" / "classroom-images.state"
+)
+OFFICIAL_MANIFEST_DIGEST = (
+    Path(__file__).resolve().parents[1] / "packer" / "release-manifest.sha256"
+)
 OFFICIAL_MANIFEST_URL = (
     "https://github.com/TheBitPoets/2cornot2c/releases/download/"
     f"classroom-v{CLASSROOM_RELEASE_VERSION}/release-manifest.json"
@@ -67,14 +74,49 @@ def _manifest_source() -> str:
     return override if override else latest_manifest_url()
 
 
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _official_manifest_digest() -> str | None:
+    try:
+        active = CLASSROOM_IMAGES_STATE.read_text(encoding="utf-8").strip()
+    except OSError as error:
+        raise ClassroomImageError("Stato immagini classroom non leggibile.") from error
+    if active != "active":
+        return None
+    try:
+        digest = OFFICIAL_MANIFEST_DIGEST.read_text(encoding="ascii").strip()
+    except OSError as error:
+        raise ClassroomImageError("Digest manifest classroom non leggibile.") from error
+    if len(digest) != 64 or any(
+        character not in "0123456789abcdef" for character in digest
+    ):
+        raise ClassroomImageError("Digest manifest classroom non valido.")
+    return digest
+
+
 def _cached_manifest_is_valid(
-    path: Path, *, expected_version: str | None = None
+    path: Path,
+    *,
+    expected_version: str | None = None,
+    expected_digest: str | None = None,
 ) -> bool:
     try:
         release = load_release(path)
-    except ArtifactError:
+        digest_matches = (
+            expected_digest is None or _file_sha256(path) == expected_digest
+        )
+    except (ArtifactError, OSError):
         return False
-    return expected_version is None or release.version == expected_version
+    return (
+        (expected_version is None or release.version == expected_version)
+        and digest_matches
+    )
 
 
 def _cached_manifest_is_fresh(path: Path) -> bool:
@@ -95,9 +137,11 @@ def acquire_manifest(cache_dir: Path) -> Path:
         if override is not None
         else official_destination
     )
+    expected_official_digest = _official_manifest_digest()
     cached_valid = _cached_manifest_is_valid(
         official_destination,
         expected_version=CLASSROOM_RELEASE_VERSION,
+        expected_digest=expected_official_digest,
     )
     if override is None and cached_valid and _cached_manifest_is_fresh(destination):
         return destination
@@ -136,15 +180,21 @@ def acquire_manifest(cache_dir: Path) -> Path:
                 output.write(_read_bounded(response, MAX_MANIFEST_BYTES))
             output.flush()
             os.fsync(output.fileno())
-        downloaded_release = load_release(Path(temporary_name))
-        if (
-            override is None
-            and downloaded_release.version != CLASSROOM_RELEASE_VERSION
-        ):
-            raise ArtifactError(
-                "Versione manifest ufficiale diversa dalla release fissata."
-            )
-        Path(temporary_name).replace(destination)
+        temporary = Path(temporary_name)
+        downloaded_release = load_release(temporary)
+        if override is None:
+            if downloaded_release.version != CLASSROOM_RELEASE_VERSION:
+                raise ArtifactError(
+                    "Versione manifest ufficiale diversa dalla release fissata."
+                )
+            if (
+                expected_official_digest is not None
+                and _file_sha256(temporary) != expected_official_digest
+            ):
+                raise ArtifactError(
+                    "Digest manifest ufficiale diverso dal lock revisionato."
+                )
+        temporary.replace(destination)
         return destination
     except (ArtifactError, ClassroomImageError, OSError, ValueError) as error:
         if override is None and cached_valid:

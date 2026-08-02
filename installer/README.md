@@ -199,8 +199,9 @@ La transizione è controllata da `packer/classroom-images.state`. Finché vale
 `pending`, l'installer mantiene il percorso Bento precedente e non propone
 ancora i passi immagine: questo consente di unire e avviare la workflow senza
 bloccare le installazioni se la prima build fisica fallisce. Dopo la
-pubblicazione e verifica di `classroom-v1.0.0`, una PR separata imposta lo stato
-ad `active`.
+pubblicazione e verifica di `classroom-v1.0.0`, una PR separata registra lo
+SHA-256 del manifest in `packer/release-manifest.sha256` e imposta lo stato ad
+`active`.
 
 Con stato `active`, la parte VM usa esclusivamente box Packer pubblicate dalla
 workflow `publish-classroom-boxes.yml`. L'installer scarica senza discovery API

@@ -107,13 +107,25 @@ try {
         $ProjectProviderPath = Join-Path $InstallDir ".classroom-provider"
         if (-not (Test-Path $BoxPath) -or
             -not (Test-Path $ProjectProviderPath)) {
-            Write-Host "ERRORE E25 - Box Packer non configurata" `
-                -ForegroundColor Red
+            $ImageStatePath = Join-Path $InstallDir `
+                "packer\classroom-images.state"
+            $ImageState = if (Test-Path $ImageStatePath) {
+                (Get-Content $ImageStatePath -Raw).Trim()
+            } else {
+                ""
+            }
+            if ($ImageState -ne "pending") {
+                Write-Host "ERRORE E25 - Box Packer non configurata" `
+                    -ForegroundColor Red
+                Write-Host (
+                    "Apri Ambiente 2cornot2c e scegli " +
+                    "Installa, completa o ripara."
+                ) -ForegroundColor Yellow
+                exit 1
+            }
             Write-Host (
-                "Apri Ambiente 2cornot2c e scegli " +
-                "Installa, completa o ripara."
+                "Prima release Packer in attesa: avvio Bento transitorio."
             ) -ForegroundColor Yellow
-            exit 1
         }
         & (Join-Path $InstallDir "scripts\setup-vm.ps1")
         exit $LASTEXITCODE

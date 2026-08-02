@@ -295,9 +295,11 @@ SHA-256 e pubblica `classroom-v1.1.0`. Durante la build il runner passa da
 
 Per la prima release, lascia `packer/classroom-images.state` su `pending`
 durante merge e build. Solo dopo acceptance fisica, pubblicazione e prova di
-download di `classroom-v1.0.0`, apri una PR separata che imposti il file ad
-`active`: da quel momento installer e `Vagrantfile` diventano fail-closed sulle
-box Packer.
+download di `classroom-v1.0.0`, copia dalla workflow lo SHA-256 del manifest in
+`packer/release-manifest.sha256` e apri una PR separata che imposti il file di
+stato ad `active`. Digest e stato devono essere revisionati insieme: da quel
+momento installer e `Vagrantfile` diventano fail-closed sulle box Packer e un
+asset release sostituito non supera il lock nel repository.
 
 ### 6. Verificare la release
 

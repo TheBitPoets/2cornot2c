@@ -181,6 +181,8 @@ jobs:
             --vmware release/2cornot2c-macos-arm64-vmware.box \
             --virtualbox release/2cornot2c-windows-amd64-virtualbox.box \
             --output release/release-manifest.json
+          echo "Digest da inserire nella PR di attivazione:"
+          sha256sum release/release-manifest.json
 
       - name: Publish GitHub release
         env:
