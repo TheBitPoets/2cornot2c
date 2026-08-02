@@ -320,11 +320,16 @@ def test_vagrantfile_disables_implicit_bento_fallback() -> None:
 def test_pending_activation_refuses_official_manifest_installation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    release = classroom_images.target_release(
-        Host.WINDOWS_AMD64, Provider.VIRTUALBOX
+    release = classroom_images.TargetRelease(
+        "windows-amd64-virtualbox",
+        Host.WINDOWS_AMD64,
+        Provider.VIRTUALBOX,
+        "1.0.0",
+        None,
+        None,
+        None,
     )
     assert not release.active
-    assert release.candidate_version == "1.0.0"
     monkeypatch.setattr(classroom_images, "_target_lock", lambda *args: release)
     with pytest.raises(
         classroom_images.ClassroomImageError,
