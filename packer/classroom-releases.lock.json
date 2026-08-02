@@ -4,8 +4,12 @@
     "windows-amd64-virtualbox": {
       "host": "windows-amd64",
       "provider": "virtualbox",
-      "candidate_version": "1.0.0",
-      "active_release": null
+      "candidate_version": null,
+      "active_release": {
+        "version": "1.0.0",
+        "manifest_url": "https://github.com/TheBitPoets/2cornot2c/releases/download/classroom-windows-amd64-virtualbox-v1.0.0/release-manifest.json",
+        "manifest_sha256": "2f81e8ae846059187737de89ebe0a9de8a7875c2cf889c2146800298da75634b"
+      }
     },
     "macos-arm64-vmware": {
       "host": "macos-arm64",
