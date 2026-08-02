@@ -289,7 +289,7 @@ Da GitHub:
 3. scegli `Run workflow`;
 4. seleziona `main`;
 5. scegli il target;
-6. inserisci la sua versione revisionata in
+6. inserisci la `candidate_version` revisionata in
    `packer/classroom-releases.lock.json` (`1.0.0` per la prima release);
 7. conferma con `Run workflow`.
 
@@ -299,13 +299,14 @@ dimensione e SHA-256 e pubblica la release target-specifica. Durante la build
 il runner passa da
 `Idle` ad `Active`; i log sono visibili aprendo il job.
 
-Per la prima release, lascia il target su `pending` in
-`packer/classroom-releases.lock.json`. Solo dopo acceptance fisica,
-pubblicazione e prova di download della release target-specifica, copia dalla
-workflow lo SHA-256 del manifest nel relativo record e apri una PR separata che
-imposti quel solo target ad `active`. Versione, URL, digest e stato devono essere
-revisionati insieme. Installer e `Vagrantfile` diventano fail-closed soltanto
-per il target attivato; gli altri continuano a usare Bento.
+Per la prima release, lascia `active_release` a `null` e imposta soltanto
+`candidate_version`. Dopo acceptance fisica, pubblicazione e prova di download,
+apri una PR separata che sposti versione, URL e SHA-256 del manifest in
+`active_release` e azzeri `candidate_version`. Installer e `Vagrantfile`
+diventano fail-closed soltanto per il target attivato; gli altri continuano a
+usare Bento. Per una versione successiva si aggiunge una nuova
+`candidate_version` senza rimuovere `active_release`: durante la build non si
+riapre mai il fallback Bento.
 
 ### 6. Verificare la release
 

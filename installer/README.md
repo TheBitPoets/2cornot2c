@@ -196,13 +196,16 @@ altre VM, box Bento o software preesistente. Il comando diretto richiede la
 frase distinta `DISINSTALLA TUTTO`.
 
 La transizione è controllata per host/provider da
-`packer/classroom-releases.lock.json`. Un target `pending` mantiene il percorso
-Bento precedente; un target `active` richiede la propria box Packer. Windows e
-macOS possono quindi essere costruiti, pubblicati e attivati in momenti diversi
-senza occupare o bloccare l'altro runner.
+`packer/classroom-releases.lock.json`. Un target con `active_release: null`
+mantiene il percorso Bento precedente; una `active_release` verificata richiede
+la propria box Packer. Windows e macOS possono quindi essere costruiti,
+pubblicati e attivati in momenti diversi senza occupare o bloccare l'altro
+runner.
 
-Per attivare un target, una PR separata registra nello stesso record versione,
-URL immutabile, SHA-256 del manifest e stato `active`. L'installer scarica senza
+Per attivare un target, una PR separata registra in `active_release` versione,
+URL immutabile e SHA-256 del manifest. `candidate_version` autorizza una nuova
+build senza rimuovere la release già attiva, quindi non riapre il fallback
+Bento durante gli aggiornamenti. L'installer scarica senza
 discovery API soltanto il manifest fissato per il proprio host/provider,
 verifica dimensione e SHA-256, importa la box e configura il progetto. Se il
 lock, la release o la combinazione richiesta non è valida, l'installazione si
@@ -220,8 +223,8 @@ isolati e viene rifiutato senza il secondo opt-in esplicito
 Se il file in cache è invalido, il nuovo download viene verificato in un file temporaneo e sostituisce atomicamente la cache soltanto dopo checksum e dimensione corretti.
 
 Quando `.classroom-box` è presente, il `Vagrantfile` usa desktop, toolchain e
-Guest Tools già inclusi nella box Packer. Quando il target corrente è
-`pending`, senza quel file usa ancora Bento in modo transitorio. Dopo
+Guest Tools già inclusi nella box Packer. Quando il target corrente non ha
+`active_release`, senza quel file usa ancora Bento in modo transitorio. Dopo
 l'attivazione del target si ferma e Bento resta disponibile soltanto alla
 migrazione controllata tramite
 `CLASSROOM_ALLOW_LEGACY_PROVISIONING=1`.

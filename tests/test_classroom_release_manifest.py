@@ -65,6 +65,7 @@ def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
     assert "if: github.ref == 'refs/heads/main'" in workflow
     assert "RELEASE_VERSION: ${{ inputs.version }}" in workflow
     assert "packer/classroom-releases.lock.json" in workflow
+    assert "entry.candidate_version != version" in workflow
     assert "inputs.target == 'windows-amd64-virtualbox'" in workflow
     assert "inputs.target == 'macos-arm64-vmware'" in workflow
     run_blocks = re.findall(

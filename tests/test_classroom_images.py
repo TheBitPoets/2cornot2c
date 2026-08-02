@@ -20,6 +20,20 @@ REAL_OFFICIAL_MANIFEST_DIGEST = classroom_images._official_manifest_digest
 
 @pytest.fixture(autouse=True)
 def active_manifest_test_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
+    active = classroom_images.TargetRelease(
+        "windows-amd64-virtualbox",
+        Host.WINDOWS_AMD64,
+        Provider.VIRTUALBOX,
+        None,
+        "1.0.0",
+        (
+            "https://github.com/TheBitPoets/2cornot2c/releases/download/"
+            "classroom-windows-amd64-virtualbox-v1.0.0/"
+            "release-manifest.json"
+        ),
+        "a" * 64,
+    )
+    monkeypatch.setattr(classroom_images, "_target_lock", lambda *args: active)
     monkeypatch.setattr(
         classroom_images, "_official_manifest_digest", lambda *args: None
     )
@@ -293,16 +307,20 @@ def test_vagrantfile_disables_implicit_bento_fallback() -> None:
 
     assert "CLASSROOM_ALLOW_LEGACY_PROVISIONING" in source
     assert "x86_64|amd64|x64" in source
-    assert '["pending", "active"].include?(image_state)' in source
-    assert "Stato immagini classroom non valido" in source
+    assert 'target_release["active_release"]' in source
+    assert "Release classroom attiva non valida" in source
     assert "Box Packer 2cornot2c non configurata" in source
 
 
-def test_pending_activation_refuses_official_manifest_installation() -> None:
-    release = classroom_images._target_lock(
+def test_pending_activation_refuses_official_manifest_installation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    release = classroom_images.target_release(
         Host.WINDOWS_AMD64, Provider.VIRTUALBOX
     )
-    assert release.state == "pending"
+    assert not release.active
+    assert release.candidate_version == "1.0.0"
+    monkeypatch.setattr(classroom_images, "_target_lock", lambda *args: release)
     with pytest.raises(
         classroom_images.ClassroomImageError,
         match="non ancora attiva",
@@ -317,7 +335,7 @@ def test_active_manifest_requires_revision_pinned_digest(
         "windows-amd64-virtualbox",
         Host.WINDOWS_AMD64,
         Provider.VIRTUALBOX,
-        "active",
+        None,
         "1.0.0",
         "https://example.test/release-manifest.json",
         "a" * 64,

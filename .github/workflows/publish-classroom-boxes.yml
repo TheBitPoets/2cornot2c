@@ -52,7 +52,7 @@ jobs:
               Path("packer/classroom-releases.lock.json")
           )
           entry = releases.get(target)
-          if entry is None or entry.version != version:
+          if entry is None or entry.candidate_version != version:
               raise SystemExit("Target o versione non revisionati nel lock.")
           PY
           tag="classroom-${RELEASE_TARGET}-v${RELEASE_VERSION}"

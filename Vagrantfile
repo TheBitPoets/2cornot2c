@@ -28,11 +28,12 @@ target_release = target_id.nil? ? nil : release_lock["targets"][target_id]
 if !target_id.nil? && !target_release.is_a?(Hash)
   raise "Target #{target_id} mancante nel lock release classroom."
 end
-image_state = target_release.nil? ? "pending" : target_release["state"]
-unless ["pending", "active"].include?(image_state)
-  raise "Stato immagini classroom non valido per #{target_id}: #{image_state.inspect}."
+active_release = target_release.nil? ? nil : target_release["active_release"]
+unless active_release.nil? || active_release.is_a?(Hash)
+  raise "Release classroom attiva non valida per #{target_id}."
 end
-packer_images_active = image_state == "active"
+packer_images_active = !active_release.nil?
+image_state = packer_images_active ? "active" : "pending"
 box_name = ENV["CLASSROOM_BOX_NAME"]
 box_name = File.read(box_file, encoding: "UTF-8").strip if box_name.to_s.empty? && File.file?(box_file)
 if box_name.to_s.empty?

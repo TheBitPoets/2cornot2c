@@ -71,7 +71,12 @@ def latest_manifest_url(
 ) -> str:
     """Return the repository-pinned target manifest without API discovery."""
 
-    return _target_lock(host, provider).manifest_url
+    release = _target_lock(host, provider)
+    if release.manifest_url is None:
+        raise ClassroomImageError(
+            f"Immagine Packer {release.target_id} non ancora attiva."
+        )
+    return release.manifest_url
 
 
 def _manifest_override() -> str | None:

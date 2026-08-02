@@ -28,13 +28,17 @@ function Get-WindowsImageState {
             "2cornot2c.classroom-release-lock.v1") {
             return ""
         }
-        $State = [string](
-            $Lock.targets.'windows-amd64-virtualbox'.state
-        )
-        if ($State -notin @("pending", "active")) {
+        $Target = $Lock.targets.'windows-amd64-virtualbox'
+        if ($null -eq $Target) {
             return ""
         }
-        return $State
+        if ($null -ne $Target.active_release) {
+            return "active"
+        }
+        if ([string]$Target.candidate_version) {
+            return "pending"
+        }
+        return ""
     } catch {
         return ""
     }
