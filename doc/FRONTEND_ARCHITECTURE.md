@@ -12,7 +12,7 @@ I frontend sono pagine statiche servite da `scripts/course_board_server.py`. Non
 | Calendario | `school_calendar.*` | eventi, orari, festività, Gantt |
 | Dashboard docente | `assignment_dashboard.*` | classi, registri, grading, feedback |
 | Vista studente locale | `student_dashboard.*` | vista docente/demo di consegne e feedback approvato, protetta da Basic docente |
-| Amministrazione | componenti in `assignment_dashboard.*` | utenti pending, ruoli, membership |
+| Amministrazione | HTML generato da `SessionHttpRoutes` in `scripts/thebitlab_session_http.py` su `/auth/admin` | utenti pending, ruoli, classi e membership con sessione admin federata e CSRF |
 
 `dashboard_dialogs.js` fornisce dialoghi, conferme e toast condivisi. Le pagine mantengono fallback leggibili senza dipendere da credenziali browser-side.
 
@@ -92,8 +92,9 @@ La dashboard compone pannelli per:
 - grading, test e tentativi;
 - richieste di aiuto;
 - feedback AI in bozza/approvato;
-- quadro classe, elenco e matrice;
-- amministrazione autorizzata.
+- quadro classe, elenco e matrice.
+
+L'amministrazione non è un pannello della dashboard docente: `/auth/admin` è una pagina server-rendered separata, autorizzata rileggendo la sessione federata admin e protetta da CSRF. Non usa la Basic authentication della board.
 
 La logica di dominio rimane negli script/service Python; il JavaScript traduce form, filtri e viste.
 

@@ -140,7 +140,7 @@ Decisione:
    - esecuzione test;
    - lettura stdout/stderr e risultati;
    - preparazione o aggiornamento della consegna.
-3. La **dashboard studente web gia iniziata** resta la vista principale di consultazione:
+3. La **vista web studente locale** resta uno strumento docente/demo protetto da Basic; non è il self-service autenticato del pilot. La CLI/TUI role-aware è il canale studente reale. Una futura dashboard federata potrà offrire:
    - consegne e scadenze;
    - percorso e calendario;
    - stato e risultati;
@@ -164,7 +164,8 @@ Per agosto l'obiettivo realistico e:
 - backend lab studente funzionante;
 - runner locale e Docker minimale collegato alle activity;
 - CLI/TUI usabile per svolgere e testare consegne;
-- dashboard studente web che legge stato, risultati e scadenze;
+- vista studente web locale/docente che legge stato, risultati e scadenze;
+- CLI/TUI autenticata come self-service studente;
 - dati demo coerenti per provare il flusso docente -> assegnazione -> studente -> test -> registro.
 
 Non rientrano nel perimetro agosto:
@@ -173,8 +174,8 @@ Non rientrano nel perimetro agosto:
 - terminale web sicuro per classe reale;
 - editor web completo;
 - blocco copia/incolla e monitoraggio schermo;
-- quote AI/token per studenti;
-- autenticazione e permessi reali.
+- quote AI/token avanzate oltre il budget MVP;
+- dashboard web studente self-service con sessione federata (autenticazione, API role-aware e TUI sono invece presenti).
 
 ## Stato recente
 
@@ -419,9 +420,9 @@ Da avere per la prima prova:
    - mostrare avatar/profilo studente solo quando la fonte autorevole arriva da GitHub Team o roster locale;
    - evitare link esterni generici nella navigazione studente.
 6. Collegamento con il lab studente:
-   - la dashboard studente web resta la vista di consultazione per consegne, calendario, percorso, risultati e feedback;
-   - l'esecuzione operativa di test, Docker e workspace passa prima dal backend lab e da una CLI/TUI;
-   - la dashboard web legge i risultati prodotti dal lab, senza duplicare logica di esecuzione;
+   - oggi la vista web è locale/docente e la CLI/TUI è il self-service autenticato;
+   - l'esecuzione operativa di test, Docker e workspace passa dal backend lab e dalla CLI/TUI;
+   - una futura dashboard web federata dovrà leggere i risultati prodotti dal lab senza duplicare logica e senza accettare uno `student_id` arbitrario;
    - una futura GUI web o terminale web dovra riusare lo stesso backend lab.
 
 ### Feedback assistito
