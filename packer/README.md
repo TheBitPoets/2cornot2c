@@ -108,7 +108,10 @@ Su una macchina amd64, dopo la build VirtualBox:
 ```
 
 Il test avvia la box con 2048 MB e due CPU, esegue l'health check installato
-nella VM e verifica zram, memoria, sessione grafica e cartelle condivise.
+nella VM e verifica zram, memoria, sessione grafica e cartelle condivise. Su
+VirtualBox, se la prima VM importata resta irraggiungibile durante il boot, il
+test la distrugge e la ricrea una sola volta; due boot falliti interrompono la
+release. Il retry è limitato a VirtualBox e resta visibile nei log.
 Il profilo sperimentale da 1536 MB si prova con:
 
 ```bash
