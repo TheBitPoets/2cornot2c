@@ -1,3 +1,5 @@
+"""Behavioral tests for transactional authentication and authorization services."""
+
 from __future__ import annotations
 
 import sqlite3

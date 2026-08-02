@@ -1,3 +1,5 @@
+"""Authentication and authorization application services independent of HTTP providers."""
+
 from __future__ import annotations
 
 import hashlib

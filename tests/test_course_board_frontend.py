@@ -127,6 +127,157 @@ def test_source_catalog_summary_reports_indexed_pending_and_providers() -> None:
     )
 
 
+def test_activity_link_dialog_adds_authoritative_activity_and_validates_dates() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        state.activities = [{
+          id: "python-somma-001",
+          path: "activities/drafts/python-somma-001.json",
+          title: "Somma",
+          kind: "laboratorio",
+        }];
+        const year = { id: "terzo", udas: [] };
+        const uda = { id: "uda-1", activity_links: [] };
+        year.udas.push(uda);
+        state.design = { years: [year] };
+        state.activityLinkEditor = { year, uda, link: null };
+        els.activityLinkSelect.value = state.activities[0].path;
+        els.activityLinkRole.value = "verification";
+        els.activityLinkScheduledOn.value = "2026-11-10";
+        els.activityLinkDueOn.value = "2026-11-09";
+
+        saveActivityLink({ preventDefault() {} });
+        assert.equal(uda.activity_links.length, 0);
+        assert.match(els.activityLinkError.textContent, /non può precedere/);
+
+        els.activityLinkDueOn.value = "2026-11-17";
+        saveActivityLink({ preventDefault() {} });
+        assert.deepEqual(uda.activity_links, [{
+          activity_id: "python-somma-001",
+          activity_path: "activities/drafts/python-somma-001.json",
+          title: "Somma",
+          kind: "laboratorio",
+          role: "verification",
+          scheduled_on: "2026-11-10",
+          due_on: "2026-11-17",
+        }]);
+        """
+    )
+
+
+def test_activity_link_dialog_rejects_detached_design_context() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        state.activities = [{ id: "a", path: "activities/a.json", title: "A", kind: "lab" }];
+        const oldYear = { id: "old", udas: [{ id: "uda", activity_links: [] }] };
+        const oldUda = oldYear.udas[0];
+        state.design = { years: [{ id: "new", udas: [] }] };
+        state.activityLinkEditor = { year: oldYear, uda: oldUda, link: null };
+        els.activityLinkSelect.value = "activities/a.json";
+        els.activityLinkRole.value = "practice";
+
+        saveActivityLink({ preventDefault() {} });
+
+        assert.equal(oldUda.activity_links.length, 0);
+        assert.match(els.status.textContent, /UDA aperta è cambiata/);
+        """
+    )
+
+
+def test_activity_link_removal_ignores_detached_design_context() -> None:
+    run_course_board_js(
+        """
+        (async () => {
+          renderCourse = () => { throw new Error("detached removal must not render"); };
+          const link = { title: "A" };
+          const oldUda = { activity_links: [link] };
+          const oldYear = { udas: [oldUda] };
+          state.design = { years: [{ id: "new", udas: [] }] };
+
+          await removeActivityLink(oldYear, oldUda, link);
+
+          assert.equal(oldUda.activity_links.length, 1);
+        })();
+        """
+    )
+
+
+def test_existing_activity_link_remains_editable_when_catalog_is_unavailable() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        state.activities = [];
+        state.activityCatalogError = "temporaneamente non disponibile";
+        const link = {
+          activity_id: "a",
+          activity_path: "activities/a.json",
+          title: "A",
+          kind: "lab",
+          role: "practice",
+        };
+        const uda = { activity_links: [link] };
+        const year = { udas: [uda] };
+        state.design = { years: [year] };
+        state.activityLinkEditor = { year, uda, link };
+        els.activityLinkSelect.value = link.activity_path;
+        els.activityLinkRole.value = "verification";
+        els.activityLinkScheduledOn.value = "2026-10-01";
+        els.activityLinkDueOn.value = "";
+
+        saveActivityLink({ preventDefault() {} });
+
+        assert.equal(uda.activity_links[0].role, "verification");
+        assert.equal(uda.activity_links[0].scheduled_on, "2026-10-01");
+        """
+    )
+
+
+def test_activity_link_dialog_rejects_duplicate_activity_in_same_uda() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        const activity = {
+          id: "python-somma-001",
+          path: "activities/drafts/python-somma-001.json",
+          title: "Somma",
+          kind: "laboratorio",
+        };
+        state.activities = [activity];
+        const existing = {
+          activity_id: activity.id,
+          activity_path: activity.path,
+          title: activity.title,
+          kind: activity.kind,
+          role: "practice",
+        };
+        const year = { id: "terzo", udas: [] };
+        const uda = { id: "uda-1", activity_links: [existing] };
+        year.udas.push(uda);
+        state.design = { years: [year] };
+        state.activityLinkEditor = { year, uda, link: null };
+        els.activityLinkSelect.value = activity.path;
+        els.activityLinkRole.value = "practice";
+
+        saveActivityLink({ preventDefault() {} });
+
+        assert.equal(uda.activity_links.length, 1);
+        assert.match(els.activityLinkError.textContent, /già collegata/);
+        """
+    )
+
+
+def test_course_board_declares_activity_link_controls() -> None:
+    html = Path("tools/course_board.html").read_text(encoding="utf-8")
+    source = Path("tools/course_board.js").read_text(encoding="utf-8")
+
+    assert 'id="activityLinkDialog"' in html
+    assert 'id="activityLinkScheduledOn"' in html
+    assert 'id="activityLinkDueOn"' in html
+    assert 'addButton.dataset.action = "add-activity-link"' in source
+
+
 def test_course_board_declares_source_catalog_summary() -> None:
     html = Path("tools/course_board.html").read_text(encoding="utf-8")
 
@@ -143,6 +294,242 @@ def test_catalog_paragraph_preview_uses_keyboard_accessible_button() -> None:
     assert ".headingPreviewTrigger" in css
 
 
+def test_loaded_legacy_item_hydrates_missing_content_digest() -> None:
+    run_course_board_js(
+        """
+        const design = { years: [{ udas: [{ items: [{
+          id: "README.md#intro", title: "Intro", source: "README.md", line: 1, level: 1,
+        }] }] }] };
+        const headings = [{
+          id: "README.md#intro", title: "Intro", source: "README.md", source_id: "legacy",
+          source_provider: "local", href: "README.md#intro",
+          line: 1, level: 1, content_sha256: "d".repeat(64),
+        }];
+
+        const hydrated = hydrateMissingItemContentDigests(design, headings);
+
+        assert.equal(hydrated, 1);
+        assert.equal(design.years[0].udas[0].items[0].content_sha256, "d".repeat(64));
+        assert.equal(design.years[0].udas[0].items[0].source_id, "legacy");
+        """
+    )
+
+
+def test_source_editor_projects_catalog_without_runtime_fields() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{
+          id: "remote", label: "Remote", provider: "gitlab", path: "",
+          repository: "school/course", ref: "main", files: ["README.md"],
+          updated_at: null, indexing_status: "ready", resolved_ref: "a".repeat(40),
+          indexed_files: ["README.md"], legacy: false,
+        }];
+
+        const editable = editableCourseSources();
+
+        assert.deepEqual(JSON.parse(JSON.stringify(editable)), [{
+          id: "remote", label: "Remote", type: "markdown", provider: "gitlab",
+          path: "", repository: "school/course", ref: "main", files: ["README.md"],
+          updated_at: null, indexing_status: "ready",
+        }]);
+        assert.equal(nextSourceId(editable), "source-2");
+        """
+    )
+
+
+def test_source_editor_migrates_legacy_item_ids_without_detaching_topics() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "legacy-abc", legacy: true }];
+        state.headings = [{
+          id: "README.md#intro", source_id: "legacy-abc", source: "README.md",
+          anchor: "intro", line: 1, level: 1, content_sha256: "c".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "README.md#intro", title: "Intro", source: "README.md",
+          line: 99, level: 3, frame: { status: "done" },
+        }] }] }] };
+        const preview = [{
+          id: "legacy-abc:README.md#intro", title: "Intro", source: "README.md",
+          source_id: "legacy-abc", source_label: "README.md", source_provider: "local",
+          source_repository: null, source_ref: null, source_commit: null,
+          content_sha256: "c".repeat(64), anchor: "intro", line: 1, level: 1, href: "../README.md#intro",
+        }];
+
+        assert.throws(
+          () => reconcileSourceItems(
+            JSON.parse(JSON.stringify(design)),
+            [],
+            [{ id: "legacy-abc", indexing_status: "pending" }],
+          ),
+          /deve restare ready/,
+        );
+        reconcileSourceItems(design, preview, [{ id: "legacy-abc", indexing_status: "ready" }]);
+
+        const item = design.years[0].udas[0].items[0];
+        assert.equal(item.id, "legacy-abc:README.md#intro");
+        assert.equal(item.source_id, "legacy-abc");
+        assert.equal(item.line, 1);
+        assert.equal(item.level, 1);
+        assert.equal(item.frame.status, "done");
+        """
+    )
+
+
+def test_source_editor_detects_orphaned_legacy_item_after_heading_rename() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{
+          id: "legacy-abc", legacy: true, path: "", files: ["README.md"],
+        }];
+        state.headings = [];
+        const design = { years: [{ udas: [{ items: [{
+          id: "README.md#old", source: "README.md", href: "../README.md#old",
+        }] }] }] };
+        const preview = [{
+          id: "legacy-abc:README.md#new", source_id: "legacy-abc", source: "README.md",
+          content_sha256: "a".repeat(64),
+        }];
+
+        assert.throws(
+          () => reconcileSourceItems(
+            design,
+            preview,
+            [{ id: "legacy-abc", indexing_status: "ready" }],
+          ),
+          /non è presente/,
+        );
+        """
+    )
+
+
+def test_source_editor_updates_assigned_remote_commit_from_preview() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "remote", legacy: false }];
+        state.headings = [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          anchor: "intro", line: 1, level: 1, source_commit: "a".repeat(40),
+          content_sha256: "c".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          source_commit: "a".repeat(40), line: 1, level: 1,
+        }] }] }] };
+        const preview = [{
+          id: "remote:README.md#intro", title: "Intro", source: "README.md",
+          source_id: "remote", source_label: "Remote", source_provider: "github",
+          source_repository: "school/course", source_ref: "main",
+          source_commit: "b".repeat(40), content_sha256: "c".repeat(64),
+          anchor: "intro", line: 2, level: 1,
+          href: "https://example.invalid/" + "b".repeat(40) + "/README.md#intro",
+        }];
+
+        reconcileSourceItems(design, preview, [{ id: "remote", indexing_status: "ready" }]);
+
+        const item = design.years[0].udas[0].items[0];
+        assert.equal(item.source_commit, "b".repeat(40));
+        assert.equal(item.line, 2);
+        assert.match(item.href, /bbbbbbbbbbbb/);
+        """
+    )
+
+
+def test_source_editor_rejects_pre_digest_item_from_stale_remote_commit() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "remote" }];
+        state.headings = [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          source_provider: "github", source_commit: "b".repeat(40),
+          content_sha256: "c".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          source_provider: "github", source_commit: "a".repeat(40),
+        }] }] }] };
+
+        assert.throws(
+          () => reconcileSourceItems(
+            design,
+            [{
+              id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+              source_provider: "github", source_commit: "b".repeat(40),
+              content_sha256: "c".repeat(64),
+            }],
+            [{ id: "remote", indexing_status: "ready" }],
+          ),
+          /vecchio commit senza digest/,
+        );
+        """
+    )
+
+
+def test_source_editor_keeps_direct_id_when_heading_content_digests_repeat() -> None:
+    run_course_board_js(
+        """
+        const emptyHash = "e".repeat(64);
+        state.sources = [{ id: "course" }];
+        state.headings = [
+          { id: "course:README.md#one", source_id: "course", source: "README.md", content_sha256: emptyHash },
+          { id: "course:README.md#two", source_id: "course", source: "README.md", content_sha256: emptyHash },
+        ];
+        const design = { years: [{ udas: [{ items: [{
+          id: "course:README.md#two", source_id: "course", source: "README.md",
+          content_sha256: emptyHash,
+        }] }] }] };
+        const preview = [
+          { id: "course:README.md#one", source_id: "course", source: "README.md", content_sha256: emptyHash, title: "One" },
+          { id: "course:README.md#two", source_id: "course", source: "README.md", content_sha256: emptyHash, title: "Two" },
+        ];
+
+        reconcileSourceItems(design, preview, [{ id: "course", indexing_status: "ready" }]);
+
+        assert.equal(design.years[0].udas[0].items[0].id, "course:README.md#two");
+        assert.equal(design.years[0].udas[0].items[0].title, "Two");
+        """
+    )
+
+
+def test_source_editor_blocks_removed_used_source_but_allows_pending_source() -> None:
+    run_course_board_js(
+        """
+        state.sources = [{ id: "remote" }];
+        state.headings = [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          content_sha256: "a".repeat(64),
+        }];
+        const design = { years: [{ udas: [{ items: [{
+          id: "remote:README.md#intro", source_id: "remote", source: "README.md",
+          content_sha256: "a".repeat(64), source_commit: "b".repeat(40),
+        }] }] }] };
+
+        assert.throws(
+          () => reconcileSourceItems(JSON.parse(JSON.stringify(design)), [], []),
+          /rimossa o rinominata/,
+        );
+        const pending = JSON.parse(JSON.stringify(design));
+        reconcileSourceItems(pending, [], [{ id: "remote", indexing_status: "pending" }]);
+        assert.equal(pending.years[0].udas[0].items[0].source_commit, "b".repeat(40));
+        """
+    )
+
+
+def test_source_editor_requires_preview_and_context_before_apply() -> None:
+    source = Path("tools/course_board.js").read_text(encoding="utf-8")
+
+    assert 'api("/api/course-sources/preview"' in source
+    assert "delete candidate.source_files" in source
+    assert "delete nextDesign.source_files" in source
+    assert "sourcePreviewSignature(sources) !== editor.preview.signature" in source
+    assert "isBoardContextUnchanged(editor.boardContext)" in source
+    assert "state.isNewDesign || hasUnsavedChanges()" in source
+    assert "editor.pendingPreviewRequests = Math.max" in source
+    assert "verified.snapshot_revision !== editor.preview.snapshotRevision" in source
+    assert "sourcePreviewSignature(collectSourceEditorSources()) !== sourcePreviewSignature(sources)" in source
+    assert "applied.ref = resolvedRef" in source
+
+
 def test_item_from_heading_preserves_source_provenance() -> None:
     run_course_board_js(
         """
@@ -152,9 +539,10 @@ def test_item_from_heading_preserves_source_provenance() -> None:
           source: "doc/course.md",
           source_id: "course",
           source_label: "Corso",
-          source_provider: "local",
-          source_repository: null,
-          source_ref: null,
+          source_provider: "github",
+          source_repository: "school/course",
+          source_ref: "main",
+          source_commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           href: "../doc/course.md#topic",
           level: 2,
           line: 4,
@@ -165,8 +553,31 @@ def test_item_from_heading_preserves_source_provenance() -> None:
 
         assert.equal(item.source_id, "course");
         assert.equal(item.source_label, "Corso");
-        assert.equal(item.source_provider, "local");
+        assert.equal(item.source_provider, "github");
+        assert.equal(item.source_commit, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
         assert.equal(item.source, "doc/course.md");
+        """
+    )
+
+
+def test_item_subtree_does_not_cross_sources_with_same_relative_path() -> None:
+    run_course_board_js(
+        """
+        const parent = {
+          id: "source-a:README.md#a", title: "A", source: "README.md",
+          source_id: "source-a", level: 1, line: 1, href: "#a",
+        };
+        state.headings = [
+          parent,
+          {
+            id: "source-b:README.md#b", title: "B", source: "README.md",
+            source_id: "source-b", level: 2, line: 1, href: "#b",
+          },
+        ];
+
+        const item = itemFromHeading(parent);
+
+        assert.equal(item.children, undefined);
         """
     )
 
@@ -494,7 +905,8 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
         """
         let requests = 0;
         let confirmationOptions = null;
-        api = async (_path, options) => {
+        api = async (path, options) => {
+          if (path.startsWith("/api/course-calendar-context")) return { revision: "target-revision" };
           requests += 1;
           const body = JSON.parse(options.body);
           if (requests === 1) {
@@ -503,7 +915,13 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
             throw error;
           }
           assert.equal(body.overwrite, true);
-          return { saved: { name: body.name }, designs: [{ name: body.name }] };
+          assert.equal(body.expected_revision, "target-revision");
+          return {
+            saved: { name: body.name },
+            design: body.design,
+            revision: "saved-revision",
+            designs: [{ name: body.name }],
+          };
         };
         DashboardDialogs.confirm = async (options) => {
           confirmationOptions = options;
@@ -815,12 +1233,25 @@ def test_newer_load_wins_over_an_earlier_save_copy_response() -> None:
         state.design = { years: [{ id: "origin" }] };
         state.activeSavedDesign = "origin.json";
 
-        const saving = saveArchiveDesignWithName("copy.json", { overwrite: true });
+        const saving = saveArchiveDesignWithName("copy.json", {
+          overwrite: true,
+          expectedRevision: "copy-revision",
+        });
         const loading = loadSavedDesignByName("target.json", { confirmFirst: false });
-        completeSave({ saved: { name: "copy.json" }, designs: [{ name: "copy.json" }] });
+        completeSave({
+          saved: { name: "copy.json" },
+          design: { years: [{ id: "origin" }] },
+          revision: "saved-copy-revision",
+          designs: [{ name: "copy.json" }],
+        });
         saving.then(() => {
           assert.equal(state.activeSavedDesign, "origin.json");
-          completeLoad({ design: { years: [{ id: "target" }] }, headings: [], sources: [] });
+          completeLoad({
+            design: { years: [{ id: "target" }] },
+            revision: "target-revision",
+            headings: [],
+            sources: [],
+          });
           return loading.then(() => {
             assert.equal(state.activeSavedDesign, "target.json");
             assert.equal(state.design.years[0].id, "target");
@@ -1274,7 +1705,7 @@ def test_detached_draft_preview_posts_its_in_memory_design() -> None:
           return { heading: { title: "Draft", content: "Detached content" } };
         };
 
-        openParagraphPreview({ id: "draft-heading", title: "Draft", source: "draft.md" })
+        openParagraphPreview({ id: "draft-heading", title: "Draft", source: "draft.md", content_sha256: "d".repeat(64) })
           .then(() => assert.match(els.paragraphContent.innerHTML, /Detached content/));
         """
     )
@@ -1293,8 +1724,8 @@ def test_late_paragraph_preview_cannot_overwrite_newer_dialog() -> None:
             else resolveSecond = resolve;
           });
         };
-        const first = openParagraphPreview({ id: "first", title: "Primo", source: "a.md" });
-        const second = openParagraphPreview({ id: "second", title: "Secondo", source: "b.md" });
+        const first = openParagraphPreview({ id: "first", title: "Primo", source: "a.md", content_sha256: "a".repeat(64) });
+        const second = openParagraphPreview({ id: "second", title: "Secondo", source: "b.md", content_sha256: "b".repeat(64) });
         resolveSecond({ heading: { title: "Secondo", content: "Nuovo" } });
         second.then(() => {
           assert.equal(els.paragraphDialogTitle.textContent, "Secondo");

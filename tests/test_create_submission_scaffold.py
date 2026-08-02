@@ -213,6 +213,35 @@ def test_create_scaffold_readme_keeps_default_source_when_assets_are_support_fil
     assert "- `tests/test_public.py` (visible_test)" in readme
 
 
+def test_create_scaffold_accepts_unicode_normalization_equivalent_asset_name(tmp_path) -> None:
+    (tmp_path / "cafe\u0301.txt").write_text("fixture\n", encoding="utf-8")
+    activity_path = write_activity(
+        tmp_path,
+        {
+            **activity(),
+            "assets": [{"type": "starter", "path": "caf\u00e9.txt", "target_path": "support.txt"}],
+        },
+    )
+
+    destination = create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
+
+    assert (destination / "support.txt").read_text(encoding="utf-8") == "fixture\n"
+
+
+def test_create_scaffold_rejects_noncanonical_asset_casing(tmp_path) -> None:
+    (tmp_path / "starter.c").write_text("fixture\n", encoding="utf-8")
+    activity_path = write_activity(
+        tmp_path,
+        {
+            **activity(),
+            "assets": [{"type": "starter", "path": "Starter.c", "target_path": "main.c"}],
+        },
+    )
+
+    with pytest.raises(ValueError, match="non portabile"):
+        create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
+
+
 def test_create_scaffold_rejects_missing_student_asset(tmp_path) -> None:
     activity_path = write_activity(
         tmp_path,
@@ -273,6 +302,12 @@ def test_create_scaffold_rejects_asset_target_reserved_for_scaffold(
         "folder\\child.txt",
         "trailing./file.txt",
         "file.txt ",
+        "CONIN$.txt",
+        "COM¹.txt",
+        "PROGRA~1/file.txt",
+        "README.md/nested.txt",
+        "activity.json/data",
+        "e\u0301.txt",
     ],
 )
 def test_create_scaffold_rejects_nonportable_asset_target(tmp_path, target) -> None:
@@ -290,7 +325,7 @@ def test_create_scaffold_rejects_nonportable_asset_target(tmp_path, target) -> N
     activity_path = write_activity(tmp_path, payload)
     target_dir = tmp_path / "student"
 
-    with pytest.raises(ValueError, match="(non portabile|separatore portabile)"):
+    with pytest.raises(ValueError, match="(non portabile|separatore portabile|riservato allo scaffold)"):
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target_dir,
@@ -352,7 +387,7 @@ def test_create_scaffold_rejects_asset_below_scaffold_file(tmp_path, target) -> 
     activity_path = write_activity(tmp_path, payload)
     target_dir = tmp_path / "student"
 
-    with pytest.raises(ValueError, match="(sovrapposto|non portabile)"):
+    with pytest.raises(ValueError, match="(sovrapposto|non portabile|riservato allo scaffold)"):
         create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target_dir,

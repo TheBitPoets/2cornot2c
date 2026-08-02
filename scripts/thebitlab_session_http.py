@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import html
 import json
 import re
@@ -30,9 +32,17 @@ from scripts.thebitlab_http_auth import (
 _SESSION_PATH = "/auth/session"
 _ACCOUNT_PATH = "/auth/account"
 _ADMIN_PATH = "/auth/admin"
+_ADMIN_CLASSES_PATH = "/auth/admin/classes"
+_ADMIN_APPROVALS_PATH = "/auth/admin/approvals"
+_ADMIN_MUTATION_PATHS = frozenset({_ADMIN_CLASSES_PATH, _ADMIN_APPROVALS_PATH})
 _LOGOUT_PATH = "/auth/logout"
 _MAX_COOKIE_HEADER_BYTES = 16 * 1024
+_MAX_ADMIN_BODY_BYTES = 4096
 _CSRF_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
+_ADMIN_SCRIPT = """const session=()=>fetch('/auth/session').then(r=>{if(!r.ok)throw Error();return r.json()});document.querySelectorAll('form[data-endpoint]').forEach(form=>form.addEventListener('submit',async event=>{event.preventDefault();if(!confirm('Confermare l’operazione amministrativa?'))return;const data=new FormData(form);let payload;if(form.dataset.endpoint.endsWith('/classes')){payload={class_id:data.get('class_id'),label:data.get('label'),school_year:data.get('school_year')}}else{const role=data.get('role');payload={target_user_id:form.dataset.user,expected_target_updated_at:form.dataset.revision,role:role,class_id:role==='student'?data.get('class_id'):null}}try{const auth=await session();const response=await fetch(form.dataset.endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':auth.csrf_token},body:JSON.stringify(payload)});if(!response.ok)throw Error();location.reload()}catch(error){alert('Operazione non completata. Ricaricare e riprovare.')}}));"""
+_ADMIN_SCRIPT_HASH = base64.b64encode(
+    hashlib.sha256(_ADMIN_SCRIPT.encode("utf-8")).digest()
+).decode("ascii")
 
 
 @dataclass(frozen=True)
@@ -42,6 +52,7 @@ class SessionHttpRequest:
     raw_query: str = field(default="", repr=False)
     edge: EdgeRequestMetadata = field(default=None, repr=False)
     is_tls: bool = False
+    body: bytes = field(default=b"", repr=False)
 
     def __post_init__(self) -> None:
         if (
@@ -50,6 +61,8 @@ class SessionHttpRequest:
             or type(self.raw_query) is not str
             or type(self.edge) is not EdgeRequestMetadata
             or type(self.is_tls) is not bool
+            or type(self.body) is not bytes
+            or len(self.body) > _MAX_ADMIN_BODY_BYTES
         ):
             raise ValueError("Richiesta sessione HTTP non valida.")
 
@@ -104,8 +117,12 @@ class SessionHttpRoutes:
 
     def handles(self, path: str) -> bool:
         return path in {_SESSION_PATH, _ACCOUNT_PATH, _LOGOUT_PATH} or (
-            path == _ADMIN_PATH and self.admin_provisioning is not None
+            path in {_ADMIN_PATH, *_ADMIN_MUTATION_PATHS}
+            and self.admin_provisioning is not None
         )
+
+    def expects_body(self, path: str) -> bool:
+        return path in _ADMIN_MUTATION_PATHS and self.admin_provisioning is not None
 
     def dispatch(self, request: SessionHttpRequest) -> SessionHttpResponse | None:
         if type(request) is not SessionHttpRequest:
@@ -118,14 +135,17 @@ class SessionHttpRoutes:
         result = None
         try:
             self._require_https(request)
-            self._require_empty_request(request)
-            if (
-                request.path in {_SESSION_PATH, _ACCOUNT_PATH, _ADMIN_PATH}
-                and request.method != "GET"
-            ):
-                return self._method_error("GET")
-            if request.path == _LOGOUT_PATH and request.method != "POST":
-                return self._method_error("POST")
+            if request.path in _ADMIN_MUTATION_PATHS:
+                if request.method != "POST":
+                    return self._method_error("POST")
+                self._require_admin_json_request(request)
+            else:
+                self._require_empty_request(request)
+                if request.path in {_SESSION_PATH, _ACCOUNT_PATH, _ADMIN_PATH}:
+                    if request.method != "GET":
+                        return self._method_error("GET")
+                elif request.method != "POST":
+                    return self._method_error("POST")
             cookie_header = _combined_header(
                 request.edge, "cookie", maximum_bytes=_MAX_COOKIE_HEADER_BYTES,
                 separator="; ", required=True
@@ -145,6 +165,29 @@ class SessionHttpRoutes:
             csrf_token = _csrf_header(
                 _header_values(request.edge, "x-csrf-token")
             )
+            if request.path in _ADMIN_MUTATION_PATHS:
+                context = self.sessions.authenticate(
+                    HttpAuthRequest(
+                        "POST",
+                        cookie_header=cookie_header,
+                        csrf_token=csrf_token,
+                    )
+                )
+                if context.user.role != "admin":
+                    return self._error(
+                        403,
+                        "admin_forbidden",
+                        "Accesso amministrativo non consentito.",
+                    )
+                payload = _json_object(request.body)
+                if request.path == _ADMIN_CLASSES_PATH:
+                    self._create_admin_class(context, payload)
+                else:
+                    self._approve_admin_user(context, payload)
+                return SessionHttpResponse(
+                    204,
+                    self._base_headers() + (("Content-Length", "0"),),
+                )
             result = self.sessions.logout(
                 HttpAuthRequest(
                     "POST",
@@ -162,6 +205,12 @@ class SessionHttpRoutes:
         except _SessionRequestError as error:
             return self._error(error.status_code, error.error_code, error.public_message)
         except AdminProvisioningConflictError:
+            if request.path in _ADMIN_MUTATION_PATHS:
+                return self._error(
+                    409,
+                    "admin_conflict",
+                    "Dati amministrativi non più correnti.",
+                )
             return self._error(403, "admin_forbidden", "Accesso amministrativo non consentito.")
         except HttpAuthError as error:
             extra = (("Allow", "POST"),) if isinstance(error, HttpMethodNotAllowedError) else ()
@@ -202,6 +251,27 @@ class SessionHttpRoutes:
         transfers = _header_values(request.edge, "transfer-encoding")
         if transfers or len(lengths) > 1 or (lengths and lengths != ["0"]):
             raise _SessionRequestError(400, "bad_auth_request", "Body non consentito.")
+
+    @staticmethod
+    def _require_admin_json_request(request: SessionHttpRequest) -> None:
+        if request.raw_query:
+            raise _SessionRequestError(400, "bad_auth_request", "Query non consentita.")
+        transfers = _header_values(request.edge, "transfer-encoding")
+        lengths = _header_values(request.edge, "content-length")
+        content_types = _header_values(request.edge, "content-type")
+        content_encodings = _header_values(request.edge, "content-encoding")
+        expected = str(len(request.body))
+        if (
+            transfers
+            or lengths != [expected]
+            or expected == "0"
+            or len(request.body) > _MAX_ADMIN_BODY_BYTES
+            or content_types != ["application/json"]
+            or content_encodings
+        ):
+            raise _SessionRequestError(
+                400, "bad_auth_request", "Richiesta JSON amministrativa non valida."
+            )
 
     @staticmethod
     def _base_headers() -> tuple[tuple[str, str], ...]:
@@ -284,6 +354,63 @@ class SessionHttpRoutes:
             body,
         )
 
+    def _create_admin_class(self, context, payload: dict[str, object]) -> None:
+        if set(payload) != {"class_id", "label", "school_year"} or any(
+            type(payload[name]) is not str
+            for name in ("class_id", "label", "school_year")
+        ):
+            raise _SessionRequestError(
+                400, "invalid_admin_payload", "Payload classe non valido."
+            )
+        try:
+            self.admin_provisioning.create_class(
+                context.user,
+                class_id=payload["class_id"],
+                label=payload["label"],
+                school_year=payload["school_year"],
+            )
+        except ValueError as error:
+            raise _SessionRequestError(
+                400, "invalid_admin_payload", "Payload classe non valido."
+            ) from error
+
+    def _approve_admin_user(self, context, payload: dict[str, object]) -> None:
+        if set(payload) != {
+            "target_user_id",
+            "expected_target_updated_at",
+            "role",
+            "class_id",
+        }:
+            raise _SessionRequestError(
+                400, "invalid_admin_payload", "Payload approvazione non valido."
+            )
+        target_user_id = payload["target_user_id"]
+        revision = payload["expected_target_updated_at"]
+        role = payload["role"]
+        class_id = payload["class_id"]
+        if (
+            type(target_user_id) is not str
+            or type(revision) is not str
+            or type(role) is not str
+            or (class_id is not None and type(class_id) is not str)
+        ):
+            raise _SessionRequestError(
+                400, "invalid_admin_payload", "Payload approvazione non valido."
+            )
+        expected_revision = _parse_utc_revision(revision)
+        try:
+            self.admin_provisioning.approve(
+                context.user,
+                target_user_id=target_user_id,
+                expected_target_updated_at=expected_revision,
+                role=role,
+                class_id=class_id,
+            )
+        except ValueError as error:
+            raise _SessionRequestError(
+                400, "invalid_admin_payload", "Payload approvazione non valido."
+            ) from error
+
     def _admin_response(self, context) -> SessionHttpResponse:
         snapshot = self.admin_provisioning.snapshot(context.user)
         budget = 10_000
@@ -301,9 +428,23 @@ class SessionHttpRoutes:
                 budget -= size
             return "".join(rows) or empty
 
+        def pending_row(user):
+            user_id = html.escape(user.user_id, quote=True)
+            revision = html.escape(_utc_z(user.updated_at), quote=True)
+            name = html.escape(user.display_name)
+            return (
+                f'<li><code>{user_id}</code> — {name}'
+                f'<form data-endpoint="{_ADMIN_APPROVALS_PATH}" data-user="{user_id}" '
+                f'data-revision="{revision}"><label>Ruolo <select name="role">'
+                '<option value="student">Studente</option><option value="teacher">Docente</option>'
+                '</select></label><label>ID classe per studente '
+                '<input name="class_id" maxlength="512"></label>'
+                '<button type="submit">Approva</button></form></li>'
+            )
+
         pending = bounded_rows(
             snapshot.pending_users,
-            lambda user: f"<li><code>{html.escape(user.user_id)}</code> — {html.escape(user.display_name)}</li>",
+            pending_row,
             "<li>Nessun account pending</li>",
         )
         classes = bounded_rows(
@@ -314,15 +455,32 @@ class SessionHttpRoutes:
         body = (
             "<!doctype html><html lang=\"it\"><head><meta charset=\"utf-8\">"
             "<title>Amministrazione - TheBitLab</title></head><body><main>"
-            f"<h1>Amministrazione</h1><h2>Account pending</h2><ul>{pending}</ul>"
-            f"<h2>Classi</h2><ul>{classes}</ul></main></body></html>"
+            "<h1>Amministrazione</h1><h2>Crea classe</h2>"
+            f'<form data-endpoint="{_ADMIN_CLASSES_PATH}"><label>ID <input name="class_id" '
+            'maxlength="512" required></label><label>Nome <input name="label" maxlength="512" '
+            'required></label><label>Anno scolastico <input name="school_year" maxlength="512" '
+            'required></label><button type="submit">Crea classe</button></form>'
+            f"<h2>Account pending</h2><ul>{pending}</ul>"
+            f"<h2>Classi</h2><ul>{classes}</ul></main>"
+            f"<script>{_ADMIN_SCRIPT}</script></body></html>"
         ).encode("utf-8")
-        return SessionHttpResponse(200, self._base_headers() + (
-            ("Content-Security-Policy", "default-src 'none'; base-uri 'none'; frame-ancestors 'none'"),
-            ("X-Content-Type-Options", "nosniff"), ("X-Frame-Options", "DENY"),
-            ("Content-Type", "text/html; charset=utf-8"),
-            ("Content-Length", str(len(body))),
-        ), body)
+        return SessionHttpResponse(
+            200,
+            self._base_headers()
+            + (
+                (
+                    "Content-Security-Policy",
+                    "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; "
+                    f"script-src 'sha256-{_ADMIN_SCRIPT_HASH}'; connect-src 'self'; "
+                    "form-action 'none'",
+                ),
+                ("X-Content-Type-Options", "nosniff"),
+                ("X-Frame-Options", "DENY"),
+                ("Content-Type", "text/html; charset=utf-8"),
+                ("Content-Length", str(len(body))),
+            ),
+            body,
+        )
 
     def _method_error(self, allowed: str) -> SessionHttpResponse:
         return self._error(
@@ -360,6 +518,46 @@ class _SessionRequestError(RuntimeError):
         self.error_code = error_code
         self.public_message = public_message
         super().__init__(public_message)
+
+
+def _json_object(body: bytes) -> dict[str, object]:
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if type(key) is not str or key in result:
+                raise ValueError("JSON duplicato")
+            result[key] = value
+        return result
+
+    try:
+        payload = json.loads(body.decode("utf-8"), object_pairs_hook=unique_object)
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError) as error:
+        raise _SessionRequestError(
+            400, "invalid_admin_payload", "Payload amministrativo non valido."
+        ) from error
+    if type(payload) is not dict:
+        raise _SessionRequestError(
+            400, "invalid_admin_payload", "Payload amministrativo non valido."
+        )
+    return payload
+
+
+def _parse_utc_revision(value: str) -> datetime:
+    if not value.endswith("Z"):
+        raise _SessionRequestError(
+            400, "invalid_admin_payload", "Revisione target non valida."
+        )
+    try:
+        parsed = datetime.fromisoformat(value[:-1] + "+00:00")
+    except ValueError as error:
+        raise _SessionRequestError(
+            400, "invalid_admin_payload", "Revisione target non valida."
+        ) from error
+    if parsed.tzinfo != timezone.utc or _utc_z(parsed) != value:
+        raise _SessionRequestError(
+            400, "invalid_admin_payload", "Revisione target non valida."
+        )
+    return parsed
 
 
 def _header_values(edge: EdgeRequestMetadata, lowered_name: str) -> list[str]:

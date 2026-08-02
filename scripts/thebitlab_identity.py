@@ -1,3 +1,5 @@
+"""Core identity, role, class-membership, and session domain contracts."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, replace

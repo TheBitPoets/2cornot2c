@@ -1,7 +1,13 @@
 ﻿const state = {
   headings: [],
   sources: [],
+  activities: [],
+  activityCatalogError: "",
   design: null,
+  designRevision: "",
+  designEditableRevision: "",
+  currentDesignRevision: "",
+  currentDesignEditableRevision: "",
   savedDesigns: [],
   activeSavedDesign: "",
   isNewDesign: false,
@@ -12,6 +18,8 @@
   courseAiYearId: null,
   courseAiProposal: null,
   activeFrameTextarea: null,
+  activityLinkEditor: null,
+  sourceEditor: null,
 };
 
 const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
@@ -25,6 +33,17 @@ const els = {
   levelFilter: document.querySelector("#levelFilter"),
   searchInput: document.querySelector("#searchInput"),
   sourceCatalogSummary: document.querySelector("#sourceCatalogSummary"),
+  manageSourcesBtn: document.querySelector("#manageSourcesBtn"),
+  sourceDialog: document.querySelector("#sourceDialog"),
+  sourceForm: document.querySelector("#sourceForm"),
+  sourceCloseBtn: document.querySelector("#sourceCloseBtn"),
+  sourceEditorList: document.querySelector("#sourceEditorList"),
+  sourceDialogError: document.querySelector("#sourceDialogError"),
+  sourcePreviewStatus: document.querySelector("#sourcePreviewStatus"),
+  sourceAddBtn: document.querySelector("#sourceAddBtn"),
+  sourcePreviewBtn: document.querySelector("#sourcePreviewBtn"),
+  sourceApplyBtn: document.querySelector("#sourceApplyBtn"),
+  sourceCancelBtn: document.querySelector("#sourceCancelBtn"),
   courseTree: document.querySelector("#courseTree"),
   projectTitle: document.querySelector("#projectTitle"),
   status: document.querySelector("#status"),
@@ -58,6 +77,16 @@ const els = {
   paragraphDialogMeta: document.querySelector("#paragraphDialogMeta"),
   paragraphContent: document.querySelector("#paragraphContent"),
   paragraphSourceLink: document.querySelector("#paragraphSourceLink"),
+  activityLinkDialog: document.querySelector("#activityLinkDialog"),
+  activityLinkForm: document.querySelector("#activityLinkForm"),
+  activityLinkDialogTitle: document.querySelector("#activityLinkDialogTitle"),
+  activityLinkCloseBtn: document.querySelector("#activityLinkCloseBtn"),
+  activityLinkSelect: document.querySelector("#activityLinkSelect"),
+  activityLinkRole: document.querySelector("#activityLinkRole"),
+  activityLinkScheduledOn: document.querySelector("#activityLinkScheduledOn"),
+  activityLinkDueOn: document.querySelector("#activityLinkDueOn"),
+  activityLinkError: document.querySelector("#activityLinkError"),
+  activityLinkCancelBtn: document.querySelector("#activityLinkCancelBtn"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
   courseAiTitle: document.querySelector("#courseAiTitle"),
   courseAiCloseBtn: document.querySelector("#courseAiCloseBtn"),
@@ -397,6 +426,8 @@ async function fetchCourseContext(name = "") {
   const payload = await api(`/api/course-source-context${query}`);
   return {
     design: payload.design,
+    revision: payload.revision || "",
+    editableRevision: payload.editable_revision || payload.revision || "",
     headings: payload.headings || [],
     sources: payload.sources || [],
   };
@@ -407,15 +438,30 @@ async function loadAll() {
   const boardContext = captureBoardContext();
   const requestId = ++courseContextRequestId;
   courseContextRequestName = "";
-  const [courseContext, aiConfig, savedDesigns] = await Promise.all([
+  const [courseContext, aiConfig, savedDesigns, activities] = await Promise.all([
     fetchCourseContext(),
     api("/api/ai-config"),
     api("/api/saved-designs"),
+    api("/api/course-linkable-activities")
+      .then((payload) => ({ payload, error: null }))
+      .catch((error) => ({ payload: null, error })),
   ]);
   if (requestId !== courseContextRequestId || !isBoardContextUnchanged(boardContext)) return;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
+  if (activities.error) {
+    state.activityCatalogError = activities.error.message || "errore sconosciuto";
+  } else {
+    state.activities = activities.payload?.activities || [];
+    state.activityCatalogError = "";
+  }
   state.design = courseContext.design;
+  markDesignClean();
+  hydrateMissingItemContentDigests();
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
+  state.currentDesignRevision = courseContext.revision;
+  state.currentDesignEditableRevision = courseContext.editableRevision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   state.aiConfig = aiConfig;
@@ -433,8 +479,9 @@ async function loadAll() {
   renderProjectTitle();
   renderHeadings();
   renderCourse();
-  markDesignClean();
-  if (state.activeSavedDesign || state.isNewDesign) {
+  if (state.activityCatalogError) {
+    setStatus(`Catalogo activity non disponibile: ${state.activityCatalogError}. Usa Ricarica per riprovare.`);
+  } else if (state.activeSavedDesign || state.isNewDesign) {
     setStatus("Pronto.");
   } else {
     renderCourseActions();
@@ -545,11 +592,16 @@ async function loadCurrentDesign() {
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
+  state.currentDesignRevision = courseContext.revision;
+  state.currentDesignEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();
+  hydrateMissingItemContentDigests();
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   renderSavedDesigns();
@@ -586,11 +638,14 @@ async function loadSavedDesignByName(name, options = {}) {
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = name;
   state.isNewDesign = false;
   markDesignClean();
+  hydrateMissingItemContentDigests();
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   if (render) {
@@ -659,7 +714,18 @@ async function persistArchiveDesignWithName(name, options = {}) {
     opensSavedDesign = state.design !== design,
     boardContext = captureBoardContext(),
     courseContextGeneration = courseContextRequestId,
+    expectedRevision = "",
   } = options;
+  const preserveActual = state.activeSavedDesign === name;
+  let targetRevision = expectedRevision;
+  if (overwrite && !targetRevision) {
+    if (preserveActual) {
+      targetRevision = state.designEditableRevision;
+    } else {
+      const target = await api(`/api/course-calendar-context?design=${encodeURIComponent(name)}`);
+      targetRevision = target.revision;
+    }
+  }
   normalizeCourseDesignFrames(design);
   const designToSave = JSON.parse(JSON.stringify(design));
   const savedSnapshot = JSON.stringify(designToSave);
@@ -668,10 +734,22 @@ async function persistArchiveDesignWithName(name, options = {}) {
   try {
     payload = await api("/api/saved-designs/save", {
       method: "POST",
-      body: JSON.stringify({ name, design: designToSave, overwrite }),
+      body: JSON.stringify({
+        name,
+        design: designToSave,
+        overwrite,
+        ...(overwrite ? {
+          expected_revision: targetRevision,
+          preserve_actual: preserveActual,
+        } : {}),
+      }),
     });
+    if (state.activeSavedDesign === name) {
+      state.designRevision = payload.revision || state.designRevision;
+      state.designEditableRevision = payload.editable_revision || state.designEditableRevision;
+    }
   } catch (error) {
-    if (error.status === 409 && confirmOverwrite) {
+    if (error.status === 409 && confirmOverwrite && !overwrite) {
       const confirmed = await DashboardDialogs.confirm({
         title: "Sostituisci progetto esistente",
         message: `Esiste già un progetto chiamato "${name}". Vuoi sostituirlo?`,
@@ -689,6 +767,7 @@ async function persistArchiveDesignWithName(name, options = {}) {
         opensSavedDesign,
         boardContext,
         courseContextGeneration,
+        expectedRevision: "",
       });
     }
     setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
@@ -704,11 +783,13 @@ async function persistArchiveDesignWithName(name, options = {}) {
     setStatus(`Progetto salvato in archivio: ${payload.saved?.name || name}. La vista aperta non e stata cambiata.`);
     return !opensSavedDesign;
   }
-  if (opensSavedDesign) state.design = designToSave;
+  if (opensSavedDesign) state.design = payload.design || designToSave;
+  state.designRevision = payload.revision || state.designRevision;
+  state.designEditableRevision = payload.editable_revision || state.designEditableRevision;
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
   state.isNewDesign = false;
-  markDesignClean(savedSnapshot);
+  markDesignClean(JSON.stringify(payload.design || designToSave));
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   renderSavedDesigns();
@@ -733,12 +814,18 @@ async function persistCurrentProject() {
   const boardContext = captureBoardContext();
   const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio progetto corrente in doc/course_design.json...");
-  await api("/api/course-design", {
+  const payload = await api("/api/course-design", {
     method: "POST",
-    body: savedSnapshot,
+    body: JSON.stringify({
+      design: JSON.parse(savedSnapshot),
+      expected_revision: state.currentDesignEditableRevision,
+      preserve_actual: true,
+    }),
   });
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   if (
-    !isBoardContextCurrent(boardContext)
+    !isBoardContextUnchanged(boardContext)
     || courseContextGeneration !== courseContextRequestId
   ) {
     setStatus("Progetto corrente salvato. La vista aperta non e stata cambiata.");
@@ -746,9 +833,14 @@ async function persistCurrentProject() {
   }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.design = payload.design;
+  state.designRevision = payload.revision;
+  state.designEditableRevision = payload.editable_revision || payload.revision;
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
-  markDesignClean(savedSnapshot);
+  markDesignClean(JSON.stringify(payload.design));
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
@@ -894,11 +986,16 @@ async function deleteArchiveDesignOnce() {
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
+  state.currentDesignRevision = courseContext.revision;
+  state.currentDesignEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();
+  hydrateMissingItemContentDigests();
   renderSavedDesigns();
   renderProjectTitle();
   populateFilters();
@@ -943,6 +1040,8 @@ async function newCourseDesign() {
   }
   invalidateParagraphPreview(true);
   state.design = courseContext.design;
+  state.designRevision = courseContext.revision;
+  state.designEditableRevision = courseContext.editableRevision;
   state.headings = courseContext.headings;
   state.sources = courseContext.sources;
   markDesignClean();
@@ -1022,25 +1121,486 @@ async function switchAiModel() {
   }
 }
 
+function headingSourceKey(heading) {
+  return JSON.stringify([heading.source_id || "", heading.source || ""]);
+}
+
+function sameHeadingSource(first, second) {
+  return headingSourceKey(first) === headingSourceKey(second);
+}
+
 function populateFilters() {
   const selected = els.sourceFilter.value;
   const sources = new Map();
   for (const heading of state.headings) {
-    if (!sources.has(heading.source)) {
-      sources.set(heading.source, {
+    const sourceKey = headingSourceKey(heading);
+    if (!sources.has(sourceKey)) {
+      sources.set(sourceKey, {
         label: heading.source_label || heading.source,
         provider: heading.source_provider || "local",
       });
     }
   }
   els.sourceFilter.innerHTML = '<option value="">Tutte le sorgenti</option>';
-  for (const [source, metadata] of sources) {
+  for (const [sourceKey, metadata] of sources) {
     const option = document.createElement("option");
-    option.value = source;
+    option.value = sourceKey;
     option.textContent = `${metadata.label} (${metadata.provider})`;
     els.sourceFilter.append(option);
   }
   els.sourceFilter.value = selected;
+}
+
+function hydrateMissingItemContentDigests(design = state.design, headings = state.headings) {
+  const byId = new Map((headings || []).map((heading) => [heading.id, heading]));
+  let hydrated = 0;
+  const visit = (items) => {
+    for (const item of items || []) {
+      const heading = byId.get(item.id);
+      if (
+        (!item.content_sha256 || !item.source_id || !item.source_provider || !item.href)
+        && heading?.content_sha256
+        && (!item.source || item.source === heading.source)
+        && (!item.source_id || item.source_id === heading.source_id)
+        && (!item.source_commit || item.source_commit === heading.source_commit)
+        && item.title === heading.title
+        && Number(item.line) === Number(heading.line)
+        && Number(item.level) === Number(heading.level)
+      ) {
+        Object.assign(item, {
+          title: heading.title,
+          source: heading.source,
+          source_id: heading.source_id,
+          source_label: heading.source_label,
+          source_provider: heading.source_provider,
+          source_repository: heading.source_repository,
+          source_ref: heading.source_ref,
+          source_commit: heading.source_commit,
+          content_sha256: heading.content_sha256,
+          href: heading.href,
+          level: heading.level,
+          line: heading.line,
+        });
+        hydrated += 1;
+      }
+      visit(item.children);
+    }
+  };
+  for (const year of design?.years || []) {
+    for (const uda of year.udas || []) visit(uda.items);
+  }
+  return hydrated;
+}
+
+function editableCourseSources() {
+  return (state.sources || []).map((source) => ({
+    id: source.id || "",
+    label: source.label || source.id || "",
+    type: "markdown",
+    provider: source.provider || "local",
+    path: source.path || "",
+    repository: source.repository || "",
+    ref: source.ref || "",
+    files: [...(source.files || [])],
+    updated_at: source.updated_at || null,
+    indexing_status: source.indexing_status || "ready",
+  }));
+}
+
+function nextSourceId(sources) {
+  const used = new Set(sources.map((source) => source.id));
+  let index = sources.length + 1;
+  while (used.has(`source-${index}`)) index += 1;
+  return `source-${index}`;
+}
+
+function sourceEditorField(label, control) {
+  const wrapper = document.createElement("label");
+  const title = document.createElement("span");
+  title.textContent = label;
+  wrapper.append(title, control);
+  return wrapper;
+}
+
+function renderSourceEditor() {
+  els.sourceEditorList.innerHTML = "";
+  const sources = state.sourceEditor?.draft || [];
+  sources.forEach((source, index) => {
+    const card = document.createElement("article");
+    card.className = "sourceEditorCard";
+    card.dataset.index = String(index);
+    card.dataset.updatedAt = source.updated_at || "";
+
+    const head = document.createElement("header");
+    const title = document.createElement("strong");
+    title.textContent = source.label || source.id || `Fonte ${index + 1}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "danger";
+    remove.textContent = "Rimuovi";
+    remove.addEventListener("click", () => {
+      const current = collectSourceEditorSources();
+      current.splice(index, 1);
+      state.sourceEditor.draft = current;
+      invalidateSourcePreview();
+      renderSourceEditor();
+    });
+    head.append(title, remove);
+
+    const grid = document.createElement("div");
+    grid.className = "sourceEditorGrid";
+    const textInput = (field, value) => {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = value || "";
+      input.dataset.field = field;
+      return input;
+    };
+    const provider = document.createElement("select");
+    provider.dataset.field = "provider";
+    for (const value of ["local", "github", "gitlab"]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      provider.append(option);
+    }
+    provider.value = source.provider;
+    provider.addEventListener("change", () => {
+      state.sourceEditor.draft = collectSourceEditorSources();
+      invalidateSourcePreview();
+      renderSourceEditor();
+    });
+    const status = document.createElement("select");
+    status.dataset.field = "indexing_status";
+    for (const value of ["ready", "pending", "error", "disabled"]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      status.append(option);
+    }
+    status.value = source.indexing_status;
+    const files = document.createElement("textarea");
+    files.rows = 3;
+    files.value = (source.files || []).join("\n");
+    files.dataset.field = "files";
+
+    grid.append(
+      sourceEditorField("ID", textInput("id", source.id)),
+      sourceEditorField("Etichetta", textInput("label", source.label)),
+      sourceEditorField("Provider", provider),
+      sourceEditorField("Stato", status),
+    );
+    if (source.provider === "local") {
+      grid.append(sourceEditorField("Directory locale", textInput("path", source.path)));
+    } else {
+      grid.append(
+        sourceEditorField("Repository", textInput("repository", source.repository)),
+        sourceEditorField("Ref", textInput("ref", source.ref)),
+      );
+    }
+    grid.append(sourceEditorField("File Markdown (uno per riga)", files));
+    const syncMeta = document.createElement("p");
+    syncMeta.className = "sourceSyncMeta";
+    syncMeta.textContent = "Non verificata.";
+    card.append(head, grid, syncMeta);
+    els.sourceEditorList.append(card);
+  });
+  if (!sources.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "Nessuna fonte configurata.";
+    els.sourceEditorList.append(empty);
+  }
+}
+
+function collectSourceEditorSources() {
+  return [...els.sourceEditorList.querySelectorAll(".sourceEditorCard")].map((card) => {
+    const value = (field) => card.querySelector(`[data-field="${field}"]`)?.value.trim() || "";
+    const provider = value("provider") || "local";
+    const source = {
+      id: value("id"),
+      label: value("label"),
+      type: "markdown",
+      provider,
+      files: value("files").split(/[\n,]/).map((item) => item.trim()).filter(Boolean),
+      updated_at: card.dataset.updatedAt || null,
+      indexing_status: value("indexing_status") || "ready",
+    };
+    if (provider === "local") {
+      const path = value("path");
+      if (path) source.path = path;
+    } else {
+      source.repository = value("repository");
+      source.ref = value("ref");
+    }
+    return source;
+  });
+}
+
+function sourcePreviewSignature(sources) {
+  return JSON.stringify(sources);
+}
+
+function invalidateSourcePreview() {
+  if (!state.sourceEditor) return;
+  state.sourceEditor.requestId += 1;
+  state.sourceEditor.preview = null;
+  els.sourceApplyBtn.disabled = true;
+  els.sourcePreviewStatus.textContent = "Modifiche da sincronizzare.";
+}
+
+function showSourceDialogError(message = "") {
+  els.sourceDialogError.textContent = message;
+  els.sourceDialogError.hidden = !message;
+}
+
+function openSourceDialog() {
+  state.sourceEditor = {
+    draft: editableCourseSources(),
+    preview: null,
+    requestId: 0,
+    pendingPreviewRequests: 0,
+    boardContext: captureBoardContext(),
+  };
+  showSourceDialogError();
+  els.sourceApplyBtn.disabled = true;
+  els.sourcePreviewBtn.disabled = false;
+  els.sourcePreviewStatus.textContent = "Sincronizza per verificare file e commit prima di applicare.";
+  renderSourceEditor();
+  els.sourceDialog.showModal();
+}
+
+function closeSourceDialog() {
+  if (state.sourceEditor) state.sourceEditor.requestId += 1;
+  state.sourceEditor = null;
+  if (els.sourceDialog.open) els.sourceDialog.close();
+}
+
+async function previewSourceEditor() {
+  const editor = state.sourceEditor;
+  if (!editor) return;
+  const sources = collectSourceEditorSources();
+  editor.draft = sources;
+  editor.preview = null;
+  showSourceDialogError();
+  els.sourceApplyBtn.disabled = true;
+  editor.pendingPreviewRequests += 1;
+  els.sourcePreviewBtn.disabled = true;
+  els.sourcePreviewStatus.textContent = "Sincronizzazione in corso...";
+  const requestId = ++editor.requestId;
+  const candidate = JSON.parse(JSON.stringify(state.design));
+  candidate.sources = sources;
+  delete candidate.source_files;
+  try {
+    const payload = await api("/api/course-sources/preview", {
+      method: "POST",
+      body: JSON.stringify({ design: candidate }),
+    });
+    if (state.sourceEditor !== editor || requestId !== editor.requestId) return;
+    if (!isBoardContextUnchanged(editor.boardContext)) {
+      throw new Error("La board è cambiata durante la sincronizzazione: riapri il dialog.");
+    }
+    editor.preview = {
+      signature: sourcePreviewSignature(sources),
+      sources: payload.sources || [],
+      headings: payload.headings || [],
+      snapshotRevision: payload.snapshot_revision || "",
+    };
+    for (const card of els.sourceEditorList.querySelectorAll(".sourceEditorCard")) {
+      const source = editor.preview.sources.find((item) => item.id === card.querySelector('[data-field="id"]').value.trim());
+      const commit = source?.resolved_ref ? ` · commit ${source.resolved_ref.slice(0, 12)}` : "";
+      card.querySelector(".sourceSyncMeta").textContent = source
+        ? `${(source.indexed_files || []).length} file indicizzati${commit}`
+        : "Fonte non restituita dal catalogo.";
+    }
+    els.sourcePreviewStatus.textContent = `${editor.preview.sources.length} fonti verificate · ${editor.preview.headings.length} paragrafi.`;
+    els.sourceApplyBtn.disabled = false;
+  } catch (error) {
+    if (state.sourceEditor === editor && requestId === editor.requestId) {
+      showSourceDialogError(error.message);
+      els.sourcePreviewStatus.textContent = "Sincronizzazione non riuscita.";
+    }
+  } finally {
+    if (state.sourceEditor === editor) {
+      editor.pendingPreviewRequests = Math.max(0, editor.pendingPreviewRequests - 1);
+      els.sourcePreviewBtn.disabled = editor.pendingPreviewRequests > 0;
+    }
+  }
+}
+
+function reconcileSourceItems(design, previewHeadings, nextSources) {
+  const managedSourceIds = new Set((state.sources || []).map((source) => source.id));
+  const currentSourceById = new Map((state.sources || []).map((source) => [source.id, source]));
+  const nextSourceById = new Map(nextSources.map((source) => [source.id, source]));
+  const oldById = new Map((state.headings || []).map((heading) => [heading.id, heading]));
+  const newById = new Map(previewHeadings.map((heading) => [heading.id, heading]));
+  const newByKey = new Map();
+  for (const heading of previewHeadings) {
+    const key = JSON.stringify([
+      heading.source_id,
+      heading.source,
+      heading.content_sha256,
+    ]);
+    newByKey.set(key, newByKey.has(key) ? null : heading);
+  }
+  const visit = (items) => {
+    for (const item of items || []) {
+      const oldHeading = oldById.get(item.id);
+      const legacyMatches = (state.sources || []).filter((source) =>
+        source.legacy
+        && (source.files || []).some((file) => `${source.path ? `${source.path}/` : ""}${file}` === item.source),
+      );
+      const sourceId = item.source_id
+        || oldHeading?.source_id
+        || (legacyMatches.length === 1 ? legacyMatches[0].id : "");
+      if (oldHeading || managedSourceIds.has(sourceId)) {
+        const nextSource = nextSourceById.get(sourceId);
+        if (!nextSource) {
+          throw new Error(`La fonte usata dal paragrafo ${item.id} è stata rimossa o rinominata.`);
+        }
+        if (nextSource.indexing_status !== "ready") {
+          if (currentSourceById.get(sourceId)?.legacy) {
+            throw new Error(`La fonte legacy ${sourceId} deve restare ready durante la migrazione iniziale.`);
+          }
+          visit(item.children);
+          continue;
+        }
+        const sourcePath = item.source || oldHeading?.source || "";
+        const provider = item.source_provider || oldHeading?.source_provider || "local";
+        if (
+          provider !== "local"
+          && item.source_commit
+          && !item.content_sha256
+          && oldHeading?.source_commit
+          && item.source_commit !== oldHeading.source_commit
+        ) {
+          throw new Error(`Il paragrafo ${item.id} appartiene a un vecchio commit senza digest: rimuovilo o ripristina la ref prima di riallinearlo.`);
+        }
+        const contentSha256 = item.content_sha256 || oldHeading?.content_sha256 || "";
+        const direct = newById.get(item.id);
+        const directMatches = direct
+          && direct.source_id === sourceId
+          && direct.source === sourcePath
+          && direct.content_sha256 === contentSha256;
+        const key = JSON.stringify([sourceId, sourcePath, contentSha256]);
+        const replacement = directMatches ? direct : newByKey.get(key);
+        if (!replacement) {
+          throw new Error(`Il paragrafo assegnato ${item.id} non è presente nell'anteprima sincronizzata.`);
+        }
+        Object.assign(item, {
+          id: replacement.id,
+          title: replacement.title,
+          source: replacement.source,
+          source_id: replacement.source_id,
+          source_label: replacement.source_label,
+          source_provider: replacement.source_provider,
+          source_repository: replacement.source_repository,
+          source_ref: replacement.source_ref,
+          source_commit: replacement.source_commit,
+          content_sha256: replacement.content_sha256,
+          href: replacement.href,
+          level: replacement.level,
+          line: replacement.line,
+        });
+      }
+      visit(item.children);
+    }
+  };
+  for (const year of design.years || []) {
+    for (const uda of year.udas || []) visit(uda.items);
+  }
+}
+
+async function applySourceEditor(event) {
+  event.preventDefault();
+  const editor = state.sourceEditor;
+  if (!editor?.preview) return;
+  const sources = collectSourceEditorSources();
+  if (sourcePreviewSignature(sources) !== editor.preview.signature) {
+    invalidateSourcePreview();
+    showSourceDialogError("Le fonti sono cambiate: sincronizza di nuovo prima di applicare.");
+    return;
+  }
+  if (!isBoardContextUnchanged(editor.boardContext)) {
+    showSourceDialogError("La board è cambiata: chiudi e riapri il dialog.");
+    return;
+  }
+
+  const candidate = JSON.parse(JSON.stringify(state.design));
+  candidate.sources = sources;
+  delete candidate.source_files;
+  const requestId = ++editor.requestId;
+  editor.pendingPreviewRequests += 1;
+  els.sourceApplyBtn.disabled = true;
+  els.sourcePreviewBtn.disabled = true;
+  els.sourcePreviewStatus.textContent = "Verifica finale dello snapshot...";
+  try {
+    const verified = await api("/api/course-sources/preview", {
+      method: "POST",
+      body: JSON.stringify({ design: candidate }),
+    });
+    if (state.sourceEditor !== editor || requestId !== editor.requestId) return;
+    if (!isBoardContextUnchanged(editor.boardContext)) {
+      throw new Error("La board è cambiata durante la verifica finale.");
+    }
+    if (sourcePreviewSignature(collectSourceEditorSources()) !== sourcePreviewSignature(sources)) {
+      editor.preview = null;
+      els.sourceApplyBtn.disabled = true;
+      throw new Error("Le fonti sono cambiate durante la verifica finale: sincronizza di nuovo.");
+    }
+    if (
+      !verified.snapshot_revision
+      || verified.snapshot_revision !== editor.preview.snapshotRevision
+    ) {
+      editor.preview = null;
+      els.sourceApplyBtn.disabled = true;
+      throw new Error("Lo snapshot delle fonti è cambiato: sincronizza di nuovo.");
+    }
+
+    const verifiedById = new Map((verified.sources || []).map((source) => [source.id, source]));
+    const appliedSources = sources.map((source) => {
+      const applied = JSON.parse(JSON.stringify(source));
+      if (source.provider !== "local" && source.indexing_status === "ready") {
+        const resolvedRef = verifiedById.get(source.id)?.resolved_ref;
+        if (!resolvedRef) throw new Error(`Commit risolto non disponibile per ${source.id}.`);
+        applied.ref = resolvedRef;
+      }
+      return applied;
+    });
+    const appliedHeadings = (verified.headings || []).map((heading) => ({
+      ...heading,
+      source_ref: appliedSources.find((source) => source.id === heading.source_id)?.ref || heading.source_ref,
+    }));
+    const appliedCatalog = (verified.sources || []).map((source) => ({
+      ...source,
+      ref: appliedSources.find((item) => item.id === source.id)?.ref || source.ref,
+    }));
+    const nextDesign = JSON.parse(JSON.stringify(state.design));
+    reconcileSourceItems(nextDesign, appliedHeadings, appliedSources);
+    nextDesign.sources = JSON.parse(JSON.stringify(appliedSources));
+    delete nextDesign.source_files;
+    state.design = nextDesign;
+    state.sources = appliedCatalog;
+    state.headings = appliedHeadings;
+    closeSourceDialog();
+    populateFilters();
+    renderSourceCatalogSummary();
+    renderHeadings();
+    renderCourse();
+    renderCourseActions();
+    setStatus("Catalogo fonti applicato e fissato allo snapshot verificato. Salva il progetto per renderlo persistente.");
+  } catch (error) {
+    if (state.sourceEditor === editor && requestId === editor.requestId) {
+      showSourceDialogError(error.message);
+      els.sourcePreviewStatus.textContent = "Applicazione non riuscita.";
+      els.sourceApplyBtn.disabled = !editor.preview;
+    }
+  } finally {
+    if (state.sourceEditor === editor) {
+      editor.pendingPreviewRequests = Math.max(0, editor.pendingPreviewRequests - 1);
+      els.sourcePreviewBtn.disabled = editor.pendingPreviewRequests > 0;
+    }
+  }
 }
 
 function renderSourceCatalogSummary() {
@@ -1085,7 +1645,7 @@ function renderHeadings() {
   els.headingList.innerHTML = "";
 
   const headings = state.headings.filter((heading) => {
-    if (source && heading.source !== source) return false;
+    if (source && headingSourceKey(heading) !== source) return false;
     if (level && String(heading.level) !== level) return false;
     if (!query && isHiddenByCollapsedParent(heading)) return false;
     if (query && !`${heading.title} ${heading.source}`.toLowerCase().includes(query)) return false;
@@ -1156,7 +1716,7 @@ function headingHasChildren(heading) {
   const index = state.headings.findIndex((candidate) => candidate.id === heading.id);
   if (index < 0) return false;
   for (const candidate of state.headings.slice(index + 1)) {
-    if (candidate.source !== heading.source) break;
+    if (!sameHeadingSource(candidate, heading)) break;
     if (candidate.level <= heading.level) return false;
     return true;
   }
@@ -1169,7 +1729,7 @@ function isHiddenByCollapsedParent(heading) {
   let ancestorLevel = heading.level;
   for (let i = index - 1; i >= 0; i -= 1) {
     const candidate = state.headings[i];
-    if (candidate.source !== heading.source) break;
+    if (!sameHeadingSource(candidate, heading)) break;
     if (candidate.level >= ancestorLevel) continue;
     if (state.collapsedHeadingIds.has(candidate.id)) return true;
     ancestorLevel = candidate.level;
@@ -1251,6 +1811,8 @@ function itemFromHeading(heading) {
     source_provider: heading.source_provider,
     source_repository: heading.source_repository,
     source_ref: heading.source_ref,
+    source_commit: heading.source_commit,
+    content_sha256: heading.content_sha256,
     href: heading.href,
     level: heading.level,
     line: heading.line,
@@ -1268,7 +1830,7 @@ function childItemsFromHeading(parentHeading) {
   const stack = [{ level: parentHeading.level, children: roots }];
 
   for (const heading of state.headings.slice(parentIndex + 1)) {
-    if (heading.source !== parentHeading.source || heading.level <= parentHeading.level) break;
+    if (!sameHeadingSource(heading, parentHeading) || heading.level <= parentHeading.level) break;
     const item = {
       id: heading.id,
       title: heading.title,
@@ -1278,6 +1840,8 @@ function childItemsFromHeading(parentHeading) {
       source_provider: heading.source_provider,
       source_repository: heading.source_repository,
       source_ref: heading.source_ref,
+      source_commit: heading.source_commit,
+      content_sha256: heading.content_sha256,
       href: heading.href,
       level: heading.level,
       line: heading.line,
@@ -1490,8 +2054,207 @@ function renderUda(year, uda) {
   } else {
     items.forEach((item, index) => dropzone.append(renderItem(year, uda, uda.items, item, index, 0)));
   }
-  details.append(dropzone);
+  details.append(dropzone, renderUdaActivities(year, uda));
   return details;
+}
+
+function renderUdaActivities(year, uda) {
+  const section = document.createElement("section");
+  section.className = "udaActivities";
+  const heading = document.createElement("div");
+  heading.className = "udaActivitiesHead";
+  heading.innerHTML = `<strong>Activity</strong><span>${(uda.activity_links || []).length} collegate</span>`;
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.dataset.action = "add-activity-link";
+  addButton.textContent = "Collega activity";
+  addButton.title = "Collega una activity disponibile a questa UDA.";
+  addButton.addEventListener("click", () => openActivityLinkDialog(year, uda));
+  heading.append(addButton);
+  section.append(heading);
+
+  const links = uda.activity_links || [];
+  if (!links.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "Nessuna activity collegata a questa UDA.";
+    section.append(empty);
+    return section;
+  }
+  for (const link of links) {
+    const card = document.createElement("article");
+    card.className = `activityLinkCard activityLink-${link.role}`;
+    const dates = [
+      link.scheduled_on ? `Pianificata: ${link.scheduled_on}` : "",
+      link.due_on ? `Scadenza: ${link.due_on}` : "",
+    ].filter(Boolean).join(" · ") || "Senza data";
+    card.innerHTML = `
+      <div>
+        <strong>${escapeHtml(link.title)}</strong>
+        <span>${escapeHtml(link.role === "verification" ? "Verifica" : "Esercitazione")} · ${escapeHtml(link.kind || "activity")}</span>
+        <code>${escapeHtml(link.activity_path)}</code>
+        <span>${escapeHtml(dates)}</span>
+      </div>
+      <div class="activityLinkActions">
+        <button type="button" data-action="edit-activity-link">Modifica</button>
+        <button type="button" data-action="remove-activity-link">Rimuovi</button>
+      </div>
+    `;
+    card.querySelector('[data-action="edit-activity-link"]').addEventListener("click", () => {
+      openActivityLinkDialog(year, uda, link);
+    });
+    card.querySelector('[data-action="remove-activity-link"]').addEventListener("click", () => {
+      removeActivityLink(year, uda, link);
+    });
+    section.append(card);
+  }
+  return section;
+}
+
+function openActivityLinkDialog(year, uda, link = null) {
+  if (!link && state.activityCatalogError) {
+    setStatus(`Catalogo activity non disponibile: ${state.activityCatalogError}. Usa Ricarica per riprovare.`);
+    return;
+  }
+  if (!link && !state.activities.length) {
+    setStatus("Nessuna activity disponibile: creane una dalla pagina Consegne.");
+    return;
+  }
+  state.activityLinkEditor = { year, uda, link };
+  els.activityLinkDialogTitle.textContent = link ? "Modifica collegamento activity" : "Collega activity";
+  els.activityLinkSelect.innerHTML = "";
+  const choices = [...state.activities];
+  if (link && !choices.some((activity) => activity.path === link.activity_path)) {
+    choices.push({
+      id: link.activity_id,
+      path: link.activity_path,
+      title: link.title,
+      kind: link.kind,
+    });
+  }
+  for (const activity of choices) {
+    const option = document.createElement("option");
+    option.value = activity.path;
+    option.textContent = `${activity.title || activity.id} (${activity.id})`;
+    els.activityLinkSelect.append(option);
+  }
+  els.activityLinkSelect.value = link?.activity_path || state.activities[0]?.path || "";
+  els.activityLinkSelect.disabled = Boolean(link);
+  els.activityLinkRole.value = link?.role || "practice";
+  els.activityLinkScheduledOn.value = link?.scheduled_on || "";
+  els.activityLinkDueOn.value = link?.due_on || "";
+  clearActivityLinkError();
+  if (typeof els.activityLinkDialog.showModal === "function") els.activityLinkDialog.showModal();
+  else els.activityLinkDialog.setAttribute("open", "");
+}
+
+function closeActivityLinkDialog() {
+  state.activityLinkEditor = null;
+  els.activityLinkSelect.disabled = false;
+  if (els.activityLinkDialog.open) els.activityLinkDialog.close();
+  else els.activityLinkDialog.removeAttribute("open");
+  clearActivityLinkError();
+}
+
+function clearActivityLinkError() {
+  els.activityLinkError.textContent = "";
+  els.activityLinkError.hidden = true;
+  for (const input of [els.activityLinkSelect, els.activityLinkRole, els.activityLinkScheduledOn, els.activityLinkDueOn]) {
+    input.removeAttribute("aria-invalid");
+  }
+}
+
+function showActivityLinkError(message, input) {
+  els.activityLinkError.textContent = message;
+  els.activityLinkError.hidden = false;
+  input?.setAttribute("aria-invalid", "true");
+  input?.focus();
+}
+
+function saveActivityLink(event) {
+  event.preventDefault();
+  const editor = state.activityLinkEditor;
+  if (
+    !editor
+    || !(state.design?.years || []).includes(editor.year)
+    || !(editor.year.udas || []).includes(editor.uda)
+  ) {
+    closeActivityLinkDialog();
+    setStatus("Collegamento annullato: la UDA aperta è cambiata.");
+    return;
+  }
+  clearActivityLinkError();
+  const activity = state.activities.find((candidate) => candidate.path === els.activityLinkSelect.value) || (
+    editor.link?.activity_path === els.activityLinkSelect.value
+      ? {
+          id: editor.link.activity_id,
+          path: editor.link.activity_path,
+          title: editor.link.title,
+          kind: editor.link.kind,
+        }
+      : null
+  );
+  if (!activity) {
+    showActivityLinkError("Seleziona un'activity disponibile.", els.activityLinkSelect);
+    return;
+  }
+  const scheduledOn = els.activityLinkScheduledOn.value;
+  const dueOn = els.activityLinkDueOn.value;
+  if (scheduledOn && dueOn && dueOn < scheduledOn) {
+    showActivityLinkError("La scadenza non può precedere la data pianificata.", els.activityLinkDueOn);
+    return;
+  }
+  editor.uda.activity_links ||= [];
+  const duplicate = editor.uda.activity_links.find((candidate) => candidate !== editor.link && (
+    candidate.activity_id.toLocaleLowerCase("en-US") === String(activity.id).toLocaleLowerCase("en-US")
+    || candidate.activity_path.toLocaleLowerCase("en-US") === String(activity.path).toLocaleLowerCase("en-US")
+  ));
+  if (duplicate) {
+    showActivityLinkError("Questa activity è già collegata alla UDA.", els.activityLinkSelect);
+    return;
+  }
+  const saved = {
+    activity_id: activity.id,
+    activity_path: activity.path,
+    title: activity.title || activity.id,
+    kind: activity.kind || "activity",
+    role: els.activityLinkRole.value,
+  };
+  if (scheduledOn) saved.scheduled_on = scheduledOn;
+  if (dueOn) saved.due_on = dueOn;
+  if (editor.link) {
+    const index = editor.uda.activity_links.indexOf(editor.link);
+    if (index < 0) {
+      closeActivityLinkDialog();
+      setStatus("Modifica annullata: il collegamento non esiste più.");
+      return;
+    }
+    editor.uda.activity_links[index] = saved;
+  } else {
+    editor.uda.activity_links.push(saved);
+  }
+  closeActivityLinkDialog();
+  renderCourse();
+  setStatus(`Activity "${saved.title}" ${editor.link ? "aggiornata" : "collegata"}.`);
+}
+
+async function removeActivityLink(year, uda, link) {
+  const confirmed = await DashboardDialogs.confirm({
+    title: "Rimuovi collegamento activity",
+    message: `Rimuovere "${link.title}" dalla UDA? L'activity originale e le consegne non verranno eliminate.`,
+    confirmLabel: "Rimuovi collegamento",
+    cancelLabel: "Mantieni",
+    danger: true,
+  });
+  if (
+    !confirmed
+    || !(state.design?.years || []).includes(year)
+    || !(year.udas || []).includes(uda)
+    || !(uda.activity_links || []).includes(link)
+  ) return;
+  uda.activity_links = uda.activity_links.filter((candidate) => candidate !== link);
+  renderCourse();
+  setStatus(`Collegamento a "${link.title}" rimosso.`);
 }
 
 function isAssignedToYear(itemId, yearId) {
@@ -1510,7 +2273,7 @@ function headingTreeIds(heading) {
   const parentIndex = state.headings.findIndex((candidate) => candidate.id === heading.id);
   if (parentIndex < 0) return ids;
   for (const candidate of state.headings.slice(parentIndex + 1)) {
-    if (candidate.source !== heading.source || candidate.level <= heading.level) break;
+    if (!sameHeadingSource(candidate, heading) || candidate.level <= heading.level) break;
     ids.push(candidate.id);
   }
   return ids;
@@ -1689,14 +2452,23 @@ async function openParagraphPreview(paragraph) {
   els.paragraphContent.textContent = "Caricamento del contenuto...";
   els.paragraphSourceLink.hidden = true;
   els.paragraphDialog.showModal();
+  if (!paragraph.content_sha256) {
+    els.paragraphContent.textContent = "Contenuto non disponibile: riallinea il paragrafo dal catalogo fonti prima della preview.";
+    return;
+  }
   try {
-    const payload = state.isNewDesign
+    const payload = state.isNewDesign || hasUnsavedChanges()
       ? await api("/api/heading-content", {
           method: "POST",
-          body: JSON.stringify({ id: paragraph.id, design: state.design }),
+          body: JSON.stringify({
+            id: paragraph.id,
+            source_commit: paragraph.source_commit || "",
+            content_sha256: paragraph.content_sha256 || "",
+            design: state.design,
+          }),
         })
       : await api(
-          `/api/heading-content?id=${encodeURIComponent(paragraph.id)}${
+          `/api/heading-content?id=${encodeURIComponent(paragraph.id)}&source_commit=${encodeURIComponent(paragraph.source_commit || "")}&content_sha256=${encodeURIComponent(paragraph.content_sha256 || "")}${
             state.activeSavedDesign ? `&design=${encodeURIComponent(state.activeSavedDesign)}` : ""
           }`,
         );
@@ -1705,8 +2477,10 @@ async function openParagraphPreview(paragraph) {
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
     els.paragraphDialogMeta.textContent = `${heading.source_label || heading.source || "Sorgente n/d"} (${heading.source_provider || "local"}) · riga ${heading.line || "?"} · H${heading.level || "?"}`;
     els.paragraphContent.innerHTML = renderParagraphContent(heading.content);
-    if (heading.github_url) {
-      els.paragraphSourceLink.href = heading.github_url;
+    const sourceUrl = heading.source_url || heading.github_url;
+    if (sourceUrl) {
+      els.paragraphSourceLink.href = sourceUrl;
+      els.paragraphSourceLink.textContent = `Apri sorgente su ${heading.source_provider === "gitlab" ? "GitLab" : "GitHub"}`;
       els.paragraphSourceLink.hidden = false;
     }
   } catch (error) {
@@ -2809,12 +3583,18 @@ async function persistDesignAsCurrent() {
   const boardContext = captureBoardContext();
   const courseContextGeneration = courseContextRequestId;
   setStatus("Salvataggio...");
-  await api("/api/course-design", {
+  const payload = await api("/api/course-design", {
     method: "POST",
-    body: savedSnapshot,
+    body: JSON.stringify({
+      design: JSON.parse(savedSnapshot),
+      expected_revision: state.currentDesignRevision,
+      preserve_actual: false,
+    }),
   });
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   if (
-    !isBoardContextCurrent(boardContext)
+    !isBoardContextUnchanged(boardContext)
     || courseContextGeneration !== courseContextRequestId
   ) {
     setStatus("Progetto impostato come corrente. La vista aperta non e stata cambiata.");
@@ -2822,9 +3602,14 @@ async function persistDesignAsCurrent() {
   }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.design = payload.design;
+  state.designRevision = payload.revision;
+  state.designEditableRevision = payload.editable_revision || payload.revision;
+  state.currentDesignRevision = payload.revision;
+  state.currentDesignEditableRevision = payload.editable_revision || payload.revision;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
-  markDesignClean(savedSnapshot);
+  markDesignClean(JSON.stringify(payload.design));
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
@@ -2883,9 +3668,43 @@ els.saveArchiveBtn.addEventListener("click", () => runAsyncAction(saveArchiveDes
 els.saveArchiveAsBtn.addEventListener("click", () => runAsyncAction(saveArchiveDesignAs, "Salvataggio copia"));
 els.deleteArchiveBtn.addEventListener("click", () => runAsyncAction(deleteArchiveDesign, "Cancellazione progetto"));
 els.addYearBtn.addEventListener("click", openYearDialog);
+els.manageSourcesBtn.addEventListener("click", openSourceDialog);
+els.sourceAddBtn.addEventListener("click", () => {
+  const sources = collectSourceEditorSources();
+  const id = nextSourceId(sources);
+  sources.push({
+    id,
+    label: `Fonte ${sources.length + 1}`,
+    type: "markdown",
+    provider: "local",
+    path: "",
+    repository: "",
+    ref: "",
+    files: [],
+    updated_at: null,
+    indexing_status: "ready",
+  });
+  state.sourceEditor.draft = sources;
+  invalidateSourcePreview();
+  renderSourceEditor();
+});
+els.sourcePreviewBtn.addEventListener("click", () => runAsyncAction(previewSourceEditor, "Sincronizzazione fonti"));
+els.sourceForm.addEventListener("submit", applySourceEditor);
+els.sourceCloseBtn.addEventListener("click", closeSourceDialog);
+els.sourceCancelBtn.addEventListener("click", closeSourceDialog);
+els.sourceDialog.addEventListener("close", closeSourceDialog);
+els.sourceEditorList.addEventListener("input", invalidateSourcePreview);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCreateBtn.addEventListener("click", createYearFromDialog);
+els.activityLinkForm.addEventListener("submit", saveActivityLink);
+els.activityLinkCloseBtn.addEventListener("click", closeActivityLinkDialog);
+els.activityLinkCancelBtn.addEventListener("click", closeActivityLinkDialog);
+els.activityLinkDialog.addEventListener("close", () => {
+  state.activityLinkEditor = null;
+  els.activityLinkSelect.disabled = false;
+  clearActivityLinkError();
+});
 els.paragraphCloseBtn.addEventListener("click", () => {
   invalidateParagraphPreview();
   els.paragraphDialog.close();

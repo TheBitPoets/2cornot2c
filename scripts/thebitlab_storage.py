@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import copy
 import errno
+import hashlib
 import json
 import os
 import re
@@ -16,6 +18,10 @@ from typing import Any
 
 from scripts import create_activity, validate_activity
 from scripts.thebitlab_contracts import normalize_activity, normalize_assignment_register
+
+
+class RevisionConflictError(RuntimeError):
+    """Raised when a JSON compare-and-swap revision is stale."""
 
 
 DESIGN_NAME_RE = re.compile(r"^[a-zA-Z0-9_.-]+\.json$")
@@ -100,10 +106,65 @@ def course_storage_lock(root: Path) -> CourseStorageLock:
         return _COURSE_LOCKS.setdefault(key, CourseStorageLock(key))
 
 
+def ensure_directory_durable(path: Path, durable_root: Path | None = None) -> None:
+    """Create a hierarchy and persist every entry below an established root."""
+
+    path = path.resolve(strict=False)
+    root = (durable_root or Path(path.anchor)).resolve(strict=False)
+    try:
+        relative = path.relative_to(root)
+    except ValueError as error:
+        raise ValueError(f"Directory fuori dalla root durevole: {path}") from error
+    if root.exists() and not root.is_dir():
+        raise NotADirectoryError(str(root))
+    path.mkdir(parents=True, exist_ok=True)
+    cursor = root
+    for part in relative.parts:
+        sync_directory(cursor)
+        cursor /= part
+
+
 def sync_directory(path: Path) -> None:
     """Persist directory metadata where the platform exposes directory fsync."""
 
     if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        create_file = kernel32.CreateFileW
+        create_file.argtypes = (
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.LPVOID,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.HANDLE,
+        )
+        create_file.restype = wintypes.HANDLE
+        flush_file_buffers = kernel32.FlushFileBuffers
+        flush_file_buffers.argtypes = (wintypes.HANDLE,)
+        flush_file_buffers.restype = wintypes.BOOL
+        close_handle = kernel32.CloseHandle
+        close_handle.argtypes = (wintypes.HANDLE,)
+        close_handle.restype = wintypes.BOOL
+        handle = create_file(
+            str(path),
+            0x00000002,  # FILE_ADD_FILE: write-capable directory handle
+            0x00000001 | 0x00000002 | 0x00000004,  # share read/write/delete
+            None,
+            3,  # OPEN_EXISTING
+            0x02000000,  # FILE_FLAG_BACKUP_SEMANTICS
+            None,
+        )
+        if handle == wintypes.HANDLE(-1).value:
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            if not flush_file_buffers(handle):
+                raise ctypes.WinError(ctypes.get_last_error())
+        finally:
+            close_handle(handle)
         return
     unsupported_errnos = {
         errno.EINVAL,
@@ -126,6 +187,44 @@ def sync_directory(path: Path) -> None:
         os.close(descriptor)
 
 
+def recover_json_rollbacks(
+    directory: Path,
+    target_name: str | None = None,
+    *,
+    recursive: bool = False,
+) -> None:
+    """Restore durable JSON backups left by interrupted rollback."""
+
+    if not directory.is_dir() or directory.is_symlink():
+        return
+    pattern = f".{target_name}.*.rollback" if target_name else ".*.*.rollback"
+    candidates = directory.rglob(pattern) if recursive else directory.glob(pattern)
+    for backup in sorted(candidates):
+        if backup.is_symlink() or not backup.is_file():
+            raise RuntimeError(f"Backup JSON non valido: {backup}")
+        core = backup.name[1 : -len(".rollback")]
+        if "." not in core:
+            raise RuntimeError(f"Nome backup JSON non valido: {backup.name}")
+        target_name = core.rsplit(".", 1)[0]
+        if not target_name.endswith((".json", ".txn")) or Path(target_name).name != target_name:
+            raise RuntimeError(f"Target backup JSON non valido: {backup.name}")
+        target = backup.with_name(target_name)
+        descriptor, restore_name = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".recover", dir=target.parent)
+        restore = Path(restore_name)
+        try:
+            os.chmod(restore, stat.S_IMODE(backup.stat().st_mode))
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(backup.read_bytes())
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(restore, target)
+            sync_directory(target.parent)
+            backup.unlink()
+            sync_directory(target.parent)
+        finally:
+            restore.unlink(missing_ok=True)
+
+
 class JsonCourseStorage:
     """JSON storage adapter for course designs and school calendars."""
 
@@ -138,6 +237,9 @@ class JsonCourseStorage:
         self.school_calendars_dir = root / "doc" / "calendars"
         self.delete_staging_dir = root / "doc" / ".delete-staging"
         with self.operation_lock:
+            recover_json_rollbacks(self.root / "doc", self.design_path.name)
+            recover_json_rollbacks(self.course_designs_dir)
+            recover_json_rollbacks(self.school_calendars_dir)
             self._recover_delete_transactions()
 
     def _delete_manifest_entries(self, targets: list[Path]) -> list[dict[str, str]]:
@@ -233,29 +335,7 @@ class JsonCourseStorage:
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
         """Atomically replace a JSON object with stable formatting."""
 
-        path.parent.mkdir(parents=True, exist_ok=True)
-        destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
-        descriptor, temporary_name = tempfile.mkstemp(
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            dir=path.parent,
-        )
-        temporary_path = Path(temporary_name)
-        try:
-            os.chmod(temporary_path, destination_mode)
-            destination = os.fdopen(descriptor, "w", encoding="utf-8")
-            descriptor = -1
-            with destination:
-                json.dump(payload, destination, ensure_ascii=False, indent=2)
-                destination.write("\n")
-                destination.flush()
-                os.fsync(destination.fileno())
-            os.replace(temporary_path, path)
-            sync_directory(path.parent)
-        finally:
-            if descriptor >= 0:
-                os.close(descriptor)
-            temporary_path.unlink(missing_ok=True)
+        JsonAssignmentStorage.write_json(self, path, payload)
 
     def write_json_exclusive(self, path: Path, payload: dict[str, Any]) -> None:
         """Publish JSON only when the process-locked final name is still free."""
@@ -278,11 +358,97 @@ class JsonCourseStorage:
                 return self.read_json(self.design_path)
             return {"version": 1, "source_files": self.default_sources, "years": []}
 
+    @staticmethod
+    def _preserve_latest_uda_actual(
+        latest: dict[str, Any],
+        proposed: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Keep calendar-owned actual progress across full-design saves."""
+
+        merged = copy.deepcopy(proposed)
+        proposed_years = {
+            year.get("id"): year
+            for year in merged.get("years", [])
+            if isinstance(year, dict) and isinstance(year.get("id"), str)
+        }
+        for latest_year in latest.get("years", []):
+            if not isinstance(latest_year, dict):
+                continue
+            proposed_year = proposed_years.get(latest_year.get("id"))
+            if not isinstance(proposed_year, dict):
+                continue
+            proposed_udas = {
+                uda.get("id"): uda
+                for uda in proposed_year.get("udas", [])
+                if isinstance(uda, dict) and isinstance(uda.get("id"), str)
+            }
+            for latest_uda in latest_year.get("udas", []):
+                if not isinstance(latest_uda, dict):
+                    continue
+                proposed_uda = proposed_udas.get(latest_uda.get("id"))
+                if not isinstance(proposed_uda, dict):
+                    continue
+                if "actual" in latest_uda:
+                    proposed_uda["actual"] = copy.deepcopy(latest_uda["actual"])
+                else:
+                    proposed_uda.pop("actual", None)
+        return merged
+
+    @staticmethod
+    def design_revision(payload: dict[str, Any]) -> str:
+        """Return a canonical content revision for optimistic concurrency."""
+
+        encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
     def write_design(self, payload: dict[str, Any]) -> None:
         """Persist the current course design."""
 
         with self.operation_lock:
             self.write_json(self.design_path, payload)
+
+    @classmethod
+    def editable_design_revision(cls, payload: dict[str, Any]) -> str:
+        """Return a revision excluding calendar-owned UDA actual records."""
+
+        editable = copy.deepcopy(payload)
+        for year in editable.get("years", []):
+            if not isinstance(year, dict):
+                continue
+            for uda in year.get("udas", []):
+                if isinstance(uda, dict):
+                    uda.pop("actual", None)
+        return cls.design_revision(editable)
+
+    @staticmethod
+    def value_revision(payload: object) -> str:
+        encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def write_design_cas(
+        self,
+        payload: dict[str, Any],
+        expected_revision: str,
+        preserve_actual: bool,
+    ) -> tuple[dict[str, Any], str]:
+        """Replace current design only at the expected revision."""
+
+        with self.operation_lock:
+            latest = self.read_json(self.design_path) if self.design_path.is_file() else {
+                "version": 1,
+                "source_files": self.default_sources,
+                "years": [],
+            }
+            current_revision = (
+                self.editable_design_revision(latest)
+                if preserve_actual
+                else self.design_revision(latest)
+            )
+            if current_revision != expected_revision:
+                raise RevisionConflictError("Il progetto e stato modificato da un'altra sessione.")
+            persisted = self._preserve_latest_uda_actual(latest, payload) if preserve_actual else copy.deepcopy(payload)
+            self.write_json(self.design_path, persisted)
+            return persisted, self.design_revision(persisted)
 
     def list_saved_designs(self) -> list[dict[str, str]]:
         """List saved course designs stored in doc/course_designs."""
@@ -318,6 +484,59 @@ class JsonCourseStorage:
             else:
                 self.write_json_exclusive(path, payload)
         return {"name": path.name, "path": self.relative_path(path)}
+
+    def write_saved_design_cas(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        expected_revision: str,
+        preserve_actual: bool,
+    ) -> tuple[dict[str, Any], dict[str, str], str]:
+        """Replace one archived design only at the expected revision."""
+
+        path = self.saved_design_path(name)
+        with self.operation_lock:
+            if not path.is_file():
+                raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
+            latest = self.read_json(path)
+            current_revision = (
+                self.editable_design_revision(latest)
+                if preserve_actual
+                else self.design_revision(latest)
+            )
+            if current_revision != expected_revision:
+                raise RevisionConflictError("Il progetto e stato modificato da un'altra sessione.")
+            persisted = self._preserve_latest_uda_actual(latest, payload) if preserve_actual else copy.deepcopy(payload)
+            self.write_json(path, persisted)
+            metadata = {"name": path.name, "path": self.relative_path(path)}
+            return persisted, metadata, self.design_revision(persisted)
+
+    def update_uda_actual(
+        self,
+        name: str,
+        year_id: str,
+        uda_id: str,
+        actual: dict[str, Any],
+        expected_actual_revision: str,
+    ) -> tuple[dict[str, Any], str]:
+        """Atomically merge one UDA actual record into the latest design."""
+
+        path = self.saved_design_path(name) if name else self.design_path
+        with self.operation_lock:
+            if not path.is_file():
+                raise FileNotFoundError(f"Percorso didattico non trovato: {name or path.name}")
+            design = self.read_json(path)
+            years = [year for year in design.get("years", []) if year.get("id") == year_id]
+            if len(years) != 1:
+                raise ValueError(f"Percorso anno non univoco o non trovato: {year_id}")
+            udas = [uda for uda in years[0].get("udas", []) if uda.get("id") == uda_id]
+            if len(udas) != 1:
+                raise ValueError(f"UDA non univoca o non trovata: {uda_id}")
+            if self.value_revision(udas[0].get("actual")) != expected_actual_revision:
+                raise RevisionConflictError("Il consuntivo UDA e stato modificato da un'altra sessione.")
+            udas[0]["actual"] = dict(actual)
+            self.write_json(path, design)
+            return design, self.relative_path(path)
 
     def list_school_calendars(self) -> list[dict[str, str]]:
         """List saved school calendars stored in doc/calendars."""
@@ -361,6 +580,33 @@ class JsonCourseStorage:
             normalized_payload = {**payload, "course_design_name": course_design_name}
             self.write_json(path, normalized_payload)
         return {"name": path.name, "path": self.relative_path(path)}
+
+    def write_school_calendar_cas(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        expected_revision: str,
+    ) -> tuple[dict[str, Any], dict[str, str], str]:
+        """Persist one calendar only when its revision still matches."""
+
+        path = self.school_calendar_path(name)
+        with self.operation_lock:
+            if path.is_file():
+                latest = self.read_json(path)
+                if self.design_revision(latest) != expected_revision:
+                    raise RevisionConflictError("Il calendario e stato modificato da un'altra sessione.")
+            elif expected_revision:
+                raise RevisionConflictError("Il calendario atteso non esiste piu.")
+            course_design_name = payload.get("course_design_name", "")
+            if not isinstance(course_design_name, str):
+                raise ValueError("course_design_name deve essere una stringa.")
+            course_design_name = course_design_name.strip()
+            if course_design_name and not self.saved_design_path(course_design_name).is_file():
+                raise FileNotFoundError(f"Percorso associato non trovato: {course_design_name}")
+            persisted = {**copy.deepcopy(payload), "course_design_name": course_design_name}
+            self.write_json(path, persisted)
+            metadata = {"name": path.name, "path": self.relative_path(path)}
+            return persisted, metadata, self.design_revision(persisted)
 
     def delete_saved_design(
         self,
@@ -410,12 +656,17 @@ class JsonCourseStorage:
                     sync_directory(transaction_dir)
                     sync_directory(target.parent)
                 os.replace(transaction_dir, committed_transaction_dir)
+                sync_directory(self.delete_staging_dir)
             except Exception:
-                self._rollback_delete_entries(transaction_dir, entries)
-                shutil.rmtree(transaction_dir)
+                rollback_dir = transaction_dir
+                if committed_transaction_dir.is_dir():
+                    rollback_dir = self.delete_staging_dir / f"{transaction_id}.rolling-back"
+                    os.replace(committed_transaction_dir, rollback_dir)
+                    sync_directory(self.delete_staging_dir)
+                self._rollback_delete_entries(rollback_dir, entries)
+                shutil.rmtree(rollback_dir)
                 sync_directory(self.delete_staging_dir)
                 raise
-            sync_directory(self.delete_staging_dir)
             cleanup_pending = False
             try:
                 shutil.rmtree(committed_transaction_dir)
@@ -438,6 +689,7 @@ class JsonAssignmentStorage:
         self.root = root
         self.teacher_reports_dir = teacher_reports_dir
         self.activity_dirs = activity_dirs
+        self.operation_lock = course_storage_lock(root)
 
     def relative_path(self, path: Path) -> str:
         """Return a repository-relative path with URL-style separators."""
@@ -476,10 +728,100 @@ class JsonAssignmentStorage:
         return payload
 
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
-        """Write a JSON object with stable formatting."""
+        """Atomically replace JSON while preserving per-file concurrency."""
 
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        JsonAssignmentStorage._write_json_locked(self, path, payload)
+
+    def _write_json_locked(self, path: Path, payload: dict[str, Any]) -> None:
+        """Restore the prior JSON version on commit failure."""
+
+        ensure_directory_durable(path.parent, self.root)
+        recover_json_rollbacks(path.parent, path.name)
+        destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
+        backup_path: Path | None = None
+        if path.exists():
+            backup_descriptor, backup_name = tempfile.mkstemp(
+                prefix=f".{path.name}.",
+                suffix=".rollback.tmp",
+                dir=path.parent,
+            )
+            backup_staging = Path(backup_name)
+            backup_path = backup_staging.with_name(backup_staging.name.removesuffix(".tmp"))
+            try:
+                os.chmod(backup_staging, destination_mode)
+                with os.fdopen(backup_descriptor, "wb") as backup:
+                    backup.write(path.read_bytes())
+                    backup.flush()
+                    os.fsync(backup.fileno())
+                os.replace(backup_staging, backup_path)
+                sync_directory(path.parent)
+            except Exception:
+                backup_staging.unlink(missing_ok=True)
+                backup_path.unlink(missing_ok=True)
+                raise
+
+        descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        temporary_path = Path(temporary_name)
+        published = False
+        commit_complete = False
+        rollback_complete = False
+        try:
+            os.chmod(temporary_path, destination_mode)
+            destination = os.fdopen(descriptor, "w", encoding="utf-8")
+            descriptor = -1
+            with destination:
+                json.dump(payload, destination, ensure_ascii=False, indent=2)
+                destination.write("\n")
+                destination.flush()
+                os.fsync(destination.fileno())
+            os.replace(temporary_path, path)
+            published = True
+            try:
+                sync_directory(path.parent)
+                commit_complete = True
+            except Exception:
+                if backup_path is None:
+                    path.unlink(missing_ok=True)
+                    sync_directory(path.parent)
+                else:
+                    restore_descriptor, restore_name = tempfile.mkstemp(
+                        prefix=f".{path.name}.",
+                        suffix=".restore",
+                        dir=path.parent,
+                    )
+                    restore_path = Path(restore_name)
+                    try:
+                        os.chmod(restore_path, destination_mode)
+                        with os.fdopen(restore_descriptor, "wb") as restored:
+                            restored.write(backup_path.read_bytes())
+                            restored.flush()
+                            os.fsync(restored.fileno())
+                        os.replace(restore_path, path)
+                        sync_directory(path.parent)
+                    finally:
+                        restore_path.unlink(missing_ok=True)
+                rollback_complete = True
+                raise
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+            temporary_path.unlink(missing_ok=True)
+            if backup_path is not None and (not published or commit_complete or rollback_complete):
+                # Rename to a non-recoverable cleanup name, then persist that
+                # rename as the transaction commit boundary. A crash before the
+                # barrier still exposes .rollback and intentionally restores old JSON.
+                cleanup_path = backup_path.with_name(f"{backup_path.name}.cleanup")
+                os.replace(backup_path, cleanup_path)
+                try:
+                    sync_directory(path.parent)
+                except Exception:
+                    os.replace(cleanup_path, backup_path)
+                    sync_directory(path.parent)
+                    raise
+                try:
+                    cleanup_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
     def save_activity(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]:
         """Validate and persist a teacher-authored activity draft."""
@@ -584,6 +926,9 @@ class JsonAssignmentStorage:
             if not directory.is_dir():
                 continue
             for path in sorted(directory.rglob("*.json")):
+                relative_parts = path.relative_to(directory).parts
+                if "assets" in relative_parts[:-1]:
+                    continue
                 resolved = path.resolve()
                 if resolved in seen_paths:
                     continue

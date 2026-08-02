@@ -1,6 +1,9 @@
+"""HTTP, storage, CAS, provider, and AI-boundary tests for Course Board."""
+
 from __future__ import annotations
 
 import base64
+import hashlib
 import http.client
 import io
 import json
@@ -266,6 +269,166 @@ def test_write_design_rejects_unsafe_source_catalog_before_persistence(tmp_path,
         )
 
 
+def test_write_design_rejects_invalid_activity_link_before_persistence(tmp_path, monkeypatch) -> None:
+    class FailingCourseService:
+        def write_design(self, payload):
+            raise AssertionError("L'activity link non valido non deve essere persistito.")
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "course_service", lambda: FailingCourseService())
+
+    with pytest.raises(ValueError, match="activities"):
+        course_board_server.write_design(
+            {
+                "years": [
+                    {
+                        "id": "terzo-anno",
+                        "udas": [
+                            {
+                                "id": "uda-1",
+                                "activity_links": [
+                                    {
+                                        "activity_id": "unsafe",
+                                        "activity_path": "../outside.json",
+                                        "title": "Unsafe",
+                                        "kind": "laboratorio",
+                                        "role": "practice",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        )
+
+
+def test_course_linkable_activity_catalog_fails_closed_on_course_validation(monkeypatch) -> None:
+    activities = [
+        {"id": "valid", "path": "activities/valid.json", "title": "Valid", "kind": "lab"},
+        {"id": "outside", "path": "examples/outside.json", "title": "Outside", "kind": "lab"},
+    ]
+    validated = []
+
+    def validate(candidate, root):
+        path = candidate["years"][0]["udas"][0]["activity_links"][0]["activity_path"]
+        validated.append((path, root))
+        if not path.startswith("activities/"):
+            raise ValueError("outside")
+
+    monkeypatch.setattr(course_board_server, "list_activities", lambda: activities)
+    monkeypatch.setattr(
+        course_board_server.course_activity_links,
+        "validate_course_activity_targets",
+        validate,
+    )
+
+    assert course_board_server.list_course_linkable_activities() == [activities[0]]
+    assert [entry[0] for entry in validated] == ["activities/valid.json", "examples/outside.json"]
+
+
+def test_course_calendar_context_derives_activity_events_from_one_design_snapshot(monkeypatch) -> None:
+    design = {
+        "years": [
+            {
+                "id": "terzo",
+                "title": "Terzo anno",
+                "udas": [
+                    {
+                        "id": "uda-1",
+                        "title": "Funzioni",
+                        "activity_links": [
+                            {
+                                "activity_id": "functions-001",
+                                "activity_path": "activities/functions.json",
+                                "title": "Funzioni",
+                                "kind": "laboratorio",
+                                "role": "verification",
+                                "scheduled_on": "2026-11-10",
+                                "due_on": "2026-11-17",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    queries = []
+    monkeypatch.setattr(
+        course_board_server,
+        "source_request_design",
+        lambda query: queries.append(query) or design,
+    )
+
+    payload = course_board_server.course_calendar_context("design=archive.json")
+
+    assert queries == ["design=archive.json"]
+    assert payload["design"] is design
+    assert payload["activity_events"] == [
+        {
+            "year_id": "terzo",
+            "year_title": "Terzo anno",
+            "uda_id": "uda-1",
+            "uda_title": "Funzioni",
+            "activity_id": "functions-001",
+            "activity_path": "activities/functions.json",
+            "title": "Funzioni",
+            "kind": "laboratorio",
+            "role": "verification",
+            "scheduled_on": "2026-11-10",
+            "due_on": "2026-11-17",
+        }
+    ]
+    assert "activity_events" not in design
+
+
+def test_update_course_uda_actual_validates_and_returns_latest_design(monkeypatch) -> None:
+    latest = {
+        "years": [
+            {
+                "id": "third",
+                "udas": [
+                    {
+                        "id": "uda-1",
+                        "activity_links": [],
+                        "actual": {"status": "done"},
+                    }
+                ],
+            }
+        ]
+    }
+    calls = []
+
+    class Service:
+        def update_uda_actual(self, name, year_id, uda_id, actual, expected_actual_revision):
+            calls.append((name, year_id, uda_id, actual, expected_actual_revision))
+            return latest, "doc/course_designs/course.json"
+
+    monkeypatch.setattr(course_board_server, "course_service", Service)
+
+    payload = course_board_server.update_course_uda_actual(
+        "course.json",
+        "third",
+        "uda-1",
+        {
+            "status": "done",
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-02",
+            "hours_done": 4,
+            "notes": "Completata",
+        },
+        "a" * 64,
+    )
+
+    assert calls[0][0:3] == ("course.json", "third", "uda-1")
+    assert payload["design"] is latest
+    assert payload["path"] == "doc/course_designs/course.json"
+    with pytest.raises(ValueError, match="non puo precedere"):
+        course_board_server.validate_uda_actual(
+            {"start_date": "2026-10-02", "end_date": "2026-10-01"}
+        )
+
+
 def test_ai_config_uses_one_provider_model_snapshot(monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_PROVIDER", "openai")
     monkeypatch.setattr(course_board_server, "ACTIVE_AI_MODEL", "model-a")
@@ -418,6 +581,94 @@ def test_course_sources_endpoint_returns_normalized_legacy_catalog(tmp_path, mon
         thread.join(timeout=5)
 
 
+def test_heading_content_digest_includes_title_identity(tmp_path) -> None:
+    descriptor = course_board_server.course_source_catalog.CourseSource(
+        source_id="course",
+        label="Course",
+        source_type="markdown",
+        provider="local",
+        path="",
+        repository=None,
+        ref=None,
+        files=("lesson.md",),
+        updated_at=None,
+        indexing_status="ready",
+    )
+    source_file = course_board_server.course_source_catalog.LocalCourseSourceFile(
+        source=descriptor,
+        relative_path="lesson.md",
+        resolved_path=tmp_path / "lesson.md",
+        expected_size=None,
+        expected_identity=None,
+        expected_sha256=None,
+    )
+
+    headings = course_board_server.headings_from_source_snapshot(
+        source_file,
+        "# Include <stdio.h>\n\nSame body.\n\n# Include <stdlib.h>\n\nSame body.\n",
+    )
+
+    assert headings[0]["title"] == headings[1]["title"] == "Include"
+    assert headings[0]["content_sha256"] != headings[1]["content_sha256"]
+
+
+def test_source_preview_resolves_in_memory_design_without_persisting(tmp_path, monkeypatch) -> None:
+    lesson = tmp_path / "lesson.md"
+    lesson.write_text("# Preview\n\n## Topic\n\nText.\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {
+        "sources": [
+            {
+                "id": "preview-source",
+                "label": "Preview source",
+                "type": "markdown",
+                "provider": "local",
+                "files": ["lesson.md"],
+                "indexing_status": "ready",
+            }
+        ],
+        "years": [],
+    }
+
+    payload = course_board_server.preview_course_sources(design)
+
+    assert payload["sources"][0]["indexed_files"] == ["lesson.md"]
+    assert [heading["title"] for heading in payload["headings"]] == [
+        "Preview",
+        "Topic",
+    ]
+    assert len(payload["snapshot_revision"]) == 64
+    assert all(len(heading["content_sha256"]) == 64 for heading in payload["headings"])
+    lesson.write_text("# Preview\n\n## Topic\n\nChanged.\n", encoding="utf-8")
+    changed = course_board_server.preview_course_sources(design)
+    assert changed["snapshot_revision"] != payload["snapshot_revision"]
+    topic = next(heading for heading in payload["headings"] if heading["title"] == "Topic")
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.heading_content_snapshot(design, topic["id"])
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.heading_content_snapshot(
+            design,
+            topic["id"],
+            "",
+            topic["content_sha256"],
+        )
+    changed_files = course_board_server.course_markdown_source_files(design)
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.section_text(
+            topic["source"],
+            topic["line"],
+            topic["level"],
+            design,
+            {},
+            changed_files,
+            topic["source_id"],
+            topic["id"],
+            "",
+            topic["content_sha256"],
+        )
+    assert not (tmp_path / "doc" / "course_design.json").exists()
+
+
 def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, monkeypatch) -> None:
     (tmp_path / "lesson.md").write_text(
         "## Before\n\nOne.\n\n## Target\n\nTwo.\n\n## After\n\nThree.\n",
@@ -438,7 +689,13 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
             }],
         }],
     }
-    original_read = course_board_server.course_source_catalog.read_local_markdown_text
+    heading_digests = {
+        heading["id"]: heading["content_sha256"]
+        for heading in course_board_server.extract_headings(design)
+    }
+    for item in design["years"][0]["udas"][0]["items"]:
+        item["content_sha256"] = heading_digests[item["id"]]
+    original_read = course_board_server.course_source_catalog.read_markdown_text
     reads = []
 
     def counted_read(item, root):
@@ -447,7 +704,7 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
 
     monkeypatch.setattr(
         course_board_server.course_source_catalog,
-        "read_local_markdown_text",
+        "read_markdown_text",
         counted_read,
     )
 
@@ -457,6 +714,12 @@ def test_target_context_reads_each_source_from_one_shared_snapshot(tmp_path, mon
     assert context["target_topic"]["text"] == "Two."
     assert context["next_topics"][0]["text"] == "Three."
     assert reads == ["lesson.md"]
+
+    design["years"][0]["udas"][0]["items"][1]["title"] = "Forged title"
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(design, "year", "uda", "lesson.md#target")
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.compact_design(design, verify_provenance=True)
 
 
 def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeypatch) -> None:
@@ -487,24 +750,22 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
         }],
     }
 
-    context = course_board_server.target_context(
-        design,
-        "year",
-        "uda",
-        "source-a:lesson.md#current",
-    )
-
-    assert context["target_topic"]["source_id"] == "source-a"
-    assert context["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            design,
+            "year",
+            "uda",
+            "source-a:lesson.md#current",
+        )
 
     design["years"][0]["udas"][0]["items"][0].pop("source_id")
-    missing_provenance = course_board_server.target_context(
-        design,
-        "year",
-        "uda",
-        "source-a:lesson.md#current",
-    )
-    assert missing_provenance["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            design,
+            "year",
+            "uda",
+            "source-a:lesson.md#current",
+        )
 
     stale_item = design["years"][0]["udas"][0]["items"][0]
     stale_item.update({
@@ -512,13 +773,13 @@ def test_target_context_rejects_stale_source_id_on_reused_path(tmp_path, monkeyp
         "source_id": "source-b",
         "line": 2,
     })
-    shifted = course_board_server.target_context(
-        design,
-        "year",
-        "uda",
-        "source-b:lesson.md#current",
-    )
-    assert shifted["target_topic"]["text"] == ""
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            design,
+            "year",
+            "uda",
+            "source-b:lesson.md#current",
+        )
 
 
 def test_ai_catalog_rejects_excessive_heading_count(tmp_path, monkeypatch) -> None:
@@ -622,13 +883,303 @@ def test_ai_course_helpers_use_the_supplied_design_source_catalog(tmp_path, monk
             }
         ],
     }
-    context = course_board_server.target_context(
-        framed_design,
-        "year",
-        "uda-1",
-        "archive:archived.md#archived",
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.target_context(
+            framed_design,
+            "year",
+            "uda-1",
+            "archive:archived.md#archived",
+        )
+
+
+def test_local_catalog_does_not_read_configured_github_token(tmp_path, monkeypatch) -> None:
+    lesson = tmp_path / "lesson.md"
+    lesson.write_text("# Local\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server,
+        "read_github_markdown_token",
+        lambda: (_ for _ in ()).throw(AssertionError("token must not be read")),
     )
-    assert context["target_topic"]["text"] == ""
+
+    files = course_board_server.course_markdown_source_files(
+        {"source_files": ["lesson.md"]}
+    )
+
+    assert [item.relative_path for item in files] == ["lesson.md"]
+
+
+def test_persistence_validation_accepts_ready_gitlab_provider(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    design = {
+        "sources": [
+            {
+                "id": "gitlab-course",
+                "label": "GitLab course",
+                "type": "markdown",
+                "provider": "gitlab",
+                "repository": "school/network/course",
+                "ref": "main",
+                "files": ["README.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+
+    course_board_server.validate_course_source_catalog(design)
+
+
+def test_github_token_is_read_only_from_stable_absolute_file(tmp_path, monkeypatch) -> None:
+    token_file = tmp_path / "github.token"
+    token_file.write_text("short-lived-installation-token\n", encoding="utf-8")
+    if os.name != "nt":
+        token_file.chmod(0o600)
+    monkeypatch.setattr(
+        course_board_server, "GITHUB_MARKDOWN_TOKEN_FILE", str(token_file.resolve())
+    )
+    if os.name == "nt":
+        monkeypatch.setattr(
+            course_board_server,
+            "verify_provider_token_file_permissions",
+            lambda _path, _metadata, _provider: None,
+        )
+
+    assert course_board_server.read_github_markdown_token() == (
+        "short-lived-installation-token"
+    )
+    monkeypatch.setattr(
+        course_board_server, "GITLAB_MARKDOWN_TOKEN_FILE", str(token_file.resolve())
+    )
+    assert course_board_server.read_gitlab_markdown_token() == (
+        "short-lived-installation-token"
+    )
+
+    monkeypatch.setattr(course_board_server, "GITHUB_MARKDOWN_TOKEN_FILE", "relative.token")
+    with pytest.raises(
+        course_board_server.course_github_markdown.RemoteMarkdownError,
+        match="path assoluto",
+    ):
+        course_board_server.read_github_markdown_token()
+
+
+def test_heading_subtrees_do_not_cross_sources_with_same_relative_path() -> None:
+    headings = [
+        {
+            "id": "source-a:README.md#a",
+            "title": "A",
+            "source": "README.md",
+            "source_id": "source-a",
+            "href": "https://example.invalid/a",
+            "level": 1,
+            "line": 1,
+        },
+        {
+            "id": "source-b:README.md#b",
+            "title": "B",
+            "source": "README.md",
+            "source_id": "source-b",
+            "href": "https://example.invalid/b",
+            "level": 2,
+            "line": 1,
+        },
+    ]
+
+    item = course_board_server.item_from_heading_id(headings[0]["id"], headings)
+
+    assert item is not None
+    assert "children" not in item
+
+
+def test_github_heading_uses_commit_pinned_snapshot_and_rejects_stale_item(
+    tmp_path, monkeypatch
+) -> None:
+    content = b"# Remote course\n\n## Private lesson\n\nPinned content.\n"
+    design = {
+        "sources": [
+            {
+                "id": "private-course",
+                "label": "Private course",
+                "type": "markdown",
+                "provider": "github",
+                "repository": "school/private-course",
+                "ref": "main",
+                "files": ["lessons/intro.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+
+    def fetch_snapshot(
+        _adapter, repository, declared_ref, files, *, deadline=None, byte_budget=None
+    ):
+        assert deadline is not None
+        assert byte_budget is not None
+        return course_board_server.course_github_markdown.RemoteMarkdownSnapshot(
+            provider="github",
+            repository=repository,
+            declared_ref=declared_ref,
+            commit_sha="a" * 40,
+            files=(
+                course_board_server.course_github_markdown.RemoteMarkdownFile(
+                    relative_path=files[0],
+                    git_object_id=hashlib.sha1(
+                        f"blob {len(content)}\0".encode("ascii") + content
+                    ).hexdigest(),
+                    sha256=hashlib.sha256(content).hexdigest(),
+                    content=content,
+                ),
+            ),
+        )
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server.course_github_markdown.GitHubMarkdownAdapter,
+        "fetch_snapshot",
+        fetch_snapshot,
+    )
+
+    source_files = course_board_server.course_markdown_source_files(design)
+    headings = course_board_server.extract_headings(design, source_files)
+    heading = next(item for item in headings if item["title"] == "Private lesson")
+
+    assert heading["source_ref"] == "main"
+    assert heading["source_commit"] == "a" * 40
+    assert heading["href"] == (
+        "https://github.com/school/private-course/blob/"
+        + "a" * 40
+        + "/lessons/intro.md#private-lesson"
+    )
+    assert course_board_server.heading_content_snapshot(
+        design, heading["id"], heading["source_commit"], heading["content_sha256"]
+    )[1] == "Pinned content."
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.heading_content_snapshot(
+            design, heading["id"], "c" * 40, heading["content_sha256"]
+        )
+
+    (tmp_path / "lessons").mkdir()
+    (tmp_path / "lessons" / "intro.md").write_bytes(content)
+    local_replacement = {
+        "sources": [
+            {
+                "id": "private-course",
+                "label": "Replacement",
+                "type": "markdown",
+                "provider": "local",
+                "path": "lessons",
+                "files": ["intro.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+    with pytest.raises(course_board_server.CourseSourceRevisionConflictError):
+        course_board_server.heading_content_snapshot(
+            local_replacement, heading["id"], heading["source_commit"], heading["content_sha256"]
+        )
+    local_files = course_board_server.course_markdown_source_files(local_replacement)
+    assert course_board_server.section_text(
+        heading["source"],
+        heading["line"],
+        heading["level"],
+        local_replacement,
+        {},
+        local_files,
+        heading["source_id"],
+        heading["id"],
+        heading["source_commit"],
+    ) == ""
+
+    assert course_board_server.section_text(
+        heading["source"],
+        heading["line"],
+        heading["level"],
+        design,
+        {},
+        source_files,
+        heading["source_id"],
+        heading["id"],
+        heading["source_commit"],
+    ) == "Pinned content."
+    assert course_board_server.section_text(
+        heading["source"],
+        heading["line"],
+        heading["level"],
+        design,
+        {},
+        source_files,
+        heading["source_id"],
+        heading["id"],
+        "c" * 40,
+    ) == ""
+
+
+def test_gitlab_heading_uses_commit_pinned_snapshot(tmp_path, monkeypatch) -> None:
+    content = b"# GitLab course\n\n## Lesson\n\nPrivate GitLab content.\n"
+    design = {
+        "sources": [
+            {
+                "id": "gitlab-course",
+                "label": "GitLab course",
+                "type": "markdown",
+                "provider": "gitlab",
+                "repository": "school/group/course",
+                "ref": "main",
+                "files": ["README.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+
+    def fetch_snapshot(
+        _adapter, repository, declared_ref, files, *, deadline=None, byte_budget=None
+    ):
+        blob_id = hashlib.sha1(
+            f"blob {len(content)}\0".encode("ascii") + content
+        ).hexdigest()
+        return course_board_server.course_github_markdown.RemoteMarkdownSnapshot(
+            provider="gitlab",
+            repository=repository,
+            declared_ref=declared_ref,
+            commit_sha="d" * 40,
+            files=(
+                course_board_server.course_github_markdown.RemoteMarkdownFile(
+                    relative_path=files[0],
+                    git_object_id=blob_id,
+                    sha256=hashlib.sha256(content).hexdigest(),
+                    content=content,
+                ),
+            ),
+        )
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server.course_gitlab_markdown.GitLabMarkdownAdapter,
+        "fetch_snapshot",
+        fetch_snapshot,
+    )
+
+    files = course_board_server.course_markdown_source_files(design)
+    heading = next(
+        item
+        for item in course_board_server.extract_headings(design, files)
+        if item["title"] == "Lesson"
+    )
+
+    assert heading["source_provider"] == "gitlab"
+    assert heading["source_commit"] == "d" * 40
+    assert heading["source_url"] == (
+        "https://gitlab.com/school/group/course/-/blob/"
+        + "d" * 40
+        + "/README.md#lesson"
+    )
+    assert course_board_server.heading_content_snapshot(
+        design, heading["id"], heading["source_commit"], heading["content_sha256"]
+    )[1] == "Private GitLab content."
+    summary = course_board_server.topic_summary(
+        course_board_server.board_item_from_heading(heading)
+    )
+    assert summary["source_url"] == heading["source_url"]
+    assert summary["github_url"] == heading["source_url"]
 
 
 def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:
@@ -645,7 +1196,7 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
     thread.start()
     try:
         heading = next(item for item in course_board_server.extract_headings() if item["title"] == "Array")
-        original_read = course_board_server.course_source_catalog.read_local_markdown_text
+        original_read = course_board_server.course_source_catalog.read_markdown_text
         reads = 0
 
         def counted_read(item, root):
@@ -655,13 +1206,17 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
 
         monkeypatch.setattr(
             course_board_server.course_source_catalog,
-            "read_local_markdown_text",
+            "read_markdown_text",
             counted_read,
         )
         authorization = "Basic " + base64.b64encode(f"teacher:{teacher_token}".encode("utf-8")).decode("ascii")
         request = urllib.request.Request(
-            "http://127.0.0.1:%s/api/heading-content?id=%s"
-            % (server.server_address[1], urllib.parse.quote(heading["id"], safe="")),
+            "http://127.0.0.1:%s/api/heading-content?id=%s&content_sha256=%s"
+            % (
+                server.server_address[1],
+                urllib.parse.quote(heading["id"], safe=""),
+                heading["content_sha256"],
+            ),
             headers={"Authorization": authorization},
         )
         with urllib.request.urlopen(request, timeout=5) as response:
@@ -672,6 +1227,7 @@ def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch
             "http://127.0.0.1:%s/api/heading-content" % server.server_address[1],
             data=json.dumps({
                 "id": heading["id"],
+                "content_sha256": heading["content_sha256"],
                 "design": {"source_files": ["lesson.md"]},
             }).encode("utf-8"),
             headers={
@@ -700,7 +1256,10 @@ def test_generate_course_plan_uses_temporary_design_without_promoting_it(tmp_pat
     def fake_run(command, **_kwargs):
         input_path = Path(command[command.index("--input") + 1])
         generated_path = Path(command[command.index("--output") + 1])
-        assert json.loads(input_path.read_text(encoding="utf-8")) == {"title": "Bozza"}
+        assert json.loads(input_path.read_text(encoding="utf-8")) == {
+            "title": "Bozza",
+            "_resolved_source_refs": {},
+        }
         generated_path.write_text("nuovo\n", encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, stdout="generato", stderr="")
 
@@ -1605,12 +2164,14 @@ def test_sync_file_tree_flushes_regular_files(tmp_path, monkeypatch) -> None:
     first.write_text("{}\n", encoding="utf-8")
     second.write_text("{}\n", encoding="utf-8")
     flushed = []
-    monkeypatch.setattr(course_board_server.assignment_records, "sync_directory", lambda path: None)
+    synced = []
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", synced.append)
     monkeypatch.setattr(course_board_server.os, "fsync", lambda descriptor: flushed.append(descriptor))
 
     course_board_server.sync_file_tree(root)
 
     assert len(flushed) == 2
+    assert set(synced) == {root, first.parent, second.parent, root.parent}
 
 
 def test_delete_assignment_uses_canonical_record_id_for_help_logs(tmp_path, monkeypatch) -> None:
@@ -2761,6 +3322,8 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
     write_demo_activity(activity_path)
+    synced_directories = []
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", synced_directories.append)
 
     payload = course_board_server.delete_activity_record({
         "activity_path": "activities/drafts/python-base-somma-001.json",
@@ -2768,9 +3331,241 @@ def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) ->
 
     assert payload["ok"] is True
     assert payload["deleted"]["id"] == "python-base-somma-001"
-    assert payload["dependencies"] == {"assignments": [], "reports": []}
+    assert payload["dependencies"] == {"assignments": [], "reports": [], "course_designs": []}
     assert payload["activities"] == []
     assert not activity_path.exists()
+    assert activity_path.parent in synced_directories
+    assert payload["cleanup_pending"] is False
+
+
+def test_delete_activity_record_restores_file_when_commit_flush_fails(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    renamed = False
+    failed = False
+    real_replace = os.replace
+
+    def track_replace(source, destination):
+        nonlocal renamed
+        real_replace(source, destination)
+        if Path(source) == activity_path and str(destination).endswith(".tombstone"):
+            renamed = True
+
+    def fail_commit_sync(path):
+        nonlocal failed
+        if renamed and not failed:
+            failed = True
+            raise OSError("directory flush failed")
+
+    monkeypatch.setattr(course_board_server.os, "replace", track_replace)
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", fail_commit_sync)
+    with pytest.raises(OSError, match="directory flush failed"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+    assert failed is True
+
+
+def test_delete_activity_record_recovers_when_committed_journal_write_fails(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    original_write = course_board_server.thebitlab_storage.JsonAssignmentStorage.write_json
+
+    def fail_committed(self, path, payload):
+        if payload.get("schema_version") == "activity_deletion.v1" and payload.get("state") == "committed":
+            raise OSError("committed journal failed")
+        return original_write(self, path, payload)
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        fail_committed,
+    )
+    with pytest.raises(OSError, match="committed journal failed"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+
+
+def test_delete_activity_record_reports_success_when_cleanup_marker_was_published(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    original_write = course_board_server.thebitlab_storage.JsonAssignmentStorage.write_json
+
+    def fail_after_cleanup_publish(self, path, payload):
+        result = original_write(self, path, payload)
+        if payload.get("schema_version") == "activity_deletion.v1" and payload.get("state") == "cleanup":
+            raise OSError("cleanup directory flush failed")
+        return result
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        fail_after_cleanup_publish,
+    )
+    result = course_board_server.delete_activity_record(
+        {"activity_path": "activities/drafts/python-base-somma-001.json"}
+    )
+
+    assert result["ok"] is True
+    assert not activity_path.exists()
+    assert list(activity_path.parent.glob(".*.tombstone")) == []
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+
+
+def test_delete_activity_record_keeps_recovery_state_when_commit_and_reset_fail(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    original_write = course_board_server.thebitlab_storage.JsonAssignmentStorage.write_json
+    commit_failed = False
+
+    def fail_commit_and_reset(self, path, payload):
+        nonlocal commit_failed
+        if payload.get("schema_version") != "activity_deletion.v1":
+            return original_write(self, path, payload)
+        if payload.get("state") == "committed":
+            original_write(self, path, payload)
+            commit_failed = True
+            raise OSError("commit marker failed")
+        if commit_failed:
+            raise OSError("reset marker failed")
+        return original_write(self, path, payload)
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        fail_commit_and_reset,
+    )
+    with pytest.raises(OSError, match="reset marker failed"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+    assert len(list(activity_path.parent.glob(".*.tombstone"))) == 1
+    assert len(list(activity_path.parent.glob(".activity-delete-*.txn"))) == 1
+
+    monkeypatch.setattr(
+        course_board_server.thebitlab_storage.JsonAssignmentStorage,
+        "write_json",
+        original_write,
+    )
+    course_board_server.recover_interrupted_activity_deletions()
+    assert activity_path.exists()
+    assert list(activity_path.parent.glob(".activity-delete-*.txn")) == []
+
+
+def test_delete_activity_record_rejects_nested_json_asset(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    asset_path = tmp_path / "activities" / "drafts" / "assets" / "demo" / "fixture.json"
+    asset_path.parent.mkdir(parents=True)
+    asset_path.write_text('{"fixture": true}', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="direttamente"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/assets/demo/fixture.json"}
+        )
+
+    assert asset_path.exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="creazione symlink non disponibile nel runner locale Windows")
+def test_delete_activity_record_rejects_symlink_alias(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    target = tmp_path / "activities" / "drafts" / "target.json"
+    write_demo_activity(target, activity_id="target")
+    alias = target.with_name("alias.json")
+    alias.symlink_to(target.name)
+
+    with pytest.raises(ValueError, match="symlink"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/alias.json"}
+        )
+
+    assert alias.is_symlink()
+    assert target.exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="creazione symlink non disponibile nel runner locale Windows")
+def test_course_design_dependency_scan_rejects_archived_symlink(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    outside = tmp_path / "outside.json"
+    outside.write_text('{"years": []}', encoding="utf-8")
+    archived_dir = tmp_path / "doc" / "course_designs"
+    archived_dir.mkdir(parents=True)
+    (archived_dir / "linked.json").symlink_to(outside)
+
+    with pytest.raises(ValueError, match="non verificabile"):
+        course_board_server.course_design_activity_dependencies("demo", "activities/drafts/demo.json")
+
+
+def test_delete_activity_record_blocks_when_course_design_links_activity(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    design_path = tmp_path / "doc" / "course_design.json"
+    design_path.parent.mkdir(parents=True)
+    design_path.write_text(
+        json.dumps(
+            {
+                "years": [
+                    {
+                        "id": "terzo-anno",
+                        "udas": [
+                            {
+                                "id": "uda-1",
+                                "activity_links": [
+                                    {
+                                        "activity_id": "PYTHON-BASE-SOMMA-001",
+                                        "activity_path": "activities/drafts/obsolete.json",
+                                        "title": "Somma in Python",
+                                        "kind": "laboratorio",
+                                        "role": "practice",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="1 percorsi"):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
+
+
+def test_delete_activity_record_fails_closed_on_unreadable_dependency(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    assignments_dir = tmp_path / "teacher-assignments"
+    assignments_dir.mkdir()
+    (assignments_dir / "broken.json").write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(json.JSONDecodeError):
+        course_board_server.delete_activity_record(
+            {"activity_path": "activities/drafts/python-base-somma-001.json"}
+        )
+
+    assert activity_path.exists()
 
 
 def test_delete_activity_record_blocks_when_assignment_exists(tmp_path, monkeypatch) -> None:
@@ -2780,8 +3575,8 @@ def test_delete_activity_record_blocks_when_assignment_exists(tmp_path, monkeypa
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
     storage.write_assignment(
         assignment_records.build_assignment_record(
-            activity_id="python-base-somma-001",
-            activity_path="activities/drafts/python-base-somma-001.json",
+            activity_id="PYTHON-BASE-SOMMA-001",
+            activity_path="activities/drafts/PYTHON-BASE-SOMMA-001.json",
             target_type="class",
             class_id="3A-TPSI",
             class_label="3A TPSI",
@@ -4612,6 +5407,57 @@ def test_teacher_post_rejects_invalid_and_oversized_json_bodies(tmp_path) -> Non
             "Richiesta docente troppo grande."
         )
         oversized.close()
+
+        invalid_design = {
+            "years": [
+                {
+                    "id": "terzo-anno",
+                    "udas": [
+                        {
+                            "id": "uda-1",
+                            "activity_links": [
+                                {
+                                    "activity_id": "unsafe",
+                                    "activity_path": "../outside.json",
+                                    "title": "Unsafe",
+                                    "kind": "laboratorio",
+                                    "role": "practice",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        for path, payload in (
+            (
+                "/api/course-design",
+                {
+                    "design": invalid_design,
+                    "expected_revision": course_board_server.course_design_revision(
+                        course_board_server.read_design()
+                    ),
+                    "preserve_actual": False,
+                },
+            ),
+            ("/api/course-plan-md", {"design": invalid_design}),
+        ):
+            body = json.dumps(payload).encode("utf-8")
+            invalid = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+            invalid.request(
+                "POST",
+                path,
+                body=body,
+                headers={
+                    "Authorization": authorization,
+                    "Content-Type": "application/json",
+                    "Content-Length": str(len(body)),
+                },
+            )
+            invalid_response = invalid.getresponse()
+            assert invalid_response.status == 400
+            assert "activity_path" in json.loads(invalid_response.read().decode("utf-8"))["error"]
+            invalid.close()
     finally:
         if server is not None:
             server.shutdown()
@@ -4713,9 +5559,123 @@ def test_save_activity_builds_valid_draft_from_gui_payload(tmp_path, monkeypatch
     }
 
 
+def test_save_activity_rejects_noncanonical_or_oversized_id(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "Foo",
+        "title": "Prima activity",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "variabili",
+        "prompt": "Prima consegna.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+    }
+
+    with pytest.raises(ValueError, match="slug sicuro"):
+        course_board_server.save_activity(payload)
+    with pytest.raises(ValueError, match="limite"):
+        course_board_server.save_activity({**payload, "id": "a" * 161})
+
+    assert not (tmp_path / "activities" / "drafts").exists()
+
+
+def test_save_activity_overwrite_cannot_replace_legacy_colliding_identity(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    activity_path = tmp_path / "activities" / "drafts" / "foo.json"
+    write_demo_activity(activity_path, activity_id="Foo")
+
+    with pytest.raises(ValueError, match="identita"):
+        course_board_server.save_activity(
+            {
+                "id": "foo",
+                "title": "Activity sostitutiva",
+                "kind": "laboratorio",
+                "difficulty": "B",
+                "topics": "variabili",
+                "prompt": "Nuova consegna.",
+                "estimated_minutes": "20",
+                "language": "python",
+                "source_name": "main.py",
+                "overwrite": True,
+            }
+        )
+
+    saved = json.loads(activity_path.read_text(encoding="utf-8"))
+    assert saved["id"] == "Foo"
+
+
+def test_save_activity_revalidates_preserved_assets_when_source_name_changes(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "preserved-assets",
+        "title": "Preserved assets",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il sorgente.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [
+            {
+                "path": "starter.py",
+                "target_path": "main.py",
+                "type": "hidden_test",
+                "content": "print('ok')\n",
+                "visibility": "grading",
+            }
+        ],
+    }
+    course_board_server.save_activity(payload)
+
+    with pytest.raises(ValueError, match="non canonico"):
+        course_board_server.save_activity(
+            {
+                **payload,
+                "source_name": "Main.py",
+                "files": None,
+                "overwrite": True,
+            }
+        )
+
+    saved_path = tmp_path / "activities" / "drafts" / "preserved-assets.json"
+    saved = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert saved["contesto"]["source_name"] == "main.py"
+
+    asset_path = saved_path.parent / saved["assets"][0]["path"]
+    mismatched_asset_path = asset_path.with_name("Starter.py")
+    asset_path.rename(mismatched_asset_path)
+    with pytest.raises(ValueError, match="non portabile"):
+        course_board_server.save_activity({**payload, "files": None, "overwrite": True})
+    mismatched_asset_path.rename(asset_path)
+
+    legacy_asset_path = saved_path.parent / "assets" / "preserved-assets" / "starter.py"
+    legacy_asset_path.parent.mkdir(parents=True, exist_ok=True)
+    legacy_asset_path.write_bytes(b"\xff\x00legacy-binary")
+    saved["assets"][0]["path"] = "assets/preserved-assets/starter.py"
+    saved_path.write_text(json.dumps(saved), encoding="utf-8")
+
+    course_board_server.save_activity({**payload, "files": [], "overwrite": True})
+    preserved_after_empty_ui_draft = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert preserved_after_empty_ui_draft["assets"][0]["path"] == "assets/preserved-assets/starter.py"
+
+    course_board_server.save_activity(
+        {**payload, "files": [], "clear_assets": True, "overwrite": True}
+    )
+    without_assets = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert without_assets["assets"] == []
+
+
 def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    synced_directories = []
+    monkeypatch.setattr(course_board_server.thebitlab_storage, "sync_directory", synced_directories.append)
     result = course_board_server.save_activity({
         "title": "Asset AI",
         "kind": "laboratorio",
@@ -4738,9 +5698,158 @@ def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> Non
     saved = json.loads(activity_path.read_text(encoding="utf-8"))
     asset = saved["assets"][0]
     assert result["ok"] is True
-    assert asset["path"] == "assets/asset-ai/starter/main.py"
+    assert asset["path"].startswith("assets/asset-ai/")
+    assert asset["path"].endswith("/starter/main.py")
+    assert len(asset["path"].split("/")[2]) == 32
     assert asset["target_path"] == "starter/main.py"
     assert (tmp_path / "activities" / "drafts" / asset["path"]).read_text(encoding="utf-8") == "print('ok')\n"
+    drafts_dir = tmp_path / "activities" / "drafts"
+    assert drafts_dir.parent in synced_directories
+    assert drafts_dir in synced_directories
+    assert drafts_dir / "assets" in synced_directories
+    assert drafts_dir / "assets" / "asset-ai" in synced_directories
+
+
+def test_save_activity_rejects_corrupted_existing_immutable_bundle(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "immutable-bundle",
+        "title": "Immutable bundle",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il file.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [{"path": "starter.py", "content": "original\r\n", "visibility": "student"}],
+    }
+    result = course_board_server.save_activity(payload)
+    course_board_server.save_activity({**payload, "files": None, "overwrite": True})
+    asset_path = tmp_path / result["activity"]["path"]
+    saved = json.loads(asset_path.read_text(encoding="utf-8"))
+    bundle_file = asset_path.parent / saved["assets"][0]["path"]
+    bundle_file.write_text("corrupted\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="corruzione"):
+        course_board_server.save_activity({**payload, "overwrite": True})
+    with pytest.raises(ValueError, match="alterato"):
+        course_board_server.save_activity({**payload, "files": None, "overwrite": True})
+    with pytest.raises(ValueError, match="alterato"):
+        course_board_server.distribute_activity_assignment(
+            {"activity_path": result["activity"]["path"], "targets_text": ""}
+        )
+
+
+@pytest.mark.parametrize(
+    ("files", "message"),
+    [
+        (
+            [
+                {"path": "starter/Main.py", "content": "one", "visibility": "student"},
+                {"path": "starter/main.py", "content": "two", "visibility": "student"},
+            ],
+            "File AI duplicato",
+        ),
+        (
+            [
+                {"path": "one.py", "target_path": "output", "content": "one", "visibility": "student"},
+                {
+                    "path": "two.py",
+                    "target_path": "output/nested.py",
+                    "content": "two",
+                    "visibility": "student",
+                },
+            ],
+            "Target AI duplicato",
+        ),
+        (
+            [{"path": "one.py", "target_path": "README.md", "content": "one", "visibility": "student"}],
+            "Target asset riservato",
+        ),
+        (
+            [{"path": "one.py", "target_path": "main.py/nested", "content": "one", "visibility": "student"}],
+            "sovrapposto al file sorgente",
+        ),
+    ],
+)
+def test_save_activity_rejects_nonportable_or_overlapping_asset_paths(tmp_path, monkeypatch, files, message) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+
+    with pytest.raises(ValueError, match=message):
+        course_board_server.save_activity(
+            {
+                "id": "asset-paths",
+                "title": "Asset paths",
+                "kind": "laboratorio",
+                "difficulty": "B",
+                "topics": "file",
+                "prompt": "Completa i file.",
+                "estimated_minutes": "20",
+                "language": "python",
+                "source_name": "main.py",
+                "files": files,
+            }
+        )
+
+
+def test_save_activity_keeps_old_and_orphan_bundles_when_json_save_fails(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    payload = {
+        "id": "asset-rollback",
+        "title": "Asset rollback",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il file.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [
+            {
+                "path": "starter/main.py",
+                "role": "starter",
+                "content": "print('original')\n",
+                "visibility": "student",
+            }
+        ],
+    }
+    course_board_server.save_activity(payload)
+    activity_json_path = tmp_path / "activities" / "drafts" / "asset-rollback.json"
+    original_json = activity_json_path.read_bytes()
+    original_payload = json.loads(original_json)
+    asset_path = tmp_path / "activities" / "drafts" / original_payload["assets"][0]["path"]
+    real_service = course_board_server.assignment_service()
+
+    class FailingService:
+        storage = real_service.storage
+
+        @staticmethod
+        def save_activity(activity, overwrite):
+            raise ValueError("salvataggio JSON rifiutato")
+
+    monkeypatch.setattr(course_board_server, "assignment_service", lambda: FailingService())
+    with pytest.raises(ValueError, match="salvataggio JSON rifiutato"):
+        course_board_server.save_activity(
+            {
+                **payload,
+                "overwrite": True,
+                "files": [{**payload["files"][0], "content": "print('changed')\n"}],
+            }
+        )
+
+    assert asset_path.read_text(encoding="utf-8") == "print('original')\n"
+    assert activity_json_path.read_bytes() == original_json
+    bundle_parent = tmp_path / "activities" / "drafts" / "assets" / "asset-rollback"
+    bundles = sorted(path for path in bundle_parent.iterdir() if path.is_dir())
+    assert len(bundles) == 2
+    assert asset_path.parents[1] in bundles
+    orphan_files = [path for bundle in bundles if bundle != asset_path.parents[1] for path in bundle.rglob("main.py")]
+    assert len(orphan_files) == 1
+    assert orphan_files[0].read_text(encoding="utf-8") == "print('changed')\n"
 
 
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:

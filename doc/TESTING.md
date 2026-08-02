@@ -21,6 +21,15 @@ python -m pip install -r requirements-auth.txt
 
 `requirements-auth.txt` installa `google-auth` e le dipendenze crittografiche necessarie ai test del verifier Google OIDC; non ometterlo quando si valida l'intera suite.
 
+Per costruire la documentazione API Sphinx:
+
+```bash
+python -m pip install -r requirements-docs.txt
+python -m sphinx -W --keep-going -c doc/sphinx doc/sphinx doc/sphinx/_build/html
+```
+
+Il test `tests/test_documentation_closeout.py` controlla guide, link, diagrammi, indice Sphinx e docstring dei moduli principali.
+
 I test del renderer opzionale `utui` richiedono Python 3.11 o successivo e la dipendenza fissata:
 
 ```bash

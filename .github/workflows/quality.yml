@@ -10,13 +10,13 @@ on:
       - "scripts/**"
       - "tests/**"
       - "activities/**"
-      - "doc/ACTIVITIES_SCHEMA.md"
-      - "doc/course_design.json"
-      - "doc/PERCORSO_DIDATTICO.md"
+      - "doc/**"
+      - "README.md"
       - "pyproject.toml"
       - "requirements-dev.txt"
       - "requirements-utui.txt"
       - "requirements-auth.txt"
+      - "requirements-docs.txt"
       - ".github/workflows/quality.yml"
   push:
     branches:
@@ -25,13 +25,13 @@ on:
       - "scripts/**"
       - "tests/**"
       - "activities/**"
-      - "doc/ACTIVITIES_SCHEMA.md"
-      - "doc/course_design.json"
-      - "doc/PERCORSO_DIDATTICO.md"
+      - "doc/**"
+      - "README.md"
       - "pyproject.toml"
       - "requirements-dev.txt"
       - "requirements-utui.txt"
       - "requirements-auth.txt"
+      - "requirements-docs.txt"
       - ".github/workflows/quality.yml"
 
 jobs:
@@ -56,6 +56,11 @@ jobs:
 
       - name: Check generated course plan
         run: python scripts/generate_course_plan.py --check
+
+      - name: Build Sphinx documentation
+        run: |
+          python -m pip install -r requirements-docs.txt
+          python -m sphinx -W --keep-going -c doc/sphinx doc/sphinx doc/sphinx/_build/html
 
   windows-filesystem:
     runs-on: windows-latest

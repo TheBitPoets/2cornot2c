@@ -84,6 +84,25 @@ def uda_summary_text(uda: dict[str, Any]) -> str:
     return f"Apri contenuto UDA - {uda.get('path', 'Da definire')} - {uda.get('weeks', '?')} settimane"
 
 
+def item_source_commits(design: dict[str, Any]) -> dict[str, set[str]]:
+    """Collect immutable remote commits preserved by assigned topic items."""
+
+    commits: dict[str, set[str]] = {}
+
+    def collect(items: list[dict[str, Any]]) -> None:
+        for item in items:
+            source_id = str(item.get("source_id", "")).strip()
+            source_commit = str(item.get("source_commit", "")).strip()
+            if source_id and source_commit:
+                commits.setdefault(source_id, set()).add(source_commit)
+            collect(item.get("children", []))
+
+    for year in design.get("years", []):
+        for uda in year.get("udas", []):
+            collect(uda.get("items", []))
+    return commits
+
+
 def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
     """Render assigned topics as an indented Markdown bullet tree."""
     lines: list[str] = []
@@ -99,11 +118,14 @@ def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
             if source_id
             else source
         )
+        source_commit = str(item.get("source_commit", "")).strip()
+        if source_commit:
+            source_badge += f" @ {source_commit}"
         level = item.get("level", "?")
         status = item.get("frame", {}).get("status", "todo")
         lines.extend([
             f"{indent}- <details>",
-            f"{content_indent}<summary>{title} <code>{source_badge}</code> H{level} <code>{status}</code></summary>",
+            f"{content_indent}<summary>{title} <code>{html.escape(source_badge)}</code> H{level} <code>{html.escape(str(status))}</code></summary>",
             "",
         ])
         frame_lines = render_frame(item.get("frame", {}), depth + 1)
@@ -158,6 +180,10 @@ def render_design(design: dict[str, Any]) -> str:
         "",
     ]
 
+    commits_by_source = item_source_commits(design)
+    resolved_refs = design.get("_resolved_source_refs", {})
+    if not isinstance(resolved_refs, dict):
+        resolved_refs = {}
     for source in course_source_catalog.normalize_course_sources(
         design,
         default_files=DEFAULT_SOURCES,
@@ -173,6 +199,14 @@ def render_design(design: dict[str, Any]) -> str:
         ]
         if source.ref:
             metadata.append(f"ref `{source.ref}`")
+        resolved_ref = resolved_refs.get(source.source_id)
+        if isinstance(resolved_ref, str) and resolved_ref:
+            metadata.append(f"snapshot `{resolved_ref}`")
+        source_commits = sorted(commits_by_source.get(source.source_id, ()))
+        if source_commits:
+            metadata.append(
+                "commit " + ", ".join(f"`{commit}`" for commit in source_commits)
+            )
         if source.updated_at:
             metadata.append(f"aggiornata `{source.updated_at}`")
         lines.append(

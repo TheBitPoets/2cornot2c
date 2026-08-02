@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
 
+from scripts.course_github_markdown import RemoteMarkdownFile, RemoteMarkdownSnapshot
 from scripts.course_source_catalog import (
     CourseSourceCatalogError,
     course_source_catalog_payload,
     local_markdown_source_files,
+    markdown_source_files,
     normalize_course_sources,
     read_local_markdown_text,
+    read_markdown_text,
+    validate_local_markdown_sources,
 )
 
 
@@ -133,17 +138,16 @@ def test_open_handle_verification_rejects_outside_file(tmp_path, monkeypatch) ->
     repository.mkdir()
     (repository / "lesson.md").write_text("# Inside\n", encoding="utf-8")
     outside.write_text("# Outside\n", encoding="utf-8")
-    item = local_markdown_source_files(
-        {"source_files": ["lesson.md"]},
-        repository,
-    )[0]
     monkeypatch.setattr(
         "scripts.course_source_catalog._opened_file_path",
         lambda _descriptor: outside,
     )
 
     with pytest.raises(CourseSourceCatalogError, match="fuori dal repository"):
-        read_local_markdown_text(item, repository)
+        local_markdown_source_files(
+            {"source_files": ["lesson.md"]},
+            repository,
+        )
 
 
 def test_open_handle_verification_rejects_different_internal_file(tmp_path, monkeypatch) -> None:
@@ -151,17 +155,16 @@ def test_open_handle_verification_rejects_different_internal_file(tmp_path, monk
     second = tmp_path / "second.md"
     first.write_text("# First\n", encoding="utf-8")
     second.write_text("# Second\n", encoding="utf-8")
-    item = local_markdown_source_files(
-        {"source_files": ["first.md"]},
-        tmp_path,
-    )[0]
     monkeypatch.setattr(
         "scripts.course_source_catalog._opened_file_path",
         lambda _descriptor: second,
     )
 
     with pytest.raises(CourseSourceCatalogError, match="cambiato durante la lettura"):
-        read_local_markdown_text(item, tmp_path)
+        local_markdown_source_files(
+            {"source_files": ["first.md"]},
+            tmp_path,
+        )
 
 
 def test_rejects_too_many_ready_local_files(tmp_path) -> None:
@@ -189,7 +192,192 @@ def test_rejects_too_many_ready_local_files(tmp_path) -> None:
         )
 
 
-def test_rejects_same_length_change_after_catalog_snapshot(tmp_path) -> None:
+def test_rejects_excess_ready_remote_files_before_adapter_calls(tmp_path) -> None:
+    calls = []
+
+    class Adapter:
+        provider_name = "github"
+
+        def fetch_snapshot(self, *args, **kwargs):
+            calls.append((args, kwargs))
+            raise AssertionError("adapter must not be called")
+
+    design = {
+        "sources": [
+            {
+                "id": f"remote-{index}",
+                "label": f"Remote {index}",
+                "type": "markdown",
+                "provider": "github",
+                "repository": f"school/course-{index}",
+                "ref": "main",
+                "files": [f"lesson-{file_index}.md" for file_index in range(64)],
+                "indexing_status": "ready",
+            }
+            for index in range(5)
+        ]
+    }
+
+    with pytest.raises(CourseSourceCatalogError, match="Troppi file Markdown pronti"):
+        markdown_source_files(design, tmp_path, adapters={"github": Adapter()})
+    assert calls == []
+
+
+def test_live_snapshot_memory_uses_bounded_slots(tmp_path, monkeypatch) -> None:
+    import gc
+    import threading
+    import time
+    from scripts import course_source_catalog
+
+    (tmp_path / "lesson.md").write_text("# Lesson\n", encoding="utf-8")
+    monkeypatch.setattr(
+        course_source_catalog, "SNAPSHOT_MEMORY_SLOTS", threading.BoundedSemaphore(1)
+    )
+    first = markdown_source_files({"source_files": ["lesson.md"]}, tmp_path)
+
+    with pytest.raises(CourseSourceCatalogError, match="Memoria snapshot Markdown satura"):
+        markdown_source_files(
+            {"source_files": ["lesson.md"]},
+            tmp_path,
+            deadline=time.monotonic() + 0.05,
+        )
+
+    del first
+    gc.collect()
+    second = markdown_source_files({"source_files": ["lesson.md"]}, tmp_path)
+    assert len(second) == 1
+
+
+def test_stalled_local_acquisitions_use_bounded_slots(tmp_path, monkeypatch) -> None:
+    import threading
+    import time
+    from scripts import course_source_catalog
+
+    release = threading.Event()
+    calls = []
+
+    def stalled(*_args, **_kwargs):
+        calls.append(True)
+        release.wait(1.0)
+        return ()
+
+    monkeypatch.setattr(course_source_catalog, "local_markdown_source_files", stalled)
+    monkeypatch.setattr(
+        course_source_catalog, "LOCAL_ACQUISITION_SLOTS", threading.BoundedSemaphore(1)
+    )
+    with pytest.raises(CourseSourceCatalogError, match="Timeout acquisizione"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {}, tmp_path, (), time.monotonic() + 0.05
+        )
+    with pytest.raises(CourseSourceCatalogError, match="satura"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {}, tmp_path, (), time.monotonic() + 0.05
+        )
+    assert calls == [True]
+    release.set()
+
+
+def test_timed_out_local_worker_keeps_snapshot_memory_reserved(
+    tmp_path, monkeypatch
+) -> None:
+    import threading
+    import time
+    from scripts import course_source_catalog
+
+    release = threading.Event()
+    monkeypatch.setattr(
+        course_source_catalog,
+        "local_markdown_source_files",
+        lambda *_args, **_kwargs: (release.wait(1.0) or ()),
+    )
+    memory_slots = threading.BoundedSemaphore(1)
+    assert memory_slots.acquire(blocking=False)
+    lease = course_source_catalog._SnapshotMemoryLease(memory_slots)
+
+    with pytest.raises(CourseSourceCatalogError, match="Timeout acquisizione"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {},
+            tmp_path,
+            (),
+            time.monotonic() + 0.05,
+            snapshot_lease=lease,
+        )
+    lease.release()
+    assert not memory_slots.acquire(blocking=False)
+    release.set()
+    assert memory_slots.acquire(timeout=1.0)
+    memory_slots.release()
+
+
+def test_local_acquisition_releases_retained_lease_before_thread_start(
+    tmp_path, monkeypatch
+) -> None:
+    import threading
+    from scripts import course_source_catalog
+
+    times = iter([100.0, 102.0])
+    monkeypatch.setattr(course_source_catalog.time, "monotonic", lambda: next(times))
+    memory_slots = threading.BoundedSemaphore(1)
+    assert memory_slots.acquire(blocking=False)
+    lease = course_source_catalog._SnapshotMemoryLease(memory_slots)
+
+    with pytest.raises(CourseSourceCatalogError, match="Timeout acquisizione"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {}, tmp_path, (), 101.0, snapshot_lease=lease
+        )
+    lease.release()
+    assert memory_slots.acquire(blocking=False)
+    memory_slots.release()
+
+
+def test_local_acquisition_releases_slot_when_thread_cannot_start(
+    tmp_path, monkeypatch
+) -> None:
+    import threading
+    import time
+    from scripts import course_source_catalog
+
+    slots = threading.BoundedSemaphore(1)
+    monkeypatch.setattr(course_source_catalog, "LOCAL_ACQUISITION_SLOTS", slots)
+    monkeypatch.setattr(
+        course_source_catalog.threading.Thread,
+        "start",
+        lambda _thread: (_ for _ in ()).throw(RuntimeError("thread unavailable")),
+    )
+
+    with pytest.raises(RuntimeError, match="thread unavailable"):
+        course_source_catalog._bounded_local_markdown_source_files(
+            {}, tmp_path, (), time.monotonic() + 1.0
+        )
+    assert slots.acquire(blocking=False)
+    slots.release()
+
+
+def test_mixed_catalog_checks_global_deadline_before_local_acquisition(
+    tmp_path, monkeypatch
+) -> None:
+    design = explicit_design()
+    design["sources"][1]["indexing_status"] = "ready"
+    times = iter([100.0, 100.0, 131.0])
+    monkeypatch.setattr(
+        "scripts.course_source_catalog.time.monotonic", lambda: next(times)
+    )
+
+    with pytest.raises(CourseSourceCatalogError, match="Timeout acquisizione"):
+        markdown_source_files(design, tmp_path, adapters={"github": object()})
+
+
+def test_validation_does_not_materialize_local_markdown(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lesson.md").write_text("# Lesson\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "scripts.course_source_catalog._read_local_markdown_bytes",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("content must not be read")),
+    )
+
+    validate_local_markdown_sources({"source_files": ["lesson.md"]}, tmp_path)
+
+
+def test_local_catalog_keeps_immutable_content_snapshot(tmp_path) -> None:
     lesson = tmp_path / "lesson.md"
     lesson.write_bytes(b"# First\n")
     item = local_markdown_source_files(
@@ -198,8 +386,61 @@ def test_rejects_same_length_change_after_catalog_snapshot(tmp_path) -> None:
     )[0]
     lesson.write_bytes(b"# Other\n")
 
-    with pytest.raises(CourseSourceCatalogError, match="cambiato durante la lettura"):
-        read_local_markdown_text(item, tmp_path)
+    assert read_local_markdown_text(item, tmp_path) == "# First\n"
+
+
+def test_indexes_ready_github_snapshot_with_resolved_commit_provenance(tmp_path) -> None:
+    design = explicit_design()
+    design["sources"][1]["indexing_status"] = "ready"
+    content = b"# Remote lesson\n"
+
+    class Adapter:
+        provider_name = "github"
+
+        def fetch_snapshot(
+            self, repository, declared_ref, files, *, deadline=None, byte_budget=None
+        ):
+            assert deadline is not None
+            assert byte_budget is not None
+            assert (repository, declared_ref, files) == (
+                "TheBitPoets/c-course",
+                "main",
+                ("README.md",),
+            )
+            return RemoteMarkdownSnapshot(
+                provider="github",
+                repository=repository,
+                declared_ref=declared_ref,
+                commit_sha="a" * 40,
+                files=(
+                    RemoteMarkdownFile(
+                        relative_path="README.md",
+                        git_object_id=hashlib.sha1(
+                            f"blob {len(content)}\0".encode("ascii") + content
+                        ).hexdigest(),
+                        sha256=hashlib.sha256(content).hexdigest(),
+                        content=content,
+                    ),
+                ),
+            )
+
+    selected = markdown_source_files(
+        design,
+        tmp_path,
+        adapters={"github": Adapter()},
+    )
+
+    remote = next(item for item in selected if item.source.provider == "github")
+    assert remote.resolved_ref == "a" * 40
+    assert read_markdown_text(remote, tmp_path) == "# Remote lesson\n"
+
+
+def test_ready_remote_source_fails_closed_without_adapter(tmp_path) -> None:
+    design = explicit_design()
+    design["sources"][1]["indexing_status"] = "ready"
+
+    with pytest.raises(CourseSourceCatalogError, match="Adapter Markdown non configurato"):
+        markdown_source_files(design, tmp_path)
 
 
 def test_catalog_payload_reports_only_files_actually_indexable(tmp_path) -> None:
@@ -235,7 +476,6 @@ def test_catalog_payload_reports_only_files_actually_indexable(tmp_path) -> None
         (lambda design: design["sources"][1].update(ref="release/foo.lock/bar"), "ref non valido"),
         (lambda design: design["sources"][1].update(ref="release/.hidden"), "ref non valido"),
         (lambda design: design["sources"][1].update(ref="feature@{one"), "ref non valido"),
-        (lambda design: design["sources"][1].update(indexing_status="ready"), "senza adapter"),
         (lambda design: design["sources"][1].update(updated_at="2026-07-29"), "UTC con suffisso Z"),
         (lambda design: design["sources"][1].update(extra=True), "Campi fonte non supportati"),
     ],

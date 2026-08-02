@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import errno
 import json
 import os
@@ -17,6 +18,9 @@ from scripts.thebitlab_storage import (
     JsonAssignmentStorage,
     JsonClassRosterStorage,
     JsonCourseStorage,
+    RevisionConflictError,
+    ensure_directory_durable,
+    recover_json_rollbacks,
     sync_directory,
 )
 
@@ -25,6 +29,18 @@ def test_read_design_returns_minimal_default_when_missing(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path, ["README.md"])
 
     assert storage.read_design() == {"version": 1, "source_files": ["README.md"], "years": []}
+
+
+def test_course_storage_rollback_recovery_ignores_unmanaged_doc_subdirectories(tmp_path) -> None:
+    unmanaged = tmp_path / "doc" / "notes"
+    unmanaged.mkdir(parents=True)
+    legitimate = unmanaged / ".example.json.version.rollback"
+    legitimate.write_text("do not touch", encoding="utf-8")
+
+    JsonCourseStorage(tmp_path)
+
+    assert legitimate.read_text(encoding="utf-8") == "do not touch"
+    assert not (unmanaged / "example.json").exists()
 
 
 def test_write_and_read_current_design(tmp_path) -> None:
@@ -181,6 +197,113 @@ def test_school_calendar_metadata_tolerates_invalid_json(tmp_path) -> None:
     ]
 
 
+def test_school_calendar_cas_rejects_stale_revision(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_school_calendar("calendar.json", {"school_year": "2026/2027"})
+    initial = storage.read_school_calendar("calendar.json")
+    revision = storage.design_revision(initial)
+
+    calendar, _, next_revision = storage.write_school_calendar_cas(
+        "calendar.json",
+        {"school_year": "2027/2028"},
+        revision,
+    )
+
+    assert calendar["school_year"] == "2027/2028"
+    assert next_revision != revision
+    with pytest.raises(RevisionConflictError):
+        storage.write_school_calendar_cas(
+            "calendar.json",
+            {"school_year": "2028/2029"},
+            revision,
+        )
+
+
+def test_update_uda_actual_preserves_latest_activity_links(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design(
+        "course.json",
+        {
+            "years": [
+                {
+                    "id": "third",
+                    "udas": [
+                        {
+                            "id": "uda-1",
+                            "activity_links": [{"activity_id": "latest"}],
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+
+    design, path = storage.update_uda_actual(
+        "course.json",
+        "third",
+        "uda-1",
+        {"status": "done", "notes": "Completata"},
+        storage.value_revision(None),
+    )
+
+    uda = design["years"][0]["udas"][0]
+    assert uda["activity_links"] == [{"activity_id": "latest"}]
+    assert uda["actual"] == {"status": "done", "notes": "Completata"}
+    assert path == "doc/course_designs/course.json"
+    assert storage.read_saved_design("course.json") == design
+    with pytest.raises(RevisionConflictError):
+        storage.update_uda_actual(
+            "course.json",
+            "third",
+            "uda-1",
+            {"status": "skipped", "notes": "Stale"},
+            storage.value_revision(None),
+        )
+
+    stale_board_copy = copy.deepcopy(design)
+    stale_board_copy["years"][0]["udas"][0]["activity_links"] = [{"activity_id": "board-new"}]
+    stale_board_copy["years"][0]["udas"][0]["actual"] = {"status": "todo"}
+    expected_revision = storage.editable_design_revision(storage.read_saved_design("course.json"))
+    storage.write_saved_design_cas(
+        "course.json",
+        stale_board_copy,
+        expected_revision,
+        preserve_actual=True,
+    )
+
+    merged = storage.read_saved_design("course.json")["years"][0]["udas"][0]
+    assert merged["activity_links"] == [{"activity_id": "board-new"}]
+    assert merged["actual"] == {"status": "done", "notes": "Completata"}
+
+    replacement = copy.deepcopy(stale_board_copy)
+    replacement["years"][0]["udas"][0].pop("actual", None)
+    storage.write_saved_design_cas(
+        "course.json",
+        replacement,
+        storage.design_revision(storage.read_saved_design("course.json")),
+        preserve_actual=False,
+    )
+    assert "actual" not in storage.read_saved_design("course.json")["years"][0]["udas"][0]
+
+    obsolete_actual = copy.deepcopy(replacement)
+    obsolete_actual["years"][0]["udas"][0]["actual"] = {"status": "todo"}
+    storage.write_saved_design_cas(
+        "course.json",
+        obsolete_actual,
+        storage.editable_design_revision(storage.read_saved_design("course.json")),
+        preserve_actual=True,
+    )
+    assert "actual" not in storage.read_saved_design("course.json")["years"][0]["udas"][0]
+
+    with pytest.raises(RevisionConflictError):
+        storage.write_saved_design_cas(
+            "course.json",
+            replacement,
+            expected_revision,
+            preserve_actual=False,
+        )
+
+
 def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     storage.write_saved_design("as_2026_2027.json", {"title": "AS 2026/2027"})
@@ -262,6 +385,27 @@ def test_delete_saved_design_rolls_back_when_staging_fails(tmp_path, monkeypatch
 
     assert storage.read_saved_design("victim.json") == {"title": "Da conservare"}
     assert storage.read_school_calendar("linked.json") == {"course_design_name": "victim.json"}
+
+
+def test_delete_saved_design_rolls_back_when_commit_directory_flush_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da conservare"})
+    real_sync = sync_directory
+    failed = False
+
+    def fail_committed_sync(path):
+        nonlocal failed
+        if not failed and any(storage.delete_staging_dir.glob("*.committed")):
+            failed = True
+            raise OSError("commit directory flush failed")
+        real_sync(path)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", fail_committed_sync)
+    with pytest.raises(OSError, match="commit directory flush failed"):
+        storage.delete_saved_design("victim.json")
+
+    assert storage.read_saved_design("victim.json") == {"title": "Da conservare"}
+    assert list(storage.delete_staging_dir.glob("*.committed")) == []
 
 
 def test_save_waits_for_delete_rollback_before_updating_design(tmp_path, monkeypatch) -> None:
@@ -785,6 +929,114 @@ def test_ai_feedback_demo_report_exposes_teacher_review_states() -> None:
     }
 
 
+@pytest.mark.skipif(os.name != "nt", reason="primitive specifica Windows")
+def test_windows_sync_directory_flushes_write_capable_handle(tmp_path) -> None:
+    (tmp_path / "entry.txt").write_text("durable", encoding="utf-8")
+
+    sync_directory(tmp_path)
+
+
+def test_ensure_directory_durable_syncs_each_new_parent_entry(tmp_path, monkeypatch) -> None:
+    synced = []
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", synced.append)
+    target = tmp_path / "activities" / "drafts"
+
+    ensure_directory_durable(target, tmp_path)
+
+    assert target.is_dir()
+    assert synced == [tmp_path, tmp_path / "activities"]
+
+
+def test_assignment_storage_recovers_interrupted_json_rollback(tmp_path) -> None:
+    drafts = tmp_path / "activities" / "drafts"
+    drafts.mkdir(parents=True)
+    target = drafts / "demo.json"
+    target.write_text('{"version":"new"}\n', encoding="utf-8")
+    backup = drafts / ".demo.json.deadbeef.rollback"
+    backup.write_text('{"version":"old"}\n', encoding="utf-8")
+    if os.name != "nt":
+        backup.chmod(0o640)
+
+    recover_json_rollbacks(drafts)
+
+    assert json.loads(target.read_text(encoding="utf-8")) == {"version": "old"}
+    assert not backup.exists()
+    if os.name != "nt":
+        assert stat.S_IMODE(target.stat().st_mode) == 0o640
+
+
+def test_activity_rollback_recovery_supports_txn_and_ignores_nested_assets(tmp_path) -> None:
+    drafts = tmp_path / "activities" / "drafts"
+    drafts.mkdir(parents=True)
+    journal = drafts / ".activity-delete-demo.txn"
+    journal.write_text('{"state":"new"}\n', encoding="utf-8")
+    backup = drafts / "..activity-delete-demo.txn.deadbeef.rollback"
+    backup.write_text('{"state":"old"}\n', encoding="utf-8")
+    nested_asset = drafts / "assets" / "demo" / "bundle" / ".fixture.json.v1.rollback"
+    nested_asset.parent.mkdir(parents=True)
+    nested_asset.write_text("fixture", encoding="utf-8")
+    incomplete_backup = drafts / ".demo.json.deadbeef.rollback.tmp"
+    incomplete_backup.write_text("partial", encoding="utf-8")
+
+    recover_json_rollbacks(drafts)
+
+    assert json.loads(journal.read_text(encoding="utf-8")) == {"state": "old"}
+    assert not backup.exists()
+    assert nested_asset.read_text(encoding="utf-8") == "fixture"
+    assert incomplete_backup.read_text(encoding="utf-8") == "partial"
+
+
+def test_assignment_storage_atomic_json_failure_preserves_previous_file(tmp_path, monkeypatch) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    path = tmp_path / "activities" / "drafts" / "demo.json"
+    storage.write_json(path, {"version": "old"})
+    original = path.read_bytes()
+
+    def fail_replace(source, destination):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr("scripts.thebitlab_storage.os.replace", fail_replace)
+    with pytest.raises(OSError, match="replace failed"):
+        storage.write_json(path, {"version": "new"})
+
+    assert path.read_bytes() == original
+    assert list(path.parent.glob(".demo.json.*.tmp")) == []
+
+
+def test_assignment_storage_restores_previous_json_when_commit_flush_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    path = tmp_path / "activities" / "drafts" / "demo.json"
+    storage.write_json(path, {"version": "old"})
+    if os.name != "nt":
+        path.chmod(0o640)
+    original = path.read_bytes()
+    real_replace = os.replace
+    published = False
+    failed = False
+
+    def track_replace(source, destination):
+        nonlocal published
+        real_replace(source, destination)
+        if Path(destination) == path and str(source).endswith(".tmp"):
+            published = True
+
+    def fail_published_sync(directory):
+        nonlocal failed
+        if published and not failed:
+            failed = True
+            raise OSError("commit flush failed")
+
+    monkeypatch.setattr("scripts.thebitlab_storage.os.replace", track_replace)
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", fail_published_sync)
+    with pytest.raises(OSError, match="commit flush failed"):
+        storage.write_json(path, {"version": "new"})
+
+    assert path.read_bytes() == original
+    if os.name != "nt":
+        assert stat.S_IMODE(path.stat().st_mode) == 0o640
+    assert list(path.parent.glob(".demo.json.*.rollback")) == []
+
+
 def test_assignment_report_rejects_unsafe_or_invalid_reports(tmp_path) -> None:
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
     reports_dir = tmp_path / "teacher-reports"
@@ -815,6 +1067,12 @@ def test_list_activities_skips_invalid_json_and_deduplicates_paths(tmp_path) -> 
         encoding="utf-8",
     )
     (activities_dir / "broken.json").write_text("{", encoding="utf-8")
+    bundled_assets = activities_dir / "drafts" / "assets" / "real" / "digest"
+    bundled_assets.mkdir(parents=True)
+    (bundled_assets / "fixture.json").write_text(
+        json.dumps({"id": "fake-bundled-activity"}),
+        encoding="utf-8",
+    )
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [activities_dir, activities_dir])
 
     assert storage.list_activities() == [

@@ -30,12 +30,15 @@ import secrets
 import shutil
 import socket
 import ssl
+import stat
+import unicodedata
 import subprocess
 import sys
 import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from copy import deepcopy
@@ -56,9 +59,13 @@ from scripts import (
     assignment_records,
     assign_activity,
     codex_activity_adapter,
+    course_activity_links,
+    course_github_markdown,
+    course_gitlab_markdown,
     course_source_catalog,
     create_activity,
     create_submission_scaffold,
+    github_app_token_runtime,
     manual_ai_feedback,
     student_help_auth,
     student_help_codex_adapter,
@@ -93,6 +100,10 @@ COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
 AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
+GITHUB_MARKDOWN_TOKEN_FILE = os.environ.get("THEBITLAB_GITHUB_TOKEN_FILE", "").strip()
+GITLAB_MARKDOWN_TOKEN_FILE = os.environ.get("THEBITLAB_GITLAB_TOKEN_FILE", "").strip()
+GITHUB_MARKDOWN_BLOB_CACHE = course_github_markdown.InMemoryGitHubBlobCache()
+GITHUB_TOKEN_ACQUISITION_SLOTS = threading.BoundedSemaphore(2)
 LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
@@ -457,7 +468,11 @@ def configure_data_root(root: Path) -> Path:
     AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
     AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
     LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
+    with thebitlab_storage.course_storage_lock(ROOT):
+        thebitlab_storage.recover_json_rollbacks(ROOT / "activities" / "drafts")
+        thebitlab_storage.recover_json_rollbacks(TEACHER_REPORTS_DIR, recursive=True)
     recover_interrupted_assignment_deletions()
+    recover_interrupted_activity_deletions()
     return ROOT
 
 
@@ -552,35 +567,273 @@ def read_design() -> dict:
     return course_service().read_design()
 
 
-def validate_course_source_catalog(payload: dict) -> None:
-    """Validate source descriptors and repository confinement before persistence."""
+def verify_provider_token_file_permissions(
+    path: Path, metadata: os.stat_result, provider: str
+) -> None:
+    """Fail closed unless the token file is owner-only on this platform."""
 
-    course_source_catalog.local_markdown_source_files(
+    if os.name != "nt":
+        if metadata.st_mode & 0o077 or (
+            hasattr(os, "getuid") and metadata.st_uid != os.getuid()
+        ):
+            raise course_github_markdown.RemoteMarkdownError(
+                f"Il file token {provider} deve essere accessibile solo al proprietario."
+            )
+        return
+    try:
+        powershell, _icacls, environment = thebitlab_auth_runtime._windows_acl_tools()
+        sid_process = subprocess.run(
+            (
+                powershell,
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value",
+            ),
+            check=True,
+            capture_output=True,
+            timeout=10,
+            env=environment,
+        )
+        sid = sid_process.stdout.decode("ascii", errors="strict").strip()
+        if thebitlab_auth_runtime._SID_RE.fullmatch(sid) is None:
+            raise OSError("SID Windows non valido")
+        thebitlab_auth_runtime._verify_windows_acl(
+            path, sid, require_protected=True
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError) as exc:
+        raise course_github_markdown.RemoteMarkdownError(
+            f"ACL del file token {provider} non sicura."
+        ) from exc
+
+
+def _read_provider_markdown_token_blocking(
+    configured_value: str, provider: str
+) -> str | None:
+    """Read one optional provider token from an external regular file."""
+
+    if not configured_value:
+        return None
+    configured = Path(configured_value)
+    if not configured.is_absolute():
+        raise course_github_markdown.RemoteMarkdownError(
+            f"Il file token {provider} deve avere un path assoluto."
+        )
+    try:
+        resolved = configured.resolve(strict=True)
+        if os.path.normcase(str(configured.absolute())) != os.path.normcase(str(resolved)):
+            raise course_github_markdown.RemoteMarkdownError(
+                f"Il file token {provider} non può essere un collegamento."
+            )
+        metadata = resolved.stat()
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 2:
+            raise course_github_markdown.RemoteMarkdownError(f"File token {provider} non valido.")
+        verify_provider_token_file_permissions(resolved, metadata, provider)
+        with resolved.open("rb") as stream:
+            before = os.fstat(stream.fileno())
+            opened_path = course_source_catalog._opened_file_path(stream.fileno()).resolve()
+            if (
+                os.path.normcase(str(opened_path)) != os.path.normcase(str(resolved))
+                or not stat.S_ISREG(before.st_mode)
+                or (before.st_dev, before.st_ino) != (metadata.st_dev, metadata.st_ino)
+                or before.st_size != metadata.st_size
+                or before.st_mtime_ns != metadata.st_mtime_ns
+                or before.st_mode != metadata.st_mode
+                or getattr(before, "st_uid", None) != getattr(metadata, "st_uid", None)
+            ):
+                raise course_github_markdown.RemoteMarkdownError(
+                    f"File token {provider} sostituito durante l'apertura."
+                )
+            raw = stream.read(course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 3)
+            after = os.fstat(stream.fileno())
+        if (
+            len(raw) > course_github_markdown.MAX_GITHUB_TOKEN_BYTES + 2
+            or before.st_size != after.st_size
+            or before.st_mtime_ns != after.st_mtime_ns
+            or before.st_mode != after.st_mode
+            or getattr(before, "st_uid", None) != getattr(after, "st_uid", None)
+            or (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)
+        ):
+            raise course_github_markdown.RemoteMarkdownError(f"File token {provider} instabile.")
+        verify_provider_token_file_permissions(resolved, after, provider)
+        final_metadata = resolved.stat()
+        if (
+            (final_metadata.st_dev, final_metadata.st_ino)
+            != (after.st_dev, after.st_ino)
+            or final_metadata.st_mode != after.st_mode
+            or getattr(final_metadata, "st_uid", None)
+            != getattr(after, "st_uid", None)
+        ):
+            raise course_github_markdown.RemoteMarkdownError(f"File token {provider} instabile.")
+        if raw.endswith(b"\r\n"):
+            raw = raw[:-2]
+        elif raw.endswith((b"\r", b"\n")):
+            raw = raw[:-1]
+        return raw.decode("utf-8")
+    except course_github_markdown.RemoteMarkdownError:
+        raise
+    except (OSError, UnicodeDecodeError) as exc:
+        raise course_github_markdown.RemoteMarkdownError(
+            f"File token {provider} non leggibile."
+        ) from exc
+
+
+def _read_provider_markdown_token(
+    configured_value: str, provider: str, deadline: float | None = None
+) -> str | None:
+    """Bound provider secret-file and ACL operations within one deadline."""
+
+    operation_deadline = time.monotonic() + 30.0 if deadline is None else deadline
+    remaining = operation_deadline - time.monotonic()
+    if remaining <= 0:
+        raise course_github_markdown.RemoteMarkdownError(
+            f"Timeout lettura token {provider} esaurito."
+        )
+    slot_guard = GITHUB_TOKEN_ACQUISITION_SLOTS
+    if not slot_guard.acquire(timeout=remaining):
+        raise course_github_markdown.RemoteMarkdownError(
+            f"Lettura token {provider} satura."
+        )
+    result: dict[str, Any] = {}
+    done = threading.Event()
+
+    def worker() -> None:
+        try:
+            result["value"] = _read_provider_markdown_token_blocking(
+                configured_value, provider
+            )
+        except BaseException as exc:  # noqa: BLE001
+            result["error"] = exc
+        finally:
+            done.set()
+            slot_guard.release()
+
+    remaining = operation_deadline - time.monotonic()
+    if remaining <= 0:
+        slot_guard.release()
+        raise course_github_markdown.RemoteMarkdownError(
+            f"Timeout lettura token {provider} esaurito."
+        )
+    thread = threading.Thread(target=worker, daemon=True)
+    try:
+        thread.start()
+    except RuntimeError:
+        slot_guard.release()
+        raise
+    if not done.wait(remaining):
+        raise course_github_markdown.RemoteMarkdownError(
+            f"Timeout lettura token {provider} esaurito."
+        )
+    error_value = result.get("error")
+    if error_value is not None:
+        raise error_value
+    return result.get("value")
+
+
+def read_github_markdown_token(deadline: float | None = None) -> str | None:
+    return _read_provider_markdown_token(
+        GITHUB_MARKDOWN_TOKEN_FILE, "GitHub", deadline
+    )
+
+
+def read_gitlab_markdown_token(deadline: float | None = None) -> str | None:
+    return _read_provider_markdown_token(
+        GITLAB_MARKDOWN_TOKEN_FILE, "GitLab", deadline
+    )
+
+
+def course_markdown_source_files(
+    design: dict,
+) -> tuple[course_source_catalog.CourseMarkdownSourceFile, ...]:
+    """Resolve local files and commit-pinned provider snapshots for one operation."""
+
+    operation_deadline = time.monotonic() + 30.0
+    sources = course_source_catalog.normalize_course_sources(
+        design, default_files=DEFAULT_SOURCES
+    )
+    adapters: dict[str, course_source_catalog.RemoteMarkdownAdapter] = {}
+    if any(
+        source.provider == "github" and source.indexing_status == "ready"
+        for source in sources
+    ):
+        adapters["github"] = course_github_markdown.GitHubMarkdownAdapter(
+            course_github_markdown.GitHubApiTransport(
+                read_github_markdown_token(operation_deadline)
+            ),
+            blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
+        )
+    if any(
+        source.provider == "gitlab" and source.indexing_status == "ready"
+        for source in sources
+    ):
+        adapters["gitlab"] = course_gitlab_markdown.GitLabMarkdownAdapter(
+            course_gitlab_markdown.GitLabApiTransport(
+                read_gitlab_markdown_token(operation_deadline)
+            ),
+            blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
+        )
+    return course_source_catalog.markdown_source_files(
+        design,
+        ROOT,
+        adapters=adapters,
+        default_files=DEFAULT_SOURCES,
+        deadline=operation_deadline,
+    )
+
+
+def validate_course_source_catalog(payload: dict) -> None:
+    """Validate source and activity-link boundaries before persistence."""
+
+    for source in course_source_catalog.normalize_course_sources(
+        payload, default_files=DEFAULT_SOURCES
+    ):
+        if (
+            source.provider != "local"
+            and source.indexing_status == "ready"
+            and source.provider not in {"github", "gitlab"}
+        ):
+            raise course_source_catalog.CourseSourceCatalogError(
+                f"Adapter Markdown non configurato per {source.provider}."
+            )
+    course_source_catalog.validate_local_markdown_sources(
         payload,
         ROOT,
         default_files=DEFAULT_SOURCES,
-        existing_only=False,
     )
+    course_activity_links.validate_course_activity_links(payload)
+    course_activity_links.validate_course_activity_targets(payload, ROOT)
 
 
 def write_design(payload: dict) -> None:
     """Persist the course design JSON with stable formatting."""
 
-    validate_course_source_catalog(payload)
-    course_service().write_design(payload)
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        course_service().write_design(payload)
 
 
 def generate_course_plan_md(payload: dict) -> dict:
     """Generate doc/PERCORSO_DIDATTICO.md without promoting the edited design."""
 
     validate_course_source_catalog(payload)
+    source_files = course_markdown_source_files(payload)
+    generation_payload = deepcopy(payload)
+    generation_payload["_resolved_source_refs"] = {
+        item.source.source_id: item.resolved_ref
+        for item in source_files
+        if isinstance(item, course_source_catalog.RemoteCourseSourceFile)
+    }
+    del source_files
     temporary_root = ROOT / "tmp"
     temporary_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="course-plan-", dir=temporary_root) as directory:
         workdir = Path(directory)
         input_path = workdir / "course_design.json"
         output_path = workdir / COURSE_PLAN_MD_PATH.name
-        input_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        input_path.write_text(
+            json.dumps(generation_payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
         command = [
             sys.executable,
             str(ROOT / "scripts" / "generate_course_plan.py"),
@@ -589,7 +842,17 @@ def generate_course_plan_md(payload: dict) -> dict:
             "--output",
             str(output_path),
         ]
-        completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("Timeout durante la generazione del percorso MD.") from exc
         if completed.returncode:
             detail = (
                 completed.stderr
@@ -695,11 +958,204 @@ def source_request_design(raw_query: str) -> dict:
     return read_saved_design(names[0])
 
 
+def course_design_revision(design: dict) -> str:
+    """Return the canonical optimistic-concurrency revision for a design."""
+
+    return thebitlab_storage.JsonCourseStorage.design_revision(design)
+
+
+def course_design_editable_revision(design: dict) -> str:
+    """Return a revision that excludes calendar-owned actual records."""
+
+    return thebitlab_storage.JsonCourseStorage.editable_design_revision(design)
+
+
+def uda_actual_revisions(design: dict) -> dict[str, str]:
+    """Return stable record revisions keyed by year and UDA IDs."""
+
+    revisions: dict[str, str] = {}
+    for year in design.get("years", []):
+        for uda in year.get("udas", []):
+            key = json.dumps([year.get("id", ""), uda.get("id", "")], separators=(",", ":"))
+            revisions[key] = thebitlab_storage.JsonCourseStorage.value_revision(uda.get("actual"))
+    return revisions
+
+
+def preview_course_sources(design: object) -> dict:
+    """Resolve an in-memory source catalog without persisting the design."""
+
+    if not isinstance(design, dict):
+        raise ValueError("design deve essere un oggetto.")
+    validate_course_source_catalog(design)
+    source_files = course_markdown_source_files(design)
+    catalog = course_source_catalog.course_source_catalog_payload(
+        design,
+        ROOT,
+        default_files=DEFAULT_SOURCES,
+        local_files=source_files,
+    )
+    snapshot_manifest = [
+        {
+            "source_id": item.source.source_id,
+            "provider": item.source.provider,
+            "path": item.relative_path,
+            "resolved_ref": getattr(item, "resolved_ref", None),
+            "sha256": item.expected_sha256,
+        }
+        for item in source_files
+    ]
+    snapshot_revision = hashlib.sha256(
+        json.dumps(
+            snapshot_manifest,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    return {
+        "sources": catalog["sources"],
+        "headings": extract_headings(design, source_files),
+        "snapshot_revision": snapshot_revision,
+    }
+
+
+def course_calendar_context(raw_query: str) -> dict:
+    """Return one design and its derived activity events from one snapshot."""
+
+    design = source_request_design(raw_query)
+    return {
+        "design": design,
+        "revision": course_design_revision(design),
+        "editable_revision": course_design_editable_revision(design),
+        "actual_revisions": uda_actual_revisions(design),
+        "activity_events": list(course_activity_links.iter_scheduled_activity_links(design)),
+    }
+
+
+def validate_uda_actual(payload: object) -> dict:
+    """Validate the bounded teacher-owned actual-progress payload."""
+
+    if not isinstance(payload, dict):
+        raise ValueError("actual deve essere un oggetto.")
+    allowed = {"status", "start_date", "end_date", "hours_done", "notes"}
+    unknown = set(payload) - allowed
+    if unknown:
+        raise ValueError(f"Campi actual non supportati: {', '.join(sorted(map(str, unknown)))}.")
+    status = payload.get("status", "todo")
+    if status not in {"todo", "in_progress", "done", "paused", "skipped"}:
+        raise ValueError("Stato programmazione svolta non valido.")
+    dates: dict[str, str] = {}
+    for field in ("start_date", "end_date"):
+        value = payload.get(field, "")
+        if not isinstance(value, str):
+            raise ValueError(f"{field} deve essere una data ISO o vuota.")
+        if value:
+            try:
+                parsed = datetime.strptime(value, "%Y-%m-%d").date().isoformat()
+            except ValueError as error:
+                raise ValueError(f"{field} deve essere una data ISO valida.") from error
+            if parsed != value:
+                raise ValueError(f"{field} deve essere una data ISO canonica.")
+        dates[field] = value
+    if dates["start_date"] and dates["end_date"] and dates["end_date"] < dates["start_date"]:
+        raise ValueError("end_date non puo precedere start_date.")
+    hours = payload.get("hours_done", "")
+    if hours != "" and (isinstance(hours, bool) or not isinstance(hours, (int, float)) or not 0 <= hours <= 10000):
+        raise ValueError("hours_done deve essere vuoto o compreso tra 0 e 10000.")
+    notes = payload.get("notes", "")
+    if not isinstance(notes, str) or len(notes) > 20000:
+        raise ValueError("notes deve essere una stringa di massimo 20000 caratteri.")
+    return {"status": status, **dates, "hours_done": hours, "notes": notes}
+
+
+def update_course_uda_actual(
+    name: str,
+    year_id: object,
+    uda_id: object,
+    actual: object,
+    expected_actual_revision: object,
+) -> dict:
+    """Merge one actual-progress record without replacing concurrent design edits."""
+
+    if not isinstance(name, str):
+        raise ValueError("name deve essere una stringa.")
+    if not isinstance(year_id, str) or not year_id or len(year_id) > 160:
+        raise ValueError("year_id non valido.")
+    if not isinstance(uda_id, str) or not uda_id or len(uda_id) > 160:
+        raise ValueError("uda_id non valido.")
+    if not isinstance(expected_actual_revision, str) or len(expected_actual_revision) != 64:
+        raise ValueError("expected_actual_revision non valida.")
+    normalized_actual = validate_uda_actual(actual)
+    design, path = course_service().update_uda_actual(
+        name, year_id, uda_id, normalized_actual, expected_actual_revision
+    )
+    try:
+        activity_events = list(course_activity_links.iter_scheduled_activity_links(design))
+    except ValueError:
+        activity_events = []
+    return {
+        "design": design,
+        "revision": course_design_revision(design),
+        "editable_revision": course_design_editable_revision(design),
+        "actual_revisions": uda_actual_revisions(design),
+        "activity_events": activity_events,
+        "path": path,
+    }
+
+
+def write_design_cas(payload: dict, expected_revision: object, preserve_actual: object) -> dict:
+    """Persist current design only when its revision still matches."""
+
+    if not isinstance(expected_revision, str) or len(expected_revision) != 64:
+        raise ValueError("expected_revision non valida.")
+    if not isinstance(preserve_actual, bool):
+        raise ValueError("preserve_actual deve essere booleano.")
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        course_activity_links.validate_course_activity_links(payload)
+        course_activity_links.validate_course_activity_targets(payload, ROOT)
+        design, revision = course_service().write_design_cas(payload, expected_revision, preserve_actual)
+    return {
+        "design": design,
+        "revision": revision,
+        "editable_revision": course_design_editable_revision(design),
+        "path": str(DESIGN_PATH.relative_to(ROOT)),
+    }
+
+
+def write_saved_design_cas(
+    name: str,
+    payload: dict,
+    expected_revision: object,
+    preserve_actual: object,
+) -> dict:
+    """Persist archived design only when its revision still matches."""
+
+    if not isinstance(expected_revision, str) or len(expected_revision) != 64:
+        raise ValueError("expected_revision non valida.")
+    if not isinstance(preserve_actual, bool):
+        raise ValueError("preserve_actual deve essere booleano.")
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        course_activity_links.validate_course_activity_links(payload)
+        course_activity_links.validate_course_activity_targets(payload, ROOT)
+        design, saved, revision = course_service().write_saved_design_cas(
+            name, payload, expected_revision, preserve_actual
+        )
+    return {
+        "design": design,
+        "saved": saved,
+        "revision": revision,
+        "editable_revision": course_design_editable_revision(design),
+    }
+
+
 def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
     """Persist a named course design in the archive folder."""
 
-    validate_course_source_catalog(payload)
-    return course_service().write_saved_design(name, payload, overwrite=overwrite)
+    with thebitlab_storage.course_storage_lock(ROOT):
+        validate_course_source_catalog(payload)
+        return course_service().write_saved_design(name, payload, overwrite=overwrite)
 
 
 def delete_saved_design(name: str, delete_calendars: bool = False, calendars: list[str] | None = None) -> dict:
@@ -820,8 +1276,8 @@ def sync_file_tree(root: Path) -> None:
                 os.fsync(stream.fileno())
             directories.add(candidate.parent)
     for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
-        assignment_records.sync_directory(directory)
-    assignment_records.sync_directory(root.parent)
+        thebitlab_storage.sync_directory(directory)
+    thebitlab_storage.sync_directory(root.parent)
 
 
 def update_help_deletion_manifest(trash_root: Path, **updates: Any) -> dict[str, Any]:
@@ -998,6 +1454,13 @@ def stage_help_logs_for_deletion(
 def recover_interrupted_assignment_deletions() -> None:
     """Recover or complete journaled help-log deletions after a server restart."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        _recover_interrupted_assignment_deletions_locked()
+
+
+def _recover_interrupted_assignment_deletions_locked() -> None:
+    """Recover deletion journals while activity lifecycle changes are excluded."""
+
     trash_base = ROOT / "teacher-help-events" / ".trash"
     if not trash_base.is_dir():
         return
@@ -1078,6 +1541,13 @@ def rollback_help_deletion(
 
 def delete_assignment_record(payload: dict) -> dict:
     """Delete one assignment, including its authoritative student help logs."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _delete_assignment_record_locked(payload)
+
+
+def _delete_assignment_record_locked(payload: dict) -> dict:
+    """Delete one assignment while activity lifecycle changes are excluded."""
 
     requested_assignment_id = str(payload.get("assignment_id", "")).strip()
     if not requested_assignment_id:
@@ -1171,22 +1641,77 @@ def ensure_activity_draft_path(path: Path) -> None:
     """Reject deletion targets outside activities/drafts."""
 
     drafts_dir = (ROOT / "activities" / "drafts").resolve()
-    try:
-        path.resolve().relative_to(drafts_dir)
-    except ValueError as error:
-        raise ValueError("Puoi cancellare solo bozze activity dentro activities/drafts.") from error
+    resolved = path.resolve()
+    if resolved.parent != drafts_dir or resolved.suffix.casefold() != ".json":
+        raise ValueError("Puoi cancellare solo file activity JSON direttamente dentro activities/drafts.")
+
+
+def course_design_activity_dependencies(activity_id: str, activity_path: str) -> list[dict]:
+    """Return current and archived course-design links to one activity."""
+
+    current_path = ROOT / "doc" / "course_design.json"
+    if current_path.is_symlink():
+        raise ValueError("Course design corrente non verificabile: symlink non consentito.")
+    designs = [("doc/course_design.json", read_design())]
+    archived_dir = ROOT / "doc" / "course_designs"
+    if (ROOT / "doc").is_symlink() or archived_dir.is_symlink():
+        raise ValueError("Directory course design non verificabile: symlink non consentito.")
+    archived_paths = sorted(archived_dir.glob("*.json")) if archived_dir.is_dir() else []
+    for archived_path in archived_paths:
+        if archived_path.is_symlink():
+            raise ValueError(f"Course design archiviato non verificabile: {archived_path.name}.")
+        name = safe_design_name(archived_path.name)
+        designs.append((f"doc/course_designs/{name}", read_saved_design(name)))
+
+    dependencies = []
+    path_key = activity_path.casefold()
+    for design_name, design in designs:
+        course_activity_links.validate_course_activity_links(design)
+        for year in design.get("years", []):
+            for uda in year.get("udas", []):
+                for link in uda.get("activity_links", []):
+                    linked_id = str(link.get("activity_id", ""))
+                    linked_path = str(link.get("activity_path", ""))
+                    if (
+                        activity_id and linked_id.casefold() == activity_id.casefold()
+                    ) or linked_path.casefold() == path_key:
+                        dependencies.append(
+                            {
+                                "design": design_name,
+                                "year_id": str(year.get("id", "")),
+                                "uda_id": str(uda.get("id", "")),
+                                "activity_id": linked_id,
+                                "activity_path": linked_path,
+                            }
+                        )
+    return dependencies
 
 
 def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
-    """Return assignments and registers that still reference an activity."""
+    """Return persisted objects that still reference an activity."""
 
     activity_id = str(activity.get("id", "")).strip()
     relative_activity_path = repository_relative_path(activity_path.resolve())
+    activity_path_key = create_submission_scaffold.portable_path_key(Path(relative_activity_path))
     assignments = []
-    for assignment in assignment_record_storage().list_assignments():
+    record_storage = assignment_record_storage()
+    if record_storage.assignments_dir.is_symlink():
+        raise ValueError("Directory assegnazioni non verificabile: symlink non consentito.")
+    assignment_paths = (
+        sorted(record_storage.assignments_dir.glob("*.json"))
+        if record_storage.assignments_dir.is_dir()
+        else []
+    )
+    for assignment_file in assignment_paths:
+        if assignment_file.is_symlink():
+            raise ValueError(f"Record assegnazione non verificabile: {assignment_file.name}.")
+        assignment = assignment_records.validate_assignment_record(record_storage.read_json(assignment_file))
         assignment_activity_id = str(assignment.get("activity_id", "")).strip()
         assignment_activity_path = str(assignment.get("activity_path", "")).strip().replace("\\", "/")
-        if (activity_id and assignment_activity_id == activity_id) or assignment_activity_path == relative_activity_path:
+        assignment_path_key = create_submission_scaffold.portable_path_key(Path(assignment_activity_path))
+        if (
+            activity_id and assignment_activity_id.casefold() == activity_id.casefold()
+        ) or assignment_path_key == activity_path_key:
             assignments.append(
                 {
                     "id": assignment.get("id", ""),
@@ -1201,17 +1726,28 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
 
     storage = assignment_storage()
     reports = []
-    for report_summary in storage.list_assignment_reports():
-        name = str(report_summary.get("name", "")).strip()
-        if not name:
-            continue
-        try:
-            report = storage.read_assignment_report(name)
-        except Exception:  # noqa: BLE001
-            continue
+    if storage.teacher_reports_dir.is_symlink():
+        raise ValueError("Directory registri non verificabile: symlink non consentito.")
+    if storage.teacher_reports_dir.is_dir():
+        for descendant in storage.teacher_reports_dir.rglob("*"):
+            if descendant.is_symlink():
+                raise ValueError(f"Percorso registro non verificabile: {descendant.name}.")
+    report_paths = (
+        sorted(storage.teacher_reports_dir.rglob("*.json"))
+        if storage.teacher_reports_dir.is_dir()
+        else []
+    )
+    for report_path in report_paths:
+        if report_path.is_symlink():
+            raise ValueError(f"Registro non verificabile: {report_path.name}.")
+        name = report_path.relative_to(storage.teacher_reports_dir).as_posix()
+        report = storage.read_assignment_report(name)
         report_activity_id = str(report.get("activity_id", "")).strip()
         report_activity_path = str(report.get("activity_path", "")).strip().replace("\\", "/")
-        if (activity_id and report_activity_id == activity_id) or report_activity_path == relative_activity_path:
+        report_path_key = create_submission_scaffold.portable_path_key(Path(report_activity_path))
+        if (
+            activity_id and report_activity_id.casefold() == activity_id.casefold()
+        ) or report_path_key == activity_path_key:
             reports.append(
                 {
                     "name": name,
@@ -1222,34 +1758,191 @@ def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
                     "due_at": report.get("due_at", ""),
                 }
             )
-    return {"assignments": assignments, "reports": reports}
+    return {
+        "assignments": assignments,
+        "reports": reports,
+        "course_designs": course_design_activity_dependencies(activity_id, relative_activity_path),
+    }
+
+
+def recover_interrupted_activity_deletions() -> None:
+    """Recover prepared deletions and purge committed activity tombstones."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        drafts_dir = ROOT / "activities" / "drafts"
+        if drafts_dir.is_symlink():
+            raise RuntimeError("Directory bozze activity non valida: symlink non consentito.")
+        if not drafts_dir.is_dir():
+            return
+        storage = assignment_storage()
+        referenced_tombstones: set[str] = set()
+        for journal in sorted(drafts_dir.glob(".activity-delete-*.txn")):
+            if journal.is_symlink() or not journal.is_file():
+                raise RuntimeError(f"Journal activity non valido: {journal.name}")
+            transaction = storage.read_json(journal)
+            if transaction.get("schema_version") != "activity_deletion.v1":
+                raise RuntimeError(f"Schema journal activity non supportato: {journal.name}")
+            state = transaction.get("state")
+            original_name = str(transaction.get("original", ""))
+            tombstone_name = str(transaction.get("tombstone", ""))
+            if (
+                state not in {"prepared", "rolling_back", "committed", "cleanup"}
+                or Path(original_name).name != original_name
+                or Path(tombstone_name).name != tombstone_name
+                or not tombstone_name.endswith(".tombstone")
+            ):
+                raise RuntimeError(f"Journal activity non valido: {journal.name}")
+            original = drafts_dir / original_name
+            tombstone = drafts_dir / tombstone_name
+            referenced_tombstones.add(tombstone_name)
+            if original.is_symlink() or tombstone.is_symlink():
+                raise RuntimeError(f"Path journal activity non valido: {journal.name}")
+            if state in {"prepared", "rolling_back"}:
+                if tombstone.is_file() and not original.exists():
+                    os.replace(tombstone, original)
+                    thebitlab_storage.sync_directory(drafts_dir)
+                elif tombstone.is_file() and original.is_file():
+                    tombstone.unlink()
+                    thebitlab_storage.sync_directory(drafts_dir)
+                elif not original.is_file():
+                    raise RuntimeError(f"Activity e tombstone mancanti: {journal.name}")
+            elif state == "committed":
+                # A committed transaction without cleanup intent never produced
+                # a confirmed response. Prefer recoverability.
+                if original.is_file() and tombstone.is_file():
+                    tombstone.unlink()
+                    thebitlab_storage.sync_directory(drafts_dir)
+                elif tombstone.is_file():
+                    os.replace(tombstone, original)
+                    thebitlab_storage.sync_directory(drafts_dir)
+            else:
+                # Cleanup intent is durable, so recovery preserves deletion.
+                if original.exists():
+                    raise RuntimeError(f"Activity cleanup riapparsa: {journal.name}")
+                if tombstone.is_file():
+                    tombstone.unlink()
+                    thebitlab_storage.sync_directory(drafts_dir)
+            journal.unlink()
+            thebitlab_storage.sync_directory(drafts_dir)
+        orphan_tombstones = [
+            path.name
+            for path in drafts_dir.glob(".*.tombstone")
+            if path.name not in referenced_tombstones
+        ]
+        if orphan_tombstones:
+            raise RuntimeError(f"Tombstone activity senza journal: {orphan_tombstones[0]}")
 
 
 def delete_activity_record(payload: dict) -> dict:
     """Delete one unlinked teacher-authored activity draft."""
 
-    activity_path = resolve_local_path(str(payload.get("activity_path", "")), "activity_path")
-    if not activity_path.is_file():
-        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
-    ensure_activity_draft_path(activity_path)
-    storage = assignment_storage()
-    activity = normalize_activity(storage.read_json(activity_path))
-    dependencies = activity_delete_dependencies(activity_path, activity)
-    if dependencies["assignments"] or dependencies["reports"]:
-        assignment_count = len(dependencies["assignments"])
-        report_count = len(dependencies["reports"])
-        raise ValueError(
-            "Activity collegata a "
-            f"{assignment_count} assegnazioni e {report_count} registri: cancellazione bloccata. "
-            "Cancella prima le assegnazioni o i registri collegati."
-        )
-    deleted = {
-        "id": activity.get("id", ""),
-        "title": activity.get("title", ""),
-        "path": repository_relative_path(activity_path),
-    }
-    activity_path.unlink()
-    return {"ok": True, "deleted": deleted, "dependencies": dependencies, "activities": list_activities()}
+    with thebitlab_storage.course_storage_lock(ROOT):
+        raw_activity_path = str(payload.get("activity_path", "")).strip().replace("\\", "/")
+        relative_path = Path(raw_activity_path)
+        if (
+            not raw_activity_path
+            or relative_path.is_absolute()
+            or relative_path.as_posix() != raw_activity_path
+            or any(part in {"", ".", ".."} for part in relative_path.parts)
+        ):
+            raise ValueError("activity_path deve essere un percorso relativo canonico.")
+        lexical_path = ROOT
+        for part in relative_path.parts:
+            lexical_path /= part
+            if lexical_path.is_symlink():
+                raise ValueError("activity_path non puo attraversare symlink.")
+        activity_path = resolve_local_path(raw_activity_path, "activity_path")
+        if not activity_path.is_file():
+            raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+        ensure_activity_draft_path(activity_path)
+        storage = assignment_storage()
+        activity = normalize_activity(storage.read_json(activity_path))
+        dependencies = activity_delete_dependencies(activity_path, activity)
+        if dependencies["assignments"] or dependencies["reports"] or dependencies["course_designs"]:
+            assignment_count = len(dependencies["assignments"])
+            report_count = len(dependencies["reports"])
+            design_count = len(dependencies["course_designs"])
+            raise ValueError(
+                "Activity collegata a "
+                f"{assignment_count} assegnazioni, {report_count} registri e {design_count} percorsi: "
+                "cancellazione bloccata. Rimuovi prima tutti i collegamenti."
+            )
+        deleted = {
+            "id": activity.get("id", ""),
+            "title": activity.get("title", ""),
+            "path": repository_relative_path(activity_path),
+        }
+        transaction_id = uuid.uuid4().hex
+        tombstone = activity_path.with_name(f".{activity_path.name}.{transaction_id}.tombstone")
+        journal = activity_path.with_name(f".activity-delete-{transaction_id}.txn")
+        transaction = {
+            "schema_version": "activity_deletion.v1",
+            "state": "prepared",
+            "original": activity_path.name,
+            "tombstone": tombstone.name,
+        }
+        storage.write_json(journal, transaction)
+        os.replace(activity_path, tombstone)
+        try:
+            thebitlab_storage.sync_directory(activity_path.parent)
+        except Exception:
+            recover_interrupted_activity_deletions()
+            raise
+        try:
+            storage.write_json(journal, {**transaction, "state": "committed"})
+        except Exception:
+            # Publish rollback intent before restoring the original. Recovery
+            # always restores rolling_back transactions, regardless of which
+            # side of the rename survived a crash.
+            try:
+                storage.write_json(journal, {**transaction, "state": "rolling_back"})
+            except Exception:
+                # Even if the marker cannot be updated, restore the original:
+                # recovery deliberately prefers original+committed over deletion.
+                if tombstone.is_file() and not activity_path.exists():
+                    restore_temp = activity_path.with_name(f".{activity_path.name}.{uuid.uuid4().hex}.restore")
+                    try:
+                        shutil.copy2(tombstone, restore_temp)
+                        with restore_temp.open("r+b") as restored:
+                            os.fsync(restored.fileno())
+                        os.replace(restore_temp, activity_path)
+                        thebitlab_storage.sync_directory(activity_path.parent)
+                    finally:
+                        restore_temp.unlink(missing_ok=True)
+                raise
+            if tombstone.is_file() and not activity_path.exists():
+                os.replace(tombstone, activity_path)
+                thebitlab_storage.sync_directory(activity_path.parent)
+            recover_interrupted_activity_deletions()
+            raise
+        try:
+            storage.write_json(journal, {**transaction, "state": "cleanup"})
+        except Exception:
+            # Atomic replace may have published cleanup before a failing parent
+            # flush. If the authoritative journal already says cleanup, finish
+            # and report success instead of returning an error after deletion.
+            current_state = storage.read_json(journal).get("state")
+            if current_state != "cleanup":
+                recover_interrupted_activity_deletions()
+                raise
+            # Retry the exact durability barrier before treating the visible
+            # cleanup marker as authoritative.
+            thebitlab_storage.sync_directory(journal.parent)
+        cleanup_pending = False
+        try:
+            tombstone.unlink()
+            thebitlab_storage.sync_directory(tombstone.parent)
+            journal.unlink()
+            thebitlab_storage.sync_directory(journal.parent)
+        except OSError:
+            cleanup_pending = True
+        return {
+            "ok": True,
+            "deleted": deleted,
+            "dependencies": dependencies,
+            "cleanup_pending": cleanup_pending,
+            "activities": list_activities(),
+        }
 
 
 def list_class_rosters() -> list[dict]:
@@ -1410,9 +2103,49 @@ def list_activities() -> list[dict]:
     return assignment_service().list_activities()
 
 
+def list_course_linkable_activities() -> list[dict]:
+    """List only activities that can pass the course-link persistence boundary."""
+
+    linkable: list[dict] = []
+    for activity in list_activities():
+        link = {
+            "activity_id": activity.get("id", ""),
+            "activity_path": activity.get("path", ""),
+            "title": activity.get("title", ""),
+            "kind": activity.get("kind", ""),
+            "role": "practice",
+        }
+        candidate = {"years": [{"udas": [{"activity_links": [link]}]}]}
+        try:
+            course_activity_links.validate_course_activity_targets(candidate, ROOT)
+        except (OSError, ValueError):
+            continue
+        linkable.append(activity)
+    return linkable
+
+
+def immutable_bundle_snapshot(root: Path) -> dict[str, str]:
+    """Return a bounded-structure digest map while rejecting symlinks."""
+
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError(f"Bundle asset non valido: {root.name}.")
+    snapshot: dict[str, str] = {}
+    for candidate in sorted(root.rglob("*")):
+        if candidate.is_symlink():
+            raise ValueError(f"Bundle asset con symlink non consentito: {candidate.name}.")
+        if candidate.is_dir():
+            continue
+        if not candidate.is_file():
+            raise ValueError(f"Elemento bundle non valido: {candidate.name}.")
+        relative = candidate.relative_to(root).as_posix()
+        snapshot[relative] = create_submission_scaffold.file_sha256(candidate)
+    return snapshot
+
+
 def persist_activity_draft_files(
     *,
     activity_id: str,
+    source_name: str,
     files: Any,
     drafts_dir: Path,
 ) -> list[dict[str, str]]:
@@ -1433,16 +2166,17 @@ def persist_activity_draft_files(
     }
     allowed_types = set(validate_activity.ALLOWED_ASSET_TYPES)
     allowed_visibility = set(validate_activity.ALLOWED_ASSET_VISIBILITIES)
-    normalized: list[tuple[Path, Path, dict[str, str]]] = []
-    seen: set[str] = set()
+    normalized: list[tuple[Path, str, dict[str, str]]] = []
+    source_paths: list[Path] = []
+    target_paths: list[Path] = []
     for index, file in enumerate(files):
         if not isinstance(file, dict):
             raise ValueError(f"files[{index}] deve essere un oggetto.")
         source_rel = create_submission_scaffold.validate_relative_path(file.get("path"), f"files[{index}].path")
         source_key = source_rel.as_posix()
-        if source_key in seen:
-            raise ValueError(f"File AI duplicato: {source_key}.")
-        seen.add(source_key)
+        if any(create_submission_scaffold.portable_paths_overlap(source_rel, existing) for existing in source_paths):
+            raise ValueError(f"File AI duplicato, equivalente o sovrapposto: {source_key}.")
+        source_paths.append(source_rel)
         content = file.get("content", "")
         if not isinstance(content, str):
             raise ValueError(f"files[{index}].content deve essere una stringa.")
@@ -1456,28 +2190,220 @@ def persist_activity_draft_files(
             file.get("target_path") or source_key,
             f"files[{index}].target_path",
         )
-        asset_rel = Path("assets") / create_activity.slugify(activity_id) / source_rel
+        if any(create_submission_scaffold.portable_paths_overlap(target_path, existing) for existing in target_paths):
+            raise ValueError(f"Target AI duplicato, equivalente o sovrapposto: {target_path.as_posix()}.")
+        if create_submission_scaffold.is_reserved_scaffold_target(target_path):
+            raise ValueError(f"Target asset riservato allo scaffold: {target_path.as_posix()}.")
+        target_key = create_submission_scaffold.portable_path_key(target_path)
+        source_name_path = Path(source_name)
+        source_name_key = create_submission_scaffold.portable_path_key(source_name_path)
+        if target_key != source_name_key and create_submission_scaffold.portable_paths_overlap(
+            target_path,
+            source_name_path,
+        ):
+            raise ValueError(f"Target asset sovrapposto al file sorgente: {target_path.as_posix()}.")
+        if target_key == source_name_key and target_path.as_posix() != source_name_path.as_posix():
+            raise ValueError(f"Target sorgente non canonico: {target_path.as_posix()}.")
+        target_paths.append(target_path)
         metadata = {
             "type": asset_type,
-            "path": asset_rel.as_posix(),
             "target_path": target_path.as_posix(),
             "visibility": visibility,
             "description": str(file.get("description") or "File proposto dal docente o dall'assistente AI."),
         }
-        normalized.append((source_rel, drafts_dir / asset_rel, metadata))
+        normalized.append((source_rel, content, metadata))
 
-    for _, destination, _ in normalized:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-    for file, (_, destination, _) in zip(files, normalized):
-        destination.write_text(str(file.get("content", "")), encoding="utf-8", newline="\n")
-    return [metadata for _, _, metadata in normalized]
+    fingerprint = [
+        {"source": source.as_posix(), "content": content, **metadata}
+        for source, content, metadata in normalized
+    ]
+    bundle_id = hashlib.sha256(
+        json.dumps(fingerprint, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()[:32]
+    assets_root = drafts_dir / "assets"
+    bundle_parent = assets_root / create_activity.slugify(activity_id)
+    bundle_dir = bundle_parent / bundle_id
+    thebitlab_storage.ensure_directory_durable(bundle_parent, ROOT)
+    # Sync every level even on retries: a previous attempt may have created it
+    # and then failed before its directory entry became durable.
+    thebitlab_storage.sync_directory(drafts_dir.parent)
+    thebitlab_storage.sync_directory(drafts_dir)
+    thebitlab_storage.sync_directory(assets_root)
+    thebitlab_storage.sync_directory(bundle_parent)
+    staging_dir = Path(tempfile.mkdtemp(prefix=f".{bundle_id}.", dir=bundle_parent))
+    try:
+        for source, content, _ in normalized:
+            destination = staging_dir / source
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(content, encoding="utf-8", newline="\n")
+        sync_file_tree(staging_dir)
+        if bundle_dir.exists():
+            if immutable_bundle_snapshot(bundle_dir) != immutable_bundle_snapshot(staging_dir):
+                raise ValueError("Collisione o corruzione del bundle asset immutabile.")
+            shutil.rmtree(staging_dir)
+        else:
+            os.replace(staging_dir, bundle_dir)
+        # Required in both branches: an earlier post-rename fsync may have failed.
+        thebitlab_storage.sync_directory(bundle_parent)
+    finally:
+        if staging_dir.exists():
+            shutil.rmtree(staging_dir)
+
+    return [
+        {
+            **metadata,
+            "path": (Path("assets") / create_activity.slugify(activity_id) / bundle_id / source).as_posix(),
+        }
+        for source, _, metadata in normalized
+    ]
+
+
+def save_activity_with_proposed_files(
+    *,
+    activity_id: str,
+    source_name: str,
+    activity: dict,
+    files: Any,
+    overwrite: bool,
+    storage: thebitlab_storage.JsonAssignmentStorage,
+) -> dict:
+    """Publish an immutable bundle before atomically replacing its activity JSON."""
+
+    drafts_dir = storage.activity_drafts_dir()
+    assets_dir = drafts_dir / "assets" / create_activity.slugify(activity_id)
+    if assets_dir.is_symlink() or (assets_dir.exists() and not assets_dir.is_dir()):
+        raise ValueError("Directory asset dell'activity non valida.")
+    activity["assets"] = persist_activity_draft_files(
+        activity_id=activity_id,
+        source_name=source_name,
+        files=files,
+        drafts_dir=drafts_dir,
+    )
+    # A failure with an uncertain JSON commit deliberately leaves the immutable
+    # bundle behind: an orphan is safe, deleting a possibly referenced bundle is not.
+    return assignment_service().save_activity(activity, overwrite)
+
+
+def validate_preserved_activity_assets(activity: dict, activity_path: Path) -> None:
+    """Validate every retained asset against updated scaffold metadata."""
+
+    normalized = create_submission_scaffold.validate_activity_contract_or_raise(
+        activity,
+        str(activity.get("id", "")),
+    )
+    language = create_submission_scaffold.language_for(normalized)
+    source_name = create_submission_scaffold.validate_source_name(
+        str(normalized.get("source_name", ""))
+        or create_submission_scaffold.default_source_name_for(language)
+    )
+    source_name_path = Path(source_name)
+    source_name_key = create_submission_scaffold.portable_path_key(source_name_path)
+    source_paths: list[Path] = []
+    target_paths: list[Path] = []
+    bundle_ids: set[str] = set()
+    bundle_modes: set[str] = set()
+    fingerprint: list[dict[str, str]] = []
+    activity_root = activity_path.parent.resolve(strict=True)
+    for index, asset in enumerate(activity.get("assets", [])):
+        source = create_submission_scaffold.validate_relative_path(asset.get("path"), f"assets[{index}].path")
+        target = create_submission_scaffold.validate_relative_path(
+            asset.get("target_path", asset.get("path")),
+            f"assets[{index}].target_path",
+        )
+        if any(create_submission_scaffold.portable_paths_overlap(source, item) for item in source_paths):
+            raise ValueError("Asset preservato duplicato o sovrapposto.")
+        if any(create_submission_scaffold.portable_paths_overlap(target, item) for item in target_paths):
+            raise ValueError("Target preservato duplicato o sovrapposto.")
+        if create_submission_scaffold.is_reserved_scaffold_target(target):
+            raise ValueError(f"Target asset riservato allo scaffold: {target.as_posix()}.")
+        target_key = create_submission_scaffold.portable_path_key(target)
+        if target_key != source_name_key and create_submission_scaffold.portable_paths_overlap(
+            target,
+            source_name_path,
+        ):
+            raise ValueError(f"Target asset sovrapposto al file sorgente: {target.as_posix()}.")
+        if target_key == source_name_key and target.as_posix() != source_name_path.as_posix():
+            raise ValueError(f"Target sorgente non canonico: {target.as_posix()}.")
+        source_file = activity_root
+        for part in source.parts:
+            try:
+                names = {entry.name for entry in source_file.iterdir()}
+            except OSError as error:
+                raise ValueError(f"Asset preservato non trovato: {source.as_posix()}.") from error
+            part_key = create_submission_scaffold.portable_path_key(Path(part))
+            matches = [
+                name
+                for name in names
+                if create_submission_scaffold.portable_path_key(Path(name)) == part_key
+            ]
+            if (
+                len(matches) != 1
+                or unicodedata.normalize("NFC", matches[0]) != part
+            ):
+                raise ValueError(f"Asset preservato non portabile o mancante: {source.as_posix()}.")
+            source_file /= matches[0]
+            if source_file.is_symlink():
+                raise ValueError(f"Asset preservato non puo attraversare symlink: {source.as_posix()}.")
+        try:
+            source_file.resolve(strict=True).relative_to(activity_root)
+        except (FileNotFoundError, RuntimeError, ValueError) as error:
+            raise ValueError(f"Asset preservato fuori dalla activity: {source.as_posix()}.") from error
+        if not source_file.is_file():
+            raise ValueError(f"Asset preservato non trovato: {source.as_posix()}.")
+        source_parts = source.parts
+        expected_slug = create_activity.slugify(str(activity.get("id", "")))
+        if (
+            len(source_parts) < 3
+            or source_parts[0] != "assets"
+            or source_parts[1] != expected_slug
+            or source_file.stat().st_size > MAX_TEACHER_REQUEST_BYTES
+        ):
+            raise ValueError(f"Asset preservato fuori dalla directory canonica: {source.as_posix()}.")
+        immutable = len(source_parts) >= 4 and bool(re.fullmatch(r"[0-9a-f]{32}", source_parts[2]))
+        bundle_modes.add("immutable" if immutable else "legacy")
+        if len(bundle_modes) > 1:
+            raise ValueError("Asset preservati legacy e immutabili non possono essere combinati.")
+        if immutable:
+            try:
+                content = source_file.read_bytes().decode("utf-8")
+            except (OSError, UnicodeError) as error:
+                raise ValueError(f"Asset preservato non leggibile: {source.as_posix()}.") from error
+            bundle_ids.add(source_parts[2])
+            fingerprint.append(
+                {
+                    "source": Path(*source_parts[3:]).as_posix(),
+                    "content": content,
+                    "type": str(asset.get("type", "")),
+                    "target_path": target.as_posix(),
+                    "visibility": str(asset.get("visibility", "")),
+                    "description": str(asset.get("description", "")),
+                }
+            )
+        source_paths.append(source)
+        target_paths.append(target)
+    if bundle_modes == {"immutable"}:
+        expected_bundle_id = hashlib.sha256(
+            json.dumps(fingerprint, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:32]
+        if bundle_ids != {expected_bundle_id}:
+            raise ValueError("Bundle asset preservato alterato o non canonico.")
 
 
 def save_activity(payload: dict) -> dict:
     """Create and persist a teacher-authored activity draft."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _save_activity_locked(payload)
+
+
+def _save_activity_locked(payload: dict) -> dict:
+    """Persist one activity while the shared course/activity lock is held."""
+
     title = str(payload.get("title", "")).strip()
     activity_id = str(payload.get("id", "")).strip() or create_activity.slugify(title)
+    activity_id = create_submission_scaffold.activity_id({"id": activity_id})
+    if len(activity_id) > course_activity_links.MAX_ID_LENGTH:
+        raise ValueError(f"activity_id supera il limite di {course_activity_links.MAX_ID_LENGTH} caratteri.")
     topics = create_activity.parse_topics(str(payload.get("topics", "")))
     activity = create_activity.build_activity(
         activity_id=activity_id,
@@ -1498,21 +2424,45 @@ def save_activity(payload: dict) -> dict:
     )
     storage = assignment_service().storage
     overwrite = bool(payload.get("overwrite", False))
-    proposed_files = payload.get("files")
-    if proposed_files:
-        activity["assets"] = persist_activity_draft_files(
-            activity_id=activity_id,
-            files=proposed_files,
-            drafts_dir=storage.activity_drafts_dir(),
-        )
-    elif overwrite:
+    previous = {}
+    if overwrite:
         try:
             previous = storage.read_json(storage.safe_activity_draft_path(activity_id))
         except FileNotFoundError:
             previous = {}
+        previous_id = str(normalize_activity(previous).get("id", "")) if previous else ""
+        if previous_id and previous_id != activity_id:
+            raise ValueError("L'overwrite non puo cambiare l'identita dell'activity esistente.")
+    proposed_files = payload.get("files")
+    clear_assets = payload.get("clear_assets", False)
+    if not isinstance(clear_assets, bool):
+        raise ValueError("clear_assets deve essere booleano.")
+    if proposed_files and clear_assets:
+        raise ValueError("clear_assets non puo essere combinato con files non vuoto.")
+    if proposed_files or clear_assets:
+        normalized_activity = normalize_activity(activity)
+        selected_language = create_submission_scaffold.language_for(
+            {"language": normalized_activity.get("language", "c") or "c"}
+        )
+        selected_source_name = str(normalized_activity.get("source_name", "")) or (
+            create_submission_scaffold.default_source_name_for(selected_language)
+        )
+        saved = save_activity_with_proposed_files(
+            activity_id=activity_id,
+            source_name=create_submission_scaffold.validate_source_name(selected_source_name),
+            activity=activity,
+            files=proposed_files if proposed_files is not None else [],
+            overwrite=overwrite,
+            storage=storage,
+        )
+    else:
         if isinstance(previous.get("assets"), list):
             activity["assets"] = previous["assets"]
-    saved = assignment_service().save_activity(activity, overwrite)
+            validate_preserved_activity_assets(
+                activity,
+                storage.safe_activity_draft_path(activity_id),
+            )
+        saved = assignment_service().save_activity(activity, overwrite)
     return {"ok": True, "activity": saved, "activities": list_activities()}
 
 
@@ -1752,6 +2702,13 @@ def validate_global_assignment_target_bindings(
 def save_assignment_record(payload: dict) -> dict:
     """Persist an explicit assignment record from the teacher dashboard."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _save_assignment_record_locked(payload)
+
+
+def _save_assignment_record_locked(payload: dict) -> dict:
+    """Persist one assignment while activity deletion is excluded."""
+
     activity_path_value = str(payload.get("activity_path", "")).strip()
     activity_path = resolve_local_path(activity_path_value, "activity_path")
     if not activity_path.is_file():
@@ -1855,9 +2812,21 @@ def preview_activity_ai_codex_draft(payload: dict) -> dict:
 def distribute_activity_assignment(payload: dict) -> dict:
     """Create activity scaffolds in the selected local target repositories."""
 
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _distribute_activity_assignment_locked(payload)
+
+
+def _distribute_activity_assignment_locked(payload: dict) -> dict:
+    """Distribute one stable activity snapshot while writes/deletion are excluded."""
+
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
     if not activity_path.is_file():
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    if activity_path.parent == (ROOT / "activities" / "drafts").resolve(strict=False):
+        validate_preserved_activity_assets(
+            assignment_storage().read_json(activity_path),
+            activity_path,
+        )
     targets = read_assignment_target_paths_from_text(str(payload.get("targets_text", "")))
     results = assign_activity.assign_activity_to_targets(
         activity_path=activity_path,
@@ -1891,6 +2860,13 @@ def distribute_activity_assignment(payload: dict) -> dict:
 
 def generate_assignment_report(payload: dict) -> dict:
     """Generate and persist an assignment tracking report from the local GUI."""
+
+    with thebitlab_storage.course_storage_lock(ROOT):
+        return _generate_assignment_report_locked(payload)
+
+
+def _generate_assignment_report_locked(payload: dict) -> dict:
+    """Persist one report while activity deletion is excluded."""
 
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
     if not activity_path.is_file():
@@ -1949,6 +2925,21 @@ def write_school_calendar(name: str, payload: dict) -> dict:
     """Persist a named school calendar in the calendars folder."""
 
     return course_service().write_school_calendar(name, payload)
+
+
+def write_school_calendar_cas(name: object, payload: object, expected_revision: object) -> dict:
+    """Persist a calendar only at its expected revision."""
+
+    if not isinstance(name, str):
+        raise ValueError("name deve essere una stringa.")
+    if not isinstance(payload, dict):
+        raise ValueError("calendar deve essere un oggetto.")
+    if not isinstance(expected_revision, str) or len(expected_revision) not in {0, 64}:
+        raise ValueError("expected_revision non valida.")
+    calendar, saved, revision = course_service().write_school_calendar_cas(
+        name, payload, expected_revision
+    )
+    return {"calendar": calendar, "saved": saved, "revision": revision}
 
 
 def read_secret_env() -> dict[str, str]:
@@ -2052,26 +3043,19 @@ def default_ai_provider_config() -> dict:
 
 def extract_headings(
     design: dict | None = None,
-    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+    source_files: tuple[course_source_catalog.CourseMarkdownSourceFile, ...] | None = None,
 ) -> list[dict]:
     """Extract headings from configured Markdown sources."""
 
     selected_design = read_design() if design is None else design
     headings: list[dict] = []
     selected_files = (
-        course_source_catalog.local_markdown_source_files(
-            selected_design,
-            ROOT,
-            default_files=DEFAULT_SOURCES,
-        )
+        course_markdown_source_files(selected_design)
         if source_files is None
         else source_files
     )
     for source_file in selected_files:
-        source_text = course_source_catalog.read_local_markdown_text(
-            source_file,
-            ROOT,
-        )
+        source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
         source_headings = headings_from_source_snapshot(source_file, source_text)
         if len(headings) + len(source_headings) > MAX_TOTAL_HEADINGS:
             raise course_source_catalog.CourseSourceCatalogError(
@@ -2093,7 +3077,7 @@ def iter_markdown_lines(source_text: str):
 
 
 def headings_from_source_snapshot(
-    source_file: course_source_catalog.LocalCourseSourceFile,
+    source_file: course_source_catalog.CourseMarkdownSourceFile,
     source_text: str,
 ) -> list[dict]:
     """Extract bounded public heading metadata from one verified source snapshot."""
@@ -2127,6 +3111,8 @@ def headings_from_source_snapshot(
             raise course_source_catalog.CourseSourceCatalogError(
                 f"La fonte {source} contiene troppi heading Markdown."
             )
+        resolved_ref = getattr(source_file, "resolved_ref", None)
+        source_url = markdown_source_url(source_file, anchor)
         headings.append(
             {
                 "id": heading_id,
@@ -2136,30 +3122,60 @@ def headings_from_source_snapshot(
                 "source_provider": descriptor.provider,
                 "source_repository": descriptor.repository,
                 "source_ref": descriptor.ref,
+                "source_commit": resolved_ref,
                 "level": len(match.group(1)),
                 "title": TAG_RE.sub("", title).strip(),
+                "_identity_title": title,
                 "anchor": anchor,
-                "href": f"../{source}#{anchor}",
-                "github_url": github_blob_url(source, anchor),
+                "href": source_url if descriptor.provider in {"github", "gitlab"} else f"../{source}#{anchor}",
+                "source_url": source_url,
+                "github_url": source_url,
                 "line": lineno,
             }
         )
+    source_lines = source_text.splitlines()
+    end_lines = [len(source_lines) + 1] * len(headings)
+    open_headings: list[int] = []
+    for index, heading in enumerate(headings):
+        while (
+            open_headings
+            and heading["level"] <= headings[open_headings[-1]]["level"]
+        ):
+            end_lines[open_headings.pop()] = heading["line"]
+        open_headings.append(index)
+    for index, heading in enumerate(headings):
+        section = "\n".join(
+            source_lines[heading["line"] : end_lines[index] - 1]
+        ).strip()
+        identity_title = heading.pop("_identity_title")
+        identity_text = (
+            f"{heading['level']}\0{identity_title}\0{section}"
+        )
+        heading["content_sha256"] = hashlib.sha256(
+            identity_text.encode("utf-8")
+        ).hexdigest()
     return headings
 
 
-def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] | None:
-    """Return heading metadata and section from one bounded source read."""
+class CourseSourceRevisionConflictError(ValueError):
+    """Raised when a preview no longer matches its saved remote commit."""
 
-    total_headings = 0
-    for source_file in course_source_catalog.local_markdown_source_files(
-        design,
-        ROOT,
-        default_files=DEFAULT_SOURCES,
-    ):
-        source_text = course_source_catalog.read_local_markdown_text(
-            source_file,
-            ROOT,
+
+def heading_content_snapshot(
+    design: dict,
+    heading_id: str,
+    expected_source_commit: str = "",
+    expected_content_sha256: str = "",
+) -> tuple[dict, str] | None:
+    """Return heading content only when immutable provenance still matches."""
+
+    if re.fullmatch(r"[0-9a-f]{64}", expected_content_sha256) is None:
+        raise CourseSourceRevisionConflictError(
+            "Digest del paragrafo mancante o non valido: riallinealo prima della preview."
         )
+    total_headings = 0
+    for source_file in course_markdown_source_files(design):
+        source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
         source_headings = headings_from_source_snapshot(source_file, source_text)
         total_headings += len(source_headings)
         if total_headings > MAX_TOTAL_HEADINGS:
@@ -2168,6 +3184,20 @@ def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] 
             )
         for heading in source_headings:
             if heading["id"] == heading_id:
+                if (
+                    expected_source_commit
+                    or heading.get("source_provider") != "local"
+                ) and heading.get("source_commit") != expected_source_commit:
+                    raise CourseSourceRevisionConflictError(
+                        "La fonte remota è cambiata: riallinea il paragrafo prima della preview."
+                    )
+                if (
+                    expected_content_sha256
+                    and heading.get("content_sha256") != expected_content_sha256
+                ):
+                    raise CourseSourceRevisionConflictError(
+                        "Il contenuto del paragrafo è cambiato: riallinealo prima della preview."
+                    )
                 return heading, section_text_from_source(
                     source_text,
                     heading["line"],
@@ -2177,11 +3207,58 @@ def heading_content_snapshot(design: dict, heading_id: str) -> tuple[dict, str] 
     return None
 
 
-def github_blob_url(source: str, anchor: str = "") -> str:
-    """Return a GitHub URL for a source file and optional anchor."""
+def markdown_source_url(
+    source_file: course_source_catalog.CourseMarkdownSourceFile,
+    anchor: str = "",
+) -> str:
+    """Return an immutable provider URL when available."""
 
-    base = f"https://github.com/TheBitPoets/2cornot2c/blob/main/{source}"
-    return f"{base}#{anchor}" if anchor else base
+    descriptor = source_file.source
+    if descriptor.provider == "github":
+        resolved_ref = getattr(source_file, "resolved_ref", None)
+        if descriptor.repository is None or resolved_ref is None:
+            return ""
+        encoded_repository = "/".join(
+            urllib.parse.quote(part, safe="")
+            for part in descriptor.repository.split("/")
+        )
+        encoded_source = "/".join(
+            urllib.parse.quote(part, safe="")
+            for part in source_file.relative_path.split("/")
+        )
+        base = f"https://github.com/{encoded_repository}/blob/{resolved_ref}/{encoded_source}"
+    elif descriptor.provider == "gitlab":
+        resolved_ref = getattr(source_file, "resolved_ref", None)
+        if descriptor.repository is None or resolved_ref is None:
+            return ""
+        encoded_repository = "/".join(
+            urllib.parse.quote(part, safe="")
+            for part in descriptor.repository.split("/")
+        )
+        encoded_source = "/".join(
+            urllib.parse.quote(part, safe="")
+            for part in source_file.relative_path.split("/")
+        )
+        base = f"https://gitlab.com/{encoded_repository}/-/blob/{resolved_ref}/{encoded_source}"
+    else:
+        base = (
+            "https://github.com/TheBitPoets/2cornot2c/blob/main/"
+            + "/".join(
+                urllib.parse.quote(part, safe="")
+                for part in source_file.relative_path.split("/")
+            )
+        )
+    return f"{base}#{urllib.parse.quote(anchor, safe='-')}" if anchor else base
+
+
+def github_blob_url(source: str, anchor: str = "") -> str:
+    """Return the legacy local-repository GitHub URL."""
+
+    encoded_source = "/".join(
+        urllib.parse.quote(part, safe="") for part in source.split("/")
+    )
+    base = f"https://github.com/TheBitPoets/2cornot2c/blob/main/{encoded_source}"
+    return f"{base}#{urllib.parse.quote(anchor, safe='-')}" if anchor else base
 
 
 def section_text(
@@ -2190,9 +3267,12 @@ def section_text(
     level: int | str,
     design: dict | None = None,
     source_snapshots: dict[str, str] | None = None,
-    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+    source_files: tuple[course_source_catalog.CourseMarkdownSourceFile, ...] | None = None,
     source_id: str = "",
     heading_id: str = "",
+    source_commit: str = "",
+    content_sha256: str = "",
+    expected_title: str = "",
 ) -> str:
     """Extract local Markdown text for one heading section."""
 
@@ -2203,11 +3283,7 @@ def section_text(
         return ""
     selected_design = read_design() if design is None else design
     selected_files = (
-        course_source_catalog.local_markdown_source_files(
-            selected_design,
-            ROOT,
-            default_files=DEFAULT_SOURCES,
-        )
+        course_markdown_source_files(selected_design)
         if source_files is None
         else source_files
     )
@@ -2225,14 +3301,25 @@ def section_text(
         None,
     )
     if source_file is None:
+        if content_sha256:
+            raise CourseSourceRevisionConflictError(
+                "La fonte del paragrafo non è disponibile: riattivala o riallinea l'item prima di usare l'AI."
+            )
+        return ""
+    resolved_ref = getattr(source_file, "resolved_ref", None)
+    if (
+        (source_commit or source_file.source.provider != "local")
+        and source_commit != resolved_ref
+    ):
+        if content_sha256:
+            raise CourseSourceRevisionConflictError(
+                "Il commit della fonte è cambiato: riallinea il paragrafo prima di usare l'AI."
+            )
         return ""
     snapshot_key = f"{source_id}\0{source}"
     source_text = None if source_snapshots is None else source_snapshots.get(snapshot_key)
     if source_text is None:
-        source_text = course_source_catalog.read_local_markdown_text(
-            source_file,
-            ROOT,
-        )
+        source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
         if source_snapshots is not None:
             source_snapshots[snapshot_key] = source_text
     if heading_id:
@@ -2249,7 +3336,22 @@ def section_text(
             or matching_heading["line"] != start_line
             or matching_heading["level"] != start_level
         ):
+            if content_sha256:
+                raise CourseSourceRevisionConflictError(
+                    "Il paragrafo è stato rinominato, rimosso o spostato: riallinealo prima di usare l'AI."
+                )
             return ""
+        if expected_title and matching_heading.get("title") != expected_title:
+            raise CourseSourceRevisionConflictError(
+                "Il titolo del paragrafo è cambiato: riallinealo prima di usare l'AI."
+            )
+        if (
+            content_sha256
+            and matching_heading.get("content_sha256") != content_sha256
+        ):
+            raise CourseSourceRevisionConflictError(
+                "Il contenuto del paragrafo è cambiato: riallinealo prima di usare l'AI."
+            )
     return section_text_from_source(source_text, start_line, start_level)
 
 
@@ -2307,15 +3409,8 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
     selected_design = read_design() if design is None else design
     catalog_headings: list[dict] = []
     total_excerpt_chars = 0
-    for source_file in course_source_catalog.local_markdown_source_files(
-        selected_design,
-        ROOT,
-        default_files=DEFAULT_SOURCES,
-    ):
-        source_text = course_source_catalog.read_local_markdown_text(
-            source_file,
-            ROOT,
-        )
+    for source_file in course_markdown_source_files(selected_design):
+        source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
         source_headings = headings_from_source_snapshot(source_file, source_text)
         if len(catalog_headings) + len(source_headings) > MAX_AI_CATALOG_HEADINGS:
             raise course_source_catalog.CourseSourceCatalogError(
@@ -2346,9 +3441,10 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
     stack: list[dict] = []
     previous_source = None
     for heading in catalog_headings:
-        if heading["source"] != previous_source:
+        source_key = (heading.get("source_id", ""), heading["source"])
+        if source_key != previous_source:
             stack.clear()
-            previous_source = heading["source"]
+            previous_source = source_key
         node = {
             "id": heading["id"],
             "title": heading["title"],
@@ -2358,6 +3454,8 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
             "source_provider": heading.get("source_provider", "local"),
             "source_repository": heading.get("source_repository"),
             "source_ref": heading.get("source_ref"),
+            "source_commit": heading.get("source_commit"),
+            "content_sha256": heading.get("content_sha256"),
             "level": heading["level"],
             "line": heading["line"],
             "anchor": heading["anchor"],
@@ -2392,7 +3490,7 @@ def topic_summary(
     child_text_budget: int = 0,
     design: dict | None = None,
     source_snapshots: dict[str, str] | None = None,
-    source_files: tuple[course_source_catalog.LocalCourseSourceFile, ...] | None = None,
+    source_files: tuple[course_source_catalog.CourseMarkdownSourceFile, ...] | None = None,
 ) -> dict:
     """Return a compact recursive topic summary for the AI prompt."""
 
@@ -2404,9 +3502,20 @@ def topic_summary(
         "source_provider": item.get("source_provider", "local"),
         "source_repository": item.get("source_repository"),
         "source_ref": item.get("source_ref"),
+        "source_commit": item.get("source_commit"),
+        "content_sha256": item.get("content_sha256"),
         "level": item.get("level", ""),
         "href": item.get("href", ""),
-        "github_url": github_blob_url(item.get("source", ""), anchor),
+        "source_url": (
+            item.get("href", "")
+            if item.get("source_provider") in {"github", "gitlab"}
+            else github_blob_url(item.get("source", ""), anchor)
+        ),
+        "github_url": (
+            item.get("href", "")
+            if item.get("source_provider") in {"github", "gitlab"}
+            else github_blob_url(item.get("source", ""), anchor)
+        ),
         "children": [
             topic_summary(
                 child,
@@ -2419,6 +3528,10 @@ def topic_summary(
         ],
     }
     if include_text:
+        if not item.get("content_sha256"):
+            raise CourseSourceRevisionConflictError(
+                "Il paragrafo non ha una provenienza verificabile: riallinealo prima di usare l'AI."
+            )
         summary["text"] = section_text(
             item.get("source", ""),
             item.get("line", ""),
@@ -2428,6 +3541,9 @@ def topic_summary(
             source_files,
             str(item.get("source_id", "")),
             str(item.get("id", "")),
+            str(item.get("source_commit") or ""),
+            str(item.get("content_sha256", "")),
+            str(item.get("title", "")),
         )
     return summary
 
@@ -2449,7 +3565,11 @@ def item_from_heading_id(heading_id: str, headings: list[dict]) -> dict | None:
     roots: list[dict] = []
     stack: list[dict] = [{"level": heading["level"], "children": roots}]
     for child in headings[index + 1:]:
-        if child["source"] != heading["source"] or child["level"] <= heading["level"]:
+        if (
+            child["source"] != heading["source"]
+            or child.get("source_id", "") != heading.get("source_id", "")
+            or child["level"] <= heading["level"]
+        ):
             break
         child_item = board_item_from_heading(child)
         child_item["children"] = []
@@ -2475,6 +3595,8 @@ def board_item_from_heading(heading: dict) -> dict:
         "source_provider": heading.get("source_provider", "local"),
         "source_repository": heading.get("source_repository"),
         "source_ref": heading.get("source_ref"),
+        "source_commit": heading.get("source_commit"),
+        "content_sha256": heading.get("content_sha256"),
         "href": heading["href"],
         "level": heading["level"],
         "line": heading["line"],
@@ -2482,9 +3604,38 @@ def board_item_from_heading(heading: dict) -> dict:
     }
 
 
-def compact_design(design: dict) -> dict:
+def validate_course_item_provenance(design: dict) -> None:
+    """Reject board items whose immutable heading provenance is incomplete or stale."""
+
+    headings = {heading["id"]: heading for heading in extract_headings(design)}
+    keys = (
+        "title", "source", "source_id", "source_provider", "source_repository",
+        "source_ref", "source_commit", "content_sha256", "level", "line", "href",
+    )
+
+    def validate(items: list[dict]) -> None:
+        for item in items:
+            heading = headings.get(str(item.get("id", "")))
+            if not item.get("content_sha256") or heading is None:
+                raise CourseSourceRevisionConflictError(
+                    "Un paragrafo del corso non ha una provenienza verificabile: riallinealo prima di usare l'AI."
+                )
+            if any(item.get(key) != heading.get(key) for key in keys):
+                raise CourseSourceRevisionConflictError(
+                    "Un paragrafo del corso non coincide più con la fonte: riallinealo prima di usare l'AI."
+                )
+            validate(item.get("children", []))
+
+    for year in design.get("years", []):
+        for uda in year.get("udas", []):
+            validate(uda.get("items", []))
+
+
+def compact_design(design: dict, *, verify_provenance: bool = False) -> dict:
     """Return the full course structure without verbose frame text."""
 
+    if verify_provenance:
+        validate_course_item_provenance(design)
     return {
         "years": [
             {
@@ -2522,11 +3673,7 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
             found = find_item_context(uda.get("items", []), item_id)
             if found:
                 index, siblings, item = found
-                source_files = course_source_catalog.local_markdown_source_files(
-                    design,
-                    ROOT,
-                    default_files=DEFAULT_SOURCES,
-                )
+                source_files = course_markdown_source_files(design)
                 source_snapshots: dict[str, str] = {}
                 previous_topics = siblings[max(0, index - 2):index]
                 next_topics = siblings[index + 1:index + 3]
@@ -4211,10 +5358,36 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.scheme or parsed.netloc or parsed.params:
             self.write_oidc_transport_error(400, "bad_auth_request")
             return True
+        body = b""
         try:
             edge = thebitlab_google_oidc_http.EdgeRequestMetadata(
                 str(self.client_address[0]), tuple(self.headers.raw_items())
             )
+            if routes.expects_body(parsed.path) and self.command != "POST":
+                self.close_connection = True
+            if routes.expects_body(parsed.path) and self.command == "POST":
+                lengths = [
+                    value.strip()
+                    for name, value in edge.headers
+                    if name.lower() == "content-length"
+                ]
+                transfers = [
+                    value
+                    for name, value in edge.headers
+                    if name.lower() == "transfer-encoding"
+                ]
+                if (
+                    transfers
+                    or len(lengths) != 1
+                    or not lengths[0].isdigit()
+                    or not 1 <= int(lengths[0]) <= 4096
+                ):
+                    raise ValueError("admin body framing")
+                body = self._read_body_with_deadline(
+                    int(lengths[0]), PAIRING_BODY_DEADLINE_SECONDS
+                )
+                if body is None:
+                    raise ValueError("admin body timeout")
             raw_query = parsed.query
             if parsed.fragment:
                 raw_query += "#" + parsed.fragment
@@ -4224,11 +5397,13 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 raw_query,
                 edge,
                 is_tls=isinstance(self.connection, ssl.SSLSocket),
+                body=body,
             )
         except (
             ValueError,
             thebitlab_google_oidc_http.EdgeClientAttributionError,
         ):
+            self.close_connection = True
             self.write_oidc_transport_error(400, "bad_auth_request")
             return True
         try:
@@ -4242,6 +5417,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             edge = None
             request = None
             raw_query = None
+            body = None
+            lengths = None
+            transfers = None
         self.write_session_http_response(response)
         return True
 
@@ -4534,11 +5712,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-source-context":
             try:
                 design = source_request_design(parsed.query)
-                source_files = course_source_catalog.local_markdown_source_files(
-                    design,
-                    ROOT,
-                    default_files=DEFAULT_SOURCES,
-                )
+                source_files = course_markdown_source_files(design)
                 catalog = course_source_catalog.course_source_catalog_payload(
                     design,
                     ROOT,
@@ -4548,10 +5722,14 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_json(
                     {
                         "design": design,
+                        "revision": course_design_revision(design),
+                        "editable_revision": course_design_editable_revision(design),
                         "headings": extract_headings(design, source_files),
                         "sources": catalog["sources"],
                     }
                 )
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
             except (ValueError, FileNotFoundError):
@@ -4560,13 +5738,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-sources":
             try:
                 design = source_request_design(parsed.query)
+                source_files = course_markdown_source_files(design)
                 self.write_json(
                     course_source_catalog.course_source_catalog_payload(
                         design,
                         ROOT,
                         default_files=DEFAULT_SOURCES,
+                        local_files=source_files,
                     )
                 )
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
             except (ValueError, FileNotFoundError):
@@ -4576,6 +5758,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 design = source_request_design(parsed.query)
                 self.write_json({"headings": extract_headings(design)})
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
             except (ValueError, FileNotFoundError):
@@ -4584,9 +5768,22 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/heading-content":
             query = parse_qs(parsed.query)
             heading_id = query.get("id", [""])[0]
+            expected_source_commit = query.get("source_commit", [""])[0]
+            expected_content_sha256 = query.get("content_sha256", [""])[0]
             try:
                 design = source_request_design(parsed.query)
-                snapshot = heading_content_snapshot(design, heading_id)
+                snapshot = heading_content_snapshot(
+                    design,
+                    heading_id,
+                    expected_source_commit,
+                    expected_content_sha256,
+                )
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
+                return
+            except CourseSourceRevisionConflictError as error:
+                self.write_error_json(409, str(error))
+                return
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
                 return
@@ -4601,6 +5798,12 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/course-design":
             self.write_json(read_design())
+            return
+        if parsed.path == "/api/course-calendar-context":
+            try:
+                self.write_json(course_calendar_context(parsed.query))
+            except (ValueError, FileNotFoundError):
+                self.write_error_json(404, "Progetto didattico non trovato o non valido.")
             return
         if parsed.path == "/api/saved-designs":
             self.write_json({"designs": list_saved_designs()})
@@ -4633,6 +5836,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/activities":
             self.write_json({"activities": list_activities()})
+            return
+        if parsed.path == "/api/course-linkable-activities":
+            self.write_json({"activities": list_course_linkable_activities()})
             return
         if parsed.path == "/api/ai-config":
             self.write_json(ai_config())
@@ -4720,6 +5926,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         payload = self.read_teacher_json()
         if payload is None:
             return
+        if parsed.path == "/api/course-sources/preview":
+            try:
+                self.write_json(preview_course_sources(payload.get("design")))
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+            except ValueError as error:
+                self.write_error_json(400, str(error))
+            return
         if parsed.path == "/api/heading-content":
             heading_id = payload.get("id", "")
             design = payload.get("design")
@@ -4727,7 +5943,18 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_error_json(400, "Richiesta contenuto paragrafo non valida.")
                 return
             try:
-                snapshot = heading_content_snapshot(design, heading_id)
+                snapshot = heading_content_snapshot(
+                    design,
+                    heading_id,
+                    str(payload.get("source_commit") or ""),
+                    str(payload.get("content_sha256", "")),
+                )
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
+                return
+            except CourseSourceRevisionConflictError as error:
+                self.write_error_json(409, str(error))
+                return
             except course_source_catalog.CourseSourceCatalogError as error:
                 self.write_error_json(422, str(error))
                 return
@@ -4739,15 +5966,23 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/course-design":
             try:
-                write_design(payload)
-                self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
-            except course_source_catalog.CourseSourceCatalogError as error:
+                if not isinstance(payload.get("design"), dict):
+                    raise ValueError("Il salvataggio richiede design, expected_revision e preserve_actual.")
+                result = write_design_cas(
+                    payload["design"],
+                    payload.get("expected_revision"),
+                    payload.get("preserve_actual"),
+                )
+                self.write_json({"ok": True, **result})
+            except thebitlab_storage.RevisionConflictError as error:
+                self.write_error_json(409, str(error))
+            except (course_source_catalog.CourseSourceCatalogError, ValueError) as error:
                 self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/course-plan-md":
             try:
                 self.write_json(generate_course_plan_md(payload.get("design", payload)))
-            except course_source_catalog.CourseSourceCatalogError as error:
+            except (course_source_catalog.CourseSourceCatalogError, ValueError) as error:
                 self.write_error_json(400, str(error))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
@@ -4766,7 +6001,12 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/saved-designs/load":
             try:
-                self.write_json({"design": read_saved_design(payload.get("name", ""))})
+                design = read_saved_design(payload.get("name", ""))
+                self.write_json({
+                    "design": design,
+                    "revision": course_design_revision(design),
+                    "editable_revision": course_design_editable_revision(design),
+                })
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -4775,14 +6015,31 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/saved-designs/save":
             try:
-                saved = write_saved_design(
-                    payload.get("name", ""),
-                    payload.get("design", {}),
-                    overwrite=payload.get("overwrite") is True,
-                )
-                self.write_json({"ok": True, "saved": saved, "designs": list_saved_designs()})
-            except FileExistsError:
-                self.write_error_json(409, "Esiste già un progetto con questo nome.")
+                if payload.get("overwrite") is True:
+                    result = write_saved_design_cas(
+                        payload.get("name", ""),
+                        payload.get("design", {}),
+                        payload.get("expected_revision"),
+                        payload.get("preserve_actual"),
+                    )
+                    self.write_json({"ok": True, **result, "designs": list_saved_designs()})
+                else:
+                    saved = write_saved_design(
+                        payload.get("name", ""),
+                        payload.get("design", {}),
+                        overwrite=payload.get("overwrite") is True,
+                    )
+                    saved_design = payload.get("design", {})
+                    self.write_json({
+                        "ok": True,
+                        "saved": saved,
+                        "design": saved_design,
+                        "revision": course_design_revision(saved_design),
+                        "editable_revision": course_design_editable_revision(saved_design),
+                        "designs": list_saved_designs(),
+                    })
+            except (FileExistsError, thebitlab_storage.RevisionConflictError) as error:
+                self.write_error_json(409, str(error) or "Esiste già un progetto con questo nome.")
             except Exception as error:  # noqa: BLE001
                 self.write_error_json(400, str(error))
             return
@@ -4801,7 +6058,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/school-calendars/load":
             try:
-                self.write_json({"calendar": read_school_calendar(payload.get("name", ""))})
+                calendar = read_school_calendar(payload.get("name", ""))
+                self.write_json({"calendar": calendar, "revision": course_design_revision(calendar)})
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -4970,15 +6228,33 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
             return
+        if parsed.path == "/api/course-uda-actual":
+            try:
+                result = update_course_uda_actual(
+                    payload.get("name", ""),
+                    payload.get("year_id"),
+                    payload.get("uda_id"),
+                    payload.get("actual"),
+                    payload.get("expected_actual_revision"),
+                )
+                self.write_json({"ok": True, **result})
+            except thebitlab_storage.RevisionConflictError as error:
+                self.write_error_json(409, str(error))
+            except (FileNotFoundError, ValueError) as error:
+                self.write_error_json(400, str(error))
+            return
         if parsed.path == "/api/school-calendars/save":
             try:
-                saved = write_school_calendar(payload.get("name", ""), payload.get("calendar", {}))
-                self.write_json({"ok": True, "saved": saved, "calendars": list_school_calendars()})
+                result = write_school_calendar_cas(
+                    payload.get("name", ""),
+                    payload.get("calendar", {}),
+                    payload.get("expected_revision"),
+                )
+                self.write_json({"ok": True, **result, "calendars": list_school_calendars()})
+            except thebitlab_storage.RevisionConflictError as error:
+                self.write_error_json(409, str(error))
             except Exception as error:  # noqa: BLE001
-                self.send_response(400)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+                self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/ai-config":
             try:
@@ -4992,7 +6268,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/ai-frame":
             try:
                 context = {
-                    "course": compact_design(payload.get("design", {})),
+                    "course": compact_design(payload.get("design", {}), verify_provenance=True),
                     "target": target_context(
                         payload.get("design", {}),
                         payload.get("year_id", ""),
@@ -5001,6 +6277,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     ),
                 }
                 self.write_json({"frame": call_ai_didactic_frame(context)})
+            except CourseSourceRevisionConflictError as error:
+                self.write_error_json(409, str(error))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -5033,7 +6311,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     "selection_objectives": brief.get("description", ""),
                     "selection_rule": "Usa selection_objectives come criterio principale per scegliere quali paragrafi e sottoparagrafi inserire nelle UDA.",
                     "target_year_id": year_id,
-                    "current_course": compact_design(design),
+                    "current_course": compact_design(design, verify_provenance=True),
                     "available_topics": available_topics,
                     "constraints": {
                         "use_only_available_topic_ids": True,
@@ -5112,6 +6390,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
+    global GITHUB_MARKDOWN_TOKEN_FILE
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -5130,6 +6410,11 @@ def main() -> int:
         action="store_true",
         help="Abilita Google OIDC usando la configurazione sicura da environment.",
     )
+    parser.add_argument(
+        "--enable-github-app-token-runtime",
+        action="store_true",
+        help="Genera e rinnova il token GitHub App dalla configurazione esterna protetta.",
+    )
     args = parser.parse_args()
     teacher_token_is_configured = bool(os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip())
     try:
@@ -5143,8 +6428,18 @@ def main() -> int:
     except RuntimeError as error:
         parser.error(str(error))
     server = None
+    github_token_runtime = None
     try:
         data_root = configure_data_root(args.root)
+        if args.enable_github_app_token_runtime:
+            try:
+                github_token_runtime = (
+                    github_app_token_runtime.GitHubAppTokenRuntime.from_config_path()
+                )
+                github_token_runtime.start()
+                GITHUB_MARKDOWN_TOKEN_FILE = str(github_token_runtime.config.token_file)
+            except github_app_token_runtime.GitHubAppRuntimeError as error:
+                parser.error(str(error))
         auth_runtime = None
         if args.enable_google_auth:
             try:
@@ -5174,6 +6469,11 @@ def main() -> int:
             if auth_runtime is not None
             else "Google OIDC: disabilitato."
         )
+        print(
+            "GitHub App fonti private: runtime attivo."
+            if github_token_runtime is not None
+            else "GitHub App fonti private: runtime disabilitato."
+        )
         print("Premi Ctrl+C per fermare il server.")
         try:
             server.serve_forever()
@@ -5182,6 +6482,8 @@ def main() -> int:
     finally:
         if server is not None:
             server.server_close()
+        if github_token_runtime is not None:
+            github_token_runtime.stop()
         data_root_lock.release()
     return 0
 
