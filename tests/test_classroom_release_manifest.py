@@ -138,6 +138,55 @@ def test_acceptance_import_uses_isolated_vagrantfile(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(os.name == "nt", reason="richiede Bash/Unix")
+def test_virtualbox_acceptance_recreates_one_failed_first_boot(
+    tmp_path: Path,
+) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    calls = tmp_path / "vagrant-calls.txt"
+    marker = tmp_path / "first-up-failed"
+    vagrant = fake_bin / "vagrant"
+    vagrant.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf '%s\\n' \"$*\" >> \"$VAGRANT_CALLS\"\n"
+        "if [ \"${1:-}\" = up ] && [ ! -e \"$VAGRANT_UP_MARKER\" ]; then\n"
+        "  : > \"$VAGRANT_UP_MARKER\"\n"
+        "  exit 1\n"
+        "fi\n",
+        encoding="utf-8",
+    )
+    vagrant.chmod(0o755)
+    box = tmp_path / "classroom.box"
+    box.write_bytes(b"box")
+
+    completed = subprocess.run(
+        (
+            "bash",
+            str(ROOT / "packer" / "acceptance" / "test-box.sh"),
+            "virtualbox",
+            str(box),
+        ),
+        cwd=ROOT,
+        env=os.environ
+        | {
+            "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            "VAGRANT_CALLS": str(calls),
+            "VAGRANT_UP_MARKER": str(marker),
+            "TMPDIR": str(tmp_path),
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    commands = calls.read_text(encoding="utf-8").splitlines()
+    assert commands.count("up --provider virtualbox") == 2
+    assert commands.count("destroy --force") == 2
+    assert "ricreo una volta" in completed.stderr
+
+
+@pytest.mark.skipif(os.name == "nt", reason="richiede Bash/Unix")
 def test_source_box_bootstrap_uses_isolated_vagrant_context(tmp_path: Path) -> None:
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()

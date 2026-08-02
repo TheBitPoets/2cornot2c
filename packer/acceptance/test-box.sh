@@ -37,7 +37,15 @@ test -f "$box_file"
 
 vagrant box add "$box_name" "$box_file" --provider "$provider" --force
 
-vagrant up --provider "$provider"
+if ! vagrant up --provider "$provider"; then
+  if [ "$provider" != "virtualbox" ]; then
+    exit 1
+  fi
+  echo "Primo boot VirtualBox non raggiungibile: ricreo una volta la VM." >&2
+  VAGRANT_DOTFILE_PATH="$dotfile_path" vagrant destroy --force
+  rm -rf -- "$dotfile_path"
+  vagrant up --provider "$provider"
+fi
 vagrant ssh -c '
   set -eu
   sudo /usr/local/bin/2cornot2c-health-check
