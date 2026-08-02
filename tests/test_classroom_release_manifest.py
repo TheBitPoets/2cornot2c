@@ -89,13 +89,15 @@ def test_acceptance_import_uses_isolated_vagrantfile(tmp_path: Path) -> None:
     vagrant.write_text(
         "#!/usr/bin/env bash\n"
         "printf '%s|%s|%s|%s|%s\\n' \"$PWD\" \"${CLASSROOM_BOX_NAME:-}\" "
-        "\"${CLASSROOM_REPO_ROOT:-}\" \"${VAGRANT_DOTFILE_PATH:-}\" \"$*\" "
+        "\"${CLASSROOM_ACCEPTANCE_SHARE:-}\" \"${VAGRANT_DOTFILE_PATH:-}\" \"$*\" "
         '>> \"$VAGRANT_CALLS\"\n',
         encoding="utf-8",
     )
     vagrant.chmod(0o755)
     box = tmp_path / "classroom.box"
     box.write_bytes(b"box")
+    shares = tmp_path / "shares"
+    shares.mkdir()
 
     completed = subprocess.run(
         (
@@ -108,6 +110,7 @@ def test_acceptance_import_uses_isolated_vagrantfile(tmp_path: Path) -> None:
         | {
             "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
             "VAGRANT_CALLS": str(calls),
+            "TMPDIR": str(shares),
         },
         check=False,
         capture_output=True,
@@ -116,16 +119,16 @@ def test_acceptance_import_uses_isolated_vagrantfile(tmp_path: Path) -> None:
 
     assert completed.returncode == 0, completed.stderr
     first_call = calls.read_text(encoding="utf-8").splitlines()[0].split("|")
-    assert first_call == [
-        str(ROOT / "packer" / "acceptance"),
-        "2cornot2c/acceptance-vmware_desktop",
-        str(ROOT),
-        ".vagrant-vmware_desktop",
-        (
-            "box add 2cornot2c/acceptance-vmware_desktop "
-            f"{box} --provider vmware_desktop --force"
-        ),
-    ]
+    assert first_call[0] == str(ROOT / "packer" / "acceptance")
+    assert first_call[1] == "2cornot2c/acceptance-vmware_desktop"
+    assert Path(first_call[2]).parent == shares
+    assert Path(first_call[2]).name.startswith("2cornot2c-acceptance-share.")
+    assert first_call[2] != str(ROOT)
+    assert first_call[3] == ".vagrant-vmware_desktop"
+    assert first_call[4] == (
+        "box add 2cornot2c/acceptance-vmware_desktop "
+        f"{box} --provider vmware_desktop --force"
+    )
 
 
 @pytest.mark.skipif(os.name == "nt", reason="richiede Bash/Unix")
