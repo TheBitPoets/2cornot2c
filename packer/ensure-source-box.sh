@@ -18,7 +18,9 @@ lock_file="$script_dir/source-boxes.lock.json"
 
 python_command=""
 for candidate in python3 python; do
-  if command -v "$candidate" >/dev/null 2>&1; then
+  if command -v "$candidate" >/dev/null 2>&1 &&
+     "$candidate" -c 'import sys; raise SystemExit(sys.version_info < (3, 10))' \
+       >/dev/null 2>&1; then
     python_command="$candidate"
     break
   fi
