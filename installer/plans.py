@@ -2,11 +2,26 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 import sys
 
 from installer.model import Check, Host, InstallPlan, Provider, Step
 from installer.student_dev import immutable_reference
 from installer.tool_versions import MINIMUM_TOOL_VERSIONS
+
+
+CLASSROOM_IMAGES_STATE = (
+    Path(__file__).resolve().parents[1] / "packer" / "classroom-images.state"
+)
+
+
+def classroom_images_active() -> bool:
+    """Enable mandatory Packer images only after the first release exists."""
+
+    try:
+        return CLASSROOM_IMAGES_STATE.read_text(encoding="utf-8").strip() == "active"
+    except OSError:
+        return False
 
 
 def _winget_ensure(package_id: str) -> tuple[str, ...]:
@@ -95,7 +110,10 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
     )
     checks = (resources, connectivity, *plan.checks)
     steps = plan.steps
-    if provider in {Provider.VMWARE, Provider.VIRTUALBOX}:
+    if (
+        provider in {Provider.VMWARE, Provider.VIRTUALBOX}
+        and classroom_images_active()
+    ):
         image_command = (
             sys.executable,
             "-m",

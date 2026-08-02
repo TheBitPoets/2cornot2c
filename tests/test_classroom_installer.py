@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from installer import plans
 from installer.diagnostics import CheckResult, run_check
 from installer.executor import execute_plan
 from installer.model import Check
@@ -12,6 +13,11 @@ from installer.resources import LOW_MEMORY_LIMIT_BYTES, order_by_recommendation
 from installer.student_dev import immutable_reference, load_lock
 
 
+@pytest.fixture(autouse=True)
+def active_classroom_images(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(plans, "classroom_images_active", lambda: True)
+
+
 def test_detects_supported_hosts() -> None:
     assert detect_host("Darwin", "arm64") is Host.MACOS_ARM64
     assert detect_host("Windows", "AMD64") is Host.WINDOWS_AMD64
@@ -20,6 +26,20 @@ def test_detects_supported_hosts() -> None:
 def test_rejects_unsupported_host() -> None:
     with pytest.raises(RuntimeError, match="Host non supportato"):
         detect_host("Linux", "x86_64")
+
+
+def test_pending_packer_release_keeps_vm_image_steps_dormant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(plans, "classroom_images_active", lambda: False)
+
+    windows = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
+    macos = install_plan(Host.MACOS_ARM64, Provider.VMWARE)
+
+    assert all(step.key != "classroom-image" for step in windows.steps)
+    assert all(step.key != "classroom-image" for step in macos.steps)
+    assert all(check.key != "classroom-image" for check in windows.checks)
+    assert all(check.key != "classroom-image" for check in macos.checks)
 
 
 def test_hosts_support_vm_and_lightweight_docker_paths() -> None:

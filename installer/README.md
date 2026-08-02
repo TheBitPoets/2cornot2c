@@ -195,17 +195,21 @@ Elimina dalla cache esclusivamente box con namespace `2cornot2c/`; non tocca
 altre VM, box Bento o software preesistente. Il comando diretto richiede la
 frase distinta `DISINSTALLA TUTTO`.
 
-La parte VM usa esclusivamente box Packer pubblicate dalla workflow
-`publish-classroom-boxes.yml`. L'installer scarica senza discovery API il
-manifest della release fissata nel codice (`classroom-v1.0.0`), seleziona la
-combinazione host/provider, verifica dimensione e SHA-256, importa la box e
-configura il progetto. Un aggiornamento delle immagini richiede una modifica
-revisionata di `CLASSROOM_RELEASE_VERSION`, evitando il limite API condiviso
-delle aule dietro NAT.
+La transizione è controllata da `packer/classroom-images.state`. Finché vale
+`pending`, l'installer mantiene il percorso Bento precedente e non propone
+ancora i passi immagine: questo consente di unire e avviare la workflow senza
+bloccare le installazioni se la prima build fisica fallisce. Dopo la
+pubblicazione e verifica di `classroom-v1.0.0`, una PR separata imposta lo stato
+ad `active`.
 
-Se la release o la combinazione richiesta non è disponibile, l'installazione
-si ferma con E25. Non viene più usata implicitamente la box Bento e non parte
-alcun provisioning desktop al primo avvio.
+Con stato `active`, la parte VM usa esclusivamente box Packer pubblicate dalla
+workflow `publish-classroom-boxes.yml`. L'installer scarica senza discovery API
+il manifest della release fissata nel codice, seleziona host/provider, verifica
+dimensione e SHA-256, importa la box e configura il progetto. Un aggiornamento
+delle immagini richiede una modifica revisionata di
+`CLASSROOM_RELEASE_VERSION`, evitando il limite API condiviso delle aule dietro
+NAT. Se la release o la combinazione richiesta non è disponibile,
+l'installazione si ferma con E25.
 
 `installer/vagrant_box.py` completa il flusso locale:
 
@@ -217,8 +221,9 @@ alcun provisioning desktop al primo avvio.
 Se il file in cache è invalido, il nuovo download viene verificato in un file temporaneo e sostituisce atomicamente la cache soltanto dopo checksum e dimensione corretti.
 
 Quando `.classroom-box` è presente, il `Vagrantfile` usa desktop, toolchain e
-Guest Tools già inclusi nella box Packer. Senza quel file si ferma. Il fallback
-Bento resta disponibile soltanto agli sviluppatori impostando esplicitamente
+Guest Tools già inclusi nella box Packer. Durante lo stato `pending`, senza quel
+file usa ancora Bento in modo transitorio. Dopo l'attivazione si ferma e Bento
+resta disponibile soltanto alla migrazione controllata tramite
 `CLASSROOM_ALLOW_LEGACY_PROVISIONING=1`.
 
 ## VM già esistente

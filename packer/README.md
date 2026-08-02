@@ -293,6 +293,12 @@ che ogni asset sia inferiore a 2 GiB, genera il manifest con dimensioni e
 SHA-256 e pubblica `classroom-v1.1.0`. Durante la build il runner passa da
 `Idle` ad `Active`; i log sono visibili aprendo il job.
 
+Per la prima release, lascia `packer/classroom-images.state` su `pending`
+durante merge e build. Solo dopo acceptance fisica, pubblicazione e prova di
+download di `classroom-v1.0.0`, apri una PR separata che imposti il file ad
+`active`: da quel momento installer e `Vagrantfile` diventano fail-closed sulle
+box Packer.
+
 ### 6. Verificare la release
 
 La release è completa soltanto se contiene:

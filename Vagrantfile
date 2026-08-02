@@ -4,17 +4,23 @@
 require "rbconfig"
 
 box_file = File.join(__dir__, ".classroom-box")
+image_state_file = File.join(__dir__, "packer", "classroom-images.state")
+packer_images_active = File.file?(image_state_file) &&
+  File.read(image_state_file, encoding: "UTF-8").strip == "active"
 box_name = ENV["CLASSROOM_BOX_NAME"]
 box_name = File.read(box_file, encoding: "UTF-8").strip if box_name.to_s.empty? && File.file?(box_file)
 if box_name.to_s.empty?
-  unless ENV["CLASSROOM_ALLOW_LEGACY_PROVISIONING"] == "1"
+  if packer_images_active && ENV["CLASSROOM_ALLOW_LEGACY_PROVISIONING"] != "1"
     raise <<~MESSAGE
       Box Packer 2cornot2c non configurata.
       Apri "Ambiente 2cornot2c" e scegli "Installa, completa o ripara".
-      Il provisioning Bento legacy è disabilitato per evitare installazioni lente
-      e non riproducibili. Solo per sviluppo puoi impostare
+      Il provisioning Bento legacy è disabilitato dopo l'attivazione delle
+      immagini Packer. Solo per migrazione controllata puoi impostare
       CLASSROOM_ALLOW_LEGACY_PROVISIONING=1.
     MESSAGE
+  end
+  unless packer_images_active
+    warn "Immagini Packer in attesa della prima release: uso Bento transitorio."
   end
   box_name = "bento/ubuntu-24.04"
 end
