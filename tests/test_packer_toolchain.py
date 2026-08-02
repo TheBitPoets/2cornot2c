@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 import zipfile
@@ -26,6 +27,13 @@ def plugin_archive(member: str = "packer-plugin-vagrant_v1.1.5_x5.0.exe") -> byt
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w") as archive:
         archive.writestr(member, b"verified plugin")
+    return output.getvalue()
+
+
+def packer_archive(member: str = "packer") -> bytes:
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as archive:
+        archive.writestr(member, b"verified packer")
     return output.getvalue()
 
 
@@ -57,6 +65,57 @@ def write_lock(path: Path, archive: bytes) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def test_locked_packer_installer_verifies_and_extracts_archive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = load_script("install_locked_packer", "install-locked-packer.py")
+    archive = packer_archive()
+    lock = tmp_path / "toolchain.lock.json"
+    lock.write_text(
+        json.dumps(
+            {
+                "packer_version": "1.16.0",
+                "packer_archives": {
+                    "darwin_arm64": hashlib.sha256(archive).hexdigest()
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(module, "LOCK", lock)
+    monkeypatch.setattr(module, "urlopen", lambda url, timeout: Response(archive))
+
+    binary = module.install("darwin_arm64", tmp_path / "bin")
+
+    assert binary.read_bytes() == b"verified packer"
+    if os.name != "nt":
+        assert binary.stat().st_mode & 0o700 == 0o700
+
+
+def test_locked_packer_installer_rejects_archive_traversal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = load_script("install_locked_packer_unsafe", "install-locked-packer.py")
+    archive = packer_archive("../packer")
+    lock = tmp_path / "toolchain.lock.json"
+    lock.write_text(
+        json.dumps(
+            {
+                "packer_version": "1.16.0",
+                "packer_archives": {
+                    "darwin_arm64": hashlib.sha256(archive).hexdigest()
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(module, "LOCK", lock)
+    monkeypatch.setattr(module, "urlopen", lambda url, timeout: Response(archive))
+
+    with pytest.raises(RuntimeError, match="non sicuro"):
+        module.install("darwin_arm64", tmp_path / "bin")
 
 
 def test_locked_plugin_installer_verifies_archive_before_install(

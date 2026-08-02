@@ -151,10 +151,17 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Configure isolated Vagrant home
+      - name: Configure isolated toolchain home
         run: |
-          printf 'VAGRANT_HOME=%s/2cornot2c-vagrant-%s-%s\n' \
-            "$RUNNER_TEMP" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+          isolated="$RUNNER_TEMP/2cornot2c-vagrant-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          printf 'VAGRANT_HOME=%s\n' "$isolated" >> "$GITHUB_ENV"
+          printf 'PACKER_BIN_DIR=%s/packer-bin\n' "$isolated" >> "$GITHUB_ENV"
+      - name: Install checksum-locked Packer
+        working-directory: packer
+        run: |
+          python3 install-locked-packer.py \
+            --platform darwin_arm64 --destination "$PACKER_BIN_DIR"
+          printf '%s\n' "$PACKER_BIN_DIR" >> "$GITHUB_PATH"
       - name: Install checksum-locked Packer plugin
         working-directory: packer
         run: python3 install-locked-plugin.py --platform darwin_arm64
