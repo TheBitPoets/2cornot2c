@@ -113,7 +113,7 @@ def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, 
     (tmp_path / "lessons" / "images").mkdir(parents=True)
     markdown = tmp_path / "lessons" / "intro.md"
     markdown.write_text(
-        "# Demo\n\n![Schema](images/schema.png)\n\n```md\n![Solo esempio](images/hidden.png)\n```\n",
+        "# Demo\n\n![Schema](images/schema.png)\n\n<div>```md\n![Solo esempio](images/hidden.png)\n```\n",
         encoding="utf-8",
     )
     image = b"\x89PNG\r\nverified"
@@ -178,19 +178,19 @@ def test_heading_asset_rejects_unsafe_or_non_image_paths(target) -> None:
         course_board_server.normalized_heading_asset_path("lessons/intro.md", target)
 
 
-def test_local_heading_asset_rechecks_final_open_handle_path(tmp_path, monkeypatch) -> None:
+def test_local_heading_asset_rechecks_exact_final_open_handle_path(tmp_path, monkeypatch) -> None:
     (tmp_path / "images").mkdir()
     (tmp_path / "images" / "safe.png").write_bytes(b"safe")
-    outside = tmp_path.parent / f"outside-{tmp_path.name}.png"
-    outside.write_bytes(b"outside")
+    alternate = tmp_path / "images" / "alternate.png"
+    alternate.write_bytes(b"alternate")
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(
         course_board_server.course_source_catalog,
         "opened_file_path",
-        lambda _descriptor: outside,
+        lambda _descriptor: alternate,
     )
 
-    with pytest.raises(ValueError, match="aperta esce"):
+    with pytest.raises(ValueError, match="non coincide"):
         course_board_server._read_local_heading_asset(
             "images/safe.png", course_board_server.MAX_HEADING_IMAGE_BYTES
         )

@@ -3270,12 +3270,35 @@ def normalized_heading_asset_path(source_path: str, target: str) -> str:
     return path.as_posix()
 
 
+def normalize_paragraph_preview_source(source: str) -> str:
+    """Mirror the frontend's bounded HTML-to-Markdown preview normalization."""
+
+    text = re.sub(r"<br\s*/?\s*>", "\n", source, flags=re.IGNORECASE)
+    text = re.sub(
+        r"<h([1-6])\b[^>]*>",
+        lambda match: f"\n{'#' * int(match.group(1))} ",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"<li\b[^>]*>", "\n- ", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"</?(?:details|summary|p|div|section|article|table|thead|tbody|tr|ul|ol|li|pre|h[1-6])\b[^>]*>",
+        "\n",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\r\n?", "\n", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 def heading_referenced_asset_paths(source_path: str, section: str) -> set[str]:
     """Return image paths rendered by the bounded paragraph Markdown renderer."""
 
     referenced: set[str] = set()
     in_code_fence = False
-    for line in section.splitlines():
+    normalized = normalize_paragraph_preview_source(section)
+    for line in normalized.splitlines():
         if line.strip().startswith("```"):
             in_code_fence = not in_code_fence
             continue
@@ -3291,11 +3314,14 @@ def heading_referenced_asset_paths(source_path: str, section: str) -> set[str]:
 
 def _read_local_heading_asset(relative_path: str, max_bytes: int) -> bytes:
     repository_root = ROOT.resolve()
-    resolved = (repository_root / Path(relative_path)).resolve()
+    lexical = (repository_root / Path(relative_path)).absolute()
+    resolved = lexical.resolve()
     try:
         resolved.relative_to(repository_root)
     except ValueError as exc:
         raise ValueError("L'immagine esce dalla root configurata.") from exc
+    if os.path.normcase(str(resolved)) != os.path.normcase(str(lexical)):
+        raise ValueError("Symlink o reparse point non consentito nel path immagine.")
     flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -3309,12 +3335,36 @@ def _read_local_heading_asset(relative_path: str, max_bytes: int) -> bytes:
             opened_path.relative_to(repository_root)
         except (OSError, ValueError) as exc:
             raise ValueError("L'immagine aperta esce dalla root configurata.") from exc
-        metadata = os.fstat(descriptor)
-        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > max_bytes:
+        if os.path.normcase(str(opened_path)) != os.path.normcase(str(resolved)):
+            raise ValueError("Il file immagine aperto non coincide con il path verificato.")
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > max_bytes:
             raise ValueError("File immagine locale non valido o troppo grande.")
         with os.fdopen(descriptor, "rb", closefd=False) as stream:
             content = stream.read(max_bytes + 1)
-        if len(content) != metadata.st_size or len(content) > max_bytes:
+            stream.seek(0)
+            verification = stream.read(max_bytes + 1)
+        after = os.fstat(descriptor)
+        before_identity = (
+            before.st_dev,
+            before.st_ino,
+            before.st_size,
+            before.st_mtime_ns,
+            before.st_ctime_ns,
+        )
+        after_identity = (
+            after.st_dev,
+            after.st_ino,
+            after.st_size,
+            after.st_mtime_ns,
+            after.st_ctime_ns,
+        )
+        if (
+            len(content) != before.st_size
+            or len(content) > max_bytes
+            or content != verification
+            or before_identity != after_identity
+        ):
             raise ValueError("File immagine locale instabile o troppo grande.")
         return content
     finally:
