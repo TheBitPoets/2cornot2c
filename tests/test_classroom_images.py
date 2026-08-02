@@ -221,62 +221,12 @@ def test_vagrantfile_disables_implicit_bento_fallback() -> None:
     assert "Box Packer 2cornot2c non configurata" in source
 
 
-def test_latest_manifest_ignores_unrelated_releases(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    payload = [
-        {
-            "tag_name": "application-v9.0.0",
-            "draft": False,
-            "prerelease": False,
-            "assets": [],
-        },
-        {
-            "tag_name": "classroom-v1.9.0",
-            "draft": False,
-            "prerelease": False,
-            "assets": [
-                {
-                    "name": "release-manifest.json",
-                    "browser_download_url": (
-                        "https://github.com/TheBitPoets/2cornot2c/releases/"
-                        "download/classroom-v1.9.0/release-manifest.json"
-                    ),
-                }
-            ],
-        },
-        {
-            "tag_name": "classroom-v1.10.0",
-            "draft": False,
-            "prerelease": False,
-            "assets": [
-                {
-                    "name": "release-manifest.json",
-                    "browser_download_url": (
-                        "https://github.com/TheBitPoets/2cornot2c/releases/"
-                        "download/classroom-v1.10.0/release-manifest.json"
-                    ),
-                }
-            ],
-        },
-    ]
-
-    class Response(io.BytesIO):
-        headers: dict[str, str] = {}
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            self.close()
-
-    monkeypatch.setattr(
-        classroom_images,
-        "urlopen",
-        lambda url, timeout: Response(json.dumps(payload).encode()),
+def test_official_manifest_is_pinned_without_github_api_discovery() -> None:
+    assert classroom_images.latest_manifest_url() == (
+        "https://github.com/TheBitPoets/2cornot2c/releases/download/"
+        "classroom-v1.0.0/release-manifest.json"
     )
-
-    assert "classroom-v1.10.0" in classroom_images.latest_manifest_url()
+    assert "api.github.com" not in classroom_images.latest_manifest_url()
 
 
 def test_acquire_manifest_reuses_fresh_valid_cache(

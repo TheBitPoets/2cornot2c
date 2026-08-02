@@ -6,7 +6,6 @@ import argparse
 import json
 import os
 from pathlib import Path
-import re
 import sys
 import tempfile
 import time
@@ -28,15 +27,13 @@ from installer.vagrant_box import (
 )
 
 
-RELEASES_API_URL = (
-    "https://api.github.com/repos/TheBitPoets/2cornot2c/releases?per_page=100"
+CLASSROOM_RELEASE_VERSION = "1.0.0"
+OFFICIAL_MANIFEST_URL = (
+    "https://github.com/TheBitPoets/2cornot2c/releases/download/"
+    f"classroom-v{CLASSROOM_RELEASE_VERSION}/release-manifest.json"
 )
 MAX_MANIFEST_BYTES = 256 * 1024
-MAX_RELEASE_INDEX_BYTES = 1024 * 1024
 MANIFEST_CACHE_MAX_AGE_SECONDS = 60 * 60
-CLASSROOM_TAG_RE = re.compile(
-    r"^classroom-v([0-9]+)\.([0-9]+)\.([0-9]+)$"
-)
 
 
 class ClassroomImageError(RuntimeError):
@@ -60,53 +57,9 @@ def _read_bounded(response, maximum: int) -> bytes:
 
 
 def latest_manifest_url() -> str:
-    """Trova l'ultima release stabile appartenente alla serie classroom."""
+    """Return the repository-pinned classroom manifest without API discovery."""
 
-    try:
-        with urlopen(RELEASES_API_URL, timeout=30) as response:
-            payload = json.loads(
-                _read_bounded(response, MAX_RELEASE_INDEX_BYTES).decode("utf-8")
-            )
-    except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError) as error:
-        raise ClassroomImageError(
-            f"Elenco release classroom non disponibile: {error}"
-        ) from error
-    if not isinstance(payload, list):
-        raise ClassroomImageError("Elenco release GitHub non valido.")
-    candidates: list[tuple[tuple[int, int, int], str]] = []
-    for release in payload:
-        tag = str(release.get("tag_name", "")) if isinstance(release, dict) else ""
-        tag_match = CLASSROOM_TAG_RE.fullmatch(tag)
-        if (
-            not isinstance(release, dict)
-            or release.get("draft") is not False
-            or release.get("prerelease") is not False
-            or tag_match is None
-        ):
-            continue
-        assets = release.get("assets")
-        if not isinstance(assets, list):
-            continue
-        matches = [
-            asset.get("browser_download_url")
-            for asset in assets
-            if isinstance(asset, dict)
-            and asset.get("name") == "release-manifest.json"
-            and isinstance(asset.get("browser_download_url"), str)
-        ]
-        expected_suffix = f"/download/{tag}/release-manifest.json"
-        if (
-            len(matches) == 1
-            and matches[0].startswith("https://")
-            and matches[0].endswith(expected_suffix)
-        ):
-            version = tuple(int(part) for part in tag_match.groups())
-            candidates.append((version, matches[0]))
-    if candidates:
-        return max(candidates)[1]
-    raise ClassroomImageError(
-        "Nessuna release classroom Packer collaudata è disponibile."
-    )
+    return OFFICIAL_MANIFEST_URL
 
 
 def _manifest_source() -> str:

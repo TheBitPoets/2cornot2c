@@ -196,9 +196,12 @@ altre VM, box Bento o software preesistente. Il comando diretto richiede la
 frase distinta `DISINSTALLA TUTTO`.
 
 La parte VM usa esclusivamente box Packer pubblicate dalla workflow
-`publish-classroom-boxes.yml`. L'installer scarica il manifest dell'ultima
-release `classroom-v*`, seleziona la combinazione host/provider, verifica
-dimensione e SHA-256, importa la box e configura il progetto.
+`publish-classroom-boxes.yml`. L'installer scarica senza discovery API il
+manifest della release fissata nel codice (`classroom-v1.0.0`), seleziona la
+combinazione host/provider, verifica dimensione e SHA-256, importa la box e
+configura il progetto. Un aggiornamento delle immagini richiede una modifica
+revisionata di `CLASSROOM_RELEASE_VERSION`, evitando il limite API condiviso
+delle aule dietro NAT.
 
 Se la release o la combinazione richiesta non è disponibile, l'installazione
 si ferma con E25. Non viene più usata implicitamente la box Bento e non parte
