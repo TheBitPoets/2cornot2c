@@ -88,7 +88,9 @@ def _official_manifest_digest() -> str | None:
     except OSError as error:
         raise ClassroomImageError("Stato immagini classroom non leggibile.") from error
     if active == "pending":
-        return None
+        raise ClassroomImageError(
+            "Immagini Packer non ancora attive; usare il fallback Bento."
+        )
     if active != "active":
         raise ClassroomImageError(
             f"Stato immagini classroom non valido: {active!r}."
@@ -141,7 +143,9 @@ def acquire_manifest(cache_dir: Path) -> Path:
         if override is not None
         else official_destination
     )
-    expected_official_digest = _official_manifest_digest()
+    expected_official_digest = (
+        None if override is not None else _official_manifest_digest()
+    )
     cached_valid = _cached_manifest_is_valid(
         official_destination,
         expected_version=CLASSROOM_RELEASE_VERSION,
@@ -218,11 +222,17 @@ def acquire_manifest(cache_dir: Path) -> Path:
 def _configured_identity(project: Path) -> tuple[str, str] | None:
     box = project / ".classroom-box"
     provider = project / ".classroom-provider"
-    if not box.is_file() or not provider.is_file():
+    box_present = box.exists() or box.is_symlink()
+    provider_present = provider.exists() or provider.is_symlink()
+    if not box_present and not provider_present:
         return None
+    if (box_present and not box.is_file()) or (
+        provider_present and not provider.is_file()
+    ):
+        raise ClassroomImageError("Marker box Packer non valido.")
     return (
-        box.read_text(encoding="utf-8").strip(),
-        provider.read_text(encoding="utf-8").strip(),
+        box.read_text(encoding="utf-8").strip() if box_present else "",
+        provider.read_text(encoding="utf-8").strip() if provider_present else "",
     )
 
 
@@ -287,11 +297,19 @@ def install_image(project: Path, host: Host, provider: Provider) -> str:
     artifact = resolve_artifact(host, provider, cache)
     expected = (artifact.box_name, artifact.provider.value)
     configured = _configured_identity(project)
-    if configured not in {None, expected}:
-        raise ClassroomImageError(
-            "Il progetto usa un'altra box. Avvia la migrazione esplicita prima "
-            "di cambiare immagine."
-        )
+    if configured is not None:
+        configured_box, configured_provider = configured
+        if (
+            configured_box not in {"", expected[0]}
+            or configured_provider not in {"", expected[1]}
+        ):
+            raise ClassroomImageError(
+                "Il progetto usa un'altra box. Avvia la migrazione esplicita "
+                "prima di cambiare immagine."
+            )
+        # A single valid marker is enough to identify an interrupted Packer
+        # configuration. The verified import below reconstructs both markers.
+        configured = expected
     legacy_providers = _legacy_vm_providers(project)
     blocking_legacy = (
         legacy_providers

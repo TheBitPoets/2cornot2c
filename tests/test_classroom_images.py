@@ -15,6 +15,12 @@ from installer.vagrant_box import VagrantResult
 
 
 CONTENT = b"verified packer box"
+REAL_OFFICIAL_MANIFEST_DIGEST = classroom_images._official_manifest_digest
+
+
+@pytest.fixture(autouse=True)
+def active_manifest_test_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(classroom_images, "_official_manifest_digest", lambda: None)
 
 
 def artifact() -> BoxArtifact:
@@ -91,6 +97,44 @@ def test_install_image_downloads_imports_and_configures(
     assert downloaded[0].name == (
         "2cornot2c--ubuntu-24.04-virtualbox-amd64-1.0.0.box"
     )
+    assert (root / ".classroom-box").read_text(encoding="utf-8").strip() == (
+        selected.box_name
+    )
+    assert (root / ".classroom-provider").read_text(encoding="utf-8").strip() == (
+        "virtualbox"
+    )
+
+
+def test_repair_reconstructs_partial_packer_markers_without_destroying_vm(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = project(tmp_path)
+    selected = artifact()
+    (root / ".classroom-provider").write_text("virtualbox\n", encoding="utf-8")
+    machine = root / ".vagrant" / "machines" / "default" / "virtualbox"
+    machine.mkdir(parents=True)
+    (machine / "id").write_text("packer-vm-id", encoding="utf-8")
+    monkeypatch.setattr(
+        classroom_images,
+        "resolve_artifact",
+        lambda host, provider, cache: selected,
+    )
+    monkeypatch.setattr(
+        classroom_images,
+        "download_box",
+        lambda item, destination, **kwargs: destination,
+    )
+    monkeypatch.setattr(
+        classroom_images,
+        "import_box",
+        lambda item, path: VagrantResult("succeeded", "reimportata"),
+    )
+
+    detail = classroom_images.install_image(
+        root, Host.WINDOWS_AMD64, Provider.VIRTUALBOX
+    )
+
+    assert "reimportata" in detail
     assert (root / ".classroom-box").read_text(encoding="utf-8").strip() == (
         selected.box_name
     )
@@ -223,11 +267,15 @@ def test_vagrantfile_disables_implicit_bento_fallback() -> None:
     assert "Box Packer 2cornot2c non configurata" in source
 
 
-def test_pending_activation_does_not_claim_an_unpublished_manifest_digest() -> None:
+def test_pending_activation_refuses_official_manifest_installation() -> None:
     assert classroom_images.CLASSROOM_IMAGES_STATE.read_text(
         encoding="utf-8"
     ).strip() == "pending"
-    assert classroom_images._official_manifest_digest() is None
+    with pytest.raises(
+        classroom_images.ClassroomImageError,
+        match="Immagini Packer non ancora attive",
+    ):
+        REAL_OFFICIAL_MANIFEST_DIGEST()
 
 
 def test_invalid_activation_state_fails_closed(
@@ -241,7 +289,7 @@ def test_invalid_activation_state_fails_closed(
         classroom_images.ClassroomImageError,
         match="Stato immagini classroom non valido",
     ):
-        classroom_images._official_manifest_digest()
+        REAL_OFFICIAL_MANIFEST_DIGEST()
 
 
 def test_active_manifest_requires_revision_pinned_digest(
@@ -254,14 +302,14 @@ def test_active_manifest_requires_revision_pinned_digest(
     monkeypatch.setattr(classroom_images, "CLASSROOM_IMAGES_STATE", state)
     monkeypatch.setattr(classroom_images, "OFFICIAL_MANIFEST_DIGEST", digest)
 
-    assert classroom_images._official_manifest_digest() == "a" * 64
+    assert REAL_OFFICIAL_MANIFEST_DIGEST() == "a" * 64
 
     digest.write_text("pending\n", encoding="ascii")
     with pytest.raises(
         classroom_images.ClassroomImageError,
         match="Digest manifest classroom non valido",
     ):
-        classroom_images._official_manifest_digest()
+        REAL_OFFICIAL_MANIFEST_DIGEST()
 
 
 def test_cached_manifest_must_match_revision_pinned_digest(tmp_path: Path) -> None:
