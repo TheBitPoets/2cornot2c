@@ -3155,7 +3155,7 @@ def headings_from_source_snapshot(
                 "line": lineno,
             }
         )
-    source_lines = source_text.splitlines()
+    source_lines = list(iter_markdown_lines(source_text))
     end_lines = [len(source_lines) + 1] * len(headings)
     open_headings: list[int] = []
     for index, heading in enumerate(headings):
@@ -3292,23 +3292,26 @@ def normalize_paragraph_preview_source(source: str) -> str:
         rf"<br[{JAVASCRIPT_WHITESPACE}]*/?[{JAVASCRIPT_WHITESPACE}]*>",
         "\n",
         source,
-        flags=re.IGNORECASE,
+        flags=re.IGNORECASE | re.ASCII,
     )
     text = re.sub(
         r"<h([1-6])(?![A-Za-z0-9_])[^>]*>",
         lambda match: f"\n{'#' * int(match.group(1))} ",
         text,
-        flags=re.IGNORECASE,
+        flags=re.IGNORECASE | re.ASCII,
     )
     text = re.sub(
-        r"<li(?![A-Za-z0-9_])[^>]*>", "\n- ", text, flags=re.IGNORECASE
+        r"<li(?![A-Za-z0-9_])[^>]*>",
+        "\n- ",
+        text,
+        flags=re.IGNORECASE | re.ASCII,
     )
     text = re.sub(
         r"</?(?:details|summary|p|div|section|article|table|thead|tbody|tr|ul|ol|li|pre|h[1-6])"
         r"(?![A-Za-z0-9_])[^>]*>",
         "\n",
         text,
-        flags=re.IGNORECASE,
+        flags=re.IGNORECASE | re.ASCII,
     )
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"\r\n?", "\n", text)
@@ -3706,7 +3709,7 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
             raise course_source_catalog.CourseSourceCatalogError(
                 "Troppi heading per il catalogo di contesto AI."
             )
-        source_lines = source_text.splitlines()
+        source_lines = list(iter_markdown_lines(source_text))
         for heading in source_headings:
             excerpt = catalog_excerpt_from_lines(
                 source_lines,

@@ -233,7 +233,12 @@ def test_section_extraction_uses_same_line_model_as_heading_index() -> None:
         expected_sha256=None,
     )
     headings = course_board_server.headings_from_source_snapshot(source_file, source)
+    changed = course_board_server.headings_from_source_snapshot(
+        source_file,
+        source.replace("same indexed line", "changed indexed line"),
+    )
 
+    assert headings[0]["content_sha256"] != changed[0]["content_sha256"]
     assert headings[1]["line"] == 3
     assert course_board_server.section_text_from_source(source, 1, 1) == (
         "body\u2028same indexed line\n## Second\ncontent"
@@ -241,11 +246,12 @@ def test_section_extraction_uses_same_line_model_as_heading_index() -> None:
     assert course_board_server.section_text_from_source(source, 3, 2) == "content"
 
 
-def test_paragraph_normalization_uses_javascript_ascii_word_boundary() -> None:
-    source = "x<divé>```\n![Visible](images/visible.png)\n```"
+@pytest.mark.parametrize("suffix", ["é", "İ", "ı", "ſ", "K"])
+def test_paragraph_normalization_uses_javascript_ascii_word_boundary(suffix) -> None:
+    source = f"x<div{suffix}>```\n![Hidden](images/private.png)\n```"
 
     assert course_board_server.normalize_paragraph_preview_source(source) == (
-        "x\n```\n![Visible](images/visible.png)\n```"
+        "x\n```\n![Hidden](images/private.png)\n```"
     )
     assert course_board_server.heading_referenced_asset_paths(
         "lesson.md", source
