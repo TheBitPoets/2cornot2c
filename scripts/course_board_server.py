@@ -3270,7 +3270,26 @@ def normalized_heading_asset_path(source_path: str, target: str) -> str:
     return path.as_posix()
 
 
-def _read_local_heading_asset(relative_path: str) -> bytes:
+def heading_referenced_asset_paths(source_path: str, section: str) -> set[str]:
+    """Return image paths rendered by the bounded paragraph Markdown renderer."""
+
+    referenced: set[str] = set()
+    in_code_fence = False
+    for line in section.splitlines():
+        if line.strip().startswith("```"):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
+        for match in MARKDOWN_IMAGE_RE.finditer(line):
+            try:
+                referenced.add(normalized_heading_asset_path(source_path, match.group(1)))
+            except ValueError:
+                continue
+    return referenced
+
+
+def _read_local_heading_asset(relative_path: str, max_bytes: int) -> bytes:
     repository_root = ROOT.resolve()
     resolved = (repository_root / Path(relative_path)).resolve()
     try:
@@ -3291,11 +3310,11 @@ def _read_local_heading_asset(relative_path: str) -> bytes:
         except (OSError, ValueError) as exc:
             raise ValueError("L'immagine aperta esce dalla root configurata.") from exc
         metadata = os.fstat(descriptor)
-        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > MAX_HEADING_IMAGE_BYTES:
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > max_bytes:
             raise ValueError("File immagine locale non valido o troppo grande.")
         with os.fdopen(descriptor, "rb", closefd=False) as stream:
-            content = stream.read(MAX_HEADING_IMAGE_BYTES + 1)
-        if len(content) != metadata.st_size or len(content) > MAX_HEADING_IMAGE_BYTES:
+            content = stream.read(max_bytes + 1)
+        if len(content) != metadata.st_size or len(content) > max_bytes:
             raise ValueError("File immagine locale instabile o troppo grande.")
         return content
     finally:
@@ -3308,9 +3327,17 @@ def heading_asset_snapshot(
     expected_source_commit: str,
     expected_content_sha256: str,
     target: str,
+    max_bytes: int = MAX_HEADING_IMAGE_BYTES,
 ) -> dict:
     """Return one bounded source-relative image after provenance validation."""
 
+    if (
+        not isinstance(max_bytes, int)
+        or isinstance(max_bytes, bool)
+        or max_bytes <= 0
+        or max_bytes > MAX_HEADING_IMAGE_BYTES
+    ):
+        raise ValueError("Budget immagine non valido.")
     if re.fullmatch(r"[0-9a-f]{64}", expected_content_sha256) is None:
         raise CourseSourceRevisionConflictError(
             "Digest del paragrafo mancante o non valido: riallinealo prima della preview."
@@ -3352,20 +3379,16 @@ def heading_asset_snapshot(
         selected_heading["line"],
         selected_heading["level"],
     )
-    referenced_assets = set()
-    for match in MARKDOWN_IMAGE_RE.finditer(section):
-        try:
-            referenced_assets.add(
-                normalized_heading_asset_path(selected_file.relative_path, match.group(1))
-            )
-        except ValueError:
-            continue
+    referenced_assets = heading_referenced_asset_paths(
+        selected_file.relative_path,
+        section,
+    )
     if relative_path not in referenced_assets:
         raise ValueError("L'immagine non è referenziata dal paragrafo verificato.")
     content_type = HEADING_IMAGE_CONTENT_TYPES[PurePosixPath(relative_path).suffix.lower()]
     provider = selected_file.source.provider
     if provider == "local":
-        content = _read_local_heading_asset(relative_path)
+        content = _read_local_heading_asset(relative_path, max_bytes)
     else:
         repository = selected_file.source.repository
         commit = getattr(selected_file, "resolved_ref", None)
@@ -3392,7 +3415,7 @@ def heading_asset_snapshot(
             repository,
             commit,
             relative_path,
-            max_bytes=MAX_HEADING_IMAGE_BYTES,
+            max_bytes=max_bytes,
         ).content
     return {
         "content_type": content_type,
@@ -6177,6 +6200,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                         str(payload.get("source_commit") or ""),
                         str(payload.get("content_sha256", "")),
                         target,
+                        payload.get("max_bytes", MAX_HEADING_IMAGE_BYTES),
                     )
                 )
             except course_github_markdown.RemoteMarkdownError as error:

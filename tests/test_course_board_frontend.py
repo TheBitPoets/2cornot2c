@@ -1764,6 +1764,7 @@ def test_paragraph_preview_loads_assets_through_authenticated_api() -> None:
           assert.equal(path, "/api/heading-asset");
           const body = JSON.parse(options.body);
           assert.equal(body.target, "../private/icon.svg");
+          assert.equal(body.max_bytes, 8 * 1024 * 1024);
           assert.deepEqual(body.design, state.design);
           return { content_type: "image/svg+xml", content_base64: "PHN2Zz48L3N2Zz4=" };
         };

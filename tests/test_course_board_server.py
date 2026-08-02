@@ -112,9 +112,13 @@ def test_extract_headings_and_section_text_include_paragraph_content(tmp_path, m
 def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, monkeypatch) -> None:
     (tmp_path / "lessons" / "images").mkdir(parents=True)
     markdown = tmp_path / "lessons" / "intro.md"
-    markdown.write_text("# Demo\n\n![Schema](images/schema.png)\n", encoding="utf-8")
+    markdown.write_text(
+        "# Demo\n\n![Schema](images/schema.png)\n\n```md\n![Solo esempio](images/hidden.png)\n```\n",
+        encoding="utf-8",
+    )
     image = b"\x89PNG\r\nverified"
     (tmp_path / "lessons" / "images" / "schema.png").write_bytes(image)
+    (tmp_path / "lessons" / "images" / "hidden.png").write_bytes(image)
     design = {
         "sources": [
             {
@@ -143,15 +147,26 @@ def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, 
     assert base64.b64decode(payload["content_base64"]) == image
     assert payload["sha256"] == hashlib.sha256(image).hexdigest()
 
-    (tmp_path / "lessons" / "images" / "unreferenced.png").write_bytes(image)
-    with pytest.raises(ValueError, match="non è referenziata"):
+    with pytest.raises(ValueError, match="troppo grande"):
         course_board_server.heading_asset_snapshot(
             design,
             heading["id"],
             "",
             heading["content_sha256"],
-            "images/unreferenced.png",
+            "images/schema.png",
+            max_bytes=4,
         )
+
+    (tmp_path / "lessons" / "images" / "unreferenced.png").write_bytes(image)
+    for rejected_target in ("images/unreferenced.png", "images/hidden.png"):
+        with pytest.raises(ValueError, match="non è referenziata"):
+            course_board_server.heading_asset_snapshot(
+                design,
+                heading["id"],
+                "",
+                heading["content_sha256"],
+                rejected_target,
+            )
 
 
 @pytest.mark.parametrize(
@@ -176,7 +191,9 @@ def test_local_heading_asset_rechecks_final_open_handle_path(tmp_path, monkeypat
     )
 
     with pytest.raises(ValueError, match="aperta esce"):
-        course_board_server._read_local_heading_asset("images/safe.png")
+        course_board_server._read_local_heading_asset(
+            "images/safe.png", course_board_server.MAX_HEADING_IMAGE_BYTES
+        )
 
 
 def test_markdown_line_iteration_is_streaming_and_preserves_line_endings() -> None:
