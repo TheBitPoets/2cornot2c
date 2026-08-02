@@ -75,6 +75,7 @@ def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
     assert run_blocks
     for run_block in run_blocks:
         assert "${{ inputs.version }}" not in run_block
+    assert "packer build '-only=classroom.vagrant.virtualbox-amd64'" in workflow
     assert "Length -ge 2GB" in workflow
     assert "stat -f %z" in workflow
     assert "needs: virtualbox-amd64" in workflow

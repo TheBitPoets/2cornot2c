@@ -57,7 +57,7 @@ packer build -only=classroom.vagrant.vmware-arm64 classroom.pkr.hcl
 Il comando seguente deve essere eseguito su Windows o Linux amd64:
 
 ```bash
-packer build -only=classroom.vagrant.virtualbox-amd64 classroom.pkr.hcl
+packer build '-only=classroom.vagrant.virtualbox-amd64' classroom.pkr.hcl
 ```
 
 Gli artefatti vengono scritti sotto `packer/output/` e sono ignorati da Git.
