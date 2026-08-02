@@ -105,7 +105,7 @@ Materiale su sistema operativo, architettura x86-64 e programmazione Assembly.
     + [Base Addressing (indirizzamento di base)](#base-addressing-indirizzamento-di-base)
     + [Base + Displacement Addressing](#base--displacement-addressing)
     + [Base + Index Addressing](#base--index-addressing)
-    + [Index - Scale + Displacement Addressing](#index--scale--displacement-addressing)
+    + [Index - Scale + Displacement Addressing](#index---scale--displacement-addressing)
     + [Altri schemi d'indirizzamento](#altri-schemi-dindirizzamento)
     + [Istruzione LEA](#istruzione-lea)
     + [Tabella di traduzione caratteri](#tabella-di-traduzione-caratteri)

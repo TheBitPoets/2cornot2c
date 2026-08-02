@@ -4989,12 +4989,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
     - <details>
       <summary><strong>Anticipazione</strong></summary>
 
-      Questo argomento prepara il lavoro successivo su "Suddivisione in moduli di un programma". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+      Questo argomento conclude la sequenza assegnata dell’UDA. Usa il riepilogo finale per consolidare preprocessore, header e compilazione separata senza anticipare contenuti non assegnati.
       </details>
     - <details>
       <summary><strong>Prossimo passo</strong></summary>
 
-      Dopo la spiegazione, proponi un esempio minimo su "Protezione del contenuto dei file d'intestazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Suddivisione in moduli di un programma" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+      Dopo la spiegazione, proponi un esempio minimo sulla protezione dei file di intestazione, un esercizio di modifica e una verifica conclusiva dell’UDA.
       </details>
     - <details>
       <summary><strong>Rimando</strong></summary>
@@ -5504,12 +5504,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       - <details>
         <summary><strong>Anticipazione</strong></summary>
 
-        Questo argomento prepara il lavoro successivo su "Semplici operazioni di I/O sui file". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+        Questo argomento conclude la sequenza assegnata dell’UDA. Usa il riepilogo finale per consolidare preprocessore, header e compilazione separata senza anticipare contenuti non assegnati.
         </details>
       - <details>
         <summary><strong>Prossimo passo</strong></summary>
 
-        Dopo la spiegazione, proponi un esempio minimo su "Protezione del contenuto dei file d'intestazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Semplici operazioni di I/O sui file" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+        Dopo la spiegazione, proponi un esempio minimo sulla protezione dei file di intestazione, un esercizio di modifica e una verifica conclusiva dell’UDA.
         </details>
       - <details>
         <summary><strong>Rimando</strong></summary>
