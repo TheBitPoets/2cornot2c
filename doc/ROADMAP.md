@@ -28,7 +28,13 @@ Per "estendibile" si intende:
 - interfacce GUI/TUI costruite sopra la stessa logica applicativa;
 - test minimi sui flussi critici.
 
-Non e necessario che l'MVP supporti subito tutte le fonti, tutti i linguaggi o tutte le modalita AI. Deve pero evitare scelte architetturali che rendano difficile aggiungerli dopo.
+Non e necessario che l'MVP supporti subito tutti i linguaggi o tutte le modalita AI. Deve pero evitare scelte architetturali che rendano difficile aggiungerli dopo.
+
+### Stato closeout agosto 2026
+
+L'MVP include ora lab studente, grading/sandbox, dashboard, activity e registri, autenticazione federata, amministrazione, collegamenti activity-UDA-calendario, fonti Markdown locali/GitHub/GitLab, repository privati GitHub tramite GitHub App e documentazione operativa/architetturale. La guida di riferimento è [`MVP_2026_2027.md`](MVP_2026_2027.md); limiti e percorso evolutivo sono espliciti in [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md).
+
+Il passo successivo non è aggiungere provider senza un caso d'uso, ma condurre il pilot, raccogliere evidenze e scegliere tra affinamenti GUI, costruzione dei percorsi 2026/2027 e investimenti di scalabilità.
 
 ## Visione lunga: playground per una piattaforma di conoscenza federata
 
@@ -104,16 +110,15 @@ Da avere per una prova reale:
 
 Rimandabile dopo l'MVP:
 
-- supporto completo GitLab;
+- runtime credenziali GitLab equivalente al GitHub App runtime;
 - provider interno completo;
 - tutti i linguaggi previsti;
 - AI assisted avanzata durante lo svolgimento;
-- import paragrafi da molte fonti remote;
 - federazione tra fonti/istanze di conoscenza;
 - knowledge graph o ricerca semantica avanzata;
 - cancellazioni definitive complesse;
 - metriche longitudinali avanzate;
-- database SQLite se il layer JSON normalizzato basta per la prova iniziale.
+- migrazione dei dati SaaS da SQLite/JSON a PostgreSQL, object storage e code condivise.
 
 ### Decisione luglio-agosto 2026: lab studente MVP
 
@@ -135,7 +140,7 @@ Decisione:
    - esecuzione test;
    - lettura stdout/stderr e risultati;
    - preparazione o aggiornamento della consegna.
-3. La **dashboard studente web gia iniziata** resta la vista principale di consultazione:
+3. La **vista web studente locale** resta uno strumento docente/demo protetto da Basic; non è il self-service autenticato del pilot. La CLI/TUI role-aware è il canale studente reale. Una futura dashboard federata potrà offrire:
    - consegne e scadenze;
    - percorso e calendario;
    - stato e risultati;
@@ -159,7 +164,8 @@ Per agosto l'obiettivo realistico e:
 - backend lab studente funzionante;
 - runner locale e Docker minimale collegato alle activity;
 - CLI/TUI usabile per svolgere e testare consegne;
-- dashboard studente web che legge stato, risultati e scadenze;
+- vista studente web locale/docente che legge stato, risultati e scadenze;
+- CLI/TUI autenticata come self-service studente;
 - dati demo coerenti per provare il flusso docente -> assegnazione -> studente -> test -> registro.
 
 Non rientrano nel perimetro agosto:
@@ -168,8 +174,8 @@ Non rientrano nel perimetro agosto:
 - terminale web sicuro per classe reale;
 - editor web completo;
 - blocco copia/incolla e monitoraggio schermo;
-- quote AI/token per studenti;
-- autenticazione e permessi reali.
+- quote AI/token avanzate oltre il budget MVP;
+- dashboard web studente self-service con sessione federata (autenticazione, API role-aware e TUI sono invece presenti).
 
 ## Stato recente
 
@@ -414,9 +420,9 @@ Da avere per la prima prova:
    - mostrare avatar/profilo studente solo quando la fonte autorevole arriva da GitHub Team o roster locale;
    - evitare link esterni generici nella navigazione studente.
 6. Collegamento con il lab studente:
-   - la dashboard studente web resta la vista di consultazione per consegne, calendario, percorso, risultati e feedback;
-   - l'esecuzione operativa di test, Docker e workspace passa prima dal backend lab e da una CLI/TUI;
-   - la dashboard web legge i risultati prodotti dal lab, senza duplicare logica di esecuzione;
+   - oggi la vista web è locale/docente e la CLI/TUI è il self-service autenticato;
+   - l'esecuzione operativa di test, Docker e workspace passa dal backend lab e dalla CLI/TUI;
+   - una futura dashboard web federata dovrà leggere i risultati prodotti dal lab senza duplicare logica e senza accettare uno `student_id` arbitrario;
    - una futura GUI web o terminale web dovra riusare lo stesso backend lab.
 
 ### Feedback assistito
@@ -537,12 +543,12 @@ Serve una guida d'uso pratica, separata dalla documentazione tecnica, che accomp
 4. Salvare screenshot e immagini in una cartella dedicata, per esempio `doc/images/dashboard-guides/`.
 5. Collegare le guide da `doc/README.md`, `STUDENT_DASHBOARD.md`, `CLASS_ROSTERS.md` e dalla futura cornice didattica.
 
-## Priorita 6 - Cornice didattica
+## Priorita 6 - Cornice didattica (completata)
 
-Serve un documento leggibile che spieghi il progetto dal punto di vista didattico, non solo tecnico.
+La cornice didattica e il closeout MVP sono disponibili in `doc/CORNICE_DIDATTICA.md`, `doc/MVP_2026_2027.md`, `doc/ARCHITETTURA_MVP.md` e `doc/FRONTEND_ARCHITECTURE.md`.
 
-1. Creare `doc/CORNICE_DIDATTICA.md`.
-2. Spiegare:
+1. [x] Creare `doc/CORNICE_DIDATTICA.md`.
+2. [x] Spiegare:
    - obiettivi formativi;
    - struttura del percorso;
    - UDA;
@@ -552,7 +558,7 @@ Serve un documento leggibile che spieghi il progetto dal punto di vista didattic
    - feedback deterministico e AI assisted;
    - ruolo del docente;
    - uso di calendario, dashboard, registri e quadro classe.
-3. Collegare il documento da `doc/README.md` e dal README principale, se opportuno.
+3. [x] Collegare il documento da `doc/README.md` e dal README principale.
 
 ## Priorita 7 - Qualita, test e manutenzione
 

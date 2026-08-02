@@ -1,3 +1,5 @@
+"""HTTP, storage, CAS, provider, and AI-boundary tests for Course Board."""
+
 from __future__ import annotations
 
 import base64

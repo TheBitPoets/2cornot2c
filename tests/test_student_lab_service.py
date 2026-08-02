@@ -1,3 +1,5 @@
+"""Contract and lifecycle tests for the shared student-lab application service."""
+
 from __future__ import annotations
 
 import json

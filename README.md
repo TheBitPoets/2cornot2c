@@ -3,6 +3,17 @@
 This is a C 101 course for my students. Sorry, only the Italian version is available so far.
 </p>
 
+## TheBitLab MVP
+
+Questo repository contiene anche TheBitLab, la piattaforma didattica che collega dispense, UDA, calendario, activity, laboratorio studente, grading, feedback e dashboard docente. Il pilot 2026/2027 mantiene il corso C esistente come fonte didattica e aggiunge flussi verificabili per docenti e studenti.
+
+Punti di ingresso:
+
+- [cornice didattica](doc/CORNICE_DIDATTICA.md);
+- [guida MVP 2026/2027](doc/MVP_2026_2027.md);
+- [architettura MVP](doc/ARCHITETTURA_MVP.md);
+- [indice completo della documentazione](doc/README.md).
+
 ## Indice
   * [Introduzione](#introduzione)
   * [Installare l'ambiente di sviluppo](#installare-lambiente-di-sviluppo)

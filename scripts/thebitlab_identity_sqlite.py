@@ -1,3 +1,5 @@
+"""Transactional SQLite implementation of TheBitLab identity and session storage."""
+
 from __future__ import annotations
 
 import sqlite3

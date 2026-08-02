@@ -1,3 +1,5 @@
+"""Acquire bounded, commit-pinned, and verified Markdown snapshots from GitHub."""
+
 from __future__ import annotations
 
 from collections import OrderedDict

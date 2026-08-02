@@ -1,3 +1,5 @@
+"""Run bounded local or Docker-backed student attempts and persist structured reports."""
+
 from __future__ import annotations
 
 import argparse
