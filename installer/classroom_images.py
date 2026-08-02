@@ -67,12 +67,14 @@ def _manifest_source() -> str:
     return override if override else latest_manifest_url()
 
 
-def _cached_manifest_is_valid(path: Path) -> bool:
+def _cached_manifest_is_valid(
+    path: Path, *, expected_version: str | None = None
+) -> bool:
     try:
-        load_release(path)
+        release = load_release(path)
     except ArtifactError:
         return False
-    return True
+    return expected_version is None or release.version == expected_version
 
 
 def _cached_manifest_is_fresh(path: Path) -> bool:
@@ -93,7 +95,10 @@ def acquire_manifest(cache_dir: Path) -> Path:
         if override is not None
         else official_destination
     )
-    cached_valid = _cached_manifest_is_valid(official_destination)
+    cached_valid = _cached_manifest_is_valid(
+        official_destination,
+        expected_version=CLASSROOM_RELEASE_VERSION,
+    )
     if override is None and cached_valid and _cached_manifest_is_fresh(destination):
         return destination
 
@@ -131,7 +136,14 @@ def acquire_manifest(cache_dir: Path) -> Path:
                 output.write(_read_bounded(response, MAX_MANIFEST_BYTES))
             output.flush()
             os.fsync(output.fileno())
-        load_release(Path(temporary_name))
+        downloaded_release = load_release(Path(temporary_name))
+        if (
+            override is None
+            and downloaded_release.version != CLASSROOM_RELEASE_VERSION
+        ):
+            raise ArtifactError(
+                "Versione manifest ufficiale diversa dalla release fissata."
+            )
         Path(temporary_name).replace(destination)
         return destination
     except (ArtifactError, ClassroomImageError, OSError, ValueError) as error:

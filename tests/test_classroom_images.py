@@ -245,6 +245,31 @@ def test_acquire_manifest_reuses_fresh_valid_cache(
     assert classroom_images.acquire_manifest(cache) == manifest
 
 
+def test_acquire_manifest_rejects_cached_release_different_from_pin(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = tmp_path / "images"
+    cache.mkdir()
+    payload = manifest_payload()
+    payload["release"] = "0.9.0"
+    (cache / "release-manifest.json").write_text(
+        json.dumps(payload), encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        classroom_images,
+        "latest_manifest_url",
+        lambda: (_ for _ in ()).throw(
+            classroom_images.ClassroomImageError("manifest fissato non disponibile")
+        ),
+    )
+
+    with pytest.raises(
+        classroom_images.ClassroomImageError,
+        match="manifest fissato non disponibile",
+    ):
+        classroom_images.acquire_manifest(cache)
+
+
 def test_acquire_manifest_falls_back_to_stale_valid_cache(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
