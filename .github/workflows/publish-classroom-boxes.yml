@@ -29,7 +29,6 @@ jobs:
     env:
       RELEASE_TARGET: ${{ inputs.target }}
       RELEASE_VERSION: ${{ inputs.version }}
-      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -57,9 +56,18 @@ jobs:
               raise SystemExit("Target o versione non revisionati nel lock.")
           PY
           tag="classroom-${RELEASE_TARGET}-v${RELEASE_VERSION}"
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "La release $tag esiste già e non può essere sostituita." >&2
+          set +e
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" \
+            >/dev/null 2>&1
+          tag_status=$?
+          set -e
+          if [ "$tag_status" -eq 0 ]; then
+            echo "Il tag $tag esiste già e non può essere riutilizzato." >&2
             exit 4
+          fi
+          if [ "$tag_status" -ne 2 ]; then
+            echo "Impossibile attestare l'assenza del tag $tag." >&2
+            exit 5
           fi
 
   virtualbox-amd64:

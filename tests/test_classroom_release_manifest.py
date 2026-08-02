@@ -79,6 +79,8 @@ def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
     assert "needs: virtualbox-amd64" in workflow
     assert "needs: vmware-arm64" in workflow
     assert "needs: [virtualbox-amd64, vmware-arm64]" not in workflow
+    assert 'git ls-remote --exit-code --tags origin "refs/tags/$tag"' in workflow
+    assert 'if [ "$tag_status" -ne 2 ]' in workflow
 
 
 @pytest.mark.skipif(os.name == "nt", reason="richiede Bash/Unix")
