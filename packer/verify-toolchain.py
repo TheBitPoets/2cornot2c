@@ -20,6 +20,7 @@ def load_lock(path: Path = LOCK) -> tuple[str, str, str]:
     if set(payload) != {
         "schema_version",
         "packer_version",
+        "packer_archives",
         "plugins",
         "vagrant_plugins",
     }:
@@ -27,6 +28,16 @@ def load_lock(path: Path = LOCK) -> tuple[str, str, str]:
     if payload["schema_version"] != "2cornot2c.packer-toolchain.v1":
         raise RuntimeError("Versione lock Packer non supportata.")
     packer_version = payload["packer_version"]
+    packer_archives = payload["packer_archives"]
+    if not isinstance(packer_archives, dict) or set(packer_archives) != {
+        "darwin_arm64",
+        "windows_amd64",
+    }:
+        raise RuntimeError("Archivi Packer non validi.")
+    if any(
+        not SHA256_RE.fullmatch(str(value)) for value in packer_archives.values()
+    ):
+        raise RuntimeError("Checksum Packer non valido.")
     plugins = payload["plugins"]
     if not isinstance(plugins, dict) or set(plugins) != {
         "github.com/hashicorp/vagrant"

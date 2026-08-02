@@ -292,6 +292,8 @@ def test_packer_toolchain_and_source_are_exactly_locked() -> None:
     ).read_text(encoding="utf-8")
 
     assert toolchain["packer_version"] == "1.16.0"
+    assert set(toolchain["packer_archives"]) == {"darwin_arm64", "windows_amd64"}
+    assert all(len(value) == 64 for value in toolchain["packer_archives"].values())
     assert toolchain["plugins"]["github.com/hashicorp/vagrant"]["version"] == "1.1.5"
     assert toolchain["vagrant_plugins"]["vagrant-vmware-desktop"]["version"] == "3.0.5"
     assert 'required_version = "= 1.16.0"' in template
@@ -300,6 +302,8 @@ def test_packer_toolchain_and_source_are_exactly_locked() -> None:
     assert all(len(box["sha256"]) == 64 for box in sources["boxes"].values())
     assert "install-locked-plugin.py --platform windows_amd64" in workflow
     assert "install-locked-plugin.py --platform darwin_arm64" in workflow
+    assert "install-locked-packer.py" in workflow
+    assert "--platform darwin_arm64 --destination \"$PACKER_BIN_DIR\"" in workflow
     assert "install-locked-vagrant-plugin.py" in workflow
     assert "--require-vagrant-vmware" in workflow
     assert "VAGRANT_HOME: ${{ runner.temp }}" not in workflow
@@ -307,7 +311,7 @@ def test_packer_toolchain_and_source_are_exactly_locked() -> None:
     assert workflow.count("shell: powershell") == 3
     assert "$vagrantHome = Join-Path" in workflow
     assert "2cornot2c-vagrant-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT" in workflow
-    assert '"$RUNNER_TEMP" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"' in workflow
+    assert 'isolated="$RUNNER_TEMP/2cornot2c-vagrant-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"' in workflow
     assert "Remove-Item -LiteralPath $env:VAGRANT_HOME" not in workflow
     assert 'rm -rf -- "$VAGRANT_HOME"' not in workflow
     assert "Remove-Item -LiteralPath $isolated" in workflow

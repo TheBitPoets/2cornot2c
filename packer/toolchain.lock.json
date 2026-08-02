@@ -1,6 +1,10 @@
 {
   "schema_version": "2cornot2c.packer-toolchain.v1",
   "packer_version": "1.16.0",
+  "packer_archives": {
+    "darwin_arm64": "6530042cf8f8a1f96b6607cb22b5be298be53b400cd4a2c81ab8b946964fccda",
+    "windows_amd64": "91a378d4e7f9c5363caa196e23fd78717da31d12fc6069c8bb892cdacceb2eb8"
+  },
   "plugins": {
     "github.com/hashicorp/vagrant": {
       "version": "1.1.5",
