@@ -125,7 +125,21 @@ jobs:
       - name: Remove isolated Vagrant home
         if: always()
         shell: pwsh
-        run: Remove-Item -LiteralPath $env:VAGRANT_HOME -Recurse -Force -ErrorAction SilentlyContinue
+        run: |
+          $isolated = Join-Path $env:RUNNER_TEMP `
+            "2cornot2c-vagrant-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $separator = [IO.Path]::DirectorySeparatorChar
+          $expectedParent = [IO.Path]::GetFullPath(
+            $env:RUNNER_TEMP
+          ).TrimEnd($separator)
+          $actualParent = [IO.Path]::GetFullPath(
+            (Split-Path -Parent $isolated)
+          ).TrimEnd($separator)
+          if ($actualParent -ne $expectedParent) {
+            throw 'Percorso VAGRANT_HOME isolato non valido.'
+          }
+          Remove-Item -LiteralPath $isolated -Recurse -Force `
+            -ErrorAction SilentlyContinue
 
   vmware-arm64:
     if: inputs.target == 'macos-arm64-vmware'
@@ -179,7 +193,12 @@ jobs:
           retention-days: 1
       - name: Remove isolated Vagrant home
         if: always()
-        run: rm -rf -- "$VAGRANT_HOME"
+        run: |
+          isolated="$RUNNER_TEMP/2cornot2c-vagrant-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          case "$isolated" in
+            "$RUNNER_TEMP"/2cornot2c-vagrant-*) rm -rf -- "$isolated" ;;
+            *) echo "Percorso VAGRANT_HOME isolato non valido." >&2; exit 6 ;;
+          esac
 
   release-windows:
     needs: virtualbox-amd64
