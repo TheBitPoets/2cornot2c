@@ -17,6 +17,29 @@ if (Test-Path $StatePath) {
     }
 }
 
+function Get-WindowsImageState {
+    $LockPath = Join-Path $InstallDir "packer\classroom-releases.lock.json"
+    if (-not (Test-Path $LockPath)) {
+        return ""
+    }
+    try {
+        $Lock = Get-Content $LockPath -Raw | ConvertFrom-Json
+        if ($Lock.schema_version -ne
+            "2cornot2c.classroom-release-lock.v1") {
+            return ""
+        }
+        $State = [string](
+            $Lock.targets.'windows-amd64-virtualbox'.state
+        )
+        if ($State -notin @("pending", "active")) {
+            return ""
+        }
+        return $State
+    } catch {
+        return ""
+    }
+}
+
 function Find-ExistingProvider {
     $LogPath = Join-Path $StateDir "installer.jsonl"
     if (Test-Path $LogPath) {
@@ -83,12 +106,7 @@ function Find-ExistingProvider {
         (Test-Path (Join-Path $InstallDir ".classroom-box")) -and
         (Test-Path (Join-Path $InstallDir ".classroom-provider"))
     )
-    $ImageStatePath = Join-Path $InstallDir "packer\classroom-images.state"
-    $ImageState = if (Test-Path $ImageStatePath) {
-        (Get-Content $ImageStatePath -Raw).Trim()
-    } else {
-        ""
-    }
+    $ImageState = Get-WindowsImageState
     if ($HasVirtualBoxVm -and ($HasPackerMarkers -or $ImageState -eq "pending")) {
         return "virtualbox"
     }
@@ -126,13 +144,7 @@ try {
         $ProjectProviderPath = Join-Path $InstallDir ".classroom-provider"
         if (-not (Test-Path $BoxPath) -or
             -not (Test-Path $ProjectProviderPath)) {
-            $ImageStatePath = Join-Path $InstallDir `
-                "packer\classroom-images.state"
-            $ImageState = if (Test-Path $ImageStatePath) {
-                (Get-Content $ImageStatePath -Raw).Trim()
-            } else {
-                ""
-            }
+            $ImageState = Get-WindowsImageState
             if ($ImageState -ne "pending") {
                 Write-Host "ERRORE E25 - Box Packer non configurata" `
                     -ForegroundColor Red

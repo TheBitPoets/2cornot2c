@@ -1,10 +1,17 @@
-name: Build and publish classroom Packer boxes
+name: Build and publish one classroom Packer box
 
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: "Piattaforma da costruire e pubblicare"
+        required: true
+        type: choice
+        options:
+          - windows-amd64-virtualbox
+          - macos-arm64-vmware
       version:
-        description: "Versione SemVer della release, per esempio 1.0.0"
+        description: "Versione SemVer revisionata del target"
         required: true
         type: string
 
@@ -12,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: classroom-boxes-${{ inputs.version }}
+  group: classroom-box-${{ inputs.target }}-${{ inputs.version }}
   cancel-in-progress: false
 
 jobs:
@@ -20,26 +27,43 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
+      RELEASE_TARGET: ${{ inputs.target }}
       RELEASE_VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
 
-      - name: Validate release version
+      - name: Validate reviewed target and version
         run: |
-          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Versione non valida: usare SemVer numerica, per esempio 1.0.0." >&2
-            exit 2
-          fi
-          expected_version="$(tr -d '\r\n' < packer/classroom-release-target.version)"
-          if [ "$RELEASE_VERSION" != "$expected_version" ]; then
-            echo "Versione non revisionata: attesa $expected_version." >&2
-            exit 3
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+
+          from installer.classroom_release_lock import load_target_releases
+
+          target = os.environ["RELEASE_TARGET"]
+          version = os.environ["RELEASE_VERSION"]
+          if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+              raise SystemExit("Versione non valida: usare SemVer numerica.")
+          releases = load_target_releases(
+              Path("packer/classroom-releases.lock.json")
+          )
+          entry = releases.get(target)
+          if entry is None or entry.version != version:
+              raise SystemExit("Target o versione non revisionati nel lock.")
+          PY
+          tag="classroom-${RELEASE_TARGET}-v${RELEASE_VERSION}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "La release $tag esiste già e non può essere sostituita." >&2
+            exit 4
           fi
 
   virtualbox-amd64:
+    if: inputs.target == 'windows-amd64-virtualbox'
     needs: validate-release
     runs-on: [self-hosted, Windows, X64, classroom-packer]
     timeout-minutes: 120
@@ -50,11 +74,9 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-
       - name: Install checksum-locked Packer plugin
         working-directory: packer
         run: python install-locked-plugin.py --platform windows_amd64
-
       - name: Validate locked Packer toolchain and template
         working-directory: packer
         run: |
@@ -62,20 +84,16 @@ jobs:
           python verify-toolchain.py
           packer fmt -check .
           packer validate classroom.pkr.hcl
-
       - name: Prepare VirtualBox source box
         shell: bash
         working-directory: packer
         run: ./ensure-source-box.sh virtualbox 202510.26.0
-
       - name: Build VirtualBox AMD64 box
         working-directory: packer
         run: packer build -only=classroom.vagrant.virtualbox-amd64 classroom.pkr.hcl
-
       - name: Acceptance test
         shell: bash
         run: ./packer/acceptance/test-box.sh virtualbox packer/output/virtualbox-amd64/package.box
-
       - name: Stage release asset
         shell: pwsh
         run: |
@@ -84,21 +102,20 @@ jobs:
             throw 'La box supera il limite GitHub Releases di 2 GiB.'
           }
           Copy-Item -LiteralPath $source 2cornot2c-windows-amd64-virtualbox.box
-
       - name: Upload verified box
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: virtualbox-amd64
+          name: windows-amd64-virtualbox-${{ inputs.version }}
           path: 2cornot2c-windows-amd64-virtualbox.box
           if-no-files-found: error
           retention-days: 1
-
       - name: Remove isolated Vagrant home
         if: always()
         shell: pwsh
         run: Remove-Item -LiteralPath $env:VAGRANT_HOME -Recurse -Force -ErrorAction SilentlyContinue
 
   vmware-arm64:
+    if: inputs.target == 'macos-arm64-vmware'
     needs: validate-release
     runs-on: [self-hosted, macOS, ARM64, classroom-packer]
     timeout-minutes: 120
@@ -109,15 +126,12 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-
       - name: Install checksum-locked Packer plugin
         working-directory: packer
         run: python3 install-locked-plugin.py --platform darwin_arm64
-
       - name: Install VMware plugin in isolated Vagrant home
         working-directory: packer
         run: python3 install-locked-vagrant-plugin.py
-
       - name: Validate locked Packer toolchain and template
         working-directory: packer
         run: |
@@ -125,18 +139,14 @@ jobs:
           python3 verify-toolchain.py --require-vagrant-vmware
           packer fmt -check .
           packer validate classroom.pkr.hcl
-
       - name: Prepare VMware source box
         working-directory: packer
         run: ./ensure-source-box.sh vmware_desktop 202510.26.0
-
       - name: Build VMware ARM64 box
         working-directory: packer
         run: packer build -only=classroom.vagrant.vmware-arm64 classroom.pkr.hcl
-
       - name: Acceptance test
         run: ./packer/acceptance/test-box.sh vmware_desktop packer/output/vmware-arm64/package.box
-
       - name: Stage release asset
         run: |
           source_box="packer/output/vmware-arm64/package.box"
@@ -145,21 +155,19 @@ jobs:
             exit 3
           fi
           cp "$source_box" 2cornot2c-macos-arm64-vmware.box
-
       - name: Upload verified box
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: vmware-arm64
+          name: macos-arm64-vmware-${{ inputs.version }}
           path: 2cornot2c-macos-arm64-vmware.box
           if-no-files-found: error
           retention-days: 1
-
       - name: Remove isolated Vagrant home
         if: always()
         run: rm -rf -- "$VAGRANT_HOME"
 
-  release:
-    needs: [virtualbox-amd64, vmware-arm64]
+  release-windows:
+    needs: virtualbox-amd64
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -170,39 +178,64 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-
-      - name: Download verified boxes
+      - name: Download verified box
         uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d16 # v4
         with:
-          name: vmware-arm64
+          name: windows-amd64-virtualbox-${{ inputs.version }}
           path: release
-
-      - name: Download VirtualBox box
-        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d16 # v4
-        with:
-          name: virtualbox-amd64
-          path: release
-
-      - name: Generate immutable release manifest
+      - name: Generate immutable target manifest
         run: |
           python packer/create-release-manifest.py \
             --version "$RELEASE_VERSION" \
-            --repository "${{ github.repository }}" \
-            --vmware release/2cornot2c-macos-arm64-vmware.box \
-            --virtualbox release/2cornot2c-windows-amd64-virtualbox.box \
+            --repository "$GITHUB_REPOSITORY" \
+            --target windows-amd64-virtualbox \
+            --box release/2cornot2c-windows-amd64-virtualbox.box \
             --output release/release-manifest.json
-          echo "Digest da inserire nella PR di attivazione:"
           sha256sum release/release-manifest.json
-
-      - name: Publish GitHub release
+      - name: Publish target release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "classroom-v${RELEASE_VERSION}" \
-            --repo "${{ github.repository }}" \
-            --target "${{ github.sha }}" \
-            --title "Classroom VM ${RELEASE_VERSION}" \
-            --notes "Box Packer collaudate per Windows AMD64 e macOS Apple Silicon." \
+          gh release create "classroom-windows-amd64-virtualbox-v${RELEASE_VERSION}" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Classroom Windows AMD64 / VirtualBox ${RELEASE_VERSION}" \
+            --notes "Box Packer Windows AMD64 / VirtualBox collaudata fisicamente." \
             release/release-manifest.json \
-            release/2cornot2c-macos-arm64-vmware.box \
             release/2cornot2c-windows-amd64-virtualbox.box
+
+  release-macos:
+    needs: vmware-arm64
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Download verified box
+        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d16 # v4
+        with:
+          name: macos-arm64-vmware-${{ inputs.version }}
+          path: release
+      - name: Generate immutable target manifest
+        run: |
+          python packer/create-release-manifest.py \
+            --version "$RELEASE_VERSION" \
+            --repository "$GITHUB_REPOSITORY" \
+            --target macos-arm64-vmware \
+            --box release/2cornot2c-macos-arm64-vmware.box \
+            --output release/release-manifest.json
+          sha256sum release/release-manifest.json
+      - name: Publish target release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "classroom-macos-arm64-vmware-v${RELEASE_VERSION}" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Classroom macOS ARM64 / VMware ${RELEASE_VERSION}" \
+            --notes "Box Packer macOS ARM64 / VMware collaudata fisicamente." \
+            release/release-manifest.json \
+            release/2cornot2c-macos-arm64-vmware.box

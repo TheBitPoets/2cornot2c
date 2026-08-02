@@ -1,0 +1,21 @@
+{
+  "schema_version": "2cornot2c.classroom-release-lock.v1",
+  "targets": {
+    "windows-amd64-virtualbox": {
+      "host": "windows-amd64",
+      "provider": "virtualbox",
+      "state": "pending",
+      "version": "1.0.0",
+      "manifest_url": "https://github.com/TheBitPoets/2cornot2c/releases/download/classroom-windows-amd64-virtualbox-v1.0.0/release-manifest.json",
+      "manifest_sha256": null
+    },
+    "macos-arm64-vmware": {
+      "host": "macos-arm64",
+      "provider": "vmware_desktop",
+      "state": "pending",
+      "version": "1.0.0",
+      "manifest_url": "https://github.com/TheBitPoets/2cornot2c/releases/download/classroom-macos-arm64-vmware-v1.0.0/release-manifest.json",
+      "manifest_sha256": null
+    }
+  }
+}

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 from installer import plans
+from installer.classroom_release_lock import ClassroomReleaseLockError
 from installer.diagnostics import CheckResult, run_check
 from installer.executor import execute_plan
 from installer.model import Check
@@ -19,7 +22,7 @@ from installer.student_dev import immutable_reference, load_lock
 
 @pytest.fixture(autouse=True)
 def active_classroom_images(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(plans, "classroom_images_active", lambda: True)
+    monkeypatch.setattr(plans, "classroom_images_active", lambda *args: True)
 
 
 def test_detects_supported_hosts() -> None:
@@ -33,20 +36,20 @@ def test_rejects_unsupported_host() -> None:
 
 
 def test_invalid_packer_activation_state_fails_closed(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    state = tmp_path / "classroom-images.state"
-    state.write_text("typo\n", encoding="utf-8")
-    monkeypatch.setattr(plans, "CLASSROOM_IMAGES_STATE", state)
+    def invalid_target(*args):
+        raise ClassroomReleaseLockError("Stato non valido per target.")
 
-    with pytest.raises(RuntimeError, match="Stato immagini classroom non valido"):
-        read_classroom_images_active()
+    monkeypatch.setattr(plans, "target_release", invalid_target)
+    with pytest.raises(RuntimeError, match="Stato non valido"):
+        read_classroom_images_active(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
 
 
 def test_pending_packer_release_keeps_vm_image_steps_dormant(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(plans, "classroom_images_active", lambda: False)
+    monkeypatch.setattr(plans, "classroom_images_active", lambda *args: False)
 
     windows = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
     macos = install_plan(Host.MACOS_ARM64, Provider.VMWARE)
@@ -127,7 +130,7 @@ def test_check_can_require_semantic_output() -> None:
         Check(
             "python",
             "Python",
-            ("python3", "-c", "print('installed plugins')"),
+            (sys.executable, "-c", "print('installed plugins')"),
             "vagrant-vmware-desktop",
         )
     )

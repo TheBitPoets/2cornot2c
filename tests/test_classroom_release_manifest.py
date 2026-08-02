@@ -17,10 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_release_manifest_generator_emits_installable_contract(tmp_path: Path) -> None:
-    vmware = tmp_path / "vmware.box"
     virtualbox = tmp_path / "virtualbox.box"
     output = tmp_path / "release-manifest.json"
-    vmware.write_bytes(b"vmware")
     virtualbox.write_bytes(b"virtualbox")
     script = ROOT / "packer" / "create-release-manifest.py"
 
@@ -32,9 +30,9 @@ def test_release_manifest_generator_emits_installable_contract(tmp_path: Path) -
             "1.2.3",
             "--repository",
             "TheBitPoets/2cornot2c",
-            "--vmware",
-            str(vmware),
-            "--virtualbox",
+            "--target",
+            "windows-amd64-virtualbox",
+            "--box",
             str(virtualbox),
             "--output",
             str(output),
@@ -48,7 +46,6 @@ def test_release_manifest_generator_emits_installable_contract(tmp_path: Path) -
     release = load_release(output)
     assert release.version == "1.2.3"
     assert {(item.host, item.provider) for item in release.artifacts} == {
-        (Host.MACOS_ARM64, Provider.VMWARE),
         (Host.WINDOWS_AMD64, Provider.VIRTUALBOX),
     }
     assert all(
@@ -57,10 +54,7 @@ def test_release_manifest_generator_emits_installable_contract(tmp_path: Path) -
         )
         for item in release.artifacts
     )
-    assert {item.name for item in release.artifacts} == {
-        "VMware ARM64",
-        "VirtualBox AMD64",
-    }
+    assert {item.name for item in release.artifacts} == {"VirtualBox AMD64"}
 
 
 def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
@@ -70,8 +64,9 @@ def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
 
     assert "if: github.ref == 'refs/heads/main'" in workflow
     assert "RELEASE_VERSION: ${{ inputs.version }}" in workflow
-    assert "packer/classroom-release-target.version" in workflow
-    assert 'RELEASE_VERSION" != "$expected_version' in workflow
+    assert "packer/classroom-releases.lock.json" in workflow
+    assert "inputs.target == 'windows-amd64-virtualbox'" in workflow
+    assert "inputs.target == 'macos-arm64-vmware'" in workflow
     run_blocks = re.findall(
         r"(?m)^        run: \|\n((?:^          .*(?:\n|$))*)",
         workflow,
@@ -81,8 +76,12 @@ def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
         assert "${{ inputs.version }}" not in run_block
     assert "Length -ge 2GB" in workflow
     assert "stat -f %z" in workflow
+    assert "needs: virtualbox-amd64" in workflow
+    assert "needs: vmware-arm64" in workflow
+    assert "needs: [virtualbox-amd64, vmware-arm64]" not in workflow
 
 
+@pytest.mark.skipif(os.name == "nt", reason="richiede Bash/Unix")
 def test_acceptance_import_uses_isolated_vagrantfile(tmp_path: Path) -> None:
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
@@ -103,6 +102,7 @@ def test_acceptance_import_uses_isolated_vagrantfile(tmp_path: Path) -> None:
 
     completed = subprocess.run(
         (
+            "bash",
             str(ROOT / "packer" / "acceptance" / "test-box.sh"),
             "vmware_desktop",
             str(box),

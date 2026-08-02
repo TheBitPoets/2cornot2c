@@ -18,6 +18,11 @@ from installer.artifacts import (
     load_release,
     select_artifact,
 )
+from installer.classroom_release_lock import (
+    ClassroomReleaseLockError,
+    TargetRelease,
+    target_release,
+)
 from installer.model import Host, Provider, VM_PROVIDERS
 from installer.platforms import detect_host
 from installer.vagrant_box import (
@@ -29,17 +34,6 @@ from installer.vagrant_box import (
 )
 
 
-CLASSROOM_RELEASE_VERSION = "1.0.0"
-CLASSROOM_IMAGES_STATE = (
-    Path(__file__).resolve().parents[1] / "packer" / "classroom-images.state"
-)
-OFFICIAL_MANIFEST_DIGEST = (
-    Path(__file__).resolve().parents[1] / "packer" / "release-manifest.sha256"
-)
-OFFICIAL_MANIFEST_URL = (
-    "https://github.com/TheBitPoets/2cornot2c/releases/download/"
-    f"classroom-v{CLASSROOM_RELEASE_VERSION}/release-manifest.json"
-)
 MAX_MANIFEST_BYTES = 256 * 1024
 MANIFEST_CACHE_MAX_AGE_SECONDS = 60 * 60
 
@@ -64,10 +58,20 @@ def _read_bounded(response, maximum: int) -> bytes:
     return bytes(result)
 
 
-def latest_manifest_url() -> str:
-    """Return the repository-pinned classroom manifest without API discovery."""
+def _target_lock(host: Host, provider: Provider) -> TargetRelease:
+    try:
+        return target_release(host, provider)
+    except ClassroomReleaseLockError as error:
+        raise ClassroomImageError(str(error)) from error
 
-    return OFFICIAL_MANIFEST_URL
+
+def latest_manifest_url(
+    host: Host = Host.WINDOWS_AMD64,
+    provider: Provider = Provider.VIRTUALBOX,
+) -> str:
+    """Return the repository-pinned target manifest without API discovery."""
+
+    return _target_lock(host, provider).manifest_url
 
 
 def _manifest_override() -> str | None:
@@ -83,9 +87,9 @@ def _manifest_override() -> str | None:
     return override
 
 
-def _manifest_source() -> str:
+def _manifest_source(host: Host, provider: Provider) -> str:
     override = _manifest_override()
-    return override if override else latest_manifest_url()
+    return override if override else latest_manifest_url(host, provider)
 
 
 def _file_sha256(path: Path) -> str:
@@ -96,28 +100,19 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _official_manifest_digest() -> str | None:
-    try:
-        active = CLASSROOM_IMAGES_STATE.read_text(encoding="utf-8").strip()
-    except OSError as error:
-        raise ClassroomImageError("Stato immagini classroom non leggibile.") from error
-    if active == "pending":
+def _official_manifest_digest(
+    host: Host = Host.WINDOWS_AMD64,
+    provider: Provider = Provider.VIRTUALBOX,
+) -> str:
+    release = _target_lock(host, provider)
+    if not release.active:
         raise ClassroomImageError(
-            "Immagini Packer non ancora attive; usare il fallback Bento."
+            f"Immagine Packer {release.target_id} non ancora attiva; "
+            "usare il fallback Bento."
         )
-    if active != "active":
-        raise ClassroomImageError(
-            f"Stato immagini classroom non valido: {active!r}."
-        )
-    try:
-        digest = OFFICIAL_MANIFEST_DIGEST.read_text(encoding="ascii").strip()
-    except OSError as error:
-        raise ClassroomImageError("Digest manifest classroom non leggibile.") from error
-    if len(digest) != 64 or any(
-        character not in "0123456789abcdef" for character in digest
-    ):
-        raise ClassroomImageError("Digest manifest classroom non valido.")
-    return digest
+    if release.manifest_sha256 is None:
+        raise ClassroomImageError("Digest manifest classroom attivo mancante.")
+    return release.manifest_sha256
 
 
 def _cached_manifest_is_valid(
@@ -147,29 +142,40 @@ def _cached_manifest_is_fresh(path: Path) -> bool:
     return age <= MANIFEST_CACHE_MAX_AGE_SECONDS
 
 
-def acquire_manifest(cache_dir: Path) -> Path:
-    """Acquisisce il manifest da file locale o HTTPS con limite dimensionale."""
+def acquire_manifest(
+    cache_dir: Path,
+    host: Host = Host.WINDOWS_AMD64,
+    provider: Provider = Provider.VIRTUALBOX,
+) -> Path:
+    """Acquisisce il manifest target da file locale o HTTPS con limite."""
 
     override = _manifest_override()
-    official_destination = cache_dir / "release-manifest.json"
+    release_lock = None if override is not None else _target_lock(host, provider)
+    target_id = (
+        f"override-{host.value}-{provider.value}"
+        if release_lock is None
+        else release_lock.target_id
+    )
+    official_destination = cache_dir / f"{target_id}-release-manifest.json"
     destination = (
-        cache_dir / "override-release-manifest.json"
+        cache_dir / f"override-{host.value}-{provider.value}-release-manifest.json"
         if override is not None
         else official_destination
     )
     expected_official_digest = (
-        None if override is not None else _official_manifest_digest()
+        None if override is not None else _official_manifest_digest(host, provider)
     )
+    expected_version = None if release_lock is None else release_lock.version
     cached_valid = _cached_manifest_is_valid(
         official_destination,
-        expected_version=CLASSROOM_RELEASE_VERSION,
+        expected_version=expected_version,
         expected_digest=expected_official_digest,
     )
     if override is None and cached_valid and _cached_manifest_is_fresh(destination):
         return destination
 
     try:
-        source = _manifest_source()
+        source = _manifest_source(host, provider)
     except ClassroomImageError:
         if override is None and cached_valid:
             return official_destination
@@ -205,7 +211,7 @@ def acquire_manifest(cache_dir: Path) -> Path:
         temporary = Path(temporary_name)
         downloaded_release = load_release(temporary)
         if override is None:
-            if downloaded_release.version != CLASSROOM_RELEASE_VERSION:
+            if downloaded_release.version != expected_version:
                 raise ArtifactError(
                     "Versione manifest ufficiale diversa dalla release fissata."
                 )
@@ -290,7 +296,7 @@ def _legacy_vm_providers(project: Path) -> tuple[Provider, ...]:
 def resolve_artifact(host: Host, provider: Provider, cache_dir: Path):
     if provider not in VM_PROVIDERS:
         raise ClassroomImageError(f"Provider non VM: {provider.value}")
-    manifest = acquire_manifest(cache_dir)
+    manifest = acquire_manifest(cache_dir, host, provider)
     try:
         return select_artifact(load_release(manifest), host, provider)
     except ArtifactError as error:

@@ -1,14 +1,36 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+require "json"
 require "rbconfig"
 
 box_file = File.join(__dir__, ".classroom-box")
-image_state_file = File.join(__dir__, "packer", "classroom-images.state")
-raise "Stato immagini classroom mancante." unless File.file?(image_state_file)
-image_state = File.read(image_state_file, encoding: "UTF-8").strip
+release_lock_file = File.join(__dir__, "packer", "classroom-releases.lock.json")
+raise "Lock release classroom mancante." unless File.file?(release_lock_file)
+begin
+  release_lock = JSON.parse(File.read(release_lock_file, encoding: "UTF-8"))
+rescue JSON::ParserError => error
+  raise "Lock release classroom non valido: #{error.message}"
+end
+unless release_lock.is_a?(Hash) &&
+       release_lock["schema_version"] == "2cornot2c.classroom-release-lock.v1" &&
+       release_lock["targets"].is_a?(Hash)
+  raise "Schema lock release classroom non valido."
+end
+host_os = RbConfig::CONFIG["host_os"]
+host_cpu = RbConfig::CONFIG["host_cpu"]
+target_id = if host_os.match?(/mswin|mingw|cygwin/i) && host_cpu.match?(/x86_64|amd64|x64/i)
+              "windows-amd64-virtualbox"
+            elsif host_os.match?(/darwin/i) && host_cpu.match?(/arm64|aarch64/i)
+              "macos-arm64-vmware"
+            end
+target_release = target_id.nil? ? nil : release_lock["targets"][target_id]
+if !target_id.nil? && !target_release.is_a?(Hash)
+  raise "Target #{target_id} mancante nel lock release classroom."
+end
+image_state = target_release.nil? ? "pending" : target_release["state"]
 unless ["pending", "active"].include?(image_state)
-  raise "Stato immagini classroom non valido: #{image_state.inspect}."
+  raise "Stato immagini classroom non valido per #{target_id}: #{image_state.inspect}."
 end
 packer_images_active = image_state == "active"
 box_name = ENV["CLASSROOM_BOX_NAME"]

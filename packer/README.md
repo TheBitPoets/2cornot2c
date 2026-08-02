@@ -65,9 +65,10 @@ Gli artefatti vengono scritti sotto `packer/output/` e sono ignorati da Git.
 ## Manifest di rilascio
 
 `release-manifest.example.json` descrive il contratto pubblicato insieme alle
-box. La workflow manuale `publish-classroom-boxes.yml` costruisce e collauda i
-due artefatti su runner fisici provider-specifici, genera il manifest e crea
-la GitHub Release `classroom-v<versione>`. Per ciascun host contiene:
+box. La workflow manuale `publish-classroom-boxes.yml` costruisce, collauda e
+pubblica un solo target per esecuzione. Crea una release immutabile
+`classroom-<target>-v<versione>` con un manifest target-specifico. Il manifest
+contiene:
 
 - provider e architettura;
 - nome Vagrant immutabile che include la versione;
@@ -77,8 +78,8 @@ la GitHub Release `classroom-v<versione>`. Per ciascun host contiene:
 
 L'esempio usa deliberatamente `example.invalid` e checksum fittizi: non è un
 manifest installabile. Il manifest reale è un asset della release e viene
-generato da `create-release-manifest.py` soltanto dopo il successo di entrambi
-gli acceptance test.
+generato da `create-release-manifest.py` soltanto dopo il successo
+dell'acceptance test del target selezionato.
 
 I runner self-hosted devono avere le etichette:
 
@@ -122,16 +123,16 @@ commit. Usa soltanto `workflow_dispatch`: un maintainer la avvia manualmente
 da `main`, dopo review e merge. Questo evita di occupare i runner fisici per
 modifiche che non richiedono una nuova immagine.
 
-La pubblicazione richiede entrambi i runner self-hosted:
+Ogni esecuzione richiede soltanto il runner del target scelto:
 
-| Job | Label richieste | Provider |
+| Target | Label richieste | Provider |
 | --- | --- | --- |
-| Windows AMD64 | `self-hosted`, `Windows`, `X64`, `classroom-packer` | VirtualBox |
-| macOS ARM64 | `self-hosted`, `macOS`, `ARM64`, `classroom-packer` | VMware Fusion |
+| `windows-amd64-virtualbox` | `self-hosted`, `Windows`, `X64`, `classroom-packer` | VirtualBox |
+| `macos-arm64-vmware` | `self-hosted`, `macOS`, `ARM64`, `classroom-packer` | VMware Fusion |
 
-Il job di release parte soltanto se entrambe le build e i test di accettazione
-terminano correttamente. Non pubblicare manualmente una sola box: il manifest
-deve descrivere entrambe le piattaforme.
+Build, acceptance, manifest, tag e attivazione sono indipendenti. Un runner
+occupato o offline non blocca le altre piattaforme. Nuovi target si aggiungono
+al lock revisionato e alla workflow senza modificare le release esistenti.
 
 ### 1. Modificare il provisioning
 
@@ -199,8 +200,8 @@ un numero già pubblicato.
 
 ### 4. Preparare i runner fisici
 
-Accendi entrambi i computer e controlla in
-`Settings > Actions > Runners` che siano `Idle` e abbiano la label
+Accendi soltanto il computer del target da pubblicare e controlla in
+`Settings > Actions > Runners` che sia `Idle` e abbia la label
 `classroom-packer`. `Offline` indica che il processo non è attivo o non
 riesce a raggiungere GitHub.
 
@@ -274,8 +275,10 @@ La gestione `svc.sh` su macOS e quella tramite Servizi su Windows seguono la
 Installazione e servizio della utility sono descritti nella
 [documentazione ufficiale HashiCorp](https://developer.hashicorp.com/vagrant/docs/providers/vmware/vagrant-vmware-utility).
 
-I computer devono restare accesi, connessi e non sospesi per tutta la build.
-Ogni job usa un `VAGRANT_HOME` isolato e scarica nuovamente la box Bento attestata. I plugin Packer e Vagrant VMware vengono installati da archivi con checksum bloccato.
+Il computer selezionato deve restare acceso, connesso e non sospeso per tutta
+la build. Ogni job usa un `VAGRANT_HOME` isolato e scarica nuovamente la box
+Bento attestata. I plugin Packer e Vagrant VMware vengono installati da archivi
+con checksum bloccato.
 
 ### 5. Avviare la workflow
 
@@ -285,36 +288,32 @@ Da GitHub:
 2. seleziona `Build and publish classroom Packer boxes`;
 3. scegli `Run workflow`;
 4. seleziona `main`;
-5. inserisci la versione revisionata in
-   `packer/classroom-release-target.version` (`1.0.0` per la prima release);
-6. conferma con `Run workflow`.
+5. scegli il target;
+6. inserisci la sua versione revisionata in
+   `packer/classroom-releases.lock.json` (`1.0.0` per la prima release);
+7. conferma con `Run workflow`.
 
-La workflow rifiuta una versione diversa dal target committato, costruisce e
-collauda entrambe le box, verifica che ogni asset sia inferiore a 2 GiB, genera
-il manifest con dimensioni e SHA-256 e pubblica la release corrispondente.
-Durante la build il runner passa da
+La workflow rifiuta target o versione diversi dal lock, usa soltanto il runner
+selezionato, verifica che l'asset sia inferiore a 2 GiB, genera il manifest con
+dimensione e SHA-256 e pubblica la release target-specifica. Durante la build
+il runner passa da
 `Idle` ad `Active`; i log sono visibili aprendo il job.
 
-Per la prima release, lascia `packer/classroom-images.state` su `pending`
-durante merge e build. Solo dopo acceptance fisica, pubblicazione e prova di
-download di `classroom-v1.0.0`, copia dalla workflow lo SHA-256 del manifest in
-`packer/release-manifest.sha256` e apri una PR separata che aggiorni anche
-`CLASSROOM_RELEASE_VERSION` alla versione pubblicata e imposti il file di stato
-ad `active`. Versione, digest e stato devono essere revisionati insieme: da quel
-momento installer e `Vagrantfile` diventano fail-closed sulle box Packer e un
-asset release sostituito non supera il lock nel repository.
+Per la prima release, lascia il target su `pending` in
+`packer/classroom-releases.lock.json`. Solo dopo acceptance fisica,
+pubblicazione e prova di download della release target-specifica, copia dalla
+workflow lo SHA-256 del manifest nel relativo record e apri una PR separata che
+imposti quel solo target ad `active`. Versione, URL, digest e stato devono essere
+revisionati insieme. Installer e `Vagrantfile` diventano fail-closed soltanto
+per il target attivato; gli altri continuano a usare Bento.
 
 ### 6. Verificare la release
 
-La release è completa soltanto se contiene:
-
-- `release-manifest.json`;
-- `2cornot2c-windows-amd64-virtualbox.box`;
-- `2cornot2c-macos-arm64-vmware.box`.
-
-Controlla il tag `classroom-v<versione>` e verifica che non sia una bozza o
-una prerelease. L'installer usa il manifest per scegliere la box, controllarne
-dimensione e checksum e importarla con un nome Vagrant immutabile.
+La release è completa soltanto se contiene `release-manifest.json` e la box del
+target selezionato. Controlla il tag `classroom-<target>-v<versione>` e verifica
+che non sia una bozza o una prerelease. L'installer usa il lock del proprio
+host/provider, controlla dimensione e checksum e importa la box con un nome
+Vagrant immutabile.
 
 Se una build fallisce, non creare gli asset a mano. Correggi gli script, ripeti
 PR e merge e rilancia con una versione non ancora pubblicata. Se il problema è

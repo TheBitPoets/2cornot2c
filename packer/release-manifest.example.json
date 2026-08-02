@@ -3,22 +3,12 @@
   "release": "0.1.0",
   "artifacts": [
     {
-      "name": "Ubuntu 24.04 VMware ARM64",
-      "host": "macos-arm64",
-      "provider": "vmware_desktop",
-      "architecture": "arm64",
-      "box_name": "2cornot2c/ubuntu-24.04-vmware-arm64-0.1.0",
-      "url": "https://example.invalid/2cornot2c-ubuntu-24.04-vmware-arm64.box",
-      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-      "size_bytes": 1
-    },
-    {
-      "name": "Ubuntu 24.04 VirtualBox AMD64",
+      "name": "VirtualBox AMD64",
       "host": "windows-amd64",
       "provider": "virtualbox",
       "architecture": "amd64",
       "box_name": "2cornot2c/ubuntu-24.04-virtualbox-amd64-0.1.0",
-      "url": "https://example.invalid/2cornot2c-ubuntu-24.04-virtualbox-amd64.box",
+      "url": "https://example.invalid/classroom-windows-amd64-virtualbox-v0.1.0/2cornot2c-windows-amd64-virtualbox.box",
       "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "size_bytes": 1
     }
