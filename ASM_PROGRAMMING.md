@@ -48,7 +48,7 @@ Materiale su sistema operativo, architettura x86-64 e programmazione Assembly.
     + [Examples](#examples)
     + [Notes](#notes)
     + [Cosa manca](#cosa-manca)
-    + [Esaminiamo `EASTSYSCALL.ASM`](#il-primo-programma-assembly-eatsyscallasm)
+    + [Esaminiamo `EATSYSCALL.ASM`](#esaminiamo-eatsyscallasm)
     + [Sezione .data](#sezione-data)
     + [Sezione .bss](#sezione-bss)
     + [Sezione .text](#sezione-text)
