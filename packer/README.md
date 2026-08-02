@@ -285,19 +285,22 @@ Da GitHub:
 2. seleziona `Build and publish classroom Packer boxes`;
 3. scegli `Run workflow`;
 4. seleziona `main`;
-5. inserisci la versione, per esempio `1.1.0`;
+5. inserisci la versione revisionata in
+   `packer/classroom-release-target.version` (`1.0.0` per la prima release);
 6. conferma con `Run workflow`.
 
-La workflow valida la versione, costruisce e collauda entrambe le box, verifica
-che ogni asset sia inferiore a 2 GiB, genera il manifest con dimensioni e
-SHA-256 e pubblica `classroom-v1.1.0`. Durante la build il runner passa da
+La workflow rifiuta una versione diversa dal target committato, costruisce e
+collauda entrambe le box, verifica che ogni asset sia inferiore a 2 GiB, genera
+il manifest con dimensioni e SHA-256 e pubblica la release corrispondente.
+Durante la build il runner passa da
 `Idle` ad `Active`; i log sono visibili aprendo il job.
 
 Per la prima release, lascia `packer/classroom-images.state` su `pending`
 durante merge e build. Solo dopo acceptance fisica, pubblicazione e prova di
 download di `classroom-v1.0.0`, copia dalla workflow lo SHA-256 del manifest in
-`packer/release-manifest.sha256` e apri una PR separata che imposti il file di
-stato ad `active`. Digest e stato devono essere revisionati insieme: da quel
+`packer/release-manifest.sha256` e apri una PR separata che aggiorni anche
+`CLASSROOM_RELEASE_VERSION` alla versione pubblicata e imposti il file di stato
+ad `active`. Versione, digest e stato devono essere revisionati insieme: da quel
 momento installer e `Vagrantfile` diventano fail-closed sulle box Packer e un
 asset release sostituito non supera il lock nel repository.
 

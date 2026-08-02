@@ -70,6 +70,8 @@ def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
 
     assert "if: github.ref == 'refs/heads/main'" in workflow
     assert "RELEASE_VERSION: ${{ inputs.version }}" in workflow
+    assert "packer/classroom-release-target.version" in workflow
+    assert 'RELEASE_VERSION" != "$expected_version' in workflow
     run_blocks = re.findall(
         r"(?m)^        run: \|\n((?:^          .*(?:\n|$))*)",
         workflow,
