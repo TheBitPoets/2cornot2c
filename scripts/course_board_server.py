@@ -45,7 +45,7 @@ from copy import deepcopy
 from contextlib import ExitStack, contextmanager, nullcontext
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import parse_qs, parse_qsl, unquote, urlparse
 
@@ -118,6 +118,18 @@ STUDENT_API_BODY_DEADLINE_SECONDS = 15
 HTTP_HEADER_DEADLINE_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 MARKDOWN_LINE_ENDING_RE = re.compile(r"\r\n|\r|\n")
+JAVASCRIPT_WHITESPACE = (
+    "\\u0009-\\u000d\\u0020\\u00a0\\u1680\\u2000-\\u200a"
+    "\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff"
+)
+MARKDOWN_IMAGE_RE = re.compile(
+    rf"!\[[^\]\r\n]{{0,500}}\]\(([^){JAVASCRIPT_WHITESPACE}]+)"
+    rf"(?:[{JAVASCRIPT_WHITESPACE}]+(?:\"[^\"]*\"|'[^']*'))?\)"
+)
+JAVASCRIPT_TRIM_RE = re.compile(
+    r"^[\u0009-\u000d\u0020\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+"
+    r"|[\u0009-\u000d\u0020\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+$"
+)
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
 SPACE_RE = re.compile(r"[\s_]+")
@@ -141,6 +153,16 @@ MAX_HEADINGS_PER_SOURCE = 10_000
 MAX_MARKDOWN_LINES_PER_SOURCE = 250_000
 MAX_TOTAL_HEADINGS = 50_000
 MAX_HEADING_TITLE_CHARS = 512
+MAX_HEADING_IMAGE_BYTES = 8 * 1024 * 1024
+HEADING_IMAGE_CONTENT_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+}
 AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 MAX_AI_PROVIDER_RESPONSE_BYTES = 4 * 1024 * 1024
@@ -3133,7 +3155,7 @@ def headings_from_source_snapshot(
                 "line": lineno,
             }
         )
-    source_lines = source_text.splitlines()
+    source_lines = list(iter_markdown_lines(source_text))
     end_lines = [len(source_lines) + 1] * len(headings)
     open_headings: list[int] = []
     for index, heading in enumerate(headings):
@@ -3205,6 +3227,277 @@ def heading_content_snapshot(
                 )
         source_text = None
     return None
+
+
+def normalized_heading_asset_path(source_path: str, target: str) -> str:
+    """Resolve one Markdown image path without leaving the source repository."""
+
+    if (
+        not target
+        or len(target) > 2048
+        or target.startswith(("/", "//"))
+        or "\\" in target
+        or "?" in target
+        or "#" in target
+        or re.search(r"[\x00-\x1f\x7f]", target)
+        or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", target)
+        or re.search(r"%(?![0-9A-Fa-f]{2})", target)
+    ):
+        raise ValueError("Riferimento immagine non consentito.")
+    try:
+        decoded = urllib.parse.unquote(target, errors="strict")
+    except UnicodeDecodeError as exc:
+        raise ValueError("Riferimento immagine non valido.") from exc
+    if (
+        "\\" in decoded
+        or ":" in decoded
+        or "?" in decoded
+        or "#" in decoded
+        or re.search(r"[\x00-\x1f\x7f]", decoded)
+        or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", decoded)
+    ):
+        raise ValueError("Riferimento immagine non consentito.")
+    parts = list(PurePosixPath(source_path).parts[:-1])
+    if not parts or any(part in {"", ".", "..", "/"} for part in parts):
+        if "/" in source_path:
+            raise ValueError("Path fonte immagine non valido.")
+        parts = []
+    for part in decoded.split("/"):
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if not parts:
+                raise ValueError("L'immagine esce dalla root della fonte.")
+            parts.pop()
+        else:
+            parts.append(part)
+    if not parts:
+        raise ValueError("Path immagine vuoto.")
+    path = PurePosixPath(*parts)
+    if path.suffix.lower() not in HEADING_IMAGE_CONTENT_TYPES:
+        raise ValueError("Formato immagine non consentito.")
+    return path.as_posix()
+
+
+def javascript_trim(value: str) -> str:
+    """Apply the ECMAScript String.trim whitespace set."""
+
+    return JAVASCRIPT_TRIM_RE.sub("", value)
+
+
+def normalize_paragraph_preview_source(source: str) -> str:
+    """Mirror the frontend's bounded HTML-to-Markdown preview normalization."""
+
+    text = re.sub(
+        rf"<br[{JAVASCRIPT_WHITESPACE}]*/?[{JAVASCRIPT_WHITESPACE}]*>",
+        "\n",
+        source,
+        flags=re.IGNORECASE | re.ASCII,
+    )
+    text = re.sub(
+        r"<h([1-6])(?![A-Za-z0-9_])[^>]*>",
+        lambda match: f"\n{'#' * int(match.group(1))} ",
+        text,
+        flags=re.IGNORECASE | re.ASCII,
+    )
+    text = re.sub(
+        r"<li(?![A-Za-z0-9_])[^>]*>",
+        "\n- ",
+        text,
+        flags=re.IGNORECASE | re.ASCII,
+    )
+    text = re.sub(
+        r"</?(?:details|summary|p|div|section|article|table|thead|tbody|tr|ul|ol|li|pre|h[1-6])"
+        r"(?![A-Za-z0-9_])[^>]*>",
+        "\n",
+        text,
+        flags=re.IGNORECASE | re.ASCII,
+    )
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\r\n?", "\n", text)
+    return javascript_trim(re.sub(r"\n{3,}", "\n\n", text))
+
+
+def heading_referenced_asset_paths(source_path: str, section: str) -> set[str]:
+    """Return image paths rendered by the bounded paragraph Markdown renderer."""
+
+    referenced: set[str] = set()
+    in_code_fence = False
+    normalized = normalize_paragraph_preview_source(section)
+    for line in normalized.split("\n"):
+        if javascript_trim(line).startswith("```"):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
+        for match in MARKDOWN_IMAGE_RE.finditer(line):
+            try:
+                referenced.add(normalized_heading_asset_path(source_path, match.group(1)))
+            except ValueError:
+                continue
+    return referenced
+
+
+def _read_local_heading_asset(relative_path: str, max_bytes: int) -> bytes:
+    repository_root = ROOT.resolve()
+    lexical = (repository_root / Path(relative_path)).absolute()
+    resolved = lexical.resolve()
+    try:
+        resolved.relative_to(repository_root)
+    except ValueError as exc:
+        raise ValueError("L'immagine esce dalla root configurata.") from exc
+    if os.path.normcase(str(resolved)) != os.path.normcase(str(lexical)):
+        raise ValueError("Symlink o reparse point non consentito nel path immagine.")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(resolved, flags)
+    except OSError as exc:
+        raise FileNotFoundError("Immagine locale non disponibile.") from exc
+    try:
+        try:
+            opened_path = course_source_catalog.opened_file_path(descriptor).resolve()
+            opened_path.relative_to(repository_root)
+        except (OSError, ValueError) as exc:
+            raise ValueError("L'immagine aperta esce dalla root configurata.") from exc
+        if os.path.normcase(str(opened_path)) != os.path.normcase(str(resolved)):
+            raise ValueError("Il file immagine aperto non coincide con il path verificato.")
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > max_bytes:
+            raise ValueError("File immagine locale non valido o troppo grande.")
+        with os.fdopen(descriptor, "rb", closefd=False) as stream:
+            content = stream.read(max_bytes + 1)
+            stream.seek(0)
+            verification = stream.read(max_bytes + 1)
+        after = os.fstat(descriptor)
+        before_identity = (
+            before.st_dev,
+            before.st_ino,
+            before.st_size,
+            before.st_mtime_ns,
+            before.st_ctime_ns,
+        )
+        after_identity = (
+            after.st_dev,
+            after.st_ino,
+            after.st_size,
+            after.st_mtime_ns,
+            after.st_ctime_ns,
+        )
+        if (
+            len(content) != before.st_size
+            or len(content) > max_bytes
+            or content != verification
+            or before_identity != after_identity
+        ):
+            raise ValueError("File immagine locale instabile o troppo grande.")
+        return content
+    finally:
+        os.close(descriptor)
+
+
+def heading_asset_snapshot(
+    design: dict,
+    heading_id: str,
+    expected_source_commit: str,
+    expected_content_sha256: str,
+    target: str,
+    max_bytes: int = MAX_HEADING_IMAGE_BYTES,
+) -> dict:
+    """Return one bounded source-relative image after provenance validation."""
+
+    if (
+        not isinstance(max_bytes, int)
+        or isinstance(max_bytes, bool)
+        or max_bytes <= 0
+        or max_bytes > MAX_HEADING_IMAGE_BYTES
+    ):
+        raise ValueError("Budget immagine non valido.")
+    if re.fullmatch(r"[0-9a-f]{64}", expected_content_sha256) is None:
+        raise CourseSourceRevisionConflictError(
+            "Digest del paragrafo mancante o non valido: riallinealo prima della preview."
+        )
+    selected_file = None
+    selected_heading = None
+    selected_source_text = None
+    total_headings = 0
+    for source_file in course_markdown_source_files(design):
+        source_text = course_source_catalog.read_markdown_text(source_file, ROOT)
+        source_headings = headings_from_source_snapshot(source_file, source_text)
+        total_headings += len(source_headings)
+        if total_headings > MAX_TOTAL_HEADINGS:
+            raise course_source_catalog.CourseSourceCatalogError(
+                "Il catalogo contiene troppi heading Markdown."
+            )
+        match = next((item for item in source_headings if item["id"] == heading_id), None)
+        if match is not None:
+            selected_file = source_file
+            selected_heading = match
+            selected_source_text = source_text
+            break
+    if selected_file is None or selected_heading is None or selected_source_text is None:
+        raise FileNotFoundError("Paragrafo non trovato.")
+    if (
+        (expected_source_commit or selected_heading["source_provider"] != "local")
+        and selected_heading.get("source_commit") != expected_source_commit
+    ):
+        raise CourseSourceRevisionConflictError(
+            "La fonte remota è cambiata: riallinea il paragrafo prima della preview."
+        )
+    if selected_heading.get("content_sha256") != expected_content_sha256:
+        raise CourseSourceRevisionConflictError(
+            "Il contenuto del paragrafo è cambiato: riallinealo prima della preview."
+        )
+    relative_path = normalized_heading_asset_path(selected_file.relative_path, target)
+    section = section_text_from_source(
+        selected_source_text,
+        selected_heading["line"],
+        selected_heading["level"],
+    )
+    referenced_assets = heading_referenced_asset_paths(
+        selected_file.relative_path,
+        section,
+    )
+    if relative_path not in referenced_assets:
+        raise ValueError("L'immagine non è referenziata dal paragrafo verificato.")
+    content_type = HEADING_IMAGE_CONTENT_TYPES[PurePosixPath(relative_path).suffix.lower()]
+    provider = selected_file.source.provider
+    if provider == "local":
+        content = _read_local_heading_asset(relative_path, max_bytes)
+    else:
+        repository = selected_file.source.repository
+        commit = getattr(selected_file, "resolved_ref", None)
+        if repository is None or commit is None:
+            raise CourseSourceRevisionConflictError("Provenienza immagine remota incompleta.")
+        deadline = time.monotonic() + 30.0
+        if provider == "github":
+            adapter = course_github_markdown.GitHubMarkdownAdapter(
+                course_github_markdown.GitHubApiTransport(
+                    read_github_markdown_token(deadline)
+                ),
+                blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
+            )
+        elif provider == "gitlab":
+            adapter = course_gitlab_markdown.GitLabMarkdownAdapter(
+                course_gitlab_markdown.GitLabApiTransport(
+                    read_gitlab_markdown_token(deadline)
+                ),
+                blob_cache=GITHUB_MARKDOWN_BLOB_CACHE,
+            )
+        else:
+            raise ValueError("Provider immagine non supportato.")
+        content = adapter.fetch_file_at_commit(
+            repository,
+            commit,
+            relative_path,
+            max_bytes=max_bytes,
+        ).content
+    return {
+        "content_type": content_type,
+        "content_base64": base64.b64encode(content).decode("ascii"),
+        "sha256": hashlib.sha256(content).hexdigest(),
+    }
 
 
 def markdown_source_url(
@@ -3356,9 +3649,9 @@ def section_text(
 
 
 def section_text_from_source(source_text: str, start_line: int, start_level: int) -> str:
-    """Extract one heading section from an already verified source snapshot."""
+    """Extract one heading section using the same CR/LF model as heading indexing."""
 
-    return section_text_from_lines(source_text.splitlines(), start_line, start_level)
+    return section_text_from_lines(list(iter_markdown_lines(source_text)), start_line, start_level)
 
 
 def section_text_from_lines(lines: list[str], start_line: int, start_level: int) -> str:
@@ -3416,7 +3709,7 @@ def heading_catalog_tree(design: dict | None = None) -> list[dict]:
             raise course_source_catalog.CourseSourceCatalogError(
                 "Troppi heading per il catalogo di contesto AI."
             )
-        source_lines = source_text.splitlines()
+        source_lines = list(iter_markdown_lines(source_text))
         for heading in source_headings:
             excerpt = catalog_excerpt_from_lines(
                 source_lines,
@@ -5964,6 +6257,39 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             heading, content = snapshot
             self.write_json({"heading": {**heading, "content": content}})
             return
+        if parsed.path == "/api/heading-asset":
+            heading_id = payload.get("id", "")
+            design = payload.get("design")
+            target = payload.get("target", "")
+            if (
+                not isinstance(heading_id, str)
+                or not isinstance(design, dict)
+                or not isinstance(target, str)
+            ):
+                self.write_error_json(400, "Richiesta immagine paragrafo non valida.")
+                return
+            try:
+                self.write_sensitive_json(
+                    heading_asset_snapshot(
+                        design,
+                        heading_id,
+                        str(payload.get("source_commit") or ""),
+                        str(payload.get("content_sha256", "")),
+                        target,
+                        payload.get("max_bytes", MAX_HEADING_IMAGE_BYTES),
+                    )
+                )
+            except course_github_markdown.RemoteMarkdownError as error:
+                self.write_error_json(502, str(error))
+            except CourseSourceRevisionConflictError as error:
+                self.write_error_json(409, str(error))
+            except course_source_catalog.CourseSourceCatalogError as error:
+                self.write_error_json(422, str(error))
+            except FileNotFoundError as error:
+                self.write_error_json(404, str(error))
+            except ValueError as error:
+                self.write_error_json(400, str(error))
+            return
         if parsed.path == "/api/course-design":
             try:
                 if not isinstance(payload.get("design"), dict):
@@ -6343,6 +6669,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def write_sensitive_json(self, payload: dict) -> None:
+        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)

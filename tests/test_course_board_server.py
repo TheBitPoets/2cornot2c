@@ -109,6 +109,155 @@ def test_extract_headings_and_section_text_include_paragraph_content(tmp_path, m
     )
 
 
+def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lessons" / "images").mkdir(parents=True)
+    markdown = tmp_path / "lessons" / "intro.md"
+    markdown.write_text(
+        "# Demo\n\n![Schema](images/schema.png)\n\n<div>```md\n![Solo esempio](images/hidden.png)\nx\u2028```\n![Separatore Unicode](images/unicode.png)\n```\n",
+        encoding="utf-8",
+    )
+    image = b"\x89PNG\r\nverified"
+    (tmp_path / "lessons" / "images" / "schema.png").write_bytes(image)
+    (tmp_path / "lessons" / "images" / "hidden.png").write_bytes(image)
+    (tmp_path / "lessons" / "images" / "unicode.png").write_bytes(image)
+    design = {
+        "sources": [
+            {
+                "id": "lesson",
+                "label": "Lesson",
+                "type": "markdown",
+                "provider": "local",
+                "path": "lessons",
+                "files": ["intro.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    heading = course_board_server.extract_headings(design)[0]
+
+    payload = course_board_server.heading_asset_snapshot(
+        design,
+        heading["id"],
+        "",
+        heading["content_sha256"],
+        "images/schema.png",
+    )
+
+    assert payload["content_type"] == "image/png"
+    assert base64.b64decode(payload["content_base64"]) == image
+    assert payload["sha256"] == hashlib.sha256(image).hexdigest()
+
+    with pytest.raises(ValueError, match="troppo grande"):
+        course_board_server.heading_asset_snapshot(
+            design,
+            heading["id"],
+            "",
+            heading["content_sha256"],
+            "images/schema.png",
+            max_bytes=4,
+        )
+
+    (tmp_path / "lessons" / "images" / "unreferenced.png").write_bytes(image)
+    for rejected_target in (
+        "images/unreferenced.png",
+        "images/hidden.png",
+        "images/unicode.png",
+    ):
+        with pytest.raises(ValueError, match="non è referenziata"):
+            course_board_server.heading_asset_snapshot(
+                design,
+                heading["id"],
+                "",
+                heading["content_sha256"],
+                rejected_target,
+            )
+
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["../../outside.png", "%2e%2e/%2e%2e/outside.png", "https://example.test/x.png", "images/x:/pic.png", "file.txt", "x.png?token=secret"],
+)
+def test_heading_asset_rejects_unsafe_or_non_image_paths(target) -> None:
+    with pytest.raises(ValueError):
+        course_board_server.normalized_heading_asset_path("lessons/intro.md", target)
+
+
+def test_heading_asset_parser_uses_javascript_trim_for_code_fences() -> None:
+    section = "\ufeff```md\n![Solo codice](images/private.png)\n```"
+
+    assert course_board_server.heading_referenced_asset_paths(
+        "lessons/intro.md", section
+    ) == set()
+
+
+def test_local_heading_asset_rechecks_exact_final_open_handle_path(tmp_path, monkeypatch) -> None:
+    (tmp_path / "images").mkdir()
+    (tmp_path / "images" / "safe.png").write_bytes(b"safe")
+    alternate = tmp_path / "images" / "alternate.png"
+    alternate.write_bytes(b"alternate")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        course_board_server.course_source_catalog,
+        "opened_file_path",
+        lambda _descriptor: alternate,
+    )
+
+    with pytest.raises(ValueError, match="non coincide"):
+        course_board_server._read_local_heading_asset(
+            "images/safe.png", course_board_server.MAX_HEADING_IMAGE_BYTES
+        )
+
+
+def test_section_extraction_uses_same_line_model_as_heading_index() -> None:
+    source = "# First\nbody\u2028same indexed line\n## Second\ncontent"
+    descriptor = course_board_server.course_source_catalog.CourseSource(
+        source_id="local",
+        label="Local",
+        source_type="markdown",
+        provider="local",
+        path="",
+        repository=None,
+        ref=None,
+        files=("lesson.md",),
+        updated_at=None,
+        indexing_status="ready",
+    )
+    source_file = course_board_server.course_source_catalog.LocalCourseSourceFile(
+        source=descriptor,
+        relative_path="lesson.md",
+        resolved_path=Path("lesson.md"),
+        expected_size=None,
+        expected_identity=None,
+        expected_sha256=None,
+    )
+    headings = course_board_server.headings_from_source_snapshot(source_file, source)
+    changed = course_board_server.headings_from_source_snapshot(
+        source_file,
+        source.replace("same indexed line", "changed indexed line"),
+    )
+
+    assert headings[0]["content_sha256"] != changed[0]["content_sha256"]
+    assert headings[1]["line"] == 3
+    assert course_board_server.section_text_from_source(source, 1, 1) == (
+        "body\u2028same indexed line\n## Second\ncontent"
+    )
+    assert course_board_server.section_text_from_source(source, 3, 2) == "content"
+
+
+@pytest.mark.parametrize("suffix", ["é", "İ", "ı", "ſ", "K"])
+def test_paragraph_normalization_uses_javascript_ascii_word_boundary(suffix) -> None:
+    source = f"x<div{suffix}>```\n![Hidden](images/private.png)\n```"
+
+    assert course_board_server.normalize_paragraph_preview_source(source) == (
+        "x\n```\n![Hidden](images/private.png)\n```"
+    )
+    assert course_board_server.heading_referenced_asset_paths(
+        "lesson.md", source
+    ) == set()
+
+
 def test_markdown_line_iteration_is_streaming_and_preserves_line_endings() -> None:
     class SplitlinesForbidden(str):
         def splitlines(self, *args, **kwargs):

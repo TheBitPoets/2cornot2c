@@ -35,7 +35,13 @@ GITLAB_REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+$")
 
 
 class GitLabJsonTransport(Protocol):
-    def get_json(self, api_path: str, *, timeout_seconds: float) -> Any: ...
+    def get_json(
+        self,
+        api_path: str,
+        *,
+        timeout_seconds: float,
+        max_response_bytes: int = MAX_GITHUB_RESPONSE_BYTES,
+    ) -> Any: ...
 
 
 class GitLabApiTransport:
@@ -61,7 +67,15 @@ class GitLabApiTransport:
         self._clock = clock
         self._connection_factory = connection_factory
 
-    def get_json(self, api_path: str, *, timeout_seconds: float) -> Any:
+    def get_json(
+        self,
+        api_path: str,
+        *,
+        timeout_seconds: float,
+        max_response_bytes: int = MAX_GITHUB_RESPONSE_BYTES,
+    ) -> Any:
+        if max_response_bytes <= 0 or max_response_bytes > MAX_GITHUB_RESPONSE_BYTES:
+            raise RemoteMarkdownError("Limite risposta GitLab non valido.")
         started = time.monotonic()
         operation_deadline = self._clock() + timeout_seconds
         slot_guard = GITHUB_NETWORK_SLOTS
@@ -79,7 +93,11 @@ class GitLabApiTransport:
         def worker() -> None:
             try:
                 result["value"] = self._get_json_blocking(
-                    api_path, operation_deadline, resources, lock
+                    api_path,
+                    operation_deadline,
+                    resources,
+                    lock,
+                    max_response_bytes,
                 )
             except BaseException as exc:  # noqa: BLE001
                 result["error"] = exc
@@ -124,6 +142,7 @@ class GitLabApiTransport:
         deadline: float,
         resources: dict[str, Any],
         lock: threading.Lock,
+        max_response_bytes: int,
     ) -> Any:
         parsed_path = parse.urlsplit(api_path)
         if (
@@ -176,12 +195,12 @@ class GitLabApiTransport:
                 if connection.sock is not None:
                     connection.sock.settimeout(remaining)
                 chunk = response.read(
-                    min(64 * 1024, MAX_GITHUB_RESPONSE_BYTES + 1 - len(payload))
+                    min(64 * 1024, max_response_bytes + 1 - len(payload))
                 )
                 if not chunk:
                     break
                 payload.extend(chunk)
-                if len(payload) > MAX_GITHUB_RESPONSE_BYTES:
+                if len(payload) > max_response_bytes:
                     raise RemoteMarkdownError("Risposta GitLab API troppo grande.")
         except RemoteMarkdownError:
             raise
@@ -287,11 +306,72 @@ class GitLabMarkdownAdapter:
             files=tuple(snapshots),
         )
 
-    def _get_json(self, api_path: str, deadline: float) -> Any:
+    def fetch_file_at_commit(
+        self,
+        repository: str,
+        commit_sha: str,
+        relative_path: str,
+        *,
+        max_bytes: int = MAX_REMOTE_MARKDOWN_BYTES,
+    ) -> RemoteMarkdownFile:
+        """Fetch one bounded file from an already resolved immutable commit."""
+
+        path = PurePosixPath(relative_path)
+        repository_parts = repository.split("/")
+        if (
+            GITLAB_REPOSITORY_RE.fullmatch(repository) is None
+            or any(part in {".", ".."} for part in repository_parts)
+            or GITLAB_OBJECT_ID_RE.fullmatch(commit_sha) is None
+            or not relative_path
+            or ":" in relative_path
+            or "\\" in relative_path
+            or path.is_absolute()
+            or path.as_posix() != relative_path
+            or any(part in {"", ".", ".."} for part in path.parts)
+            or max_bytes <= 0
+            or max_bytes > MAX_REMOTE_MARKDOWN_BYTES
+        ):
+            raise RemoteMarkdownError("File GitLab immutabile non valido.")
+        deadline = self._clock() + self._timeout_seconds
+        project = parse.quote(repository, safe="")
+        encoded_path = parse.quote(relative_path, safe="")
+        response_budget = min(
+            MAX_GITHUB_RESPONSE_BYTES,
+            ((max_bytes + 2) // 3) * 4 + 64 * 1024,
+        )
+        payload = self._get_json(
+            f"/api/v4/projects/{project}/repository/files/{encoded_path}"
+            f"?ref={commit_sha}",
+            deadline,
+            max_response_bytes=response_budget,
+        )
+        item = _decode_file(payload, commit_sha, relative_path)
+        if len(item.content) > max_bytes:
+            raise RemoteMarkdownError(
+                f"Dimensione file GitLab non valida: {relative_path}."
+            )
+        if self._blob_cache is not None:
+            cached = self._blob_cache.get(item.git_object_id)
+            if cached is not None and cached != item.content:
+                raise RemoteMarkdownError(f"Cache Git incoerente: {relative_path}.")
+            self._blob_cache.put(item.git_object_id, item.content)
+        return item
+
+    def _get_json(
+        self,
+        api_path: str,
+        deadline: float,
+        *,
+        max_response_bytes: int = MAX_GITHUB_RESPONSE_BYTES,
+    ) -> Any:
         remaining = deadline - self._clock()
         if remaining <= 0:
             raise RemoteMarkdownError("Timeout sincronizzazione GitLab esaurito.")
-        return self._transport.get_json(api_path, timeout_seconds=remaining)
+        return self._transport.get_json(
+            api_path,
+            timeout_seconds=remaining,
+            max_response_bytes=max_response_bytes,
+        )
 
     @staticmethod
     def _validate_files(files: tuple[str, ...]) -> None:
