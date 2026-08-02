@@ -1,0 +1,17 @@
+{
+  "schema_version": "2cornot2c.packer-source-boxes.v1",
+  "boxes": {
+    "virtualbox": {
+      "architecture": "amd64",
+      "version": "202510.26.0",
+      "sha256": "14ae82e423c270d1c03907faf90691b0fbd673b16bfc369a949808e4e6991b82",
+      "size_bytes": 651326766
+    },
+    "vmware_desktop": {
+      "architecture": "arm64",
+      "version": "202510.26.0",
+      "sha256": "d3b9ef74295cc3b87f5a8212356c317271b7705ae67272628308b34822e25a5f",
+      "size_bytes": 762587793
+    }
+  }
+}

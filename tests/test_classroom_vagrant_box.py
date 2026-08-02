@@ -47,7 +47,7 @@ def test_parse_installed_boxes_pairs_name_and_provider() -> None:
     }
 
 
-def test_import_skips_exact_installed_box(tmp_path: Path) -> None:
+def test_import_force_replaces_exact_installed_identity(tmp_path: Path) -> None:
     box = tmp_path / "classroom.box"
     box.write_bytes(CONTENT)
     calls = []
@@ -55,41 +55,18 @@ def test_import_skips_exact_installed_box(tmp_path: Path) -> None:
     result = import_box(
         artifact(),
         box,
-        runner=lambda command, cwd: (
-            calls.append(command)
-            or (
-                0,
-                "1,,box-name,2cornot2c/ubuntu-vmware-0.1.0\n"
-                "1,,box-provider,vmware_desktop\n",
-            )
-        ),
-    )
-
-    assert result.status == "skipped"
-    assert len(calls) == 1
-
-
-def test_import_does_not_force_overwrite(tmp_path: Path) -> None:
-    box = tmp_path / "classroom.box"
-    box.write_bytes(CONTENT)
-    calls = []
-
-    result = import_box(
-        artifact(),
-        box,
-        runner=lambda command, cwd: (
-            calls.append(command) or (0, "" if len(calls) == 1 else "added")
-        ),
+        runner=lambda command, cwd: (calls.append(command) or (0, "added")),
     )
 
     assert result.status == "succeeded"
-    assert calls[1][:4] == (
+    assert len(calls) == 1
+    assert calls[0][:4] == (
         "vagrant",
         "box",
         "add",
         "2cornot2c/ubuntu-vmware-0.1.0",
     )
-    assert "--force" not in calls[1]
+    assert "--force" in calls[0]
 
 
 def test_import_uses_an_isolated_vagrant_context(
@@ -116,9 +93,9 @@ def test_import_uses_an_isolated_vagrant_context(
     result = import_box(artifact(), box, runner=fail_closed_runner)
 
     assert result.status == "succeeded"
-    assert [call[0][1:3] for call in calls] == [("box", "list"), ("box", "add")]
-    assert calls[0][1] == calls[1][1]
-    assert Path(calls[1][0][4]).is_absolute()
+    assert [call[0][1:3] for call in calls] == [("box", "add")]
+    assert Path(calls[0][0][4]).is_absolute()
+    assert "--force" in calls[0][0]
 
 
 def test_configure_project_writes_local_selection(tmp_path: Path) -> None:

@@ -5,29 +5,36 @@ Ubuntu 24.04 fissata in `classroom.pkr.hcl`.
 
 ## Prerequisiti
 
-- Packer 1.11 o successivo;
+- Packer 1.16.0 esatto;
+- Python 3;
 - Vagrant;
 - il provider da costruire;
 - spazio libero sufficiente per box sorgente, VM temporanea e artefatto.
 
-Inizializza i plugin:
+Installa il plugin attestato, inizializza e verifica la toolchain:
 
 ```bash
 cd packer
+python3 install-locked-plugin.py --platform darwin_arm64
 packer init classroom.pkr.hcl
+python3 verify-toolchain.py
 ```
 
-Scarica una volta la box sorgente per il provider scelto da un contesto
-Vagrant isolato:
+Su Windows usa `python` e `--platform windows_amd64`. Versioni e checksum
+degli archivi plugin sono in `toolchain.lock.json`.
+
+Prepara una box sorgente in un `VAGRANT_HOME` nuovo e job-specifico:
 
 ```bash
+export VAGRANT_HOME="$(mktemp -d)"
 ./ensure-source-box.sh vmware_desktop 202510.26.0
 ```
 
-Per VirtualBox sostituisci `vmware_desktop` con `virtualbox`. Packer riusa la
-box locale: questo evita download duplicati e rende esplicito quale input
-viene usato. Lo script evita che Vagrant carichi il `Vagrantfile` fail-closed
-della root durante il comando globale `box add`.
+Per VirtualBox sostituisci `vmware_desktop` con `virtualbox`. Versione,
+dimensione e SHA-256 delle due box Bento sono in `source-boxes.lock.json`.
+Lo script rifiuta un `VAGRANT_HOME` non vuoto, verifica il download tramite
+Vagrant e impedisce di riusare una box globale o residua. Conserva questa
+variabile durante build e acceptance, quindi elimina la directory.
 
 Valida la configurazione:
 
@@ -229,7 +236,7 @@ Verifica poi architettura, toolchain e integrazione VMware:
 
 ```bash
 test "$(uname -m)" = arm64
-command -v packer
+test "$(packer version | sed -n 's/^Packer v//p')" = 1.16.0
 command -v vagrant
 grep -q '/opt/homebrew/bin' ~/actions-runner-2cornot2c/.path
 vagrant plugin list | grep '^vagrant-vmware-desktop '
@@ -264,7 +271,7 @@ Installazione e servizio della utility sono descritti nella
 [documentazione ufficiale HashiCorp](https://developer.hashicorp.com/vagrant/docs/providers/vmware/vagrant-vmware-utility).
 
 I computer devono restare accesi, connessi e non sospesi per tutta la build.
-La prima esecuzione è più lunga perché scarica la box Bento e i plugin Packer.
+Ogni job usa un `VAGRANT_HOME` isolato e scarica nuovamente la box Bento attestata. Il plugin Packer viene installato dall'archivio con checksum bloccato.
 
 ### 5. Avviare la workflow
 

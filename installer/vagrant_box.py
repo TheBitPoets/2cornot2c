@@ -67,23 +67,12 @@ def import_box(
     *,
     runner: Runner = subprocess_runner,
 ) -> VagrantResult:
-    """Verifica e importa la box senza forzare o sovrascrivere installazioni."""
+    """Verifica e reimporta la box, sostituendo la stessa identità locale."""
 
     box_path = box_path.resolve(strict=True)
     verify_box(box_path, artifact)
     with tempfile.TemporaryDirectory(prefix="2cornot2c-vagrant-box-") as directory:
         isolated_cwd = Path(directory)
-        returncode, output = runner(
-            ("vagrant", "box", "list", "--machine-readable"), isolated_cwd
-        )
-        if returncode != 0:
-            return VagrantResult(
-                "failed", output or "Impossibile elencare le box Vagrant."
-            )
-        identity = (artifact.box_name, artifact.provider.value)
-        if identity in parse_installed_boxes(output):
-            return VagrantResult("skipped", "box già installata")
-
         returncode, output = runner(
             (
                 "vagrant",
@@ -93,12 +82,13 @@ def import_box(
                 str(box_path),
                 "--provider",
                 artifact.provider.value,
+                "--force",
             ),
             isolated_cwd,
         )
     if returncode != 0:
-        return VagrantResult("failed", output or "Importazione box non riuscita.")
-    return VagrantResult("succeeded", "box verificata e importata")
+        return VagrantResult("failed", output or "Reimportazione box non riuscita.")
+    return VagrantResult("succeeded", "box verificata e reimportata")
 
 
 def _atomic_text(path: Path, content: str) -> None:

@@ -7,6 +7,8 @@ import re
 import subprocess
 import sys
 
+import pytest
+
 from installer.artifacts import load_release
 from installer.model import Host, Provider
 
@@ -126,12 +128,14 @@ def test_acceptance_import_uses_isolated_vagrantfile(tmp_path: Path) -> None:
     ]
 
 
+@pytest.mark.skipif(os.name == "nt", reason="richiede Bash/Unix")
 def test_source_box_bootstrap_uses_isolated_vagrant_context(tmp_path: Path) -> None:
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     contexts = tmp_path / "contexts"
     contexts.mkdir()
     calls = tmp_path / "vagrant-calls.txt"
+    vagrant_home = tmp_path / "vagrant-home"
     vagrant = fake_bin / "vagrant"
     vagrant.write_text(
         "#!/usr/bin/env bash\n"
@@ -143,6 +147,7 @@ def test_source_box_bootstrap_uses_isolated_vagrant_context(tmp_path: Path) -> N
 
     completed = subprocess.run(
         (
+            "bash",
             str(ROOT / "packer" / "ensure-source-box.sh"),
             "vmware_desktop",
             "202510.26.0",
@@ -153,6 +158,7 @@ def test_source_box_bootstrap_uses_isolated_vagrant_context(tmp_path: Path) -> N
             "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
             "TMPDIR": str(contexts),
             "VAGRANT_CALLS": str(calls),
+            "VAGRANT_HOME": str(vagrant_home),
         },
         check=False,
         capture_output=True,
@@ -162,11 +168,61 @@ def test_source_box_bootstrap_uses_isolated_vagrant_context(tmp_path: Path) -> N
     assert completed.returncode == 0, completed.stderr
     recorded = [line.split("|", 1) for line in calls.read_text().splitlines()]
     assert [command for _, command in recorded] == [
-        "box list",
         (
             "box add bento/ubuntu-24.04 --box-version 202510.26.0 "
-            "--provider vmware_desktop"
+            "--provider vmware_desktop "
+            "--checksum d3b9ef74295cc3b87f5a8212356c317271b7705ae67272628308b34822e25a5f "
+            "--checksum-type sha256"
         ),
     ]
     assert len({cwd for cwd, _ in recorded}) == 1
     assert all(Path(cwd).parent == contexts for cwd, _ in recorded)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="richiede Bash/Unix")
+def test_source_box_bootstrap_rejects_nonempty_vagrant_home(tmp_path: Path) -> None:
+    vagrant_home = tmp_path / "vagrant-home"
+    vagrant_home.mkdir()
+    (vagrant_home / "untrusted-box").write_text("present", encoding="utf-8")
+
+    completed = subprocess.run(
+        (
+            "bash",
+            str(ROOT / "packer" / "ensure-source-box.sh"),
+            "virtualbox",
+            "202510.26.0",
+        ),
+        cwd=ROOT / "packer",
+        env=os.environ | {"VAGRANT_HOME": str(vagrant_home)},
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 4
+    assert "non è vuoto" in completed.stderr
+
+
+def test_packer_toolchain_and_source_are_exactly_locked() -> None:
+    toolchain = json.loads(
+        (ROOT / "packer" / "toolchain.lock.json").read_text(encoding="utf-8")
+    )
+    sources = json.loads(
+        (ROOT / "packer" / "source-boxes.lock.json").read_text(encoding="utf-8")
+    )
+    template = (ROOT / "packer" / "classroom.pkr.hcl").read_text(
+        encoding="utf-8"
+    )
+    workflow = (
+        ROOT / ".github" / "workflows" / "publish-classroom-boxes.yml"
+    ).read_text(encoding="utf-8")
+
+    assert toolchain["packer_version"] == "1.16.0"
+    assert toolchain["plugins"]["github.com/hashicorp/vagrant"]["version"] == "1.1.5"
+    assert 'required_version = "= 1.16.0"' in template
+    assert 'version = "= 1.1.5"' in template
+    assert set(sources["boxes"]) == {"virtualbox", "vmware_desktop"}
+    assert all(len(box["sha256"]) == 64 for box in sources["boxes"].values())
+    assert "install-locked-plugin.py --platform windows_amd64" in workflow
+    assert "install-locked-plugin.py --platform darwin_arm64" in workflow
+    assert "VAGRANT_HOME: ${{ runner.temp }}/2cornot2c-vagrant-" in workflow

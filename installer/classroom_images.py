@@ -229,6 +229,16 @@ def _legacy_vm_exists(project: Path, provider: Provider) -> bool:
     )
 
 
+def _legacy_vm_providers(project: Path) -> tuple[Provider, ...]:
+    """Find every legacy VM state before selecting a replacement provider."""
+
+    return tuple(
+        provider
+        for provider in (Provider.VIRTUALBOX, Provider.VMWARE)
+        if _legacy_vm_exists(project, provider)
+    )
+
+
 def resolve_artifact(host: Host, provider: Provider, cache_dir: Path):
     if provider not in VM_PROVIDERS:
         raise ClassroomImageError(f"Provider non VM: {provider.value}")
@@ -263,12 +273,19 @@ def install_image(project: Path, host: Host, provider: Provider) -> str:
             "Il progetto usa un'altra box. Avvia la migrazione esplicita prima "
             "di cambiare immagine."
         )
-    if configured is None and _legacy_vm_exists(project, provider):
-        raise ClassroomImageError(
-            "È presente una VM Bento legacy. Esegui prima "
-            f"`python -m installer.migration --provider {provider.value}`; "
-            "la VM non verrà sostituita automaticamente."
-        )
+    if configured is None:
+        legacy_providers = _legacy_vm_providers(project)
+        if legacy_providers:
+            commands = ", ".join(
+                "`python -m installer.migration --provider "
+                f"{legacy.value}`"
+                for legacy in legacy_providers
+            )
+            raise ClassroomImageError(
+                "È presente una VM Bento legacy. Esegui prima la migrazione "
+                f"esplicita per ogni stato rilevato: {commands}; la VM non "
+                "verrà sostituita automaticamente."
+            )
 
     cache_name = f"{artifact.box_name.replace('/', '--')}.box"
     box_path = cache / cache_name

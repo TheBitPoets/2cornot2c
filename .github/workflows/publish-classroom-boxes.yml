@@ -33,16 +33,23 @@ jobs:
     needs: validate-release
     runs-on: [self-hosted, Windows, X64, classroom-packer]
     timeout-minutes: 120
+    env:
+      VAGRANT_HOME: ${{ runner.temp }}/2cornot2c-vagrant-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
 
-      - name: Validate Packer template
+      - name: Install checksum-locked Packer plugin
+        working-directory: packer
+        run: python install-locked-plugin.py --platform windows_amd64
+
+      - name: Validate locked Packer toolchain and template
         working-directory: packer
         run: |
           packer init classroom.pkr.hcl
+          python verify-toolchain.py
           packer fmt -check .
           packer validate classroom.pkr.hcl
 
@@ -76,20 +83,32 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Remove isolated Vagrant home
+        if: always()
+        shell: pwsh
+        run: Remove-Item -LiteralPath $env:VAGRANT_HOME -Recurse -Force -ErrorAction SilentlyContinue
+
   vmware-arm64:
     needs: validate-release
     runs-on: [self-hosted, macOS, ARM64, classroom-packer]
     timeout-minutes: 120
+    env:
+      VAGRANT_HOME: ${{ runner.temp }}/2cornot2c-vagrant-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
 
-      - name: Validate Packer template
+      - name: Install checksum-locked Packer plugin
+        working-directory: packer
+        run: python3 install-locked-plugin.py --platform darwin_arm64
+
+      - name: Validate locked Packer toolchain and template
         working-directory: packer
         run: |
           packer init classroom.pkr.hcl
+          python3 verify-toolchain.py
           packer fmt -check .
           packer validate classroom.pkr.hcl
 
@@ -120,6 +139,10 @@ jobs:
           path: 2cornot2c-macos-arm64-vmware.box
           if-no-files-found: error
           retention-days: 1
+
+      - name: Remove isolated Vagrant home
+        if: always()
+        run: rm -rf -- "$VAGRANT_HOME"
 
   release:
     needs: [virtualbox-amd64, vmware-arm64]
