@@ -75,13 +75,18 @@ jobs:
     needs: validate-release
     runs-on: [self-hosted, Windows, X64, classroom-packer]
     timeout-minutes: 120
-    env:
-      VAGRANT_HOME: ${{ runner.temp }}/2cornot2c-vagrant-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Configure isolated Vagrant home
+        shell: pwsh
+        run: |
+          $home = Join-Path $env:RUNNER_TEMP `
+            "2cornot2c-vagrant-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          "VAGRANT_HOME=$home" | Out-File -FilePath $env:GITHUB_ENV `
+            -Encoding utf8 -Append
       - name: Install checksum-locked Packer plugin
         working-directory: packer
         run: python install-locked-plugin.py --platform windows_amd64
@@ -127,13 +132,15 @@ jobs:
     needs: validate-release
     runs-on: [self-hosted, macOS, ARM64, classroom-packer]
     timeout-minutes: 120
-    env:
-      VAGRANT_HOME: ${{ runner.temp }}/2cornot2c-vagrant-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Configure isolated Vagrant home
+        run: |
+          printf 'VAGRANT_HOME=%s/2cornot2c-vagrant-%s-%s\n' \
+            "$RUNNER_TEMP" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
       - name: Install checksum-locked Packer plugin
         working-directory: packer
         run: python3 install-locked-plugin.py --platform darwin_arm64
