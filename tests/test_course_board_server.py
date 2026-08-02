@@ -193,6 +193,14 @@ def test_heading_asset_rejects_unsafe_or_non_image_paths(target) -> None:
         course_board_server.normalized_heading_asset_path("lessons/intro.md", target)
 
 
+def test_heading_asset_parser_uses_javascript_trim_for_code_fences() -> None:
+    section = "\ufeff```md\n![Solo codice](images/private.png)\n```"
+
+    assert course_board_server.heading_referenced_asset_paths(
+        "lessons/intro.md", section
+    ) == set()
+
+
 def test_local_heading_asset_rechecks_exact_final_open_handle_path(tmp_path, monkeypatch) -> None:
     (tmp_path / "images").mkdir()
     (tmp_path / "images" / "safe.png").write_bytes(b"safe")

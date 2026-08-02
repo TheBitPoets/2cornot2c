@@ -121,6 +121,10 @@ MARKDOWN_LINE_ENDING_RE = re.compile(r"\r\n|\r|\n")
 MARKDOWN_IMAGE_RE = re.compile(
     r"!\[[^\]\r\n]{0,500}\]\(([^)\s]+)(?:\s+(?:\"[^\"]*\"|'[^']*'))?\)"
 )
+JAVASCRIPT_TRIM_RE = re.compile(
+    r"^[\u0009-\u000d\u0020\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+"
+    r"|[\u0009-\u000d\u0020\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+$"
+)
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
 SPACE_RE = re.compile(r"[\s_]+")
@@ -3270,6 +3274,12 @@ def normalized_heading_asset_path(source_path: str, target: str) -> str:
     return path.as_posix()
 
 
+def javascript_trim(value: str) -> str:
+    """Apply the ECMAScript String.trim whitespace set."""
+
+    return JAVASCRIPT_TRIM_RE.sub("", value)
+
+
 def normalize_paragraph_preview_source(source: str) -> str:
     """Mirror the frontend's bounded HTML-to-Markdown preview normalization."""
 
@@ -3289,7 +3299,7 @@ def normalize_paragraph_preview_source(source: str) -> str:
     )
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"\r\n?", "\n", text)
-    return re.sub(r"\n{3,}", "\n\n", text).strip()
+    return javascript_trim(re.sub(r"\n{3,}", "\n\n", text))
 
 
 def heading_referenced_asset_paths(source_path: str, section: str) -> set[str]:
@@ -3299,7 +3309,7 @@ def heading_referenced_asset_paths(source_path: str, section: str) -> set[str]:
     in_code_fence = False
     normalized = normalize_paragraph_preview_source(section)
     for line in normalized.split("\n"):
-        if line.strip().startswith("```"):
+        if javascript_trim(line).startswith("```"):
             in_code_fence = not in_code_fence
             continue
         if in_code_fence:
