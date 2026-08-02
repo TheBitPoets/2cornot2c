@@ -210,7 +210,9 @@ dimensione e SHA-256, importa la box e configura il progetto. Un aggiornamento
 delle immagini richiede una modifica revisionata di
 `CLASSROOM_RELEASE_VERSION`, evitando il limite API condiviso delle aule dietro
 NAT. Se la release o la combinazione richiesta non è disponibile,
-l'installazione si ferma con E25.
+l'installazione si ferma con E25. L'override `CLASSROOM_RELEASE_MANIFEST` è
+riservato a test isolati e viene rifiutato senza il secondo opt-in esplicito
+`CLASSROOM_ALLOW_UNTRUSTED_MANIFEST=1`; non va usato nel pilot.
 
 `installer/vagrant_box.py` completa il flusso locale:
 

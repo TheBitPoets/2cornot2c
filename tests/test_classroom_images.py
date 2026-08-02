@@ -474,6 +474,20 @@ def test_acquire_manifest_preserves_valid_cache_on_invalid_refresh(
     assert manifest.read_text(encoding="utf-8") == original
 
 
+def test_manifest_override_requires_separate_development_opt_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = tmp_path / "override.json"
+    manifest.write_text(json.dumps(manifest_payload()), encoding="utf-8")
+    monkeypatch.setenv("CLASSROOM_RELEASE_MANIFEST", str(manifest))
+
+    with pytest.raises(
+        classroom_images.ClassroomImageError,
+        match="Override manifest non autorizzato",
+    ):
+        classroom_images.acquire_manifest(tmp_path / "cache")
+
+
 def test_remote_override_does_not_replace_official_manifest_cache(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -507,6 +521,7 @@ def test_remote_override_does_not_replace_official_manifest_cache(
 
     monkeypatch.setattr(classroom_images, "urlopen", fake_urlopen)
     monkeypatch.setenv("CLASSROOM_RELEASE_MANIFEST", override_url)
+    monkeypatch.setenv("CLASSROOM_ALLOW_UNTRUSTED_MANIFEST", "1")
 
     override = classroom_images.acquire_manifest(cache)
 
@@ -515,6 +530,7 @@ def test_remote_override_does_not_replace_official_manifest_cache(
     assert not (cache / "release-manifest.json").exists()
 
     monkeypatch.delenv("CLASSROOM_RELEASE_MANIFEST")
+    monkeypatch.delenv("CLASSROOM_ALLOW_UNTRUSTED_MANIFEST")
     monkeypatch.setattr(classroom_images, "latest_manifest_url", lambda: official_url)
 
     official = classroom_images.acquire_manifest(cache)

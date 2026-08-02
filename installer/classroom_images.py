@@ -69,8 +69,21 @@ def latest_manifest_url() -> str:
     return OFFICIAL_MANIFEST_URL
 
 
-def _manifest_source() -> str:
+def _manifest_override() -> str | None:
     override = os.environ.get("CLASSROOM_RELEASE_MANIFEST") or None
+    if (
+        override is not None
+        and os.environ.get("CLASSROOM_ALLOW_UNTRUSTED_MANIFEST") != "1"
+    ):
+        raise ClassroomImageError(
+            "Override manifest non autorizzato; per sviluppo isolato impostare "
+            "anche CLASSROOM_ALLOW_UNTRUSTED_MANIFEST=1."
+        )
+    return override
+
+
+def _manifest_source() -> str:
+    override = _manifest_override()
     return override if override else latest_manifest_url()
 
 
@@ -136,7 +149,7 @@ def _cached_manifest_is_fresh(path: Path) -> bool:
 def acquire_manifest(cache_dir: Path) -> Path:
     """Acquisisce il manifest da file locale o HTTPS con limite dimensionale."""
 
-    override = os.environ.get("CLASSROOM_RELEASE_MANIFEST") or None
+    override = _manifest_override()
     official_destination = cache_dir / "release-manifest.json"
     destination = (
         cache_dir / "override-release-manifest.json"
