@@ -70,7 +70,11 @@ if [ "$version" != "$locked_version" ]; then
   exit 3
 fi
 
-install -d -m 0700 "$VAGRANT_HOME"
+mkdir -p "$VAGRANT_HOME"
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) ;;
+  *) chmod 0700 "$VAGRANT_HOME" ;;
+esac
 
 isolated_context="$(mktemp -d "${TMPDIR:-/tmp}/2cornot2c-vagrant-box.XXXXXX")"
 cleanup() {
