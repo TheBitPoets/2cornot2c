@@ -81,11 +81,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Configure isolated Vagrant home
-        shell: pwsh
+        shell: powershell
         run: |
-          $home = Join-Path $env:RUNNER_TEMP `
+          $vagrantHome = Join-Path $env:RUNNER_TEMP `
             "2cornot2c-vagrant-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
-          "VAGRANT_HOME=$home" | Out-File -FilePath $env:GITHUB_ENV `
+          "VAGRANT_HOME=$vagrantHome" | Out-File -FilePath $env:GITHUB_ENV `
             -Encoding utf8 -Append
       - name: Install checksum-locked Packer plugin
         working-directory: packer
@@ -108,7 +108,7 @@ jobs:
         shell: bash
         run: ./packer/acceptance/test-box.sh virtualbox packer/output/virtualbox-amd64/package.box
       - name: Stage release asset
-        shell: pwsh
+        shell: powershell
         run: |
           $source = 'packer/output/virtualbox-amd64/package.box'
           if ((Get-Item -LiteralPath $source).Length -ge 2GB) {
@@ -124,7 +124,7 @@ jobs:
           retention-days: 1
       - name: Remove isolated Vagrant home
         if: always()
-        shell: pwsh
+        shell: powershell
         run: |
           $isolated = Join-Path $env:RUNNER_TEMP `
             "2cornot2c-vagrant-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
