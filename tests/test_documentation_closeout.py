@@ -54,6 +54,8 @@ def test_pilot_guide_covers_startup_security_and_shutdown() -> None:
         "Ctrl+C",
         "installation token",
         "Cosa non è ancora produzione multi-scuola",
+        "thebitlab_admin_bootstrap_cli.py",
+        "Governance obbligatoria prima dei dati reali",
     ):
         assert value in guide
 

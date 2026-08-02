@@ -131,7 +131,8 @@ Il docente può partire con CLI/TUI e dati demo, introdurre gradualmente dashboa
 - le metriche tecniche non misurano da sole comprensione o collaborazione;
 - un test superato non equivale automaticamente al raggiungimento di una competenza;
 - il pilot è mono-scuola e richiede procedure organizzative locali;
-- accessibilità, privacy e conservazione dei dati vanno riesaminate con dati reali e policy scolastiche.
+- accessibilità va collaudata con utenti e tecnologie assistive prima dell'adozione;
+- privacy, retention, cancellazione, accessi, backup e trasferimenti provider devono essere definiti e approvati prima di acquisire dati reali; fino ad allora il pilot usa solo dati demo.
 
 ## Documenti collegati
 
