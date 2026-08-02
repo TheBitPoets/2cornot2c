@@ -249,4 +249,10 @@ def test_packer_toolchain_and_source_are_exactly_locked() -> None:
     assert "install-locked-plugin.py --platform darwin_arm64" in workflow
     assert "install-locked-vagrant-plugin.py" in workflow
     assert "--require-vagrant-vmware" in workflow
-    assert "VAGRANT_HOME: ${{ runner.temp }}/2cornot2c-vagrant-" in workflow
+    assert "VAGRANT_HOME: ${{ runner.temp }}" not in workflow
+    assert "2cornot2c-vagrant-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT" in workflow
+    assert '"$RUNNER_TEMP" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"' in workflow
+    assert "Remove-Item -LiteralPath $env:VAGRANT_HOME" not in workflow
+    assert 'rm -rf -- "$VAGRANT_HOME"' not in workflow
+    assert "Remove-Item -LiteralPath $isolated" in workflow
+    assert 'rm -rf -- "$isolated"' in workflow

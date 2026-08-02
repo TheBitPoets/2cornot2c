@@ -75,13 +75,18 @@ jobs:
     needs: validate-release
     runs-on: [self-hosted, Windows, X64, classroom-packer]
     timeout-minutes: 120
-    env:
-      VAGRANT_HOME: ${{ runner.temp }}/2cornot2c-vagrant-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Configure isolated Vagrant home
+        shell: pwsh
+        run: |
+          $home = Join-Path $env:RUNNER_TEMP `
+            "2cornot2c-vagrant-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          "VAGRANT_HOME=$home" | Out-File -FilePath $env:GITHUB_ENV `
+            -Encoding utf8 -Append
       - name: Install checksum-locked Packer plugin
         working-directory: packer
         run: python install-locked-plugin.py --platform windows_amd64
@@ -120,20 +125,36 @@ jobs:
       - name: Remove isolated Vagrant home
         if: always()
         shell: pwsh
-        run: Remove-Item -LiteralPath $env:VAGRANT_HOME -Recurse -Force -ErrorAction SilentlyContinue
+        run: |
+          $isolated = Join-Path $env:RUNNER_TEMP `
+            "2cornot2c-vagrant-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $separator = [IO.Path]::DirectorySeparatorChar
+          $expectedParent = [IO.Path]::GetFullPath(
+            $env:RUNNER_TEMP
+          ).TrimEnd($separator)
+          $actualParent = [IO.Path]::GetFullPath(
+            (Split-Path -Parent $isolated)
+          ).TrimEnd($separator)
+          if ($actualParent -ne $expectedParent) {
+            throw 'Percorso VAGRANT_HOME isolato non valido.'
+          }
+          Remove-Item -LiteralPath $isolated -Recurse -Force `
+            -ErrorAction SilentlyContinue
 
   vmware-arm64:
     if: inputs.target == 'macos-arm64-vmware'
     needs: validate-release
     runs-on: [self-hosted, macOS, ARM64, classroom-packer]
     timeout-minutes: 120
-    env:
-      VAGRANT_HOME: ${{ runner.temp }}/2cornot2c-vagrant-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Configure isolated Vagrant home
+        run: |
+          printf 'VAGRANT_HOME=%s/2cornot2c-vagrant-%s-%s\n' \
+            "$RUNNER_TEMP" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
       - name: Install checksum-locked Packer plugin
         working-directory: packer
         run: python3 install-locked-plugin.py --platform darwin_arm64
@@ -172,7 +193,12 @@ jobs:
           retention-days: 1
       - name: Remove isolated Vagrant home
         if: always()
-        run: rm -rf -- "$VAGRANT_HOME"
+        run: |
+          isolated="$RUNNER_TEMP/2cornot2c-vagrant-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          case "$isolated" in
+            "$RUNNER_TEMP"/2cornot2c-vagrant-*) rm -rf -- "$isolated" ;;
+            *) echo "Percorso VAGRANT_HOME isolato non valido." >&2; exit 6 ;;
+          esac
 
   release-windows:
     needs: virtualbox-amd64
