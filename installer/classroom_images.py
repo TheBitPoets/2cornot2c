@@ -273,19 +273,27 @@ def install_image(project: Path, host: Host, provider: Provider) -> str:
             "Il progetto usa un'altra box. Avvia la migrazione esplicita prima "
             "di cambiare immagine."
         )
-    if configured is None:
-        legacy_providers = _legacy_vm_providers(project)
-        if legacy_providers:
-            commands = ", ".join(
-                "`python -m installer.migration --provider "
-                f"{legacy.value}`"
-                for legacy in legacy_providers
-            )
-            raise ClassroomImageError(
-                "È presente una VM Bento legacy. Esegui prima la migrazione "
-                f"esplicita per ogni stato rilevato: {commands}; la VM non "
-                "verrà sostituita automaticamente."
-            )
+    legacy_providers = _legacy_vm_providers(project)
+    blocking_legacy = (
+        legacy_providers
+        if configured is None
+        else tuple(
+            legacy
+            for legacy in legacy_providers
+            if legacy is not provider
+        )
+    )
+    if blocking_legacy:
+        commands = ", ".join(
+            "`python -m installer.migration --provider "
+            f"{legacy.value}`"
+            for legacy in blocking_legacy
+        )
+        raise ClassroomImageError(
+            "È presente una VM Bento legacy incompatibile. Esegui prima la "
+            f"migrazione esplicita per ogni stato rilevato: {commands}; la "
+            "VM non verrà sostituita automaticamente."
+        )
 
     cache_name = f"{artifact.box_name.replace('/', '--')}.box"
     box_path = cache / cache_name

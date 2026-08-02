@@ -200,8 +200,14 @@ def download_box(
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
-        verify_box(destination, artifact)
-        return destination
+        try:
+            verify_box(destination, artifact)
+        except ArtifactError:
+            # Keep the invalid file in place until a complete verified
+            # replacement is ready; this is safe under concurrent repairs.
+            pass
+        else:
+            return destination
 
     temporary_name = ""
     try:

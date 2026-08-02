@@ -173,13 +173,6 @@ def project_selection_provider(project: Path) -> Provider | None:
         ) from error
 
 
-def provider_mismatch_detail(selected: Provider, requested: Provider) -> str:
-    return (
-        f"La selezione corrente appartiene a {selected.value}, non a "
-        f"{requested.value}; nessun marker è stato rimosso."
-    )
-
-
 def clear_project_selection(project: Path) -> bool:
     """Rimuove in modo idempotente la selezione della box ormai migrata."""
 
@@ -200,15 +193,17 @@ def recreate_machine(
     """Arresta e distrugge soltanto la VM confermata, mai i dati condivisi."""
 
     selected_provider = project_selection_provider(project)
-    if (
+    selection_belongs_to_other_provider = (
         selected_provider is not None
         and selected_provider is not machine.provider
-    ):
-        return MigrationResult(
-            "blocked",
-            provider_mismatch_detail(selected_provider, machine.provider),
-        )
+    )
     if not machine.exists:
+        if selection_belongs_to_other_provider:
+            return MigrationResult(
+                "skipped",
+                "nessuna VM legacy per il provider richiesto; selezione "
+                f"{selected_provider.value} conservata",
+            )
         if not project_selection_exists(project):
             return MigrationResult("skipped", "nessuna VM preesistente")
         if confirmation != CONFIRMATION:
@@ -241,10 +236,17 @@ def recreate_machine(
     )
     if returncode != 0:
         return MigrationResult("failed", output or "Rimozione VM non riuscita.")
-    clear_project_selection(project)
+    if not selection_belongs_to_other_provider:
+        clear_project_selection(project)
+    selection_detail = (
+        f"; selezione {selected_provider.value} conservata"
+        if selection_belongs_to_other_provider
+        else ""
+    )
     return MigrationResult(
         "succeeded",
-        "VM precedente rimossa; lab e lab2 sono rimaste sull'host",
+        "VM precedente rimossa; lab e lab2 sono rimaste sull'host"
+        f"{selection_detail}",
     )
 
 
@@ -271,19 +273,17 @@ def main(argv: list[str] | None = None) -> int:
     try:
         selection_exists = project_selection_exists(args.project)
         selected_provider = project_selection_provider(args.project)
-        if selected_provider is not None and selected_provider is not provider:
-            result = MigrationResult(
-                "blocked",
-                provider_mismatch_detail(selected_provider, provider),
-            )
-            print(f"[{result.status.upper()}] {result.detail}")
-            return 1
         machine = inspect_machine(args.project, provider)
         validate_shared_folders(args.project)
     except (OSError, RuntimeError, ValueError) as error:
         print(f"Migrazione non disponibile: {error}")
         return 1
-    if not machine.exists and not selection_exists:
+    selection_belongs_to_other_provider = (
+        selected_provider is not None and selected_provider is not provider
+    )
+    if not machine.exists and (
+        not selection_exists or selection_belongs_to_other_provider
+    ):
         result = recreate_machine(args.project, machine, "")
         print(f"[{result.status.upper()}] {result.detail}")
         return 0

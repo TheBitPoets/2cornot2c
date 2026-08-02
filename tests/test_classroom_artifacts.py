@@ -132,6 +132,23 @@ def test_download_is_verified_and_atomically_published(tmp_path: Path) -> None:
     assert list(destination.parent.glob("*.part")) == []
 
 
+def test_download_replaces_corrupt_cached_box_atomically(tmp_path: Path) -> None:
+    release = load_release(write_manifest(tmp_path, manifest_payload()))
+    destination = tmp_path / "cache" / "classroom.box"
+    destination.parent.mkdir()
+    destination.write_bytes(b"truncated")
+
+    result = download_box(
+        release.artifacts[0],
+        destination,
+        opener=lambda url: FakeResponse(BOX_CONTENT),
+    )
+
+    assert result == destination
+    assert destination.read_bytes() == BOX_CONTENT
+    assert list(destination.parent.glob("*.part")) == []
+
+
 def test_download_does_not_publish_invalid_file(tmp_path: Path) -> None:
     release = load_release(write_manifest(tmp_path, manifest_payload()))
     destination = tmp_path / "classroom.box"

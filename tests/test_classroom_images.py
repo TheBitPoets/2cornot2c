@@ -153,6 +153,42 @@ def test_install_image_blocks_virtualbox_legacy_state_before_selecting_vmware(
     assert not (root / ".classroom-provider").exists()
 
 
+def test_repair_blocks_incompatible_legacy_state_with_existing_markers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = project(tmp_path)
+    machine = root / ".vagrant" / "machines" / "default" / "virtualbox"
+    machine.mkdir(parents=True)
+    (machine / "id").write_text("legacy-vbox-id", encoding="utf-8")
+    selected = BoxArtifact(
+        "VMware ARM64",
+        Host.MACOS_ARM64,
+        Provider.VMWARE,
+        "arm64",
+        "2cornot2c/ubuntu-24.04-vmware-arm64-1.0.0",
+        "https://downloads.example.test/classroom.box",
+        hashlib.sha256(CONTENT).hexdigest(),
+        len(CONTENT),
+    )
+    (root / ".classroom-box").write_text(selected.box_name, encoding="utf-8")
+    (root / ".classroom-provider").write_text(
+        selected.provider.value, encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        classroom_images,
+        "resolve_artifact",
+        lambda host, provider, cache: selected,
+    )
+
+    with pytest.raises(
+        classroom_images.ClassroomImageError,
+        match="migration.*virtualbox",
+    ):
+        classroom_images.install_image(
+            root, Host.MACOS_ARM64, Provider.VMWARE
+        )
+
+
 def test_check_ready_requires_matching_config_and_installed_box(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

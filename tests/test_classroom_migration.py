@@ -177,9 +177,40 @@ def test_migration_does_not_clear_selection_for_another_provider(
         ),
     )
 
-    assert result.status == "blocked"
-    assert "appartiene a vmware_desktop" in result.detail
+    assert result.status == "skipped"
+    assert "selezione vmware_desktop conservata" in result.detail
     assert (project / ".classroom-box").is_file()
+    assert (project / ".classroom-provider").is_file()
+
+
+def test_migration_destroys_legacy_other_provider_and_preserves_selection(
+    tmp_path: Path,
+) -> None:
+    project = project_with_labs(tmp_path)
+    (project / ".classroom-box").write_text(
+        "2cornot2c/vmware-box\n", encoding="utf-8"
+    )
+    (project / ".classroom-provider").write_text(
+        "vmware_desktop\n", encoding="utf-8"
+    )
+    calls = []
+
+    result = recreate_machine(
+        project,
+        MachineState(Provider.VIRTUALBOX, "poweroff"),
+        CONFIRMATION,
+        runner=lambda command, cwd, environment: (
+            calls.append((command, environment)) or (0, "destroyed")
+        ),
+    )
+
+    assert result.status == "succeeded"
+    assert calls[0][0] == ("vagrant", "destroy", "--force")
+    assert calls[0][1]["VAGRANT_DOTFILE_PATH"] == ".vagrant"
+    assert "selezione vmware_desktop conservata" in result.detail
+    assert (project / ".classroom-box").read_text(encoding="utf-8").strip() == (
+        "2cornot2c/vmware-box"
+    )
     assert (project / ".classroom-provider").is_file()
 
 
@@ -202,7 +233,7 @@ def test_partial_selection_without_provider_can_be_confirmed(tmp_path: Path) -> 
     assert not (project / ".classroom-box").exists()
 
 
-def test_cli_blocks_provider_mismatch_before_prompt_or_vagrant(
+def test_cli_preserves_other_provider_when_requested_legacy_vm_is_absent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     project = project_with_labs(tmp_path)
@@ -215,7 +246,7 @@ def test_cli_blocks_provider_mismatch_before_prompt_or_vagrant(
     monkeypatch.setattr(
         migration,
         "inspect_machine",
-        lambda selected_project, provider: pytest.fail("Vagrant non atteso"),
+        lambda selected_project, provider: MachineState(provider, "not_created"),
     )
     monkeypatch.setattr(
         "builtins.input",
@@ -226,7 +257,7 @@ def test_cli_blocks_provider_mismatch_before_prompt_or_vagrant(
         ["--provider", "virtualbox", "--project", str(project)]
     )
 
-    assert exit_code == 1
+    assert exit_code == 0
     assert (project / ".classroom-box").is_file()
     assert (project / ".classroom-provider").is_file()
 
