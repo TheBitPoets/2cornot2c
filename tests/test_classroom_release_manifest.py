@@ -81,6 +81,9 @@ def test_release_workflow_keeps_dispatch_input_out_of_shell_source() -> None:
     assert "needs: virtualbox-amd64" in workflow
     assert "needs: vmware-arm64" in workflow
     assert "needs: [virtualbox-amd64, vmware-arm64]" not in workflow
+    assert workflow.count(
+        "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"
+    ) == 2
     assert 'git ls-remote --exit-code --tags origin "refs/tags/$tag"' in workflow
     assert 'if [ "$tag_status" -ne 2 ]' in workflow
 

@@ -213,7 +213,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Download verified box
-        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d16 # v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: windows-amd64-virtualbox-${{ inputs.version }}
           path: release
@@ -250,7 +250,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Download verified box
-        uses: actions/download-artifact@fa0a91b85d5f404e444e00e005971372dc801d16 # v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: macos-arm64-vmware-${{ inputs.version }}
           path: release
