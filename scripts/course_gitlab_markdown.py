@@ -1,3 +1,5 @@
+"""Acquire bounded, commit-pinned, and verified Markdown snapshots from GitLab."""
+
 from __future__ import annotations
 
 import base64

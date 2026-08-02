@@ -1,3 +1,5 @@
+"""Student-lab application service shared by CLI, TUI, and authenticated HTTP APIs."""
+
 from __future__ import annotations
 
 import argparse

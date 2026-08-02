@@ -1,3 +1,5 @@
+"""Security and lifecycle tests for GitHub App installation-token rotation."""
+
 from __future__ import annotations
 
 import base64

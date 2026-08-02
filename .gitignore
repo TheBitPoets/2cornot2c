@@ -14,6 +14,7 @@ packer/*.box
 *.log
 __pycache__/
 *.py[cod]
+doc/sphinx/_build/
 .secrets/
 *.secret
 .course-storage.lock

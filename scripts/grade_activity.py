@@ -1,3 +1,5 @@
+"""Deterministically grade one activity using its locked language runner contract."""
+
 from __future__ import annotations
 
 import argparse

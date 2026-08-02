@@ -28,7 +28,13 @@ Per "estendibile" si intende:
 - interfacce GUI/TUI costruite sopra la stessa logica applicativa;
 - test minimi sui flussi critici.
 
-Non e necessario che l'MVP supporti subito tutte le fonti, tutti i linguaggi o tutte le modalita AI. Deve pero evitare scelte architetturali che rendano difficile aggiungerli dopo.
+Non e necessario che l'MVP supporti subito tutti i linguaggi o tutte le modalita AI. Deve pero evitare scelte architetturali che rendano difficile aggiungerli dopo.
+
+### Stato closeout agosto 2026
+
+L'MVP include ora lab studente, grading/sandbox, dashboard, activity e registri, autenticazione federata, amministrazione, collegamenti activity-UDA-calendario, fonti Markdown locali/GitHub/GitLab, repository privati GitHub tramite GitHub App e documentazione operativa/architetturale. La guida di riferimento è [`MVP_2026_2027.md`](MVP_2026_2027.md); limiti e percorso evolutivo sono espliciti in [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md).
+
+Il passo successivo non è aggiungere provider senza un caso d'uso, ma condurre il pilot, raccogliere evidenze e scegliere tra affinamenti GUI, costruzione dei percorsi 2026/2027 e investimenti di scalabilità.
 
 ## Visione lunga: playground per una piattaforma di conoscenza federata
 
@@ -104,16 +110,15 @@ Da avere per una prova reale:
 
 Rimandabile dopo l'MVP:
 
-- supporto completo GitLab;
+- runtime credenziali GitLab equivalente al GitHub App runtime;
 - provider interno completo;
 - tutti i linguaggi previsti;
 - AI assisted avanzata durante lo svolgimento;
-- import paragrafi da molte fonti remote;
 - federazione tra fonti/istanze di conoscenza;
 - knowledge graph o ricerca semantica avanzata;
 - cancellazioni definitive complesse;
 - metriche longitudinali avanzate;
-- database SQLite se il layer JSON normalizzato basta per la prova iniziale.
+- migrazione dei dati SaaS da SQLite/JSON a PostgreSQL, object storage e code condivise.
 
 ### Decisione luglio-agosto 2026: lab studente MVP
 
@@ -537,12 +542,12 @@ Serve una guida d'uso pratica, separata dalla documentazione tecnica, che accomp
 4. Salvare screenshot e immagini in una cartella dedicata, per esempio `doc/images/dashboard-guides/`.
 5. Collegare le guide da `doc/README.md`, `STUDENT_DASHBOARD.md`, `CLASS_ROSTERS.md` e dalla futura cornice didattica.
 
-## Priorita 6 - Cornice didattica
+## Priorita 6 - Cornice didattica (completata)
 
-Serve un documento leggibile che spieghi il progetto dal punto di vista didattico, non solo tecnico.
+La cornice didattica e il closeout MVP sono disponibili in `doc/CORNICE_DIDATTICA.md`, `doc/MVP_2026_2027.md`, `doc/ARCHITETTURA_MVP.md` e `doc/FRONTEND_ARCHITECTURE.md`.
 
-1. Creare `doc/CORNICE_DIDATTICA.md`.
-2. Spiegare:
+1. [x] Creare `doc/CORNICE_DIDATTICA.md`.
+2. [x] Spiegare:
    - obiettivi formativi;
    - struttura del percorso;
    - UDA;
@@ -552,7 +557,7 @@ Serve un documento leggibile che spieghi il progetto dal punto di vista didattic
    - feedback deterministico e AI assisted;
    - ruolo del docente;
    - uso di calendario, dashboard, registri e quadro classe.
-3. Collegare il documento da `doc/README.md` e dal README principale, se opportuno.
+3. [x] Collegare il documento da `doc/README.md` e dal README principale.
 
 ## Priorita 7 - Qualita, test e manutenzione
 

@@ -1,3 +1,5 @@
+"""Normalize and snapshot provider-independent Markdown course source catalogs."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
