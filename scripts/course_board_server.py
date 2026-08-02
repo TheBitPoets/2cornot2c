@@ -3298,7 +3298,7 @@ def heading_referenced_asset_paths(source_path: str, section: str) -> set[str]:
     referenced: set[str] = set()
     in_code_fence = False
     normalized = normalize_paragraph_preview_source(section)
-    for line in normalized.splitlines():
+    for line in normalized.split("\n"):
         if line.strip().startswith("```"):
             in_code_fence = not in_code_fence
             continue

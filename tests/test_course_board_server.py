@@ -113,12 +113,13 @@ def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, 
     (tmp_path / "lessons" / "images").mkdir(parents=True)
     markdown = tmp_path / "lessons" / "intro.md"
     markdown.write_text(
-        "# Demo\n\n![Schema](images/schema.png)\n\n<div>```md\n![Solo esempio](images/hidden.png)\n```\n",
+        "# Demo\n\n![Schema](images/schema.png)\n\n<div>```md\n![Solo esempio](images/hidden.png)\nx\u2028```\n![Separatore Unicode](images/unicode.png)\n```\n",
         encoding="utf-8",
     )
     image = b"\x89PNG\r\nverified"
     (tmp_path / "lessons" / "images" / "schema.png").write_bytes(image)
     (tmp_path / "lessons" / "images" / "hidden.png").write_bytes(image)
+    (tmp_path / "lessons" / "images" / "unicode.png").write_bytes(image)
     design = {
         "sources": [
             {
@@ -158,7 +159,10 @@ def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, 
         )
 
     (tmp_path / "lessons" / "images" / "unreferenced.png").write_bytes(image)
-    for rejected_target in ("images/unreferenced.png", "images/hidden.png"):
+    for rejected_target in (
+        "images/unreferenced.png",
+        "images/hidden.png",
+    ):
         with pytest.raises(ValueError, match="non è referenziata"):
             course_board_server.heading_asset_snapshot(
                 design,
@@ -167,6 +171,17 @@ def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, 
                 heading["content_sha256"],
                 rejected_target,
             )
+
+    # section_text_from_source normalizes Unicode line separators before both
+    # API rendering and reference authorization, so this image is visible.
+    unicode_payload = course_board_server.heading_asset_snapshot(
+        design,
+        heading["id"],
+        "",
+        heading["content_sha256"],
+        "images/unicode.png",
+    )
+    assert base64.b64decode(unicode_payload["content_base64"]) == image
 
 
 @pytest.mark.parametrize(

@@ -5,6 +5,7 @@ import hashlib
 
 import pytest
 
+from scripts import course_gitlab_markdown
 from scripts.course_gitlab_markdown import GitLabMarkdownAdapter
 from scripts.course_github_markdown import RemoteMarkdownError
 
@@ -17,10 +18,19 @@ class FakeTransport:
     def __init__(self, responses: dict[str, object]) -> None:
         self.responses = responses
         self.calls: list[str] = []
+        self.response_budgets: list[int] = []
 
-    def get_json(self, api_path: str, *, timeout_seconds: float):
+    def get_json(
+        self,
+        api_path: str,
+        *,
+        timeout_seconds: float,
+        max_response_bytes: int = course_gitlab_markdown.MAX_GITHUB_RESPONSE_BYTES,
+    ):
         assert timeout_seconds > 0
+        assert 0 < max_response_bytes <= course_gitlab_markdown.MAX_GITHUB_RESPONSE_BYTES
         self.calls.append(api_path)
+        self.response_budgets.append(max_response_bytes)
         return self.responses[api_path]
 
 
@@ -87,6 +97,7 @@ def test_fetches_binary_asset_from_exact_gitlab_commit() -> None:
 
     assert item.content == content
     assert item.relative_path == path
+    assert transport.response_budgets == [((len(content) + 2) // 3) * 4 + 64 * 1024]
 
 
 def test_rejects_file_response_from_different_commit() -> None:
