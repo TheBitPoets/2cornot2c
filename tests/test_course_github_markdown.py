@@ -84,6 +84,29 @@ def test_fetches_every_file_from_one_resolved_commit() -> None:
     ]
 
 
+def test_fetches_binary_asset_from_exact_commit_with_size_bound() -> None:
+    commit = "f" * 40
+    content = b"\x89PNG\r\nverified"
+    blob_id, blob = blob_payload(content)
+    transport = FakeTransport(
+        {
+            f"/repos/owner/repo/contents/images/icon.png?ref={commit}": {
+                "type": "file",
+                "size": len(content),
+                "sha": blob_id,
+            },
+            f"/repos/owner/repo/git/blobs/{blob_id}": blob,
+        }
+    )
+
+    item = GitHubMarkdownAdapter(transport).fetch_file_at_commit(
+        "owner/repo", commit, "images/icon.png", max_bytes=len(content)
+    )
+
+    assert item.content == content
+    assert item.relative_path == "images/icon.png"
+
+
 def test_quotes_declared_ref_and_file_segments_without_changing_repository() -> None:
     commit = "b" * 40
     content = b"# Spazi\n"

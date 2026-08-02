@@ -109,6 +109,50 @@ def test_extract_headings_and_section_text_include_paragraph_content(tmp_path, m
     )
 
 
+def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, monkeypatch) -> None:
+    (tmp_path / "lessons" / "images").mkdir(parents=True)
+    markdown = tmp_path / "lessons" / "intro.md"
+    markdown.write_text("# Demo\n\n![Schema](images/schema.png)\n", encoding="utf-8")
+    image = b"\x89PNG\r\nverified"
+    (tmp_path / "lessons" / "images" / "schema.png").write_bytes(image)
+    design = {
+        "sources": [
+            {
+                "id": "lesson",
+                "label": "Lesson",
+                "type": "markdown",
+                "provider": "local",
+                "path": "lessons",
+                "files": ["intro.md"],
+                "indexing_status": "ready",
+            }
+        ]
+    }
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    heading = course_board_server.extract_headings(design)[0]
+
+    payload = course_board_server.heading_asset_snapshot(
+        design,
+        heading["id"],
+        "",
+        heading["content_sha256"],
+        "images/schema.png",
+    )
+
+    assert payload["content_type"] == "image/png"
+    assert base64.b64decode(payload["content_base64"]) == image
+    assert payload["sha256"] == hashlib.sha256(image).hexdigest()
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["../../outside.png", "%2e%2e/%2e%2e/outside.png", "https://example.test/x.png", "images/x:/pic.png", "file.txt", "x.png?token=secret"],
+)
+def test_heading_asset_rejects_unsafe_or_non_image_paths(target) -> None:
+    with pytest.raises(ValueError):
+        course_board_server.normalized_heading_asset_path("lessons/intro.md", target)
+
+
 def test_markdown_line_iteration_is_streaming_and_preserves_line_endings() -> None:
     class SplitlinesForbidden(str):
         def splitlines(self, *args, **kwargs):

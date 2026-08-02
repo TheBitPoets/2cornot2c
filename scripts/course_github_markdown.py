@@ -388,6 +388,73 @@ class GitHubMarkdownAdapter:
             files=tuple(snapshots),
         )
 
+    def fetch_file_at_commit(
+        self,
+        repository: str,
+        commit_sha: str,
+        relative_path: str,
+        *,
+        max_bytes: int = MAX_REMOTE_MARKDOWN_BYTES,
+    ) -> RemoteMarkdownFile:
+        """Fetch one bounded file from an already resolved immutable commit."""
+
+        path = PurePosixPath(relative_path)
+        if (
+            REPOSITORY_RE.fullmatch(repository) is None
+            or any(part in {".", ".."} for part in repository.split("/"))
+            or GIT_OBJECT_ID_RE.fullmatch(commit_sha) is None
+            or not relative_path
+            or ":" in relative_path
+            or "\\" in relative_path
+            or path.is_absolute()
+            or path.as_posix() != relative_path
+            or any(part in {"", ".", ".."} for part in path.parts)
+            or max_bytes <= 0
+            or max_bytes > MAX_REMOTE_MARKDOWN_BYTES
+        ):
+            raise RemoteMarkdownError("File GitHub immutabile non valido.")
+        deadline = self._clock() + self._timeout_seconds
+        repository_path = "/".join(
+            parse.quote(part, safe="") for part in repository.split("/")
+        )
+        encoded_path = "/".join(
+            parse.quote(part, safe="") for part in relative_path.split("/")
+        )
+        metadata = self._get_json(
+            f"/repos/{repository_path}/contents/{encoded_path}?ref={commit_sha}",
+            deadline,
+            allow_query=True,
+        )
+        if not isinstance(metadata, dict) or metadata.get("type") != "file":
+            raise RemoteMarkdownError(f"File GitHub non valido: {relative_path}.")
+        declared_size = metadata.get("size")
+        if (
+            not isinstance(declared_size, int)
+            or isinstance(declared_size, bool)
+            or declared_size < 0
+            or declared_size > max_bytes
+        ):
+            raise RemoteMarkdownError(f"Dimensione file GitHub non valida: {relative_path}.")
+        blob_id = _required_object_id(metadata, "sha", f"file {relative_path}")
+        content = None if self._blob_cache is None else self._blob_cache.get(blob_id)
+        if content is None:
+            blob = self._get_json(
+                f"/repos/{repository_path}/git/blobs/{blob_id}", deadline
+            )
+            content = _decode_blob(blob, blob_id, relative_path)
+            if self._blob_cache is not None:
+                self._blob_cache.put(blob_id, content)
+        if len(content) != declared_size or len(content) > max_bytes:
+            raise RemoteMarkdownError(
+                f"Dimensione file GitHub incoerente: {relative_path}."
+            )
+        return RemoteMarkdownFile(
+            relative_path=relative_path,
+            git_object_id=blob_id,
+            sha256=hashlib.sha256(content).hexdigest(),
+            content=content,
+        )
+
     def _get_json(
         self,
         api_path: str,

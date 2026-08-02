@@ -2387,6 +2387,7 @@ function normalizedParagraphAssetPath(sourcePath, target) {
   }
   if (
     decodedTarget.includes("\\")
+    || decodedTarget.includes(":")
     || decodedTarget.includes("?")
     || decodedTarget.includes("#")
     || /[\u0000-\u001f\u007f]/.test(decodedTarget)
@@ -2409,11 +2410,10 @@ function normalizedParagraphAssetPath(sourcePath, target) {
   return parts.map((part) => encodeURIComponent(part)).join("/");
 }
 
-function resolveParagraphImageSource(target, heading = {}) {
-  const assetPath = normalizedParagraphAssetPath(heading.source, target);
-  if (!assetPath) return "";
+function validatedParagraphImageTarget(target, heading = {}) {
+  if (!normalizedParagraphAssetPath(heading.source, target)) return "";
   const provider = heading.source_provider || "local";
-  if (provider === "local") return `/${assetPath}`;
+  if (provider === "local") return String(target);
   const repository = String(heading.source_repository || "");
   const commit = String(heading.source_commit || "");
   if (!/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(commit)) return "";
@@ -2422,13 +2422,8 @@ function resolveParagraphImageSource(target, heading = {}) {
     repositoryParts.length < 2
     || repositoryParts.some((part) => !/^[A-Za-z0-9_.-]+$/.test(part) || part === "." || part === "..")
   ) return "";
-  const encodedRepository = repositoryParts.map((part) => encodeURIComponent(part)).join("/");
-  if (provider === "github" && repositoryParts.length === 2) {
-    return `https://raw.githubusercontent.com/${encodedRepository}/${commit}/${assetPath}`;
-  }
-  if (provider === "gitlab") {
-    return `https://gitlab.com/${encodedRepository}/-/raw/${commit}/${assetPath}`;
-  }
+  if (provider === "github" && repositoryParts.length === 2) return String(target);
+  if (provider === "gitlab") return String(target);
   return "";
 }
 
@@ -2449,11 +2444,11 @@ function renderParagraphInline(value, heading = {}) {
   for (const match of source.matchAll(imagePattern)) {
     parts.push(renderParagraphInlineText(source.slice(start, match.index)));
     const alt = match[1].trim() || "immagine";
-    const resolved = resolveParagraphImageSource(match[2], heading);
+    const validatedTarget = validatedParagraphImageTarget(match[2], heading);
     const fallback = `Immagine non disponibile: ${alt}`;
-    if (resolved) {
+    if (validatedTarget) {
       parts.push(
-        `<span class="paragraphImageFrame"><img class="paragraphImage" data-preview-image src="${escapeHtml(resolved)}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer"><span class="paragraphImageFallback" hidden>${escapeHtml(fallback)}</span></span>`,
+        `<span class="paragraphImageFrame"><img class="paragraphImage" data-preview-image data-asset-target="${escapeHtml(validatedTarget)}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer"><span class="paragraphImageFallback" hidden>${escapeHtml(fallback)}</span></span>`,
       );
     } else {
       parts.push(`<span class="paragraphImageFallback" role="img" aria-label="${escapeHtml(fallback)}">[${escapeHtml(fallback)}]</span>`);
@@ -2464,14 +2459,45 @@ function renderParagraphInline(value, heading = {}) {
   return parts.join("");
 }
 
-function bindParagraphImageFallbacks(container) {
-  for (const image of container.querySelectorAll("img[data-preview-image]")) {
-    image.addEventListener("error", () => {
-      image.hidden = true;
-      const fallback = image.parentElement?.querySelector(".paragraphImageFallback");
-      if (fallback) fallback.hidden = false;
-    }, { once: true });
-  }
+function showParagraphImageFallback(image) {
+  image.hidden = true;
+  const fallback = image.parentElement?.querySelector(".paragraphImageFallback");
+  if (fallback) fallback.hidden = false;
+}
+
+async function loadParagraphImages(container, heading, isCurrent = () => true) {
+  const allImages = Array.from(container.querySelectorAll("img[data-preview-image]"));
+  const images = allImages.slice(0, 32);
+  for (const image of allImages.slice(32)) showParagraphImageFallback(image);
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < images.length) {
+      const image = images[nextIndex++];
+      image.addEventListener("error", () => showParagraphImageFallback(image), { once: true });
+      try {
+        const payload = await api("/api/heading-asset", {
+          method: "POST",
+          body: JSON.stringify({
+            id: heading.id,
+            source_commit: heading.source_commit || "",
+            content_sha256: heading.content_sha256 || "",
+            target: image.dataset.assetTarget || "",
+            design: state.design,
+          }),
+        });
+        if (!isCurrent()) return;
+        if (
+          !/^image\/(?:png|jpeg|gif|webp|svg\+xml|x-icon)$/.test(payload.content_type || "")
+          || !/^[A-Za-z0-9+/]*={0,2}$/.test(payload.content_base64 || "")
+          || payload.content_base64.length > 11_184_812
+        ) throw new Error("Payload immagine non valido.");
+        image.src = `data:${payload.content_type};base64,${payload.content_base64}`;
+      } catch (_error) {
+        if (isCurrent()) showParagraphImageFallback(image);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, images.length) }, worker));
 }
 
 function renderParagraphContent(source, heading = {}) {
@@ -2579,7 +2605,12 @@ async function openParagraphPreview(paragraph) {
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
     els.paragraphDialogMeta.textContent = `${heading.source_label || heading.source || "Sorgente n/d"} (${heading.source_provider || "local"}) · riga ${heading.line || "?"} · H${heading.level || "?"}`;
     els.paragraphContent.innerHTML = renderParagraphContent(heading.content, heading);
-    bindParagraphImageFallbacks(els.paragraphContent);
+    await loadParagraphImages(
+      els.paragraphContent,
+      heading,
+      () => requestId === paragraphPreviewRequestId,
+    );
+    if (requestId !== paragraphPreviewRequestId) return;
     const sourceUrl = heading.source_url || heading.github_url;
     if (sourceUrl) {
       els.paragraphSourceLink.href = sourceUrl;

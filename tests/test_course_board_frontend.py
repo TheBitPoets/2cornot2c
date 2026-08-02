@@ -1695,29 +1695,29 @@ def test_paragraph_preview_resolves_local_and_commit_pinned_remote_images() -> N
     run_course_board_js(
         """
         assert.equal(
-          resolveParagraphImageSource("../images/schema rete.png", {
+          validatedParagraphImageTarget("../images/schema rete.png", {
             source: "doc/guide/chapter.md", source_provider: "local",
           }),
-          "/doc/images/schema%20rete.png",
+          "../images/schema rete.png",
         );
         const commit = "a".repeat(40);
         assert.equal(
-          resolveParagraphImageSource("assets/icon.svg", {
+          validatedParagraphImageTarget("assets/icon.svg", {
             source: "lessons/intro.md",
             source_provider: "github",
             source_repository: "TheBitPoets/materials",
             source_commit: commit,
           }),
-          "https://raw.githubusercontent.com/TheBitPoets/materials/" + commit + "/lessons/assets/icon.svg",
+          "assets/icon.svg",
         );
         assert.equal(
-          resolveParagraphImageSource("../media/map.webp", {
+          validatedParagraphImageTarget("../media/map.webp", {
             source: "course/unit/page.md",
             source_provider: "gitlab",
             source_repository: "school/group/materials",
             source_commit: commit,
           }),
-          "https://gitlab.com/school/group/materials/-/raw/" + commit + "/course/media/map.webp",
+          "../media/map.webp",
         );
         """
     )
@@ -1727,18 +1727,51 @@ def test_paragraph_preview_rejects_untrusted_or_escaping_image_references() -> N
     run_course_board_js(
         """
         const local = { source: "README.md", source_provider: "local" };
-        assert.equal(resolveParagraphImageSource("../outside.png", local), "");
-        assert.equal(resolveParagraphImageSource("https://tracker.example/pixel.png", local), "");
-        assert.equal(resolveParagraphImageSource("//tracker.example/pixel.png", local), "");
-        assert.equal(resolveParagraphImageSource("%2e%2e/secret.png", local), "");
-        assert.equal(resolveParagraphImageSource("script.html", local), "");
-        assert.equal(resolveParagraphImageSource("image.png?token=x", local), "");
-        assert.equal(resolveParagraphImageSource("image.png", {
+        assert.equal(validatedParagraphImageTarget("../outside.png", local), "");
+        assert.equal(validatedParagraphImageTarget("https://tracker.example/pixel.png", local), "");
+        assert.equal(validatedParagraphImageTarget("//tracker.example/pixel.png", local), "");
+        assert.equal(validatedParagraphImageTarget("%2e%2e/secret.png", local), "");
+        assert.equal(validatedParagraphImageTarget("script.html", local), "");
+        assert.equal(validatedParagraphImageTarget("image.png?token=x", local), "");
+        assert.equal(validatedParagraphImageTarget("image.png", {
           source: "lesson.md",
           source_provider: "github",
           source_repository: "owner/repo",
           source_commit: "main",
         }), "");
+        """
+    )
+
+
+def test_paragraph_preview_loads_assets_through_authenticated_api() -> None:
+    run_course_board_js(
+        """
+        const fallback = { hidden: true };
+        const image = {
+          dataset: { assetTarget: "../private/icon.svg" },
+          hidden: false,
+          src: "",
+          parentElement: { querySelector: () => fallback },
+          addEventListener() {},
+        };
+        const heading = {
+          id: "private:lesson.md#demo",
+          source_commit: "a".repeat(40),
+          content_sha256: "b".repeat(64),
+        };
+        state.design = { sources: [{ id: "private" }] };
+        api = async (path, options) => {
+          assert.equal(path, "/api/heading-asset");
+          const body = JSON.parse(options.body);
+          assert.equal(body.target, "../private/icon.svg");
+          assert.deepEqual(body.design, state.design);
+          return { content_type: "image/svg+xml", content_base64: "PHN2Zz48L3N2Zz4=" };
+        };
+        loadParagraphImages({ querySelectorAll: () => [image] }, heading).then(() => {
+          assert.equal(image.src, "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=");
+          assert.equal(image.hidden, false);
+          assert.equal(fallback.hidden, true);
+        });
         """
     )
 
@@ -1752,7 +1785,8 @@ def test_paragraph_preview_renders_images_and_readable_fallbacks_safely() -> Non
           heading,
         );
         assert.match(rendered, /class="paragraphImage"/);
-        assert.ok(rendered.includes('src="/doc/images/network.png"'));
+        assert.ok(rendered.includes('data-asset-target="images/network.png"'));
+        assert.equal(rendered.includes("raw.githubusercontent"), false);
         assert.ok(rendered.includes('alt="Schema **rete**"'));
         assert.match(rendered, /Immagine non disponibile: Mancante/);
         assert.doesNotMatch(rendered, /<x>/);
