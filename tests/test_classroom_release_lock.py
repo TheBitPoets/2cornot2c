@@ -89,6 +89,7 @@ def test_candidate_does_not_disable_existing_active_release(tmp_path: Path) -> N
 @pytest.mark.parametrize(
     "mutation",
     (
+        lambda value: value["targets"].pop("macos-arm64-vmware"),
         lambda value: value["targets"]["windows-amd64-virtualbox"].update(
             candidate_version=None, active_release=None
         ),

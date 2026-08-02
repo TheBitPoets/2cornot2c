@@ -75,8 +75,11 @@ def load_target_releases(path: Path = DEFAULT_LOCK_PATH) -> dict[str, TargetRele
     if payload["schema_version"] != SCHEMA_VERSION:
         raise ClassroomReleaseLockError("Schema lock release non supportato.")
     raw_targets = payload["targets"]
-    if not isinstance(raw_targets, dict) or not raw_targets:
-        raise ClassroomReleaseLockError("Il lock non contiene target.")
+    if (
+        not isinstance(raw_targets, dict)
+        or set(raw_targets) != set(TARGET_IDS.values())
+    ):
+        raise ClassroomReleaseLockError("Insieme target del lock non valido.")
 
     releases: dict[str, TargetRelease] = {}
     identities: set[tuple[Host, Provider]] = set()
