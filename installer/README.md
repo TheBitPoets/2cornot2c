@@ -195,23 +195,22 @@ Elimina dalla cache esclusivamente box con namespace `2cornot2c/`; non tocca
 altre VM, box Bento o software preesistente. Il comando diretto richiede la
 frase distinta `DISINSTALLA TUTTO`.
 
-La transizione è controllata da `packer/classroom-images.state`. Finché vale
-`pending`, l'installer mantiene il percorso Bento precedente e non propone
-ancora i passi immagine: questo consente di unire e avviare la workflow senza
-bloccare le installazioni se la prima build fisica fallisce. Dopo la
-pubblicazione e verifica di `classroom-v1.0.0`, una PR separata registra lo
-SHA-256 del manifest in `packer/release-manifest.sha256` e imposta lo stato ad
-`active`.
+La transizione è controllata per host/provider da
+`packer/classroom-releases.lock.json`. Un target con `active_release: null`
+mantiene il percorso Bento precedente; una `active_release` verificata richiede
+la propria box Packer. Windows e macOS possono quindi essere costruiti,
+pubblicati e attivati in momenti diversi senza occupare o bloccare l'altro
+runner.
 
-Con stato `active`, la parte VM usa esclusivamente box Packer pubblicate dalla
-workflow `publish-classroom-boxes.yml`. L'installer scarica senza discovery API
-il manifest della release fissata nel codice, seleziona host/provider, verifica
-dimensione e SHA-256, importa la box e configura il progetto. Un aggiornamento
-delle immagini richiede una modifica revisionata di
-`CLASSROOM_RELEASE_VERSION`, evitando il limite API condiviso delle aule dietro
-NAT. Se la release o la combinazione richiesta non è disponibile,
-l'installazione si ferma con E25. L'override `CLASSROOM_RELEASE_MANIFEST` è
-riservato a test isolati e viene rifiutato senza il secondo opt-in esplicito
+Per attivare un target, una PR separata registra in `active_release` versione,
+URL immutabile e SHA-256 del manifest. `candidate_version` autorizza una nuova
+build senza rimuovere la release già attiva, quindi non riapre il fallback
+Bento durante gli aggiornamenti. L'installer scarica senza
+discovery API soltanto il manifest fissato per il proprio host/provider,
+verifica dimensione e SHA-256, importa la box e configura il progetto. Se il
+lock, la release o la combinazione richiesta non è valida, l'installazione si
+ferma con E25. L'override `CLASSROOM_RELEASE_MANIFEST` è riservato a test
+isolati e viene rifiutato senza il secondo opt-in esplicito
 `CLASSROOM_ALLOW_UNTRUSTED_MANIFEST=1`; non va usato nel pilot.
 
 `installer/vagrant_box.py` completa il flusso locale:
@@ -224,9 +223,10 @@ riservato a test isolati e viene rifiutato senza il secondo opt-in esplicito
 Se il file in cache è invalido, il nuovo download viene verificato in un file temporaneo e sostituisce atomicamente la cache soltanto dopo checksum e dimensione corretti.
 
 Quando `.classroom-box` è presente, il `Vagrantfile` usa desktop, toolchain e
-Guest Tools già inclusi nella box Packer. Durante lo stato `pending`, senza quel
-file usa ancora Bento in modo transitorio. Dopo l'attivazione si ferma e Bento
-resta disponibile soltanto alla migrazione controllata tramite
+Guest Tools già inclusi nella box Packer. Quando il target corrente non ha
+`active_release`, senza quel file usa ancora Bento in modo transitorio. Dopo
+l'attivazione del target si ferma e Bento resta disponibile soltanto alla
+migrazione controllata tramite
 `CLASSROOM_ALLOW_LEGACY_PROVISIONING=1`.
 
 ## VM già esistente

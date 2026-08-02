@@ -145,7 +145,8 @@ def test_windows_launcher_hides_technical_start_commands() -> None:
     assert '"Oracle\\VirtualBox\\VBoxManage.exe"' in setup_vm
     assert "Invoke-Checked $VagrantCommand" in setup_vm
     assert ".classroom-box" in launcher
-    assert "classroom-images.state" in launcher
+    assert "classroom-releases.lock.json" in launcher
+    assert "windows-amd64-virtualbox" in launcher
     assert 'Join-Path $InstallDir ".vagrant\\machines"' in launcher
     assert '$ImageState -eq "pending"' in launcher
     assert 'if ($ImageState -ne "pending")' in launcher

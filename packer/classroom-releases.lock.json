@@ -1,0 +1,17 @@
+{
+  "schema_version": "2cornot2c.classroom-release-lock.v1",
+  "targets": {
+    "windows-amd64-virtualbox": {
+      "host": "windows-amd64",
+      "provider": "virtualbox",
+      "candidate_version": "1.0.0",
+      "active_release": null
+    },
+    "macos-arm64-vmware": {
+      "host": "macos-arm64",
+      "provider": "vmware_desktop",
+      "candidate_version": "1.0.0",
+      "active_release": null
+    }
+  }
+}

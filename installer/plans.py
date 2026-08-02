@@ -2,29 +2,24 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import sys
 
+from installer.classroom_release_lock import (
+    ClassroomReleaseLockError,
+    target_release,
+)
 from installer.model import Check, Host, InstallPlan, Provider, Step
 from installer.student_dev import immutable_reference
 from installer.tool_versions import MINIMUM_TOOL_VERSIONS
 
 
-CLASSROOM_IMAGES_STATE = (
-    Path(__file__).resolve().parents[1] / "packer" / "classroom-images.state"
-)
-
-
-def classroom_images_active() -> bool:
-    """Enable mandatory Packer images only after the first release exists."""
+def classroom_images_active(host: Host, provider: Provider) -> bool:
+    """Require Packer only for a target activated in the reviewed lock."""
 
     try:
-        state = CLASSROOM_IMAGES_STATE.read_text(encoding="utf-8").strip()
-    except OSError as error:
-        raise RuntimeError("Stato immagini classroom non leggibile.") from error
-    if state not in {"pending", "active"}:
-        raise RuntimeError(f"Stato immagini classroom non valido: {state!r}.")
-    return state == "active"
+        return target_release(host, provider).active
+    except ClassroomReleaseLockError as error:
+        raise RuntimeError(str(error)) from error
 
 
 def _winget_ensure(package_id: str) -> tuple[str, ...]:
@@ -115,7 +110,7 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
     steps = plan.steps
     if (
         provider in {Provider.VMWARE, Provider.VIRTUALBOX}
-        and classroom_images_active()
+        and classroom_images_active(host, provider)
     ):
         image_command = (
             sys.executable,

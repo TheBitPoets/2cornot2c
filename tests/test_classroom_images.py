@@ -20,7 +20,23 @@ REAL_OFFICIAL_MANIFEST_DIGEST = classroom_images._official_manifest_digest
 
 @pytest.fixture(autouse=True)
 def active_manifest_test_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(classroom_images, "_official_manifest_digest", lambda: None)
+    active = classroom_images.TargetRelease(
+        "windows-amd64-virtualbox",
+        Host.WINDOWS_AMD64,
+        Provider.VIRTUALBOX,
+        None,
+        "1.0.0",
+        (
+            "https://github.com/TheBitPoets/2cornot2c/releases/download/"
+            "classroom-windows-amd64-virtualbox-v1.0.0/"
+            "release-manifest.json"
+        ),
+        "a" * 64,
+    )
+    monkeypatch.setattr(classroom_images, "_target_lock", lambda *args: active)
+    monkeypatch.setattr(
+        classroom_images, "_official_manifest_digest", lambda *args: None
+    )
 
 
 def artifact() -> BoxArtifact:
@@ -290,54 +306,47 @@ def test_vagrantfile_disables_implicit_bento_fallback() -> None:
     ).read_text(encoding="utf-8")
 
     assert "CLASSROOM_ALLOW_LEGACY_PROVISIONING" in source
-    assert '["pending", "active"].include?(image_state)' in source
-    assert "Stato immagini classroom non valido" in source
+    assert "x86_64|amd64|x64" in source
+    assert 'target_release["active_release"]' in source
+    assert 'locked_target.keys.sort ==' in source
+    assert 'active.keys.sort ==' in source
+    assert "DuplicateRejectingHash" in source
+    assert 'release_lock.keys.sort ==' in source
+    assert 'release_lock["targets"].keys.sort == expected_identities.keys.sort' in source
+    assert "Release classroom attiva non valida" in source
     assert "Box Packer 2cornot2c non configurata" in source
 
 
-def test_pending_activation_refuses_official_manifest_installation() -> None:
-    assert classroom_images.CLASSROOM_IMAGES_STATE.read_text(
-        encoding="utf-8"
-    ).strip() == "pending"
-    with pytest.raises(
-        classroom_images.ClassroomImageError,
-        match="Immagini Packer non ancora attive",
-    ):
-        REAL_OFFICIAL_MANIFEST_DIGEST()
-
-
-def test_invalid_activation_state_fails_closed(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_pending_activation_refuses_official_manifest_installation(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    state = tmp_path / "classroom-images.state"
-    state.write_text("typo\n", encoding="utf-8")
-    monkeypatch.setattr(classroom_images, "CLASSROOM_IMAGES_STATE", state)
-
+    release = classroom_images.target_release(
+        Host.WINDOWS_AMD64, Provider.VIRTUALBOX
+    )
+    assert not release.active
+    assert release.candidate_version == "1.0.0"
+    monkeypatch.setattr(classroom_images, "_target_lock", lambda *args: release)
     with pytest.raises(
         classroom_images.ClassroomImageError,
-        match="Stato immagini classroom non valido",
+        match="non ancora attiva",
     ):
         REAL_OFFICIAL_MANIFEST_DIGEST()
 
 
 def test_active_manifest_requires_revision_pinned_digest(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    state = tmp_path / "classroom-images.state"
-    digest = tmp_path / "release-manifest.sha256"
-    state.write_text("active\n", encoding="utf-8")
-    digest.write_text("a" * 64 + "\n", encoding="ascii")
-    monkeypatch.setattr(classroom_images, "CLASSROOM_IMAGES_STATE", state)
-    monkeypatch.setattr(classroom_images, "OFFICIAL_MANIFEST_DIGEST", digest)
-
+    active = classroom_images.TargetRelease(
+        "windows-amd64-virtualbox",
+        Host.WINDOWS_AMD64,
+        Provider.VIRTUALBOX,
+        None,
+        "1.0.0",
+        "https://example.test/release-manifest.json",
+        "a" * 64,
+    )
+    monkeypatch.setattr(classroom_images, "_target_lock", lambda *args: active)
     assert REAL_OFFICIAL_MANIFEST_DIGEST() == "a" * 64
-
-    digest.write_text("pending\n", encoding="ascii")
-    with pytest.raises(
-        classroom_images.ClassroomImageError,
-        match="Digest manifest classroom non valido",
-    ):
-        REAL_OFFICIAL_MANIFEST_DIGEST()
 
 
 def test_cached_manifest_must_match_revision_pinned_digest(tmp_path: Path) -> None:
@@ -354,7 +363,7 @@ def test_cached_manifest_must_match_revision_pinned_digest(tmp_path: Path) -> No
 def test_official_manifest_is_pinned_without_github_api_discovery() -> None:
     assert classroom_images.latest_manifest_url() == (
         "https://github.com/TheBitPoets/2cornot2c/releases/download/"
-        "classroom-v1.0.0/release-manifest.json"
+        "classroom-windows-amd64-virtualbox-v1.0.0/release-manifest.json"
     )
     assert "api.github.com" not in classroom_images.latest_manifest_url()
 
@@ -364,12 +373,12 @@ def test_acquire_manifest_reuses_fresh_valid_cache(
 ) -> None:
     cache = tmp_path / "images"
     cache.mkdir()
-    manifest = cache / "release-manifest.json"
+    manifest = cache / "windows-amd64-virtualbox-release-manifest.json"
     manifest.write_text(json.dumps(manifest_payload()), encoding="utf-8")
     monkeypatch.setattr(
         classroom_images,
         "latest_manifest_url",
-        lambda: pytest.fail("la cache fresca non deve interrogare GitHub"),
+        lambda *args: pytest.fail("la cache fresca non deve interrogare GitHub"),
     )
 
     assert classroom_images.acquire_manifest(cache) == manifest
@@ -382,13 +391,13 @@ def test_acquire_manifest_rejects_cached_release_different_from_pin(
     cache.mkdir()
     payload = manifest_payload()
     payload["release"] = "0.9.0"
-    (cache / "release-manifest.json").write_text(
+    (cache / "windows-amd64-virtualbox-release-manifest.json").write_text(
         json.dumps(payload), encoding="utf-8"
     )
     monkeypatch.setattr(
         classroom_images,
         "latest_manifest_url",
-        lambda: (_ for _ in ()).throw(
+        lambda *args: (_ for _ in ()).throw(
             classroom_images.ClassroomImageError("manifest fissato non disponibile")
         ),
     )
@@ -405,13 +414,13 @@ def test_acquire_manifest_falls_back_to_stale_valid_cache(
 ) -> None:
     cache = tmp_path / "images"
     cache.mkdir()
-    manifest = cache / "release-manifest.json"
+    manifest = cache / "windows-amd64-virtualbox-release-manifest.json"
     manifest.write_text(json.dumps(manifest_payload()), encoding="utf-8")
     os.utime(manifest, (1, 1))
     monkeypatch.setattr(
         classroom_images,
         "latest_manifest_url",
-        lambda: (_ for _ in ()).throw(
+        lambda *args: (_ for _ in ()).throw(
             classroom_images.ClassroomImageError("GitHub API rate limit")
         ),
     )
@@ -424,11 +433,13 @@ def test_acquire_manifest_rejects_invalid_cache_during_api_failure(
 ) -> None:
     cache = tmp_path / "images"
     cache.mkdir()
-    (cache / "release-manifest.json").write_text("{}", encoding="utf-8")
+    (cache / "windows-amd64-virtualbox-release-manifest.json").write_text(
+        "{}", encoding="utf-8"
+    )
     monkeypatch.setattr(
         classroom_images,
         "latest_manifest_url",
-        lambda: (_ for _ in ()).throw(
+        lambda *args: (_ for _ in ()).throw(
             classroom_images.ClassroomImageError("GitHub API rate limit")
         ),
     )
@@ -442,14 +453,14 @@ def test_acquire_manifest_preserves_valid_cache_on_invalid_refresh(
 ) -> None:
     cache = tmp_path / "images"
     cache.mkdir()
-    manifest = cache / "release-manifest.json"
+    manifest = cache / "windows-amd64-virtualbox-release-manifest.json"
     original = json.dumps(manifest_payload())
     manifest.write_text(original, encoding="utf-8")
     os.utime(manifest, (1, 1))
     monkeypatch.setattr(
         classroom_images,
         "latest_manifest_url",
-        lambda: "https://downloads.example.test/release-manifest.json",
+        lambda *args: "https://downloads.example.test/release-manifest.json",
     )
 
     class Response(io.BytesIO):
@@ -525,16 +536,16 @@ def test_remote_override_does_not_replace_official_manifest_cache(
 
     override = classroom_images.acquire_manifest(cache)
 
-    assert override == cache / "override-release-manifest.json"
+    assert override == cache / "override-windows-amd64-virtualbox-release-manifest.json"
     assert classroom_images.load_release(override).version == "9.9.9"
-    assert not (cache / "release-manifest.json").exists()
+    assert not (cache / "windows-amd64-virtualbox-release-manifest.json").exists()
 
     monkeypatch.delenv("CLASSROOM_RELEASE_MANIFEST")
     monkeypatch.delenv("CLASSROOM_ALLOW_UNTRUSTED_MANIFEST")
-    monkeypatch.setattr(classroom_images, "latest_manifest_url", lambda: official_url)
+    monkeypatch.setattr(classroom_images, "latest_manifest_url", lambda *args: official_url)
 
     official = classroom_images.acquire_manifest(cache)
 
-    assert official == cache / "release-manifest.json"
+    assert official == cache / "windows-amd64-virtualbox-release-manifest.json"
     assert classroom_images.load_release(official).version == "1.0.0"
     assert requested == [override_url, official_url]

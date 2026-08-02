@@ -1,16 +1,98 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+require "json"
 require "rbconfig"
 
-box_file = File.join(__dir__, ".classroom-box")
-image_state_file = File.join(__dir__, "packer", "classroom-images.state")
-raise "Stato immagini classroom mancante." unless File.file?(image_state_file)
-image_state = File.read(image_state_file, encoding: "UTF-8").strip
-unless ["pending", "active"].include?(image_state)
-  raise "Stato immagini classroom non valido: #{image_state.inspect}."
+class DuplicateRejectingHash < Hash
+  def []=(key, value)
+    raise JSON::ParserError, "Chiave duplicata: #{key}" if key?(key)
+    super
+  end
 end
-packer_images_active = image_state == "active"
+
+box_file = File.join(__dir__, ".classroom-box")
+release_lock_file = File.join(__dir__, "packer", "classroom-releases.lock.json")
+raise "Lock release classroom mancante." unless File.file?(release_lock_file)
+begin
+  release_lock = JSON.parse(
+    File.read(release_lock_file, encoding: "UTF-8"),
+    object_class: DuplicateRejectingHash
+  )
+rescue JSON::ParserError => error
+  raise "Lock release classroom non valido: #{error.message}"
+end
+unless release_lock.is_a?(Hash) &&
+       release_lock.keys.sort == ["schema_version", "targets"] &&
+       release_lock["schema_version"] == "2cornot2c.classroom-release-lock.v1" &&
+       release_lock["targets"].is_a?(Hash) &&
+       !release_lock["targets"].empty?
+  raise "Schema lock release classroom non valido."
+end
+expected_identities = {
+  "windows-amd64-virtualbox" => ["windows-amd64", "virtualbox"],
+  "macos-arm64-vmware" => ["macos-arm64", "vmware_desktop"]
+}
+unless release_lock["targets"].keys.sort == expected_identities.keys.sort
+  raise "Insieme target del lock release classroom non valido."
+end
+release_lock["targets"].each do |locked_target_id, locked_target|
+  unless locked_target_id.match?(/\A[a-z0-9-]+\z/) &&
+         locked_target.is_a?(Hash) &&
+         locked_target.keys.sort == ["active_release", "candidate_version", "host", "provider"] &&
+         locked_target["host"].is_a?(String) && !locked_target["host"].empty? &&
+         locked_target["provider"].is_a?(String) && !locked_target["provider"].empty?
+    raise "Target #{locked_target_id.inspect} non valido nel lock release classroom."
+  end
+  unless [locked_target["host"], locked_target["provider"]] == expected_identities.fetch(locked_target_id)
+    raise "Identità target #{locked_target_id} non valida."
+  end
+  candidate = locked_target["candidate_version"]
+  unless candidate.nil? || (
+    candidate.is_a?(String) && candidate.match?(/\A\d+\.\d+\.\d+\z/)
+  )
+    raise "Versione candidata #{locked_target_id} non valida."
+  end
+  active = locked_target["active_release"]
+  active_valid = active.nil?
+  if active.is_a?(Hash) &&
+     active.keys.sort == ["manifest_sha256", "manifest_url", "version"] &&
+     active["version"].is_a?(String)
+    active_version = active["version"]
+    expected_url = "https://github.com/TheBitPoets/2cornot2c/releases/download/classroom-#{locked_target_id}-v#{active_version}/release-manifest.json"
+    active_valid = active_version.match?(/\A\d+\.\d+\.\d+\z/) &&
+      active["manifest_url"] == expected_url &&
+      active["manifest_sha256"].is_a?(String) &&
+      active["manifest_sha256"].match?(/\A[0-9a-f]{64}\z/)
+  end
+  raise "Release classroom attiva non valida per #{locked_target_id}." unless active_valid
+  if candidate.nil? && active.nil?
+    raise "Target #{locked_target_id} senza release attiva o candidata."
+  end
+  if !active.nil? && candidate == active["version"]
+    raise "Release candidata e attiva coincidono per #{locked_target_id}."
+  end
+end
+
+host_os = RbConfig::CONFIG["host_os"]
+host_cpu = RbConfig::CONFIG["host_cpu"]
+target_id = if host_os.match?(/mswin|mingw|cygwin/i) && host_cpu.match?(/x86_64|amd64|x64/i)
+              "windows-amd64-virtualbox"
+            elsif host_os.match?(/darwin/i) && host_cpu.match?(/arm64|aarch64/i)
+              "macos-arm64-vmware"
+            end
+target_release = target_id.nil? ? nil : release_lock["targets"][target_id]
+if !target_id.nil?
+  raise "Target #{target_id} mancante nel lock release classroom." if target_release.nil?
+  unless [target_release["host"], target_release["provider"]] == expected_identities.fetch(target_id)
+    raise "Identità target #{target_id} non valida."
+  end
+  active_release = target_release["active_release"]
+else
+  active_release = nil
+end
+packer_images_active = !active_release.nil?
+image_state = packer_images_active ? "active" : "pending"
 box_name = ENV["CLASSROOM_BOX_NAME"]
 box_name = File.read(box_file, encoding: "UTF-8").strip if box_name.to_s.empty? && File.file?(box_file)
 if box_name.to_s.empty?
