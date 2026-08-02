@@ -118,8 +118,13 @@ STUDENT_API_BODY_DEADLINE_SECONDS = 15
 HTTP_HEADER_DEADLINE_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 MARKDOWN_LINE_ENDING_RE = re.compile(r"\r\n|\r|\n")
+JAVASCRIPT_WHITESPACE = (
+    "\\u0009-\\u000d\\u0020\\u00a0\\u1680\\u2000-\\u200a"
+    "\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff"
+)
 MARKDOWN_IMAGE_RE = re.compile(
-    r"!\[[^\]\r\n]{0,500}\]\(([^)\s]+)(?:\s+(?:\"[^\"]*\"|'[^']*'))?\)"
+    rf"!\[[^\]\r\n]{{0,500}}\]\(([^){JAVASCRIPT_WHITESPACE}]+)"
+    rf"(?:[{JAVASCRIPT_WHITESPACE}]+(?:\"[^\"]*\"|'[^']*'))?\)"
 )
 JAVASCRIPT_TRIM_RE = re.compile(
     r"^[\u0009-\u000d\u0020\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+"
@@ -3283,16 +3288,24 @@ def javascript_trim(value: str) -> str:
 def normalize_paragraph_preview_source(source: str) -> str:
     """Mirror the frontend's bounded HTML-to-Markdown preview normalization."""
 
-    text = re.sub(r"<br\s*/?\s*>", "\n", source, flags=re.IGNORECASE)
     text = re.sub(
-        r"<h([1-6])\b[^>]*>",
+        rf"<br[{JAVASCRIPT_WHITESPACE}]*/?[{JAVASCRIPT_WHITESPACE}]*>",
+        "\n",
+        source,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"<h([1-6])(?![A-Za-z0-9_])[^>]*>",
         lambda match: f"\n{'#' * int(match.group(1))} ",
         text,
         flags=re.IGNORECASE,
     )
-    text = re.sub(r"<li\b[^>]*>", "\n- ", text, flags=re.IGNORECASE)
     text = re.sub(
-        r"</?(?:details|summary|p|div|section|article|table|thead|tbody|tr|ul|ol|li|pre|h[1-6])\b[^>]*>",
+        r"<li(?![A-Za-z0-9_])[^>]*>", "\n- ", text, flags=re.IGNORECASE
+    )
+    text = re.sub(
+        r"</?(?:details|summary|p|div|section|article|table|thead|tbody|tr|ul|ol|li|pre|h[1-6])"
+        r"(?![A-Za-z0-9_])[^>]*>",
         "\n",
         text,
         flags=re.IGNORECASE,
@@ -3633,9 +3646,9 @@ def section_text(
 
 
 def section_text_from_source(source_text: str, start_line: int, start_level: int) -> str:
-    """Extract one heading section from an already verified source snapshot."""
+    """Extract one heading section using the same CR/LF model as heading indexing."""
 
-    return section_text_from_lines(source_text.splitlines(), start_line, start_level)
+    return section_text_from_lines(list(iter_markdown_lines(source_text)), start_line, start_level)
 
 
 def section_text_from_lines(lines: list[str], start_line: int, start_level: int) -> str:

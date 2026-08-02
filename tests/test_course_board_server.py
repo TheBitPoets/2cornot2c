@@ -162,6 +162,7 @@ def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, 
     for rejected_target in (
         "images/unreferenced.png",
         "images/hidden.png",
+        "images/unicode.png",
     ):
         with pytest.raises(ValueError, match="non è referenziata"):
             course_board_server.heading_asset_snapshot(
@@ -172,16 +173,6 @@ def test_heading_asset_uses_configured_data_root_and_verified_heading(tmp_path, 
                 rejected_target,
             )
 
-    # section_text_from_source normalizes Unicode line separators before both
-    # API rendering and reference authorization, so this image is visible.
-    unicode_payload = course_board_server.heading_asset_snapshot(
-        design,
-        heading["id"],
-        "",
-        heading["content_sha256"],
-        "images/unicode.png",
-    )
-    assert base64.b64decode(unicode_payload["content_base64"]) == image
 
 
 @pytest.mark.parametrize(
@@ -217,6 +208,48 @@ def test_local_heading_asset_rechecks_exact_final_open_handle_path(tmp_path, mon
         course_board_server._read_local_heading_asset(
             "images/safe.png", course_board_server.MAX_HEADING_IMAGE_BYTES
         )
+
+
+def test_section_extraction_uses_same_line_model_as_heading_index() -> None:
+    source = "# First\nbody\u2028same indexed line\n## Second\ncontent"
+    descriptor = course_board_server.course_source_catalog.CourseSource(
+        source_id="local",
+        label="Local",
+        source_type="markdown",
+        provider="local",
+        path="",
+        repository=None,
+        ref=None,
+        files=("lesson.md",),
+        updated_at=None,
+        indexing_status="ready",
+    )
+    source_file = course_board_server.course_source_catalog.LocalCourseSourceFile(
+        source=descriptor,
+        relative_path="lesson.md",
+        resolved_path=Path("lesson.md"),
+        expected_size=None,
+        expected_identity=None,
+        expected_sha256=None,
+    )
+    headings = course_board_server.headings_from_source_snapshot(source_file, source)
+
+    assert headings[1]["line"] == 3
+    assert course_board_server.section_text_from_source(source, 1, 1) == (
+        "body\u2028same indexed line\n## Second\ncontent"
+    )
+    assert course_board_server.section_text_from_source(source, 3, 2) == "content"
+
+
+def test_paragraph_normalization_uses_javascript_ascii_word_boundary() -> None:
+    source = "x<divé>```\n![Visible](images/visible.png)\n```"
+
+    assert course_board_server.normalize_paragraph_preview_source(source) == (
+        "x\n```\n![Visible](images/visible.png)\n```"
+    )
+    assert course_board_server.heading_referenced_asset_paths(
+        "lesson.md", source
+    ) == set()
 
 
 def test_markdown_line_iteration_is_streaming_and_preserves_line_endings() -> None:
