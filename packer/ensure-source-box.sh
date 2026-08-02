@@ -70,11 +70,6 @@ if [ "$version" != "$locked_version" ]; then
   exit 3
 fi
 
-if [ -e "$VAGRANT_HOME" ] &&
-   [ -n "$(find "$VAGRANT_HOME" -mindepth 1 -print -quit 2>/dev/null)" ]; then
-  echo "VAGRANT_HOME non è vuoto; rifiuto una box globale o residua." >&2
-  exit 4
-fi
 install -d -m 0700 "$VAGRANT_HOME"
 
 isolated_context="$(mktemp -d "${TMPDIR:-/tmp}/2cornot2c-vagrant-box.XXXXXX")"
@@ -84,6 +79,11 @@ cleanup() {
 trap cleanup EXIT
 
 cd "$isolated_context"
+box_list="$(vagrant box list --machine-readable)"
+if printf '%s\n' "$box_list" | grep -q ',box-name,'; then
+  echo "VAGRANT_HOME contiene già una box; rifiuto una sorgente residua." >&2
+  exit 4
+fi
 vagrant box add bento/ubuntu-24.04 \
   --box-version "$version" \
   --provider "$provider" \

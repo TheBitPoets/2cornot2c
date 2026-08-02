@@ -102,6 +102,44 @@ def test_locked_plugin_installer_rejects_archive_traversal(
         module.install("windows_amd64")
 
 
+def test_locked_vagrant_plugin_is_verified_before_isolated_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = load_script(
+        "install_locked_vagrant_plugin", "install-locked-vagrant-plugin.py"
+    )
+    gem = b"verified vmware gem"
+    lock = tmp_path / "toolchain.lock.json"
+    lock.write_text(
+        json.dumps(
+            {
+                "vagrant_plugins": {
+                    "vagrant-vmware-desktop": {
+                        "version": "3.0.5",
+                        "sha256": hashlib.sha256(gem).hexdigest(),
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    calls = []
+    monkeypatch.setenv("VAGRANT_HOME", str(tmp_path / "vagrant-home"))
+    monkeypatch.setattr(module, "LOCK", lock)
+    monkeypatch.setattr(module, "urlopen", lambda url, timeout: Response(gem))
+    monkeypatch.setattr(
+        module.subprocess,
+        "run",
+        lambda command, **kwargs: calls.append(command) or SimpleNamespace(returncode=0),
+    )
+
+    module.install()
+
+    assert len(calls) == 1
+    assert calls[0][:3] == ("vagrant", "plugin", "install")
+    assert calls[0][-1].endswith("vagrant-vmware-desktop-3.0.5.gem")
+
+
 def test_toolchain_lock_schema_is_accepted() -> None:
     module = load_script("verify_toolchain", "verify-toolchain.py")
 

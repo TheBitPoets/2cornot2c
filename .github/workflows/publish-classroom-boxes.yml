@@ -104,11 +104,15 @@ jobs:
         working-directory: packer
         run: python3 install-locked-plugin.py --platform darwin_arm64
 
+      - name: Install VMware plugin in isolated Vagrant home
+        working-directory: packer
+        run: python3 install-locked-vagrant-plugin.py
+
       - name: Validate locked Packer toolchain and template
         working-directory: packer
         run: |
           packer init classroom.pkr.hcl
-          python3 verify-toolchain.py
+          python3 verify-toolchain.py --require-vagrant-vmware
           packer fmt -check .
           packer validate classroom.pkr.hcl
 

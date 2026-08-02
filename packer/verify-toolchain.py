@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 import re
@@ -16,7 +17,12 @@ SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 def load_lock(path: Path = LOCK) -> tuple[str, str, str]:
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if set(payload) != {"schema_version", "packer_version", "plugins"}:
+    if set(payload) != {
+        "schema_version",
+        "packer_version",
+        "plugins",
+        "vagrant_plugins",
+    }:
         raise RuntimeError("Schema lock Packer non valido.")
     if payload["schema_version"] != "2cornot2c.packer-toolchain.v1":
         raise RuntimeError("Versione lock Packer non supportata.")
@@ -42,6 +48,18 @@ def load_lock(path: Path = LOCK) -> tuple[str, str, str]:
         raise RuntimeError("Versione plugin Packer non valida.")
     if any(not SHA256_RE.fullmatch(str(value)) for value in archives.values()):
         raise RuntimeError("Checksum plugin Packer non valido.")
+    vagrant_plugins = payload["vagrant_plugins"]
+    if not isinstance(vagrant_plugins, dict) or set(vagrant_plugins) != {
+        "vagrant-vmware-desktop"
+    }:
+        raise RuntimeError("Plugin Vagrant non validi.")
+    vmware = vagrant_plugins["vagrant-vmware-desktop"]
+    if set(vmware) != {"version", "sha256"}:
+        raise RuntimeError("Campi plugin Vagrant non validi.")
+    if not VERSION_RE.fullmatch(str(vmware["version"])):
+        raise RuntimeError("Versione plugin Vagrant non valida.")
+    if not SHA256_RE.fullmatch(str(vmware["sha256"])):
+        raise RuntimeError("Checksum plugin Vagrant non valido.")
     return str(packer_version), "github.com/hashicorp/vagrant", str(plugin_version)
 
 
@@ -61,7 +79,7 @@ def _run(command: tuple[str, ...]) -> str:
     return f"{completed.stdout}\n{completed.stderr}"
 
 
-def verify() -> None:
+def verify(*, require_vagrant_vmware: bool = False) -> None:
     packer_version, source, plugin_version = load_lock()
     version_output = _run(("packer", "version"))
     if not re.search(rf"v{re.escape(packer_version)}(?:\s|$)", version_output):
@@ -70,8 +88,21 @@ def verify() -> None:
     expected = rf"{re.escape(source)}.*packer-plugin-vagrant_v{re.escape(plugin_version)}_"
     if not re.search(expected, installed):
         raise RuntimeError(f"Plugin {source} {plugin_version} richiesto.")
+    if require_vagrant_vmware:
+        payload = json.loads(LOCK.read_text(encoding="utf-8"))
+        version = payload["vagrant_plugins"]["vagrant-vmware-desktop"]["version"]
+        vagrant_plugins = _run(("vagrant", "plugin", "list"))
+        if not re.search(
+            rf"(?m)^vagrant-vmware-desktop \({re.escape(version)},", vagrant_plugins
+        ):
+            raise RuntimeError(
+                f"Plugin Vagrant VMware {version} richiesto nell'home isolato."
+            )
 
 
 if __name__ == "__main__":
-    verify()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--require-vagrant-vmware", action="store_true")
+    arguments = parser.parse_args()
+    verify(require_vagrant_vmware=arguments.require_vagrant_vmware)
     print("Toolchain Packer verificata.")

@@ -168,6 +168,7 @@ def test_source_box_bootstrap_uses_isolated_vagrant_context(tmp_path: Path) -> N
     assert completed.returncode == 0, completed.stderr
     recorded = [line.split("|", 1) for line in calls.read_text().splitlines()]
     assert [command for _, command in recorded] == [
+        "box list --machine-readable",
         (
             "box add bento/ubuntu-24.04 --box-version 202510.26.0 "
             "--provider vmware_desktop "
@@ -180,10 +181,18 @@ def test_source_box_bootstrap_uses_isolated_vagrant_context(tmp_path: Path) -> N
 
 
 @pytest.mark.skipif(os.name == "nt", reason="richiede Bash/Unix")
-def test_source_box_bootstrap_rejects_nonempty_vagrant_home(tmp_path: Path) -> None:
+def test_source_box_bootstrap_rejects_preinstalled_box(tmp_path: Path) -> None:
     vagrant_home = tmp_path / "vagrant-home"
     vagrant_home.mkdir()
-    (vagrant_home / "untrusted-box").write_text("present", encoding="utf-8")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    vagrant = fake_bin / "vagrant"
+    vagrant.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf '1,,box-name,untrusted/source\\n'\n",
+        encoding="utf-8",
+    )
+    vagrant.chmod(0o755)
 
     completed = subprocess.run(
         (
@@ -193,14 +202,18 @@ def test_source_box_bootstrap_rejects_nonempty_vagrant_home(tmp_path: Path) -> N
             "202510.26.0",
         ),
         cwd=ROOT / "packer",
-        env=os.environ | {"VAGRANT_HOME": str(vagrant_home)},
+        env=os.environ
+        | {
+            "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            "VAGRANT_HOME": str(vagrant_home),
+        },
         check=False,
         capture_output=True,
         text=True,
     )
 
     assert completed.returncode == 4
-    assert "non è vuoto" in completed.stderr
+    assert "contiene già una box" in completed.stderr
 
 
 def test_packer_toolchain_and_source_are_exactly_locked() -> None:
@@ -219,10 +232,13 @@ def test_packer_toolchain_and_source_are_exactly_locked() -> None:
 
     assert toolchain["packer_version"] == "1.16.0"
     assert toolchain["plugins"]["github.com/hashicorp/vagrant"]["version"] == "1.1.5"
+    assert toolchain["vagrant_plugins"]["vagrant-vmware-desktop"]["version"] == "3.0.5"
     assert 'required_version = "= 1.16.0"' in template
     assert 'version = "= 1.1.5"' in template
     assert set(sources["boxes"]) == {"virtualbox", "vmware_desktop"}
     assert all(len(box["sha256"]) == 64 for box in sources["boxes"].values())
     assert "install-locked-plugin.py --platform windows_amd64" in workflow
     assert "install-locked-plugin.py --platform darwin_arm64" in workflow
+    assert "install-locked-vagrant-plugin.py" in workflow
+    assert "--require-vagrant-vmware" in workflow
     assert "VAGRANT_HOME: ${{ runner.temp }}/2cornot2c-vagrant-" in workflow

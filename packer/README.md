@@ -23,10 +23,13 @@ python3 verify-toolchain.py
 Su Windows usa `python` e `--platform windows_amd64`. Versioni e checksum
 degli archivi plugin sono in `toolchain.lock.json`.
 
-Prepara una box sorgente in un `VAGRANT_HOME` nuovo e job-specifico:
+Prepara un `VAGRANT_HOME` nuovo e job-specifico. Per VMware installa al suo
+interno anche il gem attestato, poi acquisisci la box sorgente:
 
 ```bash
 export VAGRANT_HOME="$(mktemp -d)"
+python3 install-locked-vagrant-plugin.py
+python3 verify-toolchain.py --require-vagrant-vmware
 ./ensure-source-box.sh vmware_desktop 202510.26.0
 ```
 
@@ -82,7 +85,8 @@ I runner self-hosted devono avere le etichette:
 - `self-hosted, Windows, X64, classroom-packer`, con Packer, Vagrant,
   VirtualBox e Git Bash;
 - `self-hosted, macOS, ARM64, classroom-packer`, con Packer, Vagrant, VMware
-  Fusion, Vagrant VMware Utility e plugin `vagrant-vmware-desktop`.
+  Fusion e Vagrant VMware Utility; il job installa il plugin
+  `vagrant-vmware-desktop` bloccato nel proprio `VAGRANT_HOME` isolato.
 
 L'installer scarica a blocchi in un file `.part`, controlla dimensione e
 checksum e rinomina atomicamente il file solo dopo la verifica. Una box
@@ -271,7 +275,7 @@ Installazione e servizio della utility sono descritti nella
 [documentazione ufficiale HashiCorp](https://developer.hashicorp.com/vagrant/docs/providers/vmware/vagrant-vmware-utility).
 
 I computer devono restare accesi, connessi e non sospesi per tutta la build.
-Ogni job usa un `VAGRANT_HOME` isolato e scarica nuovamente la box Bento attestata. Il plugin Packer viene installato dall'archivio con checksum bloccato.
+Ogni job usa un `VAGRANT_HOME` isolato e scarica nuovamente la box Bento attestata. I plugin Packer e Vagrant VMware vengono installati da archivi con checksum bloccato.
 
 ### 5. Avviare la workflow
 
