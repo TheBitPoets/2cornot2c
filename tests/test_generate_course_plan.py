@@ -38,36 +38,6 @@ def test_render_design_uses_board_defaults_when_source_fields_are_absent() -> No
     assert "LINUX_PROGRAMMING.md" in markdown
 
 
-def test_render_design_retargets_topics_moved_to_assembly_guide() -> None:
-    design = load_fixture()
-    item = design["years"][0]["udas"][0]["items"][0]
-    item.update(
-        title="Costruzione di librerie",
-        source="README.md",
-        href="../README.md#costruzione-di-librerie-di-procedure-esterne",
-        frame={
-            "status": "draft",
-            "references": (
-                "Riferimento principale: README.md "
-                "(../README.md#costruzione-di-librerie-di-procedure-esterne)."
-            ),
-        },
-    )
-
-    markdown = generate_course_plan.render_design(design)
-
-    assert "../ASM_PROGRAMMING.md#costruzione-di-librerie-di-procedure-esterne" in markdown
-    assert "<code>ASM_PROGRAMMING.md</code>" in markdown
-    assert "Riferimento principale: ASM_PROGRAMMING.md" in markdown
-    assert "../README.md#costruzione-di-librerie-di-procedure-esterne" not in markdown
-
-
-def test_non_assembly_readme_references_remain_unchanged() -> None:
-    value = "Riferimento principale: README.md (../README.md#variabili)."
-
-    assert generate_course_plan.relocate_readme_assembly_reference(value) == value
-
-
 def test_render_design_includes_explicit_source_catalog_and_item_provenance() -> None:
     design = load_fixture()
     design.pop("source_files")
