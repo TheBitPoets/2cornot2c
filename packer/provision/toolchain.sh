@@ -13,6 +13,7 @@ apt-get install -y --no-install-recommends \
   make \
   vim
 
+# Pin micro release and SHA-256 per supported architecture.
 MICRO_VERSION="2.0.14"
 MICRO_ARCH=""
 MICRO_SHA256=""

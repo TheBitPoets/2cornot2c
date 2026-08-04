@@ -891,9 +891,17 @@ def test_executor_stops_on_first_failed_command() -> None:
 
 
 def test_uninstall_script_recognizes_micro_package() -> None:
+    import re
     from pathlib import Path
 
     script = Path(__file__).resolve().parents[1] / "scripts" / "uninstall-classroom-windows.ps1"
     text = script.read_text(encoding="utf-8")
     assert '"zyedidia.micro"' in text
-    assert '"^micro(?: |$)"' in text
+
+    match = re.search(r'"zyedidia\.micro"\s*\{\s*"([^"]+)"\s*\}', text)
+    assert match is not None, "Pattern per micro non trovato nello switch"
+    pattern = match.group(1)
+    assert re.search(pattern, "micro")
+    assert re.search(pattern, "micro 2.0.14")
+    assert not re.search(pattern, "Microsoft Edge")
+    assert not re.search(pattern, "micromax")
