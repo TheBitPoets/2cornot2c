@@ -19,6 +19,7 @@ from scripts.thebitlab_edge_rate_limit import (
     EdgeRequestMetadata,
     TrustedProxyClientResolver,
 )
+from scripts.thebitlab_auth_styles import AUTH_PAGE_CSS
 from scripts.thebitlab_http_auth import (
     HttpAuthError,
     HttpAuthRequest,
@@ -320,23 +321,41 @@ class SessionHttpRoutes:
             message = (
                 "L'account studente è autorizzato. Puoi associare la TUI da questo browser."
             )
-            action = '<p><a href="/auth/tui/pair">Associa la TUI</a></p>'
+            action = '<p><a class="btn" href="/auth/tui/pair">Associa la TUI</a></p>'
         elif role == "teacher":
             title = "Area docente"
             message = (
                 "L'account docente è autorizzato. "
                 "La Board mantiene una protezione docente separata."
             )
-            action = '<p><a href="/tools/course_board.html">Apri la Course Design Board</a></p>'
+            action = '<p><a class="btn" href="/tools/course_board.html">Apri la Course Design Board</a></p>'
         else:
             title = "Area amministratore"
             message = "L'account amministratore è autorizzato."
-            action = '<p><a href="/auth/admin">Gestisci utenti e classi</a></p>'
+            action = '<p><a class="btn" href="/auth/admin">Gestisci utenti e classi</a></p>'
+        logo_url = "https://www.thebitpoets.com/assets/logo-400.png"
+        logo_srcset = (
+            "https://www.thebitpoets.com/assets/logo-400.png 400w, "
+            "https://www.thebitpoets.com/assets/logo-521.png 521w"
+        )
         body = (
-            "<!doctype html><html lang=\"it\"><head><meta charset=\"utf-8\">"
-            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-            f"<title>{title} - TheBitLab</title></head><body><main><h1>{title}</h1>"
-            f"<p>{message}</p>{action}</main></body></html>"
+            "<!doctype html>"
+            "<html lang='it'><head>"
+            "<meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            f"<title>{title} - TheBitLab</title>"
+            f"<style>{AUTH_PAGE_CSS}</style>"
+            "</head><body>"
+            "<nav class='topNav'>"
+            f"<a class='topNavBrand' href='/'><img src='{logo_url}' "
+            f"srcset='{logo_srcset}' sizes='40px' width='40' height='40' alt='TheBitLab'></a>"
+            "<div class='topNavTitle'>TheBitLab</div>"
+            "</nav>"
+            "<main><div class='account-card card'>"
+            f"<h1>{title}</h1>"
+            f"<p>{message}</p>{action}"
+            "</div></main>"
+            "</body></html>"
         ).encode("utf-8")
         return SessionHttpResponse(
             200,
@@ -344,7 +363,8 @@ class SessionHttpRoutes:
                 (
                     "Content-Security-Policy",
                     "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; "
-                    "form-action 'none'",
+                    "form-action 'none'; style-src 'unsafe-inline'; "
+                    "img-src https://www.thebitpoets.com",
                 ),
                 ("X-Content-Type-Options", "nosniff"),
                 ("X-Frame-Options", "DENY"),
@@ -422,7 +442,7 @@ class SessionHttpRoutes:
                 row = render(item)
                 size = len(row.encode("utf-8"))
                 if size > budget:
-                    rows.append("<li>Elenco troncato</li>")
+                    rows.append('<p class="hint">Elenco troncato</p>')
                     break
                 rows.append(row)
                 budget -= size
@@ -433,35 +453,66 @@ class SessionHttpRoutes:
             revision = html.escape(_utc_z(user.updated_at), quote=True)
             name = html.escape(user.display_name)
             return (
-                f'<li><code>{user_id}</code> — {name}'
-                f'<form data-endpoint="{_ADMIN_APPROVALS_PATH}" data-user="{user_id}" '
-                f'data-revision="{revision}"><label>Ruolo <select name="role">'
-                '<option value="student">Studente</option><option value="teacher">Docente</option>'
-                '</select></label><label>ID classe per studente '
-                '<input name="class_id" maxlength="512"></label>'
-                '<button type="submit">Approva</button></form></li>'
+                '<div class="pending-item">'
+                f'<div class="email">{name}</div>'
+                f'<div class="meta">Google • ID <span class="mono">{user_id}</span></div>'
+                f'<form class="row" data-endpoint="{_ADMIN_APPROVALS_PATH}" data-user="{user_id}" '
+                f'data-revision="{revision}">'
+                '<select name="role">'
+                '<option value="student">Studente</option>'
+                '<option value="teacher">Docente</option>'
+                '<option value="admin">Amministratore</option>'
+                '</select>'
+                '<input name="class_id" maxlength="512" placeholder="ID classe per studente">'
+                '<button class="ok" type="submit">Approva</button></form></div>'
             )
 
+        pending_users = list(snapshot.pending_users)
+        class_list = list(snapshot.classes)
         pending = bounded_rows(
-            snapshot.pending_users,
+            pending_users,
             pending_row,
-            "<li>Nessun account pending</li>",
+            '<p class="hint">Nessun account pending</p>',
         )
         classes = bounded_rows(
-            snapshot.classes,
-            lambda item: f"<li><code>{html.escape(item.class_id)}</code> — {html.escape(item.label)}</li>",
-            "<li>Nessuna classe</li>",
+            class_list,
+            lambda item: (
+                "<tr>"
+                f'<td class="mono">{html.escape(item.class_id)}</td>'
+                f'<td>{html.escape(item.label)}</td>'
+                f'<td>{html.escape(getattr(item, "school_year", ""))}</td>'
+                "</tr>"
+            ),
+            '<tr><td colspan="3" class="hint">Nessuna classe</td></tr>',
+        )
+        logo_url = "https://www.thebitpoets.com/assets/logo-400.png"
+        logo_srcset = (
+            "https://www.thebitpoets.com/assets/logo-400.png 400w, "
+            "https://www.thebitpoets.com/assets/logo-521.png 521w"
         )
         body = (
-            "<!doctype html><html lang=\"it\"><head><meta charset=\"utf-8\">"
-            "<title>Amministrazione - TheBitLab</title></head><body><main>"
-            "<h1>Amministrazione</h1><h2>Crea classe</h2>"
-            f'<form data-endpoint="{_ADMIN_CLASSES_PATH}"><label>ID <input name="class_id" '
-            'maxlength="512" required></label><label>Nome <input name="label" maxlength="512" '
-            'required></label><label>Anno scolastico <input name="school_year" maxlength="512" '
-            'required></label><button type="submit">Crea classe</button></form>'
-            f"<h2>Account pending</h2><ul>{pending}</ul>"
-            f"<h2>Classi</h2><ul>{classes}</ul></main>"
+            "<!doctype html><html lang='it'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<title>Amministrazione - TheBitLab</title>"
+            f"<style>{AUTH_PAGE_CSS}</style></head><body>"
+            "<nav class='topNav'>"
+            f"<a class='topNavBrand' href='/'><img src='{logo_url}' "
+            f"srcset='{logo_srcset}' sizes='40px' width='40' height='40' alt='TheBitLab'></a>"
+            "<div class='topNavTitle'>TheBitLab<span>Gestione utenti e classi</span></div>"
+            "</nav>"
+            "<main><h1>Amministrazione</h1><div class='grid'>"
+            f'<section class="card"><h2>Classi <span class="badge">{len(class_list)}</span></h2>'
+            "<table><thead><tr><th>ID</th><th>Nome</th><th>Anno</th></tr></thead>"
+            f"<tbody>{classes}</tbody></table>"
+            f'<form class="row" data-endpoint="{_ADMIN_CLASSES_PATH}">'
+            '<input class="small" name="class_id" maxlength="512" placeholder="ID classe" required>'
+            '<input name="label" maxlength="512" placeholder="Nome classe" required>'
+            '<input class="small" name="school_year" maxlength="512" placeholder="Anno scolastico" required>'
+            '<button type="submit">Crea classe</button></form></section>'
+            f'<section class="card"><h2>Utenti in attesa <span class="badge">{len(pending_users)}</span></h2>'
+            f"{pending}"
+            '<p class="hint">Gli utenti approvati ricevono il ruolo e la classe selezionati.</p></section>'
+            "</div></main>"
             f"<script>{_ADMIN_SCRIPT}</script></body></html>"
         ).encode("utf-8")
         return SessionHttpResponse(
@@ -472,7 +523,8 @@ class SessionHttpRoutes:
                     "Content-Security-Policy",
                     "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; "
                     f"script-src 'sha256-{_ADMIN_SCRIPT_HASH}'; connect-src 'self'; "
-                    "form-action 'none'",
+                    "form-action 'none'; style-src 'unsafe-inline'; "
+                    "img-src https://www.thebitpoets.com",
                 ),
                 ("X-Content-Type-Options", "nosniff"),
                 ("X-Frame-Options", "DENY"),
