@@ -2123,6 +2123,22 @@ def test_open_editor_runs_source_in_workspace(monkeypatch, tmp_path) -> None:
     assert calls[0][1]["cwd"] == str(workspace)
 
 
+def test_open_editor_falls_back_to_first_file(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    readme = workspace / "README.md"
+    readme.write_text("# readme\n", encoding="utf-8")
+    calls = []
+    monkeypatch.setenv("THEBITLAB_EDITOR", "micro")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: f"/bin/{name}")
+    monkeypatch.setattr(student_lab_cli.subprocess, "run", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    opened, message = student_lab_cli.open_editor(str(workspace), root=tmp_path)
+
+    assert opened is True
+    assert calls[0][0][0] == ["micro", str(readme)]
+
+
 def test_open_editor_reports_missing_editor(monkeypatch, tmp_path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
