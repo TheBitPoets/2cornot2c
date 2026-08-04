@@ -143,6 +143,12 @@ Il runtime GitHub App genera installation token brevi e li ruota atomicamente. S
 
 Riferimenti: [catalogo fonti](COURSE_SOURCE_CATALOG.md), [repository provider](architecture/repository-providers.md).
 
+## Bundle corsi e contenuti privati
+
+I contenuti didattici (dispense, attività, lab, media) devono restare separati dalla piattaforma. L'architettura proposta li distribuirà come **bundle versionati** con manifest, indice, attività e materiali didattici. Fetcher e loader non sono ancora implementati; il target iniziale è un repo Git privato, con object storage/CDN in futuro.
+
+Riferimenti: [ADR course bundle format](architecture/adr-course-bundle-format.md).
+
 ## AI e grading
 
 Il grading deterministico usa una toolchain bloccata e può eseguire codice studente nella sandbox Docker senza segreti. I provider AI ricevono input bounded e contesto con provenienza verificata. Correzione, generazione e verifica sono mutuamente esclusive per snapshot; le risposte restano bozze finché il docente non le approva.
