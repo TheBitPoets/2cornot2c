@@ -5405,7 +5405,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 ) if parsed.query else []
             except ValueError:
                 raise thebitlab_http_auth.HttpBadRequestError() from None
-            if parsed.path == "/api/student-lab/assignments":
+            if parsed.path == "/api/student-lab/me":
+                valid = len(pairs) == 0
+            elif parsed.path == "/api/student-lab/assignments":
                 valid = len(pairs) <= 1 and all(
                     key == "now" and 0 < len(value) <= 128 for key, value in pairs
                 )
