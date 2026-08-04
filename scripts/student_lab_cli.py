@@ -24,6 +24,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts import (
+    student_help_auth,
     student_help_service,
     student_lab_layout,
     student_lab_runner,
@@ -1826,11 +1827,33 @@ def run_tui(
                 input_fn("Premi invio per continuare...")
 
 
+def _fetch_student_id(server_url: str, server_token: str) -> str:
+    """Ask the server for the authenticated student's identifier."""
+
+    url = validated_server_url(server_url) + "/api/student-lab/me"
+    request = urllib.request.Request(
+        url,
+        headers={"Authorization": "Bearer " + server_token},
+    )
+    with urllib.request.urlopen(request, timeout=15) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    student_id = payload.get("student_id") if isinstance(payload, dict) else None
+    if not isinstance(student_id, str):
+        raise ValueError("Il server non ha restituito l'identificativo studente.")
+    return student_help_auth.validate_student_id(student_id)
+
+
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments for the student lab TUI."""
 
     parser = argparse.ArgumentParser(description="Apri la TUI minima del lab studente.")
-    parser.add_argument("--student-id", required=True, help="Identificativo studente, per esempio rossi-mario.")
+    parser.add_argument(
+        "--student-id",
+        help=(
+            "Identificativo studente, per esempio rossi-mario. "
+            "Se omesso, viene recuperato automaticamente dal server dopo il pairing."
+        ),
+    )
     parser.add_argument("--root", type=Path, default=PROJECT_ROOT, help="Root del repository TheBitLab.")
     parser.add_argument("--now", help="Data ISO da usare per calcolare scadenze e mancanti.")
     parser.add_argument("--no-clear", action="store_true", help="Non pulire lo schermo tra una vista e l'altra.")
@@ -1891,8 +1914,15 @@ def main() -> int:
                 )
             credential = thebitlab_tui_pairing_client.acquire_tui_bearer(args.server_url)
             server_token = credential.bearer_token
+        student_id = args.student_id
+        if student_id is None:
+            if not server_token.strip():
+                raise ValueError(
+                    "Specifica --student-id oppure autentica la TUI con --pair-browser o THEBITLAB_STUDENT_HELP_TOKEN."
+                )
+            student_id = _fetch_student_id(args.server_url, server_token)
         exit_code = run_tui(
-            student_id=args.student_id,
+            student_id=student_id,
             root=args.root.resolve(strict=False),
             now=args.now,
             clear=not args.no_clear,

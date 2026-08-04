@@ -182,6 +182,7 @@ TEACHER_AUTH_REALM = "TheBitLab docente"
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
 REMOTE_STUDENT_API_ROUTES = frozenset(
     {
+        ("GET", "/api/student-lab/me"),
         ("GET", "/api/student-lab/assignments"),
         ("GET", "/api/student-lab/help-history"),
         ("POST", "/api/student-lab/help"),
@@ -5988,9 +5989,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 return
         if self.reject_unauthenticated_teacher_api("GET", parsed.path):
             return
-        if parsed.path in {"/api/student-lab/assignments", "/api/student-lab/help-history"}:
+        if parsed.path in {
+            "/api/student-lab/me",
+            "/api/student-lab/assignments",
+            "/api/student-lab/help-history",
+        }:
             student_id = self.authenticated_student_id()
             if student_id is None:
+                return
+            if parsed.path == "/api/student-lab/me":
+                self.write_json({"student_id": student_id})
                 return
             try:
                 query = parse_qs(parsed.query)
