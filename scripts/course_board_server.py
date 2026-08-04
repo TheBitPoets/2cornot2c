@@ -5971,6 +5971,13 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if self.dispatch_google_oidc(parsed):
             return
+        google_runtime = getattr(self.server, "google_oidc_runtime", None)
+        if google_runtime is not None and (
+            parsed.path == "/login"
+            or (parsed.path == "/" and not self.is_teacher_authenticated())
+        ):
+            self.serve_login_page()
+            return
         if self.reject_unauthenticated_teacher_api("GET", parsed.path):
             return
         if parsed.path in {"/api/student-lab/assignments", "/api/student-lab/help-history"}:
@@ -6688,6 +6695,41 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def serve_login_page(self) -> None:
+        """Serve a public Google OIDC login page when federated auth is enabled."""
+
+        body = (
+            "<!doctype html>"
+            "<html lang='it'><head>"
+            "<meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<title>Accedi - TheBitLab</title>"
+            "<style>"
+            "body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}"
+            "main{text-align:center;padding:2rem}"
+            "h1{font-weight:600;margin-bottom:1.5rem;font-size:1.5rem}"
+            "a{display:inline-block;background:#4285F4;color:#fff;text-decoration:none;padding:.85rem 1.6rem;border-radius:.5rem;font-weight:500}"
+            "a:hover{background:#357ae8}"
+            "</style>"
+            "</head><body>"
+            "<main><h1>Accedi a TheBitLab</h1>"
+            "<a href='/auth/google/login'>Accedi con Google</a></main>"
+            "</body></html>"
+        ).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; "
+            "form-action 'none'; style-src 'unsafe-inline'",
+        )
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
         self.end_headers()
         self.wfile.write(body)
 
