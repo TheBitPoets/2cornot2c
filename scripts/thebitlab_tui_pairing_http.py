@@ -24,6 +24,7 @@ from scripts.thebitlab_http_auth import (
     HttpAuthenticationRequiredError,
     HttpCsrfRejectedError,
 )
+from scripts.thebitlab_auth_styles import AUTH_PAGE_CSS
 from scripts.thebitlab_tui_pairing import (
     IssuedTuiCredential,
     TuiBrowserPairingBoundary,
@@ -33,6 +34,7 @@ from scripts.thebitlab_tui_pairing import (
 _BEGIN_PATH = "/auth/tui/pairings"
 _AUTHORIZE_PATH = "/auth/tui/pair"
 _LOGOUT_PATH = "/auth/tui/logout"
+_PAIRING_CODE_DISPLAY_LENGTH = 10
 _TOKEN_RE = re.compile(r"^/auth/tui/pairings/([A-Za-z0-9_-]{1,128})/token$")
 _CODE_RE = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 _MAX_BODY_BYTES = 2048
@@ -334,10 +336,16 @@ class TuiPairingHttpRoutes:
 
     def _browser_page(self) -> TuiPairingHttpResponse:
         nonce = secrets.token_urlsafe(24)
-        html = _PAIRING_PAGE.replace("__CSP_NONCE__", nonce).encode("utf-8")
+        html = (
+            _PAIRING_PAGE
+            .replace("__AUTH_CSS__", AUTH_PAGE_CSS)
+            .replace("__CSP_NONCE__", nonce)
+            .replace("__PAIRING_CODE_LENGTH__", str(_PAIRING_CODE_DISPLAY_LENGTH))
+            .encode("utf-8")
+        )
         headers = self._base_headers() + (
             ("Content-Type", "text/html; charset=utf-8"),
-            ("Content-Security-Policy", f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'nonce-{nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"),
+            ("Content-Security-Policy", f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'nonce-{nonce}'; img-src https://www.thebitpoets.com; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"),
             ("X-Content-Type-Options", "nosniff"),
             ("X-Frame-Options", "DENY"),
             ("Content-Length", str(len(html))),
@@ -450,13 +458,169 @@ def _unique_object(pairs):
 
 
 _PAIRING_PAGE = """<!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Collega terminale · TheBitLab</title>
-<style nonce="__CSP_NONCE__">body{font-family:system-ui,sans-serif;max-width:34rem;margin:4rem auto;padding:0 1rem;color:#172033}label,input,button{display:block;width:100%;box-sizing:border-box}input,button{font:inherit;padding:.75rem;margin:.5rem 0 1rem}button{cursor:pointer}#status{min-height:1.5rem}.error{color:#a00}.ok{color:#075}</style>
-</head><body><main><h1>Collega il terminale</h1><p>Accedi come studente, poi inserisci il codice mostrato nel terminale. Il browser non riceverà la credenziale TUI.</p>
-<label for="code">Codice terminale</label><input id="code" name="code" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="128" pattern="[A-Za-z0-9_-]{8,128}">
-<button id="pair" type="button">Autorizza terminale</button><p id="status" role="status" aria-live="polite"></p><p><a id="login" href="/auth/google/login" target="_blank" rel="noopener noreferrer" hidden>Accedi con Google in una nuova scheda</a></p></main>
-<script nonce="__CSP_NONCE__">(()=>{'use strict';const code=document.getElementById('code'),button=document.getElementById('pair'),status=document.getElementById('status'),login=document.getElementById('login');const message=(text,kind)=>{status.textContent=text;status.className=kind||''};button.addEventListener('click',async()=>{button.disabled=true;login.hidden=true;message('Verifica in corso…','');try{const session=await fetch('/auth/session',{credentials:'same-origin',cache:'no-store',redirect:'error'});if(session.status===401){login.hidden=false;throw new Error('Accedi prima di autorizzare il terminale.')}if(!session.ok)throw new Error('Sessione non disponibile. Riprova.');const snapshot=await session.json();if(typeof snapshot.csrf_token!=='string')throw new Error('Sessione non valida.');const response=await fetch('/auth/tui/pair',{method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',headers:{'Content-Type':'application/json','X-CSRF-Token':snapshot.csrf_token},body:JSON.stringify({code:code.value.trim()})});if(!response.ok)throw new Error(response.status===403?'Accesso studente richiesto.':'Codice non valido, scaduto o già usato.');code.value='';message('Terminale autorizzato. Puoi tornare alla TUI.','ok')}catch(error){message(error instanceof Error?error.message:'Autorizzazione non disponibile.','error')}finally{button.disabled=false}})})();</script></body></html>"""
+<style nonce="__CSP_NONCE__">__AUTH_CSS__</style>
+<style nonce="__CSP_NONCE__">
+  .pair-wrap { display:flex; align-items:center; justify-content:center; min-height:calc(100vh - 4rem); padding:1rem; }
+  .pair-card { width:min(460px,100%); background:var(--card); border:1px solid var(--line); border-radius:1.25rem; padding:2rem; box-shadow:0 18px 42px rgba(0,0,0,0.06); text-align:center; }
+  .pair-card .login-brand { margin-bottom:1rem; }
+  .pair-card h1 { font-size:1.45rem; font-weight:650; margin-bottom:.35rem; }
+  .pair-card p.sub { color:var(--soft); font-size:.95rem; margin-bottom:1.5rem; }
+  .steps { text-align:left; background:var(--bg); border:1px solid var(--line); border-radius:.75rem; padding:1rem; margin-bottom:1.5rem; }
+  .steps ol { margin:0; padding-left:1.25rem; color:var(--soft); font-size:.9rem; }
+  .steps li { margin-bottom:.45rem; }
+  .steps li:last-child { margin-bottom:0; }
+  .code-label { display:block; font-size:.85rem; font-weight:500; color:var(--soft); margin-bottom:.65rem; text-align:left; }
+  .code-row { display:flex; gap:.4rem; justify-content:center; margin-bottom:1.25rem; }
+  .code-row input { width:2.5rem; height:3rem; text-align:center; font-size:1.35rem; font-weight:600; text-transform:uppercase; border:1px solid var(--line); border-radius:.5rem; background:#fff; color:var(--ink); padding:0; }
+  .code-row input:focus { outline:none; border-color:var(--ink); box-shadow:0 0 0 3px rgba(26,26,30,0.08); }
+  .pair-actions { display:flex; gap:.5rem; flex-direction:column; }
+  #login { font-size:.9rem; color:var(--soft); }
+  #login a { color:var(--ink); }
+</style>
+</head>
+<body>
+<nav class="topNav">
+  <a class="topNavBrand" href="/"><img src="https://www.thebitpoets.com/assets/logo-400.png" srcset="https://www.thebitpoets.com/assets/logo-400.png 400w, https://www.thebitpoets.com/assets/logo-521.png 521w" sizes="40px" width="40" height="40" alt="TheBitLab"></a>
+  <span class="topNavTitle">TheBitLab <span>· Collega il terminale</span></span>
+</nav>
+<div class="pair-wrap">
+  <main class="pair-card">
+    <div class="login-brand"><img src="https://www.thebitpoets.com/assets/logo-400.png" srcset="https://www.thebitpoets.com/assets/logo-400.png 400w, https://www.thebitpoets.com/assets/logo-521.png 521w" sizes="64px" width="64" height="64" alt="TheBitLab"></div>
+    <h1>Collega il terminale</h1>
+    <p class="sub">Autorizza la TUI a parlare con TheBitLab senza mai mostrare la tua password al terminale.</p>
+    <div class="steps">
+      <ol>
+        <li>Accedi con il tuo account Google da studente.</li>
+        <li>Leggi il codice a <strong>__PAIRING_CODE_LENGTH__ cifre</strong> che appare nel terminale.</li>
+        <li>Inseriscilo qui sotto e premi <strong>Autorizza terminale</strong>.</li>
+      </ol>
+    </div>
+    <label class="code-label" for="code-box-0">Codice terminale</label>
+    <div class="code-row" id="code-row" role="group" aria-label="Codice terminale"></div>
+    <input type="hidden" id="code" name="code">
+    <div class="pair-actions">
+      <button id="pair" type="button">Autorizza terminale</button>
+      <p id="login" hidden>Prima devi <a href="/auth/google/login" target="_blank" rel="noopener noreferrer">accedere con Google in una nuova scheda</a>, poi torna qui.</p>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+  </main>
+</div>
+<script nonce="__CSP_NONCE__">
+(() => {
+  'use strict';
+  const LENGTH = __PAIRING_CODE_LENGTH__;
+  const row = document.getElementById('code-row');
+  const hidden = document.getElementById('code');
+  const button = document.getElementById('pair');
+  const status = document.getElementById('status');
+  const login = document.getElementById('login');
+  const inputs = [];
+
+  function buildCode() {
+    return inputs.map(i => i.value).join('').toUpperCase();
+  }
+
+  function updateHidden() {
+    hidden.value = buildCode();
+  }
+
+  function focusAt(index) {
+    if (index >= 0 && index < inputs.length) inputs[index].focus();
+  }
+
+  for (let i = 0; i < LENGTH; i++) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.inputMode = 'verbatim';
+    input.autocapitalize = 'characters';
+    input.spellcheck = false;
+    input.maxLength = 1;
+    input.id = 'code-box-' + i;
+    input.setAttribute('aria-label', 'Cifra ' + (i + 1) + ' di ' + LENGTH);
+    input.autocomplete = i === 0 ? 'one-time-code' : 'off';
+    row.appendChild(input);
+    inputs.push(input);
+
+    input.addEventListener('input', (e) => {
+      const val = input.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      if (val.length > 1) {
+        const chars = val.split('');
+        for (let k = 0; k < chars.length && i + k < LENGTH; k++) {
+          inputs[i + k].value = chars[k];
+        }
+        focusAt(Math.min(i + chars.length, LENGTH - 1));
+      } else {
+        input.value = val;
+        if (val && i < LENGTH - 1) focusAt(i + 1);
+      }
+      updateHidden();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !input.value && i > 0) {
+        e.preventDefault();
+        inputs[i - 1].value = '';
+        focusAt(i - 1);
+        updateHidden();
+      } else if (e.key === 'ArrowLeft' && i > 0) {
+        focusAt(i - 1);
+      } else if (e.key === 'ArrowRight' && i < LENGTH - 1) {
+        focusAt(i + 1);
+      }
+    });
+
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      const chars = text.replace(/[^A-Za-z0-9]/g, '').toUpperCase().split('').slice(0, LENGTH);
+      chars.forEach((ch, idx) => { if (idx < LENGTH) inputs[idx].value = ch; });
+      focusAt(Math.min(chars.length, LENGTH - 1));
+      updateHidden();
+    });
+  }
+
+  const message = (text, kind) => { status.textContent = text; status.className = kind || ''; };
+
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    login.hidden = true;
+    message('Verifica in corso…', '');
+    try {
+      const session = await fetch('/auth/session', { credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+      if (session.status === 401) {
+        login.hidden = false;
+        throw new Error('Accedi prima di autorizzare il terminale.');
+      }
+      if (!session.ok) throw new Error('Sessione non disponibile. Riprova.');
+      const snapshot = await session.json();
+      if (typeof snapshot.csrf_token !== 'string') throw new Error('Sessione non valida.');
+      const response = await fetch('/auth/tui/pair', {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        redirect: 'error',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': snapshot.csrf_token },
+        body: JSON.stringify({ code: hidden.value.trim() })
+      });
+      if (!response.ok) throw new Error(response.status === 403 ? 'Accesso studente richiesto.' : 'Codice non valido, scaduto o già usato.');
+      inputs.forEach(i => i.value = '');
+      hidden.value = '';
+      message('Terminale autorizzato. Puoi tornare alla TUI.', 'ok');
+    } catch (error) {
+      message(error instanceof Error ? error.message : 'Autorizzazione non disponibile.', 'error');
+    } finally {
+      button.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>"""
 
 
 def _utc_z(value: datetime) -> str:
