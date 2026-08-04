@@ -997,4 +997,3 @@ sudo -u thebitlab /opt/thebitlab/venv/bin/python scripts/course_board_server.py 
 
 Aggiungere poi un vhost nginx per `staging.thebitpoets.com` che punti a
 `http://127.0.0.1:8001` e un record DNS `staging` → `91.98.123.183`.
->>>>>>> 02a30e4 (docs(INFRASTRUTTURA_PRODUZIONE): aggiungi avvio app e flussi di accesso)
