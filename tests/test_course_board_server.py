@@ -6113,3 +6113,33 @@ def test_login_page_not_exposed_without_google_auth(tmp_path, monkeypatch):
         assert error.value.code == 401
     finally:
         server.shutdown()
+
+
+def test_login_page_redirects_teacher_to_dashboard(tmp_path, monkeypatch):
+    board = tmp_path / "tools" / "course_board.html"
+    board.parent.mkdir(parents=True, exist_ok=True)
+    board.write_text("<h1>Course Board</h1>", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = "teacher-token"
+    server.google_oidc_runtime = object()
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        auth = "Basic " + base64.b64encode(
+            b"teacher:teacher-token"
+        ).decode("ascii")
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{server.server_address[1]}/login",
+            headers={"Authorization": auth},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            # urllib segue il redirect 302 automaticamente
+            assert response.status == 200
+            assert response.url.endswith("/tools/course_board.html")
+            body = response.read().decode("utf-8")
+            assert "Course Board" in body
+    finally:
+        server.shutdown()

@@ -5972,12 +5972,19 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if self.dispatch_google_oidc(parsed):
             return
         google_runtime = getattr(self.server, "google_oidc_runtime", None)
-        if google_runtime is not None and (
-            parsed.path == "/login"
-            or (parsed.path == "/" and not self.is_teacher_authenticated())
-        ):
-            self.serve_login_page()
-            return
+        if google_runtime is not None:
+            if parsed.path == "/login":
+                if self.is_teacher_authenticated():
+                    self.send_response(302)
+                    self.send_header("Location", "/tools/course_board.html")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    return
+                self.serve_login_page()
+                return
+            if parsed.path == "/" and not self.is_teacher_authenticated():
+                self.serve_login_page()
+                return
         if self.reject_unauthenticated_teacher_api("GET", parsed.path):
             return
         if parsed.path in {"/api/student-lab/assignments", "/api/student-lab/help-history"}:
