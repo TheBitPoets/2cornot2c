@@ -28,6 +28,7 @@ _MAX_RESPONSE_BYTES = 16 * 1024
 _MAX_PAIRING_LIFETIME = timedelta(minutes=15)
 _DEFAULT_POLL_SECONDS = 2.0
 _MAX_TRANSPORT_WORKERS = 4
+_USER_AGENT = "TheBitLab-TUI/1.0"
 _TRANSPORT_WORKER_SLOTS = threading.BoundedSemaphore(_MAX_TRANSPORT_WORKERS)
 _SUBPROCESS_LAUNCH_SLOTS = threading.BoundedSemaphore(_MAX_TRANSPORT_WORKERS)
 
@@ -112,7 +113,7 @@ class TuiPairingClient:
             request = urllib.request.Request(
                 self.server_url + "/auth/tui/pairings",
                 data=b"",
-                headers={"Content-Length": "0"},
+                headers={"Content-Length": "0", "User-Agent": _USER_AGENT},
                 method="POST",
             )
             try:
@@ -195,6 +196,7 @@ class TuiPairingClient:
                         "Authorization": authorization,
                         "X-TUI-Logout-Proof": credential.logout_proof,
                         "Content-Length": "0",
+                        "User-Agent": _USER_AGENT,
                     },
                     method="POST",
                 )
@@ -255,7 +257,7 @@ class TuiPairingClient:
                 request = urllib.request.Request(
                     self.server_url + path,
                     data=body,
-                    headers={"Content-Type": "application/json"},
+                    headers={"Content-Type": "application/json", "User-Agent": _USER_AGENT},
                     method="POST",
                 )
                 try:
