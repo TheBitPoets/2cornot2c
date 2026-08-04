@@ -283,7 +283,7 @@ Write-Host "Directory: $InstallDir"
 Write-Host "[0/4] Controllo risorse..."
 Test-HostResources
 
-Write-Host "[1/4] Preparazione Git e Python 3.12..."
+Write-Host "[1/4] Preparazione Git, Python 3.12 e editor micro..."
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Install-WingetPackage "Git.Git"
 } elseif (-not (Test-GitMinimumVersion)) {
@@ -292,6 +292,9 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
 }
 if (-not (Test-Python312)) {
     Install-WingetPackage "Python.Python.3.12"
+}
+if (-not (Get-Command micro -ErrorAction SilentlyContinue)) {
+    Install-WingetPackage "zyedidia.micro"
 }
 
 $env:Path = @(
