@@ -16,6 +16,7 @@ REQUIRED_GUIDES = (
     "MVP_2026_2027.md",
     "ARCHITETTURA_MVP.md",
     "FRONTEND_ARCHITECTURE.md",
+    "architecture/architecture-diagrams.md",
 )
 
 

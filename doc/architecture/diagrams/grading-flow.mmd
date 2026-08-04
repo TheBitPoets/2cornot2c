@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    actor S as Studente
+    participant TUI as CLI/TUI
+    participant Runner as student_lab_runner.py
+    participant Docker as Sandbox Docker
+    participant Reports as Report locale JSON
+    participant Dashboard as Dashboard docente
+
+    S->>TUI: sceglie consegna e scrive codice
+    S->>TUI: comando test / consegna
+    TUI->>Runner: esegue grading locale
+    Runner->>Runner: prepara sandbox (Docker/container)
+    Runner->>Docker: avvia container runner immutabile
+    Docker->>Docker: compila / esegue test
+    Docker-->>Runner: report JSONL / exit code
+    Runner->>Reports: scrive latest.json
+    Runner-->>TUI: esito test
+    TUI-->>S: mostra risultati
+
+    Dashboard->>Reports: "legge report: stesso filesystem locale, sync remoto in roadmap"
+    Dashboard-->>Dashboard: docente vede esito e valuta

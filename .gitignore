@@ -54,6 +54,8 @@ public/videos/
 *.gif
 *.svg
 *.pdf
+# Eccezione per i diagrammi d'architettura versionati come immagini.
+!doc/architecture/diagrams/*.svg
 
 # Database locali e file di storage
 *.db

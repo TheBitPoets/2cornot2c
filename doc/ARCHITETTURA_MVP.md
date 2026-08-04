@@ -2,7 +2,7 @@
 
 ## Destinatari e confini
 
-Questo documento è la vista di insieme per sviluppatori e gestori del pilot. Le guide operative descrivono l'uso; gli ADR in `doc/architecture/` motivano le decisioni di sicurezza e storage.
+Questo documento è la vista di insieme per sviluppatori e gestori del pilot. Le guide operative descrivono l'uso; gli ADR in `doc/architecture/` motivano le decisioni di sicurezza e storage. Per diagrammi visivi dettagliati di deployment, componenti e flussi HTTP vedi [`architecture/architecture-diagrams.md`](architecture/architecture-diagrams.md).
 
 L'MVP è una singola installazione, inizialmente mono-scuola, con processi Python, frontend statici, SQLite per identità/sessioni e JSON per i dati didattici esistenti. Non è ancora un servizio orizzontalmente replicabile. La CLI/TUI è l'interfaccia studente autenticata; `student_dashboard.html` resta una vista locale docente/demo protetta da Basic docente, non un self-service federato.
 

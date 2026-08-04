@@ -127,7 +127,7 @@ Le GitHub Actions attive sono:
 
 | Workflow | Quando parte | Cosa esegue | Comando locale equivalente |
 |---|---|---|---|
-| `.github/workflows/quality.yml` | PR e push su `main` quando cambiano `scripts/**`, `tests/**`, `activities/**`, documenti del percorso didattico o configurazione test | Installa le dipendenze, esegue `pytest`, poi controlla il Markdown del percorso didattico | `python -m pytest` e `python scripts/generate_course_plan.py --check` |
+| `.github/workflows/quality.yml` | PR e push su `main` quando cambiano `scripts/**`, `tests/**`, `activities/**`, documenti del percorso didattico, diagrammi d'architettura o configurazione test | Installa le dipendenze, esegue `pytest`, controlla il Markdown del percorso didattico e verifica che i diagrammi Mermaid siano renderizzabili | `python -m pytest`, `python scripts/generate_course_plan.py --check` e `bash scripts/render_architecture_diagrams.sh` |
 | `.github/workflows/lab-snippets.yml` | PR e push su `main` quando cambiano `README.md`, `TEMPLATES.md`, `lab/**`, `scripts/update_lab_snippets.py` o il workflow | Controlla che snippet, codice lab e output inseriti nei documenti siano aggiornati | `python scripts/update_lab_snippets.py --check` |
 | `.github/workflows/lab-outputs.yml` | PR e push su `main` quando cambiano sorgenti/header lab, manifest JSON, output versionati, script output o il workflow | Installa la toolchain C e verifica che gli output dei lab siano aggiornati | `python scripts/update_lab_outputs.py --check` |
 | `.github/workflows/assignment-runner-docker.yml` | PR e push su `main` quando cambiano Dockerfile, script di grading o workflow | Verifica che l'immagine Docker del runner di grading venga costruita e riesca a correggere un sorgente C minimo | `docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .` e smoke test con `python scripts/grade_activity.py --docker` |
@@ -138,7 +138,8 @@ Le GitHub Actions attive sono:
 La workflow `.github/workflows/quality.yml` esegue:
 
 - test Python con `pytest`;
-- controllo `python scripts/generate_course_plan.py --check`.
+- controllo `python scripts/generate_course_plan.py --check`;
+- smoke test dei diagrammi Mermaid d'architettura (verifica che siano renderizzabili e producano un SVG per ogni sorgente).
 
 Si puo lanciare manualmente da GitHub con `workflow_dispatch`.
 
@@ -214,5 +215,13 @@ Se vuoi solo controllare senza modificare file:
 python scripts/update_lab_outputs.py --check
 python scripts/update_lab_snippets.py --check
 ```
+
+Se hai modificato diagrammi d'architettura in `doc/architecture/diagrams/*.mmd`:
+
+```bash
+bash scripts/render_architecture_diagrams.sh
+```
+
+Poi committa anche gli SVG aggiornati.
 
 Se hai modificato solo testi fuori dai marker dei lab, in genere non serve rigenerare output o snippet.
