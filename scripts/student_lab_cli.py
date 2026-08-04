@@ -1456,7 +1456,8 @@ def _windows_terminal_command(path: Path) -> tuple[list[str], dict[str, str], st
     wt = shutil.which("wt") or shutil.which("wt.exe")
     if wt:
         return [wt, "-d", str(path)], {}, "Terminale Windows aperto."
-    return ["cmd"], {"cwd": str(path)}, "Prompt dei comandi aperto."
+    # /k keeps the window open after changing directory.
+    return ["cmd", "/k"], {"cwd": str(path)}, "Prompt dei comandi aperto."
 
 
 def _macos_terminal_command(path: Path) -> tuple[list[str], dict[str, str], str]:
@@ -1474,6 +1475,16 @@ def _linux_terminal_commands(path: Path) -> list[tuple[list[str], dict[str, str]
     ]
 
 
+def _terminal_family() -> str:
+    """Return the current platform family for terminal selection."""
+
+    if os.name == "nt":
+        return "nt"
+    if sys.platform == "darwin":
+        return "darwin"
+    return "posix"
+
+
 def open_terminal(path_value: str, root: Path = PROJECT_ROOT) -> tuple[bool, str]:
     """Open a terminal in the workspace directory.
 
@@ -1486,11 +1497,12 @@ def open_terminal(path_value: str, root: Path = PROJECT_ROOT) -> tuple[bool, str
     if not path.is_dir():
         return False, "Workspace non disponibile."
 
-    if os.name == "nt":
+    family = _terminal_family()
+    if family == "nt":
         command, kwargs, message = _windows_terminal_command(path)
-    elif sys.platform == "darwin":
+    elif family == "darwin":
         command, kwargs, message = _macos_terminal_command(path)
-    else:
+    elif family == "posix":
         for command, kwargs, message in _linux_terminal_commands(path):
             if shutil.which(command[0]):
                 try:
@@ -1499,6 +1511,8 @@ def open_terminal(path_value: str, root: Path = PROJECT_ROOT) -> tuple[bool, str
                 except OSError:
                     continue
         return False, "Nessun terminale disponibile."
+    else:
+        return False, "Piattaforma non supportata."
 
     try:
         subprocess.Popen(command, **kwargs)

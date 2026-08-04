@@ -2171,7 +2171,7 @@ def test_windows_terminal_command_falls_back_to_cmd(monkeypatch, tmp_path) -> No
 
     command, kwargs, message = student_lab_cli._windows_terminal_command(workspace)
 
-    assert command == ["cmd"]
+    assert command == ["cmd", "/k"]
     assert kwargs == {"cwd": str(workspace.resolve())}
 
 
@@ -2201,6 +2201,53 @@ def test_open_terminal_rejects_missing_path(tmp_path) -> None:
     ok, message = student_lab_cli.open_terminal(str(tmp_path / "missing"))
     assert ok is False
     assert "non disponibile" in message
+
+
+def test_open_terminal_runs_windows_command(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    calls = []
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "nt")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: str(tmp_path / name) if name == "wt" else None)
+    monkeypatch.setattr(
+        student_lab_cli.subprocess,
+        "Popen",
+        lambda args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is True
+    assert calls == [([str(tmp_path / "wt"), "-d", str(workspace.resolve())], {})]
+
+
+def test_open_terminal_runs_macos_command(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    calls = []
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "darwin")
+    monkeypatch.setattr(
+        student_lab_cli.subprocess,
+        "Popen",
+        lambda args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is True
+    assert calls == [(["open", "-a", "Terminal", "."], {"cwd": str(workspace.resolve())})]
+
+
+def test_open_terminal_reports_no_linux_terminal(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "posix")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: None)
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is False
+    assert "Nessun terminale disponibile" in message
 
 
 def test_truncate_keeps_short_text_and_clips_long_text() -> None:
