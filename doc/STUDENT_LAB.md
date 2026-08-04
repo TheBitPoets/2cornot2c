@@ -294,16 +294,16 @@ la selezione viene inviata a `POST /api/student-lab/final-attempt`: il server ri
 consegna e tentativo sui propri dati. Senza token, la stessa operazione applicativa lavora sulla root locale.
 
 Il comando `v` cerca un editor terminale nell'ordine `micro`, `nvim`, `vim`, `hx`, `nano` (e `notepad` su Windows).
-`micro` e' l'editor minimale di default: e' un binario piccolo, ha syntax highlighting, supporto mouse e
-keybinding intuitivi (`Ctrl+S` salva, `Ctrl+Q` esce). Per scegliere esplicitamente un editor, imposta
-`THEBITLAB_EDITOR`, per esempio `micro --clean` o `nvim`. L'editor viene eseguito nella cartella della
-consegna e apre il file sorgente indicato dall'activity.
+`micro` e' l'editor minimale di default ed e' installato automaticamente nelle immagini del lab: e' un binario
+piccolo, ha syntax highlighting, supporto mouse e keybinding intuitivi (`Ctrl+S` salva, `Ctrl+Q` esce).
+L'editor viene eseguito nella cartella della consegna e apre il file sorgente indicato dall'activity.
 
-Il comando `o` apre la cartella del workspace. Se e' configurato un editor in grado di aprire cartelle
-(come VS Code, VSCodium, Cursor o Zed), `o` apre la cartella direttamente nell'editor; in alternativa
-la apre con il file manager di sistema. Per forzare un programma diverso solo per `o`, imposta
-`THEBITLAB_WORKSPACE_EDITOR` (ad esempio `code` o `zed`). Se non e' impostato nulla, viene usato
-`THEBITLAB_EDITOR` solo se riconosciuto come editor che supporta le cartelle, altrimenti il file manager.
+Il comando `o` apre la cartella del workspace. Senza configurazione usa il file manager di sistema
+(Esplora Risorse su Windows). Se si vuole aprire la cartella direttamente in un editor che lo supporta
+(VS Code, VSCodium, Cursor, Zed, ...), impostare `THEBITLAB_WORKSPACE_EDITOR`.
+
+Per una guida dettagliata alla configurazione di editor diversi, inclusi VS Code, Notepad++ e VSCodium,
+vedi [TUI_EDITOR_SETUP.md](TUI_EDITOR_SETUP.md).
 
 Il comando `l` apre il layout della vista consegna. Ogni sezione del dettaglio diventa un pannello separato;
 la disposizione iniziale li distribuisce in due colonne. Per ora il controllo principale e' il ridimensionamento:
