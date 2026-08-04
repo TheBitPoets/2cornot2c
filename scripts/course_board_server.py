@@ -72,6 +72,7 @@ from scripts import (
     student_help_service,
     student_lab_service,
     thebitlab_auth_runtime,
+    thebitlab_auth_styles,
     thebitlab_grading_artifacts,
     thebitlab_google_oidc_http,
     thebitlab_github_oauth_http,
@@ -6714,16 +6715,29 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             "<meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             "<title>Accedi - TheBitLab</title>"
-            "<style>"
-            "body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}"
-            "main{text-align:center;padding:2rem}"
-            "h1{font-weight:600;margin-bottom:1.5rem;font-size:1.5rem}"
-            "a{display:inline-block;background:#4285F4;color:#fff;text-decoration:none;padding:.85rem 1.6rem;border-radius:.5rem;font-weight:500}"
-            "a:hover{background:#357ae8}"
-            "</style>"
+            f"<style>{thebitlab_auth_styles.AUTH_PAGE_CSS}</style>"
             "</head><body>"
-            "<main><h1>Accedi a TheBitLab</h1>"
-            "<a href='/auth/google/login'>Accedi con Google</a></main>"
+            "<div class='login-wrap'>"
+            "<main class='login-card'>"
+            "<div class='login-brand'>"
+            "<img src='https://www.thebitpoets.com/assets/logo-400.png' "
+            "srcset='https://www.thebitpoets.com/assets/logo-400.png 400w, https://www.thebitpoets.com/assets/logo-521.png 521w' "
+            "sizes='80px' width='80' height='80' alt='TheBitLab'>"
+            "</div>"
+            "<h1>Accedi a TheBitLab</h1>"
+            "<p class='sub'>Per studenti e docenti dell'istituto</p>"
+            "<a class='btn btn-google' href='/auth/google/login'>"
+            "<svg width='18' height='18' viewBox='0 0 24 24' aria-hidden='true'>"
+            "<path fill='#fff' d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'/>"
+            "<path fill='#34A853' d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'/>"
+            "<path fill='#FBBC05' d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'/>"
+            "<path fill='#EA4335' d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'/>"
+            "</svg>"
+            "Accedi con Google"
+            "</a>"
+            "<p class='teacher'>Sei docente? <a href='/tools/course_board.html'>Accedi alla dashboard</a></p>"
+            "</main>"
+            "</div>"
             "</body></html>"
         ).encode("utf-8")
         self.send_response(200)
@@ -6733,7 +6747,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         self.send_header(
             "Content-Security-Policy",
             "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; "
-            "form-action 'none'; style-src 'unsafe-inline'",
+            "form-action 'none'; style-src 'unsafe-inline'; img-src https://www.thebitpoets.com",
         )
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
