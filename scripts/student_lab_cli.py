@@ -588,6 +588,7 @@ def render_assignment_detail(
         "  t  Storico e tentativo definitivo",
         "  o  Apri workspace",
         "  v  Apri editor",
+        "  c  Apri terminale",
         "  l  Modifica layout pannelli",
         "",
         "Altri comandi",
