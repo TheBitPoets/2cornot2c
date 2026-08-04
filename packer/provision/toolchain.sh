@@ -13,7 +13,7 @@ apt-get install -y --no-install-recommends \
   make \
   vim
 
-# Pin micro release and SHA-256 per supported architecture.
+# Blocca versione e SHA-256 di micro per ogni architettura supportata.
 MICRO_VERSION="2.0.14"
 MICRO_ARCH=""
 MICRO_SHA256=""
@@ -33,8 +33,9 @@ case "$(uname -m)" in
 esac
 MICRO_TARBALL="micro-${MICRO_VERSION}-${MICRO_ARCH}.tar.gz"
 MICRO_URL="https://github.com/zyedidia/micro/releases/download/v${MICRO_VERSION}/${MICRO_TARBALL}"
-curl -fsSL -o "/tmp/${MICRO_TARBALL}" "${MICRO_URL}"
-echo "${MICRO_SHA256}  /tmp/${MICRO_TARBALL}" | sha256sum -c
-tar -xzf "/tmp/${MICRO_TARBALL}" -C /tmp "micro-${MICRO_VERSION}/micro"
-install -m 755 "/tmp/micro-${MICRO_VERSION}/micro" /usr/local/bin/micro
-rm -rf "/tmp/${MICRO_TARBALL}" "/tmp/micro-${MICRO_VERSION}"
+MICRO_TMPDIR="$(mktemp -d)"
+trap 'rm -rf "${MICRO_TMPDIR}"' EXIT
+curl -fsSL -o "${MICRO_TMPDIR}/${MICRO_TARBALL}" "${MICRO_URL}"
+echo "${MICRO_SHA256}  ${MICRO_TMPDIR}/${MICRO_TARBALL}" | sha256sum -c
+tar -xzf "${MICRO_TMPDIR}/${MICRO_TARBALL}" -C "${MICRO_TMPDIR}" "micro-${MICRO_VERSION}/micro"
+install -m 755 "${MICRO_TMPDIR}/micro-${MICRO_VERSION}/micro" /usr/local/bin/micro

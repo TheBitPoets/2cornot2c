@@ -217,7 +217,13 @@ def test_toolchain_script_installs_micro_with_verified_checksum() -> None:
     assert "https://github.com/zyedidia/micro/releases/download/v" in script
     assert "curl -fsSL" in script
     assert "sha256sum -c" in script
-    assert 'install -m 755 "/tmp/micro-${MICRO_VERSION}/micro" /usr/local/bin/micro' in script
+    assert 'install -m 755 "${MICRO_TMPDIR}/micro-${MICRO_VERSION}/micro" /usr/local/bin/micro' in script
+    assert 'MICRO_TMPDIR="$(mktemp -d)"' in script
+    assert "trap 'rm -rf" in script
+
+    # Avoid predictable /tmp paths that could be symlink-attacked.
+    assert '"/tmp/${MICRO_TARBALL}"' not in script
+    assert '"/tmp/micro-${MICRO_VERSION}"' not in script
 
     sha256_values = [
         "704e96add9b44e0041179f7934338d330e85230af6869f70b88720830f554786",
