@@ -207,3 +207,33 @@ def test_toolchain_lock_schema_is_accepted() -> None:
         "github.com/hashicorp/vagrant",
         "1.1.5",
     )
+
+
+def test_toolchain_script_installs_micro_with_verified_checksum() -> None:
+    script = (ROOT / "packer" / "provision" / "toolchain.sh").read_text(encoding="utf-8")
+
+    assert "set -euo pipefail" in script
+    assert 'MICRO_VERSION="2.0.14"' in script
+    assert "https://github.com/zyedidia/micro/releases/download/v" in script
+    assert "curl -fsSL" in script
+    assert "sha256sum -c" in script
+    assert 'install -m 755 "${MICRO_TMPDIR}/micro-${MICRO_VERSION}/micro" /usr/local/bin/micro' in script
+    assert 'MICRO_TMPDIR="$(mktemp -d)"' in script
+    assert "trap 'rm -rf" in script
+
+    # Avoid predictable /tmp paths that could be symlink-attacked.
+    assert '"/tmp/${MICRO_TARBALL}"' not in script
+    assert '"/tmp/micro-${MICRO_VERSION}"' not in script
+
+    sha256_values = [
+        "704e96add9b44e0041179f7934338d330e85230af6869f70b88720830f554786",
+        "2e01b3ea62cdea3e62eb3ee99f6bffe84de06f689cf479173c4e7221b6613d06",
+    ]
+    for value in sha256_values:
+        assert value in script
+        assert len(value) == 64
+        assert all(ch in "0123456789abcdef" for ch in value)
+
+    # Architecture table must reference both x86_64 and aarch64.
+    assert 'MICRO_ARCH="linux64"' in script
+    assert 'MICRO_ARCH="linux-arm64"' in script
