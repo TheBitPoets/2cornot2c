@@ -2051,7 +2051,9 @@ def test_run_tui_keeps_saved_runner_result_when_remote_refresh_fails(monkeypatch
 
 
 def test_open_workspace_rejects_missing_path(tmp_path) -> None:
-    assert student_lab_cli.open_workspace(str(tmp_path / "missing")) is False
+    ok, message = student_lab_cli.open_workspace(str(tmp_path / "missing"))
+    assert ok is False
+    assert "non disponibile" in message
 
 
 def test_open_workspace_resolves_relative_path_from_root(monkeypatch, tmp_path) -> None:
@@ -2059,13 +2061,40 @@ def test_open_workspace_resolves_relative_path_from_root(monkeypatch, tmp_path) 
     workspace.mkdir(parents=True)
     opened = []
 
-    monkeypatch.setattr(
-        student_lab_cli,
-        "os",
-        SimpleNamespace(name="nt", startfile=opened.append),
-    )
+    monkeypatch.setattr(student_lab_cli, "_open_file_manager", opened.append)
 
-    assert student_lab_cli.open_workspace("student/assignments/python-base-somma-001", root=tmp_path) is True
+    ok, message = student_lab_cli.open_workspace("student/assignments/python-base-somma-001", root=tmp_path)
+    assert ok is True
+    assert opened == [workspace.resolve()]
+
+
+def test_open_workspace_uses_configured_folder_editor(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.setenv("THEBITLAB_WORKSPACE_EDITOR", "code")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: f"/bin/{name}")
+    calls = []
+    monkeypatch.setattr(student_lab_cli.subprocess, "run", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    ok, message = student_lab_cli.open_workspace(str(workspace), root=tmp_path)
+
+    assert ok is True
+    assert "code" in message
+    assert calls[0][0][0] == ["code", str(workspace.resolve())]
+    assert calls[0][1]["cwd"] == str(workspace.resolve())
+
+
+def test_open_workspace_falls_back_to_file_manager_when_editor_is_terminal(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.setenv("THEBITLAB_EDITOR", "micro")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: f"/bin/{name}")
+    opened = []
+    monkeypatch.setattr(student_lab_cli, "_open_file_manager", opened.append)
+
+    ok, message = student_lab_cli.open_workspace(str(workspace), root=tmp_path)
+
+    assert ok is True
     assert opened == [workspace.resolve()]
 
 
