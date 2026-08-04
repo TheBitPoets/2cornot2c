@@ -2151,39 +2151,144 @@ def test_open_editor_reports_missing_editor(monkeypatch, tmp_path) -> None:
     assert "Nessun editor disponibile" in message
 
 
-def test_open_terminal_prefers_windows_terminal_on_windows(monkeypatch, tmp_path) -> None:
+def test_windows_terminal_command_prefers_wt(monkeypatch, tmp_path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
-    monkeypatch.setattr(student_lab_cli.os, "name", "nt")
-    calls = []
-    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: str(tmp_path / name) if name == "wt" else None)
-    monkeypatch.setattr(student_lab_cli.subprocess, "Popen", lambda args: calls.append(args))
+    wt_path = str(tmp_path / "wt")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: wt_path if name == "wt" else None)
 
-    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+    command, kwargs, name = student_lab_cli._windows_terminal_command(workspace)
 
-    assert ok is True
-    assert calls == [[str(tmp_path / "wt"), "-d", str(workspace.resolve())]]
+    assert command == [wt_path, "-d", str(workspace.resolve())]
+    assert kwargs == {}
+    assert name == "windows-terminal"
 
 
-def test_open_terminal_falls_back_to_cmd_on_windows(monkeypatch, tmp_path) -> None:
-    workspace = tmp_path / "workspace"
+def test_windows_terminal_command_falls_back_to_cmd(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "consegna con spazi"
     workspace.mkdir()
-    monkeypatch.setattr(student_lab_cli.os, "name", "nt")
-    calls = []
     monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: None)
-    monkeypatch.setattr(student_lab_cli.subprocess, "Popen", lambda args: calls.append(args))
 
-    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+    command, kwargs, name = student_lab_cli._windows_terminal_command(workspace)
 
-    assert ok is True
-    assert calls[0][0] == "cmd"
-    assert calls[0][1] == "/k"
+    assert command == ["cmd", "/k"]
+    assert kwargs == {"cwd": str(workspace.resolve())}
+    assert name == "cmd"
+
+
+def test_macos_terminal_command_uses_cwd(tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    command, kwargs, name = student_lab_cli._macos_terminal_command(workspace)
+
+    assert command == ["open", "-a", "Terminal", "."]
+    assert kwargs == {"cwd": str(workspace.resolve())}
+    assert name == "Terminal"
+
+
+def test_linux_terminal_commands_include_common_emulators(tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    candidates = student_lab_cli._linux_terminal_commands(workspace)
+    names = [cmd[0] for cmd, _, _ in candidates]
+
+    assert "gnome-terminal" in names
+    assert "xfce4-terminal" in names
+    assert all(kwargs.get("cwd") == str(workspace.resolve()) for _, kwargs, _ in candidates)
 
 
 def test_open_terminal_rejects_missing_path(tmp_path) -> None:
     ok, message = student_lab_cli.open_terminal(str(tmp_path / "missing"))
     assert ok is False
     assert "non disponibile" in message
+
+
+def test_open_terminal_runs_windows_command(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    calls = []
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "nt")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: str(tmp_path / name) if name == "wt" else None)
+    monkeypatch.setattr(
+        student_lab_cli.subprocess,
+        "Popen",
+        lambda args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is True
+    assert "windows-terminal" in message
+    assert calls == [([str(tmp_path / "wt"), "-d", str(workspace.resolve())], {})]
+
+
+def test_open_terminal_runs_macos_command(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    calls = []
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "darwin")
+    monkeypatch.setattr(
+        student_lab_cli.subprocess,
+        "Popen",
+        lambda args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is True
+    assert "Terminal" in message
+    assert calls == [(["open", "-a", "Terminal", "."], {"cwd": str(workspace.resolve())})]
+
+
+def test_open_terminal_runs_linux_command(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    calls = []
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "posix")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: name == "xfce4-terminal")
+    monkeypatch.setattr(
+        student_lab_cli.subprocess,
+        "Popen",
+        lambda args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is True
+    assert "xfce4-terminal" in message
+    assert calls[0][0] == ["xfce4-terminal", "--working-directory", str(workspace.resolve())]
+    assert calls[0][1]["cwd"] == str(workspace.resolve())
+
+
+def test_open_terminal_reports_no_linux_terminal(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "posix")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: None)
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is False
+    assert "Nessun terminale disponibile" in message
+
+
+def test_open_terminal_reports_subprocess_error(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "nt")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: str(tmp_path / name) if name == "wt" else None)
+
+    def failing_popen(*args, **kwargs):
+        raise OSError("nope")
+
+    monkeypatch.setattr(student_lab_cli.subprocess, "Popen", failing_popen)
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is False
+    assert "Terminale non avviabile" in message
 
 
 def test_truncate_keeps_short_text_and_clips_long_text() -> None:

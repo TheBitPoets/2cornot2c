@@ -307,7 +307,7 @@ Il comando `c` apre un terminale nella cartella del workspace. Su Windows prefer
 (`wt -d <cartella>`); se non e' installato apre il Prompt dei comandi. Da li lo studente puo' eseguire
 comandi come `code .` per avviare VS Code o `python main.py` per provare il programma.
 
-Per una guida dettagliata alla configurazione di editor diversi, inclusi VS Code, VSCodium, Notepad++ e VSCodium,
+Per una guida dettagliata alla configurazione di editor diversi, inclusi VS Code, VSCodium e Notepad++,
 vedi [TUI_EDITOR_SETUP.md](TUI_EDITOR_SETUP.md).
 
 Il comando `l` apre il layout della vista consegna. Ogni sezione del dettaglio diventa un pannello separato;

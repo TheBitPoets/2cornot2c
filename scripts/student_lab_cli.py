@@ -1452,6 +1452,38 @@ def _first_openable_source(workspace: Path) -> Path | None:
     return None
 
 
+def _windows_terminal_command(path: Path) -> tuple[list[str], dict[str, str], str]:
+    wt = shutil.which("wt") or shutil.which("wt.exe")
+    if wt:
+        return [wt, "-d", str(path)], {}, "windows-terminal"
+    # /k keeps the window open after changing directory.
+    return ["cmd", "/k"], {"cwd": str(path)}, "cmd"
+
+
+def _macos_terminal_command(path: Path) -> tuple[list[str], dict[str, str], str]:
+    return ["open", "-a", "Terminal", "."], {"cwd": str(path)}, "Terminal"
+
+
+def _linux_terminal_commands(path: Path) -> list[tuple[list[str], dict[str, str], str]]:
+    return [
+        (["gnome-terminal", "--working-directory", str(path)], {"cwd": str(path)}, "gnome-terminal"),
+        (["konsole", "--workdir", str(path)], {"cwd": str(path)}, "konsole"),
+        (["xfce4-terminal", "--working-directory", str(path)], {"cwd": str(path)}, "xfce4-terminal"),
+        (["kitty", "--directory", str(path)], {"cwd": str(path)}, "kitty"),
+        (["alacritty", "--working-directory", str(path)], {"cwd": str(path)}, "alacritty"),
+        (["xterm", "-cd", str(path)], {"cwd": str(path)}, "xterm"),
+    ]
+
+
+def _terminal_family() -> str:
+    """Return the current platform family for terminal selection."""
+    if os.name == "nt":
+        return "nt"
+    if sys.platform == "darwin":
+        return "darwin"
+    return "posix"
+
+
 def open_terminal(path_value: str, root: Path = PROJECT_ROOT) -> tuple[bool, str]:
     """Open a terminal in the workspace directory.
 
@@ -1464,43 +1496,26 @@ def open_terminal(path_value: str, root: Path = PROJECT_ROOT) -> tuple[bool, str
     if not path.is_dir():
         return False, "Workspace non disponibile."
 
-    if os.name == "nt":
-        wt = shutil.which("wt") or shutil.which("wt.exe")
-        if wt:
-            try:
-                subprocess.Popen([wt, "-d", str(path)])
-                return True, "Terminale Windows aperto."
-            except OSError as error:
-                return False, f"Terminale non avviabile: {error}"
-        try:
-            subprocess.Popen(["cmd", "/k", f"cd /d {path}"])
-            return True, "Prompt dei comandi aperto."
-        except OSError as error:
-            return False, f"Terminale non avviabile: {error}"
+    family = _terminal_family()
+    if family == "nt":
+        command, kwargs, name = _windows_terminal_command(path)
+    elif family == "darwin":
+        command, kwargs, name = _macos_terminal_command(path)
+    else:
+        for command, kwargs, name in _linux_terminal_commands(path):
+            if shutil.which(command[0]):
+                try:
+                    subprocess.Popen(command, **kwargs)
+                    return True, f"Terminale aperto ({name})."
+                except OSError:
+                    continue
+        return False, "Nessun terminale disponibile."
 
-    if sys.platform == "darwin":
-        try:
-            subprocess.Popen(["open", "-a", "Terminal", str(path)])
-            return True, "Terminale aperto."
-        except OSError as error:
-            return False, f"Terminale non avviabile: {error}"
-
-    candidates = [
-        ["gnome-terminal", "--working-directory", str(path)],
-        ["konsole", "--workdir", str(path)],
-        ["xfce4-terminal", "--working-directory", str(path)],
-        ["kitty", "--directory", str(path)],
-        ["alacritty", "--working-directory", str(path)],
-        ["xterm", "-cd", str(path)],
-    ]
-    for command in candidates:
-        if shutil.which(command[0]):
-            try:
-                subprocess.Popen(command)
-                return True, f"Terminale aperto ({command[0]})."
-            except OSError:
-                continue
-    return False, "Nessun terminale disponibile."
+    try:
+        subprocess.Popen(command, **kwargs)
+        return True, f"Terminale aperto ({name})."
+    except OSError as error:
+        return False, f"Terminale non avviabile: {error}"
 
 
 def open_editor(
