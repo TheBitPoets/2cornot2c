@@ -829,3 +829,172 @@ DS/digest DNSSEC. Le chiavi pubbliche e gli IP pubblici invece sì.
 - [ ] Pulizia record obsoleti (TXT placeholder OVH, CNAME ftp)
 - [ ] Sostituire la chiave SSH di backup da "account personale" a deploy key
       del solo repo `thebitlab-backups` (quando abilitato)
+
+---
+
+## 11. Avvio dell'applicazione e flussi di accesso
+
+### 11.1 Come avviare il server
+
+Il codice dell'app vive in `/opt/thebitlab/repo`, il virtualenv in
+`/opt/thebitlab/venv`, i dati in `/srv/thebitlab/data`.
+
+#### Produzione (systemd)
+
+```bash
+cd /opt/thebitlab/repo
+/opt/thebitlab/venv/bin/python scripts/course_board_server.py \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --root /srv/thebitlab/data \
+  --enable-google-auth \
+  --enable-github-app-token-runtime
+```
+
+In produzione il processo è gestito da systemd (`systemctl status thebitlab`).
+
+#### Sviluppo locale
+
+```bash
+python scripts/course_board_server.py \
+  --host 127.0.0.1 \
+  --port 8765 \
+  --root ./tmp-data
+```
+
+#### Sviluppo con Google OIDC
+
+```bash
+export THEBITLAB_TEACHER_TOKEN="..."
+export THEBITLAB_GOOGLE_CLIENT_ID="..."
+export THEBITLAB_GOOGLE_CLIENT_SECRET="..."
+export THEBITLAB_GOOGLE_REDIRECT_URI="https://app.thebitpoets.com/auth/google/callback"
+export THEBITLAB_AUTH_CSRF_SECRET_B64="..."
+export THEBITLAB_RATE_LIMIT_PEPPER_B64="..."
+export THEBITLAB_TUI_PAIRING_PEPPER_B64="..."
+export THEBITLAB_TRUSTED_PROXY_CIDRS="127.0.0.1/32,::1/128"
+
+python scripts/course_board_server.py \
+  --host 127.0.0.1 \
+  --port 8765 \
+  --root ./tmp-data \
+  --enable-google-auth
+```
+
+> **Nota**: per il login con Google il `redirect_uri` deve essere esattamente
+> quello registrato in Google Cloud Console, e l'app deve essere raggiungibile
+> via HTTPS (in locale si usa un tunnel come Cloudflare `cloudflared`).
+
+#### Flag disponibili
+
+| Flag | Effetto |
+|---|---|
+| `--host` | Indirizzo di ascolto (`127.0.0.1` in produzione dietro nginx) |
+| `--port` | Porta TCP |
+| `--root` | Directory radice per dati, report, lock e database SQLite |
+| `--enable-google-auth` | Attiva Google OIDC, login page, sessioni web e admin |
+| `--enable-github-app-token-runtime` | Attiva generazione/rinnovo token GitHub App per fonti private |
+| `--allow-insecure-network-http` | Permette HTTP su indirizzo non-loopback (solo per test protetti) |
+
+---
+
+### 11.2 Punti di accesso
+
+| URL | Tipo di accesso | Scopo |
+|---|---|---|
+| `/` | Pubblico (se `--enable-google-auth`) o docente Basic Auth | Login page o Course Board |
+| `/login` | Pubblico (se `--enable-google-auth`) | Pagina con bottone "Accedi con Google" |
+| `/tools/course_board.html` | Docente Basic Auth | Course Design Board |
+| `/auth/google/login` | Pubblico | Avvia il flusso OAuth 2.0/OIDC con Google |
+| `/auth/google/callback` | Pubblico (chiamato da Google) | Completa il login |
+| `/auth/account` | Sessione web | Landing post-login (stato pending/studente/docente/admin) |
+| `/auth/admin` | Admin (ruolo `admin`) | Gestione utenti, classi e approvazioni |
+| `/auth/tui/pair` | Studente autenticato | Accoppiamento browser ↔ terminale TUI |
+| `/api/student-lab/...` | Bearer TUI | API usate dalla CLI/TUI dello studente |
+| `/api/...` | Docente Basic Auth | API usate dalla dashboard docente |
+
+Credenziali dashboard docente:
+
+- **Username**: `teacher`
+- **Password**: token salvato in `C:\Users\antonio\.thebitlab-secrets\hetzner\teacher-token.txt`
+
+---
+
+### 11.3 Flusso di login per uno studente
+
+```text
+app.thebitpoets.com/login
+        │
+        ▼
+  ┌─────────────┐
+  │ Bottone     │
+  │ Accedi con  │──▶ /auth/google/login ──▶ Google
+  │ Google      │                              │
+  └─────────────┘                              │
+        ▲                                      │
+        │                                      ▼
+  /auth/account                         /auth/google/callback
+  (account in attesa)                         │
+        ▲                                     ▼
+        └────────── utente pending ◀──────────┘
+                     │
+                     ▼
+            admin approva ruolo/classe
+                     │
+                     ▼
+            /auth/account aggiornato
+            (studente/docente/admin)
+```
+
+Passaggi dettagliati:
+
+1. Lo studente apre `https://app.thebitpoets.com/login`.
+2. Clicca **Accedi con Google**; il browser viene rimandato a `/auth/google/login`.
+3. Il server risponde con `302 Found` a `https://accounts.google.com/...`.
+4. Lo studente inserisce le credenziali Google.
+5. Google rimanda il browser a `/auth/google/callback?code=...&state=...`.
+6. Il server verifica `state` e `nonce`, scambia il `code` con i token, verifica
+   la firma dell'`id_token`, estrae `email` e `sub`.
+7. Il server crea un utente nel database con ruolo **`pending`**.
+8. Il browser arriva su `/auth/account` con il messaggio
+   "Account in attesa".
+9. Un docente/admin accede a `/auth/admin` e approva l'utente,
+   assegnandogli ruolo (`student`/`teacher`/`admin`) e classe.
+10. Al prossimo caricamento di `/auth/account` lo studente vede la sua area
+    personale e può associare la TUI da `/auth/tui/pair`.
+
+---
+
+### 11.4 Flusso di accesso per il docente
+
+1. Il docente apre `https://app.thebitpoets.com/tools/course_board.html`.
+2. Il browser mostra il prompt HTTP Basic Auth.
+3. Inserisce:
+   - **Username**: `teacher`
+   - **Password**: il token dal file `teacher-token.txt`
+4. Accede alla Course Design Board.
+
+Il docente può anche usare `/auth/admin` (se ha ruolo admin) per gestire gli
+utenti pending.
+
+---
+
+### 11.5 Avviare un'istanza di staging sulla stessa macchina
+
+Per testare modifiche senza toccare la produzione si avvia una seconda istanza
+su una porta diversa con un data root separato:
+
+```bash
+sudo mkdir -p /srv/thebitlab/staging-data
+sudo chown thebitlab:thebitlab /srv/thebitlab/staging-data
+sudo -u thebitlab /opt/thebitlab/venv/bin/python scripts/course_board_server.py \
+  --host 127.0.0.1 \
+  --port 8001 \
+  --root /srv/thebitlab/staging-data \
+  --enable-google-auth \
+  --enable-github-app-token-runtime
+```
+
+Aggiungere poi un vhost nginx per `staging.thebitpoets.com` che punti a
+`http://127.0.0.1:8001` e un record DNS `staging` → `91.98.123.183`.
+>>>>>>> 02a30e4 (docs(INFRASTRUTTURA_PRODUZIONE): aggiungi avvio app e flussi di accesso)

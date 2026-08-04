@@ -6023,3 +6023,123 @@ def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_p
     assert status["configured_keys"]["GEMINI_API_KEY"] is False
     assert "secret-value" not in json.dumps(status)
     assert "legacy-secret" not in json.dumps(status)
+
+
+def test_login_page_public_when_google_auth_enabled(tmp_path, monkeypatch):
+    monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = "teacher-token"
+    server.google_oidc_runtime = object()  # abilita la pagina di login pubblica
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/login"
+        with urllib.request.urlopen(url, timeout=5) as response:
+            assert response.status == 200
+            body = response.read().decode("utf-8")
+            assert "Accedi con Google" in body
+            assert "/auth/google/login" in body
+            assert response.headers["X-Frame-Options"] == "DENY"
+            assert response.headers["X-Content-Type-Options"] == "nosniff"
+    finally:
+        server.shutdown()
+
+
+def test_root_serves_login_page_when_google_auth_enabled_and_unauthenticated(
+    tmp_path, monkeypatch,
+):
+    monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = "teacher-token"
+    server.google_oidc_runtime = object()
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/"
+        with urllib.request.urlopen(url, timeout=5) as response:
+            assert response.status == 200
+            body = response.read().decode("utf-8")
+            assert "Accedi con Google" in body
+            assert "/auth/google/login" in body
+    finally:
+        server.shutdown()
+
+
+def test_root_serves_dashboard_when_teacher_authenticated(tmp_path, monkeypatch):
+    board = tmp_path / "tools" / "course_board.html"
+    board.parent.mkdir(parents=True, exist_ok=True)
+    board.write_text("<h1>Course Board</h1>", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = "teacher-token"
+    server.google_oidc_runtime = object()
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        auth = "Basic " + base64.b64encode(
+            b"teacher:teacher-token"
+        ).decode("ascii")
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{server.server_address[1]}/",
+            headers={"Authorization": auth},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            assert response.status == 200
+            body = response.read().decode("utf-8")
+            assert "Course Board" in body
+    finally:
+        server.shutdown()
+
+
+def test_login_page_not_exposed_without_google_auth(tmp_path, monkeypatch):
+    monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = "teacher-token"
+    # google_oidc_runtime non impostato: la pagina di login non deve esistere
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/login"
+        with pytest.raises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(url, timeout=5)
+        assert error.value.code == 401
+    finally:
+        server.shutdown()
+
+
+def test_login_page_redirects_teacher_to_dashboard(tmp_path, monkeypatch):
+    board = tmp_path / "tools" / "course_board.html"
+    board.parent.mkdir(parents=True, exist_ok=True)
+    board.write_text("<h1>Course Board</h1>", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = "teacher-token"
+    server.google_oidc_runtime = object()
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        auth = "Basic " + base64.b64encode(
+            b"teacher:teacher-token"
+        ).decode("ascii")
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{server.server_address[1]}/login",
+            headers={"Authorization": auth},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            # urllib segue il redirect 302 automaticamente
+            assert response.status == 200
+            assert response.url.endswith("/tools/course_board.html")
+            body = response.read().decode("utf-8")
+            assert "Course Board" in body
+    finally:
+        server.shutdown()
