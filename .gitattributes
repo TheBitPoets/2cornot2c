@@ -1,1 +1,2 @@
 *.sh text eol=lf
+doc/architecture/diagrams/*.svg linguist-generated=true

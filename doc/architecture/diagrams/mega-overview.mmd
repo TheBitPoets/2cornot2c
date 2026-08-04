@@ -1,0 +1,65 @@
+flowchart TB
+    subgraph Utenti["👥 Utenti"]
+        Docente["Docente / Admin"]
+        Studente["Studente"]
+    end
+
+    subgraph SistemiEsterni["🌐 Sistemi esterni"]
+        Google["Google OIDC"]
+        GitHub["GitHub Cloud"]
+        GitLab["GitLab"]
+        DNS["OVH + Cloudflare DNS"]
+    end
+
+    subgraph Edge["☁️ Cloudflare edge"]
+        TLS["TLS edge + WAF"]
+        Redirect["301 .net → .com"]
+        Static["Worker statico www.thebitpoets.com"]
+    end
+
+    subgraph VPS["🖥️ VPS Hetzner thebitlab-prod-1"]
+        UFW["ufw"]
+        Nginx["nginx 443 → 127.0.0.1:8000"]
+        App["TheBitLab Python app"]
+        Runner["student_lab_runner.py"]
+        Docker["Docker grading runner"]
+        UK["Uptime Kuma"]
+    end
+
+    subgraph Dati["💾 Dati"]
+        SQLite[(auth.sqlite3)]
+        JSON[(JSON didattici)]
+        Reports[(report tentativi)]
+    end
+
+    subgraph AIProviders["🤖 AI"]
+        Codex["Codex locale"]
+        Deterministic["Guida locale"]
+        OR["OpenRouter (roadmap)"]
+    end
+
+    Docente -->|HTTPS / Basic Auth| TLS
+    Studente -->|HTTPS| TLS
+    TLS -->|app.thebitpoets.com| UFW
+    TLS --> Redirect
+    Redirect -->|www.thebitpoets.com| Static
+    DNS -->|delega + DNSSEC| Edge
+    UFW --> Nginx
+    Nginx --> App
+    App --> SQLite
+    App --> JSON
+    App --> Reports
+    App --> Google
+    App --> GitHub
+    App --> GitLab
+    App --> Codex
+    App --> Deterministic
+    App -.-> OR
+    App -->|avvia sandbox| Docker
+    UK -->|monitora| App
+
+    Studente -->|pairing code| TUI["CLI/TUI"]
+    TUI -->|Bearer| App
+    TUI -->|esegue tentativo| Runner
+    Runner -->|avvia sandbox| Docker
+    Docker --> Reports

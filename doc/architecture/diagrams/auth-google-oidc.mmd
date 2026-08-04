@@ -1,0 +1,58 @@
+sequenceDiagram
+    autonumber
+    actor S as Studente
+    participant Browser
+    participant CF as Cloudflare
+    participant Nginx as nginx
+    participant App as TheBitLab app
+    participant Google as Google OAuth / OIDC
+
+    S->>Browser: apre https://app.thebitpoets.com/login
+    Browser->>CF: GET /login
+    CF->>Nginx: TLS origine
+    Nginx->>App: GET /login
+    App-->>Nginx: 200 pagina login
+    Nginx-->>CF: 200
+    CF-->>Browser: 200 pagina login
+
+    S->>Browser: clicca "Accedi con Google"
+    Browser->>CF: GET /auth/google/login
+    CF->>Nginx: TLS origine
+    Nginx->>App: GET /auth/google/login
+    App->>App: genera state + nonce (sessione cookie)
+    App-->>Nginx: 302 Location: accounts.google.com/...
+    Nginx-->>CF: 302
+    CF-->>Browser: 302 Location: accounts.google.com/...
+
+    Browser->>Google: GET /o/oauth2/v2/auth
+    S->>Google: autenticazione + consenso
+    Google-->>Browser: 302 Location: https://app.thebitpoets.com/auth/google/callback?code=...&state=...
+
+    Browser->>CF: GET /auth/google/callback
+    CF->>Nginx: TLS origine
+    Nginx->>App: GET /auth/google/callback
+    App->>App: verifica state dalla query
+    App->>Google: POST https://oauth2.googleapis.com/token (code → token)
+    Google-->>App: token + id_token JWT
+    App->>App: verifica firma JWT, nonce e estrae sub + email
+    App->>App: crea/aggiorna utente ruolo pending
+    App->>App: set cookie sessione HTTPOnly Secure SameSite
+    App-->>Nginx: 303 /auth/account
+    Nginx-->>CF: 303
+    CF-->>Browser: 303 /auth/account
+
+    Browser->>CF: GET /auth/account
+    CF->>Nginx: TLS origine
+    Nginx->>App: GET /auth/account
+    App-->>Nginx: 200 "Account in attesa"
+    Nginx-->>CF: 200
+    CF-->>Browser: 200 "Account in attesa"
+
+    Note over App,Browser: Admin approva utente via /auth/admin
+
+    Browser->>CF: GET /auth/account
+    CF->>Nginx: TLS origine
+    Nginx->>App: GET /auth/account
+    App-->>Nginx: 200 dashboard personale
+    Nginx-->>CF: 200
+    CF-->>Browser: 200 dashboard personale

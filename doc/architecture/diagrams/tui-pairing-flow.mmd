@@ -1,0 +1,60 @@
+sequenceDiagram
+    autonumber
+    actor S as Studente
+    participant Browser
+    participant Edge as Cloudflare + nginx
+    participant App as TheBitLab app
+    participant CLI as student_lab_cli.py
+
+    Note over S: Studente già loggato nel browser
+    S->>Browser: apre /auth/tui/pair
+    Browser->>Edge: GET /auth/tui/pair
+    Edge->>App: GET /auth/tui/pair
+    App-->>Edge: 200 pagina pairing
+    Edge-->>Browser: 200 pagina pairing
+
+    S->>CLI: avvia `student_lab_cli.py pair`
+    CLI->>Edge: POST /auth/tui/pairings (body vuoto)
+    Note right of CLI: Header: User-Agent TheBitLab-TUI/1.0<br/>Content-Length: 0
+    Edge->>App: POST /auth/tui/pairings
+    App->>App: genera pairing_id + user_code
+    App-->>Edge: 200 {pairing_id, user_code}
+    Edge-->>CLI: 200 {pairing_id, user_code}
+
+    Note over S: Studente legge il code sulla CLI
+    S->>Browser: inserisce user_code
+    Browser->>Edge: POST /auth/tui/pair {code}
+    Edge->>App: POST /auth/tui/pair {code}
+    App->>App: verifica cookie web + ruolo studente
+    App->>App: segna pairing autorizzato
+    App-->>Edge: 200 pairing ok
+    Edge-->>Browser: 200 pairing ok
+
+    CLI->>Edge: POST /auth/tui/pairings/{pairing_id}/token {code}
+    Edge->>App: POST /auth/tui/pairings/{pairing_id}/token
+    App->>App: consumo atomico → crea sessione TUI
+    App-->>Edge: 200 {bearer_token, logout_proof, expiry}
+    Edge-->>CLI: 200 {bearer_token, logout_proof, expiry}
+
+    CLI->>Edge: GET /api/student-lab/me<br/>Authorization: Bearer ...
+    Edge->>App: GET /api/student-lab/me
+    App-->>Edge: 200 {student_id, class_id}
+    Edge-->>CLI: 200 {student_id, class_id}
+
+    CLI->>Edge: GET /api/student-lab/assignments<br/>Authorization: Bearer ...
+    Edge->>App: GET /api/student-lab/assignments
+    App-->>Edge: 200 lista consegne
+    Edge-->>CLI: 200 lista consegne
+
+    loop Comandi TUI
+        S->>CLI: seleziona consegna
+        CLI->>CLI: apre workspace locale
+        S->>CLI: v / o / c / s
+    end
+
+    S->>CLI: comando logout
+    CLI->>Edge: POST /auth/tui/logout<br/>Authorization: Bearer ...<br/>X-TUI-Logout-Proof: ...
+    Edge->>App: POST /auth/tui/logout
+    App->>App: revoca sessione TUI
+    App-->>Edge: 204
+    Edge-->>CLI: 204
