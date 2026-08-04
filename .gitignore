@@ -33,3 +33,113 @@ teacher-grading-bindings.json
 examples/assignment_tracking/student_repos/*/assignments/*/
 examples/assignment_tracking/student_repos/*/reports/*/
 examples/assignment_tracking/student_repos/*/help/
+
+
+# Cache di framework e bundler (Vite, Next, Astro, ecc.)
+.turbo/
+.vercel/
+.cache/
+.npm/
+.yarn/
+
+# File multimediali e statici pesanti (immagini, video, icone)
+public/assets/
+public/images/
+public/videos/
+*.mp4
+*.mp3
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
+
+# Database locali e file di storage
+*.db
+*.sqlite
+*.sqlite3
+supabase/
+.pocketbase/
+
+# File di configurazione dell'IDE e OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Output di test e coperture codice
+coverage/
+.nyc_output/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+coverage.xml
+htmlcov/
+*.cover
+.hypothesis/
+
+# --- SICUREZZA: mai commettere segreti, credenziali o file di runtime locali ---
+# Cartelle di segreti locali (Windows, Linux, ovunque)
+.thebitlab-secrets/
+**/.thebitlab-secrets/
+.secrets/
+**/.secrets/
+
+# File di credenziali e token
+*.env
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+*.pem
+*.key
+*.p12
+*.pfx
+*.credentials
+*.token
+*.tokens
+google-oauth-client.json
+runtime.json
+installation-token.txt
+private-key.pem
+.thebitlab-server.lock
+.runtime.lock
+*.pid
+
+# File privati generati da docenti/studenti
+*_private.json
+
+# Artefatti Windows da evitare
+NUL
+nul
+desktop.ini
+*.lnk
+
+# Tunnels Cloudflare locali
+.cloudflared/
+cloudflared*.log
+cloudflared*.pid
+
+# Ambienti virtuali e build Python
+.venv/
+venv/
+env/
+ENV/
+pip-wheel-metadata/
+build/
+dist/
+*.egg-info/
+.eggs/
+*.whl
+
+# Cache e profili temporanei di strumenti
+.cache/
+node_modules/
+playwright-profile/
+*.local-state/
+*.swp
+*.swo
