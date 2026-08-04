@@ -1435,6 +1435,22 @@ def editor_command(editor: str | None = None) -> list[str] | None:
     return None
 
 
+def _first_openable_source(workspace: Path) -> Path | None:
+    """Return a reasonable source file to open when no explicit source is given."""
+
+    if not workspace.is_dir():
+        return None
+    preferred = ("README.md", "readme.md", "main.c", "main.py")
+    for name in preferred:
+        candidate = workspace / name
+        if candidate.is_file():
+            return candidate
+    for candidate in sorted(workspace.iterdir()):
+        if candidate.is_file() and not candidate.name.startswith("."):
+            return candidate
+    return None
+
+
 def open_editor(
     workspace_path: str,
     source_name: str = "",
@@ -1451,9 +1467,11 @@ def open_editor(
     if command is None:
         return False, "Nessun editor disponibile. Imposta THEBITLAB_EDITOR o installa micro."
     source = clean_text(source_name, "")
-    target = workspace / source if source else workspace
-    if target != workspace and not target.is_file():
-        target = workspace
+    target = workspace / source if source else None
+    if target is None or not target.is_file():
+        target = _first_openable_source(workspace)
+    if target is None:
+        return False, "Nessun file sorgente apribile nel workspace."
     try:
         subprocess.run([*command, str(target)], cwd=str(workspace), check=False)
     except OSError as error:
