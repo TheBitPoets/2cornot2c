@@ -888,3 +888,12 @@ def test_executor_stops_on_first_failed_command() -> None:
     assert len(results) == 1
     assert results[0].status == "failed"
     assert len(calls) == 1
+
+
+def test_uninstall_script_recognizes_micro_package() -> None:
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "uninstall-classroom-windows.ps1"
+    text = script.read_text(encoding="utf-8")
+    assert '"zyedidia.micro"' in text
+    assert '"^micro(?: |$)"' in text

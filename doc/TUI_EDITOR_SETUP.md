@@ -165,4 +165,4 @@ Verifica con `where nome` (cmd) o `Get-Command nome` (PowerShell).
 
 La variabile `THEBITLAB_WORKSPACE_EDITOR` non e' impostata oppure `THEBITLAB_EDITOR`
 punta a un editor che la TUI non riconosce come in grado di aprire cartelle.
-Imosta esplicitamente `THEBITLAB_WORKSPACE_EDITOR=code`.
+Imposta esplicitamente `THEBITLAB_WORKSPACE_EDITOR=code`.

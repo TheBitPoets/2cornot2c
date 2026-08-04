@@ -163,6 +163,7 @@ function Test-PackageStillInstalled {
         "Git.Git" { "^Git(?: |$)" }
         "Hashicorp.Vagrant" { "^Vagrant(?: |$)" }
         "Oracle.VirtualBox" { "^(?:Oracle VM )?VirtualBox(?: |$)" }
+        "zyedidia.micro" { "^micro(?: |$)" }
         default { return $false }
     }
     $UninstallRoots = @(
