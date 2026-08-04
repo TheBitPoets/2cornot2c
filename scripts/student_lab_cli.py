@@ -37,6 +37,7 @@ from scripts import (
 InputFn = Callable[[str], str]
 PrintFn = Callable[[str], None]
 DEFAULT_SERVER_URL = "http://127.0.0.1:8765"
+_USER_AGENT = "TheBitLab-TUI/1.0"
 HELP_REQUEST_TIMEOUT_SECONDS = 150
 MAX_STUDENT_API_RESPONSE_BYTES = 2 * 1024 * 1024
 TUI_RENDERERS = {"auto", "legacy", "utui"}
@@ -945,6 +946,7 @@ def record_help_from_tui(
         headers={
             "Content-Type": "application/json; charset=utf-8",
             "Authorization": f"Bearer {credential.value.strip()}",
+            "User-Agent": _USER_AGENT,
         },
         method="POST",
     )
@@ -1009,7 +1011,10 @@ def fetch_help_history_from_server(
     query = urllib.parse.urlencode({"assignment_id": assignment_id})
     request = urllib.request.Request(
         f"{safe_server_url}/api/student-lab/help-history?{query}",
-        headers={"Authorization": f"Bearer {credential.value.strip()}"},
+        headers={
+            "Authorization": f"Bearer {credential.value.strip()}",
+            "User-Agent": _USER_AGENT,
+        },
         method="GET",
     )
     payload = None
@@ -1071,6 +1076,7 @@ def select_final_attempt_from_server(
         headers={
             "Content-Type": "application/json; charset=utf-8",
             "Authorization": f"Bearer {credential.value.strip()}",
+            "User-Agent": _USER_AGENT,
         },
         method="POST",
     )
@@ -1426,7 +1432,10 @@ def fetch_student_lab_payload(
     suffix = f"?{query}" if query else ""
     request = urllib.request.Request(
         f"{safe_server_url}/api/student-lab/assignments{suffix}",
-        headers={"Authorization": f"Bearer {credential.value.strip()}"},
+        headers={
+            "Authorization": f"Bearer {credential.value.strip()}",
+            "User-Agent": _USER_AGENT,
+        },
     )
     payload = None
     failure = None
@@ -1833,7 +1842,7 @@ def _fetch_student_id(server_url: str, server_token: str) -> str:
     url = validated_server_url(server_url) + "/api/student-lab/me"
     request = urllib.request.Request(
         url,
-        headers={"Authorization": "Bearer " + server_token},
+        headers={"Authorization": "Bearer " + server_token, "User-Agent": _USER_AGENT},
     )
     with urllib.request.urlopen(request, timeout=15) as response:
         payload = json.loads(response.read().decode("utf-8"))
