@@ -466,7 +466,7 @@ _PAIRING_PAGE = """<!doctype html>
 <style nonce="__CSP_NONCE__">__AUTH_CSS__</style>
 <style nonce="__CSP_NONCE__">
   .pair-wrap { display:flex; align-items:center; justify-content:center; min-height:calc(100vh - 4rem); padding:1rem; }
-  .pair-card { width:min(460px,100%); background:var(--card); border:1px solid var(--line); border-radius:1.25rem; padding:2rem; box-shadow:0 18px 42px rgba(0,0,0,0.06); text-align:center; }
+  .pair-card { width:min(520px,100%); background:var(--card); border:1px solid var(--line); border-radius:1.25rem; padding:2.5rem clamp(1.75rem, 6vw, 3rem); box-shadow:0 18px 42px rgba(0,0,0,0.06); text-align:center; }
   .pair-card .login-brand { margin-bottom:1rem; }
   .pair-card h1 { font-size:1.45rem; font-weight:650; margin-bottom:.35rem; }
   .pair-card p.sub { color:var(--soft); font-size:.95rem; margin-bottom:1.5rem; }
@@ -475,8 +475,8 @@ _PAIRING_PAGE = """<!doctype html>
   .steps li { margin-bottom:.45rem; }
   .steps li:last-child { margin-bottom:0; }
   .code-label { display:block; font-size:.85rem; font-weight:500; color:var(--soft); margin-bottom:.65rem; text-align:left; }
-  .code-row { display:flex; gap:.4rem; justify-content:center; margin-bottom:1.25rem; }
-  .code-row input { width:2.5rem; height:3rem; text-align:center; font-size:1.35rem; font-weight:600; text-transform:uppercase; border:1px solid var(--line); border-radius:.5rem; background:#fff; color:var(--ink); padding:0; }
+  .code-row { display:flex; flex-wrap:wrap; gap:.4rem; justify-content:center; margin-bottom:1.25rem; }
+  .code-row input { width:2.1rem; height:2.75rem; text-align:center; font-size:1.2rem; font-weight:600; text-transform:uppercase; border:1px solid var(--line); border-radius:.5rem; background:#fff; color:var(--ink); padding:0; }
   .code-row input:focus { outline:none; border-color:var(--ink); box-shadow:0 0 0 3px rgba(26,26,30,0.08); }
   .pair-actions { display:flex; gap:.5rem; flex-direction:column; }
   #login { font-size:.9rem; color:var(--soft); }
