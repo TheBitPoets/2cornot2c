@@ -1339,19 +1339,77 @@ def supports_color(no_color: bool = False) -> bool:
     return sys.stdout.isatty()
 
 
-def open_workspace(path_value: str, root: Path = PROJECT_ROOT) -> bool:
-    """Open a workspace folder with the platform file manager."""
+_FOLDER_CAPABLE_EDITORS = frozenset(
+    {
+        "code",
+        "code-insiders",
+        "code-oss",
+        "codium",
+        "vscodium",
+        "cursor",
+        "zed",
+        "fleet",
+        "subl",
+        "atom",
+        "gedit",
+        "kate",
+        "mousepad",
+        "notepadqq",
+        "geany",
+        "brackets",
+    }
+)
+
+
+def _is_folder_capable_editor(command: list[str]) -> bool:
+    if not command:
+        return False
+    basename = Path(command[0]).stem.lower()
+    return basename in _FOLDER_CAPABLE_EDITORS
+
+
+def _open_file_manager(path: Path) -> None:
+    """Open a folder with the platform file manager."""
+
+    if os.name == "nt":
+        os.startfile(path)  # type: ignore[attr-defined]
+        return
+    opener = "open" if sys.platform == "darwin" else "xdg-open"
+    subprocess.Popen([opener, str(path)])
+
+
+def open_workspace(
+    path_value: str,
+    root: Path = PROJECT_ROOT,
+    workspace_editor: str | None = None,
+) -> tuple[bool, str]:
+    """Open a workspace folder with the configured editor or the file manager."""
 
     raw_path = Path(path_value)
     path = raw_path if raw_path.is_absolute() else (root / raw_path).resolve(strict=False)
     if not path.is_dir():
-        return False
-    if os.name == "nt":
-        os.startfile(path)  # type: ignore[attr-defined]
-        return True
-    opener = "open" if sys.platform == "darwin" else "xdg-open"
-    subprocess.Popen([opener, str(path)])
-    return True
+        return False, "Workspace non disponibile."
+
+    explicit_workspace_editor = str(
+        workspace_editor or os.environ.get("THEBITLAB_WORKSPACE_EDITOR", "")
+    ).strip()
+    explicit_editor = str(os.environ.get("THEBITLAB_EDITOR", "")).strip()
+
+    for candidate in (explicit_workspace_editor, explicit_editor):
+        if not candidate:
+            continue
+        command = editor_command(candidate)
+        if command is None:
+            continue
+        if _is_folder_capable_editor(command):
+            try:
+                subprocess.run([*command, str(path)], cwd=str(path), check=False)
+                return True, f"Aperto in {command[0]}."
+            except OSError as error:
+                return False, f"Editor non avviabile: {error}"
+
+    _open_file_manager(path)
+    return True, "Cartella aperta."
 
 
 EDITOR_CANDIDATES = ("micro", "nvim", "vim", "hx", "nano")
@@ -1659,8 +1717,11 @@ def run_tui(
                 continue
             if action == "o":
                 workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
-                if not open_workspace(clean_text(workspace.get("path"), ""), root=root):
-                    print_fn("Workspace non disponibile.")
+                ok, message = open_workspace(clean_text(workspace.get("path"), ""), root=root)
+                if not ok:
+                    print_fn(message or "Workspace non disponibile.")
+                else:
+                    print_fn(message)
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "v":
