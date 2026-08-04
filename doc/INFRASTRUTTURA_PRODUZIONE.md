@@ -2,7 +2,7 @@
 
 > Documento operativo e didattico: cosa abbiamo costruito, perché, e come
 > rifarlo da zero. Scritto per chi vuole capire ogni passaggio, non solo
-> ripeterlo. Ultimo aggiornamento: 3 agosto 2026.
+> ripeterlo. Ultimo aggiornamento: 4 agosto 2026.
 
 ---
 
@@ -540,22 +540,216 @@ known_hosts, SCP, errori tipici) vedi la sezione **3.7bis**.
 ### Comandi utili sul server
 
 ```bash
-sudo ufw status                 # stato firewall
-sudo fail2ban-client status sshd   # IP bannati
-sudo systemctl status nginx     # reverse proxy
-sudo nginx -t                   # valida config prima di reload
+# Servizi
+sudo systemctl status thebitlab   # app Python
+sudo systemctl restart thebitlab  # riavvio app
+sudo systemctl status nginx       # reverse proxy
+sudo nginx -t                     # valida config prima di reload
 sudo systemctl reload nginx
-docker ps                       # container attivi
-df -h /                         # spazio disco
-free -h                         # memoria
+sudo docker ps                    # container attivi (Uptime Kuma)
+
+# Sicurezza e sistema
+sudo ufw status                   # stato firewall
+sudo fail2ban-client status sshd  # IP bannati
+df -h /                           # spazio disco
+free -h                           # memoria
 sudo apt update && sudo apt upgrade   # aggiornamenti manuali
+
+# Log
+sudo journalctl -u thebitlab -f   # log app in tempo reale
+cat /srv/backups/backup.log       # log backup
 ```
 
-### Backup
+---
 
-- Snapshot Hetzner settimanali automatici (console → server → Backups).
-- I dati applicativi critici (SQLite, config, chiavi GitHub App) andranno
-  inclusi in una procedura di backup dedicata al deploy dell'app.
+### 7.1 Monitoraggio con Uptime Kuma
+
+Uptime Kuma è installato sullo stesso server in un container Docker e raggiungibile
+attraverso il sottodominio `status.thebitpoets.com`.
+
+| URL | Scopo |
+|---|---|
+| `https://status.thebitpoets.com` | Dashboard di amministrazione (login con l'utente creato al primo avvio) |
+| `https://status.thebitpoets.com/status/default` | **Pagina di stato pubblica** da condividere con docenti/studenti |
+
+#### Componenti del monitoraggio
+
+- **Container**: `uptime-kuma` su `127.0.0.1:3001`
+- **Reverse proxy**: nginx vhost `status.thebitpoets.com` → `http://127.0.0.1:3001`
+- **DNS**: record `A status` → `91.98.123.183` (Proxied 🟠 su Cloudflare)
+- **Dati persistenti**: `/srv/uptime-kuma/data`
+
+#### Monitor configurati
+
+| Nome | URL | Metodo | Codice atteso | Note |
+|---|---|---|---|---|
+| TheBitLab app | `https://app.thebitpoets.com/tools/course_board.html` | GET | 200 | HTTP Basic Auth: username `teacher`, password dal file `teacher-token.txt` |
+| TheBitLab Google login | `https://app.thebitpoets.com/auth/google/login` | GET | 302 | **Max redirects = 0**, altrimenti segue il redirect su Google e torna 200 (rosso) |
+| thebitpoets.com landing | `https://www.thebitpoets.com/` | GET | 200 | Nessuna auth |
+| thebitpoets.com/thebitlab | `https://www.thebitpoets.com/thebitlab/` | GET | 200 | Nessuna auth |
+
+#### Come aggiungere un monitor manualmente
+
+1. Accedi a `https://status.thebitpoets.com`
+2. **Add New Monitor**
+3. Scegli **HTTP(s)**, dai un nome, inserisci URL e codice atteso
+4. Se serve Basic Auth (es. course board), espandi **Auth** → **HTTP Basic Auth**
+5. In **Advanced** imposta **Heartbeat Interval** (es. 60 secondi) e **Retries** (es. 3)
+6. Per il login Google imposta **Max. Redirects: 0**
+7. **Save**
+
+#### Come creare/aggiornare la status page pubblica
+
+1. Nel menu a sinistra clicca **Status Page**
+2. Seleziona la pagina `default` (o creane una nuova)
+3. Modifica titolo/descrizione e trascina i monitor nella pagina
+4. **Save**
+5. L'URL pubblico sarà `https://status.thebitpoets.com/status/<slug>`
+
+---
+
+### 7.2 Snapshot Hetzner
+
+Gli snapshot manuali sono la "foto" di uno stato noto buono dell'intera macchina:
+SO, pacchetti, configurazioni nginx/systemd, dati applicativi, segreti sul disco.
+Lo staging testa il codice, ma non protegge da incidenti a livello di sistema.
+
+#### Quando crearne uno
+
+- Subito dopo un deploy andato a buon fine (golden state)
+- Prima di aggiornamenti di sistema importanti (`apt upgrade` del kernel, Docker, nginx)
+- Prima di modifiche manuali a configurazioni critiche (nginx, systemd, env)
+- Prima di resize o migrazioni
+
+#### Frequenza e retention
+
+- **Snapshot manuali**: 2–3 attivi per volta; cancellare quelli più vecchi dopo averne creato uno nuovo
+- **Backup automatici Hetzner**: già attivi (settimanali), costano il 20% del server
+- **Costo snapshot manuale**: ~€0,012/GB/mese (paga solo lo spazio effettivamente usato)
+
+#### Procedura manuale dal dashboard
+
+1. https://console.hetzner.cloud/projects → progetto **thebitlab**
+2. **Servers** → clicca **thebitlab-prod-1**
+3. Scheda **Snapshots**
+4. Per coerenza del database SQLite, fermare brevemente il servizio:
+
+   ```bash
+   ssh thebitlab@91.98.123.183
+   sudo systemctl stop thebitlab
+   ```
+
+5. **Create snapshot** → nome es. `thebitlab-prod-1-YYYY-MM-DD-pre-upgrade`
+6. Attendi che lo stato sia **Created / Available**
+7. Riavvia il servizio:
+
+   ```bash
+   sudo systemctl start thebitlab
+   ```
+
+8. Verifica che `https://app.thebitpoets.com` risponda
+
+#### Cancellazione
+
+Nel pannello **Snapshots** del server, seleziona lo snapshot obsoleto e clicca
+**Delete**. Lo spazio liberato smette di essere fatturato.
+
+---
+
+### 7.3 Backup applicativo cifrato
+
+Mentre lo snapshot salva l'intera macchina, questo backup salva solo i dati
+applicativi essenziali in un repository GitHub privato, cifrato con GPG.
+È utile per:
+
+- recuperare rapidamente un singolo dato (utente, classe, configurazione)
+- tenere una copia off-site dei dati fuori da Hetzner
+- confrontare lo stato del database nel tempo
+
+#### Cosa viene salvato
+
+- `auth.sqlite3` — database SQLite identità/sessioni (da `/srv/thebitlab/data/.thebitlab-auth/`)
+- `thebitlab.env` — variabili d'ambiente del servizio
+- `nginx-thebitlab.conf` e `nginx-status.conf` — vhost nginx
+
+#### Crittografia
+
+- Algoritmo: **AES256** con GPG in modalità simmetrica
+- Passphrase: unica, generata casualmente, conservata in:
+  - server: `/etc/thebitlab/backup-passphrase` (`600`, utente `thebitlab`)
+  - PC admin: `C:\Users\antonio\.thebitlab-secrets\hetzner\backup-passphrase.txt`
+
+> **Senza la passphrase il backup è irrecuperabile.**
+
+#### Dove finisce il backup
+
+- Repository privato: `https://github.com/TheBitPoets/thebitlab-backups`
+- File: `thebitlab-prod-1-YYYYMMDD-HHMMSS.tar.gz.gpg`
+- Script: `/opt/thebitlab/bin/backup.sh`
+- Log: `/srv/backups/backup.log`
+
+#### Autenticazione: a cosa serve la chiave SSH `backup-deploy`
+
+Il server usa una chiave SSH dedicata (`/home/thebitlab/.ssh/backup-deploy`)
+per autenticarsi su GitHub e fare il push del backup cifrato.
+
+- La chiave **pubblica** è registrata su GitHub (nel tuo account, opzione A).
+- La chiave **privata** resta solo sul server in `/home/thebitlab/.ssh/backup-deploy`.
+- Scopo unico: pushare nel repo `TheBitPoets/thebitlab-backups`.
+
+> Se possibile, in futuro sposta la chiave da "account personale" a
+> **Deploy Key** del solo repo `thebitlab-backups` (più ristretta). Questo
+> richiede che le deploy key siano abilitate per il repository/l'organizzazione.
+
+#### Schedulazione
+
+Il backup parte ogni giorno alle **03:00 UTC** tramite cron dell'utente `thebitlab`:
+
+```bash
+sudo -u thebitlab crontab -l
+# 0 3 * * * /opt/thebitlab/bin/backup.sh
+```
+
+#### Esecuzione manuale
+
+```bash
+ssh thebitlab@91.98.123.183
+sudo -u thebitlab /opt/thebitlab/bin/backup.sh
+```
+
+#### Verifica e ripristino
+
+Da server, per verificare che un backup si apra:
+
+```bash
+LATEST=$(ls -t /srv/backups/repo/*.gpg | head -1)
+gpg --batch --yes --passphrase-file /etc/thebitlab/backup-passphrase \
+    -d "$LATEST" | tar -tzf -
+```
+
+Per ripristinare (esempio: ripristinare il database di ieri):
+
+```bash
+# 1. Ferma l'app
+sudo systemctl stop thebitlab
+
+# 2. Decritta in una cartella temporanea
+mkdir -p /tmp/restore
+gpg --batch --yes --passphrase-file /etc/thebitlab/backup-passphrase \
+    -d /srv/backups/repo/thebitlab-prod-1-YYYYMMDD-HHMMSS.tar.gz.gpg \
+    | tar -xzf - -C /tmp/restore
+
+# 3. Sostituisci i file (assicurati di voler sovrascrivere!)
+sudo cp /tmp/restore/auth.sqlite3 /srv/thebitlab/data/.thebitlab-auth/
+sudo cp /tmp/restore/thebitlab.env /etc/thebitlab/thebitlab.env
+sudo chown -R thebitlab:thebitlab /srv/thebitlab/data/.thebitlab-auth
+sudo chmod 600 /srv/thebitlab/data/.thebitlab-auth/auth.sqlite3
+sudo chmod 640 /etc/thebitlab/thebitlab.env
+sudo chown root:thebitlab /etc/thebitlab/thebitlab.env
+
+# 4. Riavvia
+sudo systemctl start thebitlab
+```
 
 ---
 
@@ -591,8 +785,9 @@ sudo apt update && sudo apt upgrade   # aggiornamenti manuali
 | `E:\thebitpoetslogo\site\` | sorgenti della landing (index.html, assets, favicon) |
 | `E:\thebitpoetslogo\mockups\` | bozze (v5 spray animata, v6 finale, ecc.) |
 | `E:\.thebitlab-secrets\hetzner\` | chiave SSH + Origin cert/key (exFAT: protetti solo da passphrase) |
-| `C:\Users\antonio\.thebitlab-secrets\hetzner\` | copia di lavoro chiave SSH (NTFS, ACL restrittivi) |
+| `C:\Users\antonio\.thebitlab-secrets\hetzner\` | copia di lavoro chiave SSH (NTFS, ACL restrittivi), teacher token, passphrase backup |
 | `C:\Users\antonio\.thebitlab-secrets\github-app\` | segreti GitHub App TheBitLab (runtime token, private key) |
+| `C:\Users\antonio\.thebitlab-secrets\google-oauth-client.json` | client OAuth 2.0 Google (uso deploy) |
 
 ### Sul server `thebitlab-prod-1` (91.98.123.183)
 
@@ -600,9 +795,22 @@ sudo apt update && sudo apt upgrade   # aggiornamenti manuali
 |---|---|
 | `/etc/ssl/thebitlab/` | Origin Certificate + chiave (root, 600) |
 | `/etc/nginx/sites-available/thebitlab.conf` | vhost app.thebitpoets.com |
+| `/etc/nginx/sites-available/status.thebitlab.conf` | vhost status.thebitpoets.com |
+| `/etc/systemd/system/thebitlab.service` | unit systemd dell'app |
+| `/etc/thebitlab/thebitlab.env` | variabili d'ambiente (teacher token, OAuth, segreti CAS) |
+| `/etc/thebitlab/backup-passphrase` | passphrase cifratura backup (600, thebitlab) |
 | `/etc/ssh/sshd_config.d/90-thebitlab-hardening.conf` | hardening SSH |
 | `/etc/sudoers.d/thebitlab` | sudo NOPASSWD per automazione |
+| `/opt/thebitlab/repo/` | checkout pinnato del repository 2cornot2c |
+| `/opt/thebitlab/venv/` | virtualenv Python con dipendenze auth |
+| `/opt/thebitlab/bin/backup.sh` | script backup giornaliero |
+| `/srv/thebitlab/data/` | data root dell'app (SQLite, lock) |
+| `/srv/backups/repo/` | clone del repo GitHub con backup cifrati |
+| `/srv/backups/backup.log` | log esecuzioni backup |
+| `/srv/uptime-kuma/data/` | dati persistenti Uptime Kuma |
 | `/home/thebitlab/` | home utente operativo |
+| `/home/thebitlab/.ssh/backup-deploy` | chiave SSH per push backup su GitHub |
+| `/home/thebitlab/.thebitlab-secrets/github-app/` | runtime.json + private-key.pem GitHub App |
 
 **Regole d'oro**: mai incollare in chat chiavi private, passphrase, token,
 DS/digest DNSSEC. Le chiavi pubbliche e gli IP pubblici invece sì.
@@ -611,10 +819,13 @@ DS/digest DNSSEC. Le chiavi pubbliche e gli IP pubblici invece sì.
 
 ## 10. Prossimi passi
 
-1. **Deploy dell'applicazione TheBitLab** sulla VPS:
-   checkout a commit pinnato, venv Python, segreti GitHub App trasferiti
-   via SCP, servizio systemd con limiti, smoke test end-to-end.
-2. Snapshot Hetzner post-deploy ("golden state").
-3. Resize a CX33 quando disponibile (o se il carico lo richiede).
-4. Pulizia record obsoleti (TXT placeholder OVH, CNAME ftp).
-5. Backup applicativo (SQLite + config) con retention definita.
+- [x] Deploy dell'applicazione TheBitLab sulla VPS
+- [x] Snapshot Hetzner post-deploy ("golden state")
+- [x] Monitoraggio Uptime Kuma + status page pubblica
+- [x] Backup applicativo cifrato con retention e cron
+- [ ] Test login Google reale con un account personale → verificare utente `pending`
+- [ ] Ambiente di staging su porta secondaria per test futuri
+- [ ] Resize a CX33 quando disponibile (o se il carico lo richiede)
+- [ ] Pulizia record obsoleti (TXT placeholder OVH, CNAME ftp)
+- [ ] Sostituire la chiave SSH di backup da "account personale" a deploy key
+      del solo repo `thebitlab-backups` (quando abilitato)
