@@ -112,6 +112,7 @@ class TuiPairingClient:
             request = urllib.request.Request(
                 self.server_url + "/auth/tui/pairings",
                 data=b"",
+                headers={"Content-Length": "0"},
                 method="POST",
             )
             try:
@@ -193,6 +194,7 @@ class TuiPairingClient:
                     headers={
                         "Authorization": authorization,
                         "X-TUI-Logout-Proof": credential.logout_proof,
+                        "Content-Length": "0",
                     },
                     method="POST",
                 )
