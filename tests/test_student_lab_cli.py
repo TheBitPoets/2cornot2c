@@ -2151,6 +2151,41 @@ def test_open_editor_reports_missing_editor(monkeypatch, tmp_path) -> None:
     assert "Nessun editor disponibile" in message
 
 
+def test_open_terminal_prefers_windows_terminal_on_windows(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.setattr(student_lab_cli.os, "name", "nt")
+    calls = []
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: str(tmp_path / name) if name == "wt" else None)
+    monkeypatch.setattr(student_lab_cli.subprocess, "Popen", lambda args: calls.append(args))
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is True
+    assert calls == [[str(tmp_path / "wt"), "-d", str(workspace.resolve())]]
+
+
+def test_open_terminal_falls_back_to_cmd_on_windows(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.setattr(student_lab_cli.os, "name", "nt")
+    calls = []
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: None)
+    monkeypatch.setattr(student_lab_cli.subprocess, "Popen", lambda args: calls.append(args))
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is True
+    assert calls[0][0] == "cmd"
+    assert calls[0][1] == "/k"
+
+
+def test_open_terminal_rejects_missing_path(tmp_path) -> None:
+    ok, message = student_lab_cli.open_terminal(str(tmp_path / "missing"))
+    assert ok is False
+    assert "non disponibile" in message
+
+
 def test_truncate_keeps_short_text_and_clips_long_text() -> None:
     assert student_lab_cli.truncate("abc", 5) == "abc"
     assert student_lab_cli.truncate("abcdef", 5) == "ab..."

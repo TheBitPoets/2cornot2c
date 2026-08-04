@@ -703,7 +703,7 @@ def render_utui_detail_commands() -> str:
     return "\n".join(
         (
             "Navigazione: j = scorri giu | k = scorri su | l = modifica layout",
-            "Azioni: e = test/report | t = tentativi | a = aiuto | o = workspace | v = editor",
+            "Azioni: e = test/report | t = tentativi | a = aiuto | o = workspace | v = editor | c = terminale",
             "Altri: h = storico aiuti | b/invio = lista | q = esci",
         )
     )
@@ -1451,6 +1451,57 @@ def _first_openable_source(workspace: Path) -> Path | None:
     return None
 
 
+def open_terminal(path_value: str, root: Path = PROJECT_ROOT) -> tuple[bool, str]:
+    """Open a terminal in the workspace directory.
+
+    On Windows prefer Windows Terminal (`wt -d <dir>`); fall back to cmd.
+    On macOS open Terminal.app; on Linux try common terminal emulators.
+    """
+
+    raw_path = Path(path_value)
+    path = raw_path if raw_path.is_absolute() else (root / raw_path).resolve(strict=False)
+    if not path.is_dir():
+        return False, "Workspace non disponibile."
+
+    if os.name == "nt":
+        wt = shutil.which("wt") or shutil.which("wt.exe")
+        if wt:
+            try:
+                subprocess.Popen([wt, "-d", str(path)])
+                return True, "Terminale Windows aperto."
+            except OSError as error:
+                return False, f"Terminale non avviabile: {error}"
+        try:
+            subprocess.Popen(["cmd", "/k", f"cd /d {path}"])
+            return True, "Prompt dei comandi aperto."
+        except OSError as error:
+            return False, f"Terminale non avviabile: {error}"
+
+    if sys.platform == "darwin":
+        try:
+            subprocess.Popen(["open", "-a", "Terminal", str(path)])
+            return True, "Terminale aperto."
+        except OSError as error:
+            return False, f"Terminale non avviabile: {error}"
+
+    candidates = [
+        ["gnome-terminal", "--working-directory", str(path)],
+        ["konsole", "--workdir", str(path)],
+        ["xfce4-terminal", "--working-directory", str(path)],
+        ["kitty", "--directory", str(path)],
+        ["alacritty", "--working-directory", str(path)],
+        ["xterm", "-cd", str(path)],
+    ]
+    for command in candidates:
+        if shutil.which(command[0]):
+            try:
+                subprocess.Popen(command)
+                return True, f"Terminale aperto ({command[0]})."
+            except OSError:
+                continue
+    return False, "Nessun terminale disponibile."
+
+
 def open_editor(
     workspace_path: str,
     source_name: str = "",
@@ -1751,6 +1802,15 @@ def run_tui(
                     root=root,
                 )
                 print_fn(message)
+                input_fn("Premi invio per continuare...")
+                continue
+            if action == "c":
+                workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+                ok, message = open_terminal(clean_text(workspace.get("path"), ""), root=root)
+                if not ok:
+                    print_fn(message or "Terminale non disponibile.")
+                else:
+                    print_fn(message)
                 input_fn("Premi invio per continuare...")
                 continue
             if action in {"l", "layout"}:
