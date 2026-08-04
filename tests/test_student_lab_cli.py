@@ -2157,11 +2157,11 @@ def test_windows_terminal_command_prefers_wt(monkeypatch, tmp_path) -> None:
     wt_path = str(tmp_path / "wt")
     monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: wt_path if name == "wt" else None)
 
-    command, kwargs, message = student_lab_cli._windows_terminal_command(workspace)
+    command, kwargs, name = student_lab_cli._windows_terminal_command(workspace)
 
     assert command == [wt_path, "-d", str(workspace.resolve())]
     assert kwargs == {}
-    assert "Windows" in message
+    assert name == "windows-terminal"
 
 
 def test_windows_terminal_command_falls_back_to_cmd(monkeypatch, tmp_path) -> None:
@@ -2169,20 +2169,22 @@ def test_windows_terminal_command_falls_back_to_cmd(monkeypatch, tmp_path) -> No
     workspace.mkdir()
     monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: None)
 
-    command, kwargs, message = student_lab_cli._windows_terminal_command(workspace)
+    command, kwargs, name = student_lab_cli._windows_terminal_command(workspace)
 
     assert command == ["cmd", "/k"]
     assert kwargs == {"cwd": str(workspace.resolve())}
+    assert name == "cmd"
 
 
 def test_macos_terminal_command_uses_cwd(tmp_path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
 
-    command, kwargs, message = student_lab_cli._macos_terminal_command(workspace)
+    command, kwargs, name = student_lab_cli._macos_terminal_command(workspace)
 
     assert command == ["open", "-a", "Terminal", "."]
     assert kwargs == {"cwd": str(workspace.resolve())}
+    assert name == "Terminal"
 
 
 def test_linux_terminal_commands_include_common_emulators(tmp_path) -> None:
@@ -2218,6 +2220,7 @@ def test_open_terminal_runs_windows_command(monkeypatch, tmp_path) -> None:
     ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
 
     assert ok is True
+    assert "windows-terminal" in message
     assert calls == [([str(tmp_path / "wt"), "-d", str(workspace.resolve())], {})]
 
 
@@ -2235,7 +2238,28 @@ def test_open_terminal_runs_macos_command(monkeypatch, tmp_path) -> None:
     ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
 
     assert ok is True
+    assert "Terminal" in message
     assert calls == [(["open", "-a", "Terminal", "."], {"cwd": str(workspace.resolve())})]
+
+
+def test_open_terminal_runs_linux_command(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    calls = []
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "posix")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: name == "xfce4-terminal")
+    monkeypatch.setattr(
+        student_lab_cli.subprocess,
+        "Popen",
+        lambda args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is True
+    assert "xfce4-terminal" in message
+    assert calls[0][0] == ["xfce4-terminal", "--working-directory", str(workspace.resolve())]
+    assert calls[0][1]["cwd"] == str(workspace.resolve())
 
 
 def test_open_terminal_reports_no_linux_terminal(monkeypatch, tmp_path) -> None:
@@ -2248,6 +2272,23 @@ def test_open_terminal_reports_no_linux_terminal(monkeypatch, tmp_path) -> None:
 
     assert ok is False
     assert "Nessun terminale disponibile" in message
+
+
+def test_open_terminal_reports_subprocess_error(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.setattr(student_lab_cli, "_terminal_family", lambda: "nt")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: str(tmp_path / name) if name == "wt" else None)
+
+    def failing_popen(*args, **kwargs):
+        raise OSError("nope")
+
+    monkeypatch.setattr(student_lab_cli.subprocess, "Popen", failing_popen)
+
+    ok, message = student_lab_cli.open_terminal(str(workspace), root=tmp_path)
+
+    assert ok is False
+    assert "Terminale non avviabile" in message
 
 
 def test_truncate_keeps_short_text_and_clips_long_text() -> None:

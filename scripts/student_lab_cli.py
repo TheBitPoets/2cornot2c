@@ -1455,13 +1455,13 @@ def _first_openable_source(workspace: Path) -> Path | None:
 def _windows_terminal_command(path: Path) -> tuple[list[str], dict[str, str], str]:
     wt = shutil.which("wt") or shutil.which("wt.exe")
     if wt:
-        return [wt, "-d", str(path)], {}, "Terminale Windows aperto."
+        return [wt, "-d", str(path)], {}, "windows-terminal"
     # /k keeps the window open after changing directory.
-    return ["cmd", "/k"], {"cwd": str(path)}, "Prompt dei comandi aperto."
+    return ["cmd", "/k"], {"cwd": str(path)}, "cmd"
 
 
 def _macos_terminal_command(path: Path) -> tuple[list[str], dict[str, str], str]:
-    return ["open", "-a", "Terminal", "."], {"cwd": str(path)}, "Terminale aperto."
+    return ["open", "-a", "Terminal", "."], {"cwd": str(path)}, "Terminal"
 
 
 def _linux_terminal_commands(path: Path) -> list[tuple[list[str], dict[str, str], str]]:
@@ -1477,7 +1477,6 @@ def _linux_terminal_commands(path: Path) -> list[tuple[list[str], dict[str, str]
 
 def _terminal_family() -> str:
     """Return the current platform family for terminal selection."""
-
     if os.name == "nt":
         return "nt"
     if sys.platform == "darwin":
@@ -1499,24 +1498,22 @@ def open_terminal(path_value: str, root: Path = PROJECT_ROOT) -> tuple[bool, str
 
     family = _terminal_family()
     if family == "nt":
-        command, kwargs, message = _windows_terminal_command(path)
+        command, kwargs, name = _windows_terminal_command(path)
     elif family == "darwin":
-        command, kwargs, message = _macos_terminal_command(path)
-    elif family == "posix":
-        for command, kwargs, message in _linux_terminal_commands(path):
+        command, kwargs, name = _macos_terminal_command(path)
+    else:
+        for command, kwargs, name in _linux_terminal_commands(path):
             if shutil.which(command[0]):
                 try:
                     subprocess.Popen(command, **kwargs)
-                    return True, f"Terminale aperto ({message})."
+                    return True, f"Terminale aperto ({name})."
                 except OSError:
                     continue
         return False, "Nessun terminale disponibile."
-    else:
-        return False, "Piattaforma non supportata."
 
     try:
         subprocess.Popen(command, **kwargs)
-        return True, message
+        return True, f"Terminale aperto ({name})."
     except OSError as error:
         return False, f"Terminale non avviabile: {error}"
 
