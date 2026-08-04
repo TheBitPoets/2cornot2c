@@ -284,7 +284,8 @@ Comandi disponibili nella TUI minima:
 Nel dettaglio della consegna i comandi sono divisi in:
 
 - azioni principali: `e` esegue il runner e salva il report, `t` mostra lo storico e seleziona il tentativo
-  definitivo, `a` registra una richiesta di aiuto, `o` apre la cartella workspace, `v` apre l'editor;
+  definitivo, `a` registra una richiesta di aiuto, `o` apre la cartella workspace, `v` apre l'editor,
+  `c` apre un terminale nel workspace;
 - altri comandi: `h` mostra lo storico aiuti, `b` o invio torna alla lista, `q` esce.
 - navigazione `utui`: `j` scorre i pannelli verso il basso e `k` verso l'alto.
 
@@ -302,7 +303,11 @@ Il comando `o` apre la cartella del workspace. Senza configurazione usa il file 
 (Esplora Risorse su Windows). Se si vuole aprire la cartella direttamente in un editor che lo supporta
 (VS Code, VSCodium, Cursor, Zed, ...), impostare `THEBITLAB_WORKSPACE_EDITOR`.
 
-Per una guida dettagliata alla configurazione di editor diversi, inclusi VS Code, Notepad++ e VSCodium,
+Il comando `c` apre un terminale nella cartella del workspace. Su Windows preferisce Windows Terminal
+(`wt -d <cartella>`); se non e' installato apre il Prompt dei comandi. Da li lo studente puo' eseguire
+comandi come `code .` per avviare VS Code o `python main.py` per provare il programma.
+
+Per una guida dettagliata alla configurazione di editor diversi, inclusi VS Code, VSCodium, Notepad++ e VSCodium,
 vedi [TUI_EDITOR_SETUP.md](TUI_EDITOR_SETUP.md).
 
 Il comando `l` apre il layout della vista consegna. Ogni sezione del dettaglio diventa un pannello separato;
