@@ -143,14 +143,14 @@ Quando il compito termina o raggiunge un punto naturale di interruzione:
 7. mostra un riepilogo conciso;
 8. dichiara l'unità terminata o sospesa;
 9. avvisa che è opportuno chiudere la sessione;
-10. indica come avviare una nuova sessione e fornisci il prompt minimo;
+10. indica come avviare una nuova sessione, fornisci il prompt minimo e suggerisci un nome per la nuova sessione;
 11. fermati.
 
 Il messaggio finale deve contenere un avviso chiaramente visibile equivalente a:
 
 > **STOP DI SESSIONE — L'unità di lavoro è terminata e il checkpoint è stato aggiornato. Per evitare ulteriore consumo di token e Context Caching, chiudi ora questa sessione. Per il prossimo compito apri una nuova sessione, fai leggere le regole operative e il checkpoint, quindi lascia che vengano consultati soltanto i file ulteriori realmente necessari.**
 
-Indica inoltre percorso del checkpoint, stato, test, problemi aperti, comando di nuova sessione se noto e prompt minimo di ripresa. Prompt predefinito:
+Indica inoltre percorso del checkpoint, stato, test, problemi aperti, comando di nuova sessione se noto, prompt minimo di ripresa e un nome suggerito per la nuova sessione. Presenta il nome in modo chiaramente identificabile, ad esempio `Nome sessione suggerito: <nome breve e descrittivo>`, e sceglilo in base al prossimo passo riportato nel checkpoint. Prompt predefinito:
 
 > Leggi il file canonico delle regole operative e CHECKPOINT.md. Verifica branch, worktree e stato Git. Riprendi dal prossimo passo indicato nel checkpoint. Consulta inizialmente i file segnalati nel checkpoint e amplia le letture soltanto quando necessario per la correttezza.
 
