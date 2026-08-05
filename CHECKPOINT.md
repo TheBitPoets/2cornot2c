@@ -1,60 +1,51 @@
 # Checkpoint operativo
 
-- **Data/ora:** 2026-08-05T19:43:34+02:00
-- **Obiettivo:** estendere la procedura di fine attività affinché, oltre al prompt minimo, suggerisca il nome della nuova sessione.
-- **Stato:** completato; modifica committata e pubblicata sulla PR #676.
-- **Criterio di completamento:** requisito esplicito presente nella procedura e nei contenuti obbligatori del messaggio finale, checkpoint aggiornato, nessun file estraneo incluso.
+- **Data/ora:** 2026-08-06T00:36:22+02:00
+- **Obiettivo:** applicare alla PR #676 il protocollo di review autonoma con finding inline e merge dopo due round consecutivi puliti.
+- **Stato:** parziale; round 1 completato con un finding, finding corretto e sequenza pulita azzerata a `0/2`.
+- **Criterio di completamento:** due review indipendenti consecutive senza finding sullo stesso HEAD, requisiti GitHub soddisfatti e PR unita.
 
-## Risultato
+## Risultato e decisioni
 
-- Creato `AGENTS.md`, context file canonico specifico del repository e caricato automaticamente da pi alle nuove sessioni, salvo `--no-context-files`.
-- Aggiunta la sezione `Politica per token, contesto, qualità e durata delle sessioni` con 22 aree operative: contesto sufficiente, unità coerenti, memoria persistente, letture/output/retry, sub-agent, budget, checkpoint, avvio/stop, protezione dai nuovi compiti, test, architettura e sicurezza.
-- La procedura di fine attività richiede ora anche un nome breve e descrittivo per la nuova sessione, scelto in base al prossimo passo del checkpoint e mostrato come `Nome sessione suggerito: ...`.
-- Creata e pubblicata la modifica canonica nel commit `e93fbdcd` (`docs: suggest next pi session name`).
-- Nessun `AGENTS.md`/`CLAUDE.md` globale, negli antenati o preesistente nel repository è stato trovato; nessun override context in `.pi/settings.json` è presente.
-- La precedenza effettiva è: istruzioni di sistema/utente; context file globali e degli antenati concatenati; `AGENTS.md` del repository. Pi richiede `/reload` o una nuova sessione per ricaricare un context file modificato durante una sessione già attiva.
-- Creato il commit `2e33fb09` (`docs: add pi agent session policy`), pubblicato il branch e aperta la PR [#676](https://github.com/TheBitPoets/2cornot2c/pull/676).
+- Le verifiche di stato delle sessioni precedenti non erano review complete e non contano come round.
+- **Round 1:** esaminato read-only l'intero diff `origin/main...ac1558a6`; trovato un finding P1: mancava nella policy il protocollo permanente di review/merge delle PR.
+- Finding pubblicato inline su `AGENTS.md`: [discussion_r3724548398](https://github.com/TheBitPoets/2cornot2c/pull/676#discussion_r3724548398).
+- Correzione applicata in `AGENTS.md`, sezione 18: un round completo per sessione, finding inline, reset dopo fix/commit, merge dopo due round puliti sullo stesso HEAD e controlli finali obbligatori.
+- La regola dei due round è stata richiesta esplicitamente dall'utente ed è ora documentazione canonica; non era presente nelle istruzioni pi/Codex caricate.
+- Ogni nuovo commit sulla PR azzera la sequenza; gli aggiornamenti locali non committati del checkpoint non cambiano lo SHA esaminato.
 
 ## File
 
-- **Creati e tracciati nella PR:** `AGENTS.md`, `CHECKPOINT.md`.
-- **Modificati in questa unità:** `AGENTS.md`, `CHECKPOINT.md`; nessun altro file.
+- **Modificati:** `AGENTS.md`, `CHECKPOINT.md`.
+- **Estranei e intatti:** `A…`, `F…`, `G…`, `T…`, `doc/ideas/learning-lab-project-plan-v2-federated-knowledge.md`.
 - **Documentazione canonica aggiornata:** `AGENTS.md`.
 
 ## Verifiche
 
-- Consultata la documentazione pi canonica: `README.md`, `docs/usage.md`, `docs/quickstart.md`, `docs/settings.md`, `docs/sessions.md`, `docs/compaction.md`.
-- Ricerca mirata dei context file nei percorsi globali, antenati e repository: nessun file preesistente.
-- Verificata la presenza di tutte le 22 intestazioni e delle clausole `STOP DI SESSIONE` e `CONTINUA NELLA STESSA SESSIONE` con `rg`.
-- Rilette soltanto la nuova sezione e le righe circostanti.
-- Controllo mirato Python su UTF-8, newline finale, whitespace, 22 sezioni e clausole obbligatorie: superato.
-- Verificati staging e diffstat prima del commit: inclusi soltanto `AGENTS.md` e `CHECKPOINT.md`.
-- Verificati autenticazione GitHub, push e metadati/body della PR #676.
-- Alla ripresa, `gh pr view 676` conferma PR `OPEN`, `CLEAN`, senza check configurati, review o commenti.
-- Verifica mirata con `rg` della nuova clausola: superata in `AGENTS.md` e documentata nel checkpoint.
-- `git diff --check` e controllo del diff in staging: superati; presenti soltanto avvisi informativi LF/CRLF.
-- Commit della modifica canonica limitato al solo `AGENTS.md`; commit finale limitato al solo `CHECKPOINT.md`; artefatti estranei esclusi.
-- Test applicativi non eseguiti: sono cambiati soltanto file Markdown operativi.
+- PR #676 verificata aperta, `MERGEABLE/CLEAN`, testa iniziale `ac1558a6`, senza check o feedback preesistenti.
+- Diff completo dei 274 contenuti iniziali della PR esaminato; comportamento dei context file confrontato con il `README.md` canonico di pi.
+- Controllo Python su UTF-8, newline finale, whitespace, 22 sezioni e clausole obbligatorie incluse quelle PR-review: superato.
+- `git diff --check`: superato; soli avvisi informativi LF/CRLF.
+- Test applicativi non eseguiti: modifiche esclusivamente Markdown operative.
 
-## Stato Git
+## Stato Git e GitHub
 
 - **Repository/worktree:** `E:/dev/2cornot2c`.
-- **Branch:** `docs/pi-session-budget-policy`, creata da `origin/main`.
-- **Base:** `origin/main` a `da58d9f1`.
-- **Commit della policy:** `2e33fb09`; precedente checkpoint `3a059be0`; aggiunta nome sessione `e93fbdcd`; branch remoto `origin/docs/pi-session-budget-policy`.
-- **PR:** #676, aperta e mergeabile verso `main`; nessun check, review o commento presente alla verifica finale.
-- Restano non tracciati e intenzionalmente intatti i file estranei `A…`, `F…`, `G…`, `T…` e `doc/ideas/learning-lab-project-plan-v2-federated-knowledge.md`.
-- Nessun processo temporaneo è stato avviato o lasciato attivo.
+- **Branch:** `docs/pi-session-budget-policy`, PR [#676](https://github.com/TheBitPoets/2cornot2c/pull/676) verso `main`.
+- **Round puliti consecutivi:** `0/2`; il prossimo round deve fissare e registrare il nuovo HEAD remoto.
+- Nessun processo temporaneo o test in background deve restare attivo.
 
-## Problemi aperti e prossimo passo
+## Prossimo passo
 
-- Nessun problema tecnico aperto nell'unità corrente.
-- Attendere review della PR #676; al momento non risultano workflow CI associati.
-- Non aggiungere agli eventuali commit successivi gli artefatti non tracciati estranei.
-- Una nuova sessione caricherà automaticamente `AGENTS.md`; usare `/reload` soltanto se si resta nello stesso processo pi.
+1. Verificare branch, worktree, stato Git, testa remota della PR e thread inline.
+2. Confermare che il finding sia corretto sul nuovo HEAD e risolvere la discussione; questa verifica da sola non conta come round.
+3. Eseguire **round 2 cronologico / primo round pulito candidato**: review indipendente e completa di `origin/main...HEAD`, in una nuova sessione e sullo SHA fissato.
+4. Se emerge un finding, pubblicarlo inline, correggerlo e riportare il conteggio a `0/2`; se non emerge, registrare `1/2` senza creare commit che cambi la PR.
+5. Non eseguire il merge finché una successiva sessione non completa il secondo round pulito sul medesimo SHA.
 
 ## File minimi per la ripresa
 
-- `AGENTS.md`
+- `AGENTS.md`, sezione 18
 - `CHECKPOINT.md`
-- Stato Git (`git status --short --branch`)
+- Diff completo `origin/main...HEAD`
+- Stato PR #676, inclusi thread inline e check

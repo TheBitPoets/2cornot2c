@@ -184,6 +184,14 @@ Dopo lo stop non proporre funzionalità, non iniziare miglioramenti, scansioni, 
 - Non eseguire l'intera suite dopo ogni piccola modifica. Segui di norma: controllo statico mirato, test specifico, test del modulo, suite più ampia se necessaria, verifica finale proporzionata.
 - Non dichiarare tutto funzionante sulla base di controlli parziali.
 
+Per le unità di lavoro pubblicate tramite pull request e affidate all'agente fino al merge:
+
+- Nelle sessioni successive non limitarti a controllare stato, review esterne o CI: esegui un round di review indipendente, completo e read-only dell'intero diff rispetto alla base, fissando lo SHA esaminato. Un controllo di stato o la sola verifica dei fix non conta come round.
+- Esegui di norma un solo round completo per sessione, con contesto nuovo. Pubblica ogni finding concreto e azionabile come commento inline sulla riga pertinente; usa un commento generale soltanto quando non esiste un ancoraggio significativo.
+- Correggi tutti i finding in scope, esegui le verifiche proporzionate, crea e pubblica i commit autorizzati dall'incarico sulla PR e risolvi le relative discussioni. Ogni fix o nuovo commit azzera la sequenza di round puliti.
+- Considera la PR pronta al merge soltanto dopo due round completi consecutivi senza finding sullo stesso HEAD. Registra nel checkpoint, per ogni round, SHA, risultato, verifiche e conteggio corrente dei round puliti.
+- Prima del merge verifica nuovamente che HEAD non sia cambiato, che la PR sia aperta e mergeabile, che non esistano check obbligatori falliti o pendenti, feedback nuovi o discussioni irrisolte. Se tutti i requisiti sono soddisfatti, esegui il merge con la strategia prevista dal repository e verificane l'esito; in caso contrario non unire e documenta il blocco.
+
 ### 19. Qualità architetturale
 
 - Prima di modificare componenti condivisi, contratti, API o formati persistenti, consulta la documentazione canonica, individua gli utilizzatori, valuta compatibilità e impatto, leggi i file necessari e aggiorna ADR o specifiche quando richiesto.
