@@ -66,6 +66,7 @@ I path sorgente sono:
 - **relativi** alla rispettiva root (bundle o directory dell'attività);
 - privi di `..` o segmenti che escono dalla root;
 - composti solo da caratteri sicuri nel manifest: `A-Z`, `a-z`, `0-9`, `_`, `-`, `/`, `.`; il separatore logico è sempre `/`;
+- privi di componenti che terminano con punto o spazio, perché Windows li rende alias del nome senza suffisso;
 - privi di symlink, junction e mount point;
 - canonicalizzati prima dell'accesso al filesystem.
 
@@ -76,12 +77,12 @@ L'algoritmo seguente si applica ai path sorgente usando come `bundle_root` la ri
 1. Ottieni `bundle_root_abs = os.path.abspath(bundle_root)` e verifica con `lstat` che non sia un symlink/junction.
 2. Sul path grezzo, separa i segmenti su `/` e rifiuta ogni segmento vuoto, `.` o `..`.
 3. Normalizza Unicode del path in NFC.
-4. Rifiuta il path se supera `PATH_MAX`/`MAX_PATH`, se `os.path.isabs()` è vero, se contiene il carattere due punti (`:`) (vietato anche in nomi altrimenti legittimi per prevenire drive letter/alternate data streams NTFS), se è un path UNC, o se contiene componenti proibiti. Un componente proibito è un segmento di directory che corrisponde esattamente a un nome riservato (es. `.git`, `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`) o a quel nome seguito da un'estensione (es. `CON.txt`), non una sottostringa. I nomi riservati su Windows vanno confrontati case-insensitively. `.git` è proibito perché il bundle non deve sovrascrivere o esporre metadati Git del repo sorgente.
+4. Rifiuta il path se supera `PATH_MAX`/`MAX_PATH`, se `os.path.isabs()` è vero, se contiene il carattere due punti (`:`) (vietato anche in nomi altrimenti legittimi per prevenire drive letter/alternate data streams NTFS), se è un path UNC, se un componente termina con punto o spazio, o se contiene componenti proibiti. Un componente proibito è un segmento di directory che corrisponde esattamente a un nome riservato (es. `.git`, `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`) o a quel nome seguito da un'estensione (es. `CON.txt`), non una sottostringa. I nomi riservati su Windows vanno confrontati case-insensitively. `.git` è proibito perché il bundle non deve sovrascrivere o esporre metadati Git del repo sorgente.
 5. Rifiuta il path se contiene `\` o qualsiasi separatore diverso da `/`.
 6. `normalized = posixpath.normpath(path)` mantenendo `/`.
 7. Dopo la normalizzazione, rifiuta il path se inizia con `..` o con `/`, o se contiene segmenti `.`/`..` (difesa in profondità).
 8. Verifica che `normalized` usi solo i caratteri sicuri elencati sopra.
-9. Prima di scrivere, verifica l'unicità di tutti i path finali dopo normalizzazione Unicode NFC e case-folding; collisioni tra file locali, importati o override falliscono senza sovrascrittura.
+9. Prima di scrivere, verifica l'unicità di tutti i path finali con una chiave portabile per componente: normalizzazione Unicode NFC, case-folding e rimozione difensiva di punti/spazi finali. Collisioni tra file locali, importati o override falliscono senza sovrascrittura; la rimozione nella chiave non sostituisce il rifiuto lessicale del punto/spazio finale.
 10. `candidate = bundle_root_abs / normalized`.
 11. Apri il percorso con un walk componente per componente usando `openat`+`O_NOFOLLOW`/`O_DIRECTORY` (Linux) o equivalente API nativa per evitare TOCTOU. Per ogni componente rifiuta anche mount/bind mount tramite `os.path.ismount()` e verifica di `/proc/self/mountinfo`; su Windows usa `FILE_FLAG_OPEN_REPARSE_POINT` e rifiuta reparse point e volume mount point.
 12. Verifica che l'oggetto aperto sia un file regolare (`S_ISREG`) quando il manifest si aspetta un file, o una directory quando si aspetta una directory.

@@ -240,6 +240,8 @@ def test_bundle_implementation_security_sections_exist() -> None:
         "assets[].target_path",
         "destinazione relativa alla root dello scaffold studente",
         "target riservati, duplicati",
+        "componenti che terminano con punto o spazio",
+        "rimozione difensiva di punti/spazi finali",
         "GIT_ASKPASS",
         "HTML, SVG",
         "convertirlo deterministicamente in PNG/WebP",
