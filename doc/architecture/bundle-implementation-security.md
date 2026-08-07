@@ -57,15 +57,21 @@ Il comando deve essere invocato tramite `subprocess` con lista di argomenti (mai
 
 ### Principi
 
-Tutti i path transitivi referenziati in `bundle.json`, `index.json` e negli `activity.json` (inclusi `assets[].path` e `assets[].target_path`) devono seguire le stesse regole. I path degli asset di un'attività si risolvono rispetto alla directory che contiene il relativo `activity.json`; non possono uscire da quella root:
+Tutti i path che identificano file dentro `bundle.json` e `index.json` devono seguire le stesse regole ed essere confinati alla root del bundle. Negli `activity.json`, `assets[].path` è invece una sorgente relativa alla directory che contiene il relativo `activity.json` e non può uscire da quella root.
 
-- **relativi** alla root del bundle;
+`assets[].target_path` non identifica un file nel bundle: è la destinazione relativa alla root dello scaffold studente. Deve rispettare le stesse regole lessicali di portabilità, ma non va risolto né cercato sotto la directory dell'attività. Prima di scrivere lo scaffold, il generatore canonicalizza ogni target contro la root dello scaffold e rifiuta target riservati, duplicati, equivalenti dopo NFC/case-folding o sovrapposti come file/directory; il walk della destinazione non segue symlink o reparse point.
+
+I path sorgente sono:
+
+- **relativi** alla rispettiva root (bundle o directory dell'attività);
 - privi di `..` o segmenti che escono dalla root;
 - composti solo da caratteri sicuri nel manifest: `A-Z`, `a-z`, `0-9`, `_`, `-`, `/`, `.`; il separatore logico è sempre `/`;
 - privi di symlink, junction e mount point;
 - canonicalizzati prima dell'accesso al filesystem.
 
 ### Algoritmo consigliato
+
+L'algoritmo seguente si applica ai path sorgente usando come `bundle_root` la rispettiva root di confinamento. I target dello scaffold applicano separatamente le regole di destinazione definite sopra.
 
 1. Ottieni `bundle_root_abs = os.path.abspath(bundle_root)` e verifica con `lstat` che non sia un symlink/junction.
 2. Sul path grezzo, separa i segmenti su `/` e rifiuta ogni segmento vuoto, `.` o `..`.

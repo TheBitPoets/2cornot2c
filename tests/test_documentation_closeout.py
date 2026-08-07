@@ -238,6 +238,8 @@ def test_bundle_implementation_security_sections_exist() -> None:
         "egress proxy controllato con DNS pinning",
         "assets[].path",
         "assets[].target_path",
+        "destinazione relativa alla root dello scaffold studente",
+        "target riservati, duplicati",
         "GIT_ASKPASS",
         "HTML, SVG",
         "convertirlo deterministicamente in PNG/WebP",
