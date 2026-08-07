@@ -240,6 +240,8 @@ def test_bundle_implementation_security_sections_exist() -> None:
         "assets[].target_path",
         "GIT_ASKPASS",
         "HTML, SVG",
+        "convertirlo deterministicamente in PNG/WebP",
+        "loader continua a rifiutare `image/svg+xml`",
         "mount/bind mount",
     ):
         assert requirement in spec, requirement

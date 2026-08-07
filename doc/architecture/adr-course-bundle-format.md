@@ -275,7 +275,8 @@ La piattaforma:
 - I release tag definiscono le versioni immutabili del bundle.
 - Limite massimo per singolo file binario: **80 MB** (soglia prudenziale sotto il limite hard di 100 MB di GitHub).
 
-**Pro**: tracciabilità, co-authoring, nessun costo aggiuntivo.  
+**Pro**: tracciabilità, co-authoring, nessun costo aggiuntivo.
+
 **Contro**: non adatto a file media molto grandi oltre il limite fissato; per il pilota i file >80 MB vengono rifiutati e devono passare a object storage. Git LFS non è supportato.
 
 ### 2. Object storage + signed URL (futuro SaaS)
@@ -284,14 +285,16 @@ La piattaforma:
 - TheBitLab server richiede un URL firmato per il download, valido pochi minuti.
 - I media pesanti possono essere serviti da CDN con token di accesso.
 
-**Pro**: scalabilità, adatto a video/slides.  
+**Pro**: scalabilità, adatto a video/slides.
+
 **Contro**: più infrastruttura da gestire.
 
 ### 3. File server con auth (opzione scolastica)
 
 - La scuola ospita un file server (SFTP/WebDAV) e TheBitLab lo interroga con credenziali configurate.
 
-**Pro**: controllo totale da parte della scuola.  
+**Pro**: controllo totale da parte della scuola.
+
 **Contro**: necessita configurazione custom; richiede attenzione a credenziali in chiaro, host key verification, command injection su path e SSRF verso indirizzi interni.
 
 Per il **pilota** si parte con il modello **1** (repo Git privato). I modelli 2 e 3 sono tenuti in considerazione ma non implementati ora.
@@ -476,6 +479,7 @@ Si svilupperà uno strumento da riga di comando (es. `scripts/thebitlab_bundle_b
 - controlla che i file binari non superino gli 80 MB;
 - valida i path (no `..`, no assoluti, caratteri sicuri);
 - genera o aggiorna `index.json` da `bundle.json`;
+- per il pilota, rasterizza in modo deterministico gli SVG sorgente autorizzati in PNG/WebP passivi, riscrive i riferimenti interni e conserva la provenienza sorgente-output; se la conversione sicura non è disponibile, la build fallisce;
 - produce un archivio pronto per la release (`.tar.gz` o directory versionata).
 
 Il CLI vivrà nel repo pubblico `2cornot2c` perché è uno strumento, non un contenuto.
