@@ -97,13 +97,16 @@ def validate_portable_path(path: str) -> list[str]:
 def validate_source_url(url: str) -> list[str]:
     """Validate the provider-independent HTTPS repository URL baseline."""
 
+    errors: list[str] = []
+    if any(ord(character) <= 0x20 or ord(character) == 0x7F for character in url):
+        errors.append("source URL must not contain whitespace or control characters")
     try:
         parsed = urlsplit(url)
         port = parsed.port
     except ValueError:
-        return ["source URL has an invalid port"]
+        errors.append("source URL has an invalid port")
+        return errors
 
-    errors: list[str] = []
     host = parsed.hostname
     if parsed.scheme != "https" or host is None:
         errors.append("source URL must use HTTPS and include a host")
@@ -304,17 +307,30 @@ def _collision_errors(
             seen_local_paths.add(path)
 
     seen: dict[tuple[str, ...], tuple[str, str]] = {}
+    descendant_by_prefix: dict[tuple[str, ...], tuple[str, str]] = {}
     entries = [*target_entries, *(("local content", path) for path in local_paths)]
     for kind, path in entries:
         key = portable_path_key(path)
         previous = seen.get(key)
+        if previous is None:
+            previous = next(
+                (
+                    seen[prefix]
+                    for length in range(1, len(key))
+                    if (prefix := key[:length]) in seen
+                ),
+                None,
+            )
+        if previous is None:
+            previous = descendant_by_prefix.get(key)
         if previous is not None:
             errors.append(
                 f"portable path collision: {previous[0]} {previous[1]!r} and "
                 f"{kind} {path!r}"
             )
-        else:
-            seen[key] = (kind, path)
+        seen.setdefault(key, (kind, path))
+        for length in range(1, len(key)):
+            descendant_by_prefix.setdefault(key[:length], (kind, path))
     return errors
 
 
@@ -649,6 +665,21 @@ def generate_index(
     return _generate_index(bundle, imports)
 
 
+def _json_values_equal(left: Any, right: Any) -> bool:
+    """Compare JSON-like values without Python's bool/integer aliasing."""
+
+    if isinstance(left, Mapping) and isinstance(right, Mapping):
+        return left.keys() == right.keys() and all(
+            _json_values_equal(left[key], right[key]) for key in left
+        )
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(
+            _json_values_equal(left_item, right_item)
+            for left_item, right_item in zip(left, right, strict=True)
+        )
+    return type(left) is type(right) and left == right
+
+
 def validate_bundle(
     bundle: Mapping[str, Any],
     *,
@@ -663,7 +694,7 @@ def validate_bundle(
         return errors
 
     canonical_index = _generate_index(bundle, imports)
-    if index is not None and index != canonical_index:
+    if index is not None and not _json_values_equal(index, canonical_index):
         errors.append("index.json is not the canonical index derived from bundle.json")
     return errors
 

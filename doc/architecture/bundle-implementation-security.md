@@ -85,7 +85,7 @@ L'algoritmo seguente si applica ai path sorgente usando come `bundle_root` la ri
 6. `normalized = posixpath.normpath(path)` mantenendo `/`.
 7. Dopo la normalizzazione, rifiuta il path se inizia con `..` o con `/`, o se contiene segmenti `.`/`..` (difesa in profondità).
 8. Verifica che `normalized` usi solo i caratteri sicuri elencati sopra.
-9. Prima di scrivere, verifica l'unicità di tutti i path finali con una chiave portabile per componente: normalizzazione Unicode NFC, case-folding e rimozione difensiva di punti/spazi finali. Collisioni tra file locali, importati o override falliscono senza sovrascrittura; la rimozione nella chiave non sostituisce il rifiuto lessicale del punto/spazio finale.
+9. Prima di scrivere, verifica l'unicità di tutti i path finali con una chiave portabile per componente: normalizzazione Unicode NFC, case-folding e rimozione difensiva di punti/spazi finali. Collisioni e sovrapposizioni file/directory tra file locali, importati o override falliscono senza sovrascrittura; la rimozione nella chiave non sostituisce il rifiuto lessicale del punto/spazio finale.
 10. `candidate = bundle_root_abs / normalized`.
 11. Apri il percorso con un walk componente per componente usando `openat`+`O_NOFOLLOW`/`O_DIRECTORY` (Linux) o equivalente API nativa per evitare TOCTOU. Per ogni componente rifiuta anche mount/bind mount tramite `os.path.ismount()` e verifica di `/proc/self/mountinfo`; su Windows usa `FILE_FLAG_OPEN_REPARSE_POINT` e rifiuta reparse point e volume mount point.
 12. Verifica che l'oggetto aperto sia un file regolare (`S_ISREG`) quando il manifest si aspetta un file, o una directory quando si aspetta una directory.

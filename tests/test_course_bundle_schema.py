@@ -104,6 +104,50 @@ def test_paths_outside_safe_manifest_alphabet_are_rejected(path: str) -> None:
     assert validate_bundle(bundle)
 
 
+@pytest.mark.parametrize(
+    ("base", "path"),
+    [
+        ("minimal-bundle.json", ["id"]),
+        ("minimal-bundle.json", ["version"]),
+        ("minimal-bundle.json", ["school_year"]),
+        ("minimal-bundle.json", ["language"]),
+        ("minimal-bundle.json", ["platform_min_version"]),
+        ("minimal-bundle.json", ["content", "units", 0, "id"]),
+        ("partial-import-bundle.json", ["imports", 0, "bundle_id"]),
+        ("partial-import-bundle.json", ["imports", 0, "source_url"]),
+        ("partial-import-bundle.json", ["imports", 0, "tag"]),
+        ("partial-import-bundle.json", ["imports", 0, "commit_sha"]),
+    ],
+)
+def test_constrained_manifest_strings_reject_terminal_newlines(
+    base: str, path: list[Any]
+) -> None:
+    bundle = load_json(VALID / base)
+    target: Any = bundle
+    for component in path[:-1]:
+        target = target[component]
+    target[path[-1]] += "\n"
+
+    assert validate_bundle(bundle)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["bundle_id", "version", "source_url", "tag", "expected_commit_sha"],
+)
+def test_constrained_bundle_reference_strings_reject_terminal_newlines(
+    field: str,
+) -> None:
+    reference = load_json(VALID / "bundle-reference.json")
+    reference[field] += "\n"
+
+    assert validate_bundle_reference(reference)
+
+
+def test_source_url_semantics_reject_terminal_newline() -> None:
+    assert validate_source_url("https://github.com/TheBitPoets/course\n")
+
+
 def test_invalid_bundle_reference_fixture_is_rejected() -> None:
     reference = load_json(INVALID / "bundle-reference-short-sha.json")
     errors = validate_bundle_reference(reference)
@@ -241,6 +285,16 @@ def test_stale_index_is_rejected() -> None:
     assert "index.json is not the canonical index derived from bundle.json" in errors
 
 
+def test_boolean_order_is_not_equal_to_canonical_integer_order() -> None:
+    bundle = load_json(VALID / "minimal-bundle.json")
+    index = load_json(VALID / "minimal-index.json")
+    index["units"][0]["order"] = True
+
+    errors = validate_bundle(bundle, index=index)
+
+    assert "index.json is not the canonical index derived from bundle.json" in errors
+
+
 def test_recursive_full_imports_are_composed_before_local_units() -> None:
     leaf = load_json(VALID / "minimal-bundle.json")
     middle = load_json(VALID / "full-import-bundle.json")
@@ -360,6 +414,28 @@ def test_full_import_materialization_collisions_are_rejected() -> None:
     local_errors = validate_bundle(bundle, imported_bundles={source["id"]: source})
     assert any("portable path collision" in error for error in local_errors)
     assert any("reserved .imports namespace" in error for error in local_errors)
+
+
+def test_local_file_directory_path_overlap_is_a_collision() -> None:
+    bundle = load_json(VALID / "minimal-bundle.json")
+    bundle["content"]["units"][0]["materials"].append(
+        "Materials/01-INTRO.md/child.txt"
+    )
+
+    errors = validate_bundle(bundle)
+
+    assert any("portable path collision" in error for error in errors)
+
+
+def test_import_target_file_directory_path_overlap_is_a_collision() -> None:
+    bundle = load_json(VALID / "partial-import-bundle.json")
+    bundle["content"]["units"][0]["materials"].append(
+        "activities/funzioni-base/activity.json/child.txt"
+    )
+
+    errors = validate_bundle(bundle)
+
+    assert any("portable path collision" in error for error in errors)
 
 
 def test_case_only_alias_of_import_target_is_a_collision() -> None:
