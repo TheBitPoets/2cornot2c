@@ -1,0 +1,96 @@
+[
+  {
+    "name": "path-traversal",
+    "base": "minimal-bundle.json",
+    "operation": "set",
+    "path": ["content", "units", 0, "materials", 0],
+    "value": "../secrets.txt",
+    "expected": "'..' component"
+  },
+  {
+    "name": "windows-reserved-name",
+    "base": "minimal-bundle.json",
+    "operation": "set",
+    "path": ["content", "units", 0, "materials", 0],
+    "value": "materials/CON.txt",
+    "expected": "reserved Windows name"
+  },
+  {
+    "name": "trailing-dot",
+    "base": "minimal-bundle.json",
+    "operation": "set",
+    "path": ["content", "units", 0, "materials", 0],
+    "value": "materials/notes./lesson.md",
+    "expected": "ends with a dot or space"
+  },
+  {
+    "name": "trailing-space",
+    "base": "minimal-bundle.json",
+    "operation": "set",
+    "path": ["content", "units", 0, "materials", 0],
+    "value": "materials/notes /lesson.md",
+    "expected": "ends with a dot or space"
+  },
+  {
+    "name": "invalid-slug",
+    "base": "minimal-bundle.json",
+    "operation": "set",
+    "path": ["id"],
+    "value": "TPSI_quarto",
+    "expected": "does not match"
+  },
+  {
+    "name": "invalid-semver",
+    "base": "minimal-bundle.json",
+    "operation": "set",
+    "path": ["version"],
+    "value": "01.0.0",
+    "expected": "does not match"
+  },
+  {
+    "name": "all-and-items",
+    "base": "partial-import-bundle.json",
+    "operation": "set",
+    "path": ["imports", 0, "all"],
+    "value": true,
+    "expected": "not valid under any of the given schemas"
+  },
+  {
+    "name": "missing-target-path",
+    "base": "partial-import-bundle.json",
+    "operation": "delete",
+    "path": ["imports", 0, "items", 0, "target_path"],
+    "expected": "target_path"
+  },
+  {
+    "name": "missing-tag-pin",
+    "base": "partial-import-bundle.json",
+    "operation": "delete",
+    "path": ["imports", 0, "tag"],
+    "expected": "tag"
+  },
+  {
+    "name": "short-sha",
+    "base": "partial-import-bundle.json",
+    "operation": "set",
+    "path": ["imports", 0, "commit_sha"],
+    "value": "01234567",
+    "expected": "does not match"
+  },
+  {
+    "name": "portable-case-collision",
+    "base": "minimal-bundle.json",
+    "operation": "append",
+    "path": ["content", "units", 0, "activities"],
+    "value": "Activities/01-intro/activity.json",
+    "expected": "portable path collision"
+  },
+  {
+    "name": "invalid-local-reference",
+    "base": "partial-import-bundle.json",
+    "operation": "set",
+    "path": ["local_extensions", 0, "ref"],
+    "value": "fondamenti-c::materials/not-imported.md",
+    "expected": "unimported item"
+  }
+]

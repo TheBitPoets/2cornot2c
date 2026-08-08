@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0.0",
+  "id": "tpsi-personalizzato",
+  "version": "1.1.0",
+  "title": "TPSI personalizzato",
+  "school_year": "2026/2027",
+  "target_class": "4^",
+  "language": "it",
+  "authors": [{"name": "Docente TPSI", "role": "editor"}],
+  "license": "proprietary",
+  "price": 1200,
+  "currency": "EUR",
+  "content": {
+    "units": [
+      {
+        "id": "u01-funzioni",
+        "title": "Funzioni personalizzate",
+        "activities": ["activities/funzioni-base/activity.json"],
+        "materials": ["materials/funzioni-personalizzate.md"]
+      }
+    ]
+  },
+  "imports": [
+    {
+      "bundle_id": "fondamenti-c",
+      "version": "1.2.0",
+      "source_type": "git",
+      "source_url": "https://github.com/TheBitPoets/fondamenti-c",
+      "tag": "v1.2.0",
+      "commit_sha": "0123456789abcdef0123456789abcdef01234567",
+      "items": [
+        {
+          "type": "activity",
+          "path": "activities/funzioni/activity.json",
+          "target_path": "activities/funzioni-base/activity.json"
+        },
+        {
+          "type": "material",
+          "path": "materials/funzioni.md",
+          "target_path": "materials/funzioni-base.md",
+          "dependencies": [
+            {
+              "path": "media/funzioni.png",
+              "target_path": "media/imported/funzioni.png"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "local_extensions": [
+    {
+      "ref": "fondamenti-c::materials/funzioni.md",
+      "override_path": "materials/funzioni-personalizzate.md"
+    }
+  ]
+}

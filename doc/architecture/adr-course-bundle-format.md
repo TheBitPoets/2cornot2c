@@ -464,11 +464,15 @@ Il caricamento da repo privato usa la stessa GitHub App/secret runtime già desc
 
 ## Schema JSON formale
 
-Prima di accettare questo ADR verrà definito uno schema JSON per `bundle.json` e `BundleReference` (issue [#675](https://github.com/TheBitPoets/2cornot2c/issues/675)), insieme a fixture valide/non valide. Lo schema verrà usato da:
+I contratti formali JSON Schema Draft 2020-12 sono [`schemas/course-bundle.schema.json`](../../schemas/course-bundle.schema.json) per `bundle.json` e [`schemas/bundle-reference.schema.json`](../../schemas/bundle-reference.schema.json) per il `BundleReference` esterno (issue [#675](https://github.com/TheBitPoets/2cornot2c/issues/675)). Le fixture di conformità sono in [`tests/fixtures/course_bundles/`](../../tests/fixtures/course_bundles/) e vengono eseguite in CI da [`tests/test_course_bundle_schema.py`](../../tests/test_course_bundle_schema.py).
+
+Gli invarianti che attraversano documenti o richiedono una chiave filesystem portabile — collisioni NFC/case-folded, riferimenti degli override, cicli degli import e coerenza dell'indice derivato — sono verificati dal modulo condiviso [`scripts/course_bundle_validation.py`](../../scripts/course_bundle_validation.py), oltre alla validazione strutturale degli schema. Questi contratti verranno usati da:
 
 - una GitHub Action che valida i bundle nei repo dei corsi;
 - il bundle builder CLI locale;
 - la piattaforma TheBitLab durante il caricamento.
+
+L'ADR resta `Proposto` fino al completamento dei due round di review puliti richiesti per accettarlo.
 
 ## Bundle builder CLI
 
