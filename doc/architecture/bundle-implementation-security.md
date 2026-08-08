@@ -8,7 +8,8 @@ Questo documento raccoglie i dettagli tecnici e le contromisure di sicurezza per
 
 - `source_type` ammesso: solo `git` per il pilota.
 - `source_url` deve essere un URL HTTPS pulito del repo, nel formato `https://{host}/{owner_segments...}/{repo}[.git]`. La porta predefinita è solo `443`; porte custom richiedono una regola amministrativa provider-specifica. `owner_segments` è uno o più slug separati da `/` (per GitHub è `owner`, per GitLab può essere `group/subgroup`); `repo` è uno slug. L'URL non deve avere trailing slash, query, fragment né componente userinfo (`user:pass@host`).
-- Sono vietati: `git://`, `git+ssh://`, `ssh://`, formati scp-like (`git@github.com:owner/repo.git`), `file://`, `http://`, indirizzi IP privati, UNC e qualsiasi URL che possa causare SSRF.
+- Sono vietati: `git://`, `git+ssh://`, `ssh://`, formati scp-like (`git@github.com:owner/repo.git`), `file://`, `http://`, host locali o sintatticamente invalidi, indirizzi IP letterali (inclusi privati, loopback, link-local o riservati), UNC e qualsiasi URL che possa causare SSRF.
+- La validazione di conformità condivisa applica la baseline indipendente dal provider: hostname DNS ASCII ben formato con almeno due label, porta assente o `443`, nessuna userinfo/query/fragment. Porte custom, anche se sintatticamente valide, sono rifiutate senza una successiva policy amministrativa provider-specifica; allowlist, risoluzione DNS, controllo degli IP risolti e protezione dal rebinding restano responsabilità del fetcher.
 - Il fetch Git deve passare attraverso un egress proxy controllato con DNS pinning (o meccanismo equivalente che vincoli la connessione all'IP validato) e blocco degli intervalli privati/link-local. La sola risoluzione preventiva dell'hostname non è sufficiente contro DNS rebinding.
 - L'allowlist dei domini/provider è un setting amministrativo lato server, non derivato dai manifest.
 - Ogni `imports[].source_url` è sottoposto alle stesse regole: validazione provider-specifica, allowlist amministrativa, blocco SSRF/DNS rebinding e divieto di userinfo/redirect. Gli import non possono ampliare l'allowlist.
@@ -70,6 +71,8 @@ I path sorgente sono:
 - privi di symlink, junction e mount point;
 - canonicalizzati prima dell'accesso al filesystem.
 
+Il primo componente `.imports` è riservato al builder per gli import completi: manifest, destinazioni di import parziali e override locali non possono dichiarare path finali in quel namespace.
+
 ### Algoritmo consigliato
 
 L'algoritmo seguente si applica ai path sorgente usando come `bundle_root` la rispettiva root di confinamento. I target dello scaffold applicano separatamente le regole di destinazione definite sopra.
@@ -82,7 +85,7 @@ L'algoritmo seguente si applica ai path sorgente usando come `bundle_root` la ri
 6. `normalized = posixpath.normpath(path)` mantenendo `/`.
 7. Dopo la normalizzazione, rifiuta il path se inizia con `..` o con `/`, o se contiene segmenti `.`/`..` (difesa in profondità).
 8. Verifica che `normalized` usi solo i caratteri sicuri elencati sopra.
-9. Prima di scrivere, verifica l'unicità di tutti i path finali con una chiave portabile per componente: normalizzazione Unicode NFC, case-folding e rimozione difensiva di punti/spazi finali. Collisioni tra file locali, importati o override falliscono senza sovrascrittura; la rimozione nella chiave non sostituisce il rifiuto lessicale del punto/spazio finale.
+9. Prima di scrivere, verifica l'unicità di tutti i path finali con una chiave portabile per componente: normalizzazione Unicode NFC, case-folding e rimozione difensiva di punti/spazi finali. Collisioni e sovrapposizioni file/directory tra file locali, importati o override falliscono senza sovrascrittura; la rimozione nella chiave non sostituisce il rifiuto lessicale del punto/spazio finale.
 10. `candidate = bundle_root_abs / normalized`.
 11. Apri il percorso con un walk componente per componente usando `openat`+`O_NOFOLLOW`/`O_DIRECTORY` (Linux) o equivalente API nativa per evitare TOCTOU. Per ogni componente rifiuta anche mount/bind mount tramite `os.path.ismount()` e verifica di `/proc/self/mountinfo`; su Windows usa `FILE_FLAG_OPEN_REPARSE_POINT` e rifiuta reparse point e volume mount point.
 12. Verifica che l'oggetto aperto sia un file regolare (`S_ISREG`) quando il manifest si aspetta un file, o una directory quando si aspetta una directory.

@@ -1,0 +1,29 @@
+{
+  "units": [
+    {
+      "id": "tpsi-quarto-2026-u01-intro-c",
+      "title": "Introduzione al C",
+      "order": 1,
+      "items": [
+        {"type": "activity", "path": ".imports/tpsi-quarto-2026/activities/01-intro/activity.json"},
+        {"type": "material", "path": ".imports/tpsi-quarto-2026/materials/01-intro.md"}
+      ]
+    },
+    {
+      "id": "tpsi-quarto-2026-u02-funzioni",
+      "title": "Funzioni in C",
+      "order": 5,
+      "items": [
+        {"type": "handout", "path": ".imports/tpsi-quarto-2026/handouts/funzioni.pdf"}
+      ]
+    },
+    {
+      "id": "u-local",
+      "title": "Unità locale",
+      "order": 1,
+      "items": [
+        {"type": "material", "path": "materials/local.md"}
+      ]
+    }
+  ]
+}
