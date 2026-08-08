@@ -2,7 +2,7 @@
 
 ## Stato
 
-Proposto. Il formato diventerà accettato solo dopo la definizione dello schema JSON e delle fixture di conformità; non è ancora implementato né supportato dal runtime.
+Accettato. Lo schema JSON e le fixture di conformità sono stati definiti e approvati dopo due round completi di review puliti; il formato non è ancora implementato né supportato dal runtime.
 
 ## Data
 
@@ -472,7 +472,7 @@ Gli invarianti che attraversano documenti o richiedono una chiave filesystem por
 - il bundle builder CLI locale;
 - la piattaforma TheBitLab durante il caricamento.
 
-L'ADR resta `Proposto` fino al completamento dei due round di review puliti richiesti per accettarlo.
+L'ADR è `Accettato` dopo il completamento dei due round di review puliti richiesti. L'accettazione riguarda i contratti formali e non implica il supporto del formato nel runtime.
 
 ## Bundle builder CLI
 
@@ -514,5 +514,5 @@ Il CLI vivrà nel repo pubblico `2cornot2c` perché è uno strumento, non un con
 
 - Il file `doc/course_designs/tpsi_quarto_fonti_private.json` non deve essere committato nel repo pubblico: la regola `*_private.json` in `.gitignore` ne impedisce l'inserimento accidentale. Il contenuto autoritativo andrà nel repo privato `tpsi-quarto-docente`. Se il file fosse mai stato committato in passato, andrebbe rimosso anche dalla cronologia Git con `git filter-repo` o BFG.
 - `doc/COURSE_SOURCE_CATALOG.md` è stato aggiornato con una sezione che descrive la relazione tra catalogo delle fonti e course bundle.
-- Lo schema JSON e le fixture di conformità sono tracciati nell'issue #675; fino alla loro approvazione l'ADR resta `Proposto`.
-- L'implementazione del loader, del builder CLI e dell'integrazione con board/calendario sarà fatta in PR dedicate dopo approvazione di questo ADR.
+- Lo schema JSON e le fixture di conformità tracciati nell'issue #675 sono stati approvati e l'ADR è `Accettato`.
+- L'implementazione del loader, del builder CLI e dell'integrazione con board/calendario sarà fatta in PR dedicate successive.
