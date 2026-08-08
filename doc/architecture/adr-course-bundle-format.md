@@ -208,7 +208,7 @@ Le collezioni sono plurali perché contengono liste; `type` è singolare perché
 
 Se `index.json` manca, il loader server-side può rigenerarlo da `bundle.json` come fallback; in produzione è raccomandato committarlo per ridurre il tempo di caricamento. Se entrambi i file sono presenti, il loader deve verificare che `index.json` sia coerente con `bundle.json` (ad esempio rigenerandolo e confrontando hash) oppure rigenerarlo sempre da `bundle.json`, che resta l'unica fonte autorevole.
 
-Il campo `order` in `index.json` deriva per default dalla posizione dell'unità nell'array `content.units` di `bundle.json`; ogni unità può opzionalmente sovrascriverlo con un proprio campo `order`. Valori non unici sono ammessi e vengono ordinati stabilmente per `id`. Dentro ogni unità, il builder genera gli item nell'ordine canonico `activity`, `material`, `media`, `handout`; l'ordine non modifica la semantica.
+Il campo `order` in `index.json` deriva per default dalla posizione dell'unità nell'array `content.units` di `bundle.json`; ogni unità può opzionalmente sovrascriverlo con un proprio campo `order`. Valori non unici sono ammessi e vengono ordinati stabilmente per `id` all'interno di ogni manifest. Gli import completi vengono composti ricorsivamente prima delle unità locali, nell'ordine dichiarato dagli import; a ogni livello il builder premette il `bundle_id` agli ID e `.imports/<bundle_id>/` ai path. Dentro ogni unità, il builder genera gli item nell'ordine canonico `activity`, `material`, `media`, `handout`; l'ordine non modifica la semantica.
 
 ```json
 {
@@ -399,8 +399,8 @@ Regole:
 - Ogni `bundle_id` può comparire una sola volta in `imports`; il builder rifiuta duplicati e cicli (es. A importa B che importa A) tramite un grafo di dipendenze.
 - Se un bundle importato a sua volta contiene `imports`, il builder lo materializza ricorsivamente, sempre entro l'allowlist e i permessi configurati.
 - Per un import parziale ogni `target_path` è obbligatorio. Un item `activity` include automaticamente gli asset dichiarati nel relativo `activity.json`; i loro path sono risolti rispetto alla directory dell'attività. Un `material` deve elencare immagini/media incorporati in `dependencies`. Dipendenze mancanti, non dichiarate o esterne alla root sorgente fanno fallire la build.
-- Ogni componente dei path finali prodotti (file locali, importati e override) deve essere normalizzato Unicode NFC e non può terminare con punto o spazio, che su Windows genererebbe alias. I path devono essere univoci secondo una chiave portabile per componente (NFC, confronto case-folded e rimozione difensiva di punti/spazi finali); qualsiasi collisione tra origini diverse fallisce senza sovrascrittura. I path in `content.units` e `index.json` sono riferimenti e possono legittimamente puntare a un `target_path` importato.
-- Con `all: true`, i file vengono materializzati sotto `.imports/<bundle_id>/`; le unità importate precedono quelle locali nell'ordine dichiarato degli import e ricevono ID `<bundle_id>-<unit_id>`. Il builder riscrive i loro path verso il prefisso `.imports/<bundle_id>/`.
+- Ogni componente dei path finali prodotti (file locali, importati e override) deve essere normalizzato Unicode NFC, usare soltanto `A-Z`, `a-z`, `0-9`, `_`, `-`, `/`, `.` e non può terminare con punto o spazio, che su Windows genererebbe alias. I path devono essere univoci secondo una chiave portabile per componente (NFC, confronto case-folded e rimozione difensiva di punti/spazi finali) e non possono sovrapporsi come file/directory; qualsiasi collisione tra origini diverse fallisce senza sovrascrittura. I path in `content.units` e `index.json` sono riferimenti e possono legittimamente puntare a un `target_path` importato.
+- Con `all: true`, i file vengono materializzati sotto `.imports/<bundle_id>/`; `.imports` è un namespace riservato e non può essere usato da contenuti locali, destinazioni di import parziali o override. Le unità importate precedono quelle locali nell'ordine dichiarato degli import e ricevono ID `<bundle_id>-<unit_id>`. Il builder riscrive ricorsivamente i loro path verso il prefisso `.imports/<bundle_id>/`.
 - Dopo la composizione tutti i `content.units[].id` devono essere globalmente univoci; collisioni tra unità locali e importate falliscono senza rinomina implicita.
 
 #### Campi di `imports[]`
@@ -464,11 +464,15 @@ Il caricamento da repo privato usa la stessa GitHub App/secret runtime già desc
 
 ## Schema JSON formale
 
-Prima di accettare questo ADR verrà definito uno schema JSON per `bundle.json` e `BundleReference` (issue [#675](https://github.com/TheBitPoets/2cornot2c/issues/675)), insieme a fixture valide/non valide. Lo schema verrà usato da:
+I contratti formali JSON Schema Draft 2020-12 sono [`schemas/course-bundle.schema.json`](../../schemas/course-bundle.schema.json) per `bundle.json` e [`schemas/bundle-reference.schema.json`](../../schemas/bundle-reference.schema.json) per il `BundleReference` esterno (issue [#675](https://github.com/TheBitPoets/2cornot2c/issues/675)). Le fixture di conformità sono in [`tests/fixtures/course_bundles/`](../../tests/fixtures/course_bundles/) e vengono eseguite in CI da [`tests/test_course_bundle_schema.py`](../../tests/test_course_bundle_schema.py).
+
+Gli invarianti che attraversano documenti o richiedono una chiave filesystem portabile — baseline URL indipendente dal provider, collisioni NFC/case-folded incluse le materializzazioni ricorsive, riferimenti degli override, cicli degli import e coerenza dell’indice composto — sono verificati dal modulo condiviso [`scripts/course_bundle_validation.py`](../../scripts/course_bundle_validation.py), oltre alla validazione strutturale degli schema. Questi contratti verranno usati da:
 
 - una GitHub Action che valida i bundle nei repo dei corsi;
 - il bundle builder CLI locale;
 - la piattaforma TheBitLab durante il caricamento.
+
+L'ADR resta `Proposto` fino al completamento dei due round di review puliti richiesti per accettarlo.
 
 ## Bundle builder CLI
 

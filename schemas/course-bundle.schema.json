@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thebitlab.dev/schemas/course-bundle.schema.json",
+  "title": "TheBitLab course bundle manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "version",
+    "title",
+    "school_year",
+    "target_class",
+    "language",
+    "authors",
+    "license",
+    "content"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "id": {"$ref": "#/$defs/slug"},
+    "version": {"$ref": "#/$defs/semver"},
+    "title": {"$ref": "#/$defs/nonEmptyString"},
+    "school_year": {
+      "type": "string",
+      "pattern": "^[0-9]{4}/[0-9]{4}(?![\\s\\S])"
+    },
+    "target_class": {"$ref": "#/$defs/nonEmptyString"},
+    "language": {
+      "$comment": "ISO 639-1 alpha-2 codes from https://www.loc.gov/standards/iso639-2/ISO-639-2_utf-8.txt",
+      "type": "string",
+      "enum": [
+        "aa", "ab", "ae", "af", "ak", "am", "an", "ar",
+        "as", "av", "ay", "az", "ba", "be", "bg", "bi",
+        "bm", "bn", "bo", "br", "bs", "ca", "ce", "ch",
+        "co", "cr", "cs", "cu", "cv", "cy", "da", "de",
+        "dv", "dz", "ee", "el", "en", "eo", "es", "et",
+        "eu", "fa", "ff", "fi", "fj", "fo", "fr", "fy",
+        "ga", "gd", "gl", "gn", "gu", "gv", "ha", "he",
+        "hi", "ho", "hr", "ht", "hu", "hy", "hz", "ia",
+        "id", "ie", "ig", "ii", "ik", "io", "is", "it",
+        "iu", "ja", "jv", "ka", "kg", "ki", "kj", "kk",
+        "kl", "km", "kn", "ko", "kr", "ks", "ku", "kv",
+        "kw", "ky", "la", "lb", "lg", "li", "ln", "lo",
+        "lt", "lu", "lv", "mg", "mh", "mi", "mk", "ml",
+        "mn", "mr", "ms", "mt", "my", "na", "nb", "nd",
+        "ne", "ng", "nl", "nn", "no", "nr", "nv", "ny",
+        "oc", "oj", "om", "or", "os", "pa", "pi", "pl",
+        "ps", "pt", "qu", "rm", "rn", "ro", "ru", "rw",
+        "sa", "sc", "sd", "se", "sg", "si", "sk", "sl",
+        "sm", "sn", "so", "sq", "sr", "ss", "st", "su",
+        "sv", "sw", "ta", "te", "tg", "th", "ti", "tk",
+        "tl", "tn", "to", "tr", "ts", "tt", "tw", "ty",
+        "ug", "uk", "ur", "uz", "ve", "vi", "vo", "wa",
+        "wo", "xh", "yi", "yo", "za", "zh", "zu"
+      ]
+    },
+    "platform_min_version": {
+      "type": "string",
+      "pattern": "^[0-9]{4}[.](?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)(?![\\s\\S])"
+    },
+    "authors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/author"}
+    },
+    "license": {"$ref": "#/$defs/nonEmptyString"},
+    "price": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "currency": {
+      "$comment": "ISO 4217 List One published 2026-01-01: https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml",
+      "type": "string",
+      "enum": [
+        "AED", "AFN", "ALL", "AMD", "AOA", "ARS", "AUD", "AWG",
+        "AZN", "BAM", "BBD", "BDT", "BHD", "BIF", "BMD", "BND",
+        "BOB", "BOV", "BRL", "BSD", "BTN", "BWP", "BYN", "BZD",
+        "CAD", "CDF", "CHE", "CHF", "CHW", "CLF", "CLP", "CNY",
+        "COP", "COU", "CRC", "CUP", "CVE", "CZK", "DJF", "DKK",
+        "DOP", "DZD", "EGP", "ERN", "ETB", "EUR", "FJD", "FKP",
+        "GBP", "GEL", "GHS", "GIP", "GMD", "GNF", "GTQ", "GYD",
+        "HKD", "HNL", "HTG", "HUF", "IDR", "ILS", "INR", "IQD",
+        "IRR", "ISK", "JMD", "JOD", "JPY", "KES", "KGS", "KHR",
+        "KMF", "KPW", "KRW", "KWD", "KYD", "KZT", "LAK", "LBP",
+        "LKR", "LRD", "LSL", "LYD", "MAD", "MDL", "MGA", "MKD",
+        "MMK", "MNT", "MOP", "MRU", "MUR", "MVR", "MWK", "MXN",
+        "MXV", "MYR", "MZN", "NAD", "NGN", "NIO", "NOK", "NPR",
+        "NZD", "OMR", "PAB", "PEN", "PGK", "PHP", "PKR", "PLN",
+        "PYG", "QAR", "RON", "RSD", "RUB", "RWF", "SAR", "SBD",
+        "SCR", "SDG", "SEK", "SGD", "SHP", "SLE", "SOS", "SRD",
+        "SSP", "STN", "SVC", "SYP", "SZL", "THB", "TJS", "TMT",
+        "TND", "TOP", "TRY", "TTD", "TWD", "TZS", "UAH", "UGX",
+        "USD", "USN", "UYI", "UYU", "UYW", "UZS", "VED", "VES",
+        "VND", "VUV", "WST", "XAD", "XAF", "XAG", "XAU", "XBA",
+        "XBB", "XBC", "XBD", "XCD", "XCG", "XDR", "XOF", "XPD",
+        "XPF", "XPT", "XSU", "XTS", "XUA", "XXX", "YER", "ZAR",
+        "ZMW", "ZWG"
+      ]
+    },
+    "content": {"$ref": "#/$defs/content"},
+    "imports": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/import"}
+    },
+    "local_extensions": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/localExtension"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["price"],
+        "properties": {"price": {"type": "integer"}}
+      },
+      "then": {"required": ["currency"]}
+    }
+  ],
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?![\\s\\S])"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:[.](?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:[+][0-9A-Za-z-]+(?:[.][0-9A-Za-z-]+)*)?(?![\\s\\S])"
+    },
+    "gitTag": {
+      "type": "string",
+      "pattern": "^v?(?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:[.](?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:[+][0-9A-Za-z-]+(?:[.][0-9A-Za-z-]+)*)?(?![\\s\\S])"
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})(?![\\s\\S])"
+    },
+    "portablePath": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*(?![\\s\\S])"
+    },
+    "sourceUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://(?!(?:[0-9]+[.])+[0-9]+(?=[:/]))[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:[.][A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+(?::443)?(?:/(?![.]{1,2}(?:/|$))[A-Za-z0-9_.-]+){2,}(?![\\s\\S])"
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "role"],
+      "properties": {
+        "name": {"$ref": "#/$defs/nonEmptyString"},
+        "role": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["units"],
+      "properties": {
+        "units": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/unit"}
+        }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title"],
+      "properties": {
+        "id": {"$ref": "#/$defs/slug"},
+        "title": {"$ref": "#/$defs/nonEmptyString"},
+        "order": {"type": "integer", "minimum": 1},
+        "activities": {"$ref": "#/$defs/pathList"},
+        "materials": {"$ref": "#/$defs/pathList"},
+        "media": {"$ref": "#/$defs/pathList"},
+        "handouts": {"$ref": "#/$defs/pathList"}
+      }
+    },
+    "pathList": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/portablePath"}
+    },
+    "import": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundle_id",
+        "version",
+        "source_type",
+        "source_url",
+        "tag",
+        "commit_sha"
+      ],
+      "properties": {
+        "bundle_id": {"$ref": "#/$defs/slug"},
+        "version": {"$ref": "#/$defs/semver"},
+        "source_type": {"const": "git"},
+        "source_url": {"$ref": "#/$defs/sourceUrl"},
+        "tag": {"$ref": "#/$defs/gitTag"},
+        "commit_sha": {"$ref": "#/$defs/gitSha"},
+        "all": {"const": true},
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/importItem"}
+        }
+      },
+      "oneOf": [
+        {"required": ["all"], "not": {"required": ["items"]}},
+        {"required": ["items"], "not": {"required": ["all"]}}
+      ]
+    },
+    "importItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "path", "target_path"],
+      "properties": {
+        "type": {
+          "enum": ["activity", "material", "media", "handout"]
+        },
+        "path": {"$ref": "#/$defs/portablePath"},
+        "target_path": {"$ref": "#/$defs/portablePath"},
+        "dependencies": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/dependency"}
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "target_path"],
+      "properties": {
+        "path": {"$ref": "#/$defs/portablePath"},
+        "target_path": {"$ref": "#/$defs/portablePath"}
+      }
+    },
+    "localExtension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "override_path"],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*::[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*(?![\\s\\S])"
+        },
+        "override_path": {"$ref": "#/$defs/portablePath"}
+      }
+    }
+  }
+}

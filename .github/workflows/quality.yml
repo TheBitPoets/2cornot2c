@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - "scripts/**"
+      - "schemas/**"
       - "tests/**"
       - "activities/**"
       - "doc/**"
@@ -23,6 +24,7 @@ on:
       - main
     paths:
       - "scripts/**"
+      - "schemas/**"
       - "tests/**"
       - "activities/**"
       - "doc/**"
