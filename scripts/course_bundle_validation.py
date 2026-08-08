@@ -29,6 +29,10 @@ _WINDOWS_INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')
 _SAFE_PATH = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$")
 _SOURCE_URL_PATH_SEGMENT = re.compile(r"^[A-Za-z0-9_.-]+$")
 _HOST_LABEL = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
+_LEGACY_IPV4 = re.compile(
+    r"^(?:(?:0[xX][0-9A-Fa-f]+|[0-9]+)\.)+"
+    r"(?:0[xX][0-9A-Fa-f]+|[0-9]+)$"
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -139,7 +143,7 @@ def validate_source_url(url: str) -> list[str]:
         ipaddress.ip_address(host)
     except ValueError:
         labels = host.split(".")
-        if set(host) <= set("0123456789."):
+        if _LEGACY_IPV4.fullmatch(host):
             errors.append("source URL host is an invalid or ambiguous IP address")
         elif (
             len(host) > 253
