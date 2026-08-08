@@ -338,21 +338,40 @@ def _reference_errors(
             errors.append(f"duplicate import bundle_id: {bundle_id}")
         imports[bundle_id] = imported
         source_bundle = imported_bundles.get(bundle_id)
+        source_matches = source_bundle is not None
         if source_bundle is not None:
             if source_bundle.get("id") != bundle_id:
+                source_matches = False
                 errors.append(
                     f"import {bundle_id} does not match source bundle id: "
                     f"{source_bundle.get('id')!r}"
                 )
             if source_bundle.get("version") != imported["version"]:
+                source_matches = False
                 errors.append(
                     f"import {bundle_id} version {imported['version']!r} does not "
                     f"match source bundle version: {source_bundle.get('version')!r}"
                 )
+        source_content_types = (
+            _content_path_types(source_bundle) if source_matches else {}
+        )
 
         imported_source_types: dict[str, set[str]] = {}
         for item in imported.get("items", []):
             imported_source_types.setdefault(item["path"], set()).add(item["type"])
+            if source_matches:
+                actual_types = source_content_types.get(item["path"], set())
+                if not actual_types:
+                    errors.append(
+                        f"import {bundle_id} references a missing source item: "
+                        f"{item['path']!r}"
+                    )
+                elif item["type"] not in actual_types:
+                    errors.append(
+                        f"import {bundle_id} source item {item['path']!r} is declared "
+                        f"as {item['type']}, but source manifest has type "
+                        f"{', '.join(sorted(actual_types))}"
+                    )
             referenced_types = content_types.get(item["target_path"], set())
             if referenced_types and item["type"] not in referenced_types:
                 errors.append(
@@ -468,7 +487,15 @@ def _reachable_manifest_closure(
         for imported in manifest.get("imports", []):
             bundle_id = imported["bundle_id"]
             source = available.get(bundle_id)
-            if source is None or bundle_id in discovered:
+            if source is None:
+                if imported.get("all") is True:
+                    context = " -> ".join((*lineage, bundle_id))
+                    errors.append(
+                        f"import closure {context}: full import source manifest "
+                        "is unavailable"
+                    )
+                continue
+            if bundle_id in discovered:
                 continue
             discovered.add(bundle_id)
             source_lineage = (*lineage, bundle_id)
@@ -546,6 +573,11 @@ def _bundle_errors(
         ]
         errors.extend(_contextualize_errors(lineage, manifest_errors))
     errors.extend(_cycle_errors(bundle, valid_imports))
+    if not errors:
+        canonical_index = _generate_index(bundle, valid_imports)
+        composed_ids = [unit["id"] for unit in canonical_index["units"]]
+        if len(composed_ids) != len(set(composed_ids)):
+            errors.append("composed content.units ids must be globally unique")
     return errors
 
 
@@ -631,9 +663,6 @@ def validate_bundle(
         return errors
 
     canonical_index = _generate_index(bundle, imports)
-    composed_ids = [unit["id"] for unit in canonical_index["units"]]
-    if len(composed_ids) != len(set(composed_ids)):
-        errors.append("composed content.units ids must be globally unique")
     if index is not None and index != canonical_index:
         errors.append("index.json is not the canonical index derived from bundle.json")
     return errors

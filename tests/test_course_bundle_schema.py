@@ -155,6 +155,25 @@ def test_import_metadata_must_match_source_manifest() -> None:
     ]
 
 
+def test_partial_import_items_must_match_supplied_source_manifest() -> None:
+    bundle = load_json(VALID / "partial-import-bundle.json")
+    source = load_json(VALID / "minimal-bundle.json")
+    source["id"] = "fondamenti-c"
+    source["version"] = "1.2.0"
+    imported_bundles = {source["id"]: source}
+
+    missing_errors = validate_bundle(bundle, imported_bundles=imported_bundles)
+    assert any("references a missing source item" in error for error in missing_errors)
+
+    first_item = bundle["imports"][0]["items"][0]
+    first_item["path"] = source["content"]["units"][0]["materials"][0]
+    type_errors = validate_bundle(bundle, imported_bundles=imported_bundles)
+    assert any(
+        "is declared as activity, but source manifest has type material" in error
+        for error in type_errors
+    )
+
+
 def test_semver_numeric_prerelease_identifiers_reject_leading_zeroes() -> None:
     bundle = load_json(VALID / "minimal-bundle.json")
     reference = load_json(VALID / "bundle-reference.json")
@@ -247,6 +266,42 @@ def test_recursive_full_imports_are_composed_before_local_units() -> None:
         ".imports/middle-course/.imports/tpsi-quarto-2026/"
     )
     assert validate_bundle(root, index=index, imported_bundles=imported_bundles) == []
+
+
+def test_full_import_requires_source_for_validation_and_index_generation() -> None:
+    root = load_json(VALID / "full-import-bundle.json")
+    truncated_index = {
+        "units": [
+            {
+                "id": "u-local",
+                "title": "Unità locale",
+                "order": 1,
+                "items": [{"type": "material", "path": "materials/local.md"}],
+            }
+        ]
+    }
+
+    errors = validate_bundle(root, index=truncated_index)
+
+    assert any(
+        "full import source manifest is unavailable" in error for error in errors
+    )
+    with pytest.raises(ValueError, match="full import source manifest is unavailable"):
+        generate_index(root)
+
+
+def test_generate_index_rejects_composed_unit_id_collisions() -> None:
+    root = load_json(VALID / "full-import-bundle.json")
+    source = load_json(VALID / "minimal-bundle.json")
+    root["content"]["units"][0]["id"] = "tpsi-quarto-2026-u01-intro-c"
+
+    errors = validate_bundle(root, imported_bundles={source["id"]: source})
+
+    assert "composed content.units ids must be globally unique" in errors
+    with pytest.raises(
+        ValueError, match="composed content.units ids must be globally unique"
+    ):
+        generate_index(root, imported_bundles={source["id"]: source})
 
 
 def test_full_import_rejects_unsafe_source_paths_before_index_generation() -> None:
