@@ -249,6 +249,49 @@ def test_recursive_full_imports_are_composed_before_local_units() -> None:
     assert validate_bundle(root, index=index, imported_bundles=imported_bundles) == []
 
 
+def test_full_import_rejects_unsafe_source_paths_before_index_generation() -> None:
+    source = load_json(VALID / "minimal-bundle.json")
+    source["content"]["units"][0]["materials"][0] = "../escape.md"
+    root = load_json(VALID / "full-import-bundle.json")
+    imported_bundles = {source["id"]: source}
+
+    errors = validate_bundle(root, imported_bundles=imported_bundles)
+
+    assert any(
+        "import closure composite-course -> tpsi-quarto-2026" in error
+        and "'..' component" in error
+        for error in errors
+    )
+    with pytest.raises(ValueError, match="cannot generate index"):
+        generate_index(root, imported_bundles=imported_bundles)
+
+
+def test_nested_full_import_manifest_is_validated_before_composition() -> None:
+    leaf = load_json(VALID / "minimal-bundle.json")
+    del leaf["content"]
+    middle = load_json(VALID / "full-import-bundle.json")
+    middle["id"] = "middle-course"
+    root = load_json(VALID / "full-import-bundle.json")
+    root["imports"][0].update(
+        {
+            "bundle_id": "middle-course",
+            "source_url": "https://github.com/TheBitPoets/middle-course",
+        }
+    )
+
+    errors = validate_bundle(
+        root,
+        imported_bundles={"middle-course": middle, "tpsi-quarto-2026": leaf},
+    )
+
+    assert any(
+        "import closure composite-course -> middle-course -> tpsi-quarto-2026"
+        in error
+        and "content" in error
+        for error in errors
+    )
+
+
 def test_full_import_materialization_collisions_are_rejected() -> None:
     bundle = load_json(INVALID / "full-import-collision-bundle.json")
     source = load_json(VALID / "minimal-bundle.json")
@@ -285,6 +328,50 @@ def test_case_only_alias_of_local_override_is_not_an_explicit_reference() -> Non
 
     assert any("portable path collision" in error for error in errors)
     assert any("override is not referenced by content.units" in error for error in errors)
+
+
+def test_import_target_must_keep_its_declared_item_type() -> None:
+    bundle = load_json(VALID / "partial-import-bundle.json")
+    unit = bundle["content"]["units"][0]
+    target_path = unit["activities"].pop()
+    unit["materials"].append(target_path)
+
+    errors = validate_bundle(bundle)
+
+    assert any(
+        "import target 'activities/funzioni-base/activity.json' declared as "
+        "activity is referenced by content.units as material" in error
+        for error in errors
+    )
+
+
+def test_local_content_path_cannot_have_conflicting_types() -> None:
+    bundle = load_json(VALID / "minimal-bundle.json")
+    unit = bundle["content"]["units"][0]
+    unit["materials"].append(unit["activities"][0])
+
+    errors = validate_bundle(bundle)
+
+    assert any(
+        "is referenced with conflicting types: activity, material" in error
+        for error in errors
+    )
+
+
+def test_local_extension_must_keep_its_source_item_type() -> None:
+    bundle = load_json(VALID / "partial-import-bundle.json")
+    unit = bundle["content"]["units"][0]
+    override_path = unit["materials"].pop()
+    unit["activities"].append(override_path)
+
+    errors = validate_bundle(bundle)
+
+    assert any(
+        "local extension override 'materials/funzioni-personalizzate.md' is "
+        "referenced as activity" in error
+        and "has type material" in error
+        for error in errors
+    )
 
 
 def test_portable_key_normalizes_nfc_case_and_windows_suffixes() -> None:

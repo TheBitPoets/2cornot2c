@@ -176,17 +176,24 @@ def _manifest_paths(bundle: Mapping[str, Any]) -> list[tuple[str, str]]:
     return paths
 
 
-def _content_paths(bundle: Mapping[str, Any]) -> list[str]:
+def _content_items(bundle: Mapping[str, Any]) -> list[tuple[str, str]]:
     return [
-        path
+        (item_type, path)
         for unit in bundle.get("content", {}).get("units", [])
-        for collection, _ in COLLECTION_TYPES
+        for collection, item_type in COLLECTION_TYPES
         for path in unit.get(collection, [])
     ]
 
 
-def _source_item_paths(bundle: Mapping[str, Any]) -> set[str]:
-    return set(_content_paths(bundle))
+def _content_paths(bundle: Mapping[str, Any]) -> list[str]:
+    return [path for _, path in _content_items(bundle)]
+
+
+def _content_path_types(bundle: Mapping[str, Any]) -> dict[str, set[str]]:
+    path_types: dict[str, set[str]] = {}
+    for item_type, path in _content_items(bundle):
+        path_types.setdefault(path, set()).add(item_type)
+    return path_types
 
 
 def _final_destination_paths(bundle: Mapping[str, Any]) -> list[tuple[str, str]]:
@@ -317,6 +324,14 @@ def _reference_errors(
 ) -> list[str]:
     errors: list[str] = []
     imports: dict[str, Mapping[str, Any]] = {}
+    content_types = _content_path_types(bundle)
+    for path, item_types in content_types.items():
+        if len(item_types) > 1:
+            errors.append(
+                f"content path {path!r} is referenced with conflicting types: "
+                f"{', '.join(sorted(item_types))}"
+            )
+
     for imported in bundle.get("imports", []):
         bundle_id = imported["bundle_id"]
         if bundle_id in imports:
@@ -335,7 +350,23 @@ def _reference_errors(
                     f"match source bundle version: {source_bundle.get('version')!r}"
                 )
 
-    content_paths = set(_content_paths(bundle))
+        imported_source_types: dict[str, set[str]] = {}
+        for item in imported.get("items", []):
+            imported_source_types.setdefault(item["path"], set()).add(item["type"])
+            referenced_types = content_types.get(item["target_path"], set())
+            if referenced_types and item["type"] not in referenced_types:
+                errors.append(
+                    f"import target {item['target_path']!r} declared as "
+                    f"{item['type']} is referenced by content.units as "
+                    f"{', '.join(sorted(referenced_types))}"
+                )
+        for source_path, item_types in imported_source_types.items():
+            if len(item_types) > 1:
+                errors.append(
+                    f"import {bundle_id} source path {source_path!r} has "
+                    f"conflicting declared types: {', '.join(sorted(item_types))}"
+                )
+
     seen_overrides: set[tuple[str, ...]] = set()
     for extension in bundle.get("local_extensions", []):
         bundle_id, separator, source_path = extension["ref"].partition("::")
@@ -343,21 +374,37 @@ def _reference_errors(
         if not separator or imported is None:
             errors.append(f"local extension references an undeclared import: {extension['ref']}")
             continue
+
+        source_types: set[str] = set()
         if "items" in imported:
-            imported_paths = {item["path"] for item in imported["items"]}
-            if source_path not in imported_paths:
+            source_types = {
+                item["type"]
+                for item in imported["items"]
+                if item["path"] == source_path
+            }
+            if not source_types:
                 errors.append(f"local extension references an unimported item: {extension['ref']}")
         elif bundle_id in imported_bundles:
-            if source_path not in _source_item_paths(imported_bundles[bundle_id]):
+            source_types = _content_path_types(imported_bundles[bundle_id]).get(
+                source_path, set()
+            )
+            if not source_types:
                 errors.append(f"local extension references a missing item: {extension['ref']}")
 
         override_key = portable_path_key(extension["override_path"])
         if override_key in seen_overrides:
             errors.append(f"duplicate local extension override: {extension['override_path']}")
         seen_overrides.add(override_key)
-        if extension["override_path"] not in content_paths:
+        override_types = content_types.get(extension["override_path"], set())
+        if not override_types:
             errors.append(
                 f"local extension override is not referenced by content.units: {extension['override_path']}"
+            )
+        elif source_types and source_types.isdisjoint(override_types):
+            errors.append(
+                f"local extension override {extension['override_path']!r} is "
+                f"referenced as {', '.join(sorted(override_types))}, but source "
+                f"{extension['ref']!r} has type {', '.join(sorted(source_types))}"
             )
     return errors
 
@@ -399,14 +446,114 @@ def _cycle_errors(
     return []
 
 
-def generate_index(
-    bundle: Mapping[str, Any],
-    *,
-    imported_bundles: Mapping[str, Mapping[str, Any]] | None = None,
-) -> dict[str, Any]:
-    """Generate the canonical flat index, including recursive full imports."""
+def _reachable_manifest_closure(
+    root: Mapping[str, Any],
+    imported_bundles: Mapping[str, Mapping[str, Any]],
+) -> tuple[
+    list[tuple[tuple[str, ...], Mapping[str, Any]]],
+    dict[str, Mapping[str, Any]],
+    list[str],
+]:
+    root_id = str(root.get("id", "<root>"))
+    available = dict(imported_bundles)
+    available.setdefault(root_id, root)
+    manifests: list[tuple[tuple[str, ...], Mapping[str, Any]]] = [
+        ((root_id,), root)
+    ]
+    valid_imports: dict[str, Mapping[str, Any]] = {}
+    errors: list[str] = []
+    discovered = {root_id}
 
-    imports = imported_bundles or {}
+    for lineage, manifest in manifests:
+        for imported in manifest.get("imports", []):
+            bundle_id = imported["bundle_id"]
+            source = available.get(bundle_id)
+            if source is None or bundle_id in discovered:
+                continue
+            discovered.add(bundle_id)
+            source_lineage = (*lineage, bundle_id)
+            schema_errors = validate_schema(source, "course-bundle.schema.json")
+            if schema_errors:
+                context = " -> ".join(source_lineage)
+                errors.extend(
+                    f"import closure {context}: {message}"
+                    for message in schema_errors
+                )
+                continue
+            valid_imports[bundle_id] = source
+            manifests.append((source_lineage, source))
+    return manifests, valid_imports, errors
+
+
+def _local_manifest_errors(bundle: Mapping[str, Any]) -> list[str]:
+    errors: list[str] = []
+    for location, path in _manifest_paths(bundle):
+        errors.extend(
+            f"{location}: {message}" for message in validate_portable_path(path)
+        )
+    for import_index, imported in enumerate(bundle.get("imports", [])):
+        errors.extend(
+            f"imports.{import_index}.source_url: {message}"
+            for message in validate_source_url(imported["source_url"])
+        )
+
+    unit_ids = [unit["id"] for unit in bundle["content"]["units"]]
+    if len(unit_ids) != len(set(unit_ids)):
+        errors.append("content.units ids must be unique")
+    errors.extend(_reserved_namespace_errors(bundle))
+    return errors
+
+
+def _contextualize_errors(
+    lineage: tuple[str, ...], errors: list[str]
+) -> list[str]:
+    if len(lineage) == 1:
+        return errors
+    context = " -> ".join(lineage)
+    return [f"import closure {context}: {message}" for message in errors]
+
+
+def _bundle_errors(
+    bundle: Mapping[str, Any],
+    imported_bundles: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    errors = validate_schema(bundle, "course-bundle.schema.json")
+    if errors:
+        return errors
+
+    manifests, valid_imports, closure_errors = _reachable_manifest_closure(
+        bundle, imported_bundles
+    )
+    if closure_errors:
+        return closure_errors
+
+    imported_local_errors: list[str] = []
+    for lineage, manifest in manifests:
+        manifest_errors = _contextualize_errors(
+            lineage, _local_manifest_errors(manifest)
+        )
+        if len(lineage) == 1:
+            errors.extend(manifest_errors)
+        else:
+            imported_local_errors.extend(manifest_errors)
+    if imported_local_errors:
+        return [*errors, *imported_local_errors]
+
+    for lineage, manifest in manifests:
+        manifest_errors = [
+            *_reference_errors(manifest, valid_imports),
+            *_collision_errors(manifest, valid_imports),
+        ]
+        errors.extend(_contextualize_errors(lineage, manifest_errors))
+    errors.extend(_cycle_errors(bundle, valid_imports))
+    return errors
+
+
+def _generate_index(
+    bundle: Mapping[str, Any],
+    imported_bundles: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    imports = imported_bundles
 
     def compose(
         manifest: Mapping[str, Any], lineage: tuple[str, ...]
@@ -456,6 +603,20 @@ def generate_index(
     return {"units": compose(bundle, (root_id,))}
 
 
+def generate_index(
+    bundle: Mapping[str, Any],
+    *,
+    imported_bundles: Mapping[str, Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Generate the canonical flat index after validating the import closure."""
+
+    imports = imported_bundles or {}
+    errors = _bundle_errors(bundle, imports)
+    if errors:
+        raise ValueError(f"cannot generate index: {'; '.join(errors)}")
+    return _generate_index(bundle, imports)
+
+
 def validate_bundle(
     bundle: Mapping[str, Any],
     *,
@@ -464,31 +625,12 @@ def validate_bundle(
 ) -> list[str]:
     """Validate one manifest and optional cross-document context."""
 
-    errors = validate_schema(bundle, "course-bundle.schema.json")
+    imports = imported_bundles or {}
+    errors = _bundle_errors(bundle, imports)
     if errors:
         return errors
 
-    imports = imported_bundles or {}
-    for location, path in _manifest_paths(bundle):
-        errors.extend(
-            f"{location}: {message}" for message in validate_portable_path(path)
-        )
-    for import_index, imported in enumerate(bundle.get("imports", [])):
-        errors.extend(
-            f"imports.{import_index}.source_url: {message}"
-            for message in validate_source_url(imported["source_url"])
-        )
-
-    unit_ids = [unit["id"] for unit in bundle["content"]["units"]]
-    if len(unit_ids) != len(set(unit_ids)):
-        errors.append("content.units ids must be unique")
-
-    errors.extend(_reserved_namespace_errors(bundle))
-    errors.extend(_collision_errors(bundle, imports))
-    errors.extend(_reference_errors(bundle, imports))
-    errors.extend(_cycle_errors(bundle, imports))
-
-    canonical_index = generate_index(bundle, imported_bundles=imports)
+    canonical_index = _generate_index(bundle, imports)
     composed_ids = [unit["id"] for unit in canonical_index["units"]]
     if len(composed_ids) != len(set(composed_ids)):
         errors.append("composed content.units ids must be globally unique")
