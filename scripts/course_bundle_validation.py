@@ -117,9 +117,11 @@ def validate_source_url(url: str) -> list[str]:
         return errors
     if parsed.username is not None or parsed.password is not None:
         errors.append("source URL must not contain userinfo")
-    if parsed.query or parsed.fragment:
+    if "?" in url or "#" in url:
         errors.append("source URL must not contain a query or fragment")
     authority = parsed.netloc.rsplit("@", 1)[-1]
+    if "[" in authority or "]" in authority:
+        errors.append("source URL must use an unbracketed DNS hostname")
     if ":" in authority and authority.rsplit(":", 1)[1] != "443":
         errors.append("source URL port must be omitted or written exactly as 443")
     elif port not in (None, 443):

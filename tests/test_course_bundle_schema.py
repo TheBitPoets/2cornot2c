@@ -243,6 +243,7 @@ def test_semver_numeric_prerelease_identifiers_reject_leading_zeroes() -> None:
         "https://0x7f.0.0.1/org/repo",
         "https://0x7f.1/org/repo",
         "https://127.0.0x1/org/repo",
+        "https://[v1.localhost]/org/repo",
         "https://example.com:99999/org/repo",
         "https://example.com:8443/org/repo",
         "https://github.com:/foo/repo",
@@ -251,6 +252,8 @@ def test_semver_numeric_prerelease_identifiers_reject_leading_zeroes() -> None:
         "https://github.com/foo/..",
         "https://github.com/../repo",
         "https://github.com/./repo",
+        "https://github.com/foo/repo?",
+        "https://github.com/foo/repo#",
     ],
 )
 def test_source_url_baseline_rejects_unsafe_targets(source_url: str) -> None:
