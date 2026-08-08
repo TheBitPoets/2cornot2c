@@ -48,6 +48,22 @@
     "expected": "does not match"
   },
   {
+    "name": "unassigned-iso-639-1-language",
+    "base": "minimal-bundle.json",
+    "operation": "set",
+    "path": ["language"],
+    "value": "zz",
+    "expected": "is not one of"
+  },
+  {
+    "name": "unassigned-iso-4217-currency",
+    "base": "partial-import-bundle.json",
+    "operation": "set",
+    "path": ["currency"],
+    "value": "AAA",
+    "expected": "is not one of"
+  },
+  {
     "name": "all-and-items",
     "base": "partial-import-bundle.json",
     "operation": "set",
