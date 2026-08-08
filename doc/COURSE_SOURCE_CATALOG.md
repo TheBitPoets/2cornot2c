@@ -124,3 +124,9 @@ La prima applicazione dell'editor migra intenzionalmente il vecchio `source_file
 - La cache è locale al processo; installazioni replicate richiederanno uno snapshot store condiviso.
 - Il Markdown generato conserva repository, ref, commit risolto, stato e timestamp dichiarato della fonte.
 - I conflitti semantici tra contenuti equivalenti di fonti differenti richiedono ancora una decisione del docente.
+
+## Relazione con i course bundle
+
+Il catalogo delle fonti indicizza singoli file Markdown da repository o dal filesystem locale. Un **course bundle** (definito nell'ADR [`architecture/adr-course-bundle-format.md`](architecture/adr-course-bundle-format.md)) è invece un'unità superiore che raggruppa attività, materiali didattici, media e metadati di un intero corso.
+
+In futuro le fonti del catalogo potranno essere ricavate automaticamente dal bundle (ad esempio dalla cartella `materials/`), mantenendo la stessa filosofia di immutabilità e commit-pinning già usata per GitHub/GitLab. Il design proposto usa repository Git privati come primo target; fetcher, builder e loader non sono ancora implementati.

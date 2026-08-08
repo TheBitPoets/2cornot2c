@@ -12,6 +12,8 @@ Usa questo file come punto di partenza per capire quale documento leggere in bas
 | Guida operativa pilot | [`MVP_2026_2027.md`](MVP_2026_2027.md) | docenti e gestori dell'installazione |
 | Architettura | [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md) | sviluppatori e gestori tecnici |
 | Diagrammi d'architettura | [`architecture/architecture-diagrams.md`](architecture/architecture-diagrams.md) | sviluppatori e gestori tecnici |
+| Bundle corsi (ADR) | [`architecture/adr-course-bundle-format.md`](architecture/adr-course-bundle-format.md) | docenti autori, sviluppatori |
+| Sicurezza bundle (guida) | [`architecture/bundle-implementation-security.md`](architecture/bundle-implementation-security.md) | sviluppatori fetcher/loader |
 | Frontend | [`FRONTEND_ARCHITECTURE.md`](FRONTEND_ARCHITECTURE.md) | sviluppatori GUI |
 | API/moduli Sphinx | [`sphinx/index.rst`](sphinx/index.rst) | sviluppatori backend |
 
