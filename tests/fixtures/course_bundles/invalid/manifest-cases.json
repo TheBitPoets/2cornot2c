@@ -48,6 +48,22 @@
     "expected": "does not match"
   },
   {
+    "name": "zero-calver-month",
+    "base": "minimal-bundle.json",
+    "operation": "set",
+    "path": ["platform_min_version"],
+    "value": "2026.0.0",
+    "expected": "does not match"
+  },
+  {
+    "name": "out-of-range-calver-month",
+    "base": "minimal-bundle.json",
+    "operation": "set",
+    "path": ["platform_min_version"],
+    "value": "2026.13.0",
+    "expected": "does not match"
+  },
+  {
     "name": "unassigned-iso-639-1-language",
     "base": "minimal-bundle.json",
     "operation": "set",
