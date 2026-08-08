@@ -27,6 +27,7 @@ _WINDOWS_RESERVED = re.compile(
 )
 _WINDOWS_INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')
 _SAFE_PATH = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$")
+_SOURCE_URL_PATH_SEGMENT = re.compile(r"^[A-Za-z0-9_.-]+$")
 _HOST_LABEL = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 
 
@@ -113,6 +114,20 @@ def validate_source_url(url: str) -> list[str]:
         errors.append("source URL must not contain a query or fragment")
     if port not in (None, 443):
         errors.append("source URL port requires provider-specific policy; only 443 is allowed")
+
+    path_parts = parsed.path.split("/")
+    if (
+        len(path_parts) < 3
+        or path_parts[0] != ""
+        or any(
+            part in ("", ".", "..") or not _SOURCE_URL_PATH_SEGMENT.fullmatch(part)
+            for part in path_parts[1:]
+        )
+    ):
+        errors.append(
+            "source URL path must contain owner and repository slug segments "
+            "without empty, '.' or '..' components"
+        )
 
     try:
         ipaddress.ip_address(host)
@@ -271,14 +286,13 @@ def _collision_errors(
         ("local extension", extension["override_path"])
         for extension in bundle.get("local_extensions", [])
     )
-    referenceable_keys = {portable_path_key(path) for _, path in target_entries}
+    referenceable_paths = {path for _, path in target_entries}
     target_entries.extend(_full_import_entries(bundle, imported_bundles))
 
     local_paths: list[str] = []
     seen_local_paths: set[str] = set()
     for path in _content_paths(bundle):
-        key = portable_path_key(path)
-        if key not in referenceable_keys and path not in seen_local_paths:
+        if path not in referenceable_paths and path not in seen_local_paths:
             local_paths.append(path)
             seen_local_paths.add(path)
 
@@ -321,7 +335,7 @@ def _reference_errors(
                     f"match source bundle version: {source_bundle.get('version')!r}"
                 )
 
-    content_keys = {portable_path_key(path) for path in _content_paths(bundle)}
+    content_paths = set(_content_paths(bundle))
     seen_overrides: set[tuple[str, ...]] = set()
     for extension in bundle.get("local_extensions", []):
         bundle_id, separator, source_path = extension["ref"].partition("::")
@@ -341,7 +355,7 @@ def _reference_errors(
         if override_key in seen_overrides:
             errors.append(f"duplicate local extension override: {extension['override_path']}")
         seen_overrides.add(override_key)
-        if override_key not in content_keys:
+        if extension["override_path"] not in content_paths:
             errors.append(
                 f"local extension override is not referenced by content.units: {extension['override_path']}"
             )

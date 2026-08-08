@@ -17,6 +17,7 @@ from scripts.course_bundle_validation import (
     portable_path_key,
     validate_bundle,
     validate_bundle_reference,
+    validate_source_url,
 )
 
 
@@ -178,6 +179,9 @@ def test_semver_numeric_prerelease_identifiers_reject_leading_zeroes() -> None:
         "https://010.0.0.1/org/repo",
         "https://example.com:99999/org/repo",
         "https://example.com:8443/org/repo",
+        "https://github.com/foo/..",
+        "https://github.com/../repo",
+        "https://github.com/./repo",
     ],
 )
 def test_source_url_baseline_rejects_unsafe_targets(source_url: str) -> None:
@@ -190,6 +194,7 @@ def test_source_url_baseline_rejects_unsafe_targets(source_url: str) -> None:
 
     assert not Draft202012Validator(bundle_schema).is_valid(bundle)
     assert not Draft202012Validator(reference_schema).is_valid(reference)
+    assert validate_source_url(source_url)
     assert validate_bundle(bundle)
     assert validate_bundle_reference(reference)
 
@@ -257,6 +262,29 @@ def test_full_import_materialization_collisions_are_rejected() -> None:
     local_errors = validate_bundle(bundle, imported_bundles={source["id"]: source})
     assert any("portable path collision" in error for error in local_errors)
     assert any("reserved .imports namespace" in error for error in local_errors)
+
+
+def test_case_only_alias_of_import_target_is_a_collision() -> None:
+    bundle = load_json(VALID / "partial-import-bundle.json")
+    bundle["imports"][0]["items"][0]["target_path"] = (
+        "activities/FUNZIONI-base/activity.json"
+    )
+
+    errors = validate_bundle(bundle)
+
+    assert any("portable path collision" in error for error in errors)
+
+
+def test_case_only_alias_of_local_override_is_not_an_explicit_reference() -> None:
+    bundle = load_json(VALID / "partial-import-bundle.json")
+    bundle["local_extensions"][0]["override_path"] = (
+        "materials/FUNZIONI-personalizzate.md"
+    )
+
+    errors = validate_bundle(bundle)
+
+    assert any("portable path collision" in error for error in errors)
+    assert any("override is not referenced by content.units" in error for error in errors)
 
 
 def test_portable_key_normalizes_nfc_case_and_windows_suffixes() -> None:
