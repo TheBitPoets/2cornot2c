@@ -8,7 +8,8 @@ Questo documento raccoglie i dettagli tecnici e le contromisure di sicurezza per
 
 - `source_type` ammesso: solo `git` per il pilota.
 - `source_url` deve essere un URL HTTPS pulito del repo, nel formato `https://{host}/{owner_segments...}/{repo}[.git]`. La porta predefinita è solo `443`; porte custom richiedono una regola amministrativa provider-specifica. `owner_segments` è uno o più slug separati da `/` (per GitHub è `owner`, per GitLab può essere `group/subgroup`); `repo` è uno slug. L'URL non deve avere trailing slash, query, fragment né componente userinfo (`user:pass@host`).
-- Sono vietati: `git://`, `git+ssh://`, `ssh://`, formati scp-like (`git@github.com:owner/repo.git`), `file://`, `http://`, indirizzi IP privati, UNC e qualsiasi URL che possa causare SSRF.
+- Sono vietati: `git://`, `git+ssh://`, `ssh://`, formati scp-like (`git@github.com:owner/repo.git`), `file://`, `http://`, host locali o sintatticamente invalidi, indirizzi IP letterali (inclusi privati, loopback, link-local o riservati), UNC e qualsiasi URL che possa causare SSRF.
+- La validazione di conformità condivisa applica la baseline indipendente dal provider: hostname DNS ASCII ben formato con almeno due label, porta assente o `443`, nessuna userinfo/query/fragment. Porte custom, anche se sintatticamente valide, sono rifiutate senza una successiva policy amministrativa provider-specifica; allowlist, risoluzione DNS, controllo degli IP risolti e protezione dal rebinding restano responsabilità del fetcher.
 - Il fetch Git deve passare attraverso un egress proxy controllato con DNS pinning (o meccanismo equivalente che vincoli la connessione all'IP validato) e blocco degli intervalli privati/link-local. La sola risoluzione preventiva dell'hostname non è sufficiente contro DNS rebinding.
 - L'allowlist dei domini/provider è un setting amministrativo lato server, non derivato dai manifest.
 - Ogni `imports[].source_url` è sottoposto alle stesse regole: validazione provider-specifica, allowlist amministrativa, blocco SSRF/DNS rebinding e divieto di userinfo/redirect. Gli import non possono ampliare l'allowlist.
@@ -69,6 +70,8 @@ I path sorgente sono:
 - privi di componenti che terminano con punto o spazio, perché Windows li rende alias del nome senza suffisso;
 - privi di symlink, junction e mount point;
 - canonicalizzati prima dell'accesso al filesystem.
+
+Il primo componente `.imports` è riservato al builder per gli import completi: manifest, destinazioni di import parziali e override locali non possono dichiarare path finali in quel namespace.
 
 ### Algoritmo consigliato
 

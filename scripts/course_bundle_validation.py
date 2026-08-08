@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import ipaddress
 import json
 from pathlib import Path
 import re
 import unicodedata
 from typing import Any
+from urllib.parse import urlsplit
 
 from jsonschema import Draft202012Validator, FormatChecker
 
@@ -24,6 +26,8 @@ _WINDOWS_RESERVED = re.compile(
     r"^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$", re.IGNORECASE
 )
 _WINDOWS_INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')
+_SAFE_PATH = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$")
+_HOST_LABEL = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -74,6 +78,8 @@ def validate_portable_path(path: str) -> list[str]:
     parts = path.split("/")
     if unicodedata.normalize("NFC", path) != path:
         errors.append("path is not Unicode NFC")
+    if not _SAFE_PATH.fullmatch(path):
+        errors.append("path contains a character outside the safe manifest alphabet")
     if any(part in ("", ".", "..") for part in parts):
         errors.append("path contains an empty, '.' or '..' component")
     if any(part.endswith((".", " ")) for part in parts):
@@ -84,6 +90,44 @@ def validate_portable_path(path: str) -> list[str]:
         errors.append("path contains reserved .git metadata")
     if any(_WINDOWS_RESERVED.fullmatch(part) for part in parts):
         errors.append("path contains a reserved Windows name")
+    return errors
+
+
+def validate_source_url(url: str) -> list[str]:
+    """Validate the provider-independent HTTPS repository URL baseline."""
+
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError:
+        return ["source URL has an invalid port"]
+
+    errors: list[str] = []
+    host = parsed.hostname
+    if parsed.scheme != "https" or host is None:
+        errors.append("source URL must use HTTPS and include a host")
+        return errors
+    if parsed.username is not None or parsed.password is not None:
+        errors.append("source URL must not contain userinfo")
+    if parsed.query or parsed.fragment:
+        errors.append("source URL must not contain a query or fragment")
+    if port not in (None, 443):
+        errors.append("source URL port requires provider-specific policy; only 443 is allowed")
+
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        labels = host.split(".")
+        if set(host) <= set("0123456789."):
+            errors.append("source URL host is an invalid or ambiguous IP address")
+        elif (
+            len(host) > 253
+            or len(labels) < 2
+            or any(not _HOST_LABEL.fullmatch(label) for label in labels)
+        ):
+            errors.append("source URL host is not a valid public DNS name")
+    else:
+        errors.append("source URL must use a DNS hostname, not an IP address")
     return errors
 
 
@@ -130,7 +174,90 @@ def _source_item_paths(bundle: Mapping[str, Any]) -> set[str]:
     return set(_content_paths(bundle))
 
 
-def _collision_errors(bundle: Mapping[str, Any]) -> list[str]:
+def _final_destination_paths(bundle: Mapping[str, Any]) -> list[tuple[str, str]]:
+    paths: list[tuple[str, str]] = []
+    for unit_index, unit in enumerate(bundle.get("content", {}).get("units", [])):
+        for collection, _ in COLLECTION_TYPES:
+            for item_index, path in enumerate(unit.get(collection, [])):
+                paths.append(
+                    (f"content.units.{unit_index}.{collection}.{item_index}", path)
+                )
+    for import_index, imported in enumerate(bundle.get("imports", [])):
+        for item_index, item in enumerate(imported.get("items", [])):
+            prefix = f"imports.{import_index}.items.{item_index}"
+            paths.append((f"{prefix}.target_path", item["target_path"]))
+            paths.extend(
+                (
+                    f"{prefix}.dependencies.{dependency_index}.target_path",
+                    dependency["target_path"],
+                )
+                for dependency_index, dependency in enumerate(
+                    item.get("dependencies", [])
+                )
+            )
+    paths.extend(
+        (f"local_extensions.{index}.override_path", extension["override_path"])
+        for index, extension in enumerate(bundle.get("local_extensions", []))
+    )
+    return paths
+
+
+def _reserved_namespace_errors(bundle: Mapping[str, Any]) -> list[str]:
+    return [
+        f"{location}: path uses reserved .imports namespace"
+        for location, path in _final_destination_paths(bundle)
+        if path.split("/", 1)[0].casefold() == ".imports"
+    ]
+
+
+def _materialized_paths(
+    bundle: Mapping[str, Any],
+    imported_bundles: Mapping[str, Mapping[str, Any]],
+    lineage: tuple[str, ...],
+) -> list[str]:
+    paths = [path for _, path in _final_destination_paths(bundle)]
+    for imported in bundle.get("imports", []):
+        if imported.get("all") is not True:
+            continue
+        bundle_id = imported["bundle_id"]
+        source = imported_bundles.get(bundle_id)
+        if source is None or bundle_id in lineage:
+            continue
+        paths.extend(
+            f".imports/{bundle_id}/{path}"
+            for path in _materialized_paths(
+                source, imported_bundles, (*lineage, bundle_id)
+            )
+        )
+    return list(dict.fromkeys(paths))
+
+
+def _full_import_entries(
+    bundle: Mapping[str, Any],
+    imported_bundles: Mapping[str, Mapping[str, Any]],
+) -> list[tuple[str, str]]:
+    entries: list[tuple[str, str]] = []
+    lineage = (str(bundle.get("id", "<root>")),)
+    for imported in bundle.get("imports", []):
+        if imported.get("all") is not True:
+            continue
+        bundle_id = imported["bundle_id"]
+        source = imported_bundles.get(bundle_id)
+        if source is None or bundle_id in lineage:
+            continue
+        entries.extend(
+            (f"full import {bundle_id!r}", f".imports/{bundle_id}/{path}")
+            for path in _materialized_paths(
+                source, imported_bundles, (*lineage, bundle_id)
+            )
+        )
+    return entries
+
+
+def _collision_errors(
+    bundle: Mapping[str, Any],
+    imported_bundles: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
     errors: list[str] = []
     target_entries: list[tuple[str, str]] = []
     for imported in bundle.get("imports", []):
@@ -144,23 +271,26 @@ def _collision_errors(bundle: Mapping[str, Any]) -> list[str]:
         ("local extension", extension["override_path"])
         for extension in bundle.get("local_extensions", [])
     )
+    referenceable_keys = {portable_path_key(path) for _, path in target_entries}
+    target_entries.extend(_full_import_entries(bundle, imported_bundles))
 
-    generated_keys = {portable_path_key(path) for _, path in target_entries}
     local_paths: list[str] = []
     seen_local_paths: set[str] = set()
     for path in _content_paths(bundle):
         key = portable_path_key(path)
-        if key not in generated_keys and path not in seen_local_paths:
+        if key not in referenceable_keys and path not in seen_local_paths:
             local_paths.append(path)
             seen_local_paths.add(path)
 
     seen: dict[tuple[str, ...], tuple[str, str]] = {}
-    for kind, path in [*target_entries, *(("local content", value) for value in local_paths)]:
+    entries = [*target_entries, *(("local content", path) for path in local_paths)]
+    for kind, path in entries:
         key = portable_path_key(path)
         previous = seen.get(key)
         if previous is not None:
             errors.append(
-                f"portable path collision: {previous[0]} {previous[1]!r} and {kind} {path!r}"
+                f"portable path collision: {previous[0]} {previous[1]!r} and "
+                f"{kind} {path!r}"
             )
         else:
             seen[key] = (kind, path)
@@ -255,26 +385,61 @@ def _cycle_errors(
     return []
 
 
-def generate_index(bundle: Mapping[str, Any]) -> dict[str, Any]:
-    """Generate the canonical flat index for the local manifest units."""
+def generate_index(
+    bundle: Mapping[str, Any],
+    *,
+    imported_bundles: Mapping[str, Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Generate the canonical flat index, including recursive full imports."""
 
-    units: list[dict[str, Any]] = []
-    for position, unit in enumerate(bundle["content"]["units"], start=1):
-        items = [
-            {"type": item_type, "path": path}
-            for collection, item_type in COLLECTION_TYPES
-            for path in unit.get(collection, [])
-        ]
-        units.append(
-            {
-                "id": unit["id"],
-                "title": unit["title"],
-                "order": unit.get("order", position),
-                "items": items,
-            }
-        )
-    units.sort(key=lambda unit: (unit["order"], unit["id"]))
-    return {"units": units}
+    imports = imported_bundles or {}
+
+    def compose(
+        manifest: Mapping[str, Any], lineage: tuple[str, ...]
+    ) -> list[dict[str, Any]]:
+        units: list[dict[str, Any]] = []
+        for imported in manifest.get("imports", []):
+            if imported.get("all") is not True:
+                continue
+            bundle_id = imported["bundle_id"]
+            source = imports.get(bundle_id)
+            if source is None or bundle_id in lineage:
+                continue
+            for unit in compose(source, (*lineage, bundle_id)):
+                units.append(
+                    {
+                        **unit,
+                        "id": f"{bundle_id}-{unit['id']}",
+                        "items": [
+                            {
+                                **item,
+                                "path": f".imports/{bundle_id}/{item['path']}",
+                            }
+                            for item in unit["items"]
+                        ],
+                    }
+                )
+
+        local_units: list[dict[str, Any]] = []
+        for position, unit in enumerate(manifest["content"]["units"], start=1):
+            items = [
+                {"type": item_type, "path": path}
+                for collection, item_type in COLLECTION_TYPES
+                for path in unit.get(collection, [])
+            ]
+            local_units.append(
+                {
+                    "id": unit["id"],
+                    "title": unit["title"],
+                    "order": unit.get("order", position),
+                    "items": items,
+                }
+            )
+        local_units.sort(key=lambda unit: (unit["order"], unit["id"]))
+        return [*units, *local_units]
+
+    root_id = str(bundle.get("id", "<root>"))
+    return {"units": compose(bundle, (root_id,))}
 
 
 def validate_bundle(
@@ -291,16 +456,29 @@ def validate_bundle(
 
     imports = imported_bundles or {}
     for location, path in _manifest_paths(bundle):
-        errors.extend(f"{location}: {message}" for message in validate_portable_path(path))
+        errors.extend(
+            f"{location}: {message}" for message in validate_portable_path(path)
+        )
+    for import_index, imported in enumerate(bundle.get("imports", [])):
+        errors.extend(
+            f"imports.{import_index}.source_url: {message}"
+            for message in validate_source_url(imported["source_url"])
+        )
 
     unit_ids = [unit["id"] for unit in bundle["content"]["units"]]
     if len(unit_ids) != len(set(unit_ids)):
         errors.append("content.units ids must be unique")
 
-    errors.extend(_collision_errors(bundle))
+    errors.extend(_reserved_namespace_errors(bundle))
+    errors.extend(_collision_errors(bundle, imports))
     errors.extend(_reference_errors(bundle, imports))
     errors.extend(_cycle_errors(bundle, imports))
-    if index is not None and index != generate_index(bundle):
+
+    canonical_index = generate_index(bundle, imported_bundles=imports)
+    composed_ids = [unit["id"] for unit in canonical_index["units"]]
+    if len(composed_ids) != len(set(composed_ids)):
+        errors.append("composed content.units ids must be globally unique")
+    if index is not None and index != canonical_index:
         errors.append("index.json is not the canonical index derived from bundle.json")
     return errors
 
@@ -308,4 +486,11 @@ def validate_bundle(
 def validate_bundle_reference(reference: Mapping[str, Any]) -> list[str]:
     """Validate an external BundleReference document."""
 
-    return validate_schema(reference, "bundle-reference.schema.json")
+    errors = validate_schema(reference, "bundle-reference.schema.json")
+    if errors:
+        return errors
+    errors.extend(
+        f"source_url: {message}"
+        for message in validate_source_url(reference["source_url"])
+    )
+    return errors

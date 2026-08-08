@@ -29,7 +29,7 @@
     "operation": "set",
     "path": ["content", "units", 0, "materials", 0],
     "value": "materials/notes /lesson.md",
-    "expected": "ends with a dot or space"
+    "expected": "does not match"
   },
   {
     "name": "invalid-slug",
