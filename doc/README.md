@@ -10,6 +10,7 @@ Usa questo file come punto di partenza per capire quale documento leggere in bas
 |---|---|---|
 | Cornice didattica | [`CORNICE_DIDATTICA.md`](CORNICE_DIDATTICA.md) | docenti, coordinatori, sviluppatori |
 | Guida operativa pilot | [`MVP_2026_2027.md`](MVP_2026_2027.md) | docenti e gestori dell'installazione |
+| Pilot rehearsal e go/no-go | [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md) | docenti, gestori e decision owner |
 | Architettura | [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md) | sviluppatori e gestori tecnici |
 | Diagrammi d'architettura | [`architecture/architecture-diagrams.md`](architecture/architecture-diagrams.md) | sviluppatori e gestori tecnici |
 | Bundle corsi (ADR) | [`architecture/adr-course-bundle-format.md`](architecture/adr-course-bundle-format.md) | docenti autori, sviluppatori |
@@ -98,6 +99,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`TESTING.md`](TESTING.md) | Quando devi lanciare test locali o capire quali GitHub Actions sono attive |
 | [`CORNICE_DIDATTICA.md`](CORNICE_DIDATTICA.md) | Quando devi comprendere obiettivi, UDA, aiuti, feedback e ruolo docente |
 | [`MVP_2026_2027.md`](MVP_2026_2027.md) | Quando devi preparare o usare il pilot scolastico |
+| [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md) | Quando devi eseguire la prova generale e decidere go/no-go |
 | [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md) | Quando devi capire GUI, API, service, storage, provider, AI e Docker |
 | [`architecture/architecture-diagrams.md`](architecture/architecture-diagrams.md) | Quando vuoi una vista visuale di deployment, componenti e flussi HTTP |
 | [`FRONTEND_ARCHITECTURE.md`](FRONTEND_ARCHITECTURE.md) | Quando devi modificare stato UI, endpoint o flussi asincroni |
