@@ -154,7 +154,8 @@ Eseguire lo Scenario 7A di [SCENARI_TEST_MANUALI_GUI.md](SCENARI_TEST_MANUALI_GU
 1. impostare `$ScenarioRoot = $DemoRoot` e non eseguire i setup distruttivi o le root `tmp/...` proposti per l'esecuzione autonoma degli scenari;
 2. in un terminale dedicato avviare `python scripts/course_board_server.py --root $DemoRoot` e lasciare il server sulla stessa root usata da entrambe le TUI;
 3. eseguire i comandi TUI locale e Docker con `--root $DemoRoot`; al comando Docker dello Scenario 7A aggiungere obbligatoriamente `--docker-image $DockerImage`, usando la variabile validata nel preflight e non il tag locale di default; usare la stessa istanza per il confronto dashboard dello Scenario 7A e per lo Scenario 6;
-4. per lo Scenario 7 fermare il server, configurare il provider previsto e riavviarlo con `--root $DemoRoot`, senza ricreare la demo; anche la TUI autenticata deve usare `$DemoRoot`.
+4. dopo la scelta del tentativo definitivo, aprire la dashboard docente servita dalla stessa istanza e, nel pannello `Genera registro consegne`, selezionare l'assegnazione demo, rigenerare `demo/python-demo-somma-001.json` e lasciarlo caricato; nel file sotto `$DemoRoot\teacher-reports` la riga `rossi-mario` deve avere `submission.report_selection=final`, `submission.final_selected=true` e lo stesso `submission.attempt_id` scelto nella TUI, mentre la dashboard deve mostrare lo stesso esito e conteggio test; un registro non rigenerato dopo la selezione rende il gate `FAIL`;
+5. per lo Scenario 7 fermare il server, configurare il provider previsto e riavviarlo con `--root $DemoRoot`, senza ricreare la demo; anche la TUI autenticata deve usare `$DemoRoot`.
 
 Prima di ogni avvio verificare che non esista un'altra istanza sulla root. Ogni comando che usa `tmp/student-lab-demo` o la root Docker dedicata nel documento degli scenari deve quindi essere sostituito con `$DemoRoot`; un server o una TUI avviati su una root diversa rendono il gate `FAIL`.
 
@@ -164,7 +165,7 @@ Sono obbligatorie queste evidenze:
 - nessun segreto disponibile al job e nessuna rete nel container;
 - due tentativi distinti nello storico, con ultimo/migliore coerenti;
 - scelta esplicita del definitivo e persistenza dopo riavvio/rilettura;
-- stesso `attempt_id`, esito e conteggio test in TUI, report persistito e dashboard docente;
+- stesso `attempt_id`, esito e conteggio test in TUI, report persistito e registro docente rigenerato dopo la scelta finale; esito e test devono coincidere anche nella dashboard docente che ha caricato quel registro;
 - un test negativo resta fallito e non viene presentato come superato;
 - errore Docker esplicito e fail-closed se il runtime non è disponibile.
 
@@ -307,10 +308,12 @@ Registrare repository privato e revisione immutabile, quindi verificare:
 - test visibili/nascosti, soluzione docente e rubrica non esposti allo studente;
 - import/indicizzazione nella Course Board e collaudo completo fino a TUI, report e registro docente.
 
-Validare le activity estratte nella release candidata:
+Validare le activity estratte nella release candidata. Impostare `$ActivityPath` al file o alla directory estratti dalla revisione immutabile registrata nella scheda della prova:
 
 ```powershell
-python -m scripts.validate_activity <path-activity-o-directory> `
+$ActivityPath = "D:\path\to\immutable-content\activity.json"
+if (-not (Test-Path -LiteralPath $ActivityPath)) { throw "Path activity assente" }
+python -m scripts.validate_activity $ActivityPath `
   2>&1 | Tee-Object "$Evidence\10-content-validation.txt"
 if ($LASTEXITCODE -ne 0) { throw "Activity non valida" }
 ```
