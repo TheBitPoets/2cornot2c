@@ -597,8 +597,8 @@ Avvia la TUI, prova un input non valido, seleziona la consegna con il numero e v
 Controlla le sezioni, apri lo storico, entra in aiuto e verifica che <code>b</code> e invio annullino senza creare richieste.<br><br>
 <strong style="color:#7b35b2">Step 11-15 - Viola: richiesta e storico</strong><br>
 Invia una richiesta consentita, controlla tipo, stato, risposta e presenza di prompt e risposta nello storico.<br><br>
-<strong style="color:#b45f06">Step 16-19 - Arancio: esecuzione e navigazione</strong><br>
-Esegui il runner, controlla report ed esito, poi usa <code>b</code>, <code>r</code> e <code>q</code>.<br><br>
+<strong style="color:#b45f06">Step 16-21 - Arancio: esecuzione, definitivo e navigazione</strong><br>
+Esegui il runner, controlla report ed esito, scegli e ricarica il tentativo definitivo, poi usa <code>b</code> e <code>q</code>.<br><br>
 </td></tr>
 </table>
 
@@ -637,13 +637,16 @@ Esegui il runner, controlla report ed esito, poi usa <code>b</code>, <code>r</co
 14. Premi `h` e verifica che prompt e risposta siano entrambi nello storico.
 15. Ripeti con un URL o un identificatore lungo senza spazi e verifica che venga mandato a capo senza scorrimento orizzontale.
 16. Premi `e` per eseguire test e salvare report.
-17. Premi `b` per tornare alla lista.
-18. Premi `r` per ricaricare.
-19. Premi `q` per uscire.
+17. Premi `t`, verifica gli ID dei tentativi mostrati, prova un numero non valido e controlla che non cambi nulla.
+18. Premi di nuovo `t`, scegli un tentativo valido come definitivo e annotane l'ID.
+19. Premi `r`, riapri `t` e verifica che lo stesso ID sia marcato `definitivo`; premi invio per annullare senza cambiare la scelta.
+20. Premi `b` per tornare alla lista.
+21. Premi `q` per uscire.
 
 Risultato atteso:
 
 - Gli input non validi non eseguono azioni.
+- Il tentativo definitivo selezionato resta marcato dopo la ricarica e l'annullamento non lo modifica.
 - `b` e invio annullano o tornano indietro dove previsto.
 - Dopo un comando nel dettaglio si resta nel dettaglio della consegna, non si torna alla lista generale.
 - Codex locale e la guida di fallback sono distinti dall'etichetta del provider e non mostrano una soluzione completa.
@@ -715,13 +718,18 @@ il setup distruttivo del passo 1. Server, TUI locale, TUI Docker e dashboard dev
 
 7. Verifica nel dettaglio che ora compaiano `Backend: docker`, `Stato runner: passed`, `Test: 2/2 test` e
    un nuovo percorso di report.
-8. Controlla il report persistito:
+8. Controlla il report persistito e annota l'ID del tentativo Docker:
 
    ```powershell
-   Get-Content (Join-Path $ScenarioRoot "examples/assignment_tracking/student_repos/rossi-mario/reports/python-demo-somma-001/latest.json")
+   $DockerReportPath = Join-Path $ScenarioRoot "examples/assignment_tracking/student_repos/rossi-mario/reports/python-demo-somma-001/latest.json"
+   $DockerReport = Get-Content -LiteralPath $DockerReportPath -Raw -ErrorAction Stop | ConvertFrom-Json
+   if ($DockerReport.backend -ne "docker") { throw "Il report più recente non usa Docker" }
+   $DockerAttemptId = [string]$DockerReport.attempt_id
+   if ([string]::IsNullOrWhiteSpace($DockerAttemptId)) { throw "attempt_id Docker assente" }
+   $DockerAttemptId
    ```
 
-   Nel JSON il campo `backend` deve valere `docker` dopo l'ultima esecuzione.
+   Conserva `$DockerAttemptId` nelle evidenze: identifica senza ambiguità il tentativo prodotto dal backend Docker.
 9. Apri dal server già attivo la dashboard studente, seleziona `rossi-mario` e verifica che test, esito,
    ultimo tentativo e `attempt_id` corrispondano al report Docker. Una dashboard avviata su una root diversa
    non costituisce evidenza valida.
