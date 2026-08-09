@@ -94,6 +94,16 @@ git status --porcelain=v1 | Tee-Object "$Evidence\01-git-status.txt"
 python --version 2>&1 | Tee-Object "$Evidence\01-python.txt"
 python -m pip check 2>&1 | Tee-Object "$Evidence\01-pip-check.txt"
 docker version 2>&1 | Tee-Object "$Evidence\01-docker-version.txt"
+if ($LASTEXITCODE -ne 0) { throw "Docker non disponibile" }
+
+$ToolchainLock = Get-Content -LiteralPath "docker/assignment-runner/toolchain.lock.json" -Raw -ErrorAction Stop | ConvertFrom-Json
+$DockerImage = [string]$ToolchainLock.immutable_reference
+if ($DockerImage -notmatch '^.+@sha256:[0-9a-f]{64}$') { throw "Reference Docker immutabile non valida" }
+$DockerImage | Tee-Object "$Evidence\04-docker-check.txt"
+docker pull $DockerImage 2>&1 | Tee-Object -Append "$Evidence\04-docker-check.txt"
+if ($LASTEXITCODE -ne 0) { throw "Pull della toolchain Docker fissata fallito" }
+docker image inspect --format "{{json .RepoDigests}}" $DockerImage 2>&1 | Tee-Object -Append "$Evidence\04-docker-check.txt"
+if ($LASTEXITCODE -ne 0) { throw "Toolchain Docker fissata non ispezionabile" }
 ```
 
 Il preflight passa soltanto se:
@@ -101,7 +111,7 @@ Il preflight passa soltanto se:
 - `git status --porcelain=v1` è vuoto e lo SHA coincide con quello approvato/CI;
 - i check obbligatori dello stesso SHA non sono falliti o pendenti;
 - Python è 3.11-3.13, `pip check` passa e l'orologio host è sincronizzato;
-- Docker risponde e il riferimento immutabile coincide con `docker/assignment-runner/toolchain.lock.json`;
+- Docker risponde e pull/ispezione della reference immutabile letta da `docker/assignment-runner/toolchain.lock.json` passano;
 - porta, spazio disco, certificato, DNS e callback sono verificati;
 - esiste una sola istanza per data root e non ci sono lock/processi residui;
 - segreti e directory runtime sono esterni al repository e protetti dall'account di servizio;
@@ -143,14 +153,14 @@ Eseguire lo Scenario 7A di [SCENARI_TEST_MANUALI_GUI.md](SCENARI_TEST_MANUALI_GU
 
 1. impostare `$ScenarioRoot = $DemoRoot` e non eseguire i setup distruttivi o le root `tmp/...` proposti per l'esecuzione autonoma degli scenari;
 2. in un terminale dedicato avviare `python scripts/course_board_server.py --root $DemoRoot` e lasciare il server sulla stessa root usata da entrambe le TUI;
-3. eseguire i comandi TUI locale e Docker con `--root $DemoRoot`; usare la stessa istanza per il confronto dashboard dello Scenario 7A e per lo Scenario 6;
+3. eseguire i comandi TUI locale e Docker con `--root $DemoRoot`; al comando Docker dello Scenario 7A aggiungere obbligatoriamente `--docker-image $DockerImage`, usando la variabile validata nel preflight e non il tag locale di default; usare la stessa istanza per il confronto dashboard dello Scenario 7A e per lo Scenario 6;
 4. per lo Scenario 7 fermare il server, configurare il provider previsto e riavviarlo con `--root $DemoRoot`, senza ricreare la demo; anche la TUI autenticata deve usare `$DemoRoot`.
 
 Prima di ogni avvio verificare che non esista un'altra istanza sulla root. Ogni comando che usa `tmp/student-lab-demo` o la root Docker dedicata nel documento degli scenari deve quindi essere sostituito con `$DemoRoot`; un server o una TUI avviati su una root diversa rendono il gate `FAIL`.
 
 Sono obbligatorie queste evidenze:
 
-- runner Docker `passed`, test attesi superati e campo `backend=docker` nel report;
+- runner Docker `passed`, test attesi superati e campo `backend=docker` nel report; comando ed evidenza `04-docker-check.txt` devono mostrare la stessa `$DockerImage` immutabile letta dal lock;
 - nessun segreto disponibile al job e nessuna rete nel container;
 - due tentativi distinti nello storico, con ultimo/migliore coerenti;
 - scelta esplicita del definitivo e persistenza dopo riavvio/rilettura;
