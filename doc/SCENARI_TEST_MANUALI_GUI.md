@@ -706,18 +706,17 @@ il setup distruttivo del passo 1. Server, TUI locale, TUI Docker e dashboard dev
    python scripts/student_lab_cli.py --root $ScenarioRoot --student-id rossi-mario --backend local --no-clear --no-color
    ```
 
-4. Seleziona `Demo somma in Python`, premi `e`, attendi il messaggio `Esecuzione completata`, premi invio,
-   poi `b` e `q`.
+4. Seleziona `Demo somma in Python`, premi `e`, attendi il messaggio `Esecuzione completata` e premi invio.
 5. Verifica nel dettaglio che compaiano `Backend: local`, `Stato runner: passed`, `Test: 2/2 test` e
-   `Report salvato`.
-6. Ripeti i passi 3-5 con il backend Docker:
+   `Report salvato`, poi premi `b` e `q`.
+6. Ripeti i passi 3-4 con il backend Docker:
 
    ```powershell
    python scripts/student_lab_cli.py --root $ScenarioRoot --student-id rossi-mario --backend docker --no-clear --no-color
    ```
 
 7. Verifica nel dettaglio che ora compaiano `Backend: docker`, `Stato runner: passed`, `Test: 2/2 test` e
-   un nuovo percorso di report.
+   un nuovo percorso di report, poi premi `b` e `q`.
 8. Controlla il report persistito e annota l'ID del tentativo Docker:
 
    ```powershell
