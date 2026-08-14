@@ -597,8 +597,8 @@ Avvia la TUI, prova un input non valido, seleziona la consegna con il numero e v
 Controlla le sezioni, apri lo storico, entra in aiuto e verifica che <code>b</code> e invio annullino senza creare richieste.<br><br>
 <strong style="color:#7b35b2">Step 11-15 - Viola: richiesta e storico</strong><br>
 Invia una richiesta consentita, controlla tipo, stato, risposta e presenza di prompt e risposta nello storico.<br><br>
-<strong style="color:#b45f06">Step 16-19 - Arancio: esecuzione e navigazione</strong><br>
-Esegui il runner, controlla report ed esito, poi usa <code>b</code>, <code>r</code> e <code>q</code>.<br><br>
+<strong style="color:#b45f06">Step 16-21 - Arancio: esecuzione, definitivo e navigazione</strong><br>
+Esegui il runner, controlla report ed esito, scegli e ricarica il tentativo definitivo, poi usa <code>b</code> e <code>q</code>.<br><br>
 </td></tr>
 </table>
 
@@ -637,13 +637,16 @@ Esegui il runner, controlla report ed esito, poi usa <code>b</code>, <code>r</co
 14. Premi `h` e verifica che prompt e risposta siano entrambi nello storico.
 15. Ripeti con un URL o un identificatore lungo senza spazi e verifica che venga mandato a capo senza scorrimento orizzontale.
 16. Premi `e` per eseguire test e salvare report.
-17. Premi `b` per tornare alla lista.
-18. Premi `r` per ricaricare.
-19. Premi `q` per uscire.
+17. Premi `t`, verifica gli ID dei tentativi mostrati, prova un numero non valido e controlla che non cambi nulla.
+18. Premi di nuovo `t`, scegli un tentativo valido come definitivo e annotane l'ID.
+19. Premi `r`, riapri `t` e verifica che lo stesso ID sia marcato `definitivo`; premi invio per annullare senza cambiare la scelta.
+20. Premi `b` per tornare alla lista.
+21. Premi `q` per uscire.
 
 Risultato atteso:
 
 - Gli input non validi non eseguono azioni.
+- Il tentativo definitivo selezionato resta marcato dopo la ricarica e l'annullamento non lo modifica.
 - `b` e invio annullano o tornano indietro dove previsto.
 - Dopo un comando nel dettaglio si resta nel dettaglio della consegna, non si torna alla lista generale.
 - Codex locale e la guida di fallback sono distinti dall'etichetta del provider e non mostrano una soluzione completa.
@@ -667,54 +670,68 @@ con la dashboard studente.
 ![Scenario 7A annotato](images/dashboard-guides/scenario-7a-tui-docker-colori.svg)
 
 </td><td valign="top">
-<strong style="color:#1464c0">Step 1-4 - Blu: runner locale</strong><br>
-Avvia la TUI con <code>--backend local</code>, seleziona la demo, premi <code>e</code> e verifica esecuzione completata,
-<code>passed</code>, test <code>2/2</code> e report salvato.<br><br>
-<strong style="color:#b45f06">Step 5-7 - Arancione: runner Docker</strong><br>
+<strong style="color:#1464c0">Step 1-5 - Blu: root unica e runner locale</strong><br>
+Prepara la root, avvia sulla stessa root il server e la TUI con <code>--backend local</code>, seleziona la demo,
+premi <code>e</code> e verifica esecuzione completata, <code>passed</code>, test <code>2/2</code> e report salvato.<br><br>
+<strong style="color:#b45f06">Step 6-8 - Arancione: runner Docker</strong><br>
 Riavvia con <code>--backend docker</code>, ripeti l'esecuzione e controlla che il report persistito contenga
 <code>backend=docker</code>. Se Docker non e disponibile deve comparire un errore esplicito.<br><br>
-<strong style="color:#168a45">Step 8 - Verde: verifica dashboard</strong><br>
-Apri la dashboard studente, seleziona <code>rossi-mario</code> e confronta test, esito, ultimo tentativo e report.
+<strong style="color:#168a45">Step 9 - Verde: verifica dashboard</strong><br>
+Apri la dashboard servita dalla stessa root, seleziona <code>rossi-mario</code> e confronta test, esito, ultimo tentativo e report.
 </td></tr>
 </table>
 
 Obiettivo: verificare che il comando `e` usi davvero il backend scelto all'avvio della TUI e che il
-report persistito mantenga lo stesso valore. Questo scenario usa una root separata per non sovrascrivere
-la demo corrente.
+report persistito mantenga lo stesso valore. Nell'esecuzione autonoma usare una root dedicata; nel
+[pilot rehearsal](PILOT_REHEARSAL.md) impostare invece `$ScenarioRoot = $DemoRoot` già preparata e saltare
+il setup distruttivo del passo 1. Server, TUI locale, TUI Docker e dashboard devono usare sempre la stessa
+`$ScenarioRoot`.
 
-1. Prepara una root demo dedicata:
-
-   ```powershell
-   python scripts/student_lab_demo_setup.py --root tmp/student-lab-docker-demo-20260723
-   ```
-
-2. Avvia la TUI con il backend locale:
+1. In PowerShell scegli la root e, soltanto per l'esecuzione autonoma, preparala:
 
    ```powershell
-   python scripts/student_lab_cli.py --root tmp/student-lab-docker-demo-20260723 --student-id rossi-mario --backend local --no-clear --no-color
+   $ScenarioRoot = "tmp/student-lab-docker-demo-YYYYMMDD"
+   python scripts/student_lab_demo_setup.py --root $ScenarioRoot
    ```
 
-3. Seleziona `Demo somma in Python`, premi `e`, attendi il messaggio `Esecuzione completata`, premi invio,
-   poi `b` e `q`.
-4. Verifica nel dettaglio che compaiano `Backend: local`, `Stato runner: passed`, `Test: 2/2 test` e
-   `Report salvato`.
-5. Ripeti i passi 2-4 con il backend Docker:
+2. In un terminale dedicato avvia il server sulla stessa root e lascialo attivo:
 
    ```powershell
-   python scripts/student_lab_cli.py --root tmp/student-lab-docker-demo-20260723 --student-id rossi-mario --backend docker --no-clear --no-color
+   python scripts/course_board_server.py --root $ScenarioRoot
    ```
 
-6. Verifica nel dettaglio che ora compaiano `Backend: docker`, `Stato runner: passed`, `Test: 2/2 test` e
-   un nuovo percorso di report.
-7. Controlla il report persistito:
+3. In un secondo terminale avvia la TUI con il backend locale:
 
    ```powershell
-   Get-Content tmp/student-lab-docker-demo-20260723/examples/assignment_tracking/student_repos/rossi-mario/reports/python-demo-somma-001/latest.json
+   python scripts/student_lab_cli.py --root $ScenarioRoot --student-id rossi-mario --backend local --no-clear --no-color
    ```
 
-   Nel JSON il campo `backend` deve valere `docker` dopo l'ultima esecuzione.
-8. Apri la dashboard studente, seleziona `rossi-mario` e verifica che test, esito e ultimo tentativo
-   corrispondano al report Docker.
+4. Seleziona `Demo somma in Python`, premi `e`, attendi il messaggio `Esecuzione completata` e premi invio.
+5. Verifica nel dettaglio che compaiano `Backend: local`, `Stato runner: passed`, `Test: 2/2 test` e
+   `Report salvato`, poi premi `b` e `q`.
+6. Ripeti i passi 3-4 con il backend Docker:
+
+   ```powershell
+   python scripts/student_lab_cli.py --root $ScenarioRoot --student-id rossi-mario --backend docker --no-clear --no-color
+   ```
+
+7. Verifica nel dettaglio che ora compaiano `Backend: docker`, `Stato runner: passed`, `Test: 2/2 test` e
+   un nuovo percorso di report, poi premi `b` e `q`.
+8. Controlla il report persistito e annota l'ID del tentativo Docker:
+
+   ```powershell
+   $DockerReportPath = Join-Path $ScenarioRoot "examples/assignment_tracking/student_repos/rossi-mario/reports/python-demo-somma-001/latest.json"
+   $DockerReport = Get-Content -LiteralPath $DockerReportPath -Raw -ErrorAction Stop | ConvertFrom-Json
+   if ($DockerReport.backend -ne "docker") { throw "Il report più recente non usa Docker" }
+   $DockerAttemptId = [string]$DockerReport.attempt_id
+   if ([string]::IsNullOrWhiteSpace($DockerAttemptId)) { throw "attempt_id Docker assente" }
+   $DockerAttemptId
+   ```
+
+   Conserva `$DockerAttemptId` nelle evidenze: identifica senza ambiguità il tentativo prodotto dal backend Docker.
+9. Apri dal server già attivo la dashboard studente, seleziona `rossi-mario` e verifica che test, esito,
+   ultimo tentativo e `attempt_id` corrispondano al report Docker. Una dashboard avviata su una root diversa
+   non costituisce evidenza valida.
 
 Risultato atteso:
 
@@ -798,26 +815,52 @@ Prova salva, ricarica, generazione AI e annullamento; ogni stato deve avere feed
 
 Obiettivo: verificare creazione, modifica, persistenza, protezione dagli errori, dialog grafici e accessibilità
 della pagina Percorso. Nessun passaggio deve aprire i dialog nativi del browser (`alert`, `confirm` o `prompt`).
+Nell'esecuzione autonoma usare una root dedicata; nel [pilot rehearsal](PILOT_REHEARSAL.md) impostare invece
+`$ScenarioRoot = $DemoRoot` già preparata e non eseguire il setup distruttivo.
 
-1. Ferma con `Ctrl+C` il server dello Scenario 7, se ancora attivo. Avvia quindi il server senza root demo,
-   usando i dati del repository:
+1. Ferma con `Ctrl+C` ogni server sulla root. In PowerShell scegli la root e, soltanto per l'esecuzione autonoma,
+   prepara i dati demo che rendono disponibile anche un'activity:
 
    ```powershell
-   python scripts/course_board_server.py
+   $ScenarioRoot = "tmp/course-board-scenario-9-YYYYMMDD"
+   python scripts/student_lab_demo_setup.py --root $ScenarioRoot
+   if ($LASTEXITCODE -ne 0) { throw "Setup Scenario 9 fallito" }
    ```
+
+   Con il server ancora fermo, copia in entrambi i casi le fonti e l'asset controllati dello scenario, quindi
+   avvia il server sulla stessa root:
+
+   ```powershell
+   $ReadmeFixture = Join-Path $ScenarioRoot "README.md"
+   $SourceFixtureDir = Join-Path $ScenarioRoot "doc/fixtures"
+   $SourceFixture = Join-Path $SourceFixtureDir "scenario-9-course-source.md"
+   $AssetFixtureDir = Join-Path $ScenarioRoot "doc/images/dashboard-guides"
+   $AssetFixture = Join-Path $AssetFixtureDir "scenario-9-docente-percorso-colori.png"
+   New-Item -ItemType Directory -Force -Path $SourceFixtureDir, $AssetFixtureDir | Out-Null
+   Copy-Item "README.md" $ReadmeFixture -Force
+   Copy-Item "doc/fixtures/scenario-9-course-source.md" $SourceFixture -Force
+   Copy-Item "doc/images/dashboard-guides/scenario-9-docente-percorso-colori.png" $AssetFixture -Force
+   if (-not (Test-Path -LiteralPath $ReadmeFixture -PathType Leaf)) { throw "README Scenario 9 assente" }
+   if (-not (Test-Path -LiteralPath $SourceFixture -PathType Leaf)) { throw "Fonte Scenario 9 assente" }
+   if (-not (Test-Path -LiteralPath $AssetFixture -PathType Leaf)) { throw "Asset Scenario 9 assente" }
+   python scripts/course_board_server.py --root $ScenarioRoot
+   ```
+
+   Non rilanciare il setup dopo la copia: cancellerebbe le fixture. Un catalogo vuoto, una fixture assente
+   o l'assenza dell'activity demo rende lo scenario `FAIL`.
 
 2. Apri `http://localhost:8765/tools/course_board.html` e autenticati con le credenziali stampate dal server.
 3. Usa `Nuovo progetto`. Nel dialog di conferma premi `Esc` e verifica che il progetto corrente non cambi.
    Riaprilo, conferma, lascia vuoto il nome e verifica l'errore inline; inserisci infine
    `test-manuale-percorso.json` e crea il progetto.
 4. Aggiungi un percorso con settimane e ore valide. Prova poi a crearne uno con `0` settimane e verifica il bordo rosso e il messaggio di errore.
-4a. Usa `Gestisci fonti`, verifica la proiezione delle fonti correnti e aggiungi una fonte locale `README.md`. Prova ID duplicato e file non Markdown, controllando che `Sincronizza anteprima` mostri l'errore senza modificare la board. Correggi, sincronizza, verifica il conteggio dei file/paragrafi e applica. Se un token runtime e configurato, ripeti facoltativamente con una fonte GitHub o GitLab privata e controlla il commit risolto abbreviato. Verifica che nessun campo chieda o mostri credenziali.
+4a. Usa `Gestisci fonti` e verifica la proiezione delle fonti correnti. Nella fonte locale configura, uno per riga, `README.md` e `doc/fixtures/scenario-9-course-source.md`, entrambi predisposti al passo 1. Prova ID duplicato e file non Markdown, controllando che `Sincronizza anteprima` mostri l'errore senza modificare la board. Correggi, sincronizza, verifica il conteggio dei file/paragrafi e applica. Se un token runtime e configurato, ripeti facoltativamente con una fonte GitHub o GitLab privata e controlla il commit risolto abbreviato. Verifica che nessun campo chieda o mostri credenziali.
 5. Nel catalogo a sinistra usa il pulsante `+` su un paragrafo, poi premilo di nuovo sullo stesso paragrafo.
 5a. Clicca il titolo di un paragrafo e poi il comando `Testo`: verifica che si apra il modal con il contenuto completo.
-5b. Usa un paragrafo con un'immagine Markdown relativa alla fonte: verifica un asset locale e, se disponibile, un asset GitHub al commit risolto. L'immagine deve restare entro il modal, mostrare il testo alternativo e non inviare referrer.
-5c. Prova un'immagine mancante, un percorso che esce dalla root, un URL esterno e un'estensione non grafica: il testo deve restare leggibile e deve apparire `Immagine non disponibile`, senza caricare l'asset.
+5b. Usa il paragrafo `Immagine locale valida` della fixture: verifica l'asset locale e, se disponibile, un asset GitHub al commit risolto. L'immagine deve restare entro il modal, mostrare il testo alternativo e non inviare referrer.
+5c. Usa i quattro paragrafi negativi della fixture per provare un'immagine mancante, un percorso che esce dalla root, un URL esterno e un'estensione non grafica: il testo deve restare leggibile e deve apparire `Immagine non disponibile`, senza caricare l'asset.
 5d. Dentro una UDA ripeti dal titolo e dal comando `Testo`, poi usa `Apri sorgente su GitHub` e verifica l'ancora del paragrafo.
-5c. Nella stessa UDA usa `Collega activity`, scegli un'activity disponibile, il ruolo `Verifica`, una data pianificata e una scadenza successiva. Verifica l'errore inline provando prima una scadenza precedente. Salva, riapri `Modifica`, cambia il ruolo e controlla che una seconda aggiunta della stessa activity venga rifiutata. Mantieni il collegamento per lo Scenario 10.
+5e. Nella stessa UDA usa `Collega activity`, scegli un'activity disponibile, il ruolo `Verifica`, una data pianificata e una scadenza successiva. Verifica l'errore inline provando prima una scadenza precedente. Salva, riapri `Modifica`, cambia il ruolo e controlla che una seconda aggiunta della stessa activity venga rifiutata. Mantieni il collegamento per lo Scenario 10.
 6. Modifica una cornice e premi `Ricarica`: nel dialog grafico premi `Resta qui` e verifica che la modifica
    resti visibile e che il focus torni al comando precedente. Ripeti accettando `Scarta modifiche` e verifica
    che torni l'ultimo stato salvato.
