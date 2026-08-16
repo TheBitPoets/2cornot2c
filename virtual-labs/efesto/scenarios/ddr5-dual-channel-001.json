@@ -1,0 +1,30 @@
+{
+  "schema_version": "efesto.scenario.v1",
+  "id": "ddr5-dual-channel-001",
+  "title": "DDR5 e dual channel: scegli i DIMM corretti",
+  "slots": [
+    {"id": "dimm_a1", "kind": "dimm", "label": "DIMM A1"},
+    {"id": "dimm_a2", "kind": "dimm", "label": "DIMM A2 consigliato"},
+    {"id": "dimm_b1", "kind": "dimm", "label": "DIMM B1"},
+    {"id": "dimm_b2", "kind": "dimm", "label": "DIMM B2 consigliato"}
+  ],
+  "components": [
+    {
+      "id": "ddr5-module-a-001",
+      "kind": "ram",
+      "label": "Modulo DDR5 A",
+      "allowed_slots": ["dimm_a1", "dimm_a2", "dimm_b1", "dimm_b2"]
+    },
+    {
+      "id": "ddr5-module-b-001",
+      "kind": "ram",
+      "label": "Modulo DDR5 B",
+      "allowed_slots": ["dimm_a1", "dimm_a2", "dimm_b1", "dimm_b2"]
+    }
+  ],
+  "checks": [
+    {"id": "physically-compatible", "name": "I moduli sono inseriti in slot DIMM compatibili", "type": "all-placements-compatible", "visibility": "student"},
+    {"id": "module-a-a2", "name": "Primo modulo nel DIMM A2", "type": "component-in-slot", "component_id": "ddr5-module-a-001", "slot": "dimm_a2", "visibility": "student"},
+    {"id": "module-b-b2", "name": "Secondo modulo nel DIMM B2", "type": "component-in-slot", "component_id": "ddr5-module-b-001", "slot": "dimm_b2", "visibility": "student"}
+  ]
+}
