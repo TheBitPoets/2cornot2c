@@ -508,7 +508,19 @@ def run_assignment(
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     docker_image: str = DEFAULT_DOCKER_IMAGE,
 ) -> dict[str, Any]:
-    """Run one assignment with the requested backend."""
+    """Run one assignment with the requested backend or its declared virtual runtime."""
+
+    activity = load_activity(root, assignment)
+    extensions = activity.get("extensions")
+    if isinstance(extensions, dict) and "thebitlab.virtual_lab" in extensions:
+        # Import lazily: student_virtual_lab reuses report helpers from this module.
+        from scripts import student_virtual_lab
+
+        return student_virtual_lab.run_virtual_lab_assignment(
+            assignment,
+            root=root,
+            runtime_root=root,
+        )
 
     if backend == "local":
         return run_local_assignment(assignment, root=root, timeout_seconds=timeout_seconds)
