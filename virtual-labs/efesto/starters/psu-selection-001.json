@@ -1,0 +1,8 @@
+{
+  "schema_version": "efesto.build.v1",
+  "scenario_id": "psu-selection-001",
+  "components": [
+    {"slot": "pcie1", "component_id": "gpu-350w-001"},
+    {"slot": "psu_bay", "component_id": "psu-650-bronze-001"}
+  ]
+}
