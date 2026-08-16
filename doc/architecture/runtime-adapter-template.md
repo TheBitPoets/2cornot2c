@@ -4,6 +4,8 @@ Questo documento mostra la forma minima consigliata per un package esterno che i
 
 Il package puo vivere nello stesso repository del runtime, come integrazione opzionale, oppure in un repository adapter dedicato.
 
+**Il plugin non deve importare moduli Python interni di TheBitLab.** L'integrazione usa payload `dict` versionati; TheBitLab li valida e li traduce nei propri tipi interni.
+
 ## Packaging
 
 Esempio `pyproject.toml`:
@@ -22,40 +24,45 @@ Il nome dell'entry point e l'ID che le Activity useranno come `runtime_id`.
 ## Implementazione minima
 
 ```python
-from scripts.thebitlab_runtime_plugins import (
-    RuntimeDescriptor,
-    RuntimeLaunchResult,
-    RuntimeProbeResult,
-)
-from scripts.thebitlab_technical_services import ExecutionResult
-
-
 class ExampleRuntimePlugin:
     def describe(self):
-        return RuntimeDescriptor(
-            runtime_id="example-runtime",
-            display_name="Example Runtime",
-            plugin_version="0.1.0",
-            capabilities=frozenset({"headless-run"}),
-        )
+        return {
+            "schema_version": "runtime_descriptor.v1",
+            "runtime_id": "example-runtime",
+            "display_name": "Example Runtime",
+            "plugin_version": "0.1.0",
+            "api_version": "runtime_plugin.v1",
+            "capabilities": ["headless-run"],
+        }
 
     def probe(self):
-        return RuntimeProbeResult(
-            available=True,
-            version="1.0",
-        )
+        return {
+            "schema_version": "runtime_probe.v1",
+            "available": True,
+            "version": "1.0",
+        }
 
     def launch(self, request):
-        return RuntimeLaunchResult(status="unsupported")
+        return {
+            "schema_version": "runtime_launch.v1",
+            "status": "unsupported",
+        }
 
     def run(self, request):
-        # Il plugin interpreta request.config_path e il proprio formato.
-        # Gli artifact studente dichiarati sono in request.submission_artifacts.
-        return ExecutionResult(
-            status="passed",
-            tests=[],
-            detail="Esecuzione completata.",
-        )
+        # request e un normale mapping con schema runtime_request.v1.
+        # Il plugin interpreta il file runtime-specifico indicato in paths.config.
+        return {
+            "schema_version": "runtime_execution.v1",
+            "status": "passed",
+            "tests": [
+                {
+                    "name": "controllo esempio",
+                    "passed": True,
+                    "detail": "ok",
+                }
+            ],
+            "detail": "Esecuzione completata.",
+        }
 
     def close(self, session_id):
         pass
@@ -65,7 +72,52 @@ def create_plugin():
     return ExampleRuntimePlugin()
 ```
 
-Il codice precedente e uno scheletro di interfaccia, non un esempio di grading completo.
+Il codice precedente e uno scheletro di protocollo, non un esempio di grading completo.
+
+## Schemi di scambio v1
+
+```text
+runtime_descriptor.v1   plugin -> TheBitLab
+runtime_probe.v1        plugin -> TheBitLab
+runtime_request.v1      TheBitLab -> plugin
+runtime_launch.v1       plugin -> TheBitLab
+runtime_execution.v1    plugin -> TheBitLab
+```
+
+TheBitLab rifiuta payload con schema, status, test o tipi malformati prima di convertirli nel proprio `ExecutionResult` interno.
+
+Questa scelta evita che Efesto, ns-3 adapter, MATLAB adapter ecc. debbano dipendere dal layout Python interno del repository `2cornot2c`.
+
+## `runtime_request.v1`
+
+Il plugin riceve una forma simile a:
+
+```json
+{
+  "schema_version": "runtime_request.v1",
+  "runtime_id": "example-runtime",
+  "activity_id": "activity-1",
+  "assignment_id": "assignment-1",
+  "student_id": "student-1",
+  "paths": {
+    "activity": "/trusted/course/activity.json",
+    "workspace": "/student/workspace",
+    "config": "/trusted/course/runtime/config.json"
+  },
+  "submission_artifacts": [
+    {
+      "id": "primary",
+      "path": "answer.bin",
+      "media_type": "application/octet-stream",
+      "required": true
+    }
+  ],
+  "timeout_seconds": 30,
+  "metadata": {}
+}
+```
+
+`paths.config` e gia risolto da TheBitLab all'interno del package Activity trusted. Il plugin non deve interpretare path forniti da testo libero dello studente come comandi o endpoint.
 
 ## Regole
 
@@ -97,10 +149,10 @@ Il descriptor deve dichiarare solo capability realmente disponibili.
 Se il plugin sa aprire una GUI ma non eseguire test headless:
 
 ```python
-capabilities=frozenset({
+"capabilities": [
     "interactive-launch",
     "artifact-collect",
-})
+]
 ```
 
 Non dichiarare `deterministic-grade` solo perche il simulatore mostra un punteggio nella propria UI.
@@ -113,7 +165,7 @@ L'adapter non deve redistribuire binari o licenze del tool esterno.
 
 ### 5. Grading
 
-Quando il runtime supporta grading deterministico, `run()` restituisce `ExecutionResult.tests` ricostruiti lato trusted.
+Quando il runtime supporta grading deterministico, `run()` restituisce `runtime_execution.v1.tests` ricostruiti lato trusted.
 
 Quando non lo supporta, l'Activity non deve richiedere `deterministic-grade`; TheBitLab puo comunque raccogliere gli artifact e lasciare la valutazione al docente o ad altri servizi autorizzati.
 
@@ -124,8 +176,8 @@ Quando non lo supporta, l'Activity non deve richiedere `deterministic-grade`; Th
 Esempio concettuale: Efesto.
 
 ```text
-launch -> avvia server/app locale -> restituisce endpoint/session_id
-run    -> grader headless -> ExecutionResult
+launch -> avvia server/app locale -> runtime_launch.v1 con endpoint/session_id
+run    -> grader headless -> runtime_execution.v1
 close  -> chiude sessione
 ```
 
@@ -136,7 +188,7 @@ Esempio concettuale: ns-3.
 ```text
 probe  -> verifica tool/container
 launch -> unsupported (oppure editor esterno opzionale)
-run    -> esegue scenario trusted + submission -> test/result
+run    -> esegue scenario trusted + submission -> runtime_execution.v1
 ```
 
 ### GUI esterna senza grading headless garantito
@@ -146,7 +198,7 @@ Esempio concettuale: adapter Packet Tracer.
 ```text
 probe  -> verifica installazione disponibile
 launch -> apre file/lab nel tool
-run    -> unsupported oppure solo validazioni che l'adapter puo ricostruire
+run    -> unsupported oppure solo validazioni ricostruibili dall'adapter
 artifact-collect -> TheBitLab conserva i file dichiarati
 ```
 
@@ -170,7 +222,8 @@ close  -> chiude sessione posseduta dal plugin
 - nessun path traversal;
 - timeout;
 - artifact mancanti;
-- output normalizzato in `ExecutionResult`;
+- payload di ritorno malformato rifiutato;
+- output tecnico normalizzabile da TheBitLab;
 - cleanup sessione;
 - test senza dipendenza reale tramite fake/stub;
-- test integration opzionali marcati e attivati solo su ambienti con il runtime reale.
+- test integration opzionali attivati solo su ambienti con il runtime reale.
