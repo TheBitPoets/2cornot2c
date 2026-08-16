@@ -1,0 +1,27 @@
+{
+  "schema_version": "efesto.scenario.v1",
+  "id": "component-placement-001",
+  "title": "Riconosci e posiziona i componenti",
+  "slots": [
+    {"id": "cpu_socket", "kind": "cpu-socket", "label": "Socket CPU"},
+    {"id": "dimm_a2", "kind": "dimm", "label": "DIMM A2"},
+    {"id": "pcie1", "kind": "pcie", "label": "PCIe x16 principale"},
+    {"id": "m2_1", "kind": "m2", "label": "M.2 NVMe"},
+    {"id": "sata1", "kind": "sata", "label": "Porta SATA 1"}
+  ],
+  "components": [
+    {"id": "cpu-basic-001", "kind": "cpu", "label": "Processore", "allowed_slots": ["cpu_socket"]},
+    {"id": "ram-ddr5-001", "kind": "ram", "label": "Modulo RAM DDR5", "allowed_slots": ["dimm_a2"]},
+    {"id": "gpu-basic-001", "kind": "gpu", "label": "Scheda video", "allowed_slots": ["pcie1"]},
+    {"id": "nvme-basic-001", "kind": "nvme", "label": "SSD NVMe M.2", "allowed_slots": ["m2_1"]},
+    {"id": "sata-ssd-basic-001", "kind": "sata-ssd", "label": "SSD SATA 2,5 pollici", "allowed_slots": ["sata1"]}
+  ],
+  "checks": [
+    {"id": "placements-compatible", "name": "Ogni componente usa l'interfaccia corretta", "type": "all-placements-compatible", "visibility": "student"},
+    {"id": "cpu-correct", "name": "CPU installata nel socket", "type": "component-in-slot", "component_id": "cpu-basic-001", "slot": "cpu_socket", "visibility": "student"},
+    {"id": "ram-correct", "name": "RAM installata nel DIMM", "type": "component-in-slot", "component_id": "ram-ddr5-001", "slot": "dimm_a2", "visibility": "student"},
+    {"id": "gpu-correct", "name": "GPU installata nello slot PCIe x16", "type": "component-in-slot", "component_id": "gpu-basic-001", "slot": "pcie1", "visibility": "student"},
+    {"id": "nvme-correct", "name": "SSD NVMe installato nello slot M.2", "type": "component-in-slot", "component_id": "nvme-basic-001", "slot": "m2_1", "visibility": "student"},
+    {"id": "sata-correct", "name": "SSD SATA collegato alla porta SATA", "type": "component-in-slot", "component_id": "sata-ssd-basic-001", "slot": "sata1", "visibility": "student"}
+  ]
+}
