@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "id": "hw-ddr5-dual-channel-001",
+  "titolo": "DDR5 e dual channel: scegli A2 e B2",
+  "tipo": "laboratorio",
+  "linguaggio": "virtual-lab",
+  "language": "virtual-lab",
+  "source_name": "build.json",
+  "difficolta": "B",
+  "argomenti": ["ram", "ddr5", "dual-channel", "dimm", "motherboard"],
+  "consegna": "I due moduli DDR5 entrano fisicamente in tutti i DIMM, ma la configurazione iniziale non usa gli slot consigliati. Spostali in A2 e B2 per ottenere il dual channel previsto dal laboratorio.",
+  "student_support_mode": "feedback-tecnico",
+  "correzione": {"compila": false, "test": true, "sandbox": true, "ai_feedback": false},
+  "metriche": {
+    "tempo_stimato_minuti": 20,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": false
+  },
+  "extensions": {
+    "thebitlab.virtual_lab": {
+      "schema_version": "virtual_lab.v1",
+      "runtime": "efesto",
+      "scenario_id": "ddr5-dual-channel-001",
+      "submission": {"path": "build.json", "media_type": "application/json"},
+      "capabilities": ["interactive-ui", "deterministic-grade", "headless-run"]
+    }
+  },
+  "rubrica": [
+    {"criterio": "Distinzione tra compatibilita fisica e configurazione corretta", "punti": 4},
+    {"criterio": "Uso corretto di A2/B2", "punti": 4},
+    {"criterio": "Metodo e autonomia", "punti": 2}
+  ]
+}
