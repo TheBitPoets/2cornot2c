@@ -98,7 +98,13 @@ class VirtualLabExecutionService:
                 f"Artifact richiesto non presente nella consegna: {submission_key}."
             )
 
-        submission_path = Path(submission_value).resolve(strict=False)
+        raw_submission_path = Path(submission_value)
+        if raw_submission_path.is_symlink():
+            return ExecutionResult(
+                status="invalid_payload",
+                detail="L'artifact virtual-lab non puo essere un link simbolico.",
+            )
+        submission_path = raw_submission_path.resolve(strict=False)
         workspace_value = request.metadata.get("workspace_path")
         if workspace_value:
             workspace = Path(str(workspace_value)).resolve(strict=False)
@@ -109,7 +115,7 @@ class VirtualLabExecutionService:
                     status="invalid_payload",
                     detail="L'artifact virtual-lab deve restare dentro il workspace studente.",
                 )
-        if submission_path.is_symlink() or not submission_path.is_file():
+        if not submission_path.is_file():
             return _submission_failure(
                 f"Artifact richiesto non trovato o non regolare: {submission_key}."
             )
