@@ -75,7 +75,6 @@ def _runtime_context(
         raise ValueError(probe.detail or f"Runtime {runtime_id} non disponibile")
     request = thebitlab_runtime_plugins.runtime_request_from_activity(
         activity,
-        runtime_id=runtime_id,
         activity_id=clean_text(assignment.get("activity_id")),
         assignment_id=clean_text(assignment.get("assignment_id")),
         student_id=clean_text(assignment.get("student_id")),
