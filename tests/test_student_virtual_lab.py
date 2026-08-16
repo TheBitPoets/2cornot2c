@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import student_virtual_lab
+from scripts import student_lab_attempts, student_virtual_lab
 from scripts.thebitlab_virtual_lab_scaffold import (
     EfestoStarterProvider,
     starter_content_for_activity,
@@ -165,12 +165,9 @@ def test_end_to_end_attempt_history_keeps_failure_then_final_success(tmp_path) -
     assert second_report["attempt_id"]
     assert second_report["attempt_id"] != first_attempt_id
 
-    assignment_history = (
-        student_repo
-        / "reports"
-        / ACTIVITY_ID
-        / "assignments"
-        / assignment["assignment_id"]
+    assignment_history = student_lab_attempts.assignment_history_dir(
+        first_path,
+        assignment["assignment_id"],
     )
     attempts = sorted((assignment_history / "attempts").glob("attempt-*.json"))
     assert len(attempts) == 2
