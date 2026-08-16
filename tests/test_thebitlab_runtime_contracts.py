@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from scripts import thebitlab_runtime_contracts as runtime
+from scripts import validate_activity
 
 
 def valid_runtime_activity() -> dict:
@@ -26,6 +27,32 @@ def valid_runtime_activity() -> dict:
                 },
             }
         }
+    }
+
+
+def valid_thebitlab_activity() -> dict:
+    return {
+        "schema_version": "1.0",
+        "id": "runtime-demo-001",
+        "titolo": "Runtime plugin demo",
+        "tipo": "laboratorio",
+        "difficolta": "B",
+        "argomenti": ["runtime", "simulazione"],
+        "consegna": "Completa il laboratorio usando il runtime richiesto.",
+        "correzione": {
+            "compila": False,
+            "test": True,
+            "sandbox": True,
+            "ai_feedback": False,
+        },
+        "metriche": {
+            "tempo_stimato_minuti": 30,
+            "traccia_tempo_dichiarato": True,
+            "traccia_sessioni_thebitlab": True,
+            "traccia_eventi_didattici": True,
+            "traccia_errori_compilazione": False,
+        },
+        **valid_runtime_activity(),
     }
 
 
@@ -139,3 +166,17 @@ def test_runtime_extension_requires_at_least_one_submission_artifact() -> None:
     errors = runtime.validate_runtime_extension(activity, "activity.json")
 
     assert any("submission.artifacts deve essere una lista non vuota" in error for error in errors)
+
+
+def test_activity_validator_accepts_generic_runtime_extension() -> None:
+    assert validate_activity.validate_activity(valid_thebitlab_activity(), "activity.json") == []
+
+
+def test_activity_validator_reports_runtime_contract_errors() -> None:
+    activity = valid_thebitlab_activity()
+    artifact = activity["extensions"][runtime.RUNTIME_EXTENSION_KEY]["submission"]["artifacts"][0]
+    artifact["path"] = "../escape.bin"
+
+    errors = validate_activity.validate_activity(activity, "activity.json")
+
+    assert any("extensions.thebitlab.runtime.submission.artifacts[0].path" in error for error in errors)
