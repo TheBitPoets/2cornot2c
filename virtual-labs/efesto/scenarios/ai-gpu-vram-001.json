@@ -1,0 +1,18 @@
+{
+  "schema_version": "efesto.scenario.v1",
+  "id": "ai-gpu-vram-001",
+  "title": "Scegli una GPU per inferenza LLM locale",
+  "slots": [
+    {"id": "pcie1", "kind": "pcie", "label": "PCIe x16 principale", "attributes": {"pcie_gen": 5, "lanes": 16}}
+  ],
+  "components": [
+    {"id": "gpu-ai-12gb", "kind": "gpu", "label": "GPU · 12 GB VRAM", "allowed_slots": ["pcie1"], "attributes": {"vram_gb": 12, "power_w": 200, "pcie_gen": 4}},
+    {"id": "gpu-ai-16gb", "kind": "gpu", "label": "GPU · 16 GB VRAM", "allowed_slots": ["pcie1"], "attributes": {"vram_gb": 16, "power_w": 250, "pcie_gen": 4}},
+    {"id": "gpu-ai-24gb", "kind": "gpu", "label": "GPU · 24 GB VRAM", "allowed_slots": ["pcie1"], "attributes": {"vram_gb": 24, "power_w": 350, "pcie_gen": 4}},
+    {"id": "gpu-ai-48gb", "kind": "gpu", "label": "GPU workstation · 48 GB VRAM", "allowed_slots": ["pcie1"], "attributes": {"vram_gb": 48, "power_w": 300, "pcie_gen": 4}}
+  ],
+  "checks": [
+    {"id": "compatible", "name": "GPU installata su uno slot compatibile", "type": "all-placements-compatible", "visibility": "student"},
+    {"id": "vram-target", "name": "VRAM almeno 24 GB", "type": "slot-component-attribute-min", "slot": "pcie1", "attribute": "vram_gb", "min_value": 24, "unit": "GB", "visibility": "student"}
+  ]
+}
