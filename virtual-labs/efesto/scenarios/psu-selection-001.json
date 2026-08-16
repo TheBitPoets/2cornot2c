@@ -1,0 +1,20 @@
+{
+  "schema_version": "efesto.scenario.v1",
+  "id": "psu-selection-001",
+  "title": "Scegli l'alimentatore per la workstation",
+  "slots": [
+    {"id": "pcie1", "kind": "pcie", "label": "PCIe x16 principale"},
+    {"id": "psu_bay", "kind": "psu", "label": "Vano alimentatore ATX"}
+  ],
+  "components": [
+    {"id": "gpu-350w-001", "kind": "gpu", "label": "GPU target · 350 W", "allowed_slots": ["pcie1"]},
+    {"id": "psu-650-bronze-001", "kind": "psu", "label": "PSU 650 W Bronze", "allowed_slots": ["psu_bay"]},
+    {"id": "psu-750-gold-001", "kind": "psu", "label": "PSU 750 W Gold", "allowed_slots": ["psu_bay"]},
+    {"id": "psu-850-gold-001", "kind": "psu", "label": "PSU 850 W Gold", "allowed_slots": ["psu_bay"]}
+  ],
+  "checks": [
+    {"id": "placements-compatible", "name": "GPU e PSU sono installati nei rispettivi alloggiamenti", "type": "all-placements-compatible", "visibility": "student"},
+    {"id": "gpu-installed", "name": "GPU target installata", "type": "component-in-slot", "component_id": "gpu-350w-001", "slot": "pcie1", "visibility": "student"},
+    {"id": "psu-target", "name": "Scelto il PSU 850 W Gold richiesto dal progetto", "type": "component-in-slot", "component_id": "psu-850-gold-001", "slot": "psu_bay", "visibility": "student"}
+  ]
+}
