@@ -1,0 +1,11 @@
+{
+  "schema_version": "efesto.build.v1",
+  "scenario_id": "component-placement-001",
+  "components": [
+    {"slot": "cpu_socket", "component_id": "cpu-basic-001"},
+    {"slot": "dimm_a2", "component_id": "ram-ddr5-001"},
+    {"slot": "m2_1", "component_id": "gpu-basic-001"},
+    {"slot": "pcie1", "component_id": "nvme-basic-001"},
+    {"slot": "sata1", "component_id": "sata-ssd-basic-001"}
+  ]
+}
