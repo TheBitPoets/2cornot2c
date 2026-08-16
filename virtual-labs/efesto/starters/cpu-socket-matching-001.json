@@ -1,0 +1,8 @@
+{
+  "schema_version": "efesto.build.v1",
+  "scenario_id": "cpu-socket-matching-001",
+  "components": [
+    {"slot": "socket_lga1700", "component_id": "cpu-ryzen-am5-001"},
+    {"slot": "socket_am5", "component_id": "cpu-core-lga1700-001"}
+  ]
+}
