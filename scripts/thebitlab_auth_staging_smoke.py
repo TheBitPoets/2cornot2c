@@ -28,12 +28,14 @@ from scripts import thebitlab_tui_pairing_client
 
 _MAX_BODY_BYTES = 32 * 1024
 _MAX_HEADER_BYTES = 32 * 1024
+_USER_AGENT = "TheBitLab-Auth-Smoke/1.0"
 _TRANSACTION_COOKIE_RE = re.compile(
     r"^__Host-thebitlab_oidc_txn-[0-9a-f]{24}=[A-Za-z0-9_-]{32,512}$"
 )
 _UNRESERVED_32_256_RE = re.compile(r"^[A-Za-z0-9_-]{32,256}$")
 _PKCE_CHALLENGE_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 _CSP_NONCE_RE = re.compile(r"^'nonce-([A-Za-z0-9_-]{32})'$")
+_PAIRING_IMAGE_SOURCE = "https://www.thebitpoets.com"
 _GOOGLE_CLIENT_ID_RE = re.compile(
     r"^[A-Za-z0-9_-]{6,256}\.apps\.googleusercontent\.com$"
 )
@@ -338,10 +340,12 @@ def _check_pairing_page(response: ResponseSnapshot) -> None:
     if (
         csp_nonce is None
         or not parser.complete
-        or parser.script_nonces != [csp_nonce]
-        or parser.style_nonces != [csp_nonce]
-        or parser.script_ends != 1
-        or parser.style_ends != 1
+        or not parser.script_nonces
+        or any(nonce != csp_nonce for nonce in parser.script_nonces)
+        or parser.script_ends != len(parser.script_nonces)
+        or not parser.style_nonces
+        or any(nonce != csp_nonce for nonce in parser.style_nonces)
+        or parser.style_ends != len(parser.style_nonces)
         or not _repeated_header_is(response, "x-frame-options", "DENY")
         or not _repeated_header_is(
             response,
@@ -448,6 +452,7 @@ def _pairing_csp_nonce(directives: dict[str, list[str]]) -> str | None:
         "default-src",
         "script-src",
         "style-src",
+        "img-src",
         "connect-src",
         "base-uri",
         "form-action",
@@ -456,6 +461,7 @@ def _pairing_csp_nonce(directives: dict[str, list[str]]) -> str | None:
         return None
     if (
         directives["default-src"] != ["'none'"]
+        or directives["img-src"] != [_PAIRING_IMAGE_SOURCE]
         or directives["connect-src"] != ["'self'"]
         or directives["base-uri"] != ["'none'"]
         or directives["form-action"] != ["'none'"]
@@ -704,7 +710,12 @@ def _unique_object(pairs):
 
 
 def _request(method: str, url: str, timeout: float) -> ResponseSnapshot:
-    request = urllib.request.Request(url, data=b"" if method == "POST" else None, method=method)
+    request = urllib.request.Request(
+        url,
+        data=b"" if method == "POST" else None,
+        headers={"User-Agent": _USER_AGENT},
+        method=method,
+    )
     opener = urllib.request.build_opener(_NoRedirect())
     response = None
     body = None
