@@ -26,21 +26,6 @@
     "traccia_eventi_didattici": true,
     "traccia_errori_compilazione": false
   },
-  "assets": [
-    {
-      "type": "starter",
-      "path": "starter/build.json",
-      "target_path": "build.json",
-      "visibility": "student",
-      "description": "Stato iniziale della workstation virtuale"
-    },
-    {
-      "type": "runner",
-      "path": "grader/grade_virtual_lab.py",
-      "visibility": "grading",
-      "description": "Grader deterministico del laboratorio hardware"
-    }
-  ],
   "extensions": {
     "thebitlab.virtual_lab": {
       "schema_version": "virtual_lab.v1",
