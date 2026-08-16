@@ -2,8 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.thebitlab_technical_services import ExecutionRequest, ExecutionResult
 from scripts.thebitlab_virtual_lab_contracts import (
@@ -11,9 +17,6 @@ from scripts.thebitlab_virtual_lab_contracts import (
     validate_virtual_lab_extension,
 )
 from scripts.thebitlab_virtual_lab_runtime import VirtualLabExecutionService
-
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_json_object(path: Path, label: str) -> dict[str, Any]:
