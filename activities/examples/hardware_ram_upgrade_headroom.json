@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "id": "hw-ram-upgrade-headroom-001",
+  "titolo": "RAM: 64 GB con margine di espansione",
+  "tipo": "laboratorio",
+  "linguaggio": "virtual-lab",
+  "language": "virtual-lab",
+  "source_name": "build.json",
+  "difficolta": "C",
+  "argomenti": ["ram", "ddr5", "capacity", "upgrade", "workstation"],
+  "consegna": "La macchina deve avere almeno 64 GB di RAM oggi ma lasciare due DIMM liberi per un futuro upgrade. Sostituisci i moduli iniziali mantenendo esattamente due moduli installati.",
+  "student_support_mode": "feedback-tecnico",
+  "correzione": {"compila": false, "test": true, "sandbox": true, "ai_feedback": false},
+  "metriche": {
+    "tempo_stimato_minuti": 20,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": false
+  },
+  "extensions": {
+    "thebitlab.virtual_lab": {
+      "schema_version": "virtual_lab.v1",
+      "runtime": "efesto",
+      "scenario_id": "ram-upgrade-headroom-001",
+      "submission": {"path": "build.json", "media_type": "application/json"},
+      "capabilities": ["interactive-ui", "deterministic-grade", "headless-run"]
+    }
+  },
+  "rubrica": [
+    {"criterio": "Capacita RAM adeguata", "punti": 4},
+    {"criterio": "Margine di espansione preservato", "punti": 4},
+    {"criterio": "Metodo e autonomia", "punti": 2}
+  ]
+}
