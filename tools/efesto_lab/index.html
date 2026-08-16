@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Efesto Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">TheBitLab · laboratorio hardware virtuale</p>
+      <h1 id="activity-title">Efesto Lab</h1>
+      <p id="activity-instructions" class="instructions">Caricamento del laboratorio…</p>
+    </div>
+    <div class="header-status" aria-live="polite">
+      <span id="save-state" class="badge neutral">Caricamento</span>
+      <span id="score-badge" class="badge neutral">Punteggio —</span>
+    </div>
+  </header>
+
+  <main class="workspace" aria-busy="true" id="workspace">
+    <aside class="panel palette-panel" aria-labelledby="palette-title">
+      <div class="panel-heading">
+        <div>
+          <p class="panel-kicker">Magazzino</p>
+          <h2 id="palette-title">Componenti</h2>
+        </div>
+      </div>
+      <p class="hint">Trascina un componente oppure selezionalo e poi scegli uno slot.</p>
+      <div id="component-palette" class="component-palette"></div>
+      <div id="selection-help" class="selection-help" aria-live="polite">
+        Nessun componente selezionato.
+      </div>
+    </aside>
+
+    <section class="panel board-panel" aria-labelledby="board-title">
+      <div class="panel-heading board-heading">
+        <div>
+          <p class="panel-kicker">Scheda madre virtuale</p>
+          <h2 id="board-title">Motherboard</h2>
+        </div>
+        <span id="scenario-label" class="scenario-label"></span>
+      </div>
+
+      <div class="board-shell">
+        <div class="cpu-block" aria-hidden="true">
+          <span>CPU</span>
+          <strong>socket</strong>
+        </div>
+        <div id="slot-grid" class="slot-grid"></div>
+      </div>
+
+      <section class="relations" aria-labelledby="relations-title">
+        <h3 id="relations-title">Risorse condivise</h3>
+        <div id="relation-list"></div>
+      </section>
+    </section>
+
+    <aside class="panel results-panel" aria-labelledby="results-title">
+      <div class="panel-heading">
+        <div>
+          <p class="panel-kicker">Grader deterministico</p>
+          <h2 id="results-title">Controlli</h2>
+        </div>
+      </div>
+      <div id="grading-summary" class="grading-summary" aria-live="polite"></div>
+      <ol id="grading-tests" class="grading-tests"></ol>
+    </aside>
+  </main>
+
+  <footer class="action-bar">
+    <div id="message" class="message" aria-live="polite"></div>
+    <div class="actions">
+      <button id="reset-button" class="button secondary" type="button">Ripristina starter</button>
+      <button id="save-button" class="button primary" type="button">Salva e controlla</button>
+    </div>
+  </footer>
+
+  <noscript>
+    <p class="fatal">Efesto Lab richiede JavaScript per l'interazione con la scheda madre virtuale.</p>
+  </noscript>
+</body>
+</html>
