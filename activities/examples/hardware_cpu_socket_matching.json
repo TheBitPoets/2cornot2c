@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "id": "hw-cpu-socket-matching-001",
+  "titolo": "CPU e socket: abbina le piattaforme corrette",
+  "tipo": "laboratorio",
+  "linguaggio": "virtual-lab",
+  "language": "virtual-lab",
+  "source_name": "build.json",
+  "difficolta": "A",
+  "argomenti": ["cpu", "socket", "motherboard", "compatibilita"],
+  "consegna": "Correggi la configurazione iniziale installando ogni CPU nel socket compatibile. Usa le etichette e il feedback del grader per distinguere AM5 e LGA1700.",
+  "student_support_mode": "feedback-tecnico",
+  "correzione": {"compila": false, "test": true, "sandbox": true, "ai_feedback": false},
+  "metriche": {
+    "tempo_stimato_minuti": 15,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": false
+  },
+  "extensions": {
+    "thebitlab.virtual_lab": {
+      "schema_version": "virtual_lab.v1",
+      "runtime": "efesto",
+      "scenario_id": "cpu-socket-matching-001",
+      "submission": {"path": "build.json", "media_type": "application/json"},
+      "capabilities": ["interactive-ui", "deterministic-grade", "headless-run"]
+    }
+  },
+  "rubrica": [
+    {"criterio": "Riconoscimento del socket", "punti": 5},
+    {"criterio": "Configurazione finale corretta", "punti": 3},
+    {"criterio": "Metodo e autonomia", "punti": 2}
+  ]
+}
