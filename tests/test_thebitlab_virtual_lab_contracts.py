@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from scripts import thebitlab_virtual_lab_contracts as virtual_lab
+from scripts import validate_activity
 
 
 def valid_virtual_lab_activity() -> dict:
@@ -17,6 +18,32 @@ def valid_virtual_lab_activity() -> dict:
                 "capabilities": ["interactive-ui", "event-log", "deterministic-grade"],
             }
         }
+    }
+
+
+def valid_thebitlab_activity() -> dict:
+    return {
+        "schema_version": "1.0",
+        "id": "hw-pcie-lane-sharing-001",
+        "titolo": "Lane sharing PCIe",
+        "tipo": "laboratorio",
+        "difficolta": "B",
+        "argomenti": ["pcie", "lane", "nvme"],
+        "consegna": "Configura la macchina senza disabilitare la scheda di rete.",
+        "correzione": {
+            "compila": False,
+            "test": True,
+            "sandbox": True,
+            "ai_feedback": False,
+        },
+        "metriche": {
+            "tempo_stimato_minuti": 30,
+            "traccia_tempo_dichiarato": True,
+            "traccia_sessioni_thebitlab": True,
+            "traccia_eventi_didattici": True,
+            "traccia_errori_compilazione": False,
+        },
+        **valid_virtual_lab_activity(),
     }
 
 
@@ -108,3 +135,19 @@ def test_virtual_lab_extension_defaults_json_media_type() -> None:
     assert normalized is not None
     assert normalized["submission"]["media_type"] == "application/json"
     assert virtual_lab.validate_virtual_lab_extension(activity, "activity.json") == []
+
+
+def test_activity_validator_accepts_virtual_lab_extension() -> None:
+    assert validate_activity.validate_activity(valid_thebitlab_activity(), "activity.json") == []
+
+
+def test_activity_validator_reports_virtual_lab_contract_errors() -> None:
+    activity = valid_thebitlab_activity()
+    activity["extensions"][virtual_lab.VIRTUAL_LAB_EXTENSION_KEY]["submission"]["path"] = "../escape.json"
+
+    errors = validate_activity.validate_activity(activity, "activity.json")
+
+    assert (
+        "activity.json: extensions.thebitlab.virtual_lab.submission.path deve essere un path relativo sicuro"
+        in errors
+    )
