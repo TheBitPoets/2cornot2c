@@ -1,0 +1,22 @@
+{
+  "schema_version": "efesto.scenario.v1",
+  "id": "storage-tiering-001",
+  "title": "Progetta storage di sistema e archivio",
+  "slots": [
+    {"id": "m2_system", "kind": "m2", "label": "M.2 NVMe · sistema/VM"},
+    {"id": "sata_archive", "kind": "sata", "label": "SATA · archivio/backup"}
+  ],
+  "components": [
+    {"id": "nvme-512", "kind": "nvme", "label": "NVMe · 512 GB", "allowed_slots": ["m2_system"], "attributes": {"capacity_gb": 512, "read_mb_s": 3500}},
+    {"id": "nvme-1024", "kind": "nvme", "label": "NVMe · 1 TB", "allowed_slots": ["m2_system"], "attributes": {"capacity_gb": 1024, "read_mb_s": 7000}},
+    {"id": "nvme-2048", "kind": "nvme", "label": "NVMe · 2 TB", "allowed_slots": ["m2_system"], "attributes": {"capacity_gb": 2048, "read_mb_s": 7000}},
+    {"id": "sata-1024", "kind": "sata-storage", "label": "SATA · 1 TB", "allowed_slots": ["sata_archive"], "attributes": {"capacity_gb": 1024, "read_mb_s": 550}},
+    {"id": "sata-2048", "kind": "sata-storage", "label": "SATA · 2 TB", "allowed_slots": ["sata_archive"], "attributes": {"capacity_gb": 2048, "read_mb_s": 550}},
+    {"id": "sata-4096", "kind": "sata-storage", "label": "SATA · 4 TB", "allowed_slots": ["sata_archive"], "attributes": {"capacity_gb": 4096, "read_mb_s": 550}}
+  ],
+  "checks": [
+    {"id": "compatible", "name": "Storage installato sulle interfacce corrette", "type": "all-placements-compatible", "visibility": "student"},
+    {"id": "system-capacity", "name": "Disco di sistema almeno 1 TB", "type": "slot-component-attribute-min", "slot": "m2_system", "attribute": "capacity_gb", "min_value": 1024, "unit": "GB", "visibility": "student"},
+    {"id": "archive-capacity", "name": "Archivio almeno 2 TB", "type": "slot-component-attribute-min", "slot": "sata_archive", "attribute": "capacity_gb", "min_value": 2048, "unit": "GB", "visibility": "student"}
+  ]
+}
