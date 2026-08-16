@@ -28,12 +28,14 @@ from scripts import thebitlab_tui_pairing_client
 
 _MAX_BODY_BYTES = 32 * 1024
 _MAX_HEADER_BYTES = 32 * 1024
+_USER_AGENT = "TheBitLab-Auth-Smoke/1.0"
 _TRANSACTION_COOKIE_RE = re.compile(
     r"^__Host-thebitlab_oidc_txn-[0-9a-f]{24}=[A-Za-z0-9_-]{32,512}$"
 )
 _UNRESERVED_32_256_RE = re.compile(r"^[A-Za-z0-9_-]{32,256}$")
 _PKCE_CHALLENGE_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 _CSP_NONCE_RE = re.compile(r"^'nonce-([A-Za-z0-9_-]{32})'$")
+_PAIRING_IMAGE_SOURCE = "https://www.thebitpoets.com"
 _GOOGLE_CLIENT_ID_RE = re.compile(
     r"^[A-Za-z0-9_-]{6,256}\.apps\.googleusercontent\.com$"
 )
@@ -334,22 +336,24 @@ def _check_pairing_page(response: ResponseSnapshot) -> None:
         parser.close()
     except Exception:
         parser.invalid = True
-    visible_source = "".join(parser.data)
+    script_sources = ["".join(chunks) for chunks in parser.script_data]
     if (
         csp_nonce is None
         or not parser.complete
-        or parser.script_nonces != [csp_nonce]
-        or parser.style_nonces != [csp_nonce]
-        or parser.script_ends != 1
-        or parser.style_ends != 1
+        or not parser.script_nonces
+        or any(nonce != csp_nonce for nonce in parser.script_nonces)
+        or parser.script_ends != len(parser.script_nonces)
+        or not parser.style_nonces
+        or any(nonce != csp_nonce for nonce in parser.style_nonces)
+        or parser.style_ends != len(parser.style_nonces)
         or not _repeated_header_is(response, "x-frame-options", "DENY")
         or not _repeated_header_is(
             response,
             "x-content-type-options",
             "nosniff",
         )
-        or "/auth/session" not in visible_source
-        or "/auth/tui/pair" not in visible_source
+        or not any("/auth/session" in source for source in script_sources)
+        or not any("/auth/tui/pair" in source for source in script_sources)
     ):
         raise StagingSmokeError("Check staging pairing_page non valido.")
 
@@ -448,6 +452,7 @@ def _pairing_csp_nonce(directives: dict[str, list[str]]) -> str | None:
         "default-src",
         "script-src",
         "style-src",
+        "img-src",
         "connect-src",
         "base-uri",
         "form-action",
@@ -456,6 +461,7 @@ def _pairing_csp_nonce(directives: dict[str, list[str]]) -> str | None:
         return None
     if (
         directives["default-src"] != ["'none'"]
+        or directives["img-src"] != [_PAIRING_IMAGE_SOURCE]
         or directives["connect-src"] != ["'self'"]
         or directives["base-uri"] != ["'none'"]
         or directives["form-action"] != ["'none'"]
@@ -543,7 +549,7 @@ class _PairingPageParser(HTMLParser):
         self.style_nonces: list[str] = []
         self.script_ends = 0
         self.style_ends = 0
-        self.data: list[str] = []
+        self.script_data: list[list[str]] = []
         self.stack: list[str] = []
         self.seen = {"html": 0, "head": 0, "body": 0}
         self.inert_stack: list[str] = []
@@ -595,6 +601,8 @@ class _PairingPageParser(HTMLParser):
             return
         target = self.script_nonces if tag == "script" else self.style_nonces
         target.append(attrs[0][1])
+        if tag == "script":
+            self.script_data.append([])
         self.stack.append(tag)
 
     def handle_endtag(self, tag) -> None:
@@ -632,7 +640,7 @@ class _PairingPageParser(HTMLParser):
 
     def handle_data(self, data) -> None:
         if not self.inert_stack and self.stack and self.stack[-1] == "script":
-            self.data.append(data)
+            self.script_data[-1].append(data)
 
 
 def _require_response_framing(response: ResponseSnapshot) -> None:
@@ -704,7 +712,12 @@ def _unique_object(pairs):
 
 
 def _request(method: str, url: str, timeout: float) -> ResponseSnapshot:
-    request = urllib.request.Request(url, data=b"" if method == "POST" else None, method=method)
+    request = urllib.request.Request(
+        url,
+        data=b"" if method == "POST" else None,
+        headers={"User-Agent": _USER_AGENT},
+        method=method,
+    )
     opener = urllib.request.build_opener(_NoRedirect())
     response = None
     body = None

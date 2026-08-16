@@ -112,7 +112,9 @@ def responses():
     )
     pairing_body = (
         b'<html><head><style nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
-        b'</style></head><body><script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
+        b'base</style><style nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
+        b'pairing</style></head><body>'
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
         b'/auth/session /auth/tui/pair</script></body></html>'
     )
     return FreshResponses({
@@ -139,7 +141,7 @@ def responses():
                 ("Content-Type", "text/html; charset=utf-8"),
                 (
                     "Content-Security-Policy",
-                    "default-src 'none'; script-src 'nonce-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'; style-src 'nonce-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+                    "default-src 'none'; script-src 'nonce-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'; style-src 'nonce-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef'; img-src https://www.thebitpoets.com; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
                 ),
                 ("X-Frame-Options", "DENY"),
                 ("X-Content-Type-Options", "nosniff"),
@@ -165,6 +167,23 @@ def responses():
             b'{"error":"authentication_required"}',
         ),
     })
+
+
+def _replace_pairing_body(fixtures, original: bytes, replacement: bytes) -> None:
+    key = ("GET", "https://school.test/auth/tui/pair")
+    current = fixtures[key]
+    changed_body = current.body.replace(original, replacement)
+    assert changed_body != current.body
+    fixtures[key] = smoke.ResponseSnapshot(
+        current.status,
+        tuple(
+            (name, str(len(changed_body)))
+            if name.lower() == "content-length"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        changed_body,
+    )
 
 
 def test_staging_smoke_validates_public_routes_without_exposing_secrets() -> None:
@@ -204,6 +223,81 @@ def test_staging_smoke_validates_public_routes_without_exposing_secrets() -> Non
         *(key for key in fixtures if key != FreshResponses.LOGIN_KEY),
     ]
     assert all(call[2] == 30 for call in calls)
+
+
+def test_staging_smoke_accepts_expected_image_source_and_multiple_nonce_styles() -> None:
+    fixtures = responses()
+    pairing = fixtures[("GET", "https://school.test/auth/tui/pair")]
+
+    assert pairing.body.count(
+        b'<style nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
+    ) == 2
+    result = smoke.run_smoke(
+        "https://school.test",
+        lambda method, url, timeout: fixtures[(method, url)],
+    )
+
+    assert all(check["ok"] for check in result["checks"])
+
+
+def test_staging_smoke_accepts_routes_in_separate_nonce_scripts() -> None:
+    fixtures = responses()
+    _replace_pairing_body(
+        fixtures,
+        b'/auth/session /auth/tui/pair</script>',
+        b'/auth/session</script>'
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
+        b'/auth/tui/pair</script>',
+    )
+
+    result = smoke.run_smoke(
+        "https://school.test",
+        lambda method, url, timeout: fixtures[(method, url)],
+    )
+
+    assert all(check["ok"] for check in result["checks"])
+
+
+@pytest.mark.parametrize(
+    "replacement",
+    (
+        b'/auth/ses</script>'
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
+        b'sion /auth/tui/pair</script>',
+        b'/auth/session /auth/tui/</script>'
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">pair</script>',
+    ),
+    ids=("session-split-between-scripts", "pair-split-between-scripts"),
+)
+def test_staging_smoke_rejects_route_split_between_nonce_scripts(replacement) -> None:
+    fixtures = responses()
+    _replace_pairing_body(
+        fixtures,
+        b'/auth/session /auth/tui/pair</script>',
+        replacement,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+def test_staging_smoke_rejects_duplicate_nonce_attributes() -> None:
+    fixtures = responses()
+    _replace_pairing_body(
+        fixtures,
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">',
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef" '
+        b'nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">',
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
 
 
 def test_staging_smoke_accepts_runtime_global_security_headers() -> None:
@@ -556,6 +650,121 @@ def test_staging_smoke_rejects_conflicting_response_framing() -> None:
         )
 
 
+def test_staging_smoke_rejects_missing_img_src() -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/tui/pair")]
+    fixtures[("GET", "https://school.test/auth/tui/pair")] = smoke.ResponseSnapshot(
+        200,
+        tuple(
+            (
+                name,
+                value.replace(
+                    "img-src https://www.thebitpoets.com; ",
+                    "",
+                ),
+            )
+            if name.lower() == "content-security-policy"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        current.body,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+@pytest.mark.parametrize(
+    "image_sources",
+    (
+        "'self'",
+        "https://evil.test",
+        "https://www.thebitpoets.com https://evil.test",
+    ),
+)
+def test_staging_smoke_rejects_unexpected_image_sources(image_sources) -> None:
+    fixtures = responses()
+    current = fixtures[("GET", "https://school.test/auth/tui/pair")]
+    fixtures[("GET", "https://school.test/auth/tui/pair")] = smoke.ResponseSnapshot(
+        200,
+        tuple(
+            (
+                name,
+                value.replace(
+                    "img-src https://www.thebitpoets.com",
+                    f"img-src {image_sources}",
+                ),
+            )
+            if name.lower() == "content-security-policy"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        current.body,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+@pytest.mark.parametrize(
+    ("original", "replacement"),
+    (
+        (
+            b'<style nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">pairing',
+            b"<style>pairing",
+        ),
+        (
+            b'<style nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">pairing',
+            b'<style nonce="ZYXWVUTSRQPONMLKJIHGFEDCBAabcdef">pairing',
+        ),
+        (
+            b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">',
+            b"<script>",
+        ),
+        (
+            b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">',
+            b'<script nonce="ZYXWVUTSRQPONMLKJIHGFEDCBAabcdef">',
+        ),
+    ),
+    ids=(
+        "style-without-nonce",
+        "style-with-different-nonce",
+        "script-without-nonce",
+        "script-with-different-nonce",
+    ),
+)
+def test_staging_smoke_rejects_inline_code_without_exact_csp_nonce(
+    original,
+    replacement,
+) -> None:
+    fixtures = responses()
+    key = ("GET", "https://school.test/auth/tui/pair")
+    current = fixtures[key]
+    changed_body = current.body.replace(original, replacement)
+    fixtures[key] = smoke.ResponseSnapshot(
+        200,
+        tuple(
+            (name, str(len(changed_body)))
+            if name.lower() == "content-length"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        changed_body,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
 def test_staging_smoke_rejects_csp_with_additional_sources() -> None:
     fixtures = responses()
     current = fixtures[("GET", "https://school.test/auth/tui/pair")]
@@ -703,6 +912,47 @@ def test_staging_smoke_rejects_external_script_even_with_valid_nonce() -> None:
             "https://school.test",
             lambda method, url, timeout: fixtures[(method, url)],
         )
+
+
+@pytest.mark.parametrize(("method", "expected_data"), [("GET", None), ("POST", b"")])
+def test_request_uses_explicit_stable_user_agent_for_get_and_post(
+    monkeypatch,
+    method,
+    expected_data,
+) -> None:
+    captured = []
+
+    class Response:
+        status = 204
+        headers = type("Headers", (), {"raw_items": lambda self: []})()
+
+        def read(self, size):
+            return b""
+
+        def close(self):
+            pass
+
+    class Opener:
+        def open(self, request, timeout):
+            captured.append((request, timeout))
+            return Response()
+
+    monkeypatch.setattr(
+        smoke.urllib.request,
+        "build_opener",
+        lambda *handlers: Opener(),
+    )
+
+    snapshot = smoke._request(method, "https://school.test/auth/test", 12.5)
+
+    assert snapshot.status == 204
+    assert len(captured) == 1
+    request, timeout = captured[0]
+    assert request.method == method
+    assert request.data == expected_data
+    assert request.get_header("User-agent") == "TheBitLab-Auth-Smoke/1.0"
+    assert not request.get_header("User-agent").startswith("Python-urllib/")
+    assert timeout == 12.5
 
 
 def test_staging_smoke_uses_one_absolute_deadline() -> None:
