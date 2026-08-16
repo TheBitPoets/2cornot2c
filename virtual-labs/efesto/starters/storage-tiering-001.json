@@ -1,0 +1,8 @@
+{
+  "schema_version": "efesto.build.v1",
+  "scenario_id": "storage-tiering-001",
+  "components": [
+    {"slot": "m2_system", "component_id": "nvme-512"},
+    {"slot": "sata_archive", "component_id": "sata-1024"}
+  ]
+}
