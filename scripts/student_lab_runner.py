@@ -15,7 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import grade_activity, student_lab_attempts, student_lab_service
+from scripts import grade_activity, student_lab_attempts, student_lab_service, student_runtime
 from scripts.thebitlab_contracts import normalize_activity
 from scripts.thebitlab_technical_services import (
     DockerGradeActivityExecutionService,
@@ -508,8 +508,15 @@ def run_assignment(
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     docker_image: str = DEFAULT_DOCKER_IMAGE,
 ) -> dict[str, Any]:
-    """Run one assignment with the requested backend."""
+    """Run one assignment, delegating runtime Activities before code backends."""
 
+    activity = load_activity(root, assignment)
+    if student_runtime.activity_uses_runtime(activity):
+        return student_runtime.run_runtime_assignment(
+            assignment,
+            root=root,
+            timeout_seconds=timeout_seconds,
+        )
     if backend == "local":
         return run_local_assignment(assignment, root=root, timeout_seconds=timeout_seconds)
     if backend == "docker":
