@@ -336,7 +336,7 @@ def _check_pairing_page(response: ResponseSnapshot) -> None:
         parser.close()
     except Exception:
         parser.invalid = True
-    visible_source = "".join(parser.data)
+    script_sources = ["".join(chunks) for chunks in parser.script_data]
     if (
         csp_nonce is None
         or not parser.complete
@@ -352,8 +352,8 @@ def _check_pairing_page(response: ResponseSnapshot) -> None:
             "x-content-type-options",
             "nosniff",
         )
-        or "/auth/session" not in visible_source
-        or "/auth/tui/pair" not in visible_source
+        or not any("/auth/session" in source for source in script_sources)
+        or not any("/auth/tui/pair" in source for source in script_sources)
     ):
         raise StagingSmokeError("Check staging pairing_page non valido.")
 
@@ -549,7 +549,7 @@ class _PairingPageParser(HTMLParser):
         self.style_nonces: list[str] = []
         self.script_ends = 0
         self.style_ends = 0
-        self.data: list[str] = []
+        self.script_data: list[list[str]] = []
         self.stack: list[str] = []
         self.seen = {"html": 0, "head": 0, "body": 0}
         self.inert_stack: list[str] = []
@@ -601,6 +601,8 @@ class _PairingPageParser(HTMLParser):
             return
         target = self.script_nonces if tag == "script" else self.style_nonces
         target.append(attrs[0][1])
+        if tag == "script":
+            self.script_data.append([])
         self.stack.append(tag)
 
     def handle_endtag(self, tag) -> None:
@@ -638,7 +640,7 @@ class _PairingPageParser(HTMLParser):
 
     def handle_data(self, data) -> None:
         if not self.inert_stack and self.stack and self.stack[-1] == "script":
-            self.data.append(data)
+            self.script_data[-1].append(data)
 
 
 def _require_response_framing(response: ResponseSnapshot) -> None:

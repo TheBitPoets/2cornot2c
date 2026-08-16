@@ -169,6 +169,23 @@ def responses():
     })
 
 
+def _replace_pairing_body(fixtures, original: bytes, replacement: bytes) -> None:
+    key = ("GET", "https://school.test/auth/tui/pair")
+    current = fixtures[key]
+    changed_body = current.body.replace(original, replacement)
+    assert changed_body != current.body
+    fixtures[key] = smoke.ResponseSnapshot(
+        current.status,
+        tuple(
+            (name, str(len(changed_body)))
+            if name.lower() == "content-length"
+            else (name, value)
+            for name, value in current.headers
+        ),
+        changed_body,
+    )
+
+
 def test_staging_smoke_validates_public_routes_without_exposing_secrets() -> None:
     fixtures = responses()
     calls = []
@@ -221,6 +238,66 @@ def test_staging_smoke_accepts_expected_image_source_and_multiple_nonce_styles()
     )
 
     assert all(check["ok"] for check in result["checks"])
+
+
+def test_staging_smoke_accepts_routes_in_separate_nonce_scripts() -> None:
+    fixtures = responses()
+    _replace_pairing_body(
+        fixtures,
+        b'/auth/session /auth/tui/pair</script>',
+        b'/auth/session</script>'
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
+        b'/auth/tui/pair</script>',
+    )
+
+    result = smoke.run_smoke(
+        "https://school.test",
+        lambda method, url, timeout: fixtures[(method, url)],
+    )
+
+    assert all(check["ok"] for check in result["checks"])
+
+
+@pytest.mark.parametrize(
+    "replacement",
+    (
+        b'/auth/ses</script>'
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">'
+        b'sion /auth/tui/pair</script>',
+        b'/auth/session /auth/tui/</script>'
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">pair</script>',
+    ),
+    ids=("session-split-between-scripts", "pair-split-between-scripts"),
+)
+def test_staging_smoke_rejects_route_split_between_nonce_scripts(replacement) -> None:
+    fixtures = responses()
+    _replace_pairing_body(
+        fixtures,
+        b'/auth/session /auth/tui/pair</script>',
+        replacement,
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
+
+
+def test_staging_smoke_rejects_duplicate_nonce_attributes() -> None:
+    fixtures = responses()
+    _replace_pairing_body(
+        fixtures,
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">',
+        b'<script nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef" '
+        b'nonce="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef">',
+    )
+
+    with pytest.raises(smoke.StagingSmokeError):
+        smoke.run_smoke(
+            "https://school.test",
+            lambda method, url, timeout: fixtures[(method, url)],
+        )
 
 
 def test_staging_smoke_accepts_runtime_global_security_headers() -> None:
