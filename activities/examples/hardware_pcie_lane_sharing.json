@@ -40,8 +40,8 @@
       },
       "capabilities": [
         "interactive-ui",
-        "event-log",
-        "deterministic-grade"
+        "deterministic-grade",
+        "headless-run"
       ]
     }
   },
