@@ -4,17 +4,22 @@ import re
 from dataclasses import dataclass, field
 from importlib import metadata
 from pathlib import Path
-from typing import Any, Callable, Iterable, Literal, Protocol
+from typing import Any, Callable, Iterable, Literal, Mapping, Protocol
 
 from scripts.thebitlab_runtime_contracts import (
     normalize_runtime_extension,
     validate_runtime_extension,
 )
-from scripts.thebitlab_technical_services import ExecutionResult
+from scripts.thebitlab_technical_services import ExecutionResult, RunnerTestResult
 
 
 RUNTIME_PLUGIN_API_VERSION = "runtime_plugin.v1"
 RUNTIME_ENTRY_POINT_GROUP = "thebitlab.runtimes"
+RUNTIME_DESCRIPTOR_SCHEMA_VERSION = "runtime_descriptor.v1"
+RUNTIME_REQUEST_SCHEMA_VERSION = "runtime_request.v1"
+RUNTIME_PROBE_SCHEMA_VERSION = "runtime_probe.v1"
+RUNTIME_LAUNCH_SCHEMA_VERSION = "runtime_launch.v1"
+RUNTIME_EXECUTION_SCHEMA_VERSION = "runtime_execution.v1"
 _RUNTIME_TOKEN_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 
 RuntimeLaunchStatus = Literal[
@@ -25,10 +30,25 @@ RuntimeLaunchStatus = Literal[
     "invalid_payload",
     "error",
 ]
+_ALLOWED_LAUNCH_STATUSES = {
+    "started",
+    "already_running",
+    "unsupported",
+    "unavailable",
+    "invalid_payload",
+    "error",
+}
+_ALLOWED_EXECUTION_STATUSES = {
+    "passed",
+    "failed",
+    "timeout",
+    "runner_unavailable",
+    "invalid_payload",
+}
 
 
 class RuntimePluginError(RuntimeError):
-    """Base error raised by runtime discovery and compatibility checks."""
+    """Base error raised by runtime discovery and protocol validation."""
 
 
 class RuntimePluginNotFoundError(RuntimePluginError):
@@ -40,7 +60,7 @@ class RuntimePluginConflictError(RuntimePluginError):
 
 
 class RuntimePluginIncompatibleError(RuntimePluginError):
-    """Raised when the installed plugin does not satisfy the platform contract."""
+    """Raised when an installed plugin violates the public runtime protocol."""
 
 
 @dataclass(frozen=True)
@@ -50,10 +70,18 @@ class RuntimeArtifactSpec:
     media_type: str
     required: bool = True
 
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "path": self.path,
+            "media_type": self.media_type,
+            "required": self.required,
+        }
+
 
 @dataclass(frozen=True)
 class RuntimeDescriptor:
-    """Stable metadata advertised by one installed runtime plugin."""
+    """Validated metadata advertised by one installed runtime plugin."""
 
     runtime_id: str
     display_name: str
@@ -66,7 +94,7 @@ class RuntimeDescriptor:
 
 @dataclass(frozen=True)
 class RuntimeProbeResult:
-    """Availability of the simulator/tool behind an installed plugin."""
+    """Validated availability of the simulator/tool behind a plugin."""
 
     available: bool
     version: str = ""
@@ -76,8 +104,9 @@ class RuntimeProbeResult:
 
 @dataclass(frozen=True)
 class RuntimeRequest:
-    """Trusted paths and metadata passed by TheBitLab to a runtime plugin."""
+    """Trusted request created by TheBitLab and serialized for an external plugin."""
 
+    runtime_id: str
     activity_id: str
     assignment_id: str
     student_id: str
@@ -88,10 +117,27 @@ class RuntimeRequest:
     timeout_seconds: int = 30
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "schema_version": RUNTIME_REQUEST_SCHEMA_VERSION,
+            "runtime_id": self.runtime_id,
+            "activity_id": self.activity_id,
+            "assignment_id": self.assignment_id,
+            "student_id": self.student_id,
+            "paths": {
+                "activity": str(self.activity_path),
+                "workspace": str(self.workspace_path),
+                "config": str(self.config_path) if self.config_path is not None else None,
+            },
+            "submission_artifacts": [item.to_payload() for item in self.submission_artifacts],
+            "timeout_seconds": self.timeout_seconds,
+            "metadata": dict(self.metadata),
+        }
+
 
 @dataclass(frozen=True)
 class RuntimeLaunchResult:
-    """Result of asking an interactive runtime to open one assignment."""
+    """Validated result of asking an interactive runtime to open one assignment."""
 
     status: RuntimeLaunchStatus
     session_id: str = ""
@@ -101,20 +147,20 @@ class RuntimeLaunchResult:
 
 
 class RuntimePlugin(Protocol):
-    """Duck-typed plugin API implemented by external runtime packages.
+    """Dependency-free duck-typed interface implemented by external packages.
 
-    Implementations may wrap native executables, local web applications,
-    containers or remote services. Unsupported operations return an explicit
-    status/result; Activities never supply executable commands or endpoints.
+    Plugins receive and return plain mappings. They do not need to import any
+    Python module from TheBitLab. TheBitLab validates every returned payload
+    before translating it to internal dataclasses such as ExecutionResult.
     """
 
-    def describe(self) -> RuntimeDescriptor: ...
+    def describe(self) -> Mapping[str, Any]: ...
 
-    def probe(self) -> RuntimeProbeResult: ...
+    def probe(self) -> Mapping[str, Any]: ...
 
-    def launch(self, request: RuntimeRequest) -> RuntimeLaunchResult: ...
+    def launch(self, request: Mapping[str, Any]) -> Mapping[str, Any]: ...
 
-    def run(self, request: RuntimeRequest) -> ExecutionResult: ...
+    def run(self, request: Mapping[str, Any]) -> Mapping[str, Any]: ...
 
     def close(self, session_id: str) -> None: ...
 
@@ -142,6 +188,30 @@ def _entry_point_name(entry_point: Any) -> str:
     return str(getattr(entry_point, "name", "") or "").strip()
 
 
+def _text(value: Any, *, field_name: str, required: bool = False) -> str:
+    if value is None and not required:
+        return ""
+    if not isinstance(value, str):
+        raise RuntimePluginIncompatibleError(f"{field_name} deve essere una stringa")
+    result = value.strip()
+    if required and not result:
+        raise RuntimePluginIncompatibleError(f"{field_name} non puo essere vuoto")
+    return result
+
+
+def _mapping(value: Any, *, field_name: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise RuntimePluginIncompatibleError(f"{field_name} deve essere un oggetto")
+    return value
+
+
+def _metadata_dict(value: Any, *, field_name: str) -> dict[str, Any]:
+    if value is None:
+        return {}
+    mapping = _mapping(value, field_name=field_name)
+    return dict(mapping)
+
+
 def _load_plugin_factory(entry_point: Any) -> RuntimePlugin:
     try:
         factory = entry_point.load()
@@ -162,37 +232,152 @@ def _load_plugin_factory(entry_point: Any) -> RuntimePlugin:
     return plugin
 
 
-def _validate_descriptor(runtime_id: str, descriptor: Any) -> RuntimeDescriptor:
-    if not isinstance(descriptor, RuntimeDescriptor):
+def descriptor_from_payload(runtime_id: str, payload: Any) -> RuntimeDescriptor:
+    """Validate a dependency-free plugin descriptor payload."""
+
+    raw = _mapping(payload, field_name=f"descriptor runtime {runtime_id}")
+    schema_version = _text(
+        raw.get("schema_version"),
+        field_name="descriptor.schema_version",
+        required=True,
+    )
+    if schema_version != RUNTIME_DESCRIPTOR_SCHEMA_VERSION:
         raise RuntimePluginIncompatibleError(
-            f"Runtime {runtime_id} ha restituito un descriptor non valido"
+            f"Runtime {runtime_id} usa descriptor {schema_version}; richiesto {RUNTIME_DESCRIPTOR_SCHEMA_VERSION}"
         )
     if not _RUNTIME_TOKEN_RE.fullmatch(runtime_id):
         raise RuntimePluginIncompatibleError(
             f"Runtime entry point non usa un identificativo portabile: {runtime_id}"
         )
-    if descriptor.runtime_id != runtime_id:
+    declared_id = _text(raw.get("runtime_id"), field_name="descriptor.runtime_id", required=True)
+    if declared_id != runtime_id:
         raise RuntimePluginIncompatibleError(
-            f"Runtime entry point {runtime_id} dichiara descriptor {descriptor.runtime_id or '<mancante>'}"
+            f"Runtime entry point {runtime_id} dichiara descriptor {declared_id}"
         )
-    if descriptor.api_version != RUNTIME_PLUGIN_API_VERSION:
+    api_version = _text(raw.get("api_version"), field_name="descriptor.api_version", required=True)
+    if api_version != RUNTIME_PLUGIN_API_VERSION:
         raise RuntimePluginIncompatibleError(
-            f"Runtime {runtime_id} usa API {descriptor.api_version}; richiesta {RUNTIME_PLUGIN_API_VERSION}"
+            f"Runtime {runtime_id} usa API {api_version}; richiesta {RUNTIME_PLUGIN_API_VERSION}"
         )
-    if not descriptor.display_name.strip() or not descriptor.plugin_version.strip():
-        raise RuntimePluginIncompatibleError(
-            f"Runtime {runtime_id} deve dichiarare display_name e plugin_version"
+    display_name = _text(raw.get("display_name"), field_name="descriptor.display_name", required=True)
+    plugin_version = _text(raw.get("plugin_version"), field_name="descriptor.plugin_version", required=True)
+
+    capabilities_raw = raw.get("capabilities", [])
+    if not isinstance(capabilities_raw, (list, tuple, set, frozenset)):
+        raise RuntimePluginIncompatibleError("descriptor.capabilities deve essere una lista")
+    capabilities: set[str] = set()
+    for index, capability in enumerate(capabilities_raw):
+        value = _text(
+            capability,
+            field_name=f"descriptor.capabilities[{index}]",
+            required=True,
         )
-    invalid_capabilities = sorted(
-        capability
-        for capability in descriptor.capabilities
-        if not isinstance(capability, str) or not _RUNTIME_TOKEN_RE.fullmatch(capability)
+        if not _RUNTIME_TOKEN_RE.fullmatch(value):
+            raise RuntimePluginIncompatibleError(
+                f"descriptor.capabilities[{index}] non e un identificativo portabile: {value}"
+            )
+        capabilities.add(value)
+
+    return RuntimeDescriptor(
+        runtime_id=runtime_id,
+        display_name=display_name,
+        plugin_version=plugin_version,
+        api_version=api_version,
+        capabilities=frozenset(capabilities),
+        vendor=_text(raw.get("vendor"), field_name="descriptor.vendor"),
+        homepage=_text(raw.get("homepage"), field_name="descriptor.homepage"),
     )
-    if invalid_capabilities:
+
+
+def probe_result_from_payload(payload: Any) -> RuntimeProbeResult:
+    raw = _mapping(payload, field_name="runtime probe result")
+    schema_version = _text(raw.get("schema_version"), field_name="probe.schema_version", required=True)
+    if schema_version != RUNTIME_PROBE_SCHEMA_VERSION:
         raise RuntimePluginIncompatibleError(
-            f"Runtime {runtime_id} dichiara capability non valide: {', '.join(map(str, invalid_capabilities))}"
+            f"Probe runtime con schema {schema_version}; richiesto {RUNTIME_PROBE_SCHEMA_VERSION}"
         )
-    return descriptor
+    available = raw.get("available")
+    if not isinstance(available, bool):
+        raise RuntimePluginIncompatibleError("probe.available deve essere boolean")
+    return RuntimeProbeResult(
+        available=available,
+        version=_text(raw.get("version"), field_name="probe.version"),
+        detail=_text(raw.get("detail"), field_name="probe.detail"),
+        metadata=_metadata_dict(raw.get("metadata"), field_name="probe.metadata"),
+    )
+
+
+def launch_result_from_payload(payload: Any) -> RuntimeLaunchResult:
+    raw = _mapping(payload, field_name="runtime launch result")
+    schema_version = _text(raw.get("schema_version"), field_name="launch.schema_version", required=True)
+    if schema_version != RUNTIME_LAUNCH_SCHEMA_VERSION:
+        raise RuntimePluginIncompatibleError(
+            f"Launch runtime con schema {schema_version}; richiesto {RUNTIME_LAUNCH_SCHEMA_VERSION}"
+        )
+    status = _text(raw.get("status"), field_name="launch.status", required=True)
+    if status not in _ALLOWED_LAUNCH_STATUSES:
+        raise RuntimePluginIncompatibleError(f"launch.status non supportato: {status}")
+    return RuntimeLaunchResult(
+        status=status,  # type: ignore[arg-type]
+        session_id=_text(raw.get("session_id"), field_name="launch.session_id"),
+        endpoint=_text(raw.get("endpoint"), field_name="launch.endpoint"),
+        detail=_text(raw.get("detail"), field_name="launch.detail"),
+        metadata=_metadata_dict(raw.get("metadata"), field_name="launch.metadata"),
+    )
+
+
+def execution_result_from_payload(payload: Any) -> ExecutionResult:
+    """Validate a plugin payload and translate it to the internal execution port."""
+
+    raw = _mapping(payload, field_name="runtime execution result")
+    schema_version = _text(
+        raw.get("schema_version"),
+        field_name="execution.schema_version",
+        required=True,
+    )
+    if schema_version != RUNTIME_EXECUTION_SCHEMA_VERSION:
+        raise RuntimePluginIncompatibleError(
+            f"Execution runtime con schema {schema_version}; richiesto {RUNTIME_EXECUTION_SCHEMA_VERSION}"
+        )
+    status = _text(raw.get("status"), field_name="execution.status", required=True)
+    if status not in _ALLOWED_EXECUTION_STATUSES:
+        raise RuntimePluginIncompatibleError(f"execution.status non supportato: {status}")
+
+    tests_raw = raw.get("tests", [])
+    if not isinstance(tests_raw, list):
+        raise RuntimePluginIncompatibleError("execution.tests deve essere una lista")
+    tests: list[RunnerTestResult] = []
+    for index, item in enumerate(tests_raw):
+        test = _mapping(item, field_name=f"execution.tests[{index}]")
+        name = _text(test.get("name"), field_name=f"execution.tests[{index}].name", required=True)
+        passed = test.get("passed")
+        if not isinstance(passed, bool):
+            raise RuntimePluginIncompatibleError(
+                f"execution.tests[{index}].passed deve essere boolean"
+            )
+        tests.append(
+            RunnerTestResult(
+                name=name,
+                passed=passed,
+                detail=_text(test.get("detail"), field_name=f"execution.tests[{index}].detail"),
+            )
+        )
+
+    duration_ms = raw.get("duration_ms")
+    if duration_ms is not None and (
+        isinstance(duration_ms, bool) or not isinstance(duration_ms, int) or duration_ms < 0
+    ):
+        raise RuntimePluginIncompatibleError("execution.duration_ms deve essere un intero non negativo")
+
+    return ExecutionResult(
+        status=status,  # type: ignore[arg-type]
+        tests=tests,
+        stdout=_text(raw.get("stdout"), field_name="execution.stdout"),
+        stderr=_text(raw.get("stderr"), field_name="execution.stderr"),
+        duration_ms=duration_ms,
+        detail=_text(raw.get("detail"), field_name="execution.detail"),
+        metadata=_metadata_dict(raw.get("metadata"), field_name="execution.metadata"),
+    )
 
 
 class RuntimePluginRegistry:
@@ -248,7 +433,13 @@ class RuntimePluginRegistry:
             raise RuntimePluginIncompatibleError(
                 f"Runtime {runtime_id} non implementa describe()"
             )
-        descriptor = _validate_descriptor(runtime_id, describe())
+        try:
+            descriptor_payload = describe()
+        except Exception as error:
+            raise RuntimePluginIncompatibleError(
+                f"Runtime {runtime_id} ha fallito describe(): {error}"
+            ) from error
+        descriptor = descriptor_from_payload(runtime_id, descriptor_payload)
         loaded = LoadedRuntimePlugin(descriptor=descriptor, plugin=plugin)
         self._cache[runtime_id] = loaded
         return loaded
@@ -330,6 +521,7 @@ def runtime_request_from_activity(
         for item in extension["submission"]["artifacts"]
     )
     return RuntimeRequest(
+        runtime_id=str(extension["runtime_id"]),
         activity_id=activity_id,
         assignment_id=assignment_id,
         student_id=student_id,
@@ -340,3 +532,81 @@ def runtime_request_from_activity(
         timeout_seconds=timeout_seconds,
         metadata=dict(metadata or {}),
     )
+
+
+def probe_runtime(loaded: LoadedRuntimePlugin) -> RuntimeProbeResult:
+    probe = getattr(loaded.plugin, "probe", None)
+    if not callable(probe):
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} non implementa probe()"
+        )
+    try:
+        payload = probe()
+    except Exception as error:
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} ha fallito probe(): {error}"
+        ) from error
+    return probe_result_from_payload(payload)
+
+
+def launch_runtime(
+    loaded: LoadedRuntimePlugin,
+    request: RuntimeRequest,
+) -> RuntimeLaunchResult:
+    launch = getattr(loaded.plugin, "launch", None)
+    if not callable(launch):
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} non implementa launch()"
+        )
+    try:
+        payload = launch(request.to_payload())
+    except Exception as error:
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} ha fallito launch(): {error}"
+        ) from error
+    return launch_result_from_payload(payload)
+
+
+def run_runtime(
+    loaded: LoadedRuntimePlugin,
+    request: RuntimeRequest,
+) -> ExecutionResult:
+    run = getattr(loaded.plugin, "run", None)
+    if not callable(run):
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} non implementa run()"
+        )
+    try:
+        payload = run(request.to_payload())
+    except Exception as error:
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} ha fallito run(): {error}"
+        ) from error
+    result = execution_result_from_payload(payload)
+    return ExecutionResult(
+        status=result.status,
+        tests=result.tests,
+        stdout=result.stdout,
+        stderr=result.stderr,
+        duration_ms=result.duration_ms,
+        detail=result.detail,
+        metadata={
+            **result.metadata,
+            "runtime_id": loaded.descriptor.runtime_id,
+            "runtime_plugin_version": loaded.descriptor.plugin_version,
+        },
+    )
+
+
+def close_runtime(loaded: LoadedRuntimePlugin, session_id: str) -> None:
+    close = getattr(loaded.plugin, "close", None)
+    if not callable(close):
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} non implementa close()"
+        )
+    try:
+        close(session_id)
+    except Exception as error:
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} ha fallito close(): {error}"
+        ) from error
