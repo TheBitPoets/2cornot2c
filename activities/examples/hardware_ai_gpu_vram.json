@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "id": "hw-ai-gpu-vram-001",
+  "titolo": "Workstation AI: scegli la GPU in base alla VRAM",
+  "tipo": "laboratorio",
+  "linguaggio": "virtual-lab",
+  "language": "virtual-lab",
+  "source_name": "build.json",
+  "difficolta": "C",
+  "argomenti": ["gpu", "vram", "ai", "llm", "pcie", "workstation"],
+  "consegna": "Il target richiede inferenza LLM locale con almeno 24 GB di VRAM. Sostituisci la GPU iniziale con una qualsiasi soluzione che soddisfi il requisito, senza cercare un modello specifico.",
+  "student_support_mode": "feedback-tecnico",
+  "correzione": {"compila": false, "test": true, "sandbox": true, "ai_feedback": false},
+  "metriche": {
+    "tempo_stimato_minuti": 20,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": false
+  },
+  "extensions": {
+    "thebitlab.virtual_lab": {
+      "schema_version": "virtual_lab.v1",
+      "runtime": "efesto",
+      "scenario_id": "ai-gpu-vram-001",
+      "submission": {"path": "build.json", "media_type": "application/json"},
+      "capabilities": ["interactive-ui", "deterministic-grade", "headless-run"]
+    }
+  },
+  "rubrica": [
+    {"criterio": "Interpretazione del requisito VRAM", "punti": 4},
+    {"criterio": "Scelta di una soluzione adeguata", "punti": 4},
+    {"criterio": "Metodo e autonomia", "punti": 2}
+  ]
+}
