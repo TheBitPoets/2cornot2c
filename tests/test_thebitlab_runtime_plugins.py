@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from scripts import thebitlab_runtime_plugins as plugins
-from scripts.thebitlab_technical_services import ExecutionResult
 
 
 class FakeEntryPoint:
@@ -23,30 +22,54 @@ class FakePlugin:
         runtime_id: str = "example-runtime",
         *,
         api_version: str = plugins.RUNTIME_PLUGIN_API_VERSION,
-        capabilities: frozenset[str] = frozenset({"headless-run", "deterministic-grade"}),
+        capabilities: tuple[str, ...] = ("headless-run", "deterministic-grade"),
     ) -> None:
-        self._descriptor = plugins.RuntimeDescriptor(
-            runtime_id=runtime_id,
-            display_name="Example Runtime",
-            plugin_version="1.2.3",
-            api_version=api_version,
-            capabilities=capabilities,
-        )
+        self.runtime_id = runtime_id
+        self.api_version = api_version
+        self.capabilities = capabilities
+        self.closed: list[str] = []
+        self.last_request = None
 
-    def describe(self) -> plugins.RuntimeDescriptor:
-        return self._descriptor
+    def describe(self):
+        return {
+            "schema_version": plugins.RUNTIME_DESCRIPTOR_SCHEMA_VERSION,
+            "runtime_id": self.runtime_id,
+            "display_name": "Example Runtime",
+            "plugin_version": "1.2.3",
+            "api_version": self.api_version,
+            "capabilities": list(self.capabilities),
+        }
 
-    def probe(self) -> plugins.RuntimeProbeResult:
-        return plugins.RuntimeProbeResult(available=True, version="1.2.3")
+    def probe(self):
+        return {
+            "schema_version": plugins.RUNTIME_PROBE_SCHEMA_VERSION,
+            "available": True,
+            "version": "1.2.3",
+            "detail": "ready",
+        }
 
-    def launch(self, request: plugins.RuntimeRequest) -> plugins.RuntimeLaunchResult:
-        return plugins.RuntimeLaunchResult(status="unsupported")
+    def launch(self, request):
+        self.last_request = request
+        return {
+            "schema_version": plugins.RUNTIME_LAUNCH_SCHEMA_VERSION,
+            "status": "unsupported",
+            "detail": "no interactive UI",
+        }
 
-    def run(self, request: plugins.RuntimeRequest) -> ExecutionResult:
-        return ExecutionResult(status="passed")
+    def run(self, request):
+        self.last_request = request
+        return {
+            "schema_version": plugins.RUNTIME_EXECUTION_SCHEMA_VERSION,
+            "status": "passed",
+            "tests": [
+                {"name": "runtime smoke", "passed": True, "detail": "ok"}
+            ],
+            "duration_ms": 5,
+            "detail": "completed",
+        }
 
     def close(self, session_id: str) -> None:
-        return None
+        self.closed.append(session_id)
 
 
 def activity(
@@ -82,20 +105,36 @@ def registry(*entry_points: FakeEntryPoint) -> plugins.RuntimePluginRegistry:
     return plugins.RuntimePluginRegistry(lambda: tuple(entry_points))
 
 
+def request(tmp_path: Path, runtime_id: str = "example-runtime") -> plugins.RuntimeRequest:
+    activity_dir = tmp_path / "activity"
+    workspace = tmp_path / "workspace"
+    activity_dir.mkdir()
+    workspace.mkdir()
+    activity_path = activity_dir / "activity.json"
+    activity_path.write_text("{}", encoding="utf-8")
+    return plugins.runtime_request_from_activity(
+        activity(runtime_id),
+        activity_id="a1",
+        assignment_id="assign-1",
+        student_id="student-1",
+        activity_path=activity_path,
+        workspace_path=workspace,
+    )
+
+
 def test_registry_discovers_runtime_by_entry_point_without_hardcoded_ids() -> None:
-    fake = FakeEntryPoint("ns3", lambda: FakePlugin("ns3"))
-    runtime_registry = registry(fake)
+    fake_plugin = FakePlugin("ns3")
+    runtime_registry = registry(FakeEntryPoint("ns3", lambda: fake_plugin))
 
     loaded = runtime_registry.get("ns3")
 
     assert runtime_registry.installed_ids() == ("ns3",)
     assert loaded.descriptor.runtime_id == "ns3"
-    assert loaded.plugin.probe().available is True
+    assert plugins.probe_runtime(loaded).available is True
 
 
 def test_registry_enforces_installation_allowlist() -> None:
-    fake = FakeEntryPoint("matlab", lambda: FakePlugin("matlab"))
-    runtime_registry = registry(fake)
+    runtime_registry = registry(FakeEntryPoint("matlab", lambda: FakePlugin("matlab")))
 
     with pytest.raises(plugins.RuntimePluginNotFoundError, match="non autorizzato"):
         runtime_registry.get("matlab", allowlist={"efesto", "ns3"})
@@ -132,11 +171,26 @@ def test_registry_rejects_descriptor_id_different_from_entry_point() -> None:
         runtime_registry.get("packet-tracer")
 
 
+def test_registry_rejects_invalid_plugin_capability() -> None:
+    runtime_registry = registry(
+        FakeEntryPoint(
+            "bad-runtime",
+            lambda: FakePlugin("bad-runtime", capabilities=("headless-run", "non valida")),
+        )
+    )
+
+    with pytest.raises(plugins.RuntimePluginIncompatibleError, match="capabilities"):
+        runtime_registry.get("bad-runtime")
+
+
 def test_capability_matching_is_activity_driven() -> None:
-    descriptor = FakePlugin(
+    descriptor = plugins.descriptor_from_payload(
         "packet-tracer",
-        capabilities=frozenset({"interactive-launch", "artifact-collect"}),
-    ).describe()
+        FakePlugin(
+            "packet-tracer",
+            capabilities=("interactive-launch", "artifact-collect"),
+        ).describe(),
+    )
     requested = activity(
         "packet-tracer",
         ["interactive-launch", "artifact-collect"],
@@ -147,10 +201,13 @@ def test_capability_matching_is_activity_driven() -> None:
 
 
 def test_capability_matching_reports_missing_headless_grading() -> None:
-    descriptor = FakePlugin(
+    descriptor = plugins.descriptor_from_payload(
         "packet-tracer",
-        capabilities=frozenset({"interactive-launch", "artifact-collect"}),
-    ).describe()
+        FakePlugin(
+            "packet-tracer",
+            capabilities=("interactive-launch", "artifact-collect"),
+        ).describe(),
+    )
     requested = activity(
         "packet-tracer",
         ["interactive-launch", "deterministic-grade"],
@@ -160,34 +217,73 @@ def test_capability_matching_reports_missing_headless_grading() -> None:
         plugins.assert_runtime_supports_activity(requested, descriptor)
 
 
-def test_runtime_request_passes_paths_and_artifacts_without_parsing_runtime_config(tmp_path: Path) -> None:
+def test_runtime_request_serializes_paths_and_artifacts_without_parsing_config(tmp_path: Path) -> None:
+    runtime_request = request(tmp_path)
+    payload = runtime_request.to_payload()
+
+    assert runtime_request.runtime_id == "example-runtime"
+    assert runtime_request.config_path == tmp_path / "activity/runtime/config.json"
+    assert payload["schema_version"] == plugins.RUNTIME_REQUEST_SCHEMA_VERSION
+    assert payload["paths"]["workspace"] == str(tmp_path / "workspace")
+    assert payload["submission_artifacts"] == [
+        {
+            "id": "primary",
+            "path": "answer.bin",
+            "media_type": "application/octet-stream",
+            "required": True,
+        }
+    ]
+
+
+def test_runtime_request_rejects_invalid_activity_contract(tmp_path: Path) -> None:
+    invalid = activity()
+    invalid["extensions"]["thebitlab.runtime"]["submission"]["artifacts"][0]["path"] = "../escape.bin"
     activity_dir = tmp_path / "activity"
-    workspace = tmp_path / "workspace"
     activity_dir.mkdir()
+    workspace = tmp_path / "workspace"
     workspace.mkdir()
     activity_path = activity_dir / "activity.json"
     activity_path.write_text("{}", encoding="utf-8")
 
-    request = plugins.runtime_request_from_activity(
-        activity(),
-        activity_id="a1",
-        assignment_id="assign-1",
-        student_id="student-1",
-        activity_path=activity_path,
-        workspace_path=workspace,
-    )
+    with pytest.raises(plugins.RuntimePluginIncompatibleError, match="path relativo sicuro"):
+        plugins.runtime_request_from_activity(
+            invalid,
+            activity_id="a1",
+            assignment_id="assign-1",
+            student_id="student-1",
+            activity_path=activity_path,
+            workspace_path=workspace,
+        )
 
-    assert request.activity_id == "a1"
-    assert request.assignment_id == "assign-1"
-    assert request.config_path == activity_dir / "runtime/config.json"
-    assert request.submission_artifacts == (
-        plugins.RuntimeArtifactSpec(
-            id="primary",
-            path="answer.bin",
-            media_type="application/octet-stream",
-            required=True,
-        ),
-    )
+
+def test_runtime_lifecycle_uses_plain_payloads_and_normalizes_execution(tmp_path: Path) -> None:
+    fake_plugin = FakePlugin("ns3", capabilities=("headless-run",))
+    loaded = registry(FakeEntryPoint("ns3", lambda: fake_plugin)).get("ns3")
+    runtime_request = request(tmp_path, "ns3")
+
+    probe = plugins.probe_runtime(loaded)
+    launch = plugins.launch_runtime(loaded, runtime_request)
+    execution = plugins.run_runtime(loaded, runtime_request)
+    plugins.close_runtime(loaded, "session-1")
+
+    assert probe.available is True
+    assert launch.status == "unsupported"
+    assert execution.status == "passed"
+    assert execution.tests[0].name == "runtime smoke"
+    assert execution.metadata["runtime_id"] == "ns3"
+    assert fake_plugin.last_request["schema_version"] == plugins.RUNTIME_REQUEST_SCHEMA_VERSION
+    assert fake_plugin.closed == ["session-1"]
+
+
+def test_execution_payload_validation_rejects_malformed_test() -> None:
+    with pytest.raises(plugins.RuntimePluginIncompatibleError, match="passed deve essere boolean"):
+        plugins.execution_result_from_payload(
+            {
+                "schema_version": plugins.RUNTIME_EXECUTION_SCHEMA_VERSION,
+                "status": "failed",
+                "tests": [{"name": "broken", "passed": "yes"}],
+            }
+        )
 
 
 def test_examples_can_represent_different_runtime_operating_models() -> None:
@@ -200,5 +296,8 @@ def test_examples_can_represent_different_runtime_operating_models() -> None:
     }
 
     for runtime_id, required in cases.items():
-        descriptor = FakePlugin(runtime_id, capabilities=frozenset(required)).describe()
+        descriptor = plugins.descriptor_from_payload(
+            runtime_id,
+            FakePlugin(runtime_id, capabilities=tuple(required)).describe(),
+        )
         plugins.assert_runtime_supports_activity(activity(runtime_id, required), descriptor)
