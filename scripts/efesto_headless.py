@@ -98,20 +98,71 @@ def _placements(build: dict[str, Any]) -> dict[str, str]:
     return result
 
 
+def _component_map(scenario: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        efesto_contracts.clean_text(item.get("id")): item
+        for item in scenario.get("components", [])
+        if isinstance(item, dict) and efesto_contracts.clean_text(item.get("id"))
+    }
+
+
+def _slot_map(scenario: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        efesto_contracts.clean_text(item.get("id")): item
+        for item in scenario.get("slots", [])
+        if isinstance(item, dict) and efesto_contracts.clean_text(item.get("id"))
+    }
+
+
+def _component_in_slot(
+    scenario: dict[str, Any], placements: dict[str, str], slot_id: str
+) -> dict[str, Any] | None:
+    component_id = placements.get(slot_id)
+    return _component_map(scenario).get(component_id or "")
+
+
+def _attribute(component: dict[str, Any] | None, name: str) -> Any:
+    if not isinstance(component, dict):
+        return None
+    attributes = component.get("attributes")
+    return attributes.get(name) if isinstance(attributes, dict) else None
+
+
+def _number_attribute(component: dict[str, Any] | None, name: str) -> float | None:
+    value = _attribute(component, name)
+    return float(value) if efesto_contracts.is_finite_number(value) else None
+
+
+def _display_number(value: float) -> str:
+    return str(int(value)) if float(value).is_integer() else f"{value:.2f}".rstrip("0").rstrip(".")
+
+
+def _unit_suffix(check: dict[str, Any]) -> str:
+    unit = efesto_contracts.clean_text(check.get("unit"))
+    return f" {unit}" if unit else ""
+
+
+def _installed_components(
+    scenario: dict[str, Any], placements: dict[str, str], *, kind: str = ""
+) -> list[dict[str, Any]]:
+    components = _component_map(scenario)
+    installed: list[dict[str, Any]] = []
+    for component_id in placements.values():
+        component = components.get(component_id)
+        if component is None:
+            continue
+        if kind and efesto_contracts.clean_text(component.get("kind")) != kind:
+            continue
+        installed.append(component)
+    return installed
+
+
 def _compatibility_detail(
     scenario: dict[str, Any],
     placements: dict[str, str],
 ) -> tuple[bool, str]:
-    slots = {
-        efesto_contracts.clean_text(item.get("id")): item
-        for item in scenario.get("slots", [])
-        if isinstance(item, dict)
-    }
-    components = {
-        efesto_contracts.clean_text(item.get("id")): item
-        for item in scenario.get("components", [])
-        if isinstance(item, dict)
-    }
+    slots = _slot_map(scenario)
+    components = _component_map(scenario)
     problems: list[str] = []
     for slot_id, component_id in placements.items():
         if slot_id not in slots:
@@ -125,6 +176,141 @@ def _compatibility_detail(
         if slot_id not in allowed_slots:
             problems.append(f"{component_id} non e compatibile con {slot_id}")
     return not problems, "; ".join(problems)
+
+
+def _slot_attribute_check(
+    check: dict[str, Any],
+    scenario: dict[str, Any],
+    placements: dict[str, str],
+    *,
+    mode: str,
+) -> tuple[bool, str]:
+    slot_id = efesto_contracts.clean_text(check.get("slot"))
+    attribute = efesto_contracts.clean_text(check.get("attribute"))
+    component = _component_in_slot(scenario, placements, slot_id)
+    component_id = placements.get(slot_id, "")
+    if component is None:
+        return False, f"Lo slot {slot_id} e vuoto o contiene un componente sconosciuto."
+    actual = _attribute(component, attribute)
+    suffix = _unit_suffix(check)
+
+    if mode == "equals":
+        expected = check.get("expected")
+        passed = actual == expected
+        return passed, (
+            f"{component_id}: {attribute} = {actual!s}, valore richiesto {expected!s}."
+            if not passed
+            else f"{component_id}: {attribute} = {actual!s}, requisito soddisfatto."
+        )
+
+    if not efesto_contracts.is_finite_number(actual):
+        return False, f"{component_id} non dichiara un valore numerico per {attribute}."
+    actual_number = float(actual)
+    if mode == "min":
+        threshold = float(check["min_value"])
+        passed = actual_number >= threshold
+        operator = ">="
+    else:
+        threshold = float(check["max_value"])
+        passed = actual_number <= threshold
+        operator = "<="
+    return passed, (
+        f"{component_id}: {attribute} {_display_number(actual_number)}{suffix}; "
+        f"richiesto {operator} {_display_number(threshold)}{suffix}."
+    )
+
+
+def _installed_sum_check(
+    check: dict[str, Any],
+    scenario: dict[str, Any],
+    placements: dict[str, str],
+    *,
+    mode: str,
+) -> tuple[bool, str]:
+    attribute = efesto_contracts.clean_text(check.get("attribute"))
+    kind = efesto_contracts.clean_text(check.get("kind"))
+    installed = _installed_components(scenario, placements, kind=kind)
+    values: list[float] = []
+    missing: list[str] = []
+    for component in installed:
+        value = _attribute(component, attribute)
+        if efesto_contracts.is_finite_number(value):
+            values.append(float(value))
+        elif kind:
+            missing.append(efesto_contracts.clean_text(component.get("id")))
+    if missing:
+        return False, f"Attributo {attribute} mancante per: {', '.join(missing)}."
+    total = sum(values)
+    suffix = _unit_suffix(check)
+    if mode == "min":
+        threshold = float(check["min_value"])
+        passed = total >= threshold
+        operator = ">="
+    else:
+        threshold = float(check["max_value"])
+        passed = total <= threshold
+        operator = "<="
+    kind_label = f" sui componenti {kind}" if kind else ""
+    return passed, (
+        f"Somma {attribute}{kind_label}: {_display_number(total)}{suffix}; "
+        f"richiesto {operator} {_display_number(threshold)}{suffix}."
+    )
+
+
+def _kind_count_check(
+    check: dict[str, Any],
+    scenario: dict[str, Any],
+    placements: dict[str, str],
+) -> tuple[bool, str]:
+    kind = efesto_contracts.clean_text(check.get("kind"))
+    count = len(_installed_components(scenario, placements, kind=kind))
+    min_count = check.get("min_count")
+    max_count = check.get("max_count")
+    passed = True
+    requirements: list[str] = []
+    if isinstance(min_count, int) and not isinstance(min_count, bool):
+        passed = passed and count >= min_count
+        requirements.append(f">= {min_count}")
+    if isinstance(max_count, int) and not isinstance(max_count, bool):
+        passed = passed and count <= max_count
+        requirements.append(f"<= {max_count}")
+    return passed, (
+        f"Componenti di tipo {kind} installati: {count}; richiesto {' e '.join(requirements)}."
+    )
+
+
+def _capacity_check(
+    check: dict[str, Any],
+    scenario: dict[str, Any],
+    placements: dict[str, str],
+) -> tuple[bool, str]:
+    capacity_slot = efesto_contracts.clean_text(check.get("capacity_slot"))
+    capacity_attribute = efesto_contracts.clean_text(check.get("capacity_attribute"))
+    demand_attribute = efesto_contracts.clean_text(check.get("demand_attribute"))
+    demand_kind = efesto_contracts.clean_text(check.get("demand_kind"))
+    capacity_component = _component_in_slot(scenario, placements, capacity_slot)
+    capacity_id = placements.get(capacity_slot, "")
+    capacity = _number_attribute(capacity_component, capacity_attribute)
+    if capacity is None:
+        return False, (
+            f"Il componente in {capacity_slot} non dichiara {capacity_attribute} numerico."
+        )
+
+    demand = 0.0
+    for component in _installed_components(scenario, placements, kind=demand_kind):
+        value = _attribute(component, demand_attribute)
+        if efesto_contracts.is_finite_number(value):
+            demand += float(value)
+    fixed = float(check.get("fixed_demand", 0) or 0)
+    factor = float(check.get("factor", 1) or 1)
+    required = (demand + fixed) * factor
+    passed = capacity >= required
+    suffix = _unit_suffix(check)
+    return passed, (
+        f"{capacity_id}: capacita {_display_number(capacity)}{suffix}; "
+        f"carico {_display_number(demand)}{suffix} + fisso {_display_number(fixed)}{suffix}, "
+        f"fattore {_display_number(factor)} => richiesti {_display_number(required)}{suffix}."
+    )
 
 
 def _evaluate_check(
@@ -170,6 +356,21 @@ def _evaluate_check(
             if passed
             else f"Conflitto: gli slot {', '.join(slot_ids)} sono occupati contemporaneamente."
         )
+
+    if check_type == "slot-component-attribute-min":
+        return _slot_attribute_check(check, scenario, placements, mode="min")
+    if check_type == "slot-component-attribute-max":
+        return _slot_attribute_check(check, scenario, placements, mode="max")
+    if check_type == "slot-component-attribute-equals":
+        return _slot_attribute_check(check, scenario, placements, mode="equals")
+    if check_type == "installed-attribute-sum-min":
+        return _installed_sum_check(check, scenario, placements, mode="min")
+    if check_type == "installed-attribute-sum-max":
+        return _installed_sum_check(check, scenario, placements, mode="max")
+    if check_type == "installed-kind-count":
+        return _kind_count_check(check, scenario, placements)
+    if check_type == "slot-capacity-covers-installed-sum":
+        return _capacity_check(check, scenario, placements)
 
     return False, f"Tipo di controllo non supportato: {check_type}."
 
