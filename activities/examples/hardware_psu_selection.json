@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "id": "hw-psu-selection-001",
+  "titolo": "Dimensiona l'alimentatore della workstation",
+  "tipo": "laboratorio",
+  "linguaggio": "virtual-lab",
+  "language": "virtual-lab",
+  "source_name": "build.json",
+  "difficolta": "B",
+  "argomenti": ["psu", "alimentazione", "watt", "gpu", "workstation"],
+  "consegna": "La workstation del caso di studio usa una GPU da 350 W e il progetto richiede margine operativo: sostituisci il PSU iniziale con il modello 850 W Gold previsto dal brief.",
+  "student_support_mode": "feedback-tecnico",
+  "correzione": {"compila": false, "test": true, "sandbox": true, "ai_feedback": false},
+  "metriche": {
+    "tempo_stimato_minuti": 20,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": false
+  },
+  "extensions": {
+    "thebitlab.virtual_lab": {
+      "schema_version": "virtual_lab.v1",
+      "runtime": "efesto",
+      "scenario_id": "psu-selection-001",
+      "submission": {"path": "build.json", "media_type": "application/json"},
+      "capabilities": ["interactive-ui", "deterministic-grade", "headless-run"]
+    }
+  },
+  "rubrica": [
+    {"criterio": "Interpretazione del brief energetico", "punti": 4},
+    {"criterio": "Scelta del PSU richiesto", "punti": 4},
+    {"criterio": "Metodo e autonomia", "punti": 2}
+  ]
+}
