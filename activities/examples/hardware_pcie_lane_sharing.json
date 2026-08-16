@@ -3,6 +3,9 @@
   "id": "hw-pcie-lane-sharing-001",
   "titolo": "Lane sharing PCIe",
   "tipo": "laboratorio",
+  "linguaggio": "virtual-lab",
+  "language": "virtual-lab",
+  "source_name": "build.json",
   "difficolta": "B",
   "argomenti": [
     "motherboard",
