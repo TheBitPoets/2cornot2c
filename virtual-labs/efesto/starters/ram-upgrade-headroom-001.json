@@ -1,0 +1,8 @@
+{
+  "schema_version": "efesto.build.v1",
+  "scenario_id": "ram-upgrade-headroom-001",
+  "components": [
+    {"slot": "dimm_a2", "component_id": "ram16-a"},
+    {"slot": "dimm_b2", "component_id": "ram16-b"}
+  ]
+}
