@@ -1,0 +1,10 @@
+{
+  "schema_version": "efesto.build.v1",
+  "scenario_id": "psu-headroom-design-001",
+  "components": [
+    {"slot": "cpu_socket", "component_id": "cpu-workstation-120w"},
+    {"slot": "pcie1", "component_id": "gpu-workstation-350w"},
+    {"slot": "m2_1", "component_id": "nvme-workstation-15w"},
+    {"slot": "psu_bay", "component_id": "psu-design-650"}
+  ]
+}
