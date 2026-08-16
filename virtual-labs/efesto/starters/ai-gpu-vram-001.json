@@ -1,0 +1,7 @@
+{
+  "schema_version": "efesto.build.v1",
+  "scenario_id": "ai-gpu-vram-001",
+  "components": [
+    {"slot": "pcie1", "component_id": "gpu-ai-12gb"}
+  ]
+}
