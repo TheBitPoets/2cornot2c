@@ -1,0 +1,37 @@
+{
+  "schema_version": "efesto.scenario.v1",
+  "id": "psu-headroom-design-001",
+  "title": "Dimensiona il PSU dal carico reale",
+  "slots": [
+    {"id": "cpu_socket", "kind": "cpu-socket", "label": "CPU"},
+    {"id": "pcie1", "kind": "pcie", "label": "GPU"},
+    {"id": "m2_1", "kind": "m2", "label": "NVMe"},
+    {"id": "psu_bay", "kind": "psu", "label": "PSU ATX"}
+  ],
+  "components": [
+    {"id": "cpu-workstation-120w", "kind": "cpu", "label": "CPU workstation · 120 W", "allowed_slots": ["cpu_socket"], "attributes": {"power_w": 120}},
+    {"id": "gpu-workstation-350w", "kind": "gpu", "label": "GPU workstation · 350 W", "allowed_slots": ["pcie1"], "attributes": {"power_w": 350}},
+    {"id": "nvme-workstation-15w", "kind": "nvme", "label": "NVMe · 15 W", "allowed_slots": ["m2_1"], "attributes": {"power_w": 15}},
+    {"id": "psu-design-650", "kind": "psu", "label": "PSU · 650 W", "allowed_slots": ["psu_bay"], "attributes": {"capacity_w": 650}},
+    {"id": "psu-design-750", "kind": "psu", "label": "PSU · 750 W", "allowed_slots": ["psu_bay"], "attributes": {"capacity_w": 750}},
+    {"id": "psu-design-850", "kind": "psu", "label": "PSU · 850 W", "allowed_slots": ["psu_bay"], "attributes": {"capacity_w": 850}}
+  ],
+  "checks": [
+    {"id": "compatible", "name": "Componenti installati sulle interfacce corrette", "type": "all-placements-compatible", "visibility": "student"},
+    {"id": "cpu-required", "name": "CPU del brief presente", "type": "component-in-slot", "component_id": "cpu-workstation-120w", "slot": "cpu_socket", "visibility": "student"},
+    {"id": "gpu-required", "name": "GPU del brief presente", "type": "component-in-slot", "component_id": "gpu-workstation-350w", "slot": "pcie1", "visibility": "student"},
+    {"id": "nvme-required", "name": "NVMe del brief presente", "type": "component-in-slot", "component_id": "nvme-workstation-15w", "slot": "m2_1", "visibility": "student"},
+    {
+      "id": "capacity",
+      "name": "PSU sufficiente con 80 W fissi e margine del 20 percento",
+      "type": "slot-capacity-covers-installed-sum",
+      "capacity_slot": "psu_bay",
+      "capacity_attribute": "capacity_w",
+      "demand_attribute": "power_w",
+      "fixed_demand": 80,
+      "factor": 1.2,
+      "unit": "W",
+      "visibility": "student"
+    }
+  ]
+}
