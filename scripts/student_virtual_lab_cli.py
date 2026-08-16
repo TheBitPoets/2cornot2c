@@ -11,7 +11,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import efesto_ui_server, student_lab_runner, student_lab_service, student_virtual_lab
+from scripts import (
+    efesto_ui_server,
+    student_lab_runner,
+    student_virtual_lab,
+    student_virtual_lab_ui,
+)
 
 
 def add_assignment_selection(parser: argparse.ArgumentParser) -> None:
@@ -60,32 +65,32 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def assignment_ui_session(args: argparse.Namespace) -> efesto_ui_server.EfestoUiSession:
+def load_selected_assignment(args: argparse.Namespace) -> dict:
     root = args.root.resolve(strict=False)
-    assignment = student_lab_runner.load_student_assignment(
+    return student_lab_runner.load_student_assignment(
         root=root,
         student_id=args.student_id,
         assignment_id=args.assignment_id,
         activity_id=args.activity_id,
         now=args.now,
     )
-    activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
-    workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
-    activity_path_value = str(activity.get("path") or "").strip()
-    workspace_path_value = str(workspace.get("path") or "").strip()
-    if not activity_path_value:
-        raise ValueError("activity.path mancante nella consegna")
-    if not workspace_path_value:
-        raise ValueError("workspace.path mancante nella consegna")
-    return efesto_ui_server.EfestoUiSession.load(
-        project_root=(args.runtime_root or root).resolve(strict=False),
-        activity_path=student_lab_service.resolve_local_path(root, activity_path_value),
-        workspace_path=student_lab_service.resolve_local_path(root, workspace_path_value),
+
+
+def assignment_ui_session(args: argparse.Namespace) -> efesto_ui_server.EfestoUiSession:
+    return student_virtual_lab_ui.session_for_assignment(
+        load_selected_assignment(args),
+        root=args.root,
+        runtime_root=args.runtime_root,
     )
 
 
 def run_ui_command(args: argparse.Namespace) -> int:
-    session = assignment_ui_session(args)
+    assignment = load_selected_assignment(args)
+    session = student_virtual_lab_ui.session_for_assignment(
+        assignment,
+        root=args.root,
+        runtime_root=args.runtime_root,
+    )
     server = efesto_ui_server.create_server(session, port=args.port)
     url = efesto_ui_server.session_url(server, session)
     print(f"Efesto UI: {url}")
