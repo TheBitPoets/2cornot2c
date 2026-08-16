@@ -1,0 +1,8 @@
+{
+  "schema_version": "efesto.build.v1",
+  "scenario_id": "ddr5-dual-channel-001",
+  "components": [
+    {"slot": "dimm_a1", "component_id": "ddr5-module-a-001"},
+    {"slot": "dimm_b1", "component_id": "ddr5-module-b-001"}
+  ]
+}
