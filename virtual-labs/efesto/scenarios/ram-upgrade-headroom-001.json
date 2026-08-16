@@ -1,0 +1,22 @@
+{
+  "schema_version": "efesto.scenario.v1",
+  "id": "ram-upgrade-headroom-001",
+  "title": "64 GB oggi, spazio per l'upgrade domani",
+  "slots": [
+    {"id": "dimm_a1", "kind": "dimm", "label": "DIMM A1"},
+    {"id": "dimm_a2", "kind": "dimm", "label": "DIMM A2"},
+    {"id": "dimm_b1", "kind": "dimm", "label": "DIMM B1"},
+    {"id": "dimm_b2", "kind": "dimm", "label": "DIMM B2"}
+  ],
+  "components": [
+    {"id": "ram16-a", "kind": "ram", "label": "DDR5 · 16 GB A", "allowed_slots": ["dimm_a1", "dimm_a2", "dimm_b1", "dimm_b2"], "attributes": {"capacity_gb": 16, "speed_mt_s": 5600}},
+    {"id": "ram16-b", "kind": "ram", "label": "DDR5 · 16 GB B", "allowed_slots": ["dimm_a1", "dimm_a2", "dimm_b1", "dimm_b2"], "attributes": {"capacity_gb": 16, "speed_mt_s": 5600}},
+    {"id": "ram32-a", "kind": "ram", "label": "DDR5 · 32 GB A", "allowed_slots": ["dimm_a1", "dimm_a2", "dimm_b1", "dimm_b2"], "attributes": {"capacity_gb": 32, "speed_mt_s": 5600}},
+    {"id": "ram32-b", "kind": "ram", "label": "DDR5 · 32 GB B", "allowed_slots": ["dimm_a1", "dimm_a2", "dimm_b1", "dimm_b2"], "attributes": {"capacity_gb": 32, "speed_mt_s": 5600}}
+  ],
+  "checks": [
+    {"id": "compatible", "name": "Moduli inseriti in DIMM compatibili", "type": "all-placements-compatible", "visibility": "student"},
+    {"id": "capacity", "name": "RAM totale almeno 64 GB", "type": "installed-attribute-sum-min", "attribute": "capacity_gb", "kind": "ram", "min_value": 64, "unit": "GB", "visibility": "student"},
+    {"id": "two-modules", "name": "Usa esattamente due moduli per lasciare due DIMM liberi", "type": "installed-kind-count", "kind": "ram", "min_count": 2, "max_count": 2, "visibility": "student"}
+  ]
+}
