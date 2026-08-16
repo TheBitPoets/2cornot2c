@@ -1,0 +1,18 @@
+{
+  "schema_version": "efesto.scenario.v1",
+  "id": "cpu-socket-matching-001",
+  "title": "Abbina CPU e socket",
+  "slots": [
+    {"id": "socket_am5", "kind": "cpu-socket", "label": "Socket AMD AM5"},
+    {"id": "socket_lga1700", "kind": "cpu-socket", "label": "Socket Intel LGA1700"}
+  ],
+  "components": [
+    {"id": "cpu-ryzen-am5-001", "kind": "cpu", "label": "AMD Ryzen per AM5", "allowed_slots": ["socket_am5"]},
+    {"id": "cpu-core-lga1700-001", "kind": "cpu", "label": "Intel Core per LGA1700", "allowed_slots": ["socket_lga1700"]}
+  ],
+  "checks": [
+    {"id": "placements-compatible", "name": "Le CPU sono abbinate a socket compatibili", "type": "all-placements-compatible", "visibility": "student"},
+    {"id": "ryzen-am5", "name": "Ryzen installato su AM5", "type": "component-in-slot", "component_id": "cpu-ryzen-am5-001", "slot": "socket_am5", "visibility": "student"},
+    {"id": "core-lga1700", "name": "Intel Core installato su LGA1700", "type": "component-in-slot", "component_id": "cpu-core-lga1700-001", "slot": "socket_lga1700", "visibility": "student"}
+  ]
+}
