@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import webbrowser
 from pathlib import Path
 
 
@@ -10,12 +11,22 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import student_virtual_lab
+from scripts import efesto_ui_server, student_lab_runner, student_lab_service, student_virtual_lab
+
+
+def add_assignment_selection(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--student-id", required=True)
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--assignment-id")
+    selection.add_argument("--activity-id")
+    parser.add_argument("--root", type=Path, default=PROJECT_ROOT)
+    parser.add_argument("--runtime-root", type=Path)
+    parser.add_argument("--now")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Scaffold ed esecuzione dei laboratori virtuali TheBitLab."
+        description="Scaffold, esecuzione e UI dei laboratori virtuali TheBitLab."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -32,15 +43,62 @@ def parse_args() -> argparse.Namespace:
         "run",
         help="Esegue e salva un tentativo virtual-lab per uno studente.",
     )
-    run_parser.add_argument("--student-id", required=True)
-    selection = run_parser.add_mutually_exclusive_group(required=True)
-    selection.add_argument("--assignment-id")
-    selection.add_argument("--activity-id")
-    run_parser.add_argument("--root", type=Path, default=PROJECT_ROOT)
-    run_parser.add_argument("--runtime-root", type=Path)
-    run_parser.add_argument("--now")
+    add_assignment_selection(run_parser)
     run_parser.add_argument("--final", action="store_true")
+
+    ui_parser = subparsers.add_parser(
+        "ui",
+        help="Apre la UI 2D locale della consegna virtual-lab selezionata.",
+    )
+    add_assignment_selection(ui_parser)
+    ui_parser.add_argument("--port", type=efesto_ui_server.positive_port, default=0)
+    ui_parser.add_argument(
+        "--no-open-browser",
+        action="store_true",
+        help="Avvia il server senza aprire automaticamente il browser.",
+    )
     return parser.parse_args()
+
+
+def assignment_ui_session(args: argparse.Namespace) -> efesto_ui_server.EfestoUiSession:
+    root = args.root.resolve(strict=False)
+    assignment = student_lab_runner.load_student_assignment(
+        root=root,
+        student_id=args.student_id,
+        assignment_id=args.assignment_id,
+        activity_id=args.activity_id,
+        now=args.now,
+    )
+    activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
+    workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+    activity_path_value = str(activity.get("path") or "").strip()
+    workspace_path_value = str(workspace.get("path") or "").strip()
+    if not activity_path_value:
+        raise ValueError("activity.path mancante nella consegna")
+    if not workspace_path_value:
+        raise ValueError("workspace.path mancante nella consegna")
+    return efesto_ui_server.EfestoUiSession.load(
+        project_root=(args.runtime_root or root).resolve(strict=False),
+        activity_path=student_lab_service.resolve_local_path(root, activity_path_value),
+        workspace_path=student_lab_service.resolve_local_path(root, workspace_path_value),
+    )
+
+
+def run_ui_command(args: argparse.Namespace) -> int:
+    session = assignment_ui_session(args)
+    server = efesto_ui_server.create_server(session, port=args.port)
+    url = efesto_ui_server.session_url(server, session)
+    print(f"Efesto UI: {url}")
+    print("Server solo locale; Ctrl+C per terminare.")
+    if not args.no_open_browser:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return 0
 
 
 def main() -> int:
@@ -55,6 +113,9 @@ def main() -> int:
             )
             print(f"Scaffold virtual-lab creato: {destination}")
             return 0
+
+        if args.command == "ui":
+            return run_ui_command(args)
 
         report, report_path = student_virtual_lab.run_student_virtual_lab(
             student_id=args.student_id,
