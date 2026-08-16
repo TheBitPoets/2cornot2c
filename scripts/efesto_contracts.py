@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from copy import deepcopy
 from typing import Any
@@ -9,12 +10,21 @@ EFESTO_BUILD_SCHEMA_VERSION = "efesto.build.v1"
 EFESTO_SCENARIO_SCHEMA_VERSION = "efesto.scenario.v1"
 MAX_BUILD_PLACEMENTS = 256
 MAX_SCENARIO_ITEMS = 512
+MAX_ATTRIBUTES = 64
+MAX_ATTRIBUTE_STRING_LENGTH = 256
 
 _ALLOWED_CHECK_TYPES = {
     "all-placements-compatible",
     "component-present",
     "component-in-slot",
     "not-all-occupied",
+    "slot-component-attribute-min",
+    "slot-component-attribute-max",
+    "slot-component-attribute-equals",
+    "installed-attribute-sum-min",
+    "installed-attribute-sum-max",
+    "installed-kind-count",
+    "slot-capacity-covers-installed-sum",
 }
 _ALLOWED_VISIBILITIES = {"student", "teacher"}
 _PORTABLE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
@@ -30,6 +40,26 @@ def is_portable_id(value: Any) -> bool:
     """Return whether value is a stable portable identifier."""
 
     return bool(_PORTABLE_ID_RE.fullmatch(clean_text(value)))
+
+
+def is_finite_number(value: Any) -> bool:
+    """Return whether value is a finite int/float and not a boolean."""
+
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
+
+
+def is_attribute_scalar(value: Any) -> bool:
+    """Return whether value is an allowed scenario attribute scalar."""
+
+    if isinstance(value, bool):
+        return True
+    if is_finite_number(value):
+        return True
+    return isinstance(value, str) and len(value) <= MAX_ATTRIBUTE_STRING_LENGTH
 
 
 def normalize_build(payload: dict[str, Any]) -> dict[str, Any]:
@@ -131,6 +161,43 @@ def _validate_unique_ids(
     return errors, identifiers
 
 
+def _validate_attributes(value: Any, prefix: str) -> list[str]:
+    """Validate optional scalar attributes attached to slots/components."""
+
+    if value is None:
+        return []
+    if not isinstance(value, dict):
+        return [f"{prefix}.attributes deve essere un oggetto"]
+    errors: list[str] = []
+    if len(value) > MAX_ATTRIBUTES:
+        errors.append(
+            f"{prefix}.attributes supera il limite di {MAX_ATTRIBUTES} attributi"
+        )
+    for key, attribute_value in list(value.items())[:MAX_ATTRIBUTES]:
+        if not is_portable_id(key):
+            errors.append(f"{prefix}.attributes contiene una chiave non portabile: {key}")
+            continue
+        if not is_attribute_scalar(attribute_value):
+            errors.append(
+                f"{prefix}.attributes.{key} deve essere stringa, boolean o numero finito"
+            )
+    return errors
+
+
+def _require_slot(check: dict[str, Any], slot_ids: set[str], prefix: str, field: str = "slot") -> list[str]:
+    slot_id = clean_text(check.get(field))
+    return [] if slot_id in slot_ids else [f"{prefix}.{field} sconosciuto: {slot_id}"]
+
+
+def _require_attribute(check: dict[str, Any], prefix: str, field: str = "attribute") -> list[str]:
+    value = clean_text(check.get(field))
+    return [] if is_portable_id(value) else [f"{prefix}.{field} deve essere un identificativo portabile"]
+
+
+def _require_number(check: dict[str, Any], prefix: str, field: str) -> list[str]:
+    return [] if is_finite_number(check.get(field)) else [f"{prefix}.{field} deve essere un numero finito"]
+
+
 def validate_scenario(payload: Any, source: str = "<scenario>") -> list[str]:
     """Validate the trusted `efesto.scenario.v1` format."""
 
@@ -163,20 +230,25 @@ def validate_scenario(payload: Any, source: str = "<scenario>") -> list[str]:
     for index, slot in enumerate(slots[:MAX_SCENARIO_ITEMS]):
         if not isinstance(slot, dict):
             continue
+        prefix = f"{source}: slots[{index}]"
         if not is_portable_id(slot.get("kind")):
-            errors.append(
-                f"{source}: slots[{index}].kind deve essere un identificativo portabile"
-            )
+            errors.append(f"{prefix}.kind deve essere un identificativo portabile")
+        errors.extend(_validate_attributes(slot.get("attributes"), prefix))
 
     components = (
         payload.get("components") if isinstance(payload.get("components"), list) else []
     )
+    component_kinds: set[str] = set()
     for index, component in enumerate(components[:MAX_SCENARIO_ITEMS]):
         if not isinstance(component, dict):
             continue
         prefix = f"{source}: components[{index}]"
-        if not is_portable_id(component.get("kind")):
+        kind = clean_text(component.get("kind"))
+        if not is_portable_id(kind):
             errors.append(f"{prefix}.kind deve essere un identificativo portabile")
+        else:
+            component_kinds.add(kind)
+        errors.extend(_validate_attributes(component.get("attributes"), prefix))
         allowed_slots = component.get("allowed_slots")
         if not isinstance(allowed_slots, list) or not allowed_slots:
             errors.append(f"{prefix}.allowed_slots deve essere una lista non vuota")
@@ -205,9 +277,7 @@ def validate_scenario(payload: Any, source: str = "<scenario>") -> list[str]:
             if component_id not in component_ids:
                 errors.append(f"{prefix}.component_id sconosciuto: {component_id}")
         if check_type == "component-in-slot":
-            slot_id = clean_text(check.get("slot"))
-            if slot_id not in slot_ids:
-                errors.append(f"{prefix}.slot sconosciuto: {slot_id}")
+            errors.extend(_require_slot(check, slot_ids, prefix))
         if check_type == "not-all-occupied":
             check_slots = check.get("slots")
             if not isinstance(check_slots, list) or len(check_slots) < 2:
@@ -216,6 +286,69 @@ def validate_scenario(payload: Any, source: str = "<scenario>") -> list[str]:
                 for slot_id in check_slots:
                     if clean_text(slot_id) not in slot_ids:
                         errors.append(f"{prefix}.slots contiene slot sconosciuto: {slot_id}")
+
+        if check_type in {
+            "slot-component-attribute-min",
+            "slot-component-attribute-max",
+            "slot-component-attribute-equals",
+        }:
+            errors.extend(_require_slot(check, slot_ids, prefix))
+            errors.extend(_require_attribute(check, prefix))
+        if check_type == "slot-component-attribute-min":
+            errors.extend(_require_number(check, prefix, "min_value"))
+        if check_type == "slot-component-attribute-max":
+            errors.extend(_require_number(check, prefix, "max_value"))
+        if check_type == "slot-component-attribute-equals":
+            if "expected" not in check or not is_attribute_scalar(check.get("expected")):
+                errors.append(f"{prefix}.expected deve essere uno scalare valido")
+
+        if check_type in {"installed-attribute-sum-min", "installed-attribute-sum-max"}:
+            errors.extend(_require_attribute(check, prefix))
+            if check_type.endswith("-min"):
+                errors.extend(_require_number(check, prefix, "min_value"))
+            else:
+                errors.extend(_require_number(check, prefix, "max_value"))
+            kind = clean_text(check.get("kind"))
+            if kind and kind not in component_kinds:
+                errors.append(f"{prefix}.kind sconosciuto: {kind}")
+
+        if check_type == "installed-kind-count":
+            kind = clean_text(check.get("kind"))
+            if kind not in component_kinds:
+                errors.append(f"{prefix}.kind sconosciuto: {kind}")
+            has_min = check.get("min_count") is not None
+            has_max = check.get("max_count") is not None
+            if not has_min and not has_max:
+                errors.append(f"{prefix} richiede min_count e/o max_count")
+            for field in ("min_count", "max_count"):
+                if check.get(field) is not None:
+                    value = check.get(field)
+                    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                        errors.append(f"{prefix}.{field} deve essere un intero non negativo")
+            if (
+                isinstance(check.get("min_count"), int)
+                and not isinstance(check.get("min_count"), bool)
+                and isinstance(check.get("max_count"), int)
+                and not isinstance(check.get("max_count"), bool)
+                and check["min_count"] > check["max_count"]
+            ):
+                errors.append(f"{prefix}.min_count non puo superare max_count")
+
+        if check_type == "slot-capacity-covers-installed-sum":
+            errors.extend(_require_slot(check, slot_ids, prefix, "capacity_slot"))
+            errors.extend(_require_attribute(check, prefix, "capacity_attribute"))
+            errors.extend(_require_attribute(check, prefix, "demand_attribute"))
+            if check.get("fixed_demand") is not None:
+                errors.extend(_require_number(check, prefix, "fixed_demand"))
+                if is_finite_number(check.get("fixed_demand")) and float(check["fixed_demand"]) < 0:
+                    errors.append(f"{prefix}.fixed_demand deve essere non negativo")
+            if check.get("factor") is not None:
+                errors.extend(_require_number(check, prefix, "factor"))
+                if is_finite_number(check.get("factor")) and float(check["factor"]) <= 0:
+                    errors.append(f"{prefix}.factor deve essere maggiore di zero")
+            kind = clean_text(check.get("demand_kind"))
+            if kind and kind not in component_kinds:
+                errors.append(f"{prefix}.demand_kind sconosciuto: {kind}")
 
     if len(check_ids) == 0 and isinstance(payload.get("checks"), list):
         errors.append(f"{source}: checks deve contenere almeno un controllo valido")
