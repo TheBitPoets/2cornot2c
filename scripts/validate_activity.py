@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts.thebitlab_contracts import ALLOWED_ACTIVITY_KINDS
+from scripts.thebitlab_virtual_lab_contracts import validate_virtual_lab_extension
 
 ALLOWED_TYPES = ALLOWED_ACTIVITY_KINDS
 
@@ -116,6 +117,7 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
     if assets is not None:
         errors.extend(validate_assets(assets, source))
 
+    errors.extend(validate_virtual_lab_extension(data, source))
     return errors
 
 
