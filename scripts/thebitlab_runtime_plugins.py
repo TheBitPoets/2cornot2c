@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from importlib import metadata
 from pathlib import Path
 from typing import Any, Callable, Iterable, Literal, Protocol
 
-from scripts.thebitlab_runtime_contracts import normalize_runtime_extension
+from scripts.thebitlab_runtime_contracts import (
+    normalize_runtime_extension,
+    validate_runtime_extension,
+)
 from scripts.thebitlab_technical_services import ExecutionResult
 
 
 RUNTIME_PLUGIN_API_VERSION = "runtime_plugin.v1"
 RUNTIME_ENTRY_POINT_GROUP = "thebitlab.runtimes"
+_RUNTIME_TOKEN_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 
 RuntimeLaunchStatus = Literal[
     "started",
@@ -162,6 +167,10 @@ def _validate_descriptor(runtime_id: str, descriptor: Any) -> RuntimeDescriptor:
         raise RuntimePluginIncompatibleError(
             f"Runtime {runtime_id} ha restituito un descriptor non valido"
         )
+    if not _RUNTIME_TOKEN_RE.fullmatch(runtime_id):
+        raise RuntimePluginIncompatibleError(
+            f"Runtime entry point non usa un identificativo portabile: {runtime_id}"
+        )
     if descriptor.runtime_id != runtime_id:
         raise RuntimePluginIncompatibleError(
             f"Runtime entry point {runtime_id} dichiara descriptor {descriptor.runtime_id or '<mancante>'}"
@@ -173,6 +182,15 @@ def _validate_descriptor(runtime_id: str, descriptor: Any) -> RuntimeDescriptor:
     if not descriptor.display_name.strip() or not descriptor.plugin_version.strip():
         raise RuntimePluginIncompatibleError(
             f"Runtime {runtime_id} deve dichiarare display_name e plugin_version"
+        )
+    invalid_capabilities = sorted(
+        capability
+        for capability in descriptor.capabilities
+        if not isinstance(capability, str) or not _RUNTIME_TOKEN_RE.fullmatch(capability)
+    )
+    if invalid_capabilities:
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {runtime_id} dichiara capability non valide: {', '.join(map(str, invalid_capabilities))}"
         )
     return descriptor
 
@@ -203,6 +221,8 @@ class RuntimePluginRegistry:
         runtime_id = str(runtime_id or "").strip()
         if not runtime_id:
             raise RuntimePluginNotFoundError("runtime_id mancante")
+        if not _RUNTIME_TOKEN_RE.fullmatch(runtime_id):
+            raise RuntimePluginNotFoundError(f"runtime_id non valido: {runtime_id}")
         if allowlist is not None and runtime_id not in allowlist:
             raise RuntimePluginNotFoundError(
                 f"Runtime {runtime_id} non autorizzato da questa installazione TheBitLab"
@@ -254,6 +274,9 @@ def assert_runtime_supports_activity(
 ) -> None:
     """Reject an installed runtime that cannot satisfy the Activity requirements."""
 
+    errors = validate_runtime_extension(activity, "activity")
+    if errors:
+        raise RuntimePluginIncompatibleError("; ".join(errors))
     extension = normalize_runtime_extension(activity)
     if extension is None:
         raise RuntimePluginIncompatibleError("Activity senza extensions.thebitlab.runtime")
@@ -281,6 +304,9 @@ def runtime_request_from_activity(
 ) -> RuntimeRequest:
     """Build the generic request without parsing runtime-specific configuration."""
 
+    errors = validate_runtime_extension(activity, "activity")
+    if errors:
+        raise RuntimePluginIncompatibleError("; ".join(errors))
     extension = normalize_runtime_extension(activity)
     if extension is None:
         raise RuntimePluginIncompatibleError("Activity senza extensions.thebitlab.runtime")
