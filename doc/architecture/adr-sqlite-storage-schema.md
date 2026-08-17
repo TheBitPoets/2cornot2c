@@ -12,7 +12,7 @@ La dashboard consegne e le future viste docente/studente hanno pero bisogno di q
 
 La decisione precedente e documentata in [`storage-sqlite-evaluation.md`](storage-sqlite-evaluation.md): introdurre porte di storage prima di SQLite e usare SQLite prima come indice/prototipo isolato.
 
-Questo ADR riguarda i dati didattici indicizzabili. Utenti, identita federate, classi di autorizzazione, sessioni e pairing sono invece sorgente primaria transazionale nello schema separato definito da [`adr-identity-auth-storage.md`](adr-identity-auth-storage.md); non devono essere ricostruiti dai JSON didattici.
+Questo ADR riguarda i dati didattici indicizzabili. Utenti, identita federate, classi di autorizzazione, sessioni, pairing e binding auth-soggetto didattico sono invece sorgente primaria transazionale nello schema separato definito da [`adr-identity-auth-storage.md`](adr-identity-auth-storage.md); non devono essere ricostruiti dai JSON didattici. Il confine autorevole verso assignment e target e specificato in [`adr-authoritative-student-identity-binding.md`](adr-authoritative-student-identity-binding.md).
 
 ## Decisione
 
@@ -187,6 +187,7 @@ Note:
 
 - Quando l'entita Assignment non esiste ancora nei JSON, l'id puo essere derivato da `activity_id`, `class_id` e `due_at`.
 - In futuro i registri dovranno collegarsi a `assignment_id`, non solo ad `activity_id`.
+- I target studente canonici referenziano il `subject_id` identity; `student_id`, repository e path legacy non sono autorita e richiedono l'adapter di migrazione esplicito.
 
 ### `registers`
 

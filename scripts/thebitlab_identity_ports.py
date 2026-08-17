@@ -12,6 +12,11 @@ from scripts.thebitlab_identity import (
     UserAccount,
     UserSession,
 )
+from scripts.thebitlab_identity_binding import (
+    LegacySubjectAlias,
+    StudentBindingSnapshot,
+    StudentSubjectBinding,
+)
 
 
 class IdentityStorageError(RuntimeError):
@@ -269,6 +274,44 @@ class ClassDirectoryStorage(Protocol):
         future_skew: timedelta,
         expected_class_updated_at: datetime,
     ) -> None: ...
+
+
+class StudentSubjectBindingStorage(Protocol):
+    """Authoritative persistence port for auth-to-educational-subject binding."""
+
+    def create_student_subject_binding(
+        self,
+        binding: StudentSubjectBinding,
+        aliases: tuple[LegacySubjectAlias, ...] = (),
+    ) -> None: ...
+
+    def read_student_subject_binding(
+        self, subject_id: str
+    ) -> StudentSubjectBinding | None: ...
+
+    def list_user_subject_bindings(self, user_id: str) -> list[StudentSubjectBinding]: ...
+
+    def save_student_subject_binding(
+        self,
+        binding: StudentSubjectBinding,
+        *,
+        expected_revision: int,
+    ) -> None: ...
+
+    def save_legacy_subject_alias(
+        self,
+        alias: LegacySubjectAlias,
+        *,
+        expected_binding_revision: int,
+    ) -> None: ...
+
+    def list_legacy_subject_aliases(
+        self, class_id: str | None = None
+    ) -> list[LegacySubjectAlias]: ...
+
+    def read_student_binding_snapshot(self, user_id: str) -> StudentBindingSnapshot:
+        """Read the complete binding authority in one coherent transaction."""
+        ...
 
 
 class AdminBootstrapStorage(Protocol):
