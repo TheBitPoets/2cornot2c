@@ -1,0 +1,53 @@
+[Unit]
+Description=TheBitLab pilot application (@@DEPLOYMENT_ID@@)
+Documentation=file://@@REPOSITORY_ROOT@@/doc/PILOT_DEPLOYMENT.md
+Wants=network-online.target
+After=network-online.target
+ConditionPathIsDirectory=@@REPOSITORY_ROOT@@
+ConditionPathIsDirectory=@@DATA_ROOT@@
+ConditionPathExists=@@ENVIRONMENT_FILE@@
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_GROUP@@
+WorkingDirectory=@@REPOSITORY_ROOT@@
+RuntimeDirectory=thebitlab
+RuntimeDirectoryMode=0700
+UMask=0077
+
+# Secrets are supplied only by this external, protected file. The explicit
+# values below come later and therefore own topology/path resolution.
+EnvironmentFile=@@ENVIRONMENT_FILE@@
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=@@HOME_DIRECTORY@@
+Environment=THEBITLAB_DEPLOYMENT_REVISION=@@RELEASE_COMMIT@@
+Environment=THEBITLAB_LOCK_DIR=@@LOCK_DIRECTORY@@
+Environment=THEBITLAB_AUTH_DB_PATH=@@AUTH_DB_PATH@@
+Environment=THEBITLAB_TRUSTED_PROXY_CIDRS=127.0.0.1/32
+Environment=THEBITLAB_GOOGLE_REDIRECT_URI=@@GOOGLE_REDIRECT_URI@@
+@@GITHUB_REDIRECT_ENV@@
+
+ExecStart=@@PYTHON_EXECUTABLE@@ scripts/course_board_server.py --host @@BIND_HOST@@ --port @@APP_PORT@@ --root @@DATA_ROOT@@ --enable-google-auth@@GITHUB_APP_FLAG@@
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=30s
+TimeoutStopSec=45s
+KillSignal=SIGINT
+SuccessExitStatus=130
+
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=@@DATA_ROOT@@ @@LOCK_DIRECTORY@@@@GITHUB_APP_WRITE_PATH@@
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,40 @@
+{
+  "$schema": "../../schemas/pilot-deployment.schema.json",
+  "schema_version": "thebitlab.pilot-deployment.v1",
+  "deployment_id": "pilot-candidate-example",
+  "release": {
+    "commit": "0123456789abcdef0123456789abcdef01234567",
+    "repository_root": "/opt/thebitlab/current",
+    "python_executable": "/opt/thebitlab/current/.venv/bin/python"
+  },
+  "service": {
+    "user": "thebitlab",
+    "group": "thebitlab",
+    "home_directory": "/home/thebitlab",
+    "bind_host": "127.0.0.1",
+    "port": 8000,
+    "environment_file": "/etc/thebitlab/secrets/pilot.env",
+    "lock_directory": "/run/thebitlab"
+  },
+  "data": {
+    "root": "/srv/thebitlab/data",
+    "auth_db_path": ".thebitlab-auth/auth.sqlite3"
+  },
+  "origin": {
+    "url": "https://candidate.example.edu",
+    "exposure": "edge_only",
+    "allowed_proxy_cidrs": [
+      "192.0.2.0/24",
+      "2001:db8::/32"
+    ],
+    "tls_certificate_file": "/etc/thebitlab/tls/origin.crt",
+    "tls_private_key_file": "/etc/thebitlab/tls/origin.key",
+    "access_log": "/var/log/nginx/thebitlab-access.log",
+    "error_log": "/var/log/nginx/thebitlab-error.log"
+  },
+  "features": {
+    "google_auth": true,
+    "github_oauth": false,
+    "github_app_token_runtime": false
+  }
+}

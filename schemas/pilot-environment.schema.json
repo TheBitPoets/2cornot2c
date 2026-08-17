@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thebitlab.dev/schemas/pilot-environment.schema.json",
+  "title": "TheBitLab external pilot EnvironmentFile",
+  "$comment": "This schema describes names and shapes only. Real values remain outside the repository.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "THEBITLAB_TEACHER_TOKEN",
+    "THEBITLAB_GOOGLE_CLIENT_ID",
+    "THEBITLAB_GOOGLE_CLIENT_SECRET",
+    "THEBITLAB_AUTH_CSRF_SECRET_B64",
+    "THEBITLAB_RATE_LIMIT_PEPPER_B64",
+    "THEBITLAB_TUI_PAIRING_PEPPER_B64"
+  ],
+  "properties": {
+    "THEBITLAB_TEACHER_TOKEN": {"$ref": "#/$defs/opaqueSecret"},
+    "THEBITLAB_GOOGLE_CLIENT_ID": {
+      "type": "string",
+      "minLength": 6,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9._~+/=-]+$"
+    },
+    "THEBITLAB_GOOGLE_CLIENT_SECRET": {"$ref": "#/$defs/opaqueSecret"},
+    "THEBITLAB_AUTH_CSRF_SECRET_B64": {"$ref": "#/$defs/base64urlSecret"},
+    "THEBITLAB_RATE_LIMIT_PEPPER_B64": {"$ref": "#/$defs/base64urlSecret"},
+    "THEBITLAB_TUI_PAIRING_PEPPER_B64": {"$ref": "#/$defs/base64urlSecret"},
+    "THEBITLAB_GITHUB_CLIENT_ID": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9._~+/=-]+$"
+    },
+    "THEBITLAB_GITHUB_CLIENT_SECRET": {"$ref": "#/$defs/opaqueSecret"}
+  },
+  "$defs": {
+    "opaqueSecret": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 4096,
+      "pattern": "^[A-Za-z0-9._~+/=-]+$"
+    },
+    "base64urlSecret": {
+      "type": "string",
+      "minLength": 43,
+      "maxLength": 86,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    }
+  }
+}
