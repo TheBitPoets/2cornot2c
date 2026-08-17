@@ -185,6 +185,7 @@ def test_assignment_overview_lists_student_rows(tmp_path) -> None:
             "submitted_at": "2026-10-18T18:22:10+02:00",
             "commit": "abc1234",
             "source_path": None,
+            "report_backend": None,
             "attempt_id": None,
             "report_selection": None,
             "final_selected": False,
@@ -213,7 +214,12 @@ def test_assignment_overview_exposes_canonical_attempt_selection(tmp_path) -> No
                     {
                         "student": "finale",
                         "submitted": True,
-                        "submission": {"report_selection": "final", "final_selected": False},
+                        "submission": {
+                            "report_backend": "docker",
+                            "attempt_id": "attempt-20260814T141612102181Z-bf0933e7",
+                            "report_selection": "final",
+                            "final_selected": False,
+                        },
                         "grading": {"provisional": True},
                     },
                     {
@@ -236,6 +242,8 @@ def test_assignment_overview_exposes_canonical_attempt_selection(tmp_path) -> No
 
     rows = {row["student"]: row for row in service.assignment_overview()}
 
+    assert rows["finale"]["report_backend"] == "docker"
+    assert rows["finale"]["attempt_id"] == "attempt-20260814T141612102181Z-bf0933e7"
     assert rows["finale"]["report_selection"] == "final"
     assert rows["finale"]["final_selected"] is True
     assert rows["finale"]["grading_provisional"] is False
