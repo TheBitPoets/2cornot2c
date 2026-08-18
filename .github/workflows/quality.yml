@@ -9,6 +9,7 @@ on:
     paths:
       - "scripts/**"
       - "schemas/**"
+      - "deploy/**"
       - "tests/**"
       - "activities/**"
       - "doc/**"
@@ -25,6 +26,7 @@ on:
     paths:
       - "scripts/**"
       - "schemas/**"
+      - "deploy/**"
       - "tests/**"
       - "activities/**"
       - "doc/**"
@@ -52,6 +54,9 @@ jobs:
 
       - name: Install test dependencies
         run: python -m pip install -r requirements-dev.txt -r requirements-utui.txt -r requirements-auth.txt
+
+      - name: Install deployment lint tools
+        run: sudo apt-get update && sudo apt-get install -y nginx
 
       - name: Run Python tests
         run: python -m pytest

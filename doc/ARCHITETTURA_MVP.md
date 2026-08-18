@@ -157,6 +157,8 @@ Riferimenti: [grading](ASSIGNMENT_GRADING.md), [sandbox](ASSIGNMENT_SANDBOX.md),
 
 ## Deployment pilot
 
+La baseline operativa versionata è definita in [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md): manifest chiuso, template nginx/systemd, root unica, riferimenti secret esterni, contratto firewall e rollback bounded. Configurazioni live o copie manuali non versionate non sono fonti architetturali.
+
 Configurazione iniziale raccomandata:
 
 - una replica applicativa;

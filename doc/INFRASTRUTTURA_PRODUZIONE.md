@@ -3,6 +3,11 @@
 > Documento operativo e didattico: cosa abbiamo costruito, perché, e come
 > rifarlo da zero. Scritto per chi vuole capire ogni passaggio, non solo
 > ripeterlo. Ultimo aggiornamento: 4 agosto 2026.
+>
+> **Autorità deployment:** questa guida storica non è una configurazione
+> riproducibile. Per ogni nuova candidate usare la baseline versionata e
+> secret-safe in [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md); non ricopiare
+> configurazioni live nel repository.
 
 ---
 

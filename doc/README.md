@@ -11,6 +11,7 @@ Usa questo file come punto di partenza per capire quale documento leggere in bas
 | Cornice didattica | [`CORNICE_DIDATTICA.md`](CORNICE_DIDATTICA.md) | docenti, coordinatori, sviluppatori |
 | Guida operativa pilot | [`MVP_2026_2027.md`](MVP_2026_2027.md) | docenti e gestori dell'installazione |
 | Pilot rehearsal e go/no-go | [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md) | docenti, gestori e decision owner |
+| Deployment pilot versionato | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) | gestori tecnici e reviewer |
 | Architettura | [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md) | sviluppatori e gestori tecnici |
 | Diagrammi d'architettura | [`architecture/architecture-diagrams.md`](architecture/architecture-diagrams.md) | sviluppatori e gestori tecnici |
 | Bundle corsi (ADR) | [`architecture/adr-course-bundle-format.md`](architecture/adr-course-bundle-format.md) | docenti autori, sviluppatori |
@@ -100,6 +101,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`CORNICE_DIDATTICA.md`](CORNICE_DIDATTICA.md) | Quando devi comprendere obiettivi, UDA, aiuti, feedback e ruolo docente |
 | [`MVP_2026_2027.md`](MVP_2026_2027.md) | Quando devi preparare o usare il pilot scolastico |
 | [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md) | Quando devi eseguire la prova generale e decidere go/no-go |
+| [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) | Quando devi validare, renderizzare o fare rollback di nginx/systemd/root/origin |
 | [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md) | Quando devi capire GUI, API, service, storage, provider, AI e Docker |
 | [`architecture/architecture-diagrams.md`](architecture/architecture-diagrams.md) | Quando vuoi una vista visuale di deployment, componenti e flussi HTTP |
 | [`FRONTEND_ARCHITECTURE.md`](FRONTEND_ARCHITECTURE.md) | Quando devi modificare stato UI, endpoint o flussi asincroni |
@@ -113,6 +115,9 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | `scripts/update_lab_outputs.py` | Compila/esegue i lab configurati e aggiorna `lab/**/output/*.txt` | [`LAB_OUTPUTS.md`](LAB_OUTPUTS.md) |
 | `scripts/course_board_server.py` | Avvia il server locale della board e del calendario | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/github_app_token_runtime.py` | Genera e rinnova installation token GitHub App protetti | [`COURSE_SOURCE_CATALOG.md`](COURSE_SOURCE_CATALOG.md) |
+| `scripts/validate_pilot_deployment.py` | Valida e renderizza la baseline deployment senza incorporare segreti | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) |
+| `scripts/pilot_service_launcher.py` | Importa solo i secret consentiti e avvia il pilot con topologia autorevole | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) |
+| `scripts/pilot_deployment_smoke.py` | Esegue lint nginx/systemd non distruttivo su fixture sintetiche | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) |
 | `scripts/generate_course_plan.py` | Rigenera `doc/PERCORSO_DIDATTICO.md` dal progetto didattico corrente | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/update_course_frames.py` | Inserisce nel README le cornici didattiche presenti nel progetto | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/create_activity.py` | Crea una scheda JSON di attivita TheBitLab da prompt guidato o argomenti CLI | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) |

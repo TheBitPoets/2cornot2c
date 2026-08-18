@@ -1,6 +1,6 @@
 # Pilot rehearsal: checklist ed esito go/no-go
 
-Questo runbook definisce la prova generale obbligatoria prima della prima classe del pilot TheBitLab. La prova deve produrre evidenze ripetibili e una decisione esplicita; non sostituisce la [guida MVP](MVP_2026_2027.md), gli [scenari manuali GUI/TUI](SCENARI_TEST_MANUALI_GUI.md) o lo [smoke auth staging](AUTH_STAGING_SMOKE.md).
+Questo runbook definisce la prova generale obbligatoria prima della prima classe del pilot TheBitLab. La prova deve produrre evidenze ripetibili e una decisione esplicita; non sostituisce la [guida MVP](MVP_2026_2027.md), gli [scenari manuali GUI/TUI](SCENARI_TEST_MANUALI_GUI.md) o lo [smoke auth staging](AUTH_STAGING_SMOKE.md). La topologia della nuova candidate deve derivare dalla [baseline deployment-as-code](PILOT_DEPLOYMENT.md), con manifest, lock e rollback versionati.
 
 ## Esiti possibili
 
