@@ -144,11 +144,11 @@ def topology_from_paths(
     expanded = root.expanduser()
     if not expanded.is_absolute():
         raise PilotRootError("La data root deve essere espressa come path assoluto.")
+    if expanded.is_symlink():
+        raise PilotRootError("La data root non puo essere un symlink.")
     resolved = expanded.resolve(strict=False)
     if resolved == resolved.parent:
         raise PilotRootError("La data root deve essere una directory assoluta dedicata.")
-    if resolved.is_symlink():
-        raise PilotRootError("La data root non puo essere un symlink.")
     if not isinstance(deployment_id, str) or DEPLOYMENT_ID_PATTERN.fullmatch(deployment_id) is None:
         raise PilotRootError("deployment_id non valido.")
     return PilotTopology(resolved, _relative_path(auth_db_path), deployment_id)
@@ -437,6 +437,8 @@ def _verify_identity(topology: PilotTopology) -> None:
 
 
 def _check_required_state(root: Path, auth_relative: str) -> None:
+    if any(path.is_symlink() for path in root.rglob("*")):
+        raise PilotRootError("Symlink non supportato nella root applicativa.")
     required = (*REQUIRED_EXACT_PATHS, auth_relative)
     missing = [relative for relative in required if not root.joinpath(*PurePosixPath(relative).parts).is_file()]
     missing.extend(pattern for pattern in REQUIRED_GLOBS if not any(root.glob(pattern)))

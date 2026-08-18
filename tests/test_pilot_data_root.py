@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import sqlite3
 from pathlib import Path
@@ -62,6 +63,10 @@ def test_bootstrap_from_empty_root_is_complete_and_idempotent(tmp_path: Path) ->
     }
     assert list(root.glob("teacher-help-events/*/*/events.json"))
     assert list(root.glob("examples/**/attempts/*.json"))
+    if os.name != "nt":
+        for path in (root, *root.rglob("*")):
+            expected_mode = 0o700 if path.is_dir() else 0o600
+            assert path.stat().st_mode & 0o777 == expected_mode
 
 
 def test_partial_or_incoherent_root_fails_closed_without_reset(tmp_path: Path) -> None:
@@ -91,6 +96,26 @@ def test_missing_required_state_and_ambiguous_auth_database_fail_closed(canonica
     )
     with pytest.raises(pilot_data_root.PilotRootError, match="ambigua"):
         pilot_data_root.validate_root(topology)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Symlink POSIX non disponibile su Windows.")
+def test_symlinked_root_and_entries_fail_closed(canonical_root: Path, tmp_path: Path) -> None:
+    root_alias = tmp_path / "root-alias"
+    root_alias.symlink_to(canonical_root, target_is_directory=True)
+    with pytest.raises(pilot_data_root.PilotRootError, match="symlink"):
+        pilot_data_root.topology_from_paths(root_alias)
+
+    report = canonical_root / "teacher-reports/demo/python-demo-somma-001.json"
+    external_report = tmp_path / "external-report.json"
+    report.replace(external_report)
+    report.symlink_to(external_report)
+    topology = pilot_data_root.topology_from_paths(canonical_root)
+    with pytest.raises(pilot_data_root.PilotRootError, match="Symlink"):
+        pilot_data_root.validate_root(topology)
+    backup = tmp_path / "backup"
+    with pytest.raises(pilot_data_root.PilotRootError, match="Symlink"):
+        pilot_data_root.create_backup(topology, backup)
+    assert not backup.exists()
 
 
 def test_same_root_double_instance_is_rejected(canonical_root: Path, tmp_path: Path) -> None:
