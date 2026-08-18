@@ -116,6 +116,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | `scripts/course_board_server.py` | Avvia il server locale della board e del calendario | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/github_app_token_runtime.py` | Genera e rinnova installation token GitHub App protetti | [`COURSE_SOURCE_CATALOG.md`](COURSE_SOURCE_CATALOG.md) |
 | `scripts/validate_pilot_deployment.py` | Valida e renderizza la baseline deployment senza incorporare segreti | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) |
+| `scripts/pilot_service_launcher.py` | Importa solo i secret consentiti e avvia il pilot con topologia autorevole | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) |
 | `scripts/pilot_deployment_smoke.py` | Esegue lint nginx/systemd non distruttivo su fixture sintetiche | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) |
 | `scripts/generate_course_plan.py` | Rigenera `doc/PERCORSO_DIDATTICO.md` dal progetto didattico corrente | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/update_course_frames.py` | Inserisce nel README le cornici didattiche presenti nel progetto | [`COURSE_BOARD.md`](COURSE_BOARD.md) |

@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import base64
-import binascii
 import hashlib
 import ipaddress
 import json
@@ -22,6 +20,17 @@ from jsonschema import Draft202012Validator
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in os.sys.path:
+    os.sys.path.insert(0, str(ROOT))
+
+from scripts.pilot_environment import (  # noqa: E402
+    DeploymentValidationError,
+    check_environment_file,
+    parse_environment_file,
+    validate_external_environment,
+)
+
+
 DEPLOYMENT_SCHEMA = ROOT / "schemas" / "pilot-deployment.schema.json"
 ENVIRONMENT_SCHEMA = ROOT / "schemas" / "pilot-environment.schema.json"
 TEMPLATE_ROOT = ROOT / "deploy" / "pilot" / "templates"
@@ -36,10 +45,6 @@ GENERATED_FILES = (
     "firewall/origin-exposure.json",
     "manifest.normalized.json",
 )
-
-
-class DeploymentValidationError(ValueError):
-    """A safe configuration error that never needs to include secret values."""
 
 
 def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -188,66 +193,13 @@ def validate_manifest(manifest: Mapping[str, Any]) -> None:
         raise DeploymentValidationError("Manifest deployment non valido:\n- " + "\n- ".join(errors))
 
 
-def parse_environment_file(path: Path) -> dict[str, str]:
-    """Parse the deliberately small, unquoted EnvironmentFile contract."""
-
-    try:
-        lines = path.read_text(encoding="utf-8-sig").splitlines()
-    except (OSError, UnicodeError) as exc:
-        raise DeploymentValidationError("EnvironmentFile non leggibile.") from exc
-    values: dict[str, str] = {}
-    for line_number, raw_line in enumerate(lines, start=1):
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith("export ") or "=" not in line:
-            raise DeploymentValidationError(f"EnvironmentFile: sintassi non valida alla riga {line_number}.")
-        key, value = line.split("=", 1)
-        if not key or key != key.strip() or not key.replace("_", "A").isalnum() or not key[0].isalpha():
-            raise DeploymentValidationError(f"EnvironmentFile: nome non valido alla riga {line_number}.")
-        if key in values:
-            raise DeploymentValidationError(f"EnvironmentFile: variabile duplicata alla riga {line_number}.")
-        if not value or value != value.strip() or any(ord(character) < 0x21 or ord(character) > 0x7E for character in value):
-            raise DeploymentValidationError(f"EnvironmentFile: valore non valido alla riga {line_number}.")
-        values[key] = value
-    return values
-
-
 def validate_environment(values: Mapping[str, str], *, github_oauth: bool) -> None:
     errors = _schema_errors(values, ENVIRONMENT_SCHEMA, redact=True)
-    github_names = {"THEBITLAB_GITHUB_CLIENT_ID", "THEBITLAB_GITHUB_CLIENT_SECRET"}
-    present_github = github_names.intersection(values)
-    if github_oauth and present_github != github_names:
-        errors.append("GitHub OAuth: client ID e client secret esterni sono entrambi obbligatori")
-    if not github_oauth and present_github:
-        errors.append("GitHub OAuth: credenziali presenti ma feature disabilitata")
-
-    decoded_secrets: list[bytes] = []
-    for name in (
-        "THEBITLAB_AUTH_CSRF_SECRET_B64",
-        "THEBITLAB_RATE_LIMIT_PEPPER_B64",
-        "THEBITLAB_TUI_PAIRING_PEPPER_B64",
-    ):
-        value = values.get(name)
-        if value is None:
-            continue
-        try:
-            decoded = base64.b64decode(
-                value + "=" * (-len(value) % 4),
-                altchars=b"-_",
-                validate=True,
-            )
-        except (binascii.Error, ValueError):
-            errors.append(f"{name}: base64url non valida")
-            continue
-        if not 32 <= len(decoded) <= 64:
-            errors.append(f"{name}: deve rappresentare 32-64 byte")
-        decoded_secrets.append(decoded)
-    if len(decoded_secrets) != len(set(decoded_secrets)):
-        errors.append("I segreti CSRF, rate limit e pairing devono essere indipendenti")
-
     if errors:
-        raise DeploymentValidationError("EnvironmentFile non valido (valori omessi):\n- " + "\n- ".join(errors))
+        raise DeploymentValidationError(
+            "EnvironmentFile non valido (valori omessi):\n- " + "\n- ".join(errors)
+        )
+    validate_external_environment(values, github_oauth=github_oauth)
 
 
 def _check_external_file(
@@ -269,9 +221,7 @@ def check_external_references(manifest: Mapping[str, Any]) -> None:
 
     service = manifest["service"]
     origin = manifest["origin"]
-    _check_external_file(
-        Path(service["environment_file"]), private=True, allow_group_read=True
-    )
+    check_environment_file(Path(service["environment_file"]))
     _check_external_file(Path(origin["tls_certificate_file"]), private=False)
     _check_external_file(Path(origin["tls_private_key_file"]), private=True)
 
@@ -328,10 +278,10 @@ def render_bundle(manifest: Mapping[str, Any], output: Path) -> None:
         "DATA_ROOT": manifest["data"]["root"],
         "AUTH_DB_PATH": manifest["data"]["auth_db_path"],
         "GOOGLE_REDIRECT_URI": f"{origin['url'].rstrip('/')}/auth/google/callback",
-        "GITHUB_REDIRECT_ENV": (
-            f"Environment=THEBITLAB_GITHUB_REDIRECT_URI={origin['url'].rstrip('/')}/auth/github/callback"
+        "GITHUB_OAUTH_ARGUMENTS": (
+            f" --enable-github-oauth --github-redirect-uri {origin['url'].rstrip('/')}/auth/github/callback"
             if features["github_oauth"]
-            else "# GitHub OAuth disabled by the deployment manifest."
+            else ""
         ),
         "GITHUB_APP_FLAG": " --enable-github-app-token-runtime" if features["github_app_token_runtime"] else "",
         "GITHUB_APP_WRITE_PATH": f" -{github_app_directory}" if features["github_app_token_runtime"] else "",
@@ -411,9 +361,7 @@ def main(argv: list[str] | None = None) -> int:
             expected = Path(manifest["service"]["environment_file"])
             if args.environment_file.absolute() != expected.absolute():
                 raise DeploymentValidationError("EnvironmentFile diverso dal riferimento nel manifest.")
-            _check_external_file(
-                args.environment_file, private=True, allow_group_read=True
-            )
+            check_environment_file(args.environment_file)
             values = parse_environment_file(args.environment_file)
             validate_environment(values, github_oauth=manifest["features"]["github_oauth"])
         if args.check_external_references:

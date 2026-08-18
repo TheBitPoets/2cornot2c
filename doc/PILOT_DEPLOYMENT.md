@@ -11,6 +11,7 @@ Questo documento è il contratto canonico per preparare una nuova candidate TheB
 | `schemas/pilot-environment.schema.json` | nomi e forma dell'`EnvironmentFile` esterno |
 | `deploy/pilot/templates/` | template nginx, formato log secret-safe e unit systemd |
 | `scripts/validate_pilot_deployment.py` | validazione semantica e rendering deterministico |
+| `scripts/pilot_service_launcher.py` | import fail-closed dei secret e avvio con topologia autorevole |
 | `scripts/pilot_deployment_smoke.py` | `nginx -t` e `systemd-analyze verify` su dati sintetici temporanei |
 | `tests/test_pilot_deployment.py` | casi positivi e negativi dei contratti |
 
@@ -51,7 +52,7 @@ Lo smoke crea root, `EnvironmentFile`, certificato e output in una directory tem
 <data.root>/<data.auth_db_path>
 ```
 
-La baseline usa `.thebitlab-auth/auth.sqlite3`. L'unit renderizzata dichiara `THEBITLAB_AUTH_DB_PATH` **dopo** l'`EnvironmentFile`, impedendo a quest'ultimo di cambiare la risoluzione. Percorsi assoluti, traversal, root sovrapposta alla release o riferimenti secret dentro release/data root sono rifiutati. Il lock applicativo è fissato a `/run/thebitlab`; il backend ascolta solo su `127.0.0.1`.
+La baseline usa `.thebitlab-auth/auth.sqlite3`. L'unit non usa la direttiva systemd `EnvironmentFile=`: il launcher legge il file esterno a ogni avvio, ne accetta soltanto la allowlist e imposta `THEBITLAB_AUTH_DB_PATH` dalla configurazione renderizzata prima di sostituirsi al server. Percorsi assoluti, traversal, root sovrapposta alla release o riferimenti secret dentro release/data root sono rifiutati. Il lock applicativo è fissato a `/run/thebitlab`; il backend ascolta solo su `127.0.0.1`.
 
 Una root diversa identifica una diversa istanza. Copie o mount manuali non documentati non costituiscono sincronizzazione autorevole; valgono i confini di [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md).
 
@@ -67,7 +68,9 @@ Il vero `service.environment_file`:
 - contiene soltanto le variabili ammesse dallo schema;
 - non viene copiato nel bundle, nel lock, nei log o nel backup applicativo non cifrato.
 
-Per Google auth sono obbligatori token docente, client ID, client secret e tre segreti base64url indipendenti (CSRF, rate limit, pairing). Se `features.github_oauth=true`, client ID e secret GitHub sono entrambi obbligatori. Redirect URI, trusted proxy e auth DB sono invece derivati dal manifest e sono vietati nel file esterno. Il runtime GitHub App, se abilitato, usa la directory esterna protetta `$HOME/.thebitlab-secrets/github-app`; nessuna chiave o installation token entra negli artefatti.
+Per Google auth sono obbligatori token docente, client ID, client secret e tre segreti base64url indipendenti (CSRF, rate limit, pairing). Se `features.github_oauth=true`, client ID e secret GitHub sono entrambi obbligatori. Redirect URI, trusted proxy, auth DB, lock directory e revisione sono invece derivati dal manifest e sono vietati nel file esterno. Il runtime GitHub App, se abilitato, usa la directory esterna protetta `$HOME/.thebitlab-secrets/github-app`; nessuna chiave o installation token entra negli artefatti.
+
+L'ordine delle direttive non è un controllo di sicurezza: [`systemd.exec(5)`](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#EnvironmentFile=) specifica che i valori di `EnvironmentFile=` prevalgono su `Environment=` e che il file viene riletto poco prima dell'esecuzione. Per questo l'unit non consegna mai direttamente il file a systemd. `pilot_service_launcher.py`, eseguito senza quel file nell'ambiente, ne ricontrolla tipo, permessi, sintassi e nomi a ogni start/restart; un nome aggiunto o riservato impedisce l'avvio. Solo dopo costruisce l'ambiente del server eliminando eventuali valori precedenti posseduti dal contratto, importa i secret consentiti e applica per ultime le impostazioni autorevoli renderizzate. Non esiste quindi precedenza configurabile dal file esterno.
 
 Sul target autorizzato si può validare esplicitamente il file. Il validator legge i valori soltanto per verificarne forma e indipendenza, non li stampa:
 
@@ -125,7 +128,7 @@ Una candidate deve conservare separatamente release e configurazione immutabili,
 /srv/thebitlab/data/                    root persistente al rollback
 ```
 
-Prima dell'attivazione verificare SHA, digest del lock, metadata dei riferimenti esterni, schema dell'environment, ownership/root, contratto firewall e tool smoke. I tre symlink di integrazione nginx/systemd devono puntare **attraverso** `/etc/thebitlab/current`, non a copie o direttamente a una versione: in questo modo lo switch del bundle cambia tutti gli artifact attivi. Il formato log entra nel contesto nginx `http`; nessun file renderizzato va editato sul target. Conservare bundle, checkout e virtualenv precedenti finché termina la finestra di rollback. Qualunque differenza manuale fra bundle e host invalida il gate topologia.
+Prima dell'attivazione verificare SHA, digest del lock, metadata dei riferimenti esterni, schema dell'environment, ownership/root, contratto firewall e tool smoke. Il launcher appartiene alla release fissata da `release.commit`; l'unit deve invocarlo e non deve contenere `EnvironmentFile=`. I tre symlink di integrazione nginx/systemd devono puntare **attraverso** `/etc/thebitlab/current`, non a copie o direttamente a una versione: in questo modo lo switch del bundle cambia tutti gli artifact attivi. Il formato log entra nel contesto nginx `http`; nessun file renderizzato va editato sul target. Conservare bundle, checkout e virtualenv precedenti finché termina la finestra di rollback. Qualunque differenza manuale fra bundle e host invalida il gate topologia.
 
 ## Rollback bounded
 

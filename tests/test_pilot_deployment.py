@@ -14,6 +14,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from scripts import pilot_deployment_smoke as smoke
+from scripts import pilot_service_launcher as service_launcher
 from scripts import validate_pilot_deployment as deployment
 
 
@@ -73,11 +74,10 @@ def test_rendered_service_pins_root_auth_resolution_and_generated_topology(tmp_p
     deployment.render_bundle(payload, output)
     unit = (output / "systemd/thebitlab.service").read_text(encoding="utf-8")
 
-    environment_index = unit.index("EnvironmentFile=")
-    auth_index = unit.index("Environment=THEBITLAB_AUTH_DB_PATH=")
-    assert environment_index < auth_index
-    assert "Environment=THEBITLAB_AUTH_DB_PATH=.thebitlab-auth/auth.sqlite3" in unit
-    assert "Environment=THEBITLAB_TRUSTED_PROXY_CIDRS=127.0.0.1/32" in unit
+    assert "\nEnvironmentFile=" not in unit
+    assert "scripts/pilot_service_launcher.py" in unit
+    assert "--auth-db-path .thebitlab-auth/auth.sqlite3" in unit
+    assert "--trusted-proxy-cidrs 127.0.0.1/32" in unit
     assert "--host 127.0.0.1 --port 8000 --root /srv/thebitlab/data" in unit
     assert "--enable-google-auth" in unit
     assert "--enable-github-app-token-runtime" not in unit
@@ -209,6 +209,51 @@ def test_environment_contract_accepts_only_complete_independent_external_values(
     assert quoted["THEBITLAB_GOOGLE_CLIENT_SECRET"] not in str(captured.value)
 
 
+def test_service_launcher_rejects_reserved_external_names_and_pins_effective_topology(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "pilot.env"
+    external = valid_environment()
+    external["THEBITLAB_AUTH_DB_PATH"] = "/tmp/attacker.sqlite3"
+    path.write_text(
+        "".join(f"{name}={value}\n" for name, value in external.items()),
+        encoding="utf-8",
+    )
+    parsed = deployment.parse_environment_file(path)
+    authoritative = {
+        "THEBITLAB_DEPLOYMENT_REVISION": "a" * 40,
+        "THEBITLAB_LOCK_DIR": "/run/thebitlab",
+        "THEBITLAB_AUTH_DB_PATH": ".thebitlab-auth/auth.sqlite3",
+        "THEBITLAB_TRUSTED_PROXY_CIDRS": "127.0.0.1/32",
+        "THEBITLAB_GOOGLE_REDIRECT_URI": "https://candidate.example.edu/auth/google/callback",
+    }
+
+    with pytest.raises(deployment.DeploymentValidationError, match="variabili non ammesse"):
+        service_launcher.build_effective_environment(
+            {}, parsed, authoritative, github_oauth=False
+        )
+
+    malformed = valid_environment()
+    malformed["THEBITLAB_TEACHER_TOKEN"] = "!" * 32
+    with pytest.raises(deployment.DeploymentValidationError, match="forma non valida"):
+        service_launcher.build_effective_environment(
+            {}, malformed, authoritative, github_oauth=False
+        )
+
+    base = {
+        "PATH": "/usr/bin",
+        "THEBITLAB_AUTH_DB_PATH": "/tmp/stale.sqlite3",
+        "THEBITLAB_GITHUB_CLIENT_SECRET": "stale-secret",
+    }
+    effective = service_launcher.build_effective_environment(
+        base, valid_environment(), authoritative, github_oauth=False
+    )
+    assert effective["THEBITLAB_AUTH_DB_PATH"] == ".thebitlab-auth/auth.sqlite3"
+    assert effective["THEBITLAB_TRUSTED_PROXY_CIDRS"] == "127.0.0.1/32"
+    assert "THEBITLAB_GITHUB_CLIENT_SECRET" not in effective
+    assert effective["PATH"] == "/usr/bin"
+
+
 def test_environment_parser_rejects_duplicate_or_shell_syntax_without_echoing_values(tmp_path: Path) -> None:
     secret_marker = "DO-NOT-ECHO-THIS-SECRET"
     path = tmp_path / "pilot.env"
@@ -234,7 +279,8 @@ def test_github_features_render_only_the_explicit_contract(tmp_path: Path) -> No
     deployment.render_bundle(payload, output)
 
     unit = (output / "systemd/thebitlab.service").read_text(encoding="utf-8")
-    assert "THEBITLAB_GITHUB_REDIRECT_URI=https://candidate.example.edu/auth/github/callback" in unit
+    assert "--enable-github-oauth --github-redirect-uri https://candidate.example.edu/auth/github/callback" in unit
+    assert "Environment=THEBITLAB_GITHUB_REDIRECT_URI=" not in unit
     assert "--enable-github-app-token-runtime" in unit
     assert "-/home/thebitlab/.thebitlab-secrets/github-app" in unit
     assert "private-key.pem" not in unit
