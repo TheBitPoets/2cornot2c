@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
+from scripts import pilot_deployment_smoke as smoke
 from scripts import validate_pilot_deployment as deployment
 
 
@@ -237,6 +238,21 @@ def test_github_features_render_only_the_explicit_contract(tmp_path: Path) -> No
     assert "--enable-github-app-token-runtime" in unit
     assert "-/home/thebitlab/.thebitlab-secrets/github-app" in unit
     assert "private-key.pem" not in unit
+
+
+def test_nginx_smoke_uses_unprivileged_ports_without_mutating_bundle(tmp_path: Path) -> None:
+    output = tmp_path / "bundle"
+    deployment.render_bundle(manifest(), output)
+    site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8")
+
+    smoke_site = smoke._nginx_site_for_unprivileged_smoke(site)
+
+    assert smoke_site.count("18080") == 4
+    assert smoke_site.count("18443") == 4
+    assert smoke_site.replace("18080", "80").replace("18443", "443") == site
+    assert (output / "nginx/thebitlab.conf").read_text(encoding="utf-8") == site
+    with pytest.raises(RuntimeError, match="Direttive listen nginx inattese"):
+        smoke._nginx_site_for_unprivileged_smoke("server { listen 80; }")
 
 
 def test_smoke_cli_entrypoint_resolves_repository_package() -> None:

@@ -33,7 +33,7 @@ python scripts/pilot_deployment_smoke.py \
   --config deploy/pilot/candidate.example.json
 ```
 
-Lo smoke crea root, `EnvironmentFile`, certificato e output in una directory temporanea, esegue soltanto `nginx -t` e `systemd-analyze verify`, quindi elimina tutto. Non avvia né ricarica servizi.
+Lo smoke crea root, `EnvironmentFile`, certificato e output in una directory temporanea, esegue soltanto `nginx -t` e `systemd-analyze verify`, quindi elimina tutto. Per restare eseguibile senza privilegi, la sola copia nginx temporanea usa le porte 18080/18443; il bundle firmato resta invariato su 80/443. Non avvia né ricarica servizi.
 
 ## Contratto della data root
 

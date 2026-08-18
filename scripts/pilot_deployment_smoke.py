@@ -9,6 +9,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -47,6 +48,22 @@ def _verify_lock(bundle: Path) -> None:
         actual = hashlib.sha256((bundle / name).read_bytes()).hexdigest()
         if actual != expected:
             raise RuntimeError(f"Digest bundle non valido: {name}")
+
+
+def _nginx_site_for_unprivileged_smoke(site: str) -> str:
+    ports = {"80": "18080", "443": "18443"}
+    counts = {port: 0 for port in ports}
+    listen = re.compile(r"(?m)^(\s*listen\s+(?:\[::\]:)?)(80|443)(?=[\s;])")
+
+    def replace(match: re.Match[str]) -> str:
+        port = match.group(2)
+        counts[port] += 1
+        return match.group(1) + ports[port]
+
+    smoke_site = listen.sub(replace, site)
+    if counts != {"80": 4, "443": 4}:
+        raise RuntimeError(f"Direttive listen nginx inattese per lo smoke: {counts}")
+    return smoke_site
 
 
 def run_smoke(config: Path) -> None:
@@ -123,6 +140,13 @@ def run_smoke(config: Path) -> None:
         deployment.render_bundle(manifest, bundle)
         _verify_lock(bundle)
 
+        nginx_smoke_site = temporary / "nginx-smoke-site.conf"
+        nginx_smoke_site.write_text(
+            _nginx_site_for_unprivileged_smoke(
+                (bundle / "nginx/thebitlab.conf").read_text(encoding="utf-8")
+            ),
+            encoding="utf-8",
+        )
         nginx_config = temporary / "nginx-smoke.conf"
         nginx_config.write_text(
             "\n".join(
@@ -133,7 +157,7 @@ def run_smoke(config: Path) -> None:
                     "http {",
                     "    include /etc/nginx/mime.types;",
                     f"    include {bundle / 'nginx/thebitlab-log-format.conf'};",
-                    f"    include {bundle / 'nginx/thebitlab.conf'};",
+                    f"    include {nginx_smoke_site};",
                     "}",
                     "",
                 )
