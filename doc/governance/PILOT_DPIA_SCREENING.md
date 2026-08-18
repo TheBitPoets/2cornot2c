@@ -1,14 +1,16 @@
-# TheBitLab pilot 2026/2027 — DPIA screening
+# TheBitLab pilot 2026/2027 — DPIA & AI risk screening
 
 ## Stato
 
 **DRAFT DA COMPILARE DAL TITOLARE CON IL SUPPORTO DEL RPD/DPO PRIMA DELL'USO CON DATI REALI.**
 
-Questo documento non decide autonomamente se una DPIA completa sia giuridicamente obbligatoria. Serve a rendere la decisione esplicita, motivata e versionata.
+Questo documento non decide autonomamente se una DPIA completa sia giuridicamente obbligatoria. Serve a rendere la decisione esplicita, motivata e versionata e a coordinare, per gli use case AI, la classificazione AI Act e l'eventuale FRIA.
 
 Principio del progetto:
 
 > Se il trattamento può presentare un rischio elevato per diritti e libertà degli studenti, il pilot non procede con dati reali finché la valutazione richiesta non è stata completata e le misure di mitigazione non sono state approvate.
+
+**DPIA GDPR e FRIA AI Act sono valutazioni distinte.** Possono essere integrate operativamente per le parti sovrapposte, ma una non viene considerata automaticamente sostitutiva dell'altra.
 
 ---
 
@@ -24,7 +26,7 @@ Principio del progetto:
 - Topologia: `[________]`
 - Data: `[________]`
 
-Use case incluso nella screening:
+Use case incluso:
 
 - [ ] core identity/classi/assignment
 - [ ] tentativi/report/grading deterministico
@@ -44,8 +46,10 @@ Compilare:
 - finalità: `[________]`
 - interessati: `[________]`
 - categorie dati: `[________]`
+- eventuali categorie particolari art. 9: `[NESSUNA / DESCRIZIONE E BASE]`
 - origine dati: `[________]`
 - destinatari/provider: `[________]`
+- ruolo gestore tecnico/processori: `[________]`
 - retention: `[________]`
 - trasferimenti: `[________]`
 - decisioni prodotte: `[________]`
@@ -54,13 +58,14 @@ Compilare:
 
 ---
 
-# 3. Trigger di rischio
+# 3. Trigger di rischio GDPR
 
 Per ciascun criterio indicare `NO`, `YES`, `UNKNOWN` e rationale.
 
 | Trigger | Stato | Rationale/evidence |
 |---|---|---|
 | interessati minori | | |
+| interessati vulnerabili | | |
 | nuova tecnologia/AI | | |
 | valutazione sistematica di persone | | |
 | scoring/grading/profilazione | | |
@@ -70,7 +75,6 @@ Per ciascun criterio indicare `NO`, `YES`, `UNKNOWN` e rationale.
 | dati su larga scala | | |
 | combinazione di dataset/fonti | | |
 | dati sensibili/art. 9 | | |
-| interessati vulnerabili | | |
 | impossibilità/difficoltà di sottrarsi al trattamento | | |
 | trasferimenti verso paesi terzi | | |
 | provider multipli/sub-responsabili | | |
@@ -83,22 +87,24 @@ Per ciascun criterio indicare `NO`, `YES`, `UNKNOWN` e rationale.
 
 `UNKNOWN` è un blocker della decisione, non equivale a `NO`.
 
+La presenza contemporanea di minori/vulnerabilità, valutazione sistematica e tecnologia innovativa/AI richiede una valutazione particolarmente conservativa della necessità di DPIA.
+
 ---
 
-# 4. Classificazione conservativa per use case
+# 4. Default interno per use case
 
-Questa tabella è una **policy interna di screening**, non una classificazione legale automatica.
+Questa tabella è una **policy interna di gate**, non una classificazione legale automatica.
 
-| Use case | Default screening TheBitLab | Attivazione reale |
+| Use case | Default TheBitLab | Attivazione reale |
 |---|---|---|
-| core identity/assignment | DPIA screening obbligatoria | dopo governance e screening approvate |
+| core identity/assignment | DPIA screening obbligatoria | dopo governance e screening |
 | grading deterministico Docker/test | DPIA screening obbligatoria | dopo governance e security gate |
 | AI tutor/assistiva | screening specifica + review RPD/DPO | solo dopo #710 e gate use-case |
-| AI correction/grade proposal | **presunzione interna: DPIA completa da valutare come necessaria** | solo dopo decisione documentata |
-| AI automated grading | **presunzione interna forte: DPIA completa** | disabilitato finché gate legali/didattici non sono chiusi |
-| AI adaptive path | **presunzione interna forte: DPIA completa** | disabilitato finché gate legali/didattici non sono chiusi |
+| AI correction/grade proposal | **DPIA completa come gate interno salvo conclusione contraria formalmente motivata dal Titolare/RPD-DPO** | solo dopo decisione documentata |
+| AI automated grading | **DPIA completa come gate interno** | disabilitato finché gate legali/didattici non sono chiusi |
+| AI adaptive path con impatto materiale | **DPIA completa come gate interno** | disabilitato finché gate legali/didattici non sono chiusi |
 
-La scuola/RPD-DPO può concludere diversamente solo con rationale documentata riferita allo scope reale.
+La scuola/RPD-DPO può definire un esito diverso soltanto con rationale documentata riferita allo scope reale.
 
 ---
 
@@ -109,14 +115,15 @@ Per ogni trattamento/use case rispondere:
 1. Quale problema didattico/operativo risolve?
 2. Il dato è strettamente necessario?
 3. È possibile ottenere lo stesso risultato con meno dati?
-4. È possibile usare dati sintetici o anonimizzati?
+4. È possibile usare dati sintetici o realmente anonimizzati?
 5. Il trattamento è facoltativo o necessario al servizio core?
 6. È possibile mantenere la decisione al docente senza perdita sostanziale di utilità?
 7. Il provider deve ricevere tutto l'elaborato o basta un frammento?
-8. È necessario conservare il prompt/response?
+8. È necessario conservare prompt/response?
 9. È necessario mantenere lo storico completo o basta un aggregate?
 10. È possibile tenere hidden test/teacher solution completamente fuori dal provider?
-11. È possibile disabilitare il use case senza impedire l'attività didattica?
+11. È possibile disabilitare il use case senza impedire l'attività didattica core?
+12. Possono comparire incidentalmente dati sanitari/DSA/disabilità nel contesto? Come vengono esclusi?
 
 Outcome:
 
@@ -136,13 +143,14 @@ Rationale: `[________]`
 - account takeover;
 - accesso cross-class/cross-student;
 - esposizione email/identity mapping;
-- leakage di elaborati;
+- leakage di elaborati o categorie particolari;
 - leakage di log/query/secret;
 - backup non cifrato/incompleto;
 - provider AI che riceve campi eccedenti;
 - retention superiore al necessario;
 - trasferimenti/provider non governati;
-- coding agent con accesso improprio a produzione.
+- coding agent con accesso improprio a produzione;
+- ruolo controller/processor non qualificato.
 
 ## Didattica/assessment
 
@@ -163,7 +171,8 @@ Rationale: `[________]`
 - profilazione eccedente;
 - esposizione a output inappropriati;
 - decisioni adattive opache;
-- monitoraggio comportamentale invasivo.
+- monitoraggio comportamentale invasivo;
+- inferenza delle emozioni o pratiche vietate.
 
 ---
 
@@ -181,20 +190,22 @@ Rationale: `[________]`
 - no cross-student context;
 - no direct DB/root access per AI;
 - hidden test/teacher solution excluded by default;
+- categorie particolari escluse dal contesto AI per default;
 - model/prompt/policy/rubric versioning;
-- human oversight configurabile;
+- human oversight configurabile ed effettiva;
 - rationale/evidence separate dall'output AI;
 - contestazione/override;
 - quality/bias/drift gates per assessment;
 - feature flag e kill switch;
 - incident response con escalation a Titolare/RPD-DPO;
-- informativa comprensibile e specifica per use case.
+- informativa comprensibile e specifica per use case;
+- AI literacy del personale interessato.
 
 Misure ulteriori richieste: `[________]`
 
 ---
 
-# 8. Automated decision-making / assessment screening
+# 8. Automated decision-making / assessment screening GDPR
 
 Compilare per #713–#715:
 
@@ -209,7 +220,7 @@ Compilare per #713–#715:
 - Esistono soglie di accuracy/error/bias? `[________]`
 - È possibile tornare a workflow interamente umano? `[________]`
 
-Se l'AI produce una decisione autonoma con impatto significativo, la screening non può concludersi con un generico `low risk` senza analisi giuridica specifica.
+Se l'AI produce una decisione autonoma con impatto significativo, la screening non può concludersi con un generico `low risk` senza analisi giuridica specifica del GDPR e delle garanzie applicabili.
 
 ---
 
@@ -218,23 +229,76 @@ Se l'AI produce una decisione autonoma con impatto significativo, la screening n
 Per ogni use case AI registrare:
 
 - intended purpose;
+- provider, sistema, versione e modello;
 - provider/deployer roles;
 - whether the system evaluates learning outcomes;
 - whether the output determines/influences access, level or educational path;
+- whether profiling occurs;
 - whether the use falls within an Annex III education category;
-- whether an exclusion/non-high-risk rationale is claimed;
-- source/version of the legal guidance used for classification;
+- whether an Article 6(3) non-high-risk rationale is claimed;
+- source/version of provider/legal documentation used for classification;
 - decision owner/date.
 
 Classificazione: `[NOT_APPLICABLE | NON_HIGH_RISK | HIGH_RISK_CANDIDATE | HIGH_RISK | UNKNOWN]`
 
 Rationale: `[________]`
 
-`UNKNOWN` mantiene la capability disabilitata sui dati reali.
+Regole di gate:
+
+- `UNKNOWN` mantiene la capability disabilitata sui dati reali;
+- `AI proposes -> docente decides` non costituisce da solo una ragione sufficiente per escludere l'high-risk;
+- se viene invocato l'art. 6(3), documentare i presupposti applicabili e verificare che il sistema non effettui profilazione incompatibile con l'eccezione;
+- use case che valutano risultati dell'apprendimento o influenzano materialmente livello/percorso sono trattati come `HIGH_RISK_CANDIDATE` finché la classificazione non è conclusa.
 
 ---
 
-# 10. Decisione DPIA
+# 10. High-risk deployer screening — art. 26 AI Act
+
+Se classificazione = `HIGH_RISK`, verificare almeno:
+
+- [ ] istruzioni del provider disponibili e applicate;
+- [ ] human oversight con persone competenti, formate, dotate di autorità e supporto;
+- [ ] input data sotto controllo del deployer valutati per pertinenza/rappresentatività quando applicabile;
+- [ ] monitoraggio del sistema e procedura di sospensione;
+- [ ] reporting di rischi/incidenti secondo gli obblighi applicabili;
+- [ ] log automatici sotto controllo del deployer conservati per il periodo minimo applicabile, incluso **almeno sei mesi** quando richiesto dall'art. 26;
+- [ ] informazioni del provider utilizzate per DPIA GDPR quando applicabile;
+- [ ] obblighi di registrazione nella banca dati UE verificati per il deployer pubblico;
+- [ ] feature flag/kill switch e fallback umano testati;
+- [ ] AI literacy evidence disponibile.
+
+Riferimenti/evidence: `[________]`
+
+---
+
+# 11. FRIA screening — art. 27 AI Act
+
+Per sistemi high-risk ex art. 6(2), verificare se l'Istituto rientra nel perimetro dell'art. 27 quale organismo di diritto pubblico/deployer.
+
+Esito:
+
+- [ ] FRIA NOT APPLICABLE — rationale documentata.
+- [ ] FRIA REQUIRED.
+- [ ] UNKNOWN / BLOCKED.
+
+Se richiesta, la FRIA deve coprire almeno:
+
+- processi e intended purpose;
+- durata/frequenza d'uso;
+- categorie di persone e gruppi interessati;
+- rischi specifici di danno ai diritti fondamentali nel contesto reale;
+- implementazione concreta della human oversight;
+- mitigazioni, governance e meccanismi di reclamo/ricorso pertinenti.
+
+- [ ] FRIA completata prima dell'uso.
+- [ ] eventuale integrazione con DPIA documentata senza confondere i due adempimenti.
+- [ ] eventuali adempimenti verso l'autorità di vigilanza previsti dall'art. 27 completati/documentati.
+
+Riferimento FRIA: `[________]`
+
+---
+
+# 12. Decisione DPIA GDPR
 
 Una delle seguenti:
 
@@ -249,11 +313,24 @@ Misure obbligatorie prima dell'attivazione: `[________]`
 
 Residual risk: `[LOW | MEDIUM | HIGH | UNKNOWN]`
 
-Se resta un rischio elevato non mitigato, il Titolare/RPD-DPO determina il passo successivo previsto dalla normativa; il software non può auto-approvare il rischio.
+Se resta un rischio elevato non mitigato, il Titolare/RPD-DPO determina il passo successivo previsto dalla normativa; il software non auto-approva il rischio.
 
 ---
 
-# 11. Firme e review
+# 13. Decisione AI Act
+
+- Classificazione use case: `[________]`
+- High-risk deployer checklist: `[N.A. / COMPLETA / BLOCCATA]`
+- FRIA: `[N.A. / COMPLETA / BLOCCATA]`
+- AI literacy: `[COMPLETA / BLOCCATA]`
+- Provider evidence: `[COMPLETA / BLOCCATA]`
+- Real student data: `[ENABLED / SYNTHETIC_ONLY / BLOCKED]`
+
+Rationale/condizioni: `[________]`
+
+---
+
+# 14. Firme e review
 
 Titolare/decision owner: `[________]`
 
@@ -273,13 +350,14 @@ Release/use-case scope: `[________]`
 
 ---
 
-# 12. Invariante di rollout
+# 15. Invariante di rollout
 
 Una modifica a uno dei seguenti elementi invalida almeno la relativa screening e richiede review:
 
 - intended purpose;
-- categorie dati;
+- categorie dati, incluse categorie particolari;
 - provider/subprocessor;
+- ruolo controller/processor;
 - trasferimenti;
 - retention;
 - modello/prompt/policy per use case valutativi;
@@ -287,4 +365,6 @@ Una modifica a uno dei seguenti elementi invalida almeno la relativa screening e
 - topologia;
 - identity/authz;
 - output che diventa voto/decisione ufficiale;
-- percorso adattivo che cambia materialmente opportunità/accesso.
+- percorso adattivo che cambia materialmente opportunità/accesso;
+- classificazione AI Act;
+- condizioni che rendevano non applicabile DPIA o FRIA.
