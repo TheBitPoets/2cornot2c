@@ -4,7 +4,7 @@
 
 **DRAFT DA COMPLETARE E APPROVARE DAL TITOLARE/RPD-DPO PRIMA DELL'USO CON STUDENTI REALI.**
 
-Questa bozza serve a trasformare la governance tecnica del pilot in un'informativa comprensibile a studenti e famiglie. Non va pubblicata finché i campi mancanti non sono compilati e la scuola non ha verificato base giuridica, destinatari, trasferimenti e retention.
+Questa bozza serve a trasformare la governance tecnica del pilot in un'informativa comprensibile a studenti e famiglie. Non va pubblicata finché i campi mancanti non sono compilati e la scuola non ha verificato base giuridica, destinatari, trasferimenti, retention, perimetro AI e risultati delle valutazioni di impatto applicabili.
 
 ---
 
@@ -45,7 +45,7 @@ TheBitLab viene usato per supportare attività didattiche e laboratoriali, in pa
 
 **Base giuridica:** `[DA COMPILARE DALLA SCUOLA/RPD-DPO PER CIASCUNA FINALITÀ]`.
 
-L'uso del consenso non deve essere indicato automaticamente come base del servizio core se la base appropriata è un obbligo legale/compito di interesse pubblico o altra base prevista dalla normativa applicabile.
+L'uso del consenso non deve essere indicato automaticamente come base del servizio core se la base appropriata è un obbligo legale, un compito di interesse pubblico o altra base prevista dalla normativa applicabile.
 
 ---
 
@@ -66,13 +66,17 @@ A seconda delle funzioni effettivamente abilitate:
 
 TheBitLab non usa il dominio dell'email come autorizzazione alla classe: l'accesso è determinato dalle membership interne autorizzate dalla scuola.
 
+## Dati particolari
+
+Il core TheBitLab non richiede per design dati sanitari, diagnosi, disabilità, DSA, informazioni psicologiche o altre categorie particolari di dati. Tali informazioni non devono essere inserite automaticamente nei profili, nelle richieste di aiuto, nei prompt AI o nei log. Se l'Istituto attiva in futuro una funzione che richiede dati di questa natura, essa deve essere descritta e autorizzata come trattamento separato con le condizioni e le garanzie applicabili.
+
 ---
 
 # 4. Account scolastico o Gmail personale
 
-Nel pilot sono ammessi sia account Google Workspace scolastici sia account Gmail personali.
+Nel pilot sono tecnicamente supportati sia account Google Workspace scolastici sia account Gmail personali.
 
-L'account scolastico può essere preferito quando disponibile e funzionante, ma l'account Gmail personale può essere usato quando previsto dalla policy della scuola.
+L'account scolastico può essere preferito quando disponibile e funzionante; l'account Gmail personale può essere usato soltanto se previsto dalla policy approvata dall'Istituto.
 
 L'indirizzo email non viene usato per autorizzare automaticamente l'accesso a classi o consegne e non deve essere riutilizzato per finalità estranee al pilot.
 
@@ -91,19 +95,23 @@ In base al ruolo e al principio di necessità:
 
 Destinatari/responsabili esterni effettivi: `[ELENCO/REGISTRO DA COMPILARE]`.
 
+Ruolo dell'eventuale gestore tecnico esterno e riferimento all'atto/contratto applicabile: `[DA COMPILARE]`.
+
 ---
 
 # 6. Per quanto tempo vengono conservati
 
-La retention definitiva è stabilita dalla scuola. La baseline tecnica proposta per il pilot è:
+La retention definitiva è stabilita dalla scuola. La baseline tecnica proposta per il pilot core è:
 
 - account, membership, assignment, tentativi, report e feedback: anno scolastico + 90 giorni, salvo obblighi diversi approvati dalla scuola;
 - contenuto delle interazioni help/tutor: 30 giorni;
 - log tecnici/security ordinari: 30 giorni;
 - payload AI nel gateway TheBitLab: non persistiti per default;
-- metadati audit AI: 30 giorni;
+- metadati audit AI ordinari: 30 giorni, **salvo obblighi di conservazione più lunghi applicabili allo specifico sistema/use case**;
 - backup: rotazione di 30 giorni con backup almeno giornaliero;
 - incident evidence: retention definita caso per caso dal Titolare/RPD-DPO.
+
+Se viene attivato un sistema AI ad alto rischio soggetto agli obblighi del deployer previsti dall'AI Act, i log generati automaticamente sotto il controllo del deployer sono conservati per il periodo previsto dalla disciplina applicabile; l'art. 26 AI Act prevede, quando applicabile, un periodo di almeno sei mesi. L'informativa pubblicata deve indicare il periodo effettivamente adottato per il use case attivo.
 
 `APPROVAL REQUIRED`: questi valori devono essere confermati o sostituiti prima della pubblicazione.
 
@@ -118,7 +126,7 @@ Sono previste, tra le altre, misure quali:
 - HTTPS;
 - autenticazione federata e revoca sessioni;
 - authorization per ruolo/membership;
-- sandbox Docker per codice non fidato;
+- sandbox per codice non fidato;
 - segreti esterni al repository e ai log;
 - log minimizzati e secret-safe;
 - backup cifrato e restore verificato;
@@ -132,9 +140,11 @@ Nessun sistema può garantire rischio zero; le misure vengono riesaminate in bas
 
 # 8. Intelligenza artificiale
 
-Quando una funzione AI è abilitata, l'interfaccia deve indicarlo chiaramente.
+Il pilot può essere approvato con **AI esterna completamente disabilitata sui dati reali**. In tal caso il trattamento core non implica l'uso di provider AI.
 
-Le funzionalità previste includono tutor, feedback, correzione, proposta di voto, grading automatico e percorsi adattivi, ma non sono necessariamente tutte attive nello stesso momento.
+Quando una funzione AI è abilitata, l'interfaccia e la documentazione devono indicarlo chiaramente.
+
+Le funzionalità previste possono includere tutor, feedback, correzione, proposta di voto, grading automatico e percorsi adattivi, ma non sono necessariamente tutte attive nello stesso momento.
 
 Regole del pilot:
 
@@ -143,27 +153,45 @@ Regole del pilot:
 - vengono inviati solo i dati strettamente necessari allo specifico scopo;
 - hidden test, soluzioni docente e dati di altri studenti sono esclusi per default;
 - output AI, evidence deterministica e decisione docente restano distinguibili;
-- per funzioni valutative/adattive sono previste policy e controlli più forti, inclusa human oversight quando richiesta.
+- per funzioni valutative/adattive sono previste classificazione AI Act, valutazioni di impatto e human oversight quando applicabili;
+- funzioni di inferenza/riconoscimento delle emozioni in ambito scolastico non fanno parte del pilot, salvo eventuali future eccezioni strettamente previste dalla legge per ragioni mediche o di sicurezza.
 
 Use case AI attivi in questo pilot: `[NESSUNO / ELENCO APPROVATO]`.
 
-Provider AI attivi: `[NESSUNO / ELENCO APPROVATO]`.
+Provider/sistema/versione AI attivi: `[NESSUNO / ELENCO APPROVATO]`.
 
-Informazioni specifiche su logica/importanza/conseguenze del processo automatizzato, quando dovute: `[DA COMPILARE PER USE CASE]`.
+Classificazione AI Act del use case: `[N/A / NON_HIGH_RISK / HIGH_RISK / ALTRO ESITO MOTIVATO]`.
+
+Riferimento DPIA/FRIA quando applicabili: `[________]`.
 
 ---
 
-# 9. Trasferimenti verso paesi extra SEE
+# 9. Decisioni automatizzate, human review e contestazione
+
+Per ogni funzione che produce o influenza una valutazione, un livello, un percorso o un'altra decisione rilevante, l'informativa definitiva deve descrivere in modo coerente con il trattamento reale:
+
+- se l'AI propone soltanto o decide;
+- quale ruolo ha il docente;
+- se il docente può accettare, modificare o rifiutare l'output;
+- come lo studente può chiedere chiarimenti/review o contestare il risultato quando previsto;
+- le informazioni su logica, importanza e conseguenze del trattamento automatizzato richieste dal GDPR nei casi applicabili;
+- le misure di human oversight e fallback previste.
+
+Informazioni specifiche sul use case attivo: `[DA COMPILARE / N.A.]`.
+
+---
+
+# 10. Trasferimenti verso paesi extra SEE
 
 `[DA COMPILARE]`
 
-Per ciascun provider che tratta dati fuori dallo Spazio Economico Europeo devono essere indicate le condizioni e le garanzie applicabili, oppure deve essere dichiarato che non sono previsti tali trasferimenti.
+Per ciascun provider che comporta trattamenti o trasferimenti verso paesi terzi devono essere indicate le condizioni e le garanzie applicabili, oppure deve essere dichiarato che non sono previsti tali trasferimenti.
 
 ---
 
-# 10. Diritti
+# 11. Diritti
 
-Nei limiti e secondo le condizioni previste dalla normativa applicabile, l'interessato può esercitare i diritti relativi ai propri dati, inclusi accesso e rettifica e, quando applicabili, cancellazione, limitazione/opposizione e altri diritti previsti dal GDPR.
+Nei limiti e secondo le condizioni previste dalla normativa applicabile, l'interessato può esercitare i diritti relativi ai propri dati, inclusi accesso e rettifica e, quando applicabili, cancellazione, limitazione/opposizione e gli altri diritti previsti dal GDPR.
 
 Le richieste vanno indirizzate al Titolare/RPD-DPO ai contatti indicati sopra.
 
@@ -173,7 +201,7 @@ Per processi decisionali automatizzati/profilazione, quando applicabili, l'infor
 
 ---
 
-# 11. Conferimento dei dati
+# 12. Conferimento dei dati
 
 `[DA COMPILARE PER TRATTAMENTO]`
 
@@ -181,11 +209,20 @@ L'informativa definitiva deve distinguere:
 
 - dati necessari per il servizio didattico core;
 - dati/funzioni opzionali;
-- conseguenze della mancata disponibilità quando pertinenti.
+- conseguenze della mancata disponibilità quando pertinenti;
+- eventuali use case AI facoltativi o separatamente autorizzati.
 
 ---
 
-# 12. Contatti e revisione
+# 13. Data breach e contatti
+
+In caso di incidente che coinvolga dati personali, l'Istituto applica la propria procedura di data breach. Gli eventuali Responsabili del trattamento informano il Titolare senza ingiustificato ritardo secondo gli accordi applicabili; il Titolare valuta gli adempimenti previsti dagli artt. 33 e 34 GDPR.
+
+Canale istituzionale per segnalazioni privacy/security: `[________]`.
+
+---
+
+# 14. Contatti e revisione
 
 Versione informativa: `[________]`
 
@@ -197,18 +234,22 @@ Titolare approvazione: `[________]`
 
 RPD/DPO review: `[________]`
 
+Release/use-case AI coperti: `[________]`
+
 ---
 
 ## Note di drafting
 
 Prima della pubblicazione verificare almeno:
 
-- coerenza con `PILOT_GOVERNANCE_2026_2027.md`;
+- coerenza con `PILOT_GOVERNANCE_2026_2027.md` e `PILOT_SCHOOL_COMPLIANCE_CHECKLIST_2026_2027.md`;
 - basi giuridiche;
 - provider registry e relativi ruoli;
+- eventuale ruolo/atto art. 28 del gestore tecnico;
 - trasferimenti;
 - retention definitiva;
-- DPIA screening;
-- funzioni AI realmente abilitate;
+- DPIA screening ed eventuale DPIA;
+- funzioni AI realmente abilitate e relativa classificazione;
+- eventuale FRIA/obblighi high-risk;
 - linguaggio comprensibile agli studenti/minori;
 - modalità con cui l'informativa viene resa a studenti e famiglie.
