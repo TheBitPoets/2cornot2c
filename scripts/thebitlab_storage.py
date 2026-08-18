@@ -41,6 +41,12 @@ class CourseStorageLock:
     def _acquire_process_lock(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         handle = self.path.open("a+b")
+        try:
+            if os.name != "nt":
+                os.fchmod(handle.fileno(), 0o600)
+        except OSError:
+            handle.close()
+            raise
         handle.seek(0, os.SEEK_END)
         if handle.tell() == 0:
             handle.write(b"\0")

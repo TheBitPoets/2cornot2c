@@ -245,6 +245,8 @@ class DataRootProcessLock:
     def _acquire_handle(path: Path):
         handle = path.open("a+b")
         try:
+            if os.name != "nt":
+                os.fchmod(handle.fileno(), 0o600)
             handle.seek(0, os.SEEK_END)
             if handle.tell() == 0:
                 handle.write(b"\0")

@@ -42,7 +42,11 @@ def valid_environment() -> dict[str, str]:
 
 
 def test_deployment_schemas_are_closed_valid_draft_2020_12_documents() -> None:
-    for name in ("pilot-deployment.schema.json", "pilot-environment.schema.json"):
+    for name in (
+        "pilot-deployment.schema.json",
+        "pilot-environment.schema.json",
+        "pilot-backup-manifest.schema.json",
+    ):
         schema = deployment.load_json(ROOT / "schemas" / name)
         assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
         assert schema["additionalProperties"] is False
@@ -76,6 +80,7 @@ def test_rendered_service_pins_root_auth_resolution_and_generated_topology(tmp_p
 
     assert "\nEnvironmentFile=" not in unit
     assert "scripts/pilot_service_launcher.py" in unit
+    assert "--deployment-id pilot-candidate-example" in unit
     assert "--auth-db-path .thebitlab-auth/auth.sqlite3" in unit
     assert "--trusted-proxy-cidrs 127.0.0.1/32" in unit
     assert "--host 127.0.0.1 --port 8000 --root /srv/thebitlab/data" in unit

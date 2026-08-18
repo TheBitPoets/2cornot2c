@@ -1655,6 +1655,9 @@ def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
 
     second_lock.acquire()
     second_lock.release()
+    if os.name != "nt":
+        assert first_lock.path.stat().st_mode & 0o777 == 0o600
+        assert first_lock.legacy_path.stat().st_mode & 0o777 == 0o600
 
 
 def test_data_root_process_lock_rejects_a_legacy_server(tmp_path) -> None:

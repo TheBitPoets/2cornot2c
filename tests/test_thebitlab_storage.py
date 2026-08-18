@@ -577,6 +577,9 @@ def test_course_storage_lock_serializes_different_processes(tmp_path) -> None:
     assert process.returncode == 0, stderr
     assert stdout.strip() == "completed"
     assert storage.read_design() == {"title": "child"}
+    if os.name != "nt":
+        lock_path = tmp_path / "doc" / ".course-storage.lock"
+        assert stat.S_IMODE(lock_path.stat().st_mode) == 0o600
 
 
 def test_uncommitted_delete_transaction_is_restored_on_next_adapter(tmp_path) -> None:

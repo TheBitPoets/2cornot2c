@@ -1,46 +1,41 @@
 # Checkpoint operativo
 
-- **Data/ora:** 2026-08-17T05:19:38+02:00
-- **Obiettivo:** issue #702, binding autorevole `user_id` auth ↔ soggetto didattico ↔ `class_id` ↔ assignment/target.
-- **Stato:** **completato e committato** sul branch `feat/identity-binding-702`; nessun push o merge eseguito.
-- **Criterio e risultato:** contratto/source-of-truth documentati; ID server-side stabili; migrazione SQLite v12 e compatibilita legacy esplicita; validator fail-closed e fixture/test missing, duplicate, ambiguous, cross-class, membership rimossa e legacy ambiguo; nessun matching implicito o ID client usato come autorita.
+- **Data/ora:** 2026-08-18T22:11:15+02:00
+- **Obiettivo:** validazione Linux/POSIX finale issue #705 prima di push/PR.
+- **Stato:** **completato — READY FOR PUSH**. Validazione eseguita soltanto con dati demo/sintetici; nessun push, PR, VPS/staging/live o dato reale.
+- **Criterio:** suite integrata Linux, bootstrap root vuota, fail-closed POSIX, backup/restore verificabile e isolato, launcher ordering, render/systemd/nginx e startup loopback tutti PASS. Due difetti POSIX reali trovati, corretti, riesaminati e testati.
 
-## Decisioni canoniche
+## Ambiente Linux
 
-- ADR accettato: `doc/architecture/adr-authoritative-student-identity-binding.md`.
-- SQLite identity e source-of-truth per binding 1:1 immutabile `user_id <-> subject_id`, classi/membership e alias legacy class-scoped.
-- `subject_id` e opaco e server-generated (`subject:<uuid hex>`); `student_id`, email, username, path e repository sono attributi legacy, mai authority.
-- `class_id` deriva dalle membership auth; assignment e target sono record ricaricati dallo storage server. L'enforcement completo delle student API resta fuori scope in #706.
-- Snapshot transazionale con digest `authority_revision`; lifecycle binding CAS monotono/no-delete; alias append-only con revisione binding e membership attiva.
+- Container effimero `ubuntu:24.04`, immagine `ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea`, repository host montato read-only e copiato in `/work` interno.
+- Docker Desktop engine 28.3.2 su WSL2 kernel `6.18.33.2-microsoft-standard-WSL2`.
+- Ubuntu 24.04.4 LTS; Python 3.12.3; pytest 8.4.2; nginx 1.24.0; systemd 255; OpenSSL 3.0.13.
 
-## File principali
+## Finding e correzioni
 
-- Nuovi: ADR binding, `scripts/thebitlab_identity_binding.py`, 4 fixture `tests/fixtures/identity_binding/`, test domain/storage dedicati.
-- Modificati: ADR identity/storage e `data-contracts.md`; `scripts/thebitlab_identity_sqlite.py` (schema v12, trigger, adapter/snapshot), `scripts/thebitlab_identity_ports.py`, `scripts/assignment_records.py`; fixture/test contrattuali e rehearsal migrazioni storiche.
-- `CHECKPOINT.md` sostituisce il checkpoint obsoleto di un altro worktree.
+1. `topology_from_paths()` risolveva il path prima del controllo e accettava una root symlink; inoltre `validate_root()` accettava symlink interni. Ora la root esplicita e l'intero albero applicativo falliscono chiusi. Test di regressione POSIX aggiunto.
+2. I lock `.course-storage.lock` e `.thebitlab-server.lock` creati dopo l'hardening avevano mode `0644`. I rispettivi lock owner applicano ora `0600` su POSIX; test specifici e controllo completo dell'albero verificano directory `0700` e file `0600`.
 
-## Verifiche e review
+File modificati dal follow-up Linux: `scripts/pilot_data_root.py`, `scripts/course_board_server.py`, `scripts/thebitlab_storage.py`, `tests/test_pilot_data_root.py`, `tests/test_course_board_server.py`, `tests/test_thebitlab_storage.py`, `CHECKPOINT.md`. La documentazione canonica `doc/PILOT_ROOT_BACKUP.md` era già coerente e non ha richiesto modifiche.
 
-- Test pertinenti finali: **170 passed, 2 skipped** (`identity_binding`, `identity_binding_sqlite`, assignment records, data fixtures, identity, identity SQLite, contracts, storage).
-- Test finali focalizzati dopo i trigger DB: **69 passed**.
-- Suite ampia senza `tests/test_student_errors.py`: **2165 passed, 67 skipped, 2 failed**; i due failure sono ambientali Windows estranei al diff (privilegio symlink WinError 1314 e launcher macOS non eseguibile WinError 193).
-- Suite completa non collezionabile per dipendenza opzionale assente `utui` in `tests/test_student_errors.py`; nessun package installato. `ruff` non disponibile nell'ambiente.
-- `compileall`: **PASS**. `git diff --check`: **PASS**. Link Markdown locali: **PASS**.
-- Review completa del diff eseguita. Finding corretti: migrazione v12 non permissiva su artefatti parziali; alias aggiungibili post-provisioning con CAS; coerenza fixture `class_id`; trigger DB contro delete/reuse/update e alias non autorevoli. Nessun finding aperto.
-- Nessun server, watcher o processo temporaneo avviato.
+## Evidenze Linux/POSIX
+
+- Suite finale non-root integrata #705 + binding/assignment/demo + storage + lock: **119 passed, 1 skipped, 1 deselected**; skip = primitiva solo Windows, deselected = smoke deployment eseguito separatamente come root del container.
+- Smoke controllato nginx + `systemd-analyze verify`: **1 passed**. Test focalizzati post-review: **3 passed**.
+- Windows cross-platform mirato: **4 passed, 1 skipped** (symlink POSIX); warning cleanup DACL temporanei storico/estraneo.
+- Bootstrap CLI: prima esecuzione `created=true`, seconda `created=false`, idempotenza e demo-check PASS. Account docente + 2 studenti, classe, 3 membership e binding #702 PASS; `student_lab_demo_check --existing` PASS su sorgente e restore.
+- POSIX: root/entry symlink rejection, secret rejection, lock esclusivo, doppia istanza, root parziale senza reset, DB auth multiplo fail-closed e mode `0700/0600` PASS.
+- Backup: schema `thebitlab.pilot-backup.v1`, `manifest.sha256`, schema JSON e SHA-256/dimensione di tutti i 28 payload PASS; nessun secret, symlink, cache, lock o sidecar incluso. Snapshot SQLite con dato committed in WAL verificato coerente e sidecar esclusi.
+- Restore: solo target nuovo, checksum payload, `PRAGMA integrity_check`, migrazioni 1..12, binding #702, demo-check e startup bind loopback PASS. Root sorgente invariata per insieme path, SHA-256, mode e `mtime_ns`; backup invariato dai test integrati.
+- Launcher: root incompleta fallisce prima dell'accesso all'EnvironmentFile, verificato sia con test monkeypatch call-order sia con CLI.
+- Deployment: bundle sintetico isolato renderizzato; `systemd-analyze verify` PASS sulla unit generata; smoke nginx non distruttivo PASS. Il bundle example diretto non è verificabile senza l'eseguibile `/opt/thebitlab/current/...`, quindi non ripetere quel comando senza il manifest temporaneo usato dallo smoke.
+- Misure locali Linux, **non SLA**: backup **0.063356 s**; restore finale **0.072458 s**.
+- `compileall` e `git diff --check`: PASS. Review finale completa del diff: nessun finding aperto.
 
 ## Stato Git e prossimo passo
 
-- Base iniziale: `3d785a54336e81f69efa7a6d5ee7941f9ba76675` (`origin/main`).
-- Worktree: `F:/dev/2cornot2c-702`; branch `feat/identity-binding-702`.
-- Commit dell'unita creato su `HEAD`; lo SHA definitivo e riportato nel riepilogo finale della sessione.
-- Problemi aperti in scope: nessuno. Non e stato implementato l'enforcement student API, intenzionalmente demandato a #706.
-- Prossimo lavoro distinto: issue #706, consumare `StudentBindingSnapshot`/`AssignmentTargetResolution` nelle policy student API senza accettare authority dalla request.
-
-## File minimi per una ripresa
-
-- `AGENTS.md`
-- `CHECKPOINT.md`
-- `doc/architecture/adr-authoritative-student-identity-binding.md`
-- `scripts/thebitlab_identity_binding.py`
-- diff/commit dell'unita #702
+- Worktree `F:/dev/2cornot2c-705`; branch `feat/pilot-root-backup-705`; commit iniziale validato `92cd2864be31a0655377509733433f8bc395824e`.
+- Il follow-up Linux deve essere il nuovo `HEAD` creato al termine di questa unità; branch atteso pulito e ahead 2 rispetto a `origin/main`. Nessun push eseguito.
+- Processi temporanei: container e Docker Desktop avviati per questa unità devono risultare arrestati nel riepilogo finale.
+- Problemi aperti in scope: nessuno.
+- **Prossimo passo distinto:** controllo umano dei due commit, quindi push/apertura PR solo su autorizzazione. File minimi: `AGENTS.md`, `CHECKPOINT.md`, `doc/PILOT_ROOT_BACKUP.md` e `git diff origin/main...HEAD`.
