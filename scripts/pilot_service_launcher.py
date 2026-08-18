@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts import pilot_data_root  # noqa: E402
 from scripts.pilot_environment import (  # noqa: E402
     ALLOWED_EXTERNAL_NAMES,
     DeploymentValidationError,
@@ -59,6 +60,7 @@ def build_effective_environment(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--environment-file", type=Path, required=True)
+    parser.add_argument("--deployment-id", required=True)
     parser.add_argument("--deployment-revision", required=True)
     parser.add_argument("--lock-directory", required=True)
     parser.add_argument("--auth-db-path", required=True)
@@ -110,6 +112,14 @@ def _server_command(args: argparse.Namespace) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        pilot_data_root.validate_root(
+            pilot_data_root.topology_from_paths(
+                args.root,
+                args.auth_db_path,
+                deployment_id=args.deployment_id,
+            ),
+            run_demo_check=False,
+        )
         check_environment_file(args.environment_file)
         external = parse_environment_file(args.environment_file)
         environment = build_effective_environment(
@@ -120,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         command = _server_command(args)
         os.execve(command[0], command, environment)
-    except (DeploymentValidationError, OSError) as exc:
+    except (DeploymentValidationError, pilot_data_root.PilotRootError, OSError) as exc:
         print(f"ERRORE: {exc}", file=sys.stderr)
         return 2
     return 0

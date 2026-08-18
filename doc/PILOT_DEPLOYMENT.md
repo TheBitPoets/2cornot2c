@@ -54,7 +54,7 @@ Lo smoke crea root, `EnvironmentFile`, certificato e output in una directory tem
 
 La baseline usa `.thebitlab-auth/auth.sqlite3`. L'unit non usa la direttiva systemd `EnvironmentFile=`: il launcher legge il file esterno a ogni avvio, ne accetta soltanto la allowlist e imposta `THEBITLAB_AUTH_DB_PATH` dalla configurazione renderizzata prima di sostituirsi al server. Percorsi assoluti, traversal, root sovrapposta alla release o riferimenti secret dentro release/data root sono rifiutati. Il lock applicativo è fissato a `/run/thebitlab`; il backend ascolta solo su `127.0.0.1`.
 
-Una root diversa identifica una diversa istanza. Copie o mount manuali non documentati non costituiscono sincronizzazione autorevole; valgono i confini di [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md).
+Una root diversa identifica una diversa istanza. Copie o mount manuali non documentati non costituiscono sincronizzazione autorevole; valgono i confini di [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md). Bootstrap, marker di completezza e procedura coerente di backup/restore sono definiti in [`PILOT_ROOT_BACKUP.md`](PILOT_ROOT_BACKUP.md). Il launcher valida questa root canonica prima di leggere i secret esterni e rifiuta root parziali, auth DB divergenti o una seconda istanza sullo stesso root.
 
 ## Segreti e configurazione runtime
 
@@ -128,7 +128,7 @@ Una candidate deve conservare separatamente release e configurazione immutabili,
 /srv/thebitlab/data/                    root persistente al rollback
 ```
 
-Prima dell'attivazione verificare SHA, digest del lock, metadata dei riferimenti esterni, schema dell'environment, ownership/root, contratto firewall e tool smoke. Il launcher appartiene alla release fissata da `release.commit`; l'unit deve invocarlo e non deve contenere `EnvironmentFile=`. I tre symlink di integrazione nginx/systemd devono puntare **attraverso** `/etc/thebitlab/current`, non a copie o direttamente a una versione: in questo modo lo switch del bundle cambia tutti gli artifact attivi. Il formato log entra nel contesto nginx `http`; nessun file renderizzato va editato sul target. Conservare bundle, checkout e virtualenv precedenti finché termina la finestra di rollback. Qualunque differenza manuale fra bundle e host invalida il gate topologia.
+Prima dell'attivazione verificare SHA, digest del lock, metadata dei riferimenti esterni, schema dell'environment, ownership/root, contratto firewall, root canonica con `pilot_data_root.py validate` e tool smoke. Il launcher appartiene alla release fissata da `release.commit`; l'unit deve invocarlo e non deve contenere `EnvironmentFile=`. I tre symlink di integrazione nginx/systemd devono puntare **attraverso** `/etc/thebitlab/current`, non a copie o direttamente a una versione: in questo modo lo switch del bundle cambia tutti gli artifact attivi. Il formato log entra nel contesto nginx `http`; nessun file renderizzato va editato sul target. Conservare bundle, checkout e virtualenv precedenti finché termina la finestra di rollback. Qualunque differenza manuale fra bundle e host invalida il gate topologia.
 
 ## Rollback bounded
 

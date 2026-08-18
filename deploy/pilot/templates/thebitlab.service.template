@@ -22,7 +22,7 @@ UMask=0077
 Environment=PYTHONUNBUFFERED=1
 Environment=HOME=@@HOME_DIRECTORY@@
 
-ExecStart=@@PYTHON_EXECUTABLE@@ scripts/pilot_service_launcher.py --environment-file @@ENVIRONMENT_FILE@@ --deployment-revision @@RELEASE_COMMIT@@ --lock-directory @@LOCK_DIRECTORY@@ --auth-db-path @@AUTH_DB_PATH@@ --trusted-proxy-cidrs 127.0.0.1/32 --google-redirect-uri @@GOOGLE_REDIRECT_URI@@@@GITHUB_OAUTH_ARGUMENTS@@ --host @@BIND_HOST@@ --port @@APP_PORT@@ --root @@DATA_ROOT@@ --enable-google-auth@@GITHUB_APP_FLAG@@
+ExecStart=@@PYTHON_EXECUTABLE@@ scripts/pilot_service_launcher.py --environment-file @@ENVIRONMENT_FILE@@ --deployment-id @@DEPLOYMENT_ID@@ --deployment-revision @@RELEASE_COMMIT@@ --lock-directory @@LOCK_DIRECTORY@@ --auth-db-path @@AUTH_DB_PATH@@ --trusted-proxy-cidrs 127.0.0.1/32 --google-redirect-uri @@GOOGLE_REDIRECT_URI@@@@GITHUB_OAUTH_ARGUMENTS@@ --host @@BIND_HOST@@ --port @@APP_PORT@@ --root @@DATA_ROOT@@ --enable-google-auth@@GITHUB_APP_FLAG@@
 Restart=on-failure
 RestartSec=5s
 TimeoutStartSec=30s

@@ -85,7 +85,8 @@ Eseguire da un worktree pulito sulla release candidata. Il seguente esempio Powe
 $RunId = "pilot-rehearsal-YYYYMMDD-NN"
 $Repo = "C:\path\to\2cornot2c"
 $Evidence = "D:\thebitlab-evidence\$RunId"
-$DemoRoot = "D:\thebitlab-rehearsal-data\$RunId"
+# Nome mantenuto nei passi storici: identifica ora l'unica data root canonica, non una root separata dall'auth DB.
+$DemoRoot = "D:\thebitlab-canonical-data\$RunId"
 New-Item -ItemType Directory -Path $Evidence -ErrorAction Stop | Out-Null
 Set-Location $Repo
 
@@ -125,6 +126,7 @@ Eseguire almeno i controlli mirati del percorso critico:
 
 ```powershell
 python -m pytest -q `
+  tests/test_pilot_data_root.py `
   tests/test_student_lab_demo_smoke.py `
   tests/test_student_lab_demo_check.py `
   tests/test_student_lab_attempts.py `
@@ -134,18 +136,15 @@ python -m pytest -q `
   2>&1 | Tee-Object "$Evidence\02-tests.txt"
 if ($LASTEXITCODE -ne 0) { throw "Test mirati falliti" }
 
-python scripts/student_lab_demo_check.py --root $DemoRoot --json `
+python scripts/pilot_data_root.py bootstrap --root $DemoRoot `
+  2>&1 | Tee-Object "$Evidence\03-root-bootstrap.json"
+if ($LASTEXITCODE -ne 0) { throw "Bootstrap root canonica fallito" }
+python scripts/student_lab_demo_check.py --root $DemoRoot --existing --json `
   2>&1 | Tee-Object "$Evidence\03-demo-check.json"
 if ($LASTEXITCODE -ne 0) { throw "Demo check fallito" }
 ```
 
-`03-demo-check.json` deve avere `ok: true` e confermare setup, scenario positivo e negativo, payload lab e API dashboard. La root indicata deve essere nuova o vuota. Durante le verifiche successive usare soltanto la modalità non distruttiva:
-
-```powershell
-python scripts/student_lab_demo_check.py --root $DemoRoot --existing --json
-```
-
-Non rilanciare setup/smoke distruttivi mentre un server usa la root.
+`03-root-bootstrap.json` e `03-demo-check.json` devono avere `ok: true`; il primo prova marker, auth, classe, membership e binding, il secondo scenario positivo/negativo, payload lab e API dashboard. La root indicata deve essere nuova o vuota. Durante le verifiche successive usare soltanto `pilot_data_root.py validate` e la modalità demo `--existing`. Non rilanciare setup/smoke distruttivi mentre un server usa la root.
 
 ## 3. Flusso TUI, Docker e coerenza dei tentativi
 
@@ -181,7 +180,7 @@ Per gli Scenari 2-4 il registro è intenzionalmente quello rigenerato alla fine 
 - negli Scenari 2 e 3 la riga `rossi-mario` deve mostrare `Definitivo`, backend Docker e `$DockerAttemptId`, non `Provvisorio` e backend locale; la riga negativa `bianchi-luca` deve restare fallita;
 - nello Scenario 4 non usare i totali seed-only `Aiuti 1` e `Aiuti AI 1`: confrontare registro, riga e modal con gli eventi realmente accettati nello Scenario 7. Devono essere presenti sia il prompt seed sia ogni nuova richiesta accettata, e i totali devono uguagliare il valore iniziale più il numero di richieste persistite; richieste annullate o input invalidi non devono aumentarlo.
 
-Completato lo Scenario 5, fermare il server ed eseguire il relativo ripristino della demo con `python scripts/student_lab_demo_setup.py --root $DemoRoot`; da questo punto non servono più le aspettative sostitutive precedenti. Prima dello Scenario 9, con il server ancora fermo, impostare `$ScenarioRoot = $DemoRoot` ed eseguire la sola copia di `README.md`, della fonte controllata e del relativo asset prevista dal passo 1 dello scenario generico; saltare invece il setup iniziale dello Scenario 9, perché la root ripristinata contiene già l'activity. Verificare che `$DemoRoot\README.md`, `$DemoRoot\doc\fixtures\scenario-9-course-source.md` e `$DemoRoot\doc\images\dashboard-guides\scenario-9-docente-percorso-colori.png` siano file, quindi riavviare con `--root $DemoRoot`. Non procedere con catalogo vuoto, fixture assenti o server su una root diversa: ognuno di questi casi è `FAIL`.
+Completato lo Scenario 5, fermare il server. Non usare `student_lab_demo_setup.py`, perché cancellerebbe auth DB e marker. Se lo scenario richiede davvero uno stato pulito, conservare la root precedente soltanto come evidence protetta, scegliere una **nuova** `$DemoRoot` isolata, eseguire `pilot_data_root.py bootstrap --root $DemoRoot` e aggiornare esplicitamente la configurazione della sola istanza di rehearsal prima di proseguire; non tenere due server attivi. Da questo punto non servono più le aspettative sostitutive precedenti. Prima dello Scenario 9, con il server ancora fermo, impostare `$ScenarioRoot = $DemoRoot` ed eseguire la sola copia di `README.md`, della fonte controllata e del relativo asset prevista dal passo 1 dello scenario generico; saltare invece il setup iniziale dello Scenario 9, perché la root canonica contiene già l'activity. Verificare che `$DemoRoot\README.md`, `$DemoRoot\doc\fixtures\scenario-9-course-source.md` e `$DemoRoot\doc\images\dashboard-guides\scenario-9-docente-percorso-colori.png` siano file, quindi riavviare con `--root $DemoRoot`. Non procedere con catalogo vuoto, fixture assenti o server su una root diversa: ognuno di questi casi è `FAIL`.
 
 La matrice minima deve provare:
 
@@ -223,71 +222,31 @@ Lo smoke CLI da solo non prova il provider E2E e non autorizza **GO pilot**.
 
 ## 6. Backup e restore isolato
 
-Con soli dati/account demo, registrare prima la matrice attesa di identità, ruoli e membership, quindi fermare in modo pulito il processo e acquisire un backup coerente secondo la procedura approvata. Lo snippet deve essere eseguito nello stesso ambiente effettivo del servizio: se `THEBITLAB_AUTH_DB_PATH` è fornita da un service manager o da configurazione esterna, caricare quel valore nella sessione senza trascriverlo nelle evidenze. Un ambiente di backup che non riproduce la configurazione del servizio è `FAIL`.
+Con soli dati/account demo, registrare prima la matrice attesa di identità, ruoli e membership, quindi fermare in modo pulito il processo e acquisire un backup coerente secondo la procedura approvata. I comandi devono usare lo stesso manifest deployment effettivo del servizio: root e `data.auth_db_path` derivano solo da quel contratto, senza override environment o fallback. Un ambiente di backup che non riproduce la configurazione del servizio è `FAIL`.
 
-Per una root file-based e un processo fermo, un esempio minimo è:
+La procedura supportata è [`PILOT_ROOT_BACKUP.md`](PILOT_ROOT_BACKUP.md). Non usare più copie separate di DemoRoot e auth DB: quella procedura ricreerebbe il finding topologico #678. Con il processo applicativo fermo e il manifest candidate effettivo:
 
-```powershell
-$BackupRoot = "D:\thebitlab-backups\$RunId"
-$RestoreRoot = "D:\thebitlab-restore-tests\$RunId"
-$HadAuthDbPath = Test-Path Env:THEBITLAB_AUTH_DB_PATH
-$ConfiguredAuthDb = $env:THEBITLAB_AUTH_DB_PATH
-if (-not $HadAuthDbPath) {
-  $AuthDbSource = Join-Path $DemoRoot ".thebitlab-auth\auth.sqlite3"
-} elseif ([string]::IsNullOrWhiteSpace($ConfiguredAuthDb) -or $ConfiguredAuthDb -ne $ConfiguredAuthDb.Trim()) {
-  throw "THEBITLAB_AUTH_DB_PATH non valido"
-} elseif ([IO.Path]::IsPathRooted($ConfiguredAuthDb)) {
-  $AuthDbSource = [IO.Path]::GetFullPath($ConfiguredAuthDb)
-} else {
-  $AuthDbSource = [IO.Path]::GetFullPath((Join-Path $DemoRoot $ConfiguredAuthDb))
-}
-if (-not (Test-Path -LiteralPath $AuthDbSource -PathType Leaf)) {
-  throw "Database auth configurato assente: backup non valido"
-}
-
-New-Item -ItemType Directory -Force -Path (Split-Path $BackupRoot) | Out-Null
-New-Item -ItemType Directory -Force -Path (Split-Path $RestoreRoot) | Out-Null
-Copy-Item -LiteralPath $DemoRoot -Destination $BackupRoot -Recurse -ErrorAction Stop
-$BackupAuthDb = Join-Path $BackupRoot ".thebitlab-auth\auth.sqlite3"
-New-Item -ItemType Directory -Force -Path (Split-Path $BackupAuthDb) | Out-Null
-Copy-Item -LiteralPath $AuthDbSource -Destination $BackupAuthDb -Force -ErrorAction Stop
-Copy-Item -LiteralPath $BackupRoot -Destination $RestoreRoot -Recurse -ErrorAction Stop
-
-python scripts/student_lab_demo_check.py --root $RestoreRoot --existing --json `
-  2>&1 | Tee-Object "$Evidence\08-restore-demo-check.json"
-if ($LASTEXITCODE -ne 0) { throw "Restore demo non valido" }
-
-$RestoreAuthDb = Join-Path $RestoreRoot ".thebitlab-auth\auth.sqlite3"
-if (-not (Test-Path -LiteralPath $RestoreAuthDb -PathType Leaf)) {
-  throw "Database auth assente nel restore"
-}
-python -c "import sqlite3,sys; from pathlib import Path; c=sqlite3.connect(Path(sys.argv[1]).resolve().as_uri() + '?mode=ro', uri=True); r=c.execute('PRAGMA integrity_check').fetchone()[0]; print(r); raise SystemExit(r != 'ok')" $RestoreAuthDb `
-  2>&1 | Tee-Object "$Evidence\08-sqlite-integrity.txt"
-if ($LASTEXITCODE -ne 0) { throw "Integrita SQLite fallita" }
-
-$PreviousAuthDbPath = $env:THEBITLAB_AUTH_DB_PATH
-$env:THEBITLAB_AUTH_DB_PATH = $RestoreAuthDb
+```bash
+python scripts/pilot_data_root.py validate --config <manifest-candidate.json>
+python scripts/pilot_data_root.py backup \
+  --config <manifest-candidate.json> \
+  --output <directory-backup-nuova>
+python scripts/pilot_data_root.py restore \
+  --backup <directory-backup> \
+  --target <root-restore-nuova-isolata>
 ```
 
-Con `THEBITLAB_AUTH_DB_PATH` così rimappato, avviare in modo controllato il server con `--root $RestoreRoot` e la configurazione auth prevista. Dall'interfaccia amministrativa verificare identità demo, ruoli e membership attesi e registrare `PASS`; database assente, mancato avvio, integrity check diverso da `ok` o qualsiasi identità/ruolo/membership mancante o inatteso sono `FAIL` e bloccano **GO pilot**. Verificare inoltre che il server non scriva nella root originale. Solo dopo la verifica fermarlo e ripristinare l'ambiente:
-
-```powershell
-if ($HadAuthDbPath) {
-  $env:THEBITLAB_AUTH_DB_PATH = $PreviousAuthDbPath
-} else {
-  Remove-Item Env:THEBITLAB_AUTH_DB_PATH -ErrorAction SilentlyContinue
-}
-```
+Salvare come evidenza sanitizzata gli output JSON e il digest del manifest, non il payload né valori environment. I comandi devono terminare con `ok: true` e riportano durata effettiva, integrity/migrazioni, demo check, binding #702 e startup smoke. Verificare separatamente che la root sorgente e il backup non siano cambiati durante il restore. OAuth secret, private key e token non devono comparire in root, backup, manifest o evidenze.
 
 Il rehearsal deve inoltre provare:
 
 - manifest/checksum del backup e restore in directory isolata;
-- inclusione di identità, design, calendari, activity, roster, assegnazioni, report e binding;
+- inclusione di identità, design, calendari, activity, roster, assegnazioni, report, tentativi, help e binding;
 - esclusione dal backup applicativo non cifrato di OAuth secret, private key e token;
-- tempo di backup/restore entro gli obiettivi approvati;
+- tempo di backup/restore confrontato con i target approvati, senza dedurne automaticamente SLA o conformità;
 - avvio controllato sulla copia e nessuna scrittura nella root originale.
 
-Una semplice copia creata senza restore verificato non supera il gate.
+Una semplice copia creata senza lock esclusivo, snapshot SQLite coerente e restore verificato non supera il gate.
 
 ## 7. Drill incidente e arresto
 
