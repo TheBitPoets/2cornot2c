@@ -4,151 +4,185 @@
 
 **DRAFT PER APPROVAZIONE DELLA SCUOLA/RPD-DPO — non costituisce parere legale né attestazione di conformità.**
 
-Questo documento è il pacchetto operativo di governance richiesto da #699 e dal gate `Governance` del pilot rehearsal #678.
+Questo documento è la baseline canonica di governance richiesta da #699 e dal gate `Governance` del pilot rehearsal #678.
 
 Il documento:
 
-- traduce in regole operative i principi privacy/security del pilot;
-- registra le decisioni già prese per il pilot 2026/27;
-- separa le decisioni di prodotto dalle decisioni che spettano al titolare del trattamento/RPD-DPO;
-- fornisce una baseline verificabile per deployment, backup/restore, logging, identity e AI;
+- traduce i principi privacy/security in regole operative;
+- separa le decisioni di prodotto dalle decisioni del Titolare/RPD-DPO;
+- definisce i gate per uso di dati reali;
+- coordina GDPR, sicurezza, provider e AI Act per il pilot 2026/2027;
 - non autorizza da solo l'uso di dati reali.
 
-Prima dell'uso con studenti reali devono essere compilate le sezioni `APPROVAL REQUIRED`, completata la DPIA screening e ottenute le approvazioni previste dall'istituto.
+Documenti operativi collegati:
+
+- `PILOT_SCHOOL_COMPLIANCE_CHECKLIST_2026_2027.md`;
+- `PILOT_APPROVAL_BRIEF_2026_2027.md`;
+- `PILOT_APPROVAL_RECORD_2026_2027.md`;
+- `PILOT_PRIVACY_NOTICE_DRAFT.md`;
+- `PILOT_DPIA_SCREENING.md`;
+- `PILOT_PROVIDER_REGISTER.md`.
+
+Prima dell'uso con studenti reali devono essere completati i campi istituzionali, il Registro art. 30, la qualificazione dei provider/gestore tecnico, la DPIA screening e gli altri gate applicabili.
 
 ---
 
-# 1. Decisioni già congelate
+# 1. Perimetro e due gate distinti
 
-## 1.1 Account Google ammessi
+## 1.1 GO core
 
-Per il pilot sono ammessi:
+Il pilot core può includere:
+
+- autenticazione e identity binding;
+- classi e membership;
+- activity e assignment;
+- elaborati, tentativi e report;
+- grading deterministico/test runner;
+- feedback docente;
+- help non-AI;
+- dashboard docente;
+- backup/restore;
+- audit, sicurezza e incident response.
+
+Il `GO core` può essere concesso mantenendo **tutta l'AI esterna disabilitata sui dati reali**.
+
+## 1.2 GO AI per singolo use case
+
+L'AI è autorizzata separatamente per use case:
+
+- `TUTOR_ASSISTANCE`;
+- `FEEDBACK`;
+- `CORRECTION`;
+- `GRADE_PROPOSAL`;
+- `AUTOMATED_GRADING`;
+- `ADAPTIVE_PATH`.
+
+Il `GO core` non autorizza implicitamente alcun provider o use case AI.
+
+---
+
+# 2. Decisioni progettuali già congelate
+
+## 2.1 Account Google
+
+TheBitLab supporta tecnicamente:
 
 - account Google Workspace scolastici;
 - account Gmail personali.
 
-Quando disponibile e funzionante, l'account scolastico può essere preferito, ma non è requisito tecnico esclusivo.
+Quando disponibile, l'account scolastico può essere preferito. L'Istituto decide se Gmail personale è ammesso nel proprio pilot.
 
-Il dominio/provider dell'account **non attribuisce autorizzazioni interne**. Classe, membership, assignment, target e accesso sono determinati esclusivamente da binding e policy TheBitLab (#702/#706).
+Il provider/dominio dell'account **non attribuisce autorizzazioni interne**. Classe, membership, assignment e target derivano da binding e policy TheBitLab (#702/#706).
 
-Il gap `access_not_configured` osservato sul tenant Workspace resta un problema di onboarding/supporto del tenant, non una prova di errore del callback applicativo e non blocca l'intero pilot quando Gmail personale è ammesso dalla governance.
+## 2.2 Continuità operativa
 
-## 1.2 Continuità operativa
-
-Baseline approvata:
+Baseline tecnica:
 
 - backup almeno giornaliero;
 - RPO target: **24 ore**;
 - RTO target: **8 ore lavorative**;
-- restore sempre verificato in ambiente isolato;
+- restore verificato in ambiente isolato;
 - segreti esclusi dal backup applicativo non cifrato;
-- implementazione tecnica e rehearsal del restore: #705.
+- implementazione tecnica e rehearsal: #705.
 
-## 1.3 Roadmap AI
+## 2.3 Roadmap AI
 
-Le capacità AI previste non vengono eliminate:
+Restano previste:
 
 - tutor/assistente;
 - feedback e debugging;
-- correzione automatica;
+- correzione;
 - proposta di voto/punteggio;
 - grading automatico;
-- analisi progressi e remediation;
+- analisi progressi/remediation;
 - percorsi adattivi.
 
-L'implementazione può iniziare con dati sintetici/fixture. L'attivazione su dati reali dipende dal relativo gate di governance/privacy/compliance.
-
-Boundary comune: #710. Roadmap: #711. Capability separate: #712–#715.
+Sviluppo e benchmark possono usare dati sintetici. L'attivazione su dati reali dipende dal relativo gate. Boundary comune: #710; roadmap #711; capability #712–#715.
 
 ---
 
-# 2. Principi non negoziabili
+# 3. Principi non negoziabili
 
-Il pilot applica come requisiti di engineering e governance:
+Il pilot applica:
 
-1. **purpose limitation** — ogni dato ha una finalità dichiarata;
-2. **data minimisation** — si raccoglie e si espone solo ciò che serve;
-3. **storage limitation** — ogni categoria ha retention o criterio esplicito;
-4. **integrity & confidentiality** — accesso, cifratura, backup e audit sono proporzionati al rischio;
-5. **accountability** — decisioni, owner, policy e revisioni devono essere ricostruibili;
-6. **least privilege** — l'accesso deriva dal ruolo e dal perimetro necessario;
-7. **no silent authority** — autenticazione, provider identity o AI output non diventano automaticamente autorizzazione o decisione didattica;
-8. **synthetic-first** — sviluppo, benchmark e rehearsal usano dati sintetici/demo finché il trattamento reale non è approvato;
-9. **fail closed** — ambiguity su identity, membership, root, policy o data scope non diventa accesso;
-10. **student vulnerability** — il design assume che gli interessati siano anche minori e richiede protezioni rafforzate e comunicazioni comprensibili.
-
-Riferimenti normativi/istituzionali da riesaminare al momento dell'approvazione:
-
-- GDPR, Regolamento (UE) 2016/679, in particolare artt. 5, 6, 13, 28, 32, 33, 34, 35 e 22;
-- Garante per la protezione dei dati personali, area Scuola e vademecum aggiornati;
-- Regolamento (UE) 2024/1689 (AI Act) e calendario/applicazione vigente;
-- regole nazionali/scolastiche applicabili al trattamento e alla valutazione.
+1. **purpose limitation** — finalità esplicite e separate;
+2. **data minimisation** — solo dati necessari;
+3. **storage limitation** — retention/criterio per categoria;
+4. **integrity & confidentiality** — protezioni proporzionate al rischio;
+5. **privacy by design/default** — default più restrittivo;
+6. **accountability** — decisioni, owner, versioni ed evidence ricostruibili;
+7. **least privilege** — accesso solo al perimetro necessario;
+8. **no silent authority** — identity provider e AI output non diventano authorization/decisione didattica;
+9. **synthetic-first** — dati demo/sintetici finché il trattamento reale non è approvato;
+10. **fail closed** — ambiguità su identity, membership, root, provider o policy produce diniego;
+11. **student vulnerability** — minori/interessati vulnerabili richiedono protezioni e linguaggio adeguati;
+12. **human accountability** — decisioni istituzionali e valutative restano attribuite a soggetti identificati.
 
 ---
 
-# 3. Ruoli privacy e responsabilità
+# 4. Ruoli privacy
 
-## 3.1 Titolare
+## 4.1 Titolare
 
-Baseline organizzativa da sottoporre alla scuola:
+Baseline da sottoporre all'Istituto:
 
-> Per il pilot didattico svolto da un'istituzione scolastica, l'istituto determina finalità e mezzi del trattamento relativo alla propria utenza e viene trattato come **Titolare del trattamento**, salvo diversa qualificazione documentata per uno specifico servizio.
+> Per il pilot didattico svolto da una scuola, l'Istituto determina finalità e mezzi del trattamento relativo alla propria utenza e viene trattato come Titolare nel proprio perimetro, salvo diversa qualificazione documentata per specifici trattamenti.
 
 `APPROVAL REQUIRED`
 
-- Istituto/Titolare: `____________________________`
-- Dirigente / legale rappresentante: `____________________________`
-- Contatti privacy: `____________________________`
-- RPD/DPO: `____________________________`
-- Contatto RPD/DPO: `____________________________`
+```text
+Istituto/Titolare:
+Dirigente/rappresentante:
+Contatto privacy:
+RPD/DPO:
+Contatto RPD/DPO:
+```
 
-## 3.2 Responsabili e sub-responsabili
+## 4.2 Gestore tecnico e Responsabili
 
-Per ciascun servizio esterno che tratta dati per conto del Titolare deve essere registrato almeno:
+Il modello operativo deve essere esplicito.
 
-- provider/organizzazione;
-- servizio e finalità;
-- ruolo privacy;
-- contratto/DPA art. 28 quando applicabile;
-- sub-responsabili rilevanti;
-- localizzazione/trattamento e trasferimenti extra SEE quando applicabili;
-- retention/data-use/training policy;
-- misure di sicurezza;
-- data di approvazione e owner.
+### Self-hosted senza accesso esterno ai dati
 
-Il ruolo del gestore tecnico/TheBitLab rispetto alla scuola deve essere **esplicitamente qualificato** prima dell'uso reale. Nessun maintainer/coding agent ottiene accesso ai dati reali solo perché sviluppa il software.
+Se l'Istituto gestisce l'istanza e TheBitPoets/maintainer non riceve né può accedere ai dati personali del pilot, il semplice sviluppo/pubblicazione del software non attribuisce automaticamente al progetto il ruolo di Responsabile per i dati della scuola.
 
-## 3.3 Ruoli operativi TheBitLab
+### Servizio gestito/assistenza con accesso
+
+Se un soggetto esterno ospita, amministra, effettua backup/database o assistenza con possibilità di accesso ai dati per conto della scuola:
+
+- ruolo privacy qualificato;
+- atto/contratto art. 28 GDPR quando applicabile;
+- istruzioni documentate;
+- obblighi di riservatezza;
+- misure tecniche/organizzative;
+- sub-responsabili e autorizzazioni;
+- assistenza su diritti, incidenti, DPIA;
+- restituzione/cancellazione a fine rapporto.
+
+`UNKNOWN` sul ruolo del gestore tecnico è **NO-GO dati reali**.
+
+## 4.3 Ruoli operativi
 
 | Ruolo | Responsabilità | Authority sui dati |
 |---|---|---|
-| Studente | attività, tentativi, aiuti, selezione definitivo | solo propri dati/assignment autorizzati |
-| Docente | classe, assignment, review, feedback, grading | solo classi/perimetro assegnato |
-| Admin TheBitLab | identity, membership, configurazione applicativa | amministrazione necessaria; no browsing didattico indiscriminato |
-| Gestore tecnico | deployment, backup, security, incident response | accesso eccezionale e tracciato quando necessario |
-| Decision owner | GO/NO-GO e rischio residuo non bloccante | nessun accesso implicito ai contenuti personali |
-| RPD/DPO | consulenza/sorveglianza privacy | secondo mandato istituzionale |
-| AI provider | solo contesto minimizzato autorizzato | nessun accesso diretto a root/database |
-| Coding agent/LLM di sviluppo | sviluppo su codice e dati sintetici | **nessun accesso ai dati reali di produzione** |
+| Studente | activity, tentativi, help | solo propri dati/assignment autorizzati |
+| Docente | assignment, report, feedback, grading | solo classi assegnate |
+| Admin applicativo | identity/membership/config | amministrazione bounded |
+| Gestore tecnico | deployment, backup, security | accesso eccezionale/minimo e tracciato |
+| Decision owner | GO/NO-GO | documentazione/governance |
+| RPD/DPO | consulenza/sorveglianza | secondo mandato |
+| AI provider | contesto minimizzato autorizzato | nessun accesso diretto a root/database |
+| Coding agent/LLM dev | sviluppo | **nessun dato reale produzione** |
 
 ---
 
-# 4. Base giuridica — decisione del Titolare, non del software
+# 5. Basi giuridiche e Registro art. 30
 
 TheBitLab non codifica una base giuridica universale.
 
-Per i trattamenti necessari all'attività didattica di una scuola pubblica, la scuola/RPD-DPO deve mappare e documentare la base applicabile, tipicamente nel quadro di obblighi legali e/o compiti di interesse pubblico previsti dalla normativa nazionale ed europea.
-
-Regole di prodotto:
-
-- il **consenso non viene usato come catch-all** per rendere lecito il funzionamento core della piattaforma;
-- feature opzionali con finalità ulteriori richiedono una valutazione separata;
-- ogni use case AI con dati reali possiede una voce distinta nel registro dei trattamenti/use case;
-- se una finalità cambia, il dato non viene silenziosamente riutilizzato.
+Per i trattamenti core di una scuola pubblica, Istituto/RPD-DPO devono mappare la base applicabile nel quadro degli obblighi legali e/o compiti di interesse pubblico o altra base pertinente. Il consenso non viene usato come `catch-all` per rendere lecito il servizio core.
 
 `APPROVAL REQUIRED`
-
-La scuola/RPD-DPO deve completare una matrice:
 
 | Trattamento | Finalità | Base giuridica | Necessità/proporzionalità | Note |
 |---|---|---|---|---|
@@ -157,433 +191,476 @@ La scuola/RPD-DPO deve completare una matrice:
 | Assignment/activity | | | | |
 | Tentativi/report | | | | |
 | Feedback/grading | | | | |
-| Help/tutor | | | | |
-| Security/audit logs | | | | |
+| Help non-AI | | | | |
+| Security/audit | | | | |
 | Backup/restore | | | | |
-| AI assistiva | | | | |
-| AI assessment support | | | | |
-| AI grading/adaptive | | | | |
+| AI use case, se attivo | | | | |
+
+Prima del `GO core` il trattamento TheBitLab deve essere inserito/aggiornato nel **Registro delle attività di trattamento ex art. 30 GDPR** dell'Istituto.
+
+Il record deve essere coerente con almeno:
+
+- finalità;
+- categorie interessati/dati;
+- destinatari/processori;
+- trasferimenti quando applicabili;
+- retention/criteri;
+- misure di sicurezza pertinenti.
+
+`PILOT_PROVIDER_REGISTER.md` è un annex tecnico e **non sostituisce** il Registro art. 30.
 
 ---
 
-# 5. Inventario dati e finalità
+# 6. Inventario dati e finalità
 
-## 5.1 Identity e autenticazione
+## 6.1 Identity/auth
 
-Dati possibili:
+Possibili dati:
 
 - `user_id` interno;
-- provider e subject federato necessario al login;
-- email/display name quando necessari per onboarding e riconoscibilità operativa;
-- ruolo, stato account e membership;
+- provider subject necessario al login;
+- email/display name quando necessari per onboarding;
+- ruolo, stato account, membership;
 - session metadata minimizzati;
-- eventi di revoca/security.
+- revoca/security events.
 
-Finalità:
+Finalità: autenticazione, binding, access control, security/revoca.
 
-- autenticazione;
-- associazione dell'account al soggetto didattico;
-- access control;
-- audit security e revoca.
-
-Vincoli:
-
-- email/dominio non sono authorization authority;
-- cookie, bearer, pairing proof, OAuth code/state e secret non vanno in issue, screenshot o evidence condivise;
-- identifier interno stabile preferito nei collegamenti applicativi.
-
-## 5.2 Dati didattici strutturali
+## 6.2 Dati didattici strutturali
 
 - classe/roster/binding;
-- course design/UDA;
-- activity e assignment;
+- course/activity/assignment;
 - calendario;
-- fingerprint/versione activity/test/rubrica.
+- fingerprint/versioni test/rubrica.
 
-Finalità:
+Finalità: erogazione didattica e riproducibilità.
 
-- erogazione della didattica;
-- attribuzione corretta di attività e verifiche;
-- riproducibilità della valutazione.
+## 6.3 Elaborati/tentativi/report
 
-## 5.3 Elaborati, tentativi e report
-
-- codice/elaborato consegnato;
-- `attempt_id`;
-- timestamp necessari;
+- codice/elaborato;
+- attempt ID e timestamp necessari;
 - backend/runner;
-- esito test e report strutturato;
-- selezione del tentativo definitivo.
+- test/report;
+- selezione tentativo definitivo.
 
-Finalità:
+Finalità: laboratorio, feedback, grading/review.
 
-- esecuzione del laboratorio;
-- feedback;
-- grading/review;
-- ricostruzione del tentativo valutato.
+## 6.4 Help
 
-## 5.4 Aiuti e interazioni tutor
-
-- domanda dello studente;
+- domanda;
 - frammento di codice/context necessario;
 - risposta/feedback;
-- contatori/policy di aiuto;
-- metadati minimi per audit.
+- metadati minimi.
 
-Finalità:
+Non raccogliere conversazioni esterne, cronologie eccedenti o dati personali non necessari.
 
-- supporto didattico;
-- verifica delle policy di aiuto;
-- eventuale review docente.
-
-Non raccogliere automaticamente dati personali non necessari, conversazioni esterne o cronologie eccedenti.
-
-## 5.5 Grading e feedback
+## 6.5 Grading/feedback
 
 - evidence deterministica;
-- rubrica/revisione;
+- rubrica;
 - feedback docente;
 - eventuale proposta AI;
-- eventuale voto/punteggio e decisione finale;
-- audit di override/review.
+- voto/punteggio e decisione finale nel perimetro approvato;
+- audit override/review.
 
-Finalità:
+AI output, evidence deterministica e decisione umana restano distinguibili.
 
-- valutazione didattica nel perimetro autorizzato;
-- spiegabilità e contestabilità della decisione.
+## 6.6 Log tecnici/security
 
-L'output AI deve restare distinguibile da evidence deterministica e decisione umana.
-
-## 5.6 Log tecnici e security
+Ammessi per default:
 
 - timestamp;
 - endpoint/path canonico;
 - status/timing;
 - correlation identifier non sensibile;
-- security event essenziale;
-- client attribution solo quando necessaria e correttamente derivata.
+- security event essenziale.
 
-Da escludere per default:
+Esclusi per default:
 
 - query OAuth sensibili;
 - cookie;
 - bearer/proof;
 - secret;
-- body contenenti elaborati salvo logging esplicitamente approvato;
+- body con elaborati salvo trattamento esplicito;
 - dump database.
 
-## 5.7 Backup
+## 6.7 Backup
 
-Contiene soltanto dati applicativi necessari al restore coerente.
-
-Non contiene nel backup applicativo non cifrato:
-
-- OAuth client secret;
-- private key GitHub App;
-- bearer/token runtime;
-- credenziali infrastrutturali.
+Contiene solo lo stato applicativo necessario al restore coerente. Secret infrastrutturali e credenziali rimangono in secret store separati.
 
 ---
 
-# 6. Retention baseline proposta
+# 7. Categorie particolari e inclusione
 
-**Questi periodi sono default di engineering da approvare/modificare con la scuola/RPD-DPO. Non sostituiscono obblighi di conservazione scolastici o normativi.**
-
-TheBitLab distingue sempre la copia operativa della piattaforma dall'eventuale registro/archivio scolastico ufficiale.
-
-| Categoria | Default pilot proposto | Fine periodo |
-|---|---:|---|
-| Account/binding/membership | anno scolastico + 90 giorni | delete/deactivate o retention motivata |
-| Assignment/activity mapping per studente | anno scolastico + 90 giorni | delete/de-identify se non più necessario |
-| Elaborati/tentativi/report operativi | anno scolastico + 90 giorni | export necessario + delete/de-identify |
-| Feedback/grading operativi | anno scolastico + 90 giorni | il record ufficiale segue i sistemi/policy della scuola |
-| Help/tutor interaction content | 30 giorni | delete; mantenere solo metriche realmente anonime se utili |
-| AI request/response payload nel gateway | **0 giorni per default** | non persistere payload; audit solo metadata bounded |
-| AI audit metadata | 30 giorni | delete salvo incident/legal hold |
-| Access/security log ordinario | 30 giorni | delete/rotate salvo incident/legal hold |
-| Evidence di incident | secondo procedura incidente | closure + retention approvata caso per caso |
-| Backup applicativi | rolling 30 giorni | rotazione verificata; legal/incident hold separato |
-| Evidence rehearsal demo/sintetica | secondo progetto/release policy | nessun dato reale nel rehearsal finché non autorizzato |
+Il core non richiede per design dati sanitari, diagnosi, disabilità, DSA, informazioni psicologiche o altre categorie particolari ex art. 9 GDPR.
 
 Regole:
 
-- nessuna retention `forever` implicita;
-- estensioni richiedono finalità/owner/scadenza;
-- un incident/legal hold congela solo gli artifact necessari e viene tracciato;
-- se dati valutativi devono essere conservati più a lungo per obblighi scolastici, la retention va definita dall'istituto e preferibilmente affidata al sistema ufficiale invece di trasformare TheBitLab in archivio indefinito.
+- nessun dato particolare automatico in profili/help/prompt AI/log;
+- quando possibile gli adattamenti didattici sono rappresentati tramite configurazioni funzionali minimizzate senza esporre diagnosi;
+- se una futura feature richiede dati particolari, si apre trattamento/use case separato con base normativa, accessi, retention, informativa e DPIA/risk review;
+- i provider AI non ricevono dati particolari incidentalmente presenti nel contesto.
 
 ---
 
-# 7. Access matrix
+# 8. Retention baseline
+
+**Default tecnici da approvare/modificare con Istituto/RPD-DPO.**
+
+| Categoria | Default pilot | Fine periodo |
+|---|---:|---|
+| Account/binding/membership | anno scolastico + 90 giorni | delete/deactivate o retention motivata |
+| Assignment mapping studente | anno scolastico + 90 giorni | delete/de-identify |
+| Elaborati/tentativi/report operativi | anno scolastico + 90 giorni | export necessario + delete/de-identify |
+| Feedback/grading operativi | anno scolastico + 90 giorni | record ufficiale nei sistemi della scuola |
+| Help/tutor content | 30 giorni | delete |
+| AI payload gateway | **0 giorni default** | non persistere payload |
+| AI audit metadata ordinario | 30 giorni | salvo obblighi più lunghi |
+| Access/security log ordinario | 30 giorni | salvo incident/legal hold |
+| Evidence incidente | secondo procedura | retention motivata |
+| Backup | rolling 30 giorni | rotazione verificata |
+
+## 8.1 Eccezione high-risk AI
+
+Se viene attivato un sistema AI ad alto rischio soggetto agli obblighi del deployer, i log generati automaticamente sotto controllo del deployer seguono il periodo previsto dalla disciplina applicabile. Quando si applica l'art. 26 AI Act, la baseline minima è **almeno sei mesi**, salvo diversa disciplina applicabile.
+
+Il default `30 giorni` non può prevalere su un obbligo più lungo.
+
+Nessuna retention `forever` implicita. Estensioni richiedono finalità, owner e scadenza/review.
+
+---
+
+# 9. Access matrix
 
 Legenda: `R` read, `W` write, `A` admin, `N` no access, `E` eccezionale/incident-only.
 
 | Dato | Studente | Docente | Admin app | Gestore tecnico | AI provider | Coding agent |
 |---|---|---|---|---|---|---|
-| Proprio profilo minimo | R | R se nella classe | A | E | N | N |
+| Profilo minimo | R proprio | R se necessario | A | E | N | N |
 | Membership/classi | propria R | R classi assegnate | A | E | N | N |
-| Assignment | propri R | RW classi assegnate | A bounded | E | context minimo se use case approvato | N |
-| Proprio elaborato | RW secondo workflow | R classi assegnate | N default | E | frammento minimo se approvato | N |
-| Elaborati altri studenti | N | R solo propria classe | N default | E | N | N |
+| Assignment | propri R | RW classi assegnate | A bounded | E | context minimo approvato | N |
+| Elaborato | RW proprio | R classe | N default | E | frammento minimo approvato | N |
+| Elaborati altri | N | R propria classe | N default | E | N | N |
 | Hidden tests/teacher solution | N | R | A bounded | E | **N default** | sintetici/dev only |
-| Grading/feedback | proprio R | RW classi assegnate | N default | E | proposal context solo se approvato | N |
+| Grading/feedback | proprio R | RW classe | N default | E | proposal context approvato | N |
 | Security logs | N | N default | bounded | R/E | N | N |
 | Backup | N | N | N | E/A | N | N |
-| Secret/credentials | N | N | N | E/A secondo ruolo | N | N |
+| Secret | N | N | N | E/A secondo ruolo | N | N |
 
-Qualunque eccezione deve essere motivata, temporanea e auditabile.
-
----
-
-# 8. Account personali Gmail e Workspace
-
-L'informativa deve spiegare che:
-
-- il pilot consente entrambi i tipi di account;
-- l'email usata per il login può essere personale o scolastica;
-- il provider Google prova l'identità federata ma **non determina** classe o autorizzazione TheBitLab;
-- lo studente viene collegato a un `user_id` interno e a membership autorizzate dalla scuola;
-- eventuali problemi del tenant Workspace sono gestiti come supporto/onboarding;
-- l'uso di un account personale non autorizza il riuso dell'email per finalità estranee al pilot.
+Eccezioni devono essere motivate, temporanee e auditabili.
 
 ---
 
-# 9. Provider esterni e registry
+# 10. Provider e trasferimenti
 
-Prima dell'attivazione reale ogni provider deve avere una scheda:
+Per ciascun provider effettivo registrare:
 
-```text
-provider:
-service:
-purpose:
-data_categories:
-role: processor | independent_controller | other
-DPA_or_contract_ref:
-subprocessors_ref:
-processing_locations:
-third_country_transfer_basis:
-provider_retention:
-training_data_use:
-security_measures_ref:
-kill_switch:
-approved_by:
-approved_at:
-review_due:
-```
+- servizio/finalità;
+- categorie/campi minimi;
+- ruolo privacy;
+- DPA/atto art. 28 quando applicabile;
+- sub-responsabili;
+- localizzazione;
+- trasferimenti e garanzie;
+- retention;
+- data use/training/product improvement;
+- sicurezza;
+- incident contact;
+- owner/review date;
+- kill switch.
 
-Provider iniziali potenziali:
+Provider minimi da valutare:
 
-- Google OIDC;
-- GitHub/GitLab per fonti didattiche;
-- infrastruttura hosting/backup;
-- provider AI solo dopo #710 e gate use-case.
+- gestore tecnico esterno, se presente;
+- Google OIDC/Workspace;
+- GitHub/GitLab quando usati;
+- hosting/VPS;
+- backup storage;
+- provider/sistemi AI per gli use case autorizzati.
 
-Il registry non contiene secret.
+`UNKNOWN` materiale = provider disabilitato sui dati reali.
 
 ---
 
-# 10. AI privacy/governance boundary
+# 11. Sicurezza e incident response
 
-Tutte le feature AI seguono:
+Baseline:
+
+- HTTPS;
+- authorization server-side class-scoped;
+- isolamento cross-student;
+- secret store esterno;
+- logging secret-safe;
+- sandbox per codice non fidato;
+- least privilege;
+- backup cifrato e restore verificato;
+- revoca sessioni/credenziali;
+- audit operazioni sensibili;
+- feature flag/kill switch.
+
+## 11.1 Data breach
+
+La procedura del pilot deve collegarsi a quella istituzionale.
+
+- eventuale Responsabile informa il Titolare **senza ingiustificato ritardo** dopo aver rilevato una violazione;
+- il Titolare valuta la notifica all'autorità ai sensi dell'art. 33 GDPR e il relativo termine quando applicabile;
+- valuta la comunicazione agli interessati ex art. 34 quando ricorrono i presupposti;
+- documenta violazione, effetti, decisioni e misure;
+- TheBitLab conserva soltanto evidence necessarie, sanitizzate e con accesso ristretto.
+
+Il software non decide autonomamente la notificabilità di un breach.
+
+---
+
+# 12. Informativa e diritti
+
+Prima del `GO core` la scuola completa e approva `PILOT_PRIVACY_NOTICE_DRAFT.md` con:
+
+- Titolare/RPD-DPO;
+- finalità/basi;
+- categorie dati;
+- destinatari/processori;
+- trasferimenti;
+- retention;
+- conferimento/necessità/opzionalità;
+- diritti e canali di esercizio;
+- reclamo al Garante;
+- informazioni su processi automatizzati quando applicabili.
+
+Ogni use case AI reale richiede informativa coerente con provider, intended purpose, retention e ruolo della human review.
+
+---
+
+# 13. AI Privacy/Provider Boundary
+
+Architettura obbligatoria:
 
 ```text
 Feature didattica
-   ↓
-UseCasePolicy
-   ↓
-AI Privacy/Provider Boundary (#710)
-   ↓
-Provider Adapter
+    -> AI Policy / Privacy Boundary (#710)
+    -> Provider Adapter
 ```
 
-Regole:
+Nessuna feature AI accede direttamente a root/database/secret.
 
-- synthetic-only fino al gate reale;
-- niente accesso diretto a root/database;
-- niente cookie/bearer/secret;
-- niente cross-student context;
-- hidden test/teacher solution esclusi per default;
-- contesto minimo necessario;
-- provider/model/policy/use-case versionati;
-- payload non persistito nel gateway per default;
-- audit metadata bounded;
-- feature flag e kill switch;
-- transparency verso studente/docente;
-- grading/proposta voto/adaptive path hanno gate più forti del tutor.
+Default:
 
-Un gate tecnico #710 superato non rende automaticamente conforme ogni use case.
-
----
-
-# 11. Informativa e diritti
-
-Prima dell'uso reale deve esistere un'informativa comprensibile anche agli studenti/minori che includa almeno:
-
-- identità/contatti del Titolare;
-- contatto RPD/DPO;
-- finalità e base giuridica per categoria;
-- categorie/destinatari;
-- eventuali trasferimenti extra SEE e garanzie;
-- retention o criteri;
-- diritti esercitabili;
-- diritto di reclamo al Garante;
-- obbligatorietà/conseguenze del conferimento quando pertinenti;
-- processi decisionali automatizzati/profilazione e informazioni richieste, quando applicabili;
-- presenza e ruolo dell'AI quando attiva.
-
-Template: `PILOT_PRIVACY_NOTICE_DRAFT.md`.
-
-Workflow diritti:
-
-1. richiesta ricevuta dal Titolare/RPD-DPO;
-2. autenticazione del richiedente secondo procedura della scuola;
-3. lookup bounded dei dati TheBitLab;
-4. export/rettifica/restriction/delete secondo istruzione e base giuridica;
-5. propagazione ai responsabili quando dovuta;
-6. audit della richiesta senza duplicare dati personali;
-7. chiusura entro le scadenze normative applicabili.
+- contesto minimizzato per use case;
+- field allow/deny;
+- no cross-student context;
+- no hidden test/teacher solution salvo decisione specifica compatibile;
+- categorie particolari vietate per default;
+- payload gateway non persistito per default;
+- provider/model/prompt/policy versionati;
+- audit bounded;
+- kill switch;
+- trasparenza;
+- synthetic-first.
 
 ---
 
-# 12. Sicurezza minima
+# 14. AI Act — baseline 2026/2027
 
-Prima dei dati reali:
+Dal 2 agosto 2026 il Regolamento (UE) 2024/1689 è applicabile in via generale secondo il calendario dell'art. 113, fatte salve le disposizioni con date specifiche differenti.
 
-- HTTPS origin e trusted proxy verificati;
-- origin non esposto oltre il contratto approvato;
-- secret fuori dal repository e fuori dai log;
-- sessioni/bearer revocabili;
-- membership e authorization fail-closed;
-- Docker sandbox per codice studente non fidato;
-- job senza secret e network secondo policy;
-- backup cifrato e restore testato;
-- access log path-only/secret-safe;
-- logging applicativo minimizzato;
-- least privilege per GitHub App/provider;
-- patching e owner operativo definiti;
-- nessun accesso diretto di coding agent/AI di sviluppo ai dati reali.
+## 14.1 AI literacy — art. 4
 
-Issue tecniche collegate: #701–#706, #710.
+Prima dell'uso AI:
 
----
+- docenti/operatori formati in modo proporzionato al use case;
+- chi svolge oversight comprende output, limiti, rischi e procedure;
+- admin/gestori conoscono configurazione, logging, kill switch e incident workflow;
+- evidence della formazione disponibile.
 
-# 13. Incident & personal data breach response
+## 14.2 Pratiche vietate — art. 5
 
-## 13.1 Classi di incidente
+TheBitLab vieta per design:
 
-- credential/session compromise;
-- accesso cross-student/cross-class;
-- esposizione log/query/secret;
-- perdita/corruzione dati;
-- backup/restore failure;
-- provider breach/outage;
-- invio AI di dati oltre policy;
-- grading/assessment errato con impatto sistematico;
-- configurazione che espone origin o dati.
-
-## 13.2 Procedura minima
-
-1. **detect** — registra timestamp e source senza copiare dati eccedenti;
-2. **contain** — kill switch, disable provider, revoke session, blocca account/route, ferma release quando necessario;
-3. **preserve** — conserva evidence minima e cifrata con accesso ristretto;
-4. **assess** — categorie dati, interessati, volume, rischio e impatto;
-5. **escalate** — gestore tecnico → Titolare/dirigente → RPD-DPO/decision owner;
-6. **notify** — il Titolare valuta gli obblighi GDPR, inclusa notifica all'autorità senza ingiustificato ritardo e, ove possibile, entro 72 ore quando applicabile; comunicazione agli interessati quando richiesta;
-7. **recover** — restore/patch/revoke/redeploy;
-8. **verify** — test del controllo corretto;
-9. **close** — root cause, corrective action, owner, retention dell'evidence e follow-up.
-
-Nessun maintainer decide autonomamente se un evento è o non è un data breach notificabile.
+- inferenza/riconoscimento delle emozioni in ambito scolastico, salvo le strette eccezioni mediche/sicurezza previste dal Regolamento;
+- social scoring;
+- manipolazione/sfruttamento della vulnerabilità nei casi vietati;
+- profilazione comportamentale generalizzata non necessaria alla finalità didattica.
 
 ---
 
-# 14. DPIA screening
+# 15. Classificazione AI per l'istruzione
 
-Prima del GO con dati reali va completato `PILOT_DPIA_SCREENING.md`.
+La classificazione si basa su sistema + intended purpose reale.
 
-Regola conservativa del progetto:
+| Use case | Default di governance |
+|---|---|
+| Tutor/debugging non valutativo | `NON_HIGH_RISK_CANDIDATE` solo se non valuta/profila/influenza materialmente decisioni |
+| Feedback formativo non valutativo | `NON_HIGH_RISK_CANDIDATE`, da rivalutare se entra nell'assessment |
+| Correzione/proposta voto | `HIGH_RISK_CANDIDATE` |
+| Automated grading | `HIGH_RISK_CANDIDATE / presumptive HIGH_RISK` |
+| Adaptive path con impatto materiale | `HIGH_RISK_CANDIDATE / presumptive HIGH_RISK` |
+| Accesso/ammissione/livello | `HIGH_RISK_CANDIDATE / presumptive HIGH_RISK` |
 
-- il pilot core senza AI richiede **screening DPIA documentato**;
-- AI assistiva su dati reali richiede screening specifico e decisione RPD-DPO/Titolare;
-- assessment support, grading automatico e adaptive decision sono trattati come **presuntivamente candidati a DPIA completa** finché il Titolare/RPD-DPO non documenta diversamente;
-- la decisione `DPIA not required` deve avere rationale, autore/data e scope, non una checkbox senza motivazione.
+I sistemi che valutano risultati dell'apprendimento o influenzano materialmente livello/percorso possono rientrare nell'Allegato III, punto 3.
 
-Trigger forti:
+`AI proposes -> docente decides` **non è automaticamente un'esclusione dall'high-risk**.
 
-- minori;
-- nuova tecnologia;
-- valutazione/profilazione sistematica;
-- trattamento su larga scala o combinazione di fonti;
-- decisioni automatizzate con effetti significativi;
-- dati sensibili/special categories se introdotti;
-- monitoraggio sistematico;
-- uso AI che modifica materially grading/percorso/accesso.
+Se si invoca l'art. 6(3):
 
-Il pilot **non deve introdurre** riconoscimento emozioni, biometria o proctoring comportamentale come scorciatoia di controllo.
+- presupposti documentati;
+- impatto reale sulla decisione valutato;
+- provider evidence versionata;
+- assenza di profilazione incompatibile con l'eccezione;
+- decision owner/date.
+
+`UNKNOWN` = capability disabilitata sui dati reali.
 
 ---
 
-# 15. Data protection by design gates
+# 16. Obblighi del deployer per high-risk AI — art. 26
 
-Ogni nuova feature che tratta dati studente deve dichiarare:
+Se un use case è `HIGH_RISK`, prima dell'uso reale l'Istituto verifica quando applicabile:
+
+- uso secondo istruzioni provider;
+- human oversight con competenza, formazione, autorità e supporto;
+- qualità/pertinenza degli input sotto il proprio controllo;
+- monitoring;
+- sospensione in caso di rischio;
+- incident/risk reporting;
+- conservazione log automatici sotto proprio controllo per il periodo minimo applicabile;
+- documentazione provider utile alla DPIA GDPR;
+- obblighi di registrazione nella banca dati UE per il deployer pubblico;
+- transparency/informativa;
+- fallback umano e kill switch.
+
+Evidence in `PILOT_PROVIDER_REGISTER.md` e `PILOT_APPROVAL_RECORD_2026_2027.md`.
+
+---
+
+# 17. DPIA GDPR e FRIA AI Act
+
+## 17.1 DPIA
+
+`PILOT_DPIA_SCREENING.md` valuta:
+
+- minori/vulnerabilità;
+- valutazione/scoring;
+- decisioni automatizzate;
+- tecnologia innovativa/AI;
+- dati particolari;
+- larga scala/matching;
+- provider/trasferimenti;
+- rischio cross-student;
+- bias/errori/leakage.
+
+Se il trattamento è suscettibile di presentare rischio elevato, la DPIA viene completata **prima** dell'attivazione.
+
+## 17.2 FRIA — art. 27 AI Act
+
+Per high-risk AI ex art. 6(2), quando l'Istituto pubblico rientra nel perimetro dell'art. 27, prima dell'uso viene eseguita una Fundamental Rights Impact Assessment che copre almeno:
+
+- processi/intended purpose;
+- durata/frequenza;
+- persone/gruppi interessati;
+- rischi specifici sui diritti fondamentali;
+- human oversight concreta;
+- mitigazioni/governance e meccanismi di reclamo/ricorso pertinenti.
+
+DPIA e FRIA possono essere integrate operativamente per le parti sovrapposte, ma **non sono automaticamente sostitutive**.
+
+Eventuali adempimenti verso l'autorità di vigilanza previsti dall'art. 27 sono responsabilità del deployer e devono essere documentati.
+
+---
+
+# 18. Go/no-go governance
+
+## 18.1 GO core con dati reali
+
+Richiede:
+
+- [ ] Titolare/RPD-DPO identificati;
+- [ ] finalità/basi giuridiche approvate;
+- [ ] Registro art. 30 aggiornato;
+- [ ] categorie dati/retention approvate;
+- [ ] categorie particolari escluse o separatamente governate;
+- [ ] modello operativo e gestore tecnico/art. 28 qualificati;
+- [ ] provider/contratti/subprocessori/trasferimenti verificati;
+- [ ] informativa approvata;
+- [ ] DPIA screening e DPIA quando richiesta;
+- [ ] authorization/security/logging gate PASS;
+- [ ] backup/restore gate PASS;
+- [ ] incident/data breach workflow definito;
+- [ ] AI non autorizzata tecnicamente disabilitata.
+
+## 18.2 GO use case AI
+
+Richiede inoltre:
+
+- [ ] intended purpose/versione;
+- [ ] #710 privacy boundary;
+- [ ] provider approval;
+- [ ] AI literacy;
+- [ ] classificazione AI Act;
+- [ ] DPIA/FRIA quando applicabili;
+- [ ] high-risk deployer obligations quando applicabili;
+- [ ] human oversight/contestazione/fallback;
+- [ ] retention/logging coerenti;
+- [ ] informativa aggiornata;
+- [ ] decisione istituzionale riferita allo specifico use case/release.
+
+---
+
+# 19. Change control
+
+Richiedono nuova review almeno:
+
+- finalità/intended purpose;
+- categorie dati;
+- introduzione di categorie particolari;
+- provider/subprocessor;
+- ruolo controller/processor;
+- trasferimenti;
+- retention;
+- modello/prompt/policy per assessment;
+- livello di automazione/human oversight;
+- topologia;
+- identity/authz;
+- output che diventa voto/decisione ufficiale;
+- percorso adattivo con impatto materiale;
+- classificazione AI Act;
+- condizioni che rendevano non applicabile DPIA/FRIA.
+
+---
+
+# 20. Approval required
 
 ```text
-purpose:
-data_subjects:
-data_categories:
-minimum_fields:
-source:
-recipients:
-retention:
-authority:
-security_boundary:
-AI_use_case: none | ...
-DPIA_ref_or_screening:
-privacy_notice_impact:
-delete/export_path:
+Istituto/Titolare:
+Dirigente/rappresentante:
+RPD/DPO e contatto:
+Responsabile tecnico:
+Docente/owner didattico:
+Decision owner:
+Riferimento Registro art. 30:
+Modello operativo / gestore tecnico:
+Riferimento eventuale art. 28:
+Provider approvati:
+Hosting/localizzazione:
+Backup/localizzazione:
+Retention approvata:
+Esito DPIA screening / DPIA ref:
+AI reale nel pilot: NESSUNA / ELENCO
+Classificazione AI Act per use case:
+FRIA ref/N.A.:
+Data approvazione:
+Versione/release approvata:
+Next review:
 ```
 
-PR/issue senza questa informazione non può introdurre un nuovo trattamento reale silenziosamente.
-
 ---
 
-# 16. Approval package
+## Riferimenti normativi/istituzionali per la review
 
-Prima del nuovo rehearsal #678 con dati reali devono essere compilati/approvati:
+- Regolamento (UE) 2016/679 (GDPR), in particolare artt. 5, 6, 13, 25, 28, 30, 32, 33, 34 e 35.
+- Regolamento (UE) 2024/1689 (AI Act), in particolare artt. 4, 5, 6, 26, 27, 49 e 113 e Allegato III, punto 3.
+- Garante per la protezione dei dati personali — materiali e vademecum aggiornati per la scuola.
+- Garante — parere 4 agosto 2025 sulle Linee guida MIM per l'introduzione dell'IA nelle istituzioni scolastiche.
+- Garante — attività istruttoria/comunicazione 3 giugno 2026 sui progetti IA in ambito scolastico.
+- Garante — pareri 14 luglio 2026 sugli schemi nazionali di adeguamento al Regolamento IA, inclusi i profili relativi a istruzione e formazione.
 
-- [ ] identità del Titolare;
-- [ ] RPD/DPO e contatti;
-- [ ] mappa base giuridica/finalità;
-- [ ] data inventory;
-- [ ] retention matrix definitiva;
-- [ ] access matrix definitiva;
-- [ ] provider registry e contratti/DPA pertinenti;
-- [ ] decisione trasferimenti extra SEE dove applicabile;
-- [ ] informativa Art. 13 approvata;
-- [ ] workflow diritti interessati;
-- [ ] backup RPO/RTO e restore evidence;
-- [ ] incident response ed escalation;
-- [ ] DPIA screening e DPIA completa quando richiesta;
-- [ ] AI use case gates per qualunque AI attivata;
-- [ ] owner e firme/approvazioni;
-- [ ] data di revisione della governance.
-
-Il fatto che il software passi i test non sostituisce queste approvazioni.
-
----
-
-# 17. Stato per #699
-
-Con questo documento il pacchetto governance passa da `missing` a **DRAFT STRUCTURED**.
-
-Non è ancora `APPROVED` perché restano da compilare e approvare almeno:
-
-- Titolare/dirigente/RPD-DPO;
-- basi giuridiche specifiche;
-- retention definitiva;
-- provider registry/contratti;
-- informativa;
-- DPIA screening;
-- firme e data di revisione.
-
-Fino a quel momento #699 resta aperta e i dati reali restano bloccati dal gate governance.
+I riferimenti devono essere ricontrollati al momento dell'approvazione istituzionale e dopo modifiche normative o di perimetro.
