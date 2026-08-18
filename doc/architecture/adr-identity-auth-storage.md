@@ -67,7 +67,7 @@ I JSON restano formato di export, backup leggibile e scambio, ma non sono una se
 
 Lo schema concreto e le migrazioni sono implementati da `SqliteIdentityStorage` dietro le porte definite in `scripts/thebitlab_identity_ports.py`.
 
-### Schema SQLite v1-v2
+### Schema SQLite v1-v12
 
 La prima migrazione crea:
 
@@ -80,7 +80,7 @@ La prima migrazione crea:
 - `tui_pairings`;
 - `schema_migrations`.
 
-Foreign key, ruoli, booleani e stati pairing sono vincolati anche nel database. La cancellazione di un utente elimina identita, membership, sessioni e pairing gia associati; la cancellazione di una classe elimina membership e mapping collegati. Le chiavi provider e i digest hanno vincoli univoci indicizzati.
+Foreign key, ruoli, booleani e stati pairing sono vincolati anche nel database. La cancellazione di un utente elimina identita, membership, sessioni e pairing gia associati; dalla v12 viene invece bloccata se esiste il binding didattico autorevole. La cancellazione di una classe elimina membership e mapping collegati, ma viene bloccata finche esistono alias legacy da migrare. Le chiavi provider e i digest hanno vincoli univoci indicizzati.
 
 `linked_at` e `created_at` dei mapping descrivono la creazione originale e non cambiano quando vengono aggiornati attributi leggibili come email, username o display name. Il linking verso un proprietario interno differente fallisce senza modifiche parziali.
 
@@ -91,6 +91,8 @@ Le transizioni pairing vengono applicate con compare-and-swap sullo stato persis
 `expires_at` e un limite esclusivo: `last_seen_at` e `revoked_at` devono precederlo, e una sessione con `expires_at` uguale all'istante di revoca non e piu attiva. I cleanup ricevono un cutoff esplicito e cancellano record con `expires_at` minore o uguale al cutoff; la politica di retention resta responsabilita del service chiamante.
 
 La migrazione v2 crea la tombstone ABA-safe `external_identity_generations` e la popola dalle identita v1 esistenti prima di accettare nuovi link.
+
+La migrazione v12 aggiunge `student_subject_bindings` e `legacy_student_subject_aliases`. Il binding 1:1 collega l'account auth al soggetto didattico opaco; classi e target vengono risolti dalle membership e dagli assignment autorevoli, non da ID della request. Contratto, lifecycle e migrazione legacy sono definiti in [`adr-authoritative-student-identity-binding.md`](adr-authoritative-student-identity-binding.md).
 
 Le migrazioni sono numerate, sequenziali, eseguite dentro `BEGIN IMMEDIATE` e registrate solo al commit. Il codice rifiuta sequenze mancanti e database con una versione schema piu recente, evitando downgrade impliciti.
 
@@ -127,12 +129,15 @@ I record provider-agnostici sono definiti in `scripts/thebitlab_identity.py`:
 - `UserSession`;
 - `TuiPairing`.
 
+Il binding didattico usa i record `StudentSubjectBinding`, `LegacySubjectAlias` e `StudentBindingSnapshot` definiti in `scripts/thebitlab_identity_binding.py`.
+
 Le porte di persistenza sono definite in `scripts/thebitlab_identity_ports.py`:
 
 - `UserDirectoryStorage`;
 - `ClassDirectoryStorage`;
 - `SessionStorage`;
-- `TuiPairingStorage`.
+- `TuiPairingStorage`;
+- `StudentSubjectBindingStorage`.
 
 ## Conseguenze
 
@@ -163,6 +168,7 @@ Le porte di persistenza sono definite in `scripts/thebitlab_identity_ports.py`:
 
 - Epic MVP: #535.
 - Contratti iniziali: #537.
+- Binding autorevole studente: [`adr-authoritative-student-identity-binding.md`](adr-authoritative-student-identity-binding.md), #702.
 - Servizi applicativi: [`auth-application-services.md`](auth-application-services.md).
 - Roadmap MVP: #292.
 - Roadmap architetturale: #282.

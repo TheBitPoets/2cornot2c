@@ -106,6 +106,13 @@ def storage(database_path):
     return SqliteIdentityStorage(database_path)
 
 
+def drop_subject_binding_schema(connection: sqlite3.Connection) -> None:
+    """Remove v12 artifacts when rehearsing an older schema migration."""
+
+    connection.execute("DROP TABLE legacy_student_subject_aliases")
+    connection.execute("DROP TABLE student_subject_bindings")
+
+
 def test_in_memory_database_is_rejected_instead_of_losing_schema_between_connections() -> None:
     with pytest.raises(IdentityStorageError, match="file temporaneo"):
         SqliteIdentityStorage(":memory:")
@@ -148,6 +155,7 @@ def test_migration_v2_upgrades_and_backfills_existing_v1_identity(database_path)
         connection.execute("DROP TABLE external_identity_link_conflicts")
         connection.execute("DROP TABLE external_identity_generations")
         connection.execute("DROP TABLE external_group_mapping_generations")
+        drop_subject_binding_schema(connection)
         connection.execute("DELETE FROM schema_migrations WHERE version >= 2")
 
     upgraded = SqliteIdentityStorage(database_path)
@@ -240,7 +248,8 @@ def test_migration_v11_rechecks_correlations_after_earlier_v10(
                 .replace("+00:00", "Z"),
             ),
         )
-        connection.execute("DELETE FROM schema_migrations WHERE version = 11")
+        drop_subject_binding_schema(connection)
+        connection.execute("DELETE FROM schema_migrations WHERE version >= 11")
 
     upgraded = SqliteIdentityStorage(database_path)
     assert upgraded.read_session("session-01") is None
@@ -287,6 +296,7 @@ def test_migration_v8_removes_uncorrelated_legacy_tui_sessions(database_path) ->
                 NOW.isoformat().replace("+00:00", "Z"),
             ),
         )
+        drop_subject_binding_schema(connection)
         connection.execute("DELETE FROM schema_migrations WHERE version >= 7")
 
     upgraded = SqliteIdentityStorage(database_path)
@@ -299,6 +309,7 @@ def test_migration_v6_backfills_existing_sessions_as_web(database_path) -> None:
     storage.create_user(account())
     storage.create_session(session())
     with sqlite3.connect(database_path) as connection:
+        drop_subject_binding_schema(connection)
         connection.execute("DELETE FROM schema_migrations WHERE version >= 6")
 
     upgraded = SqliteIdentityStorage(database_path)
@@ -316,6 +327,7 @@ def test_migration_v5_backfills_mapping_revision(database_path) -> None:
         connection.execute(
             "UPDATE external_group_mappings SET updated_at = NULL"
         )
+        drop_subject_binding_schema(connection)
         connection.execute("DELETE FROM schema_migrations WHERE version >= 5")
 
     upgraded = SqliteIdentityStorage(database_path)
@@ -333,6 +345,7 @@ def test_migration_v4_backfills_external_group_mapping_generations(database_path
     storage.save_external_group_mapping(mapping, expected_updated_at=None)
     with sqlite3.connect(database_path) as connection:
         connection.execute("DROP TABLE external_group_mapping_generations")
+        drop_subject_binding_schema(connection)
         connection.execute("DELETE FROM schema_migrations WHERE version >= 4")
 
     upgraded = SqliteIdentityStorage(database_path)
@@ -351,6 +364,7 @@ def test_migration_v3_quarantines_ambiguous_provider_links(database_path) -> Non
         connection.execute("DROP INDEX uq_external_identities_user_provider")
         connection.execute("DROP TABLE external_identity_link_conflicts")
         connection.execute("DROP TABLE external_group_mapping_generations")
+        drop_subject_binding_schema(connection)
         connection.execute("DELETE FROM schema_migrations WHERE version >= 3")
         connection.execute(
             """

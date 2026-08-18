@@ -106,11 +106,12 @@ def require_same_timezone_kind(left: datetime, right: datetime, left_name: str, 
         raise ValueError(f"{left_name} e {right_name} devono usare timezone coerenti.")
 
 
-def target_sort_key(target: dict[str, str]) -> tuple[str, str, str, str, str]:
+def target_sort_key(target: dict[str, str]) -> tuple[str, str, str, str, str, str]:
     """Return a stable sort key for assignment targets."""
 
     serialized = json.dumps(target, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return (
+        target.get("subject_id", ""),
         target.get("student_id", ""),
         target.get("target", ""),
         target.get("repo_ref", ""),
@@ -131,7 +132,7 @@ def normalize_target(target: dict[str, Any] | str) -> dict[str, str]:
         raise ValueError("Target non valido.")
     normalized = {
         key: str(target.get(key, "")).strip()
-        for key in ("student_id", "display_name", "repo_ref", "path", "target")
+        for key in ("subject_id", "student_id", "display_name", "repo_ref", "path", "target")
         if str(target.get(key, "")).strip()
     }
     if not normalized:

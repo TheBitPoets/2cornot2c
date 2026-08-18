@@ -18,6 +18,12 @@ from scripts.thebitlab_identity import (
     UserAccount,
     UserSession,
 )
+from scripts.thebitlab_identity_binding import (
+    LegacySubjectAlias,
+    StudentBindingSnapshot,
+    StudentSubjectBinding,
+    build_student_binding_snapshot,
+)
 from scripts.thebitlab_dashboard_auth_ports import DashboardAuthorizationSnapshot
 from scripts.thebitlab_identity_ports import (
     IdentityStorageConflictError,
@@ -31,7 +37,7 @@ from scripts.thebitlab_identity_ports import (
 )
 
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 _T = TypeVar("_T")
 
 
@@ -298,6 +304,102 @@ _MIGRATION_11 = (
     _MIGRATION_10[1],
 )
 
+_MIGRATION_12 = (
+    """
+    CREATE TABLE student_subject_bindings (
+        subject_id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL UNIQUE REFERENCES users(user_id) ON DELETE RESTRICT,
+        active INTEGER NOT NULL CHECK (active IN (0, 1)),
+        revision INTEGER NOT NULL CHECK (revision >= 1),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        CHECK (length(subject_id) = 40),
+        CHECK (substr(subject_id, 1, 8) = 'subject:'),
+        CHECK (substr(subject_id, 9) NOT GLOB '*[^0-9a-f]*'),
+        CHECK (updated_at >= created_at)
+    )
+    """,
+    "CREATE INDEX idx_student_subject_bindings_active ON student_subject_bindings(active)",
+    """
+    CREATE TABLE legacy_student_subject_aliases (
+        class_id TEXT NOT NULL REFERENCES classes(class_id) ON DELETE RESTRICT,
+        legacy_student_id TEXT NOT NULL,
+        subject_id TEXT NOT NULL REFERENCES student_subject_bindings(subject_id) ON DELETE RESTRICT,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (class_id, legacy_student_id),
+        CHECK (length(trim(legacy_student_id)) > 0)
+    )
+    """,
+    "CREATE INDEX idx_legacy_student_subject_aliases_subject "
+    "ON legacy_student_subject_aliases(subject_id)",
+    """
+    CREATE TRIGGER trg_student_subject_bindings_validate_insert
+    BEFORE INSERT ON student_subject_bindings
+    WHEN NEW.active != 1 OR NEW.revision != 1 OR NEW.updated_at != NEW.created_at
+        OR NOT EXISTS (
+            SELECT 1 FROM users
+            WHERE user_id = NEW.user_id AND active = 1 AND role = 'student'
+        )
+    BEGIN
+        SELECT RAISE(ABORT, 'invalid student subject binding provision');
+    END
+    """,
+    """
+    CREATE TRIGGER trg_student_subject_bindings_validate_update
+    BEFORE UPDATE ON student_subject_bindings
+    WHEN NEW.subject_id != OLD.subject_id OR NEW.user_id != OLD.user_id
+        OR NEW.created_at != OLD.created_at OR NEW.revision != OLD.revision + 1
+        OR NEW.updated_at <= OLD.updated_at
+        OR (NEW.active = 1 AND NOT EXISTS (
+            SELECT 1 FROM users
+            WHERE user_id = NEW.user_id AND active = 1 AND role = 'student'
+        ))
+    BEGIN
+        SELECT RAISE(ABORT, 'invalid student subject binding revision');
+    END
+    """,
+    """
+    CREATE TRIGGER trg_student_subject_bindings_no_delete
+    BEFORE DELETE ON student_subject_bindings
+    BEGIN
+        SELECT RAISE(ABORT, 'immutable student subject binding');
+    END
+    """,
+    """
+    CREATE TRIGGER trg_legacy_student_subject_aliases_validate_insert
+    BEFORE INSERT ON legacy_student_subject_aliases
+    WHEN NOT EXISTS (
+        SELECT 1 FROM student_subject_bindings AS bindings
+        JOIN users ON users.user_id = bindings.user_id
+        JOIN class_memberships AS memberships
+            ON memberships.user_id = bindings.user_id
+            AND memberships.class_id = NEW.class_id
+            AND memberships.role = 'student'
+        JOIN classes ON classes.class_id = memberships.class_id
+        WHERE bindings.subject_id = NEW.subject_id AND bindings.active = 1
+            AND users.active = 1 AND users.role = 'student'
+            AND classes.active = 1
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'invalid legacy student subject alias');
+    END
+    """,
+    """
+    CREATE TRIGGER trg_legacy_student_subject_aliases_no_update
+    BEFORE UPDATE ON legacy_student_subject_aliases
+    BEGIN
+        SELECT RAISE(ABORT, 'immutable legacy student subject alias');
+    END
+    """,
+    """
+    CREATE TRIGGER trg_legacy_student_subject_aliases_no_delete
+    BEFORE DELETE ON legacy_student_subject_aliases
+    BEGIN
+        SELECT RAISE(ABORT, 'immutable legacy student subject alias');
+    END
+    """,
+)
+
 _MIGRATION_4 = (
     """
     CREATE TABLE external_group_mapping_generations (
@@ -419,6 +521,7 @@ class SqliteIdentityStorage:
                 (9, _MIGRATION_9),
                 (10, _MIGRATION_10),
                 (11, _MIGRATION_11),
+                (12, _MIGRATION_12),
             )
             for version, statements in migrations:
                 if version in versions:
@@ -573,6 +676,30 @@ class SqliteIdentityStorage:
             created_at=_decode_datetime(row["created_at"]),
             display_name=row["display_name"],
             updated_at=_decode_datetime(row["updated_at"]),
+        )
+
+    @classmethod
+    def _subject_binding(cls, row: sqlite3.Row) -> StudentSubjectBinding:
+        return cls._hydrate(
+            StudentSubjectBinding,
+            row,
+            subject_id=row["subject_id"],
+            user_id=row["user_id"],
+            active=bool(row["active"]),
+            revision=row["revision"],
+            created_at=_decode_datetime(row["created_at"]),
+            updated_at=_decode_datetime(row["updated_at"]),
+        )
+
+    @classmethod
+    def _legacy_subject_alias(cls, row: sqlite3.Row) -> LegacySubjectAlias:
+        return cls._hydrate(
+            LegacySubjectAlias,
+            row,
+            class_id=row["class_id"],
+            legacy_student_id=row["legacy_student_id"],
+            subject_id=row["subject_id"],
+            created_at=_decode_datetime(row["created_at"]),
         )
 
     @classmethod
@@ -1595,6 +1722,270 @@ class SqliteIdentityStorage:
                 (user_id, class_id, role.lower()),
             )
             return cursor.rowcount == 1
+
+    def create_student_subject_binding(
+        self,
+        binding: StudentSubjectBinding,
+        aliases: tuple[LegacySubjectAlias, ...] = (),
+    ) -> None:
+        """Provision one immutable user/subject pair and its explicit legacy aliases."""
+
+        if (
+            not binding.active
+            or binding.revision != 1
+            or binding.updated_at != binding.created_at
+        ):
+            raise IdentityStorageConflictError(
+                "Un nuovo binding didattico deve essere attivo e iniziare dalla revisione 1."
+            )
+        if any(alias.subject_id != binding.subject_id for alias in aliases):
+            raise IdentityStorageConflictError(
+                "Gli alias legacy devono appartenere al binding provisionato."
+            )
+        with self._transaction("create_student_subject_binding") as connection:
+            owner = connection.execute(
+                "SELECT active, role FROM users WHERE user_id = ?",
+                (binding.user_id,),
+            ).fetchone()
+            if owner is None or tuple(owner) != (1, "student"):
+                raise IdentityStorageConflictError(
+                    "Il binding didattico richiede un account studente attivo."
+                )
+            for alias in aliases:
+                eligible_class = connection.execute(
+                    """
+                    SELECT 1 FROM classes
+                    JOIN class_memberships
+                        ON class_memberships.class_id = classes.class_id
+                    WHERE classes.class_id = ? AND classes.active = 1
+                        AND class_memberships.user_id = ?
+                        AND class_memberships.role = 'student'
+                    """,
+                    (alias.class_id, binding.user_id),
+                ).fetchone()
+                if eligible_class is None:
+                    raise IdentityStorageConflictError(
+                        "Un alias legacy richiede una membership studente attiva nella classe."
+                    )
+            connection.execute(
+                """
+                INSERT INTO student_subject_bindings
+                    (subject_id, user_id, active, revision, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    binding.subject_id,
+                    binding.user_id,
+                    int(binding.active),
+                    binding.revision,
+                    _encode_datetime(binding.created_at, "created_at"),
+                    _encode_datetime(binding.updated_at, "updated_at"),
+                ),
+            )
+            connection.executemany(
+                """
+                INSERT INTO legacy_student_subject_aliases
+                    (class_id, legacy_student_id, subject_id, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                [
+                    (
+                        alias.class_id,
+                        alias.legacy_student_id,
+                        alias.subject_id,
+                        _encode_datetime(alias.created_at, "created_at"),
+                    )
+                    for alias in aliases
+                ],
+            )
+
+    def read_student_subject_binding(
+        self, subject_id: str
+    ) -> StudentSubjectBinding | None:
+        row = self._query_one(
+            "SELECT * FROM student_subject_bindings WHERE subject_id = ?",
+            (subject_id,),
+        )
+        return None if row is None else self._subject_binding(row)
+
+    def list_user_subject_bindings(self, user_id: str) -> list[StudentSubjectBinding]:
+        rows = self._query_all(
+            "SELECT * FROM student_subject_bindings WHERE user_id = ? ORDER BY subject_id",
+            (user_id,),
+        )
+        return [self._subject_binding(row) for row in rows]
+
+    def save_student_subject_binding(
+        self,
+        binding: StudentSubjectBinding,
+        *,
+        expected_revision: int,
+    ) -> None:
+        """Advance only the active flag and monotonic revision of an existing pair."""
+
+        if binding.revision != expected_revision + 1:
+            raise IdentityStorageConflictError(
+                "La revisione del binding didattico deve avanzare di uno."
+            )
+        updated_at = _encode_datetime(binding.updated_at, "updated_at")
+        created_at = _encode_datetime(binding.created_at, "created_at")
+        with self._transaction("save_student_subject_binding") as connection:
+            cursor = connection.execute(
+                """
+                UPDATE student_subject_bindings
+                SET active = ?, revision = ?, updated_at = ?
+                WHERE subject_id = ? AND user_id = ? AND created_at = ?
+                    AND revision = ? AND updated_at < ?
+                """,
+                (
+                    int(binding.active),
+                    binding.revision,
+                    updated_at,
+                    binding.subject_id,
+                    binding.user_id,
+                    created_at,
+                    expected_revision,
+                    updated_at,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise IdentityStorageConflictError(
+                    "Binding didattico mancante, immutabile o con revisione stale."
+                )
+
+    def save_legacy_subject_alias(
+        self,
+        alias: LegacySubjectAlias,
+        *,
+        expected_binding_revision: int,
+    ) -> None:
+        """Append an alias while binding ownership and class membership still match."""
+
+        with self._transaction("save_legacy_subject_alias") as connection:
+            authority = connection.execute(
+                """
+                SELECT 1 FROM student_subject_bindings AS bindings
+                JOIN users ON users.user_id = bindings.user_id
+                JOIN class_memberships AS memberships
+                    ON memberships.user_id = bindings.user_id
+                    AND memberships.class_id = ?
+                    AND memberships.role = 'student'
+                JOIN classes ON classes.class_id = memberships.class_id
+                WHERE bindings.subject_id = ? AND bindings.active = 1
+                    AND bindings.revision = ?
+                    AND users.active = 1 AND users.role = 'student'
+                    AND classes.active = 1
+                """,
+                (alias.class_id, alias.subject_id, expected_binding_revision),
+            ).fetchone()
+            if authority is None:
+                raise IdentityStorageConflictError(
+                    "Alias legacy non coerente con binding, revisione o membership attivi."
+                )
+            connection.execute(
+                """
+                INSERT INTO legacy_student_subject_aliases
+                    (class_id, legacy_student_id, subject_id, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    alias.class_id,
+                    alias.legacy_student_id,
+                    alias.subject_id,
+                    _encode_datetime(alias.created_at, "created_at"),
+                ),
+            )
+
+    def list_legacy_subject_aliases(
+        self, class_id: str | None = None
+    ) -> list[LegacySubjectAlias]:
+        if class_id is None:
+            rows = self._query_all(
+                """
+                SELECT * FROM legacy_student_subject_aliases
+                ORDER BY class_id, legacy_student_id, subject_id
+                """
+            )
+        else:
+            rows = self._query_all(
+                """
+                SELECT * FROM legacy_student_subject_aliases
+                WHERE class_id = ? ORDER BY legacy_student_id, subject_id
+                """,
+                (class_id,),
+            )
+        return [self._legacy_subject_alias(row) for row in rows]
+
+    def read_student_binding_snapshot(self, user_id: str) -> StudentBindingSnapshot:
+        """Read account, binding, memberships, classes, and aliases atomically."""
+
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN")
+            account_row = connection.execute(
+                "SELECT * FROM users WHERE user_id = ?", (user_id,)
+            ).fetchone()
+            binding_rows = connection.execute(
+                """
+                SELECT * FROM student_subject_bindings
+                WHERE user_id = ? ORDER BY subject_id
+                """,
+                (user_id,),
+            ).fetchall()
+            membership_rows = connection.execute(
+                """
+                SELECT * FROM class_memberships
+                WHERE user_id = ? ORDER BY class_id, role
+                """,
+                (user_id,),
+            ).fetchall()
+            class_rows = connection.execute(
+                """
+                SELECT DISTINCT classes.* FROM classes
+                JOIN class_memberships
+                    ON class_memberships.class_id = classes.class_id
+                WHERE class_memberships.user_id = ?
+                ORDER BY classes.class_id
+                """,
+                (user_id,),
+            ).fetchall()
+            alias_rows = connection.execute(
+                """
+                SELECT aliases.* FROM legacy_student_subject_aliases AS aliases
+                JOIN student_subject_bindings AS bindings
+                    ON bindings.subject_id = aliases.subject_id
+                WHERE bindings.user_id = ?
+                ORDER BY aliases.class_id, aliases.legacy_student_id
+                """,
+                (user_id,),
+            ).fetchall()
+            snapshot = build_student_binding_snapshot(
+                account=None if account_row is None else self._user(account_row),
+                bindings=(self._subject_binding(row) for row in binding_rows),
+                memberships=(self._membership(row) for row in membership_rows),
+                classes=(self._class_group(row) for row in class_rows),
+                legacy_aliases=(self._legacy_subject_alias(row) for row in alias_rows),
+            )
+            connection.commit()
+            return snapshot
+        except IdentityStorageCorruptionError:
+            connection.rollback()
+            raise
+        except (TypeError, ValueError) as error:
+            connection.rollback()
+            raise IdentityStorageCorruptionError(
+                "Snapshot binding didattico persistito non valido."
+            ) from error
+        except sqlite3.DatabaseError as error:
+            connection.rollback()
+            raise IdentityStorageError(
+                "Errore SQLite durante la lettura del binding didattico."
+            ) from error
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     def save_external_group_mapping(
         self,
