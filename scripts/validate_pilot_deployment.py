@@ -41,6 +41,7 @@ _ORIGIN_HOST_RE = re.compile(
 GENERATED_FILES = (
     "nginx/thebitlab-log-format.conf",
     "nginx/thebitlab.conf",
+    "logrotate/thebitlab",
     "systemd/thebitlab.service",
     "firewall/origin-exposure.json",
     "manifest.normalized.json",
@@ -108,6 +109,8 @@ def _semantic_manifest_errors(manifest: Mapping[str, Any]) -> list[str]:
     home_directory = _posix_path(service["home_directory"])
     tls_certificate = _posix_path(origin["tls_certificate_file"])
     tls_private_key = _posix_path(origin["tls_private_key_file"])
+    access_log = _posix_path(origin["access_log"])
+    error_log = _posix_path(origin["error_log"])
 
     if service["user"] in {"root", "nobody"} or service["group"] in {"root", "nogroup"}:
         errors.append("service: usare un account dedicato non privilegiato")
@@ -137,6 +140,11 @@ def _semantic_manifest_errors(manifest: Mapping[str, Any]) -> list[str]:
             errors.append(f"{name}: il riferimento esterno non può stare nella release o nella data root")
     if len(set(external_paths.values())) != len(external_paths):
         errors.append("secret references: environment, certificato e chiave devono avere path distinti")
+    if access_log == error_log:
+        errors.append("origin: access_log e error_log devono avere path distinti")
+    for name, path in (("origin.access_log", access_log), ("origin.error_log", error_log)):
+        if _is_within(path, repository_root) or _is_within(path, data_root):
+            errors.append(f"{name}: il log deve stare fuori da release e data root")
 
     try:
         parsed_origin = urlsplit(origin["url"])
@@ -236,6 +244,99 @@ def _render_template(name: str, replacements: Mapping[str, str]) -> str:
     return rendered
 
 
+_ALLOWED_ACCESS_LOG_VARIABLES = frozenset(
+    {
+        "$remote_addr",
+        "$time_local",
+        "$request_method",
+        "$uri",
+        "$server_protocol",
+        "$status",
+        "$body_bytes_sent",
+        "$request_time",
+        "$request_id",
+    }
+)
+_LOG_VARIABLE_RE = re.compile(r"(?<!\\)[$][A-Za-z0-9_]+")
+
+
+def validate_rendered_logging(
+    log_format: str,
+    nginx_site: str,
+    logrotate_config: str,
+    manifest: Mapping[str, Any],
+) -> None:
+    """Fail closed if a rendered proxy log can persist query/header credentials."""
+
+    variables = frozenset(_LOG_VARIABLE_RE.findall(log_format))
+    if variables != _ALLOWED_ACCESS_LOG_VARIABLES:
+        raise DeploymentValidationError("Formato access log fuori dalla allowlist secret-safe")
+    if log_format.count("log_format thebitlab ") != 1:
+        raise DeploymentValidationError("Formato access log thebitlab assente o duplicato")
+
+    directives = re.findall(r"(?m)^\s*access_log\s+([^;]+);", nginx_site)
+    expected = f'{manifest["origin"]["access_log"]} thebitlab'
+    active = [directive.strip() for directive in directives if directive.strip() != "off"]
+    if len(active) != 2 or any(directive != expected for directive in active):
+        raise DeploymentValidationError("Direttiva access_log non vincolata al formato secret-safe")
+    error_directives = [
+        directive.strip()
+        for directive in re.findall(r"(?m)^\s*error_log\s+([^;]+);", nginx_site)
+    ]
+    expected_error = f'{manifest["origin"]["error_log"]} crit'
+    if len(error_directives) != 2 or any(
+        directive != expected_error for directive in error_directives
+    ):
+        raise DeploymentValidationError("Direttiva error_log non vincolata al livello crit secret-safe")
+
+    logging = manifest["logging"]
+    required_lines = {
+        logging["rotation"],
+        f'rotate {logging["retention_days"]}',
+        f'maxage {logging["retention_days"]}',
+        "missingok",
+        "notifempty",
+        "compress",
+        "delaycompress",
+        f'create {logging["file_mode"]} {logging["owner"]} {logging["group"]}',
+        "sharedscripts",
+    }
+    normalized_lines = {line.strip() for line in logrotate_config.splitlines() if line.strip()}
+    expected_header = f'{manifest["origin"]["access_log"]} {manifest["origin"]["error_log"]} {{'
+    if (
+        expected_header not in normalized_lines
+        or not required_lines.issubset(normalized_lines)
+        or "copytruncate" in normalized_lines
+    ):
+        raise DeploymentValidationError("Policy logrotate incompleta o non sicura")
+
+
+def validate_versioned_logging(manifest: Mapping[str, Any]) -> None:
+    """Lint the versioned nginx/logrotate templates even without bundle output."""
+
+    origin = manifest["origin"]
+    origin_host = urlsplit(origin["url"]).hostname
+    assert origin_host is not None
+    replacements = {
+        "ORIGIN_HOST": origin_host,
+        "ORIGIN_ACCESS_RULES": _origin_access_rules(manifest),
+        "TLS_CERTIFICATE_FILE": origin["tls_certificate_file"],
+        "TLS_PRIVATE_KEY_FILE": origin["tls_private_key_file"],
+        "ACCESS_LOG": origin["access_log"],
+        "ERROR_LOG": origin["error_log"],
+        "APP_PORT": str(manifest["service"]["port"]),
+        "LOG_FILE_MODE": manifest["logging"]["file_mode"],
+        "LOG_OWNER": manifest["logging"]["owner"],
+        "LOG_GROUP": manifest["logging"]["group"],
+    }
+    validate_rendered_logging(
+        _render_template("thebitlab-log-format.conf.template", replacements),
+        _render_template("thebitlab-nginx.conf.template", replacements),
+        _render_template("thebitlab-logrotate.conf.template", replacements),
+        manifest,
+    )
+
+
 def _origin_access_rules(manifest: Mapping[str, Any]) -> str:
     if manifest["origin"]["exposure"] == "public":
         return "    # Public origin exposure explicitly selected by the manifest."
@@ -291,6 +392,9 @@ def render_bundle(manifest: Mapping[str, Any], output: Path) -> None:
         "TLS_PRIVATE_KEY_FILE": origin["tls_private_key_file"],
         "ACCESS_LOG": origin["access_log"],
         "ERROR_LOG": origin["error_log"],
+        "LOG_FILE_MODE": manifest["logging"]["file_mode"],
+        "LOG_OWNER": manifest["logging"]["owner"],
+        "LOG_GROUP": manifest["logging"]["group"],
     }
     firewall_contract = {
         "schema_version": "thebitlab.origin-exposure.v1",
@@ -303,10 +407,17 @@ def render_bundle(manifest: Mapping[str, Any], output: Path) -> None:
     contents = {
         "nginx/thebitlab-log-format.conf": _render_template("thebitlab-log-format.conf.template", replacements),
         "nginx/thebitlab.conf": _render_template("thebitlab-nginx.conf.template", replacements),
+        "logrotate/thebitlab": _render_template("thebitlab-logrotate.conf.template", replacements),
         "systemd/thebitlab.service": _render_template("thebitlab.service.template", replacements),
         "firewall/origin-exposure.json": json.dumps(firewall_contract, indent=2, sort_keys=True) + "\n",
         "manifest.normalized.json": normalized_manifest_bytes(manifest).decode("utf-8"),
     }
+    validate_rendered_logging(
+        contents["nginx/thebitlab-log-format.conf"],
+        contents["nginx/thebitlab.conf"],
+        contents["logrotate/thebitlab"],
+        manifest,
+    )
 
     temporary = Path(tempfile.mkdtemp(prefix=f".{output.name}-", dir=output.parent))
     try:
@@ -357,6 +468,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         manifest = load_json(args.config)
         validate_manifest(manifest)
+        validate_versioned_logging(manifest)
         if args.environment_file is not None:
             expected = Path(manifest["service"]["environment_file"])
             if args.environment_file.absolute() != expected.absolute():

@@ -1,0 +1,18 @@
+# Generated policy: ordinary minimized proxy logs are retained for 30 days.
+# Incident/legal-hold evidence is preserved separately under the approved procedure.
+@@ACCESS_LOG@@ @@ERROR_LOG@@ {
+    daily
+    rotate 30
+    maxage 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create @@LOG_FILE_MODE@@ @@LOG_OWNER@@ @@LOG_GROUP@@
+    sharedscripts
+    postrotate
+        if [ -s /run/nginx.pid ]; then
+            kill -USR1 "$(cat /run/nginx.pid)"
+        fi
+    endscript
+}

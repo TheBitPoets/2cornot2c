@@ -23,7 +23,8 @@ server {
     server_name @@ORIGIN_HOST@@;
 @@ORIGIN_ACCESS_RULES@@
     access_log @@ACCESS_LOG@@ thebitlab;
-    error_log @@ERROR_LOG@@ warn;
+    # Request-context errors can include an unredacted target; access audit remains authoritative.
+    error_log @@ERROR_LOG@@ crit;
     return 308 https://@@ORIGIN_HOST@@$request_uri;
 }
 
@@ -40,7 +41,8 @@ server {
     ssl_session_tickets off;
 
     access_log @@ACCESS_LOG@@ thebitlab;
-    error_log @@ERROR_LOG@@ warn;
+    # Keep only infrastructure-critical diagnostics; request outcomes remain in the path-only access log.
+    error_log @@ERROR_LOG@@ crit;
     server_tokens off;
     client_max_body_size 32m;
 

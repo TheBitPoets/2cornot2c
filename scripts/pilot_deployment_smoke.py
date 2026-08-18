@@ -11,9 +11,12 @@ import json
 import os
 import re
 import shutil
+import socket
+import ssl
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -21,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts import pilot_access_log_scanner as log_scanner  # noqa: E402
 from scripts import validate_pilot_deployment as deployment  # noqa: E402
 
 
@@ -50,8 +54,94 @@ def _verify_lock(bundle: Path) -> None:
             raise RuntimeError(f"Digest bundle non valido: {name}")
 
 
-def _nginx_site_for_unprivileged_smoke(site: str) -> str:
-    ports = {"80": "18080", "443": "18443"}
+def _send_https_request(host: str, port: int, target: str) -> int:
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    with socket.create_connection(("127.0.0.1", port), timeout=5) as connection:
+        with context.wrap_socket(connection, server_hostname=host) as tls:
+            request = (
+                f"GET {target} HTTP/1.1\r\n"
+                f"Host: {host}\r\n"
+                "User-Agent: thebitlab-deployment-smoke\r\n"
+                "Connection: close\r\n\r\n"
+            )
+            tls.sendall(request.encode("ascii"))
+            response = tls.recv(4096)
+    match = re.match(rb"HTTP/[0-9.]+\s+([0-9]{3})", response)
+    if match is None:
+        raise RuntimeError("Risposta HTTPS non valida nello smoke logging")
+    return int(match.group(1))
+
+
+def _verify_runtime_access_log(access_log: Path, error_log: Path) -> None:
+    findings = log_scanner.scan_path(access_log) + log_scanner.scan_path(error_log)
+    if findings:
+        raise RuntimeError("Scanner log secret-safe fallito; contenuto omesso")
+    records = access_log.read_text(encoding="utf-8").splitlines()
+    expected = (
+        '"GET /auth/google/callback HTTP/1.1" 204',
+        '"GET /health HTTP/1.1" 204',
+    )
+    if any(not any(fragment in record for record in records) for fragment in expected):
+        raise RuntimeError("Audit runtime incompleto per callback o richiesta ordinaria")
+    if any("request_time=" not in record or "request_id=" not in record for record in records):
+        raise RuntimeError("Timing o correlation identifier assenti dall'audit runtime")
+
+
+def _run_nginx_logging_smoke(
+    nginx: str,
+    nginx_config: Path,
+    temporary: Path,
+    origin_host: str,
+    https_port: int,
+    access_log: Path,
+    error_log: Path,
+) -> None:
+    process = subprocess.Popen(
+        [nginx, "-p", str(temporary), "-c", str(nginx_config), "-g", "daemon off;"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        deadline = time.monotonic() + 10
+        while True:
+            try:
+                with socket.create_connection(("127.0.0.1", https_port), timeout=0.25):
+                    break
+            except OSError:
+                if process.poll() is not None or time.monotonic() >= deadline:
+                    raise RuntimeError("nginx non avviato per lo smoke logging")
+                time.sleep(0.05)
+        callback_status = _send_https_request(
+            origin_host,
+            https_port,
+            "/auth/google/callback?code=tb704-synthetic-code&state=tb704-synthetic-state",
+        )
+        ordinary_status = _send_https_request(origin_host, https_port, "/health")
+        if (callback_status, ordinary_status) != (204, 204):
+            raise RuntimeError("Status inatteso nello smoke logging")
+    finally:
+        process.terminate()
+        try:
+            process.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate(timeout=5)
+    _verify_runtime_access_log(access_log, error_log)
+
+
+def _available_loopback_port() -> int:
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        return int(listener.getsockname()[1])
+
+
+def _nginx_site_for_unprivileged_smoke(
+    site: str, *, http_port: int = 18080, https_port: int = 18443
+) -> str:
+    ports = {"80": str(http_port), "443": str(https_port)}
     counts = {port: 0 for port in ports}
     listen = re.compile(r"(?m)^(\s*listen\s+(?:\[::\]:)?)(80|443)(?=[\s;])")
 
@@ -70,7 +160,17 @@ def run_smoke(config: Path) -> None:
     nginx = shutil.which("nginx")
     systemd_analyze = shutil.which("systemd-analyze")
     openssl = shutil.which("openssl")
-    missing = [name for name, value in (("nginx", nginx), ("systemd-analyze", systemd_analyze), ("openssl", openssl)) if value is None]
+    logrotate = shutil.which("logrotate")
+    missing = [
+        name
+        for name, value in (
+            ("nginx", nginx),
+            ("systemd-analyze", systemd_analyze),
+            ("openssl", openssl),
+            ("logrotate", logrotate),
+        )
+        if value is None
+    ]
     if missing:
         raise RuntimeError("Tool smoke mancanti: " + ", ".join(missing))
 
@@ -129,8 +229,10 @@ def run_smoke(config: Path) -> None:
         manifest["data"]["root"] = str(data_root)
         manifest["origin"]["tls_certificate_file"] = str(certificate)
         manifest["origin"]["tls_private_key_file"] = str(private_key)
-        manifest["origin"]["access_log"] = str(temporary / "access.log")
-        manifest["origin"]["error_log"] = str(temporary / "error.log")
+        access_log = temporary / "access.log"
+        error_log = temporary / "error.log"
+        manifest["origin"]["access_log"] = str(access_log)
+        manifest["origin"]["error_log"] = str(error_log)
         deployment.validate_manifest(manifest)
         values = deployment.parse_environment_file(environment_file)
         deployment.validate_environment(values, github_oauth=False)
@@ -141,12 +243,20 @@ def run_smoke(config: Path) -> None:
         _verify_lock(bundle)
 
         nginx_smoke_site = temporary / "nginx-smoke-site.conf"
-        nginx_smoke_site.write_text(
-            _nginx_site_for_unprivileged_smoke(
-                (bundle / "nginx/thebitlab.conf").read_text(encoding="utf-8")
-            ),
-            encoding="utf-8",
+        http_port = _available_loopback_port()
+        https_port = _available_loopback_port()
+        while https_port == http_port:
+            https_port = _available_loopback_port()
+        smoke_site = _nginx_site_for_unprivileged_smoke(
+            (bundle / "nginx/thebitlab.conf").read_text(encoding="utf-8"),
+            http_port=http_port,
+            https_port=https_port,
         )
+        proxy_directive = f'        proxy_pass http://127.0.0.1:{manifest["service"]["port"]};'
+        if smoke_site.count(proxy_directive) != 1:
+            raise RuntimeError("Proxy location inattesa nello smoke logging")
+        smoke_site = smoke_site.replace(proxy_directive, "        return 204;")
+        nginx_smoke_site.write_text(smoke_site, encoding="utf-8")
         nginx_config = temporary / "nginx-smoke.conf"
         nginx_config.write_text(
             "\n".join(
@@ -165,6 +275,24 @@ def run_smoke(config: Path) -> None:
             encoding="utf-8",
         )
         _run([nginx, "-t", "-p", str(temporary), "-c", str(nginx_config)])
+        _run_nginx_logging_smoke(
+            nginx,
+            nginx_config,
+            temporary,
+            manifest["origin"]["url"].removeprefix("https://"),
+            https_port,
+            access_log,
+            error_log,
+        )
+        _run(
+            [
+                logrotate,
+                "--debug",
+                "--state",
+                str(temporary / "logrotate.state"),
+                str(bundle / "logrotate/thebitlab"),
+            ]
+        )
 
         tool_environment = dict(os.environ)
         tool_environment["SYSTEMD_LOG_LEVEL"] = "warning"
@@ -187,7 +315,10 @@ def main(argv: list[str] | None = None) -> int:
     except (deployment.DeploymentValidationError, OSError, RuntimeError, subprocess.SubprocessError) as exc:
         print(f"ERRORE: {exc}", file=sys.stderr)
         return 2
-    print("PASS: smoke deployment non distruttivo (nginx -t, systemd-analyze verify)")
+    print(
+        "PASS: smoke deployment non distruttivo "
+        "(nginx -t/runtime log, logrotate, systemd-analyze verify)"
+    )
     return 0
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import copy
+import io
 import json
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
+from scripts import pilot_access_log_scanner as log_scanner
 from scripts import pilot_deployment_smoke as smoke
 from scripts import pilot_service_launcher as service_launcher
 from scripts import validate_pilot_deployment as deployment
@@ -102,9 +104,23 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
     assert "allow 2001:db8::/32;" in site
     assert site.count("deny all;") == 2
     assert "proxy_set_header X-Forwarded-For $remote_addr;" in site
+    assert "$uri" in log_format
+    assert "$request_time" in log_format
+    assert "$request_id" in log_format
     assert "$request_uri" not in log_format
     assert "$args" not in log_format
     assert "$http_referer" not in log_format
+    assert "$remote_user" not in log_format
+    assert "$http_user_agent" not in log_format
+    assert site.count("error_log /var/log/nginx/thebitlab-error.log crit;") == 2
+    assert "thebitlab-error.log warn;" not in site
+    logrotate = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
+    assert "/var/log/nginx/thebitlab-access.log /var/log/nginx/thebitlab-error.log {" in logrotate
+    assert "daily" in logrotate
+    assert "rotate 30" in logrotate
+    assert "maxage 30" in logrotate
+    assert "create 0640 www-data adm" in logrotate
+    assert "copytruncate" not in logrotate
     firewall = json.loads((output / "firewall/origin-exposure.json").read_text(encoding="utf-8"))
     assert firewall == {
         "schema_version": "thebitlab.origin-exposure.v1",
@@ -114,6 +130,104 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
         "allowed_source_cidrs": ["192.0.2.0/24", "2001:db8::/32"],
         "backend_bind": "127.0.0.1:8000",
     }
+
+
+@pytest.mark.parametrize(
+    "forbidden",
+    (
+        "$request",
+        "$request_uri",
+        "$args",
+        "$query_string",
+        "$http_cookie",
+        "$cookie_session",
+        "$arg_code",
+        "$http_authorization",
+        "$http_x_api_key",
+        "$sent_http_location",
+        "$upstream_http_location",
+        "$http_referer",
+    ),
+)
+def test_logging_validator_rejects_query_header_or_redirect_fields(
+    tmp_path: Path, forbidden: str
+) -> None:
+    payload = manifest()
+    output = tmp_path / "bundle"
+    deployment.render_bundle(payload, output)
+    log_format = (output / "nginx/thebitlab-log-format.conf").read_text(encoding="utf-8")
+    site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8")
+    logrotate = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
+
+    with pytest.raises(deployment.DeploymentValidationError, match="allowlist"):
+        deployment.validate_rendered_logging(
+            log_format + f"\n# unsafe {forbidden}\n", site, logrotate, payload
+        )
+
+
+def test_logging_validator_rejects_unformatted_access_log_and_copytruncate(tmp_path: Path) -> None:
+    payload = manifest()
+    output = tmp_path / "bundle"
+    deployment.render_bundle(payload, output)
+    log_format = (output / "nginx/thebitlab-log-format.conf").read_text(encoding="utf-8")
+    site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8")
+    logrotate = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
+
+    with pytest.raises(deployment.DeploymentValidationError, match="access_log"):
+        deployment.validate_rendered_logging(
+            log_format, site.replace(" thebitlab;", ";", 1), logrotate, payload
+        )
+    with pytest.raises(deployment.DeploymentValidationError, match="error_log"):
+        deployment.validate_rendered_logging(
+            log_format, site.replace(" crit;", " warn;", 1), logrotate, payload
+        )
+    with pytest.raises(deployment.DeploymentValidationError, match="logrotate"):
+        deployment.validate_rendered_logging(
+            log_format, site, logrotate.replace("    sharedscripts", "    copytruncate"), payload
+        )
+
+
+def test_secret_safe_scanner_and_synthetic_callback_audit_do_not_echo_values(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    clean = (
+        b'127.0.0.1 [18/Aug/2026:00:00:00 +0000] '
+        b'"GET /auth/google/callback HTTP/1.1" 204 0 '
+        b'request_time=0.001 request_id=synthetic-request-id\n'
+        b'127.0.0.1 [18/Aug/2026:00:00:01 +0000] '
+        b'"GET /health HTTP/1.1" 204 0 '
+        b'request_time=0.001 request_id=ordinary-request-id\n'
+    )
+    assert log_scanner.scan_stream(io.BytesIO(clean)) == ()
+
+    access_log = tmp_path / "access.log"
+    error_log = tmp_path / "error.log"
+    access_log.write_bytes(clean)
+    error_log.write_bytes(b"")
+    smoke._verify_runtime_access_log(access_log, error_log)
+
+    dummy_code = "tb704-synthetic-code-never-publish"
+    dummy_state = "tb704-synthetic-state-never-publish"
+    dummy_cookie = "tb704-synthetic-cookie-never-publish"
+    dummy_bearer = "tb704.synthetic.bearer.never.publish"
+    access_log.write_text(
+        f'"GET /auth/google/callback?code={dummy_code}&state={dummy_state} HTTP/1.1" 400\n'
+        f'Cookie: session={dummy_cookie}\n'
+        f'Authorization: Bearer {dummy_bearer}\n',
+        encoding="utf-8",
+    )
+    findings = log_scanner.scan_path(access_log)
+    assert {finding.rule for finding in findings} == {
+        "query_bearing_request_target",
+        "sensitive_field",
+        "bearer_credential",
+    }
+    assert log_scanner.main([str(access_log)]) == 1
+    output = capsys.readouterr()
+    serialized = output.out + output.err
+    for marker in (dummy_code, dummy_state, dummy_cookie, dummy_bearer):
+        assert marker not in serialized
+    assert "query_bearing_request_target" in serialized
 
 
 def test_public_origin_requires_explicit_empty_allowlist(tmp_path: Path) -> None:
@@ -334,8 +448,8 @@ def test_cli_validates_example_without_touching_external_references() -> None:
 
 
 @pytest.mark.skipif(
-    not all(shutil.which(tool) for tool in ("nginx", "systemd-analyze", "openssl")),
-    reason="nginx/systemd-analyze/openssl non disponibili su questo host",
+    not all(shutil.which(tool) for tool in ("nginx", "systemd-analyze", "openssl", "logrotate")),
+    reason="nginx/systemd-analyze/openssl/logrotate non disponibili su questo host",
 )
 def test_controlled_nginx_and_systemd_smoke() -> None:
     result = subprocess.run(

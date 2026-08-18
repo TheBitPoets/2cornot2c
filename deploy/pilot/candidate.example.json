@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/pilot-deployment.schema.json",
-  "schema_version": "thebitlab.pilot-deployment.v1",
+  "schema_version": "thebitlab.pilot-deployment.v2",
   "deployment_id": "pilot-candidate-example",
   "release": {
     "commit": "0123456789abcdef0123456789abcdef01234567",
@@ -31,6 +31,13 @@
     "tls_private_key_file": "/etc/thebitlab/tls/origin.key",
     "access_log": "/var/log/nginx/thebitlab-access.log",
     "error_log": "/var/log/nginx/thebitlab-error.log"
+  },
+  "logging": {
+    "rotation": "daily",
+    "retention_days": 30,
+    "file_mode": "0640",
+    "owner": "www-data",
+    "group": "adm"
   },
   "features": {
     "google_auth": true,

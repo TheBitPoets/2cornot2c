@@ -11,11 +11,12 @@
     "service",
     "data",
     "origin",
+    "logging",
     "features"
   ],
   "properties": {
     "$schema": {"type": "string", "minLength": 1},
-    "schema_version": {"const": "thebitlab.pilot-deployment.v1"},
+    "schema_version": {"const": "thebitlab.pilot-deployment.v2"},
     "deployment_id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]{2,62}$"
@@ -96,6 +97,24 @@
           "else": {"properties": {"allowed_proxy_cidrs": {"maxItems": 0}}}
         }
       ]
+    },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rotation",
+        "retention_days",
+        "file_mode",
+        "owner",
+        "group"
+      ],
+      "properties": {
+        "rotation": {"const": "daily"},
+        "retention_days": {"const": 30},
+        "file_mode": {"const": "0640"},
+        "owner": {"$ref": "#/$defs/account"},
+        "group": {"$ref": "#/$defs/account"}
+      }
     },
     "features": {
       "type": "object",
