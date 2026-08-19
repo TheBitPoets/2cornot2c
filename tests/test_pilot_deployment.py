@@ -1085,6 +1085,17 @@ def test_isolated_python_ignores_pythonpath_cwd_and_scripts_jsonschema_shadow(
     assert Path(runtime["path"]).name == "__init__.py"
 
 
+def test_guard_accepts_only_systemd_non_running_terminal_states(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for state in ("inactive", "failed"):
+        monkeypatch.setattr(ubuntu_activation, "_nginx_service_state", lambda state=state: (state, 3))
+        ubuntu_activation._require_nginx_not_running()
+    monkeypatch.setattr(ubuntu_activation, "_nginx_service_state", lambda: ("activating", 3))
+    with pytest.raises(ubuntu_activation.ActivationError, match="transizione"):
+        ubuntu_activation._require_nginx_not_running()
+
+
 def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1093,7 +1104,7 @@ def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
     def systemctl(arguments: list[str]) -> tuple[int, str]:
         call = tuple(arguments)
         calls.append(call)
-        if arguments[0] in {"stop", "mask", "reset-failed"}:
+        if arguments[0] in {"stop", "mask"}:
             return 0, ""
         if arguments[0] == "is-active":
             return 3, "inactive"

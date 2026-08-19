@@ -1322,17 +1322,17 @@ def _nginx_service_state() -> tuple[str, int]:
     return output, code
 
 
-def _require_nginx_inactive() -> None:
+def _require_nginx_not_running() -> None:
     state, code = _nginx_service_state()
-    if (state, code) != ("inactive", 3):
-        raise ActivationError(f"nginx.service non sicuramente inattiva: {state}")
+    if code != 3 or state not in {"inactive", "failed"}:
+        raise ActivationError(f"nginx.service attiva o in transizione: {state}")
 
 
 def _stop_nginx_service() -> None:
     code, _ = _systemctl_result(["stop", "nginx.service"])
     if code != 0:
         raise ActivationError("Arresto nginx.service fallito")
-    _require_nginx_inactive()
+    _require_nginx_not_running()
 
 
 def _systemd_property(name: str, unit: str = "nginx.service") -> str:
@@ -1353,13 +1353,13 @@ def _verify_migration_guard() -> None:
     names = set(_systemd_property("Names").split())
     if names != {"nginx.service"}:
         raise ActivationError(f"Alias systemd nginx inatteso: {sorted(names)}")
-    _require_nginx_inactive()
+    _require_nginx_not_running()
     for unit_name in ("nginx.service", "nginx"):
         code, _ = _systemctl_result(["start", unit_name])
         if code == 0:
             _stop_nginx_service()
             raise ActivationError(f"Migration guard bypassabile tramite start {unit_name}")
-        _require_nginx_inactive()
+        _require_nginx_not_running()
 
 
 def _install_migration_guard() -> None:
@@ -1375,9 +1375,6 @@ def _install_migration_guard() -> None:
     code, _ = _systemctl_result(["mask", "--now", "nginx.service"])
     if code != 0:
         raise ActivationError("Mask manager-mediated nginx.service fallita")
-    code, _ = _systemctl_result(["reset-failed", "nginx.service"])
-    if code != 0:
-        raise ActivationError("Reset dello stato failed nginx.service fallito dopo il mask")
     _fsync_directory(NGINX_MIGRATION_GUARD.parent)
     _verify_migration_guard()
     if _nginx_may_be_running():
