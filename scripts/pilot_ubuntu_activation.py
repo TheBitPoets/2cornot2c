@@ -19,6 +19,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import urlsplit
 
+import jsonschema
 from jsonschema import Draft202012Validator
 
 
@@ -81,6 +82,78 @@ _ORIGIN_HOST_RE = re.compile(
 
 class ActivationError(RuntimeError):
     """The host cannot safely activate, migrate, or restore the candidate."""
+
+
+def _assert_os_runtime_path(path: Path, *, allow_missing_leaf: bool = False) -> None:
+    candidate = path if path.exists() else path.parent if allow_missing_leaf else path
+    try:
+        candidate = candidate.absolute()
+        current = Path(candidate.anchor)
+        for part in candidate.parts[1:]:
+            current /= part
+            metadata = current.lstat()
+            if current.is_symlink() or metadata.st_uid != 0 or metadata.st_mode & 0o022:
+                raise ActivationError(f"Python runtime path non trusted: {path}")
+        if not candidate.exists():
+            raise ActivationError(f"Python runtime path assente: {path}")
+    except OSError as exc:
+        raise ActivationError(f"Python runtime path non verificabile: {path}") from exc
+
+
+def _require_trusted_runtime() -> None:
+    """Reject checkout execution and non-isolated Python before host inspection/mutation."""
+
+    expected_root = os.environ.get("THEBITLAB_TRUSTED_TOOLCHAIN_ROOT")
+    toolchain_id = os.environ.get("THEBITLAB_TRUSTED_TOOLCHAIN_ID")
+    canonical_parent = Path("/usr/lib/thebitlab/pilot-tools")
+    if (
+        not expected_root
+        or not toolchain_id
+        or ROOT != Path(expected_root)
+        or ROOT.parent != canonical_parent
+        or ROOT.name != toolchain_id
+        or Path.cwd() != Path("/")
+    ):
+        raise ActivationError("Production activation richiede il trusted launcher installato")
+    flags = sys.flags
+    if not (
+        flags.isolated
+        and flags.ignore_environment
+        and flags.no_user_site
+        and getattr(flags, "safe_path", False)
+        and getattr(flags, "dont_write_bytecode", False)
+    ):
+        raise ActivationError("Python production non è isolato (-I -B richiesti)")
+    if not sys.path or Path(sys.path[0]) != ROOT:
+        raise ActivationError("Trusted toolchain assente dalla posizione iniziale di sys.path")
+    forbidden = {"", ".", str(Path.cwd()), str(Path.home())}
+    if any(entry in forbidden or not Path(entry).is_absolute() for entry in sys.path):
+        raise ActivationError("sys.path production contiene una search root non trusted")
+    for entry in sys.path[1:]:
+        _assert_os_runtime_path(Path(entry), allow_missing_leaf=True)
+    local_modules = (Path(__file__), Path(deployment.__file__), Path(sys.modules[Directive.__module__].__file__))
+    if any(ROOT not in module.resolve(strict=True).parents for module in local_modules):
+        raise ActivationError("Modulo security-critical caricato fuori dalla trusted toolchain")
+    jsonschema_path = Path(jsonschema.__file__).resolve(strict=True)
+    if ROOT in jsonschema_path.parents:
+        raise ActivationError("jsonschema shadowed dalla toolchain")
+    _assert_os_runtime_path(jsonschema_path)
+
+
+def _runtime_information() -> dict[str, Any]:
+    return {
+        "isolated": bool(sys.flags.isolated),
+        "ignore_environment": bool(sys.flags.ignore_environment),
+        "no_user_site": bool(sys.flags.no_user_site),
+        "safe_path": bool(getattr(sys.flags, "safe_path", False)),
+        "dont_write_bytecode": bool(getattr(sys.flags, "dont_write_bytecode", False)),
+        "cwd": str(Path.cwd()),
+        "sys_path": list(sys.path),
+        "toolchain_root": str(ROOT),
+        "activator": str(Path(__file__).resolve()),
+        "renderer": str(Path(deployment.__file__).resolve()),
+        "jsonschema": str(Path(jsonschema.__file__).resolve()),
+    }
 
 
 def _source_path(path: Path) -> str:
@@ -863,7 +936,7 @@ def verify_host_configuration_trust(
     if guard_required is False and guard_present:
         raise ActivationError("Migration guard orphan presente: recovery esplicita richiesta")
     if guard_present:
-        _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
+        _verify_migration_guard()
 
     if DISTRO_AVAILABLE.exists() or DISTRO_AVAILABLE.is_symlink():
         _assert_trusted_metadata(DISTRO_AVAILABLE, directory=False, require_root_owner=True)
@@ -1262,43 +1335,59 @@ def _stop_nginx_service() -> None:
     _require_nginx_inactive()
 
 
+def _systemd_property(name: str, unit: str = "nginx.service") -> str:
+    code, value = _systemctl_result(["show", f"--property={name}", "--value", unit])
+    if code != 0 or not value or "\n" in value:
+        raise ActivationError(f"Proprietà systemd non verificabile: {unit} {name}")
+    return value
+
+
 def _verify_migration_guard() -> None:
+    """Prove the filesystem and manager guard, inactivity, aliases, and negative start."""
+
     _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
-    code, load_state = _systemctl_result(
-        ["show", "--property=LoadState", "--value", "nginx.service"]
-    )
-    if code != 0 or load_state != "masked":
+    if _systemd_property("LoadState") != "masked":
         raise ActivationError("nginx.service non risulta masked al service manager")
-    code, unit_state = _systemctl_result(
-        ["show", "--property=UnitFileState", "--value", "nginx.service"]
-    )
-    if code != 0 or unit_state != "masked":
+    if _systemd_property("UnitFileState") != "masked":
         raise ActivationError("Mask persistente nginx.service non verificata")
+    names = set(_systemd_property("Names").split())
+    if names != {"nginx.service"}:
+        raise ActivationError(f"Alias systemd nginx inatteso: {sorted(names)}")
+    _require_nginx_inactive()
+    for unit_name in ("nginx.service", "nginx"):
+        code, _ = _systemctl_result(["start", unit_name])
+        if code == 0:
+            _stop_nginx_service()
+            raise ActivationError(f"Migration guard bypassabile tramite start {unit_name}")
+        _require_nginx_inactive()
 
 
 def _install_migration_guard() -> None:
-    """Stop nginx and durably mask its systemd unit; presence alone is the orphan marker."""
+    """Acquire the guard through systemd; return only after its negative-start proof."""
 
     _stop_nginx_service()
     if _nginx_may_be_running():
         raise ActivationError("Processo nginx fuori dalla service identity systemd")
-    state = _symlink_state(NGINX_MIGRATION_GUARD)
-    if not state["present"]:
-        _replace_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
-    else:
+    existing = _symlink_state(NGINX_MIGRATION_GUARD)
+    if existing["present"]:
         _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
-    code, _ = _systemctl_result(["daemon-reload"])
+        # Recovery may see a durable mask that the rebooted/cached manager has not loaded.
+        code, _ = _systemctl_result(["daemon-reload"])
+        if code != 0:
+            raise ActivationError("systemd non ha ricaricato il guard persistente")
+    code, _ = _systemctl_result(["mask", "--now", "nginx.service"])
     if code != 0:
-        raise ActivationError("systemd daemon-reload fallito durante installazione guard")
-    _verify_migration_guard()
-    # Close a start race that could have occurred before the manager observed the mask.
-    _stop_nginx_service()
+        raise ActivationError("Mask manager-mediated nginx.service fallita")
+    _fsync_directory(NGINX_MIGRATION_GUARD.parent)
     _verify_migration_guard()
 
 
 def _remove_migration_guard() -> None:
     _verify_migration_guard()
-    _remove_symlink(NGINX_MIGRATION_GUARD)
+    code, _ = _systemctl_result(["unmask", "nginx.service"])
+    if code != 0:
+        raise ActivationError("Unmask manager-mediated nginx.service fallita")
+    _fsync_directory(NGINX_MIGRATION_GUARD.parent)
     code, _ = _systemctl_result(["daemon-reload"])
     if code != 0:
         raise ActivationError("systemd daemon-reload fallito durante rimozione guard")
@@ -1528,6 +1617,7 @@ def recover(bundle: Path | None = None, state_path: Path = STATE_FILE) -> None:
             raise ActivationError("Nessuna transition persistente da recuperare")
         if bundle is None:
             raise ActivationError("Guard orphan: --bundle trusted richiesto per recovery")
+        _install_migration_guard()
         preflight = verify_host_preflight(bundle, guard_required=True)
         state = _state_for(preflight)
         _write_state(state_path, state, exclusive=True)
@@ -1544,12 +1634,9 @@ def recover(bundle: Path | None = None, state_path: Path = STATE_FILE) -> None:
         _validate_activated(target, guard_required=False)
         return
 
-    if not _symlink_state(NGINX_MIGRATION_GUARD)["present"]:
-        # This includes the durable validated -> unmask crash window. Re-mask before retry.
-        _install_migration_guard()
-    else:
-        _verify_migration_guard()
-        _stop_nginx_service()
+    # Re-acquire through systemd for every intermediate state, including a cached manager
+    # that has not observed a durable filesystem mask after crash/reboot.
+    _install_migration_guard()
 
     if state["status"].startswith("rollback_"):
         target = _state_bundle(state, previous=True)
@@ -1598,6 +1685,11 @@ def complete(state_path: Path, archive_path: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        _require_trusted_runtime()
+    except ActivationError as exc:
+        print(f"ERRORE: {exc}", file=sys.stderr)
+        return 2
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
     preflight_parser = subparsers.add_parser("preflight")
@@ -1613,8 +1705,12 @@ def main(argv: list[str] | None = None) -> int:
     complete_parser = subparsers.add_parser("complete")
     complete_parser.add_argument("--state-file", type=Path, default=STATE_FILE)
     complete_parser.add_argument("--archive", type=Path, required=True)
+    subparsers.add_parser("runtime-info")
     args = parser.parse_args(argv)
     try:
+        if args.command == "runtime-info":
+            print(json.dumps(_runtime_information(), indent=2, sort_keys=True))
+            return 0
         if args.command == "preflight":
             verify_host_preflight(args.bundle)
         elif args.command == "activate":

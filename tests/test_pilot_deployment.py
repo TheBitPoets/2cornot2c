@@ -16,9 +16,11 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
+from scripts import build_pilot_toolchain as toolchain_builder
 from scripts import pilot_access_log_scanner as log_scanner
 from scripts import pilot_deployment_smoke as smoke
 from scripts import pilot_service_launcher as service_launcher
+from scripts import pilot_toolchain_launcher as toolchain_launcher
 from scripts import pilot_ubuntu_activation as ubuntu_activation
 from scripts import validate_pilot_deployment as deployment
 
@@ -894,6 +896,223 @@ def test_corrupt_or_incomplete_activation_state_is_rejected(tmp_path: Path) -> N
         state.chmod(0o600)
     with pytest.raises(ubuntu_activation.ActivationError, match="struttura"):
         ubuntu_activation._read_state(state, require_root_owner=False)
+
+
+def _staged_toolchain(
+    tmp_path: Path, *, source_root: Path = ROOT
+) -> tuple[Path, Path, Path, dict[str, str]]:
+    tools_root = tmp_path / "usr/lib/thebitlab/pilot-tools"
+    toolchain = tools_root / "test-toolchain"
+    launcher_path = tmp_path / "usr/sbin/thebitlab-pilot-activate"
+    pin_path = tmp_path / "etc/thebitlab/trust/pilot-toolchain.json"
+    toolchain_builder.build_toolchain(source_root, toolchain, toolchain.name, "a" * 40)
+    launcher_path.parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / "scripts/pilot_toolchain_launcher.py", launcher_path)
+    pin_path.parent.mkdir(parents=True)
+    pin = {
+        "schema_version": "thebitlab.pilot-toolchain-pin.v1",
+        "toolchain_id": toolchain.name,
+        "toolchain_manifest_sha256": hashlib.sha256(
+            (toolchain / toolchain_launcher.MANIFEST_NAME).read_bytes()
+        ).hexdigest(),
+        "launcher_sha256": hashlib.sha256(launcher_path.read_bytes()).hexdigest(),
+        "release_commit": "a" * 40,
+    }
+    pin_path.write_text(json.dumps(pin, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if os.name != "nt":
+        for directory in sorted(
+            (path for path in tmp_path.rglob("*") if path.is_dir()), key=lambda path: len(path.parts)
+        ):
+            directory.chmod(0o755)
+        for file_path in (launcher_path, pin_path, *toolchain.rglob("*")):
+            if file_path.is_file():
+                file_path.chmod(0o644)
+    return tools_root, toolchain, launcher_path, {"pin_path": str(pin_path), **pin}
+
+
+def _verify_staged(
+    tools_root: Path, launcher_path: Path, pin: dict[str, str]
+) -> tuple[Path, object]:
+    return toolchain_launcher.verify_installation(
+        pin_path=Path(pin["pin_path"]),
+        tools_root=tools_root,
+        launcher_path=launcher_path,
+        require_root_owner=False,
+    )
+
+
+def test_production_activation_rejects_checkout_and_staged_toolchain_ignores_dirty_worktree(
+    tmp_path: Path,
+) -> None:
+    result = subprocess.run(
+        [sys.executable, "scripts/pilot_ubuntu_activation.py", "runtime-info"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    assert result.returncode == 2
+    assert "trusted launcher" in result.stderr
+    direct_launcher = subprocess.run(
+        [sys.executable, "-I", "-B", "scripts/pilot_toolchain_launcher.py", "runtime-info"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    assert direct_launcher.returncode == 2
+    assert "launcher installato" in direct_launcher.stderr
+
+    fake_checkout = tmp_path / "user-writable-checkout"
+    for relative_name in toolchain_builder.TOOLCHAIN_FILES:
+        source = ROOT / relative_name
+        target = fake_checkout / relative_name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    installation = tmp_path / "installation"
+    installation.mkdir()
+    tools_root, toolchain, launcher_path, pin = _staged_toolchain(
+        installation, source_root=fake_checkout
+    )
+    dirty_source = fake_checkout / "scripts/pilot_ubuntu_activation.py"
+    dirty_source.write_bytes(dirty_source.read_bytes() + b"\nraise RuntimeError('dirty')\n")
+    (fake_checkout / "scripts/jsonschema.py").write_text(
+        "raise RuntimeError('shadow')\n", encoding="utf-8"
+    )
+    if os.name != "nt":
+        fake_checkout.chmod(0o777)
+    verified, _ = _verify_staged(tools_root, launcher_path, pin)
+    assert verified == toolchain
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Contratto ownership/mode POSIX")
+def test_trusted_toolchain_rejects_writable_pin_digest_mismatch_and_modified_files(
+    tmp_path: Path,
+) -> None:
+    tools_root, toolchain, launcher_path, pin = _staged_toolchain(tmp_path)
+    pin_path = Path(pin["pin_path"])
+    _verify_staged(tools_root, launcher_path, pin)
+
+    pin_path.chmod(0o664)
+    with pytest.raises(toolchain_launcher.ToolchainError, match="scrivibile"):
+        _verify_staged(tools_root, launcher_path, pin)
+    pin_path.chmod(0o644)
+
+    toolchain.chmod(0o775)
+    with pytest.raises(toolchain_launcher.ToolchainError, match="scrivibile"):
+        _verify_staged(tools_root, launcher_path, pin)
+    toolchain.chmod(0o755)
+
+    original_pin = pin_path.read_bytes()
+    payload = json.loads(original_pin)
+    payload["toolchain_manifest_sha256"] = "0" * 64
+    pin_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with pytest.raises(toolchain_launcher.ToolchainError, match="manifest digest"):
+        _verify_staged(tools_root, launcher_path, pin)
+    pin_path.write_bytes(original_pin)
+
+    manifest_path = toolchain / toolchain_launcher.MANIFEST_NAME
+    original_manifest = manifest_path.read_bytes()
+    manifest_path.write_bytes(original_manifest + b" ")
+    with pytest.raises(toolchain_launcher.ToolchainError, match="manifest digest"):
+        _verify_staged(tools_root, launcher_path, pin)
+    manifest_path.write_bytes(original_manifest)
+
+    activator = toolchain / toolchain_launcher.ACTIVATOR
+    activator.write_bytes(activator.read_bytes() + b"\n# modified\n")
+    with pytest.raises(toolchain_launcher.ToolchainError, match="file modificato"):
+        _verify_staged(tools_root, launcher_path, pin)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Hardlink POSIX richiesto")
+def test_trusted_toolchain_rejects_hardlinks_symlinks_and_extra_files(tmp_path: Path) -> None:
+    for mutation in ("hardlink", "symlink", "extra"):
+        case = tmp_path / mutation
+        case.mkdir()
+        tools_root, toolchain, launcher_path, pin = _staged_toolchain(case)
+        target = toolchain / "scripts/nginx_config_ast.py"
+        if mutation == "hardlink":
+            duplicate = case / "duplicate"
+            os.link(target, duplicate)
+        elif mutation == "symlink":
+            original = target.read_bytes()
+            target.unlink()
+            outside = case / "outside.py"
+            outside.write_bytes(original)
+            target.symlink_to(outside)
+        else:
+            (toolchain / "unexpected.py").write_text("pass\n", encoding="utf-8")
+        with pytest.raises(toolchain_launcher.ToolchainError):
+            _verify_staged(tools_root, launcher_path, pin)
+
+
+def test_isolated_python_ignores_pythonpath_cwd_and_scripts_jsonschema_shadow(
+    tmp_path: Path,
+) -> None:
+    malicious = tmp_path / "malicious"
+    cwd = tmp_path / "cwd"
+    malicious.mkdir()
+    (cwd / "scripts").mkdir(parents=True)
+    marker = tmp_path / "IMPORTED"
+    payload = f"from pathlib import Path\nPath({str(marker)!r}).write_text('bad')\n"
+    (malicious / "jsonschema.py").write_text(payload, encoding="utf-8")
+    (cwd / "jsonschema.py").write_text(payload, encoding="utf-8")
+    (cwd / "scripts/jsonschema.py").write_text(payload, encoding="utf-8")
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(malicious)
+    probe = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-B",
+            "-c",
+            "import json,jsonschema,sys; print(json.dumps({'path':jsonschema.__file__,'sys_path':sys.path}))",
+        ],
+        cwd=cwd,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    assert probe.returncode == 0, probe.stderr
+    runtime = json.loads(probe.stdout)
+    assert not marker.exists()
+    assert str(malicious) not in runtime["sys_path"]
+    assert str(cwd) not in runtime["sys_path"]
+    assert Path(runtime["path"]).name == "__init__.py"
+
+
+def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, ...]] = []
+
+    def systemctl(arguments: list[str]) -> tuple[int, str]:
+        call = tuple(arguments)
+        calls.append(call)
+        if arguments[0] in {"stop", "mask"}:
+            return 0, ""
+        if arguments[0] == "is-active":
+            return 3, "inactive"
+        if arguments[0] == "start":
+            return 1, ""
+        if arguments[0] == "show":
+            property_name = arguments[1].split("=", 1)[1]
+            return 0, {"LoadState": "masked", "UnitFileState": "masked", "Names": "nginx.service"}[property_name]
+        raise AssertionError(arguments)
+
+    monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
+    monkeypatch.setattr(ubuntu_activation, "_nginx_may_be_running", lambda: False)
+    monkeypatch.setattr(ubuntu_activation, "_symlink_state", lambda _path: {"present": False})
+    monkeypatch.setattr(ubuntu_activation, "_assert_root_symlink", lambda *_args: None)
+    monkeypatch.setattr(ubuntu_activation, "_fsync_directory", lambda _path: None)
+    ubuntu_activation._install_migration_guard()
+    assert ("mask", "--now", "nginx.service") in calls
+    mask_index = calls.index(("mask", "--now", "nginx.service"))
+    assert all(calls.index(start) > mask_index for start in (("start", "nginx.service"), ("start", "nginx")))
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Symlink POSIX richiesto")

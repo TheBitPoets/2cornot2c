@@ -7,7 +7,9 @@ import argparse
 import base64
 import copy
 import glob
+import hashlib
 import http.server
+import importlib
 import json
 import os
 import re
@@ -27,7 +29,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts import build_pilot_toolchain as toolchain_builder  # noqa: E402
 from scripts import pilot_access_log_scanner as log_scanner  # noqa: E402
+from scripts import pilot_toolchain_launcher as toolchain_launcher  # noqa: E402
 from scripts import pilot_ubuntu_activation as activation  # noqa: E402
 from scripts import validate_pilot_deployment as deployment  # noqa: E402
 
@@ -344,6 +348,96 @@ def _check_ephemeral_host() -> str:
     return original_default
 
 
+def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
+    """Install a CI-only fixture; unlike production provisioning this is not an approval step."""
+
+    global activation, deployment
+    commit = os.environ.get("GITHUB_SHA", "c" * 40)
+    if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
+        commit = "c" * 40
+    toolchain_id = f"ci-{commit[:12]}"
+    toolchain = toolchain_launcher.TOOLS_ROOT / toolchain_id
+    launcher = toolchain_launcher.CANONICAL_LAUNCHER
+    pin_path = toolchain_launcher.TRUST_PIN
+    if toolchain.exists() or launcher.exists() or pin_path.exists():
+        raise RuntimeError("Host effimero contiene già una trusted activation toolchain")
+    toolchain_builder.build_toolchain(ROOT, toolchain, toolchain_id, commit)
+    for path in toolchain.rglob("*"):
+        path.chmod(0o755 if path.is_dir() else 0o644)
+    toolchain.chmod(0o755)
+    launcher.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+    shutil.copyfile(ROOT / "scripts/pilot_toolchain_launcher.py", launcher)
+    launcher.chmod(0o755)
+    pin_path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+    pin = {
+        "schema_version": "thebitlab.pilot-toolchain-pin.v1",
+        "toolchain_id": toolchain_id,
+        "toolchain_manifest_sha256": hashlib.sha256(
+            (toolchain / toolchain_launcher.MANIFEST_NAME).read_bytes()
+        ).hexdigest(),
+        "launcher_sha256": hashlib.sha256(launcher.read_bytes()).hexdigest(),
+        "release_commit": commit,
+    }
+    pin_path.write_text(json.dumps(pin, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    pin_path.chmod(0o644)
+    toolchain_launcher.verify_installation()
+    os.chown(pin_path, 65534, 65534)
+    try:
+        rejected_pin = subprocess.run(
+            [str(launcher), "runtime-info"], check=False,
+            capture_output=True, text=True, timeout=60,
+        )
+    finally:
+        os.chown(pin_path, 0, 0)
+    if rejected_pin.returncode == 0:
+        raise RuntimeError("External trust pin non-root-owned accettato")
+    toolchain_launcher.verify_installation()
+
+    shadow = temporary / "shadow"
+    (shadow / "scripts").mkdir(parents=True)
+    marker = temporary / "shadow-imported"
+    malicious = f"from pathlib import Path\nPath({str(marker)!r}).write_text('bad')\n"
+    (shadow / "jsonschema.py").write_text(malicious, encoding="utf-8")
+    (shadow / "scripts/jsonschema.py").write_text(malicious, encoding="utf-8")
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(shadow)
+    runtime = subprocess.run(
+        [str(launcher), "runtime-info"], cwd=shadow, env=environment, check=False,
+        capture_output=True, text=True, timeout=60,
+    )
+    if runtime.returncode != 0:
+        raise RuntimeError(f"Trusted launcher runtime-info fallita: {runtime.stderr[-500:]}")
+    information = json.loads(runtime.stdout)
+    if (
+        marker.exists()
+        or information["toolchain_root"] != str(toolchain)
+        or not all(
+            information[name]
+            for name in ("isolated", "ignore_environment", "no_user_site", "safe_path", "dont_write_bytecode")
+        )
+        or information["cwd"] != "/"
+        or information["sys_path"][0] != str(toolchain)
+        or str(shadow) in information["sys_path"]
+        or not information["renderer"].startswith(str(toolchain) + "/")
+    ):
+        raise RuntimeError("Python isolation/sys.path della production entrypoint non verificati")
+
+    # All in-process migration probes below use the installed renderer/activator, never ROOT.
+    sys.dont_write_bytecode = True
+    scripts_package = sys.modules["scripts"]
+    scripts_package.__path__ = [str(toolchain / "scripts")]
+    for module_name in (
+        "scripts.nginx_config_ast", "scripts.pilot_environment",
+        "scripts.validate_pilot_deployment", "scripts.pilot_ubuntu_activation",
+    ):
+        sys.modules.pop(module_name, None)
+    deployment = importlib.import_module("scripts.validate_pilot_deployment")
+    activation = importlib.import_module("scripts.pilot_ubuntu_activation")
+    if not str(Path(activation.__file__).resolve()).startswith(str(toolchain) + "/"):
+        raise RuntimeError("Activator integration non proviene dalla toolchain installata")
+    return toolchain, launcher, pin_path
+
+
 def run() -> None:
     original_default = _check_ephemeral_host()
     state = activation.STATE_FILE
@@ -359,6 +453,9 @@ def run() -> None:
     )
     backend: _Backend | None = None
     backend_thread: threading.Thread | None = None
+    installed_toolchain: Path | None = None
+    installed_launcher: Path | None = None
+    installed_pin: Path | None = None
     markers = (
         "tb704-callback-code", "tb704-callback-state",
         "tb704-error-code", "tb704-error-state", "tb704-error-cookie",
@@ -369,6 +466,11 @@ def run() -> None:
     try:
         with tempfile.TemporaryDirectory(prefix="thebitlab-ubuntu-integration-") as name:
             temporary = Path(name)
+            installed_toolchain, installed_launcher, installed_pin = _install_ephemeral_toolchain(temporary)
+            Path("/run/thebitlab-ephemeral-activation-test").write_text(
+                "ephemeral-only\n", encoding="ascii"
+            )
+            Path("/run/thebitlab-ephemeral-activation-test").chmod(0o600)
             deployments.mkdir(mode=0o750, parents=True, exist_ok=True)
             manifest = _render_bundle(temporary, v2_bundle)
             legacy_manifest = _legacy_from_v2(manifest, legacy_bundle)
@@ -565,6 +667,67 @@ def run() -> None:
             _install_legacy(legacy_bundle, legacy_manifest)
             activation.verify_host_preflight(v2_bundle)
 
+            # Reproduce the exact cached-unit gap: the filesystem symlink alone leaves the
+            # already loaded manager unit startable. Orphan recovery must acquire via systemd.
+            _run(["systemctl", "start", "nginx.service"])
+            activation._stop_nginx_service()
+            if activation._systemd_property("LoadState") != "loaded":
+                raise RuntimeError("nginx legacy non loaded prima della cached-unit regression")
+            activation._replace_symlink(activation.NGINX_MIGRATION_GUARD, "/dev/null")
+            if activation._systemd_property("LoadState") != "loaded":
+                raise RuntimeError("systemd 255 non ha riprodotto il mask-on-disk cached gap")
+            activation.recover(v2_bundle, state)
+            activation.complete(state, archives[1])
+            archives[1].unlink()
+            _install_legacy(legacy_bundle, legacy_manifest)
+
+            # Linearization is the return from mask --now plus manager/inactive/start-negative
+            # verification. Concurrent starts may win before it, never after acquisition.
+            _run(["systemctl", "start", "nginx.service"])
+            activation._stop_nginx_service()
+            acquired = threading.Event()
+            attempts_done = threading.Event()
+            successful_after_acquisition: list[int] = []
+
+            def start_spammer() -> None:
+                while not acquired.is_set():
+                    subprocess.run(
+                        ["systemctl", "start", "nginx.service"], check=False,
+                        capture_output=True, text=True, timeout=30,
+                    )
+                for attempt in range(40):
+                    result = subprocess.run(
+                        ["systemctl", "start", "nginx.service"], check=False,
+                        capture_output=True, text=True, timeout=30,
+                    )
+                    if result.returncode == 0:
+                        successful_after_acquisition.append(attempt)
+                attempts_done.set()
+
+            spammer = threading.Thread(target=start_spammer, daemon=True)
+            original_fault = activation._fault
+
+            def mark_guard_acquired(point: str) -> None:
+                if point == "after_guard_install":
+                    acquired.set()
+                    if not attempts_done.wait(timeout=45):
+                        raise RuntimeError("Concurrent-start regression non terminata")
+                original_fault(point)
+
+            activation._fault = mark_guard_acquired
+            spammer.start()
+            try:
+                activation.activate(v2_bundle, state)
+            finally:
+                activation._fault = original_fault
+                acquired.set()
+                spammer.join(timeout=45)
+            if spammer.is_alive() or successful_after_acquisition:
+                raise RuntimeError("systemctl start riuscito dopo acquisizione del migration guard")
+            activation.complete(state, archives[1])
+            archives[1].unlink()
+            _install_legacy(legacy_bundle, legacy_manifest)
+
             # Recheck host trust both between preflight/switch and after switch/validation.
             for mutation_point, structural in (
                 ("after_guard_install", Path("/etc/nginx/sites-enabled")),
@@ -610,7 +773,7 @@ def run() -> None:
                 "after_guard_remove",
                 "after_nginx_start",
             )
-            activation_script = ROOT / "scripts/pilot_ubuntu_activation.py"
+            assert installed_launcher is not None
             for crash_point in crash_points:
                 environment = os.environ.copy()
                 environment.update(
@@ -621,15 +784,14 @@ def run() -> None:
                 )
                 crashed = subprocess.run(
                     [
-                        sys.executable,
-                        str(activation_script),
+                        str(installed_launcher),
                         "activate",
                         "--bundle",
                         str(v2_bundle),
                         "--state-file",
                         str(state),
                     ],
-                    cwd=ROOT,
+                    cwd=temporary,
                     env=environment,
                     check=False,
                     capture_output=True,
@@ -646,6 +808,7 @@ def run() -> None:
                     or activation.NGINX_MIGRATION_GUARD.is_symlink()
                 )
                 if guarded:
+                    _run(["systemctl", "daemon-reload"])
                     activation._verify_migration_guard()
                     service_state, service_code = activation._nginx_service_state()
                     if (service_state, service_code) != ("inactive", 3):
@@ -763,7 +926,11 @@ def run() -> None:
             if not all(path.is_file() for path in rotated):
                 raise RuntimeError("Rotazione pilot non ha prodotto i file .1 attesi")
             rotated_before = rotated[0].read_bytes()
+            process_rotated_before = rotated[1].read_bytes()
+            if not process_rotated_before:
+                raise RuntimeError("Diagnostica process-level pre-rotation assente")
             current_size_before = ACCESS_LOG.stat().st_size
+            process_size_before = PROCESS_LOG.stat().st_size
             post_rotate_path = "/_thebitlab-integration/post-rotation-write"
             if _send("127.0.0.1", 443, post_rotate_path, host=ORIGIN_HOST, use_tls=True) != 204:
                 raise RuntimeError("nginx non operativo dopo logrotate + systemd USR1")
@@ -774,7 +941,15 @@ def run() -> None:
             if ACCESS_LOG.stat().st_size <= current_size_before:
                 raise RuntimeError("Evento post-rotate assente dal nuovo access log")
             if rotated[0].read_bytes() != rotated_before:
-                raise RuntimeError("nginx ha continuato a scrivere nel file ruotato")
+                raise RuntimeError("nginx ha continuato a scrivere nel file access ruotato")
+            _run(["systemctl", "reload", "nginx.service"])
+            deadline = time.monotonic() + 5
+            while PROCESS_LOG.stat().st_size <= process_size_before and time.monotonic() < deadline:
+                time.sleep(0.05)
+            if PROCESS_LOG.stat().st_size <= process_size_before:
+                raise RuntimeError("Lifecycle event post-reopen assente dal nuovo process log")
+            if rotated[1].read_bytes() != process_rotated_before:
+                raise RuntimeError("nginx ha continuato a scrivere nel process log ruotato")
             _assert_markers_absent((*all_logs, *rotated), markers)
 
             # No previous v2: production rollback retains v2 and never restores distro/v1.
@@ -837,6 +1012,7 @@ def run() -> None:
     finally:
         if backend is not None and backend_thread is not None:
             _stop_backend(backend, backend_thread)
+        Path("/run/thebitlab-ephemeral-activation-test").unlink(missing_ok=True)
         try:
             activation._stop_nginx_service()
         except activation.ActivationError:
@@ -878,6 +1054,22 @@ def run() -> None:
                 directory.rmdir()
             except OSError:
                 pass
+        if installed_pin is not None:
+            installed_pin.unlink(missing_ok=True)
+        if installed_launcher is not None:
+            installed_launcher.unlink(missing_ok=True)
+        if installed_toolchain is not None and installed_toolchain.exists():
+            shutil.rmtree(installed_toolchain)
+        for directory in (
+            toolchain_launcher.TRUST_PIN.parent,
+            toolchain_launcher.TRUST_PIN.parent.parent,
+            toolchain_launcher.TOOLS_ROOT,
+            toolchain_launcher.TOOLS_ROOT.parent,
+        ):
+            try:
+                directory.rmdir()
+            except OSError:
+                pass
         if activation.DISTRO_DEFAULT.is_symlink():
             _run(["nginx", "-t", "-c", "/etc/nginx/nginx.conf"])
 
@@ -900,8 +1092,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(
         "PASS: integrazione Ubuntu 24.04 effettiva "
-        "(systemd guard/crash recovery, host trust, nginx -t/-T, runtime redaction, "
-        "v2-only rollback, systemd reopen/post-rotate write)"
+        "(manager mask/concurrent-start/crash recovery, trusted toolchain isolation, "
+        "host trust, nginx -t/-T, runtime redaction, v2-only rollback, "
+        "access+process post-rotation writes)"
     )
     return 0
 

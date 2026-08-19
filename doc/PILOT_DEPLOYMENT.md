@@ -15,7 +15,9 @@ Questo documento è il contratto canonico per preparare una nuova candidate TheB
 | `scripts/pilot_service_launcher.py` | import fail-closed dei secret e avvio con topologia autorevole |
 | `scripts/pilot_access_log_scanner.py` | scanner metadata-only che non ristampa il contenuto sensibile |
 | `scripts/pilot_deployment_smoke.py` | smoke non privilegiato su copie temporanee e dati sintetici |
-| `scripts/pilot_ubuntu_activation.py` | preflight, attivazione e rollback transazionali della topologia Ubuntu dedicata |
+| `scripts/build_pilot_toolchain.py` | crea soltanto uno staging non privilegiato della toolchain; non installa e non approva |
+| `scripts/pilot_toolchain_launcher.py` | sorgente del launcher production installato separatamente in `/usr/sbin` |
+| `scripts/pilot_ubuntu_activation.py` | activator incluso nella trusted toolchain, non entrypoint production dal checkout |
 | `scripts/pilot_ubuntu_integration.py` | integrazione distruttiva soltanto su Ubuntu 24.04 effimero con configurazione distro effettiva |
 | `tests/test_pilot_deployment.py` | casi positivi e negativi dei contratti |
 
@@ -166,14 +168,28 @@ La baseline supporta **nginx dedicato al pilot**, non nginx condiviso. Il prefli
 
 Il trust boundary host comprende almeno `/etc`, l'intero layout strutturale nginx (`nginx.conf`, `conf.d`, `sites-enabled`, `sites-available`, `modules-enabled`), configurazione globale/pilot logrotate, `/etc/thebitlab`, `current`, `deployments`, target artifact e unit package. Directory e file devono essere root-owned, del tipo atteso e non group/world-writable. Sono ammessi soltanto i symlink dichiarati (`current`, link pilot, default distro e moduli package); target e ancestry vengono verificati. Il controllo avviene al preflight, dopo il guard e prima delle mutazioni, dopo lo switch, durante la validazione e subito prima dell'unmask/rollback.
 
-Prima dell'attivazione verificare SHA, digest del lock, riferimenti esterni, environment, firewall, root canonica con `pilot_data_root.py validate` e smoke. Il bundle è accettato soltanto sotto `/etc/thebitlab/deployments/`: tutti gli ancestor e file devono essere root-owned e non scrivibili da group/other; symlink, artifact non regolari, hardlink, file extra, lock/manifest incoerenti o output non riproducibile dal **renderer trusted corrente** sono rifiutati. La stessa riproducibilità byte-for-byte, inclusi manifest normalizzato, inventario, lock e digest, è obbligatoria per `previous_v2`: un lock auto-generato dal bundle non è root of trust. Copiare e rendere immutabile il bundle prima del preflight, quindi:
+Prima dell'attivazione verificare SHA, digest del lock, riferimenti esterni, environment, firewall, root canonica con `pilot_data_root.py validate` e smoke. Il bundle è accettato soltanto sotto `/etc/thebitlab/deployments/`: tutti gli ancestor e file devono essere root-owned e non scrivibili da group/other; symlink, artifact non regolari, hardlink, file extra, lock/manifest incoerenti o output non riproducibile dal **renderer della trusted toolchain installata** sono rifiutati. La stessa riproducibilità byte-for-byte, inclusi manifest normalizzato, inventario, lock e digest, è obbligatoria per `previous_v2`: un lock auto-generato dal bundle non è root of trust.
+
+### Bootstrap/provisioning della trusted activation toolchain
+
+Production non esegue codice dal checkout. Un job non privilegiato può creare uno staging con `scripts/build_pilot_toolchain.py`; tale output **non certifica sé stesso** e non genera il trust pin. Un amministratore deve approvare release, inventario e digest tramite un canale esterno, quindi installare separatamente:
+
+- launcher revisionato: `/usr/sbin/thebitlab-pilot-activate`, `root:root`, non group/world-writable;
+- toolchain completa: `/usr/lib/thebitlab/pilot-tools/<toolchain-id>/`, con activator, validator, renderer, moduli Python locali, schemi e template;
+- pin di provisioning: `/etc/thebitlab/trust/pilot-toolchain.json`, `root:root`, non group/world-writable, con `toolchain_id`, release commit, digest del manifest e digest del launcher.
+
+Il pin è input di approval esterno: non deve essere derivato automaticamente dal toolchain durante l'activation runtime. Il launcher controlla ancestry, owner/mode, assenza di symlink e hardlink inattesi, inventario esatto e tutti i digest prima di eseguire operazioni host. Una modifica a toolchain, manifest, launcher o pin fallisce chiusa. Python viene avviato con `-I -B`, cwd `/`, environment ricostruito da allowlist, user site/PYTHONPATH/PYTHONHOME ignorati e toolchain verificata come unica search root locale. Le dipendenze Python di sistema restano parte del TCB OS root-owned; cwd e checkout non entrano in `sys.path`.
+
+Soltanto dopo questo provisioning distinto copiare il bundle root-owned e usare esclusivamente:
 
 ```bash
-sudo python scripts/pilot_ubuntu_activation.py preflight --bundle <bundle-assoluto>
-sudo python scripts/pilot_ubuntu_activation.py activate --bundle <bundle-assoluto>
+sudo /usr/sbin/thebitlab-pilot-activate preflight --bundle <bundle-assoluto>
+sudo /usr/sbin/thebitlab-pilot-activate activate --bundle <bundle-assoluto>
 ```
 
-L'attivatore classifica lo stato iniziale come default/empty, exact legacy v1 oppure previous v2. La sola eccezione migration accetta il fingerprint v1 byte-per-byte; legacy non è mai rollback target. Dopo il preflight arresta `nginx.service`, crea atomicamente e sincronizza `/etc/systemd/system/nginx.service -> /dev/null`, esegue `daemon-reload` e verifica `LoadState=masked`, `UnitFileState=masked` e servizio inattivo. **Soltanto dopo** scrive lo state v3 `root:root 0600` e può rimuovere default/v1 o commutare `current`. File state e symlink usano temp+`fsync`+replace e ogni directory contenente un rename/unlink viene `fsync`-ata; un errore di sync blocca l'operazione.
+L'esecuzione `sudo python scripts/pilot_ubuntu_activation.py ...` dal checkout è vietata e rifiutata. Worktree dirty o file come `scripts/jsonschema.py` non influenzano production perché il checkout non è una import root.
+
+L'attivatore classifica lo stato iniziale come default/empty, exact legacy v1 oppure previous v2. La sola eccezione migration accetta il fingerprint v1 byte-per-byte; legacy non è mai rollback target. Dopo il preflight arresta `nginx.service` e acquisisce il guard tramite `systemctl mask --now nginx.service`; non costruisce il mask come autorità autonoma. Il **linearization point** è il ritorno dell'operazione manager-mediated seguito con successo da `LoadState=masked`, `UnitFileState=masked`, identità/alias attesi, nginx inattiva e probe negativi `systemctl start nginx.service`/`systemctl start nginx`. **Soltanto dopo** questo punto scrive lo state v3 `root:root 0600` e può rimuovere default/v1 o commutare `current`. Nessuno stato considera valido `mask on disk + manager legacy-loaded`. File state e symlink applicativi usano temp+`fsync`+replace e ogni directory contenente un rename/unlink viene `fsync`-ata; un errore di sync blocca l'operazione.
 
 La state machine persistente ha queste semantiche di reboot:
 
@@ -191,14 +207,14 @@ La state machine persistente ha queste semantiche di reboot:
 
 Dopo switch l'attivatore riverifica renderer/lock, AST logging, host trust, `nginx -t/-T`, logrotate globale e unit systemd; scrive durable `validated`, ripete l'intero gate, poi rimuove il guard e avvia nginx. Availability loss è accettabile; un ritorno a logging query-bearing non lo è. Candidate mancante/mutata, previous non riproducibile, host trust fallita o validazione fallita lasciano il servizio guarded/offline.
 
-Una transition incompleta si riprende esplicitamente con `sudo python scripts/pilot_ubuntu_activation.py recover [--bundle <bundle>]`. Guard orphan richiede il bundle trusted; `prepared`, `switched` e `validated` ripartono deterministicamente dallo state e dal filesystem reale. Se il guard manca in uno stato intermedio, recovery lo reinstalla prima di proseguire. Nessuna recovery rimuove il guard o avvia nginx prima di una nuova validazione v2; non esiste `--force`. Una seconda activation `active` identica valida topologia e service e non modifica byte/mtime dello state. Prima di un deploy distinto archiviare soltanto uno state finale con `complete --archive <nuovo-file-sibling>`.
+Una transition incompleta si riprende esplicitamente con `sudo /usr/sbin/thebitlab-pilot-activate recover [--bundle <bundle>]`. Guard orphan richiede il bundle trusted; prima di fidarsi del symlink recovery riacquisisce sempre il mask tramite systemd e ripete stato manager, inattività e start-negative proof. La stessa regola vale per `prepared`, `switched`, `validated` e stati rollback; systemd non interrogabile fallisce chiuso. Se il guard manca in uno stato intermedio, recovery lo reinstalla prima di proseguire. Nessuna recovery rimuove il guard o avvia nginx prima di una nuova validazione v2; non esiste `--force`. Una seconda activation `active` identica valida topologia e service e non modifica byte/mtime dello state. Prima di un deploy distinto archiviare soltanto uno state finale con `complete --archive <nuovo-file-sibling>`.
 
 ## Rollback bounded
 
 Target operativo: decisione e rollback tecnico entro **15 minuti**, con un solo tentativo. Il rollback nginx è ammesso esclusivamente verso `previous_v2_bundle` registrato nello state e nuovamente verificato come trusted, riproducibile e conforme alla configurazione effettiva. Distro default, v1 e qualunque formato query-bearing non sono target di rollback automatico.
 
 1. Dichiarare rollback, bloccare deploy e fermare l'app se può scrivere dati incoerenti.
-2. Eseguire una sola volta `sudo python scripts/pilot_ubuntu_activation.py rollback`.
+2. Eseguire una sola volta `sudo /usr/sbin/thebitlab-pilot-activate rollback`.
 3. Previous-v2 viene riletta dal path reale e deve superare deployment path/metadata, renderer corrente byte-for-byte, inventario/lock/digest, AST logging e host trust. Lo state non rende autorevole un path arbitrario.
 4. L'attivatore installa lo stesso guard persistente, scrive gli stati `rollback_*`, commuta i link e ripete `nginx -t/-T`, logrotate globale, systemd e host trust prima di unmask/start. Un crash usa il medesimo comando `recover`.
 5. Se previous manca o non è riproducibile, non avviene alcuno switch. Se il failure avviene dopo l'ingresso guarded, il servizio resta offline: non si tenta una catena automatica verso candidate, v1 o default.
