@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import hashlib
 import ipaddress
 import json
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -52,6 +54,11 @@ LOGROTATE_LINK = Path("/etc/logrotate.d/thebitlab")
 SYSTEMD_LINK = Path("/etc/systemd/system/thebitlab.service")
 NGINX_MIGRATION_GUARD = Path("/etc/systemd/system/nginx.service")
 NGINX_PACKAGE_UNIT = Path("/usr/lib/systemd/system/nginx.service")
+NGINX_BINARY = Path("/usr/sbin/nginx")
+PROC_ROOT = Path("/proc")
+NGINX_CONTROL_GROUP = "/system.slice/nginx.service"
+NGINX_WANTS_LINK = Path("/etc/systemd/system/multi-user.target.wants/nginx.service")
+CANONICAL_NGINX_PORTS = frozenset({80, 443})
 INTEGRATION_LINKS = {
     PROCESS_LINK: "/etc/thebitlab/current/nginx/thebitlab-process-error-log.conf",
     FORMAT_LINK: "/etc/thebitlab/current/nginx/thebitlab-log-format.conf",
@@ -176,6 +183,18 @@ class Preflight:
     source_kind: str
     previous_v2: BundleInfo | None
     unsafe_provenance: Mapping[str, Any]
+
+
+@dataclass(frozen=True)
+class EffectiveNginxUnit:
+    main_pid: int
+    control_group: str
+
+
+@dataclass(frozen=True)
+class NginxProcess:
+    pid: int
+    control_groups: frozenset[str]
 
 
 def _run(command: list[str]) -> str:
@@ -927,6 +946,7 @@ def verify_host_configuration_trust(
         Path("/etc/nginx/mime.types"),
         Path("/etc/logrotate.conf"),
         NGINX_PACKAGE_UNIT,
+        NGINX_BINARY,
     ):
         _assert_trusted_metadata(config, directory=False, require_root_owner=True)
 
@@ -937,6 +957,8 @@ def verify_host_configuration_trust(
         raise ActivationError("Migration guard orphan presente: recovery esplicita richiesta")
     if guard_present:
         _verify_migration_guard()
+    else:
+        _attest_effective_nginx_unit(expect_running=None)
 
     if DISTRO_AVAILABLE.exists() or DISTRO_AVAILABLE.is_symlink():
         _assert_trusted_metadata(DISTRO_AVAILABLE, directory=False, require_root_owner=True)
@@ -1114,6 +1136,10 @@ def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) 
     source_kind, previous_v2 = _classify_existing_topology(effective)
     if previous_v2 is not None and previous_v2.path == candidate.path:
         raise ActivationError("Candidate già attiva senza activation state autorevole")
+    if guard_required is True:
+        _verify_migration_guard()
+    else:
+        _attest_preflight_nginx_runtime()
     provenance = {
         "current": _symlink_state(CURRENT_LINK),
         "distro_default": _symlink_state(DISTRO_DEFAULT),
@@ -1335,17 +1361,357 @@ def _stop_nginx_service() -> None:
     _require_nginx_not_running()
 
 
-def _systemd_property(name: str, unit: str = "nginx.service") -> str:
+def _systemd_property(
+    name: str, unit: str = "nginx.service", *, allow_empty: bool = False
+) -> str:
     code, value = _systemctl_result(["show", f"--property={name}", "--value", unit])
-    if code != 0 or not value or "\n" in value:
+    if code != 0 or "\n" in value or (not allow_empty and not value):
         raise ActivationError(f"Proprietà systemd non verificabile: {unit} {name}")
     return value
 
 
+def _canonical_path(value: str, *, label: str) -> Path:
+    try:
+        path = Path(value)
+        if not path.is_absolute():
+            raise OSError("path non assoluto")
+        return path.resolve(strict=True)
+    except OSError as exc:
+        raise ActivationError(f"Path systemd {label} non canonico: {value}") from exc
+
+
+def _parse_systemd_exec(value: str, *, name: str) -> tuple[tuple[Path, tuple[str, ...], bool], ...]:
+    """Parse systemd's normalized Exec* records and preserve their security semantics."""
+
+    record = re.compile(
+        r"\{\s*path=(?P<path>\S+)\s*;\s*argv\[\]=(?P<argv>.*?)"
+        r"\s*;\s*ignore_errors=(?P<ignore>yes|no)\s*;.*?\}"
+    )
+    parsed: list[tuple[Path, tuple[str, ...], bool]] = []
+    cursor = 0
+    for match in record.finditer(value):
+        if value[cursor : match.start()].strip():
+            raise ActivationError(f"{name} systemd non interpretabile")
+        try:
+            arguments = tuple(shlex.split(match.group("argv"), posix=True))
+        except ValueError as exc:
+            raise ActivationError(f"{name} systemd non interpretabile") from exc
+        if not arguments:
+            raise ActivationError(f"{name} systemd senza argv")
+        executable = _canonical_path(match.group("path"), label=name)
+        argv0 = _canonical_path(arguments[0], label=f"{name} argv[0]")
+        if executable != argv0:
+            raise ActivationError(f"{name} systemd con executable/argv[0] divergenti")
+        parsed.append((executable, arguments[1:], match.group("ignore") == "yes"))
+        cursor = match.end()
+    if not parsed or value[cursor:].strip():
+        raise ActivationError(f"{name} systemd non interpretabile")
+    return tuple(parsed)
+
+
+def _expected_exec(
+    executable: str, arguments: str, *, ignore_errors: bool = False
+) -> tuple[Path, tuple[str, ...], bool]:
+    return (
+        _canonical_path(executable, label="contratto Exec"),
+        tuple(shlex.split(arguments, posix=True)),
+        ignore_errors,
+    )
+
+
+def _attest_effective_nginx_unit(
+    *, expect_running: bool | None, unit_file_state: str = "enabled"
+) -> EffectiveNginxUnit:
+    """Attest the effective Ubuntu 24.04 package unit loaded by systemd."""
+
+    if unit_file_state not in {"enabled", "disabled"}:
+        raise ActivationError("UnitFileState nginx atteso non supportato")
+    scalar_contract = {
+        "Id": "nginx.service",
+        "LoadState": "loaded",
+        "UnitFileState": unit_file_state,
+        "Type": "forking",
+        "PIDFile": "/run/nginx.pid",
+        "User": "",
+        "Group": "",
+        "SourcePath": "",
+        "DropInPaths": "",
+        "KillMode": "mixed",
+    }
+    for name, expected in scalar_contract.items():
+        actual = _systemd_property(name, allow_empty=expected == "")
+        if actual != expected:
+            raise ActivationError(
+                f"Contratto systemd nginx divergente: {name}={actual!r}, atteso {expected!r}"
+            )
+    names = set(_systemd_property("Names").split())
+    if names != {"nginx.service"}:
+        raise ActivationError(f"Alias systemd nginx inatteso: {sorted(names)}")
+    fragment = _canonical_path(_systemd_property("FragmentPath"), label="FragmentPath")
+    try:
+        expected_fragment = NGINX_PACKAGE_UNIT.resolve(strict=True)
+    except OSError as exc:
+        raise ActivationError("Unit package nginx non risolvibile") from exc
+    if fragment != expected_fragment:
+        raise ActivationError(
+            f"FragmentPath nginx non package: {fragment} (atteso {expected_fragment})"
+        )
+
+    expected_commands = {
+        "ExecStartPre": (
+            _expected_exec(
+                "/usr/sbin/nginx", "-t -q -g daemon 'on;' master_process 'on;'"
+            ),
+        ),
+        "ExecStart": (
+            _expected_exec("/usr/sbin/nginx", "-g daemon 'on;' master_process 'on;'"),
+        ),
+        "ExecReload": (
+            _expected_exec(
+                "/usr/sbin/nginx", "-g daemon 'on;' master_process 'on;' -s reload"
+            ),
+        ),
+        "ExecStop": (
+            _expected_exec(
+                "/sbin/start-stop-daemon",
+                "--quiet --stop --retry QUIT/5 --pidfile /run/nginx.pid",
+                ignore_errors=True,
+            ),
+        ),
+    }
+    for name, expected in expected_commands.items():
+        actual = _parse_systemd_exec(_systemd_property(name), name=name)
+        if actual != expected:
+            raise ActivationError(f"Contratto systemd nginx divergente: {name}")
+
+    raw_main_pid = _systemd_property("MainPID")
+    control_group = _systemd_property("ControlGroup", allow_empty=True)
+    if not raw_main_pid.isdecimal():
+        raise ActivationError("MainPID nginx.service non canonico")
+    main_pid = int(raw_main_pid)
+    if expect_running is True:
+        if main_pid <= 0 or control_group != NGINX_CONTROL_GROUP:
+            raise ActivationError("MainPID/ControlGroup nginx.service non attestati dopo start")
+    elif expect_running is False:
+        if main_pid != 0 or control_group:
+            raise ActivationError("nginx.service conserva MainPID/ControlGroup inattesi")
+    elif (main_pid == 0) != (control_group == ""):
+        raise ActivationError("MainPID/ControlGroup nginx.service incoerenti")
+    return EffectiveNginxUnit(main_pid, control_group)
+
+
+def _read_process_control_groups(pid: int) -> frozenset[str]:
+    try:
+        lines = (PROC_ROOT / str(pid) / "cgroup").read_text(encoding="ascii").splitlines()
+    except OSError as exc:
+        if exc.errno in {errno.ENOENT, errno.ESRCH}:
+            return frozenset()
+        raise ActivationError(f"Cgroup processo {pid} non verificabile") from exc
+    groups: set[str] = set()
+    for line in lines:
+        fields = line.split(":", 2)
+        if len(fields) != 3 or not fields[2].startswith("/"):
+            raise ActivationError(f"Cgroup processo {pid} non canonico")
+        groups.add(fields[2])
+    if not groups:
+        raise ActivationError(f"Cgroup processo {pid} assente")
+    return frozenset(groups)
+
+
+def _process_in_control_group(process: NginxProcess, control_group: str) -> bool:
+    prefix = control_group.rstrip("/") + "/"
+    return any(group == control_group or group.startswith(prefix) for group in process.control_groups)
+
+
+def _nginx_processes() -> tuple[NginxProcess, ...]:
+    """Find package nginx processes by /proc executable inode, never PID file/name/argv."""
+
+    try:
+        binary = NGINX_BINARY.stat()
+        canonical_binary = NGINX_BINARY.resolve(strict=True)
+        entries = tuple(PROC_ROOT.iterdir())
+    except OSError as exc:
+        raise ActivationError("Enumerazione processi nginx non disponibile") from exc
+    identity = (binary.st_dev, binary.st_ino)
+    canonical_spellings = {str(NGINX_BINARY), str(canonical_binary)}
+    found: list[NginxProcess] = []
+    for entry in entries:
+        if not entry.name.isdecimal():
+            continue
+        pid = int(entry.name)
+        try:
+            executable_link = entry / "exe"
+            executable = executable_link.stat()
+            executable_name = os.readlink(executable_link)
+        except OSError as exc:
+            if exc.errno in {errno.ENOENT, errno.ESRCH}:
+                continue
+            raise ActivationError(f"Executable processo {pid} non verificabile") from exc
+        lexical_name = executable_name.removesuffix(" (deleted)")
+        if (
+            (executable.st_dev, executable.st_ino) != identity
+            and lexical_name not in canonical_spellings
+        ):
+            continue
+        groups = _read_process_control_groups(pid)
+        if groups:
+            found.append(NginxProcess(pid, groups))
+    return tuple(sorted(found, key=lambda process: process.pid))
+
+
+def _listener_inodes() -> dict[int, set[str]]:
+    listeners = {port: set() for port in CANONICAL_NGINX_PORTS}
+    for name in ("tcp", "tcp6"):
+        try:
+            lines = (PROC_ROOT / "net" / name).read_text(encoding="ascii").splitlines()[1:]
+        except OSError as exc:
+            raise ActivationError(f"Socket table {name} non verificabile") from exc
+        for line in lines:
+            fields = line.split()
+            if len(fields) < 10:
+                raise ActivationError(f"Socket table {name} non canonica")
+            try:
+                port = int(fields[1].rsplit(":", 1)[1], 16)
+            except (IndexError, ValueError) as exc:
+                raise ActivationError(f"Socket table {name} non canonica") from exc
+            if fields[3] == "0A" and port in listeners:
+                inode = fields[9]
+                if not inode.isdecimal():
+                    raise ActivationError(f"Socket inode {name} non canonico")
+                listeners[port].add(inode)
+    return listeners
+
+
+def _canonical_listener_owners() -> dict[int, frozenset[int]]:
+    """Attribute canonical listeners through proc socket inodes; fail on unattributed sockets."""
+
+    for _attempt in range(2):
+        listeners = _listener_inodes()
+        targets = set().union(*listeners.values())
+        if not targets:
+            return {port: frozenset() for port in listeners}
+        owners = {inode: set() for inode in targets}
+        try:
+            processes = tuple(PROC_ROOT.iterdir())
+        except OSError as exc:
+            raise ActivationError("Enumerazione owner socket non disponibile") from exc
+        for process in processes:
+            if not process.name.isdecimal():
+                continue
+            try:
+                descriptors = tuple((process / "fd").iterdir())
+            except OSError as exc:
+                if exc.errno in {errno.ENOENT, errno.ESRCH}:
+                    continue
+                raise ActivationError(f"FD processo {process.name} non verificabili") from exc
+            for descriptor in descriptors:
+                try:
+                    target = os.readlink(descriptor)
+                except OSError as exc:
+                    if exc.errno in {errno.ENOENT, errno.ESRCH}:
+                        continue
+                    raise ActivationError(f"FD processo {process.name} non verificabile") from exc
+                if target.startswith("socket:[") and target.endswith("]"):
+                    inode = target[8:-1]
+                    if inode in owners:
+                        owners[inode].add(int(process.name))
+        missing = {inode for inode, pids in owners.items() if not pids}
+        if not missing:
+            return {
+                port: frozenset(pid for inode in inodes for pid in owners[inode])
+                for port, inodes in listeners.items()
+            }
+        current = set().union(*_listener_inodes().values())
+        if not (missing & current):
+            continue
+        if _attempt == 1:
+            raise ActivationError("Listener canonico senza owner process-level attestabile")
+    raise ActivationError("Listener canonici instabili durante attestazione")
+
+
+def _assert_zero_nginx_processes() -> None:
+    processes = _nginx_processes()
+    if processes:
+        raise ActivationError(
+            "Processo nginx unmanaged presente durante guard: "
+            + ",".join(str(process.pid) for process in processes)
+        )
+
+
+def _assert_no_canonical_listeners() -> None:
+    owners = _canonical_listener_owners()
+    occupied = {port: sorted(pids) for port, pids in owners.items() if pids}
+    if occupied:
+        raise ActivationError(f"Listener 80/443 estraneo presente: {occupied}")
+
+
+def _attest_nginx_service_runtime(
+    unit: EffectiveNginxUnit | None = None,
+) -> None:
+    if _nginx_service_state() != ("active", 0):
+        raise ActivationError("nginx.service non attiva durante runtime attestation")
+    effective = unit or _attest_effective_nginx_unit(expect_running=True)
+    processes = _nginx_processes()
+    if not processes or effective.main_pid not in {process.pid for process in processes}:
+        raise ActivationError("MainPID nginx.service non identifica il master nginx package")
+    if any(
+        not _process_in_control_group(process, effective.control_group)
+        for process in processes
+    ):
+        raise ActivationError("Processo nginx fuori dal ControlGroup nginx.service")
+    listeners = _canonical_listener_owners()
+    if set(listeners) != CANONICAL_NGINX_PORTS or any(not pids for pids in listeners.values()):
+        raise ActivationError("Listener nginx canonici 80/443 incompleti")
+    for pids in listeners.values():
+        for pid in pids:
+            process = NginxProcess(pid, _read_process_control_groups(pid))
+            if not process.control_groups or not _process_in_control_group(
+                process, effective.control_group
+            ):
+                raise ActivationError("Listener canonico fuori dal ControlGroup nginx.service")
+
+
+def _attest_preflight_nginx_runtime() -> None:
+    state, code = _nginx_service_state()
+    if (state, code) == ("active", 0):
+        _attest_nginx_service_runtime(
+            _attest_effective_nginx_unit(expect_running=True)
+        )
+        return
+    if code == 3 and state in {"inactive", "failed"}:
+        _attest_effective_nginx_unit(expect_running=False)
+        _assert_zero_nginx_processes()
+        _assert_no_canonical_listeners()
+        return
+    raise ActivationError(f"nginx.service in stato preflight ambiguo: {state}")
+
+
+def _disable_nginx_autostart_link() -> None:
+    """Remove only the canonical package wants link while a manager mask is effective."""
+
+    state = _symlink_state(NGINX_WANTS_LINK)
+    if state["present"]:
+        target = state["target"]
+        if not isinstance(target, str) or not target.startswith("/"):
+            raise ActivationError("Enablement nginx.service non canonico")
+        _assert_root_symlink(NGINX_WANTS_LINK, target)
+        try:
+            if Path(target).resolve(strict=True) != NGINX_PACKAGE_UNIT.resolve(strict=True):
+                raise ActivationError("Enablement nginx.service fuori dal package unit")
+        except OSError as exc:
+            raise ActivationError("Enablement nginx.service non risolvibile") from exc
+        NGINX_WANTS_LINK.unlink()
+        _fsync_directory(NGINX_WANTS_LINK.parent)
+    elif NGINX_WANTS_LINK.exists():
+        raise ActivationError("Enablement nginx.service non-symlink")
+
+
 def _verify_migration_guard() -> None:
-    """Prove the filesystem and manager guard, inactivity, aliases, and negative start."""
+    """Prove the effective manager mask, zero nginx, and negative starts."""
 
     _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
+    if _systemd_property("Id") != "nginx.service":
+        raise ActivationError("Id systemd nginx inatteso durante guard")
     if _systemd_property("LoadState") != "masked":
         raise ActivationError("nginx.service non risulta masked al service manager")
     if _systemd_property("UnitFileState") != "masked":
@@ -1360,10 +1726,12 @@ def _verify_migration_guard() -> None:
             _stop_nginx_service()
             raise ActivationError(f"Migration guard bypassabile tramite start {unit_name}")
         _require_nginx_not_running()
+    _assert_zero_nginx_processes()
+    _assert_no_canonical_listeners()
 
 
 def _install_migration_guard() -> None:
-    """Acquire the guard through systemd; return only after its negative-start proof."""
+    """Acquire the guard through systemd; return only after its process-level proof."""
 
     existing = _symlink_state(NGINX_MIGRATION_GUARD)
     if existing["present"]:
@@ -1372,66 +1740,72 @@ def _install_migration_guard() -> None:
         code, _ = _systemctl_result(["daemon-reload"])
         if code != 0:
             raise ActivationError("systemd non ha ricaricato il guard persistente")
+    else:
+        # Disable before masking, while systemd can still read the package [Install] section.
+        code, _ = _systemctl_result(["disable", "nginx.service"])
+        if code != 0:
+            raise ActivationError("Disabilitazione preventiva nginx.service fallita")
+        code, unit_state = _systemctl_result(["is-enabled", "nginx.service"])
+        if code == 0 or unit_state != "disabled":
+            raise ActivationError("nginx.service non risulta disabled prima del guard")
+        if NGINX_WANTS_LINK.parent.is_dir() and not NGINX_WANTS_LINK.parent.is_symlink():
+            _fsync_directory(NGINX_WANTS_LINK.parent)
+        _fault("after_pre_guard_disable")
     code, _ = _systemctl_result(["mask", "--now", "nginx.service"])
     if code != 0:
         raise ActivationError("Mask manager-mediated nginx.service fallita")
     _fsync_directory(NGINX_MIGRATION_GUARD.parent)
     _verify_migration_guard()
-    if _nginx_may_be_running():
-        raise ActivationError("Processo nginx fuori dalla service identity systemd")
 
 
 def _remove_migration_guard() -> None:
+    # Recovery of a legacy guard may still have the canonical wants link underneath the mask.
+    _disable_nginx_autostart_link()
+    _fault("after_nginx_disable")
+
+    # Final guarded linearization point: no process/listener may survive immediately pre-unmask.
     _verify_migration_guard()
     code, _ = _systemctl_result(["unmask", "nginx.service"])
     if code != 0:
         raise ActivationError("Unmask manager-mediated nginx.service fallita")
     _fsync_directory(NGINX_MIGRATION_GUARD.parent)
+    _fault("after_guard_unmask")
     code, _ = _systemctl_result(["daemon-reload"])
     if code != 0:
         raise ActivationError("systemd daemon-reload fallito durante rimozione guard")
-    code, load_state = _systemctl_result(
-        ["show", "--property=LoadState", "--value", "nginx.service"]
-    )
-    if code != 0 or load_state != "loaded":
-        raise ActivationError("nginx.service non caricabile dopo rimozione guard")
-    code, _ = _systemctl_result(["enable", "nginx.service"])
-    if code != 0:
-        raise ActivationError("Riabilitazione persistente nginx.service fallita")
-    code, unit_state = _systemctl_result(["is-enabled", "nginx.service"])
-    if code != 0 or unit_state != "enabled":
-        raise ActivationError("nginx.service non risulta enabled dopo il guard")
-    wants = Path("/etc/systemd/system/multi-user.target.wants")
-    if wants.is_dir() and not wants.is_symlink():
-        _fsync_directory(wants)
+    _attest_effective_nginx_unit(expect_running=False, unit_file_state="disabled")
+    _require_nginx_not_running()
+    _assert_zero_nginx_processes()
+    _assert_no_canonical_listeners()
+    _fault("after_unit_reload_attestation")
 
 
 def _start_nginx_service() -> None:
+    # Start while disabled: no crash/reboot can autostart before runtime attestation.
+    _attest_effective_nginx_unit(expect_running=False, unit_file_state="disabled")
+    _require_nginx_not_running()
+    _assert_zero_nginx_processes()
+    _assert_no_canonical_listeners()
     code, _ = _systemctl_result(["start", "nginx.service"])
     if code != 0:
         raise ActivationError("Avvio nginx.service fallito")
-    state, status = _nginx_service_state()
-    if (state, status) != ("active", 0):
-        raise ActivationError(f"nginx.service non attiva dopo start: {state}")
+    disabled_unit = _attest_effective_nginx_unit(
+        expect_running=True, unit_file_state="disabled"
+    )
+    _attest_nginx_service_runtime(disabled_unit)
+    _fault("after_nginx_runtime_attestation")
 
-
-def _nginx_may_be_running() -> bool:
-    pid_path = Path("/run/nginx.pid")
-    if not pid_path.exists() and not pid_path.is_symlink():
-        return False
-    try:
-        metadata = pid_path.lstat()
-        raw = pid_path.read_text(encoding="ascii").strip()
-    except OSError as exc:
-        raise ActivationError("PID nginx non verificabile") from exc
-    if pid_path.is_symlink() or not stat.S_ISREG(metadata.st_mode):
-        raise ActivationError("PID nginx non canonico")
-    # nginx -t on Ubuntu may leave an empty regular pid file; it denotes no process.
-    if not raw:
-        return False
-    if not raw.isdecimal():
-        raise ActivationError("PID nginx non canonico")
-    return Path(f"/proc/{raw}").exists()
+    code, _ = _systemctl_result(["enable", "nginx.service"])
+    if code != 0:
+        raise ActivationError("Riabilitazione persistente nginx.service fallita")
+    if NGINX_WANTS_LINK.parent.is_dir() and not NGINX_WANTS_LINK.parent.is_symlink():
+        _fsync_directory(NGINX_WANTS_LINK.parent)
+    _fault("after_nginx_enable")
+    code, unit_state = _systemctl_result(["is-enabled", "nginx.service"])
+    if code != 0 or unit_state != "enabled":
+        raise ActivationError("nginx.service non risulta enabled dopo start attestato")
+    enabled_unit = _attest_effective_nginx_unit(expect_running=True)
+    _attest_nginx_service_runtime(enabled_unit)
 
 
 def _apply_bundle_links(bundle: Path) -> None:
@@ -1562,6 +1936,8 @@ def _finish_transition(
         _install_migration_guard()
         raise
     _fault("after_nginx_start")
+    # Catch a foreign nginx introduced after systemctl start but before durable active state.
+    _attest_nginx_service_runtime()
     _write_status(state_path, state, final)
 
 
@@ -1582,9 +1958,7 @@ def _idempotent_activation(bundle: Path, state_path: Path) -> bool:
     for path, target in INTEGRATION_LINKS.items():
         _check_managed_link(path, target, allow_absent=False)
     _validate_activated(candidate, guard_required=False)
-    service_state, code = _nginx_service_state()
-    if (service_state, code) != ("active", 0):
-        raise ActivationError("Activation state active ma nginx.service non è attiva")
+    _attest_nginx_service_runtime()
     return True
 
 
@@ -1595,6 +1969,7 @@ def activate(bundle: Path, state_path: Path = STATE_FILE) -> None:
     if _symlink_state(NGINX_MIGRATION_GUARD)["present"]:
         raise ActivationError("Migration guard orphan: usare recover; rimozione automatica vietata")
     preflight = verify_host_preflight(bundle, guard_required=False)
+    _fault("after_preflight")
     _install_migration_guard()
     _fault("after_guard_install")
     verify_host_configuration_trust(preflight.candidate, guard_required=True)
@@ -1631,6 +2006,7 @@ def recover(bundle: Path | None = None, state_path: Path = STATE_FILE) -> None:
     if state["status"] == "rolled_back_v2":
         target = _state_bundle(state, previous=True)
         _validate_activated(target, guard_required=False)
+        _attest_nginx_service_runtime()
         return
 
     # Re-acquire through systemd for every intermediate state, including a cached manager
@@ -1657,6 +2033,7 @@ def rollback(state_path: Path = STATE_FILE) -> None:
     previous_raw = state["previous_v2_bundle"]
     if previous_raw is None:
         _validate_activated(candidate, guard_required=False)
+        _attest_nginx_service_runtime()
         raise ActivationError(
             "Nessuna previous v2 riproducibile: candidate mantenuta, rollback app separato richiesto"
         )

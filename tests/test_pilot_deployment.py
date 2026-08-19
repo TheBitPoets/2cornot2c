@@ -1096,6 +1096,216 @@ def test_guard_accepts_only_systemd_non_running_terminal_states(
         ubuntu_activation._require_nginx_not_running()
 
 
+def _effective_unit_properties(fragment: Path) -> dict[str, str]:
+    return {
+        "Id": "nginx.service",
+        "Names": "nginx.service",
+        "FragmentPath": str(fragment),
+        "SourcePath": "",
+        "DropInPaths": "",
+        "LoadState": "loaded",
+        "UnitFileState": "enabled",
+        "Type": "forking",
+        "PIDFile": "/run/nginx.pid",
+        "User": "",
+        "Group": "",
+        "KillMode": "mixed",
+        "MainPID": "0",
+        "ControlGroup": "",
+        "ExecStartPre": (
+            "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -t -q -g "
+            "daemon on; master_process on; ; ignore_errors=no ; start_time=[n/a] }"
+        ),
+        "ExecStart": (
+            "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; "
+            "master_process on; ; ignore_errors=no ; start_time=[n/a] }"
+        ),
+        "ExecReload": (
+            "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; "
+            "master_process on; -s reload ; ignore_errors=no ; start_time=[n/a] }"
+        ),
+        "ExecStop": (
+            "{ path=/sbin/start-stop-daemon ; argv[]=/sbin/start-stop-daemon --quiet "
+            "--stop --retry QUIT/5 --pidfile /run/nginx.pid ; ignore_errors=yes ; "
+            "start_time=[n/a] }"
+        ),
+    }
+
+
+def test_effective_systemd_unit_contract_accepts_only_pristine_package_definition(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fragment = tmp_path / "nginx.service"
+    fragment.write_text("package unit\n", encoding="utf-8")
+    properties = _effective_unit_properties(fragment)
+    monkeypatch.setattr(ubuntu_activation, "NGINX_PACKAGE_UNIT", fragment)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_canonical_path",
+        lambda value, **_kwargs: Path(value),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_property",
+        lambda name, **_kwargs: properties[name],
+    )
+    assert ubuntu_activation._attest_effective_nginx_unit(expect_running=False) == (
+        ubuntu_activation.EffectiveNginxUnit(0, "")
+    )
+
+    alternate_fragment = tmp_path / "generated-nginx.service"
+    alternate_fragment.write_text("generated unit\n", encoding="utf-8")
+    for name, malicious in (
+        ("FragmentPath", str(alternate_fragment)),
+        ("SourcePath", "/run/systemd/generator/nginx.service"),
+        ("DropInPaths", "/etc/systemd/system/nginx.service.d/override.conf"),
+        (
+            "ExecStart",
+            "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -c /tmp/leaky.conf ; "
+            "ignore_errors=no ; start_time=[n/a] }",
+        ),
+        (
+            "ExecReload",
+            "{ path=/bin/sh ; argv[]=/bin/sh -c helper ; ignore_errors=no ; "
+            "start_time=[n/a] }",
+        ),
+        ("Names", "nginx.service nginx-alias.service"),
+    ):
+        changed = dict(properties, **{name: malicious})
+        monkeypatch.setattr(
+            ubuntu_activation,
+            "_systemd_property",
+            lambda property_name, values=changed, **_kwargs: values[property_name],
+        )
+        with pytest.raises(ubuntu_activation.ActivationError):
+            ubuntu_activation._attest_effective_nginx_unit(expect_running=False)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink /proc POSIX richiesto")
+def test_nginx_process_discovery_uses_executable_identity_not_process_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    binary = tmp_path / "usr/sbin/nginx"
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b"package nginx")
+    other = tmp_path / "usr/bin/other"
+    other.parent.mkdir(parents=True)
+    other.write_bytes(b"not nginx")
+    proc = tmp_path / "proc"
+    for pid, executable in ((101, binary), (202, other)):
+        process = proc / str(pid)
+        process.mkdir(parents=True)
+        (process / "exe").symlink_to(executable)
+        (process / "cgroup").write_text(
+            "0::/system.slice/nginx.service\n", encoding="ascii"
+        )
+    # PID 202 represents a non-nginx process whose comm/argv[0] could say nginx.
+    monkeypatch.setattr(ubuntu_activation, "NGINX_BINARY", binary)
+    monkeypatch.setattr(ubuntu_activation, "PROC_ROOT", proc)
+    assert ubuntu_activation._nginx_processes() == (
+        ubuntu_activation.NginxProcess(
+            101, frozenset({"/system.slice/nginx.service"})
+        ),
+    )
+
+
+def test_prestart_listener_attestation_rejects_occupied_canonical_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_canonical_listener_owners",
+        lambda: {80: frozenset({99}), 443: frozenset()},
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="80/443"):
+        ubuntu_activation._assert_no_canonical_listeners()
+
+
+def test_runtime_attestation_rejects_foreign_nginx_and_listener_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    canonical = ubuntu_activation.NginxProcess(
+        10, frozenset({ubuntu_activation.NGINX_CONTROL_GROUP})
+    )
+    foreign = ubuntu_activation.NginxProcess(20, frozenset({"/user.slice/manual.scope"}))
+    unit = ubuntu_activation.EffectiveNginxUnit(10, ubuntu_activation.NGINX_CONTROL_GROUP)
+    monkeypatch.setattr(ubuntu_activation, "_nginx_service_state", lambda: ("active", 0))
+    monkeypatch.setattr(ubuntu_activation, "_nginx_processes", lambda: (canonical, foreign))
+    with pytest.raises(ubuntu_activation.ActivationError, match="fuori"):
+        ubuntu_activation._attest_nginx_service_runtime(unit)
+
+    monkeypatch.setattr(ubuntu_activation, "_nginx_processes", lambda: (canonical,))
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_canonical_listener_owners",
+        lambda: {80: frozenset({10}), 443: frozenset({20})},
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_read_process_control_groups",
+        lambda pid: canonical.control_groups if pid == 10 else foreign.control_groups,
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="Listener"):
+        ubuntu_activation._attest_nginx_service_runtime(unit)
+
+
+@pytest.mark.parametrize(
+    "status",
+    (
+        "prepared",
+        "switched",
+        "validated",
+        "rollback_prepared",
+        "rollback_switched",
+        "rollback_validated",
+    ),
+)
+def test_recovery_intermediate_states_fail_before_transition_on_foreign_nginx(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, status: str
+) -> None:
+    state_path = tmp_path / "state.json"
+    state = {
+        "status": status,
+        "candidate_bundle": "/candidate",
+        "candidate_lock_digest": "a" * 64,
+        "previous_v2_bundle": "/previous",
+        "previous_v2_lock_digest": "b" * 64,
+    }
+    monkeypatch.setattr(ubuntu_activation.os, "geteuid", lambda: 0, raising=False)
+    monkeypatch.setattr(ubuntu_activation, "_state_exists", lambda _path: True)
+    monkeypatch.setattr(ubuntu_activation, "_read_state", lambda _path: state)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_install_migration_guard",
+        lambda: (_ for _ in ()).throw(
+            ubuntu_activation.ActivationError("Processo nginx unmanaged")
+        ),
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="unmanaged"):
+        ubuntu_activation.recover(state_path=state_path)
+
+
+def test_orphan_guard_recovery_fails_closed_on_foreign_nginx(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(ubuntu_activation.os, "geteuid", lambda: 0, raising=False)
+    monkeypatch.setattr(ubuntu_activation, "_state_exists", lambda _path: False)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_symlink_state",
+        lambda path: {"present": path == ubuntu_activation.NGINX_MIGRATION_GUARD},
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_install_migration_guard",
+        lambda: (_ for _ in ()).throw(
+            ubuntu_activation.ActivationError("Processo nginx unmanaged")
+        ),
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="unmanaged"):
+        ubuntu_activation.recover(Path("/candidate"), state_path=tmp_path / "state.json")
+
+
 def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1104,26 +1314,86 @@ def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
     def systemctl(arguments: list[str]) -> tuple[int, str]:
         call = tuple(arguments)
         calls.append(call)
-        if arguments[0] in {"stop", "mask"}:
+        if arguments[0] in {"stop", "mask", "disable"}:
             return 0, ""
+        if arguments[0] == "is-enabled":
+            return 1, "disabled"
         if arguments[0] == "is-active":
             return 3, "inactive"
         if arguments[0] == "start":
             return 1, ""
         if arguments[0] == "show":
             property_name = arguments[1].split("=", 1)[1]
-            return 0, {"LoadState": "masked", "UnitFileState": "masked", "Names": "nginx.service"}[property_name]
+            return 0, {
+                "Id": "nginx.service",
+                "LoadState": "masked",
+                "UnitFileState": "masked",
+                "Names": "nginx.service",
+            }[property_name]
         raise AssertionError(arguments)
 
     monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
-    monkeypatch.setattr(ubuntu_activation, "_nginx_may_be_running", lambda: False)
+    monkeypatch.setattr(ubuntu_activation, "_assert_zero_nginx_processes", lambda: None)
+    monkeypatch.setattr(ubuntu_activation, "_assert_no_canonical_listeners", lambda: None)
     monkeypatch.setattr(ubuntu_activation, "_symlink_state", lambda _path: {"present": False})
     monkeypatch.setattr(ubuntu_activation, "_assert_root_symlink", lambda *_args: None)
     monkeypatch.setattr(ubuntu_activation, "_fsync_directory", lambda _path: None)
     ubuntu_activation._install_migration_guard()
     assert ("mask", "--now", "nginx.service") in calls
+    disable_index = calls.index(("disable", "nginx.service"))
     mask_index = calls.index(("mask", "--now", "nginx.service"))
+    assert disable_index < mask_index
     assert all(calls.index(start) > mask_index for start in (("start", "nginx.service"), ("start", "nginx")))
+
+
+def test_unmask_start_and_enable_preserve_crash_safe_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[object, ...]] = []
+
+    def systemctl(arguments: list[str]) -> tuple[int, str]:
+        calls.append(("systemctl", *arguments))
+        if arguments[0] == "is-enabled":
+            return 0, "enabled"
+        return 0, ""
+
+    def attest(
+        *, expect_running: bool | None, unit_file_state: str = "enabled"
+    ) -> ubuntu_activation.EffectiveNginxUnit:
+        calls.append(("attest", expect_running, unit_file_state))
+        return ubuntu_activation.EffectiveNginxUnit(
+            10 if expect_running else 0,
+            ubuntu_activation.NGINX_CONTROL_GROUP if expect_running else "",
+        )
+
+    monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
+    monkeypatch.setattr(ubuntu_activation, "_verify_migration_guard", lambda: None)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_disable_nginx_autostart_link",
+        lambda: calls.append(("autostart-disabled",)),
+    )
+    monkeypatch.setattr(ubuntu_activation, "_fsync_directory", lambda _path: None)
+    monkeypatch.setattr(ubuntu_activation, "_fault", lambda point: calls.append(("fault", point)))
+    monkeypatch.setattr(ubuntu_activation, "_attest_effective_nginx_unit", attest)
+    monkeypatch.setattr(ubuntu_activation, "_require_nginx_not_running", lambda: None)
+    monkeypatch.setattr(ubuntu_activation, "_assert_zero_nginx_processes", lambda: None)
+    monkeypatch.setattr(ubuntu_activation, "_assert_no_canonical_listeners", lambda: None)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_nginx_service_runtime",
+        lambda unit=None: calls.append(("runtime", unit)),
+    )
+    ubuntu_activation._remove_migration_guard()
+    ubuntu_activation._start_nginx_service()
+
+    disable = calls.index(("autostart-disabled",))
+    unmask = calls.index(("systemctl", "unmask", "nginx.service"))
+    start = calls.index(("systemctl", "start", "nginx.service"))
+    enable = calls.index(("systemctl", "enable", "nginx.service"))
+    disabled_runtime = calls.index(("attest", True, "disabled"))
+    enabled_runtime = calls.index(("attest", True, "enabled"))
+    assert disable < unmask < start < disabled_runtime < enable < enabled_runtime
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Symlink POSIX richiesto")
@@ -1161,7 +1431,7 @@ def test_repeated_identical_activation_is_idempotent_and_keeps_state_bytes(
     monkeypatch.setattr(ubuntu_activation, "_read_state", lambda _: state)
     monkeypatch.setattr(ubuntu_activation, "verify_bundle", lambda _: info)
     monkeypatch.setattr(ubuntu_activation, "_validate_activated", lambda _info, **_kwargs: None)
-    monkeypatch.setattr(ubuntu_activation, "_nginx_service_state", lambda: ("active", 0))
+    monkeypatch.setattr(ubuntu_activation, "_attest_nginx_service_runtime", lambda: None)
     before = state_path.read_bytes()
     assert ubuntu_activation._idempotent_activation(candidate, state_path) is True
     assert state_path.read_bytes() == before
@@ -1227,6 +1497,7 @@ def test_transition_faults_preserve_a_recoverable_durable_boundary(
 
     monkeypatch.setattr(ubuntu_activation, "_remove_migration_guard", remove_guard)
     monkeypatch.setattr(ubuntu_activation, "_start_nginx_service", lambda: None)
+    monkeypatch.setattr(ubuntu_activation, "_attest_nginx_service_runtime", lambda: None)
 
     def inject(point: str) -> None:
         if point == fault_point:

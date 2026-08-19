@@ -14,6 +14,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import socket
 import ssl
 import stat
@@ -326,13 +327,142 @@ def _install_legacy(bundle: Path, manifest: dict) -> None:
     )
 
 
+def _write_foreign_nginx_config(temporary: Path, name: str) -> tuple[Path, Path]:
+    directory = temporary / name
+    directory.mkdir()
+    config = directory / "leaky.conf"
+    pid_file = directory / "leaky-nginx.pid"
+    config.write_text(
+        "\n".join(
+            (
+                f"pid {pid_file};",
+                f"error_log {directory / 'error.log'} notice;",
+                "events {}",
+                "http {",
+                f"  access_log {directory / 'access.log'} combined;",
+                f"  server {{ listen 127.0.0.1:{_free_port()}; return 204; }}",
+                "}",
+                "",
+            )
+        ),
+        encoding="utf-8",
+    )
+    config.chmod(0o644)
+    return config, pid_file
+
+
+def _start_foreign_nginx(
+    config: Path,
+    pid_file: Path,
+    *,
+    altered_argv0: bool = False,
+    require_canonical_pid_absent: bool = True,
+) -> int:
+    canonical_pid = Path("/run/nginx.pid")
+    if require_canonical_pid_absent and (canonical_pid.exists() or canonical_pid.is_symlink()):
+        if (
+            canonical_pid.is_symlink()
+            or not canonical_pid.is_file()
+            or canonical_pid.read_text(encoding="ascii").strip()
+        ):
+            raise RuntimeError("PID file canonico occupato prima della fixture foreign")
+        # nginx -T on Ubuntu may leave this empty regular diagnostic artifact.
+        canonical_pid.unlink()
+    if altered_argv0:
+        command = [
+            "bash",
+            "-c",
+            'exec -a manual-nginx /usr/sbin/nginx -c "$1"',
+            "bash",
+            str(config),
+        ]
+    else:
+        command = ["/usr/sbin/nginx", "-c", str(config)]
+    _run(command)
+    deadline = time.monotonic() + 5
+    while not pid_file.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    if not pid_file.is_file():
+        raise RuntimeError("Foreign nginx non ha creato il PID alternativo")
+    pid = int(pid_file.read_text(encoding="ascii").strip())
+    if require_canonical_pid_absent and (
+        Path("/run/nginx.pid").exists() or Path("/run/nginx.pid").is_symlink()
+    ):
+        raise RuntimeError("Fixture foreign nginx ha usato il PID file canonico")
+    if pid not in {process.pid for process in activation._nginx_processes()}:
+        raise RuntimeError("Foreign nginx non rilevato tramite /proc/exe")
+    return pid
+
+
+def _stop_foreign_nginx(config: Path, pid_file: Path) -> None:
+    del config  # The test owns the known master PID; production never signals unmanaged nginx.
+    if not pid_file.is_file():
+        return
+    try:
+        pid = int(pid_file.read_text(encoding="ascii").strip())
+    except ValueError as exc:
+        raise RuntimeError("PID foreign nginx fixture non canonico") from exc
+    foreign_pids = {
+        process.pid
+        for process in activation._nginx_processes()
+        if not activation._process_in_control_group(
+            process, activation.NGINX_CONTROL_GROUP
+        )
+    }
+    try:
+        os.kill(pid, signal.SIGQUIT)
+    except ProcessLookupError:
+        return
+    deadline = time.monotonic() + 5
+    while foreign_pids and time.monotonic() < deadline:
+        foreign_pids = {
+            process.pid
+            for process in activation._nginx_processes()
+            if process.pid in foreign_pids
+        }
+        if foreign_pids:
+            time.sleep(0.05)
+    if foreign_pids:
+        for foreign_pid in foreign_pids:
+            try:
+                os.kill(foreign_pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        raise RuntimeError("Foreign nginx non è terminato con QUIT durante cleanup")
+
+
+def _expect_dropin_rejected(
+    bundle: Path, root: Path, name: str, contents: str
+) -> None:
+    directory = root / "nginx.service.d"
+    path = directory / f"{name}.conf"
+    directory.mkdir(mode=0o755, parents=True, exist_ok=False)
+    path.write_text(contents, encoding="utf-8")
+    path.chmod(0o644)
+    try:
+        _run(["systemctl", "daemon-reload"])
+        try:
+            activation.verify_host_preflight(bundle)
+        except activation.ActivationError:
+            pass
+        else:
+            raise RuntimeError(f"Drop-in systemd effettivo accettato: {path}")
+        if activation.NGINX_MIGRATION_GUARD.exists() or activation.NGINX_MIGRATION_GUARD.is_symlink():
+            raise RuntimeError("Drop-in rifiutato soltanto dopo acquisizione guard")
+    finally:
+        path.unlink(missing_ok=True)
+        directory.rmdir()
+        _run(["systemctl", "daemon-reload"])
+    activation._attest_effective_nginx_unit(expect_running=False)
+
+
 def _check_ephemeral_host() -> str:
     if os.geteuid() != 0:
         raise RuntimeError("Lo smoke Ubuntu effettivo richiede root")
     os_release = Path("/etc/os-release").read_text(encoding="utf-8")
     if 'ID=ubuntu' not in os_release or 'VERSION_ID="24.04"' not in os_release:
         raise RuntimeError("Lo smoke richiede Ubuntu 24.04 effimero")
-    for tool in ("nginx", "logrotate", "systemd-analyze", "openssl", "getfacl"):
+    for tool in ("nginx", "logrotate", "systemd-analyze", "openssl", "getfacl", "bash"):
         if shutil.which(tool) is None:
             raise RuntimeError(f"Tool Ubuntu mancante: {tool}")
     if not activation.DISTRO_DEFAULT.is_symlink():
@@ -474,6 +604,65 @@ def run() -> None:
             deployments.mkdir(mode=0o750, parents=True, exist_ok=True)
             manifest = _render_bundle(temporary, v2_bundle)
             legacy_manifest = _legacy_from_v2(manifest, legacy_bundle)
+
+            # Effective systemd contract: pristine package passes; every dedicated-host drop-in
+            # is rejected through manager state before guard acquisition or start.
+            activation._attest_effective_nginx_unit(expect_running=False)
+            leaky_unit_config, _ = _write_foreign_nginx_config(temporary, "unit-leaky")
+            _expect_dropin_rejected(
+                v2_bundle,
+                Path("/etc/systemd/system"),
+                "exec-start",
+                "[Service]\nExecStart=\n"
+                f"ExecStart=/usr/sbin/nginx -c {leaky_unit_config} "
+                "-g 'daemon on; master_process on;'\n",
+            )
+            _expect_dropin_rejected(
+                v2_bundle,
+                Path("/etc/systemd/system"),
+                "exec-reload",
+                "[Service]\nExecReload=\nExecReload=/bin/sh -c '/usr/sbin/nginx -t'\n",
+            )
+            _expect_dropin_rejected(
+                v2_bundle,
+                Path("/run/systemd/system"),
+                "runtime",
+                "[Service]\nExecStart=\n"
+                f"ExecStart=/usr/sbin/nginx -c {leaky_unit_config}\n",
+            )
+            _expect_dropin_rejected(
+                v2_bundle,
+                Path("/etc/systemd/system"),
+                "innocuous",
+                "[Service]\nEnvironment=THEBITLAB_INNOCUOUS=1\n",
+            )
+
+            # Real manual nginx uses an alternate PID/config and is found by /proc/exe even
+            # when argv[0] is altered. A non-nginx executable named nginx is not classified.
+            for name, altered in (("foreign-preflight", False), ("foreign-argv0", True)):
+                foreign_config, foreign_pid = _write_foreign_nginx_config(temporary, name)
+                _start_foreign_nginx(foreign_config, foreign_pid, altered_argv0=altered)
+                try:
+                    try:
+                        activation.verify_host_preflight(v2_bundle)
+                    except activation.ActivationError:
+                        pass
+                    else:
+                        raise RuntimeError("Foreign nginx preflight non rifiutato")
+                finally:
+                    _stop_foreign_nginx(foreign_config, foreign_pid)
+            named_nginx = subprocess.Popen(
+                ["bash", "-c", "exec -a nginx sleep 60"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            try:
+                if named_nginx.pid in {process.pid for process in activation._nginx_processes()}:
+                    raise RuntimeError("Processo non-nginx classificato dal solo nome")
+            finally:
+                named_nginx.terminate()
+                named_nginx.wait(timeout=5)
+            activation.verify_host_preflight(v2_bundle)
 
             # Trusted-root, ownership, mode and symlink checks on the actual POSIX filesystem.
             outside = temporary / "unsafe-bundle"
@@ -667,6 +856,47 @@ def run() -> None:
             _install_legacy(legacy_bundle, legacy_manifest)
             activation.verify_host_preflight(v2_bundle)
 
+            # Foreign nginx races are rechecked after preflight, before unmask and after the
+            # canonical start. Every failure remains recoverable only after operator cleanup.
+            for foreign_point in (
+                "after_preflight",
+                "after_validated_state",
+                "after_nginx_start",
+            ):
+                foreign_config, foreign_pid = _write_foreign_nginx_config(
+                    temporary, f"race-{foreign_point}"
+                )
+                original_fault = activation._fault
+                started_foreign = False
+
+                def inject_foreign(point: str, *, expected: str = foreign_point) -> None:
+                    nonlocal started_foreign
+                    if point == expected and not started_foreign:
+                        _start_foreign_nginx(
+                            foreign_config,
+                            foreign_pid,
+                            require_canonical_pid_absent=expected != "after_nginx_start",
+                        )
+                        started_foreign = True
+                    original_fault(point)
+
+                activation._fault = inject_foreign
+                try:
+                    try:
+                        activation.activate(v2_bundle, state)
+                    except activation.ActivationError:
+                        pass
+                    else:
+                        raise RuntimeError(f"Foreign nginx race accettata a {foreign_point}")
+                finally:
+                    activation._fault = original_fault
+                    if started_foreign:
+                        _stop_foreign_nginx(foreign_config, foreign_pid)
+                activation.recover(v2_bundle, state)
+                activation.complete(state, archives[1])
+                archives[1].unlink()
+                _install_legacy(legacy_bundle, legacy_manifest)
+
             # Reproduce the exact cached-unit gap: the filesystem symlink alone leaves the
             # already loaded manager unit startable. Orphan recovery must acquire via systemd.
             _run(["systemctl", "start", "nginx.service"])
@@ -760,6 +990,7 @@ def run() -> None:
             # Real process-boundary crash matrix. Each child exits via os._exit(97), then
             # recovery reconstructs authority solely from guard/state/symlinks on disk.
             crash_points = (
+                "after_pre_guard_disable",
                 "after_guard_install",
                 "after_state_write",
                 "after_distro_default_disable",
@@ -770,7 +1001,12 @@ def run() -> None:
                 "after_logrotate_validation",
                 "after_systemd_validation",
                 "after_validated_state",
+                "after_nginx_disable",
+                "after_guard_unmask",
+                "after_unit_reload_attestation",
                 "after_guard_remove",
+                "after_nginx_runtime_attestation",
+                "after_nginx_enable",
                 "after_nginx_start",
             )
             assert installed_launcher is not None
@@ -807,6 +1043,18 @@ def run() -> None:
                     activation.NGINX_MIGRATION_GUARD.exists()
                     or activation.NGINX_MIGRATION_GUARD.is_symlink()
                 )
+                if crash_point == "after_pre_guard_disable":
+                    if guarded or state.exists():
+                        raise RuntimeError("Crash pre-guard ha creato autorità migration parziale")
+                    code, unit_state = activation._systemctl_result(
+                        ["is-enabled", "nginx.service"]
+                    )
+                    if code == 0 or unit_state != "disabled":
+                        raise RuntimeError("Crash pre-guard non ha preservato unit disabled")
+                    if activation._current_bundle_path() != legacy_bundle:
+                        raise RuntimeError("Crash pre-guard ha mutato la topologia legacy")
+                    _run(["systemctl", "enable", "nginx.service"])
+                    continue
                 if guarded:
                     _run(["systemctl", "daemon-reload"])
                     activation._verify_migration_guard()
@@ -825,9 +1073,29 @@ def run() -> None:
                 else:
                     if activation._current_bundle_path() != v2_bundle:
                         raise RuntimeError("Guard rimosso prima di una topologia v2 durable")
-                    activation._validate_activated(
-                        activation.verify_bundle(v2_bundle), guard_required=False
-                    )
+                    disabled_boundaries = {
+                        "after_guard_unmask",
+                        "after_unit_reload_attestation",
+                        "after_guard_remove",
+                        "after_nginx_runtime_attestation",
+                    }
+                    if crash_point == "after_guard_unmask":
+                        code, unit_state = activation._systemctl_result(
+                            ["is-enabled", "nginx.service"]
+                        )
+                        if code == 0 or unit_state != "disabled":
+                            raise RuntimeError("Unmask crash non ha preservato unit disabled")
+                    elif crash_point in disabled_boundaries:
+                        running = crash_point == "after_nginx_runtime_attestation"
+                        unit = activation._attest_effective_nginx_unit(
+                            expect_running=running, unit_file_state="disabled"
+                        )
+                        if running:
+                            activation._attest_nginx_service_runtime(unit)
+                    else:
+                        activation._validate_activated(
+                            activation.verify_bundle(v2_bundle), guard_required=False
+                        )
                 activation.recover(v2_bundle, state)
                 if activation._current_bundle_path() != v2_bundle:
                     raise RuntimeError(f"Recovery crash {crash_point} non ha attivato v2")
@@ -1092,7 +1360,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(
         "PASS: integrazione Ubuntu 24.04 effettiva "
-        "(manager mask/concurrent-start/crash recovery, trusted toolchain isolation, "
+        "(effective unit/drop-in rejection, foreign nginx/cgroup/listener rejection, "
+        "manager mask/concurrent-start/crash recovery, trusted toolchain isolation, "
         "host trust, nginx -t/-T, runtime redaction, v2-only rollback, "
         "access+process post-rotation writes)"
     )
