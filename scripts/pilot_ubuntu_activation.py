@@ -1365,9 +1365,6 @@ def _verify_migration_guard() -> None:
 def _install_migration_guard() -> None:
     """Acquire the guard through systemd; return only after its negative-start proof."""
 
-    _stop_nginx_service()
-    if _nginx_may_be_running():
-        raise ActivationError("Processo nginx fuori dalla service identity systemd")
     existing = _symlink_state(NGINX_MIGRATION_GUARD)
     if existing["present"]:
         _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
@@ -1380,6 +1377,8 @@ def _install_migration_guard() -> None:
         raise ActivationError("Mask manager-mediated nginx.service fallita")
     _fsync_directory(NGINX_MIGRATION_GUARD.parent)
     _verify_migration_guard()
+    if _nginx_may_be_running():
+        raise ActivationError("Processo nginx fuori dalla service identity systemd")
 
 
 def _remove_migration_guard() -> None:
