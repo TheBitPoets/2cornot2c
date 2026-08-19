@@ -361,18 +361,30 @@ def validate_rendered_logging(
     }
     normalized_lines = {line.strip() for line in logrotate_config.splitlines() if line.strip()}
     expected_header = f'{manifest["origin"]["access_log"]} {manifest["origin"]["error_log"]} {{'
+    expected_logrotate = _render_template(
+        "thebitlab-logrotate.conf.template",
+        {
+            "ACCESS_LOG": manifest["origin"]["access_log"],
+            "ERROR_LOG": manifest["origin"]["error_log"],
+            "LOG_FILE_MODE": logging["file_mode"],
+            "LOG_OWNER": logging["owner"],
+            "LOG_GROUP": logging["group"],
+        },
+    )
     if (
-        expected_header not in normalized_lines
+        logrotate_config != expected_logrotate
+        or expected_header not in normalized_lines
         or not required_lines.issubset(normalized_lines)
         or "copytruncate" in normalized_lines
-        or 'systemctl is-active nginx.service' not in logrotate_config
-        or 'active:0)' not in logrotate_config
-        or 'inactive:3)' not in logrotate_config
-        or 'systemctl kill --kill-whom=main --signal=USR1 nginx.service || exit 1' not in logrotate_config
-        or 'post_state="$(systemctl is-active nginx.service' not in logrotate_config
-        or '[ "$post_state:$post_result" = active:0 ] || exit 1' not in logrotate_config
+        or logrotate_config.count(
+            "/usr/sbin/thebitlab-pilot-activate logrotate-snapshot"
+        ) != 1
+        or logrotate_config.count(
+            "/usr/sbin/thebitlab-pilot-activate logrotate-reopen"
+        ) != 1
+        or "sleep 1" in logrotate_config
+        or "systemctl is-active nginx.service" in logrotate_config
         or "/run/nginx.pid" in logrotate_config
-        or "/proc/$pid" in logrotate_config
     ):
         raise DeploymentValidationError("Policy logrotate incompleta o non sicura")
 

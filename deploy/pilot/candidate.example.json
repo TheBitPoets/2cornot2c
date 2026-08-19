@@ -14,7 +14,7 @@
     "bind_host": "127.0.0.1",
     "port": 8000,
     "environment_file": "/etc/thebitlab/secrets/pilot.env",
-    "lock_directory": "/run/thebitlab"
+    "lock_directory": "/run/thebitlab/app"
   },
   "data": {
     "root": "/srv/thebitlab/data",

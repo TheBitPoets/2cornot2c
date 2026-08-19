@@ -179,10 +179,14 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
     assert "rotate 30" in logrotate
     assert "maxage 30" in logrotate
     assert "create 0640 www-data adm" in logrotate
-    assert "systemctl is-active nginx.service" in logrotate
-    assert "systemctl kill --kill-whom=main --signal=USR1 nginx.service" in logrotate
-    assert "active:0)" in logrotate
-    assert "inactive:3)" in logrotate
+    assert logrotate.count(
+        "/usr/sbin/thebitlab-pilot-activate logrotate-snapshot"
+    ) == 1
+    assert logrotate.count(
+        "/usr/sbin/thebitlab-pilot-activate logrotate-reopen"
+    ) == 1
+    assert "systemctl is-active nginx.service" not in logrotate
+    assert "sleep 1" not in logrotate
     assert "/run/nginx.pid" not in logrotate
     assert "/proc/$pid" not in logrotate
     assert "copytruncate" not in logrotate
@@ -239,74 +243,287 @@ def test_logging_validator_rejects_query_header_or_redirect_fields(
         )
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Shell logrotate POSIX richiesto")
+def _reopen_test_inodes(tmp_path: Path) -> tuple[
+    tuple[ubuntu_activation.LogInode, ...], tuple[ubuntu_activation.LogInode, ...]
+]:
+    paths = (tmp_path / "access.log", tmp_path / "process.log")
+    previous = tuple(
+        ubuntu_activation.LogInode(path, 1, index)
+        for index, path in enumerate(paths, start=10)
+    )
+    current = tuple(
+        ubuntu_activation.LogInode(path, 1, index)
+        for index, path in enumerate(paths, start=20)
+    )
+    return previous, current
+
+
+def _install_reopen_test_doubles(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    samples: list[dict[tuple[int, int], int]],
+) -> tuple[Path, list[tuple[str, ...]]]:
+    previous, current = _reopen_test_inodes(tmp_path)
+    snapshot = tmp_path / "reopen.json"
+    snapshot.write_text("diagnostic snapshot\n", encoding="utf-8")
+    calls: list[tuple[str, ...]] = []
+    process = ubuntu_activation.NginxProcess(
+        10, frozenset({ubuntu_activation.NGINX_CONTROL_GROUP})
+    )
+    unit = ubuntu_activation.EffectiveNginxUnit(
+        10, ubuntu_activation.NGINX_CONTROL_GROUP
+    )
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_SNAPSHOT", snapshot)
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_RUNTIME_DIRECTORY", tmp_path)
+    monkeypatch.setattr(ubuntu_activation, "_read_logrotate_snapshot", lambda: previous)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_log_inode",
+        lambda path: current[[item.path for item in current].index(path)],
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_nginx_service_state", lambda: ("active", 0)
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_logrotate_active_unit",
+        lambda _expected=None: (unit, (process,)),
+    )
+
+    def systemctl(arguments: list[str]) -> tuple[int, str]:
+        calls.append(tuple(arguments))
+        return 0, ""
+
+    monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
+    observed = iter(samples)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_nginx_open_log_inodes",
+        lambda _processes, _watched: next(observed),
+    )
+    monkeypatch.setattr(ubuntu_activation, "_fsync_directory", lambda _path: None)
+    monkeypatch.setattr(ubuntu_activation.time, "sleep", lambda _seconds: None)
+    return snapshot, calls
+
+
+def _fd_counts(
+    previous: tuple[ubuntu_activation.LogInode, ...],
+    current: tuple[ubuntu_activation.LogInode, ...],
+    *,
+    old: int,
+    new: int,
+) -> dict[tuple[int, int], int]:
+    return {
+        **{(item.device, item.inode): old for item in previous},
+        **{(item.device, item.inode): new for item in current},
+    }
+
+
+def test_logrotate_reopen_waits_for_delayed_fd_transition(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    previous, current = _reopen_test_inodes(tmp_path)
+    samples = [
+        _fd_counts(previous, current, old=1, new=0),
+        _fd_counts(previous, current, old=1, new=0),
+        _fd_counts(previous, current, old=0, new=1),
+        _fd_counts(previous, current, old=0, new=1),
+    ]
+    snapshot, calls = _install_reopen_test_doubles(tmp_path, monkeypatch, samples)
+    clock = iter((0.0, 0.1, 0.2))
+    monkeypatch.setattr(ubuntu_activation.time, "monotonic", lambda: next(clock))
+
+    ubuntu_activation.logrotate_reopen()
+
+    assert not snapshot.exists()
+    assert calls == [("kill", "--kill-whom=main", "--signal=USR1", "nginx.service")]
+
+
 @pytest.mark.parametrize(
-    ("state", "state_code", "kill_code", "expected_code", "expect_kill"),
+    ("old_count", "new_count"),
+    ((1, 1), (0, 0)),
+    ids=("old-fd-never-closes", "current-inode-never-opens"),
+)
+def test_logrotate_reopen_times_out_without_complete_inode_proof(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    old_count: int,
+    new_count: int,
+) -> None:
+    previous, current = _reopen_test_inodes(tmp_path)
+    snapshot, _ = _install_reopen_test_doubles(
+        tmp_path,
+        monkeypatch,
+        [
+            _fd_counts(previous, current, old=old_count, new=new_count),
+            _fd_counts(previous, current, old=old_count, new=new_count),
+        ],
+    )
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_REOPEN_TIMEOUT_SECONDS", 0.0)
+    monkeypatch.setattr(ubuntu_activation.time, "monotonic", lambda: 1.0)
+
+    with pytest.raises(ubuntu_activation.ActivationError, match="Timeout reopen"):
+        ubuntu_activation.logrotate_reopen()
+    assert snapshot.exists(), "failure snapshot is retained deterministically for diagnosis"
+
+
+@pytest.mark.parametrize(
+    ("state", "code", "passes"),
     (
-        ("active", 0, 0, 0, True),
-        ("active", 0, 1, 1, True),
-        ("inactive", 3, 0, 0, False),
-        ("failed", 3, 0, 1, False),
-        ("activating", 3, 0, 1, False),
-        ("deactivating", 3, 0, 1, False),
-        ("unknown", 4, 0, 1, False),
+        ("inactive", 3, True),
+        ("failed", 3, False),
+        ("activating", 0, False),
+        ("deactivating", 0, False),
     ),
 )
-def test_logrotate_reopen_uses_systemd_unit_identity_and_fails_closed(
+def test_logrotate_reopen_inactive_is_the_only_non_active_success(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     state: str,
-    state_code: int,
-    kill_code: int,
-    expected_code: int,
-    expect_kill: bool,
+    code: int,
+    passes: bool,
 ) -> None:
-    output = tmp_path / "bundle"
-    deployment.render_bundle(manifest(), output)
-    text = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
-    shell = text.split("    postrotate\n", 1)[1].split("    endscript", 1)[0]
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    calls = tmp_path / "calls"
-    fake = bin_dir / "systemctl"
-    fake.write_text(
-        "#!/bin/sh\n"
-        f'echo "$*" >> "{calls}"\n'
-        f'if [ "$1" = is-active ]; then echo "{state}"; exit {state_code}; fi\n'
-        f'if [ "$1" = kill ]; then exit {kill_code}; fi\n'
-        "exit 99\n",
-        encoding="utf-8",
+    previous, _current = _reopen_test_inodes(tmp_path)
+    snapshot = tmp_path / "reopen.json"
+    snapshot.write_text("diagnostic snapshot\n", encoding="utf-8")
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_SNAPSHOT", snapshot)
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_RUNTIME_DIRECTORY", tmp_path)
+    monkeypatch.setattr(ubuntu_activation, "_read_logrotate_snapshot", lambda: previous)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_log_inode",
+        lambda item: ubuntu_activation.LogInode(item, 1, previous[0].inode + 10),
     )
-    fake.chmod(0o755)
-    result = subprocess.run(
-        ["/bin/sh", "-c", shell],
-        check=False,
-        env={"PATH": str(bin_dir) + os.pathsep + os.defpath},
-        capture_output=True,
-        text=True,
+    monkeypatch.setattr(ubuntu_activation, "_nginx_service_state", lambda: (state, code))
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_effective_nginx_unit", lambda **_kwargs: None
     )
-    assert result.returncode == expected_code
-    recorded = calls.read_text(encoding="utf-8")
-    assert ("kill --kill-whom=main --signal=USR1 nginx.service" in recorded) is expect_kill
-    assert recorded.count("is-active nginx.service") == (2 if state == "active" and kill_code == 0 else 1)
-    assert "pid" not in recorded.lower()
+    monkeypatch.setattr(ubuntu_activation, "_assert_zero_nginx_processes", lambda: None)
+    monkeypatch.setattr(ubuntu_activation, "_fsync_directory", lambda _path: None)
+    if passes:
+        ubuntu_activation.logrotate_reopen()
+        assert not snapshot.exists()
+    else:
+        with pytest.raises(ubuntu_activation.ActivationError, match="Stato nginx ambiguo"):
+            ubuntu_activation.logrotate_reopen()
+        assert snapshot.exists()
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Shell logrotate POSIX richiesto")
-def test_logrotate_reopen_fails_when_systemctl_is_unavailable(tmp_path: Path) -> None:
-    output = tmp_path / "bundle"
-    deployment.render_bundle(manifest(), output)
-    text = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
-    shell = text.split("    postrotate\n", 1)[1].split("    endscript", 1)[0]
-    empty_path = tmp_path / "empty-bin"
-    empty_path.mkdir()
-    result = subprocess.run(
-        ["/bin/sh", "-c", shell],
-        check=False,
-        env={"PATH": str(empty_path)},
-        capture_output=True,
-        text=True,
+def test_logrotate_reopen_fails_immediately_when_runtime_attestation_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    previous, current = _reopen_test_inodes(tmp_path)
+    snapshot, _ = _install_reopen_test_doubles(
+        tmp_path,
+        monkeypatch,
+        [_fd_counts(previous, current, old=0, new=1)],
     )
-    assert result.returncode != 0
+    unit = ubuntu_activation.EffectiveNginxUnit(
+        10, ubuntu_activation.NGINX_CONTROL_GROUP
+    )
+    calls = 0
+
+    def attest(_expected=None):
+        nonlocal calls
+        calls += 1
+        if calls > 1:
+            raise ubuntu_activation.ActivationError("cgroup changed")
+        return unit, (
+            ubuntu_activation.NginxProcess(
+                10, frozenset({ubuntu_activation.NGINX_CONTROL_GROUP})
+            ),
+        )
+
+    monkeypatch.setattr(ubuntu_activation, "_attest_logrotate_active_unit", attest)
+    monkeypatch.setattr(ubuntu_activation.time, "monotonic", lambda: 0.0)
+    with pytest.raises(ubuntu_activation.ActivationError, match="cgroup changed"):
+        ubuntu_activation.logrotate_reopen()
+    assert snapshot.exists()
+
+
+def test_logrotate_reopen_rejects_current_path_replacement_during_wait(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    previous, current = _reopen_test_inodes(tmp_path)
+    snapshot, _ = _install_reopen_test_doubles(
+        tmp_path,
+        monkeypatch,
+        [_fd_counts(previous, current, old=0, new=1)],
+    )
+    calls = {item.path: 0 for item in current}
+
+    def changed(path: Path) -> ubuntu_activation.LogInode:
+        calls[path] += 1
+        expected = current[[item.path for item in current].index(path)]
+        if calls[path] == 1:
+            return expected
+        return ubuntu_activation.LogInode(path, expected.device, expected.inode + 100)
+
+    monkeypatch.setattr(ubuntu_activation, "_log_inode", changed)
+    monkeypatch.setattr(ubuntu_activation.time, "monotonic", lambda: 0.0)
+    with pytest.raises(ubuntu_activation.ActivationError, match="path sostituito"):
+        ubuntu_activation.logrotate_reopen()
+    assert snapshot.exists()
+
+
+def test_logrotate_snapshot_rejects_corrupt_stale_or_wrong_boot_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    previous, _current = _reopen_test_inodes(tmp_path)
+    snapshot = tmp_path / "reopen.json"
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_SNAPSHOT", snapshot)
+    monkeypatch.setattr(
+        ubuntu_activation, "_ensure_logrotate_runtime_directory", lambda: None
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_logrotate_snapshot_security", lambda _path=snapshot: snapshot.stat()
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_logrotate_paths", lambda: tuple(item.path for item in previous)
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_boot_id", lambda: "11111111-1111-1111-1111-111111111111"
+    )
+    monkeypatch.setattr(ubuntu_activation.time, "time_ns", lambda: 1_000_000_000_000)
+
+    valid = {
+        "schema_version": "thebitlab.logrotate-reopen.v1",
+        "boot_id": "11111111-1111-1111-1111-111111111111",
+        "created_unix_ns": 1_000_000_000_000,
+        "logs": [
+            {"path": str(item.path), "st_dev": item.device, "st_ino": item.inode}
+            for item in previous
+        ],
+    }
+    for mutation, message in (
+        ({"raw": "not-json"}, "corrotto"),
+        ({**valid, "boot_id": "22222222-2222-2222-2222-222222222222"}, "stale"),
+        (
+            {
+                **valid,
+                "created_unix_ns": 1_000_000_000_000
+                - (ubuntu_activation.LOGROTATE_SNAPSHOT_MAX_AGE_SECONDS + 1)
+                * 1_000_000_000,
+            },
+            "stale",
+        ),
+        (
+            {
+                **valid,
+                "logs": [
+                    {**valid["logs"][0], "path": "/var/log/thebitlab/wrong.log"},
+                    valid["logs"][1],
+                ],
+            },
+            "canonico",
+        ),
+    ):
+        if "raw" in mutation:
+            snapshot.write_text(str(mutation["raw"]), encoding="utf-8")
+        else:
+            snapshot.write_text(json.dumps(mutation), encoding="utf-8")
+        with pytest.raises(ubuntu_activation.ActivationError, match=message):
+            ubuntu_activation._read_logrotate_snapshot()
 
 
 def test_logging_validator_rejects_unformatted_access_log_and_copytruncate(tmp_path: Path) -> None:
@@ -351,6 +568,15 @@ def test_logging_validator_rejects_unformatted_access_log_and_copytruncate(tmp_p
             site,
             logrotate.replace("    sharedscripts", "    copytruncate"),
             payload,
+        )
+    legacy_reopen = logrotate.replace(
+        "/usr/sbin/thebitlab-pilot-activate logrotate-reopen",
+        "systemctl kill --kill-whom=main --signal=USR1 nginx.service\n        "
+        "sleep 1\n        systemctl is-active nginx.service",
+    )
+    with pytest.raises(deployment.DeploymentValidationError, match="logrotate"):
+        deployment.validate_rendered_logging(
+            process_error_log, log_format, site, legacy_reopen, payload
         )
 
 
@@ -701,6 +927,7 @@ def test_trusted_bundle_rejects_symlink_hardlink_and_group_writable(
 def legacy_manifest() -> dict:
     payload = manifest()
     payload["schema_version"] = "thebitlab.pilot-deployment.v1"
+    payload["service"]["lock_directory"] = "/run/thebitlab"
     payload["origin"]["access_log"] = "/var/log/nginx/thebitlab-access.log"
     payload["origin"]["error_log"] = "/var/log/nginx/thebitlab-error.log"
     del payload["logging"]
@@ -1181,6 +1408,166 @@ def test_effective_systemd_unit_contract_accepts_only_pristine_package_definitio
             ubuntu_activation._attest_effective_nginx_unit(expect_running=False)
 
 
+def _install_systemd_inventory_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path, Path]:
+    local_root = tmp_path / "etc/systemd/system"
+    package_root = tmp_path / "usr/lib/systemd/system"
+    generator_root = tmp_path / "usr/lib/systemd/system-generators"
+    for directory in (local_root, package_root, generator_root):
+        directory.mkdir(parents=True)
+    original_lstat = Path.lstat
+
+    def root_lstat(path: Path):
+        values = list(original_lstat(path))
+        values[4] = 0
+        return os.stat_result(values)
+
+    monkeypatch.setattr(Path, "lstat", root_lstat)
+    monkeypatch.setattr(
+        ubuntu_activation, "_assert_systemd_directory_ancestry", lambda _path: None
+    )
+    for name in ("default.target", "multi-user.target", "normal.service"):
+        (package_root / name).write_text("[Unit]\n", encoding="utf-8")
+    (generator_root / "systemd-test-generator").write_text(
+        "#!/bin/sh\nexit 0\n", encoding="utf-8"
+    )
+
+    def systemd_path(name: str) -> tuple[Path, ...]:
+        if name == ubuntu_activation.SYSTEMD_UNIT_SEARCH_PATH_NAME:
+            return local_root, package_root
+        if name == ubuntu_activation.SYSTEMD_GENERATOR_SEARCH_PATH_NAME:
+            return (generator_root,)
+        raise AssertionError(name)
+
+    def package_owned(paths) -> frozenset[Path]:
+        return frozenset(
+            path
+            for path in paths
+            if package_root in path.parents or generator_root in path.parents
+        )
+
+    def systemctl(arguments: list[str]) -> tuple[int, str]:
+        if arguments == ["daemon-reload"]:
+            return 0, ""
+        if arguments[0] == "list-unit-files":
+            return 0, (
+                "default.target static enabled\n"
+                "multi-user.target static enabled\n"
+                "normal.service enabled enabled\n"
+            )
+        if arguments == ["get-default"]:
+            return 0, "default.target"
+        if arguments[0] == "list-dependencies":
+            return 0, "default.target\nmulti-user.target\nnormal.service"
+        raise AssertionError(arguments)
+
+    monkeypatch.setattr(ubuntu_activation, "_systemd_path", systemd_path)
+    monkeypatch.setattr(ubuntu_activation, "_dpkg_owned_paths", package_owned)
+    monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
+    return local_root, package_root, generator_root
+
+
+def test_systemd_closed_inventory_accepts_package_owned_enabled_unit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _install_systemd_inventory_fixture(tmp_path, monkeypatch)
+    ubuntu_activation._attest_systemd_boot_surface()
+
+
+def test_systemd_generator_search_path_rejects_unmanaged_local_generator(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    generator_root = tmp_path / "etc/systemd/system-generators"
+    generator_root.mkdir(parents=True)
+    (generator_root / "local-generator").write_text("#!/bin/sh\n", encoding="utf-8")
+    original_lstat = Path.lstat
+
+    def root_lstat(path: Path):
+        values = list(original_lstat(path))
+        values[4] = 0
+        return os.stat_result(values)
+
+    monkeypatch.setattr(Path, "lstat", root_lstat)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_assert_systemd_directory_ancestry",
+        lambda _path: None,
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_path", lambda _name: (generator_root,)
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_dpkg_owned_paths", lambda _paths: frozenset()
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="Generator systemd locale"):
+        ubuntu_activation._attest_systemd_generators()
+
+
+@pytest.mark.parametrize("enabled", (False, True), ids=("disabled", "enabled"))
+def test_systemd_closed_inventory_rejects_any_unmanaged_local_unit_without_exec_grep(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, enabled: bool
+) -> None:
+    local_root, _package_root, _generator_root = _install_systemd_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    unit = local_root / ("wrapper-local.service" if enabled else "disabled-local.service")
+    unit.write_text(
+        "[Service]\nExecStart=/usr/local/bin/leaky-wrapper\n",
+        encoding="utf-8",
+    )
+    assert "/usr/sbin/nginx" not in unit.read_text(encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="locale/unmanaged"):
+        ubuntu_activation._attest_systemd_boot_surface()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink systemd POSIX richiesto")
+def test_systemd_closed_inventory_accepts_only_exact_thebitlab_local_unit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_root, _package_root, _generator_root = _install_systemd_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    deployments = tmp_path / "etc/thebitlab/deployments"
+    target = deployments / "candidate/systemd/thebitlab.service"
+    target.parent.mkdir(parents=True)
+    target.write_text("[Unit]\n", encoding="utf-8")
+    link = local_root / "thebitlab.service"
+    expected_target = str(target)
+    link.symlink_to(expected_target)
+    monkeypatch.setattr(ubuntu_activation, "DEPLOYMENTS_ROOT", deployments)
+    monkeypatch.setattr(ubuntu_activation, "SYSTEMD_LINK", link)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_assert_systemd_symlink_metadata",
+        lambda path: os.readlink(path),
+    )
+    monkeypatch.setattr(ubuntu_activation, "_verify_trusted_ancestry", lambda *_args: None)
+    monkeypatch.setattr(ubuntu_activation, "verify_bundle", lambda _path: object())
+    monkeypatch.setattr(
+        ubuntu_activation, "INTEGRATION_LINKS", {link: expected_target}
+    )
+
+    original_systemctl = ubuntu_activation._systemctl_result
+
+    def systemctl(arguments: list[str]) -> tuple[int, str]:
+        if arguments[0] == "list-unit-files":
+            return 0, (
+                "default.target static enabled\n"
+                "multi-user.target static enabled\n"
+                "normal.service enabled enabled\n"
+                "thebitlab.service linked enabled\n"
+            )
+        if arguments[0] == "list-dependencies":
+            return 0, (
+                "default.target\nmulti-user.target\nnormal.service\nthebitlab.service"
+            )
+        return original_systemctl(arguments)
+
+    monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
+    ubuntu_activation._attest_systemd_boot_surface()
+
+
 @pytest.mark.parametrize(
     ("service_state", "service_code", "unit_file_state", "main_pid", "control_group"),
     (
@@ -1393,6 +1780,7 @@ def test_recovery_intermediate_states_fail_before_transition_on_foreign_nginx(
         "previous_v2_lock_digest": "b" * 64,
     }
     monkeypatch.setattr(ubuntu_activation.os, "geteuid", lambda: 0, raising=False)
+    monkeypatch.setattr(ubuntu_activation, "_attest_systemd_boot_surface", lambda: None)
     monkeypatch.setattr(ubuntu_activation, "_state_exists", lambda _path: True)
     monkeypatch.setattr(ubuntu_activation, "_read_state", lambda _path: state)
     monkeypatch.setattr(
@@ -1410,6 +1798,7 @@ def test_orphan_guard_recovery_fails_closed_on_foreign_nginx(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(ubuntu_activation.os, "geteuid", lambda: 0, raising=False)
+    monkeypatch.setattr(ubuntu_activation, "_attest_systemd_boot_surface", lambda: None)
     monkeypatch.setattr(ubuntu_activation, "_state_exists", lambda _path: False)
     monkeypatch.setattr(
         ubuntu_activation,
@@ -1454,6 +1843,11 @@ def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
         raise AssertionError(arguments)
 
     monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_systemd_boot_surface",
+        lambda: calls.append(("boot-surface",)),
+    )
     monkeypatch.setattr(ubuntu_activation, "_assert_zero_nginx_processes", lambda: None)
     monkeypatch.setattr(ubuntu_activation, "_assert_no_canonical_listeners", lambda: None)
     monkeypatch.setattr(ubuntu_activation, "_symlink_state", lambda _path: {"present": False})
@@ -1462,8 +1856,9 @@ def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
     ubuntu_activation._install_migration_guard()
     assert ("mask", "--now", "nginx.service") in calls
     disable_index = calls.index(("disable", "nginx.service"))
+    boot_index = calls.index(("boot-surface",))
     mask_index = calls.index(("mask", "--now", "nginx.service"))
-    assert disable_index < mask_index
+    assert disable_index < boot_index < mask_index
     assert all(calls.index(start) > mask_index for start in (("start", "nginx.service"), ("start", "nginx")))
 
 
@@ -1492,6 +1887,11 @@ def test_unmask_start_and_enable_preserve_crash_safe_order(
         )
 
     monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_systemd_boot_surface",
+        lambda: calls.append(("boot-surface",)),
+    )
     monkeypatch.setattr(ubuntu_activation, "_verify_migration_guard", lambda: None)
     monkeypatch.setattr(
         ubuntu_activation,
@@ -1522,7 +1922,10 @@ def test_unmask_start_and_enable_preserve_crash_safe_order(
     enabled_runtime = calls.index(
         ("attest", True, ubuntu_activation.ENABLED_NGINX_UNIT_FILE_STATES)
     )
-    assert disable < unmask < start < disabled_runtime < enable < enabled_runtime
+    boot_checks = [index for index, call in enumerate(calls) if call == ("boot-surface",)]
+    assert len(boot_checks) == 2
+    assert disable < boot_checks[0] < unmask
+    assert start < disabled_runtime < boot_checks[1] < enable < enabled_runtime
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Symlink POSIX richiesto")
@@ -1721,7 +2124,7 @@ def test_service_launcher_rejects_reserved_external_names_and_pins_effective_top
     parsed = deployment.parse_environment_file(path)
     authoritative = {
         "THEBITLAB_DEPLOYMENT_REVISION": "a" * 40,
-        "THEBITLAB_LOCK_DIR": "/run/thebitlab",
+        "THEBITLAB_LOCK_DIR": "/run/thebitlab/app",
         "THEBITLAB_AUTH_DB_PATH": ".thebitlab-auth/auth.sqlite3",
         "THEBITLAB_TRUSTED_PROXY_CIDRS": "127.0.0.1/32",
         "THEBITLAB_GOOGLE_REDIRECT_URI": "https://candidate.example.edu/auth/google/callback",

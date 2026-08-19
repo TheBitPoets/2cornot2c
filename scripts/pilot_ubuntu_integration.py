@@ -300,6 +300,7 @@ def _render_bundle(temporary: Path, bundle: Path) -> dict:
 def _legacy_from_v2(manifest: dict, bundle: Path) -> dict:
     legacy = copy.deepcopy(manifest)
     legacy["schema_version"] = "thebitlab.pilot-deployment.v1"
+    legacy["service"]["lock_directory"] = "/run/thebitlab"
     legacy["origin"]["access_log"] = "/var/log/nginx/thebitlab-access.log"
     legacy["origin"]["error_log"] = "/var/log/nginx/thebitlab-error.log"
     del legacy["logging"]
@@ -457,6 +458,72 @@ def _expect_dropin_rejected(
         expect_running=False,
         allowed_unit_file_states=activation.PREFLIGHT_NGINX_UNIT_FILE_STATES,
     )
+
+
+def _assert_guard_absent_after_preflight_reject(label: str) -> None:
+    if activation.NGINX_MIGRATION_GUARD.exists() or activation.NGINX_MIGRATION_GUARD.is_symlink():
+        raise RuntimeError(f"{label}: reject avvenuto soltanto dopo mask/switch")
+
+
+def _expect_local_unit_rejected(
+    bundle: Path,
+    unit_name: str,
+    contents: str,
+    *,
+    enable: bool,
+    prove_start: bool = False,
+) -> None:
+    unit = Path("/etc/systemd/system") / unit_name
+    if unit.exists() or unit.is_symlink():
+        raise RuntimeError(f"Fixture unit locale già presente: {unit}")
+    unit.write_text(contents, encoding="utf-8")
+    unit.chmod(0o644)
+    try:
+        _run(["systemctl", "daemon-reload"])
+        if enable:
+            _run(["systemctl", "enable", unit_name])
+            enabled = _run(["systemctl", "is-enabled", unit_name]).strip()
+            if enabled != "enabled":
+                raise RuntimeError(f"Unit locale non enabled nella reproduction: {enabled}")
+            graph = _run(
+                [
+                    "systemctl", "list-dependencies", "--all", "--plain", "--no-pager",
+                    "multi-user.target",
+                ]
+            )
+            if unit_name not in graph:
+                raise RuntimeError("Unit locale enabled non boot-reachable dal target")
+        if prove_start:
+            _run(["systemctl", "start", unit_name])
+            if _run(["systemctl", "is-active", unit_name]).strip() != "active":
+                raise RuntimeError("systemd non ha avviato realmente la unit alternativa")
+            _run(["systemctl", "stop", unit_name])
+        state = subprocess.run(
+            ["systemctl", "is-active", unit_name],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if state.returncode != 3 or state.stdout.strip() != "inactive":
+            raise RuntimeError("Unit locale reproduction non è enabled+inactive")
+        try:
+            activation.verify_host_preflight(bundle)
+        except activation.ActivationError:
+            pass
+        else:
+            raise RuntimeError(f"Unit locale unmanaged accettata: {unit_name}")
+        _assert_guard_absent_after_preflight_reject(unit_name)
+    finally:
+        subprocess.run(
+            ["systemctl", "disable", "--now", unit_name],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        unit.unlink(missing_ok=True)
+        _run(["systemctl", "daemon-reload"])
 
 
 def _check_ephemeral_host() -> str:
@@ -621,7 +688,63 @@ def run() -> None:
                 "EVIDENCE: package nginx initial "
                 f"UnitFileState={initial_unit_file_state}; preflight PASS"
             )
+            activation._attest_systemd_boot_surface()
+            print("EVIDENCE: package-owned enabled unit inventory PASS")
+
             leaky_unit_config, _ = _write_foreign_nginx_config(temporary, "unit-leaky")
+            if "combined" not in leaky_unit_config.read_text(encoding="utf-8"):
+                raise RuntimeError("Config leaky reproduction non è query-bearing")
+            _expect_local_unit_rejected(
+                v2_bundle,
+                "leaky-nginx.service",
+                "[Unit]\nBefore=nginx.service\n\n"
+                "[Service]\nType=simple\n"
+                f"ExecStart=/usr/sbin/nginx -c {leaky_unit_config} "
+                "-g 'daemon off; master_process on;'\n\n"
+                "[Install]\nWantedBy=multi-user.target\n",
+                enable=True,
+                prove_start=True,
+            )
+            print(
+                "EVIDENCE: leaky-nginx.service enabled+boot-reachable, real start PASS, "
+                "preflight REJECT before guard"
+            )
+
+            wrapper_config, _ = _write_foreign_nginx_config(temporary, "wrapper-leaky")
+            wrapper = Path("/usr/local/bin/leaky-wrapper-thebitlab-test")
+            wrapper.write_text(
+                "#!/bin/sh\nexec /usr/sbin/nginx -c "
+                f"{wrapper_config} -g 'daemon off; master_process on;'\n",
+                encoding="utf-8",
+            )
+            wrapper.chmod(0o755)
+            wrapper_unit = (
+                "[Unit]\nBefore=nginx.service\n\n"
+                "[Service]\nType=simple\n"
+                f"ExecStart={wrapper}\n\n"
+                "[Install]\nWantedBy=multi-user.target\n"
+            )
+            if "/usr/sbin/nginx" in wrapper_unit:
+                raise RuntimeError("Wrapper unit reproduction contiene nginx in ExecStart")
+            try:
+                _expect_local_unit_rejected(
+                    v2_bundle,
+                    "wrapper-local.service",
+                    wrapper_unit,
+                    enable=True,
+                )
+            finally:
+                wrapper.unlink(missing_ok=True)
+            print("EVIDENCE: wrapper unit senza stringa nginx preflight REJECT")
+
+            _expect_local_unit_rejected(
+                v2_bundle,
+                "disabled-local.service",
+                "[Service]\nType=oneshot\nExecStart=/bin/true\n",
+                enable=False,
+            )
+            print("EVIDENCE: unmanaged local unit disabled/non-boot-reachable REJECT")
+
             _expect_dropin_rejected(
                 v2_bundle,
                 Path("/etc/systemd/system"),
@@ -871,6 +994,8 @@ def run() -> None:
             activation._replace_symlink(activation.DISTRO_DEFAULT, original_default)
 
             _install_legacy(legacy_bundle, legacy_manifest)
+            activation._attest_systemd_boot_surface()
+            print("EVIDENCE: exact canonical TheBitLab local unit inventory PASS")
             activation.verify_host_preflight(v2_bundle)
 
             # Foreign nginx races are rechecked after preflight, before unmask and after the
@@ -1207,6 +1332,10 @@ def run() -> None:
             _assert_service_streams_absent(markers)
             _verify_metadata()
             _run(["logrotate", "--debug", "/etc/logrotate.conf"])
+            pre_rotation_inodes = {
+                path: (path.stat().st_dev, path.stat().st_ino)
+                for path in (ACCESS_LOG, PROCESS_LOG)
+            }
             _run(
                 [
                     "logrotate", "--force", "--state", str(temporary / "logrotate.state"),
@@ -1219,6 +1348,20 @@ def run() -> None:
             )
             if not all(path.is_file() for path in rotated):
                 raise RuntimeError("Rotazione pilot non ha prodotto i file .1 attesi")
+            post_rotation_inodes = {
+                path: (path.stat().st_dev, path.stat().st_ino)
+                for path in (ACCESS_LOG, PROCESS_LOG)
+            }
+            if any(
+                pre_rotation_inodes[path] == post_rotation_inodes[path]
+                for path in (ACCESS_LOG, PROCESS_LOG)
+            ):
+                raise RuntimeError("Rotazione reale non ha cambiato entrambi gli inode")
+            if activation.LOGROTATE_SNAPSHOT.exists() or activation.LOGROTATE_SNAPSHOT.is_symlink():
+                raise RuntimeError("Snapshot logrotate non rimosso dopo FD transition provata")
+            print(
+                "EVIDENCE: real nginx access/process rotation FD old=0,current>=1 PASS"
+            )
             rotated_before = rotated[0].read_bytes()
             process_rotated_before = rotated[1].read_bytes()
             if not process_rotated_before:
@@ -1338,6 +1481,14 @@ def run() -> None:
         log_directory = Path("/var/log/thebitlab")
         if log_directory.exists():
             shutil.rmtree(log_directory)
+        for runtime_directory in (
+            activation.LOGROTATE_RUNTIME_DIRECTORY,
+            activation.LOGROTATE_RUNTIME_ROOT,
+        ):
+            try:
+                runtime_directory.rmdir()
+            except OSError:
+                pass
         for legacy_log in (
             Path("/var/log/nginx/thebitlab-access.log"),
             Path("/var/log/nginx/thebitlab-error.log"),

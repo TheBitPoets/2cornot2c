@@ -16,6 +16,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
@@ -58,6 +59,40 @@ NGINX_BINARY = Path("/usr/sbin/nginx")
 PROC_ROOT = Path("/proc")
 NGINX_CONTROL_GROUP = "/system.slice/nginx.service"
 NGINX_WANTS_LINK = Path("/etc/systemd/system/multi-user.target.wants/nginx.service")
+THEBITLAB_WANTS_LINK = Path(
+    "/etc/systemd/system/multi-user.target.wants/thebitlab.service"
+)
+SYSTEMD_UNIT_SEARCH_PATH_NAME = "systemd-search-system-unit"
+SYSTEMD_GENERATOR_SEARCH_PATH_NAME = "systemd-search-system-generator"
+SYSTEMD_GENERATED_DIRECTORY_NAMES = frozenset(
+    {"generator", "generator.early", "generator.late"}
+)
+SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES = (".wants", ".requires", ".upholds")
+SYSTEMD_ENABLED_STATES = frozenset(
+    {"enabled", "enabled-runtime", "linked", "linked-runtime"}
+)
+SYSTEMD_UNIT_SUFFIXES = frozenset(
+    {
+        ".automount",
+        ".device",
+        ".mount",
+        ".path",
+        ".scope",
+        ".service",
+        ".slice",
+        ".socket",
+        ".swap",
+        ".target",
+        ".timer",
+    }
+)
+LOGROTATE_RUNTIME_ROOT = Path("/run/thebitlab")
+LOGROTATE_RUNTIME_DIRECTORY = LOGROTATE_RUNTIME_ROOT / "logrotate"
+LOGROTATE_SNAPSHOT = LOGROTATE_RUNTIME_DIRECTORY / "reopen.json"
+LOGROTATE_SNAPSHOT_MAX_AGE_SECONDS = 300
+LOGROTATE_REOPEN_TIMEOUT_SECONDS = 10.0
+LOGROTATE_REOPEN_POLL_SECONDS = 0.1
+BOOT_ID_PATH = Path("/proc/sys/kernel/random/boot_id")
 CANONICAL_NGINX_PORTS = frozenset({80, 443})
 ENABLED_NGINX_UNIT_FILE_STATES = frozenset({"enabled"})
 DISABLED_NGINX_UNIT_FILE_STATES = frozenset({"disabled"})
@@ -198,6 +233,13 @@ class EffectiveNginxUnit:
 class NginxProcess:
     pid: int
     control_groups: frozenset[str]
+
+
+@dataclass(frozen=True)
+class LogInode:
+    path: Path
+    device: int
+    inode: int
 
 
 def _run(command: list[str]) -> str:
@@ -1123,6 +1165,7 @@ def _classify_existing_topology(effective: str) -> tuple[str, BundleInfo | None]
 def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) -> Preflight:
     if os.geteuid() != 0:
         raise ActivationError("Il preflight host Ubuntu richiede root")
+    _attest_systemd_boot_surface()
     verify_ubuntu_layout()
     candidate = verify_bundle(bundle)
     verify_host_configuration_trust(
@@ -1354,6 +1397,432 @@ def _systemctl_result(arguments: Sequence[str]) -> tuple[int, str]:
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ActivationError("systemctl non disponibile o non responsivo") from exc
     return result.returncode, result.stdout.strip()
+
+
+def _systemd_path(name: str) -> tuple[Path, ...]:
+    try:
+        result = subprocess.run(
+            ["systemd-path", name],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ActivationError(f"Search path systemd non disponibile: {name}") from exc
+    value = result.stdout.strip()
+    if result.returncode != 0 or not value or "\n" in value:
+        raise ActivationError(f"Search path systemd non verificabile: {name}")
+    paths: list[Path] = []
+    for raw in value.split(":"):
+        path = Path(raw)
+        if not raw or not path.is_absolute() or path != Path(os.path.abspath(path)):
+            raise ActivationError(f"Search path systemd non canonica: {name}")
+        if path in paths:
+            raise ActivationError(f"Search path systemd duplicata: {path}")
+        paths.append(path)
+    return tuple(paths)
+
+
+def _dpkg_path_spellings(path: Path) -> tuple[str, ...]:
+    value = path.as_posix()
+    spellings = [value]
+    if value == "/usr/lib" or value.startswith("/usr/lib/"):
+        spellings.append(value.removeprefix("/usr"))
+    elif value == "/lib" or value.startswith("/lib/"):
+        spellings.append("/usr" + value)
+    return tuple(spellings)
+
+
+def _dpkg_owned_paths(paths: Iterable[Path]) -> frozenset[Path]:
+    """Attribute exact filesystem artifacts to currently installed Ubuntu packages."""
+
+    candidates: dict[str, set[Path]] = {}
+    for path in paths:
+        for spelling in _dpkg_path_spellings(path):
+            candidates.setdefault(spelling, set()).add(path)
+    owners_by_spelling: dict[str, set[str]] = {}
+    search_patterns = {
+        "".join("\\" + character if character in "\\*?[" else character for character in spelling)
+        for spelling in candidates
+    }
+    names = sorted(search_patterns)
+    for offset in range(0, len(names), 100):
+        chunk = names[offset : offset + 100]
+        try:
+            result = subprocess.run(
+                ["dpkg-query", "--search", "--", *chunk],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise ActivationError("Attribuzione package systemd non disponibile") from exc
+        if result.returncode not in {0, 1}:
+            raise ActivationError("Attribuzione package systemd fallita")
+        for line in result.stdout.splitlines():
+            try:
+                packages, spelling = line.rsplit(": ", 1)
+            except ValueError as exc:
+                raise ActivationError("Output dpkg-query ambiguo") from exc
+            if spelling not in candidates:
+                continue
+            parsed = {item.strip() for item in packages.split(",") if item.strip()}
+            if not parsed:
+                raise ActivationError("Owner dpkg-query vuoto")
+            owners_by_spelling.setdefault(spelling, set()).update(parsed)
+
+    owner_names = sorted(
+        {package for packages in owners_by_spelling.values() for package in packages}
+    )
+    installed: set[str] = set()
+    for offset in range(0, len(owner_names), 100):
+        chunk = owner_names[offset : offset + 100]
+        if not chunk:
+            continue
+        try:
+            result = subprocess.run(
+                [
+                    "dpkg-query",
+                    "--show",
+                    "--showformat=${binary:Package}\\t${Status}\\n",
+                    *chunk,
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise ActivationError("Stato package systemd non disponibile") from exc
+        if result.returncode != 0:
+            raise ActivationError("Stato package systemd non verificabile")
+        for line in result.stdout.splitlines():
+            fields = line.split("\t")
+            if len(fields) != 2:
+                raise ActivationError("Output stato package systemd ambiguo")
+            package, package_status = fields
+            if package_status == "install ok installed":
+                installed.add(package)
+                installed.add(package.split(":", 1)[0])
+
+    owned: set[Path] = set()
+    for spelling, packages in owners_by_spelling.items():
+        if any(
+            package in installed or package.split(":", 1)[0] in installed
+            for package in packages
+        ):
+            owned.update(candidates[spelling])
+    return frozenset(owned)
+
+
+def _assert_systemd_directory_ancestry(path: Path) -> None:
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        current /= part
+        _assert_trusted_metadata(current, directory=True, require_root_owner=True)
+
+
+def _collect_systemd_tree(root: Path) -> tuple[tuple[Path, ...], tuple[Path, ...]]:
+    if not root.exists() and not root.is_symlink():
+        return (), ()
+    _assert_systemd_directory_ancestry(root)
+    directories: list[Path] = []
+    artifacts: list[Path] = []
+    try:
+        for current_name, directory_names, file_names in os.walk(root, followlinks=False):
+            current = Path(current_name)
+            for name in sorted(directory_names):
+                path = current / name
+                metadata = path.lstat()
+                if stat.S_ISLNK(metadata.st_mode):
+                    artifacts.append(path)
+                    directory_names.remove(name)
+                else:
+                    _assert_trusted_metadata(
+                        path, directory=True, require_root_owner=True
+                    )
+                    directories.append(path)
+            for name in sorted(file_names):
+                artifacts.append(current / name)
+    except OSError as exc:
+        raise ActivationError(f"Inventario systemd non enumerabile: {root}") from exc
+    return tuple(sorted(directories)), tuple(sorted(artifacts))
+
+
+def _systemd_unit_identity(path: Path) -> str | None:
+    candidates = (path.name, path.parent.name.removesuffix(".d"))
+    for candidate in candidates:
+        if any(candidate.endswith(suffix) for suffix in SYSTEMD_UNIT_SUFFIXES):
+            return candidate
+    return None
+
+
+def _systemd_enablement_name_matches(link_name: str, target_name: str) -> bool:
+    if link_name == target_name:
+        return True
+    if "@." not in target_name:
+        return False
+    prefix, suffix = target_name.split("@.", 1)
+    return (
+        link_name.startswith(prefix + "@")
+        and link_name.endswith("." + suffix)
+        and len(link_name) > len(prefix) + len(suffix) + 2
+    )
+
+
+def _assert_systemd_symlink_metadata(path: Path) -> str:
+    try:
+        metadata = path.lstat()
+        target = os.readlink(path)
+    except OSError as exc:
+        raise ActivationError(f"Symlink systemd non verificabile: {path}") from exc
+    if (
+        not stat.S_ISLNK(metadata.st_mode)
+        or (os.name != "nt" and metadata.st_uid != 0)
+        or not target
+    ):
+        raise ActivationError(f"Symlink systemd non root-owned/canonico: {path}")
+    return target
+
+
+def _is_generated_systemd_root(path: Path) -> bool:
+    return path.parent == Path("/run/systemd") and path.name in SYSTEMD_GENERATED_DIRECTORY_NAMES
+
+
+def _attest_systemd_generators() -> None:
+    roots = _systemd_path(SYSTEMD_GENERATOR_SEARCH_PATH_NAME)
+    directories: list[Path] = []
+    artifacts: list[Path] = []
+    for root in roots:
+        tree_directories, tree_artifacts = _collect_systemd_tree(root)
+        directories.extend(tree_directories)
+        artifacts.extend(tree_artifacts)
+    resolved_targets: dict[Path, Path] = {}
+    for path in artifacts:
+        if path.is_symlink():
+            _assert_systemd_symlink_metadata(path)
+            try:
+                resolved_targets[path] = path.resolve(strict=True)
+            except OSError as exc:
+                raise ActivationError(f"Symlink generator systemd broken: {path}") from exc
+    package_owned = _dpkg_owned_paths(
+        (*directories, *artifacts, *resolved_targets.values())
+    )
+    unmanaged = [path for path in (*directories, *artifacts) if path not in package_owned]
+    if unmanaged:
+        raise ActivationError(
+            f"Generator systemd locale/unmanaged: {unmanaged[0]}"
+        )
+    for path in artifacts:
+        metadata = path.lstat()
+        if path.is_symlink():
+            target = resolved_targets[path]
+            if target != Path("/dev/null") and target not in package_owned:
+                raise ActivationError(
+                    f"Symlink generator package con target non attribuito: {path}"
+                )
+            continue
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ActivationError(f"Generator systemd package non regolare: {path}")
+        if os.name != "nt" and (metadata.st_uid != 0 or metadata.st_mode & 0o022):
+            raise ActivationError(f"Generator systemd package con metadata unsafe: {path}")
+
+
+def _systemd_command_output(arguments: Sequence[str], *, label: str) -> str:
+    code, output = _systemctl_result(arguments)
+    if code != 0 or not output:
+        raise ActivationError(f"{label} systemd non verificabile")
+    return output
+
+
+def _attest_systemd_boot_surface() -> None:
+    """Fail closed on every non-package/local artifact in the boot unit surface."""
+
+    code, _ = _systemctl_result(["daemon-reload"])
+    if code != 0:
+        raise ActivationError("systemd daemon-reload fallita durante boot attestation")
+    _attest_systemd_generators()
+    roots = _systemd_path(SYSTEMD_UNIT_SEARCH_PATH_NAME)
+    directories: list[Path] = []
+    artifacts: list[Path] = []
+    generated_roots = {root for root in roots if _is_generated_systemd_root(root)}
+    for root in roots:
+        tree_directories, tree_artifacts = _collect_systemd_tree(root)
+        directories.extend(tree_directories)
+        artifacts.extend(tree_artifacts)
+
+    resolved_targets: dict[Path, Path | None] = {}
+    for path in artifacts:
+        metadata = path.lstat()
+        if os.name != "nt" and metadata.st_uid != 0:
+            raise ActivationError(f"Artifact systemd non root-owned: {path}")
+        if stat.S_ISLNK(metadata.st_mode):
+            _assert_systemd_symlink_metadata(path)
+            try:
+                resolved_targets[path] = path.resolve(strict=True)
+            except OSError as exc:
+                raise ActivationError(f"Symlink systemd broken/non risolvibile: {path}") from exc
+        elif stat.S_ISREG(metadata.st_mode):
+            if (
+                (os.name != "nt" and metadata.st_mode & 0o022)
+                or getattr(metadata, "st_nlink", 1) != 1
+            ):
+                raise ActivationError(f"Artifact systemd con metadata unsafe: {path}")
+        else:
+            raise ActivationError(f"Tipo artifact systemd non ammesso: {path}")
+
+    package_candidates = [*directories, *artifacts]
+    package_candidates.extend(
+        target for target in resolved_targets.values() if target is not None
+    )
+    package_owned = _dpkg_owned_paths(package_candidates)
+    unit_files = _systemd_command_output(
+        ["list-unit-files", "--all", "--no-legend", "--no-pager", "--plain"],
+        label="Inventario unit-file",
+    )
+    unit_file_states: dict[str, str] = {}
+    for line in unit_files.splitlines():
+        fields = line.split()
+        if len(fields) not in {2, 3}:
+            raise ActivationError("Output list-unit-files ambiguo")
+        unit_name, unit_state = fields[:2]
+        if unit_name in unit_file_states:
+            raise ActivationError(f"Unit file duplicata nell'inventario: {unit_name}")
+        unit_file_states[unit_name] = unit_state
+    trusted_units: set[str] = set()
+
+    for directory in directories:
+        if any(directory == root or root in directory.parents for root in generated_roots):
+            continue
+        if directory in package_owned:
+            continue
+        if directory.name.endswith(SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES):
+            continue
+        raise ActivationError(f"Directory systemd locale/unmanaged: {directory}")
+
+    for path in artifacts:
+        identity = _systemd_unit_identity(path)
+        generated = any(path == root or root in path.parents for root in generated_roots)
+        if generated:
+            target = resolved_targets.get(path)
+            if target is not None and not (
+                target == Path("/dev/null")
+                or target in package_owned
+                or any(target == root or root in target.parents for root in generated_roots)
+            ):
+                raise ActivationError(
+                    f"Symlink generator output con target non trusted: {path}"
+                )
+            if identity is not None:
+                trusted_units.add(identity)
+            continue
+        if path in package_owned:
+            target = resolved_targets.get(path)
+            if target is not None and target != Path("/dev/null") and target not in package_owned:
+                raise ActivationError(f"Symlink package systemd con target non attribuito: {path}")
+            if identity is not None:
+                trusted_units.add(identity)
+            continue
+        if path == SYSTEMD_LINK:
+            target = _assert_systemd_symlink_metadata(path)
+            if target != INTEGRATION_LINKS[SYSTEMD_LINK]:
+                raise ActivationError("Unit locale TheBitLab con target inatteso")
+            try:
+                resolved = path.resolve(strict=True)
+            except OSError as exc:
+                raise ActivationError("Unit locale TheBitLab non risolvibile") from exc
+            _verify_trusted_ancestry(resolved, DEPLOYMENTS_ROOT)
+            bundle_root = resolved.parent.parent
+            try:
+                verify_bundle(bundle_root)
+            except (ActivationError, deployment.DeploymentValidationError):
+                verify_legacy_v1_bundle(bundle_root)
+            trusted_units.add("thebitlab.service")
+            continue
+        if path == NGINX_MIGRATION_GUARD:
+            if _assert_systemd_symlink_metadata(path) != "/dev/null":
+                raise ActivationError("Migration guard systemd inatteso")
+            trusted_units.add("nginx.service")
+            continue
+        if path not in resolved_targets:
+            raise ActivationError(f"Artifact systemd locale/unmanaged: {path}")
+        target = resolved_targets[path]
+        if target is None:
+            raise ActivationError(f"Enablement/link systemd broken: {path}")
+        if path == THEBITLAB_WANTS_LINK:
+            try:
+                expected = SYSTEMD_LINK.resolve(strict=True)
+            except OSError as exc:
+                raise ActivationError("Enablement TheBitLab senza unit canonica") from exc
+            if target != expected or path.name != "thebitlab.service":
+                raise ActivationError("Enablement TheBitLab non canonico")
+            trusted_units.add(path.name)
+            continue
+        package_enablement = (
+            target in package_owned
+            and _systemd_enablement_name_matches(path.name, target.name)
+            and (
+                path.parent.name.endswith(SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES)
+                or path.parent in roots
+            )
+        )
+        package_default = (
+            target in package_owned
+            and path.name == "default.target"
+            and path.parent in roots
+        )
+        package_alias = (
+            target in package_owned
+            and path.parent in roots
+            and unit_file_states.get(path.name) == "alias"
+        )
+        if not (package_enablement or package_default or package_alias):
+            raise ActivationError(f"Enablement systemd verso target non package: {path}")
+        trusted_units.add(path.name)
+
+    enabled_units = {
+        unit_name
+        for unit_name, unit_state in unit_file_states.items()
+        if unit_state in SYSTEMD_ENABLED_STATES
+    }
+    untrusted_enabled = sorted(enabled_units - trusted_units)
+    if untrusted_enabled:
+        raise ActivationError(
+            f"Unit enabled/linked non attribuita: {untrusted_enabled[0]}"
+        )
+
+    default_target = _systemd_command_output(["get-default"], label="Default target")
+    if "\n" in default_target or default_target not in trusted_units:
+        raise ActivationError("Default target systemd non attribuito")
+    dependencies = _systemd_command_output(
+        [
+            "list-dependencies",
+            "--all",
+            "--plain",
+            "--no-pager",
+            default_target,
+        ],
+        label="Boot dependency graph",
+    )
+    for line in dependencies.splitlines():
+        fields = line.split()
+        if not fields:
+            continue
+        unit_name = fields[-1]
+        if unit_name in trusted_units or any(
+            _systemd_enablement_name_matches(unit_name, trusted)
+            for trusted in trusted_units
+        ):
+            continue
+        if unit_name.endswith((".automount", ".device", ".mount", ".scope", ".slice", ".swap")):
+            continue
+        if _systemd_property("LoadState", unit_name) == "not-found":
+            # A package target may name an optional unit (for example display-manager.service).
+            # With no artifact in the closed inventory it cannot activate local code.
+            continue
+        raise ActivationError(f"Unit boot-reachable non attribuita: {unit_name}")
 
 
 def _nginx_service_state() -> tuple[str, int]:
@@ -1697,6 +2166,301 @@ def _attest_nginx_service_runtime(
                 raise ActivationError("Listener canonico fuori dal ControlGroup nginx.service")
 
 
+def _logrotate_paths() -> tuple[Path, Path]:
+    import grp
+    import pwd
+
+    info = verify_bundle(_current_bundle_path())
+    log_directory = Path("/var/log/thebitlab")
+    try:
+        directory_metadata = log_directory.lstat()
+    except OSError as exc:
+        raise ActivationError("Directory logrotate non verificabile") from exc
+    if (
+        log_directory.is_symlink()
+        or not stat.S_ISDIR(directory_metadata.st_mode)
+        or directory_metadata.st_uid != pwd.getpwnam("root").pw_uid
+        or directory_metadata.st_gid != grp.getgrnam("www-data").gr_gid
+        or stat.S_IMODE(directory_metadata.st_mode) != 0o750
+    ):
+        raise ActivationError("Directory logrotate con metadata non canonici")
+    _verify_no_extended_acl(log_directory)
+    paths = tuple(
+        Path(info.manifest["origin"][name]) for name in ("access_log", "error_log")
+    )
+    if (
+        len(set(paths)) != 2
+        or any(
+            not path.is_absolute()
+            or path.parent != Path("/var/log/thebitlab")
+            or path.suffix != ".log"
+            for path in paths
+        )
+    ):
+        raise ActivationError("Path logrotate fuori dal contratto pilot")
+    return paths[0], paths[1]
+
+
+def _log_inode(path: Path) -> LogInode:
+    import grp
+    import pwd
+
+    try:
+        metadata = path.lstat()
+    except OSError as exc:
+        raise ActivationError(f"Log rotation path non verificabile: {path}") from exc
+    if (
+        path.is_symlink()
+        or not stat.S_ISREG(metadata.st_mode)
+        or getattr(metadata, "st_nlink", 1) != 1
+        or stat.S_IMODE(metadata.st_mode) != 0o640
+        or metadata.st_uid != pwd.getpwnam("www-data").pw_uid
+        or metadata.st_gid != grp.getgrnam("adm").gr_gid
+    ):
+        raise ActivationError(f"Log rotation path non regolare/canonico: {path}")
+    return LogInode(path, metadata.st_dev, metadata.st_ino)
+
+
+def _boot_id() -> str:
+    try:
+        value = BOOT_ID_PATH.read_text(encoding="ascii").strip()
+    except OSError as exc:
+        raise ActivationError("Boot ID non verificabile per logrotate") from exc
+    if re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", value) is None:
+        raise ActivationError("Boot ID non canonico per logrotate")
+    return value
+
+
+def _ensure_logrotate_runtime_directory() -> None:
+    if not LOGROTATE_RUNTIME_ROOT.exists():
+        LOGROTATE_RUNTIME_ROOT.mkdir(mode=0o755, parents=False)
+        _fsync_directory(LOGROTATE_RUNTIME_ROOT.parent)
+    _assert_trusted_metadata(
+        LOGROTATE_RUNTIME_ROOT, directory=True, require_root_owner=True
+    )
+    root_metadata = LOGROTATE_RUNTIME_ROOT.stat()
+    if stat.S_IMODE(root_metadata.st_mode) != 0o755:
+        raise ActivationError("Runtime root logrotate deve avere mode 0755")
+    if not LOGROTATE_RUNTIME_DIRECTORY.exists():
+        LOGROTATE_RUNTIME_DIRECTORY.mkdir(mode=0o700, parents=False)
+        _fsync_directory(LOGROTATE_RUNTIME_ROOT)
+    _assert_trusted_metadata(
+        LOGROTATE_RUNTIME_DIRECTORY, directory=True, require_root_owner=True
+    )
+    if stat.S_IMODE(LOGROTATE_RUNTIME_DIRECTORY.stat().st_mode) != 0o700:
+        raise ActivationError("Directory snapshot logrotate deve avere mode 0700")
+
+
+def _logrotate_snapshot_security(path: Path = LOGROTATE_SNAPSHOT) -> os.stat_result:
+    try:
+        metadata = path.lstat()
+    except OSError as exc:
+        raise ActivationError("Snapshot logrotate assente o non accessibile") from exc
+    if (
+        path.is_symlink()
+        or not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_uid != 0
+        or stat.S_IMODE(metadata.st_mode) != 0o600
+        or getattr(metadata, "st_nlink", 1) != 1
+        or metadata.st_size > 4096
+    ):
+        raise ActivationError("Snapshot logrotate con metadata unsafe")
+    return metadata
+
+
+def _write_logrotate_snapshot(payload: Mapping[str, Any]) -> None:
+    _ensure_logrotate_runtime_directory()
+    if LOGROTATE_SNAPSHOT.exists() or LOGROTATE_SNAPSHOT.is_symlink():
+        _logrotate_snapshot_security()
+    temporary = LOGROTATE_RUNTIME_DIRECTORY / f".reopen.{os.getpid()}"
+    descriptor = -1
+    try:
+        temporary.unlink(missing_ok=True)
+        descriptor = os.open(
+            temporary,
+            os.O_WRONLY
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+        )
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
+            descriptor = -1
+            json.dump(payload, stream, indent=2, sort_keys=True)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, LOGROTATE_SNAPSHOT)
+        _fsync_directory(LOGROTATE_RUNTIME_DIRECTORY)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
+
+
+def logrotate_snapshot() -> None:
+    """Persist only pre-rotation inode identity in a root-owned transient record."""
+
+    logs = tuple(_log_inode(path) for path in _logrotate_paths())
+    payload = {
+        "schema_version": "thebitlab.logrotate-reopen.v1",
+        "boot_id": _boot_id(),
+        "created_unix_ns": time.time_ns(),
+        "logs": [
+            {"path": str(item.path), "st_dev": item.device, "st_ino": item.inode}
+            for item in logs
+        ],
+    }
+    _write_logrotate_snapshot(payload)
+
+
+def _read_logrotate_snapshot() -> tuple[LogInode, ...]:
+    _ensure_logrotate_runtime_directory()
+    _logrotate_snapshot_security()
+    try:
+        payload = json.loads(LOGROTATE_SNAPSHOT.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ActivationError("Snapshot logrotate corrotto") from exc
+    if not isinstance(payload, dict) or set(payload) != {
+        "schema_version", "boot_id", "created_unix_ns", "logs"
+    }:
+        raise ActivationError("Schema snapshot logrotate inatteso")
+    if (
+        payload["schema_version"] != "thebitlab.logrotate-reopen.v1"
+        or payload["boot_id"] != _boot_id()
+        or not isinstance(payload["created_unix_ns"], int)
+    ):
+        raise ActivationError("Snapshot logrotate stale o non supportato")
+    age_ns = time.time_ns() - payload["created_unix_ns"]
+    if age_ns < 0 or age_ns > LOGROTATE_SNAPSHOT_MAX_AGE_SECONDS * 1_000_000_000:
+        raise ActivationError("Snapshot logrotate stale")
+    raw_logs = payload["logs"]
+    expected_paths = _logrotate_paths()
+    if not isinstance(raw_logs, list) or len(raw_logs) != 2:
+        raise ActivationError("Snapshot logrotate senza due log canonici")
+    logs: list[LogInode] = []
+    for index, raw in enumerate(raw_logs):
+        if not isinstance(raw, dict) or set(raw) != {"path", "st_dev", "st_ino"}:
+            raise ActivationError("Record inode logrotate inatteso")
+        if (
+            raw["path"] != str(expected_paths[index])
+            or not isinstance(raw["st_dev"], int)
+            or not isinstance(raw["st_ino"], int)
+            or raw["st_dev"] < 0
+            or raw["st_ino"] <= 0
+        ):
+            raise ActivationError("Record inode logrotate non canonico")
+        logs.append(LogInode(expected_paths[index], raw["st_dev"], raw["st_ino"]))
+    return tuple(logs)
+
+
+def _nginx_open_log_inodes(
+    processes: Sequence[NginxProcess], watched: frozenset[tuple[int, int]]
+) -> dict[tuple[int, int], int]:
+    counts = {identity: 0 for identity in watched}
+    for process in processes:
+        directory = PROC_ROOT / str(process.pid) / "fd"
+        try:
+            descriptors = tuple(directory.iterdir())
+        except OSError as exc:
+            raise ActivationError(f"FD nginx {process.pid} non enumerabili") from exc
+        for descriptor in descriptors:
+            try:
+                metadata = descriptor.stat()
+            except OSError as exc:
+                raise ActivationError(
+                    f"FD nginx {process.pid} instabile/non verificabile"
+                ) from exc
+            identity = (metadata.st_dev, metadata.st_ino)
+            if identity in counts:
+                counts[identity] += 1
+    return counts
+
+
+def _attest_logrotate_active_unit(
+    expected: EffectiveNginxUnit | None = None,
+) -> tuple[EffectiveNginxUnit, tuple[NginxProcess, ...]]:
+    if _nginx_service_state() != ("active", 0):
+        raise ActivationError("nginx.service ha cambiato stato durante reopen")
+    unit = _attest_effective_nginx_unit(expect_running=True)
+    if expected is not None and unit != expected:
+        raise ActivationError("MainPID/cgroup nginx cambiati durante reopen")
+    _attest_nginx_service_runtime(unit)
+    processes = _nginx_processes()
+    if not processes or any(
+        not _process_in_control_group(process, unit.control_group)
+        for process in processes
+    ):
+        raise ActivationError("Process topology nginx ambigua durante reopen")
+    return unit, processes
+
+
+def logrotate_reopen() -> None:
+    """Signal canonical nginx and prove old-to-current FD/inode transition."""
+
+    previous = _read_logrotate_snapshot()
+    current = tuple(_log_inode(item.path) for item in previous)
+    rotated = tuple(
+        (old, new)
+        for old, new in zip(previous, current, strict=True)
+        if (old.device, old.inode) != (new.device, new.inode)
+    )
+    if not rotated:
+        raise ActivationError("Postrotate invocato senza inode ruotati")
+
+    state, code = _nginx_service_state()
+    if (state, code) == ("inactive", 3):
+        _attest_effective_nginx_unit(expect_running=False)
+        _assert_zero_nginx_processes()
+        LOGROTATE_SNAPSHOT.unlink()
+        _fsync_directory(LOGROTATE_RUNTIME_DIRECTORY)
+        return
+    if (state, code) != ("active", 0):
+        raise ActivationError(f"Stato nginx ambiguo durante logrotate: {state}")
+
+    unit, _ = _attest_logrotate_active_unit()
+    kill_code, _ = _systemctl_result(
+        ["kill", "--kill-whom=main", "--signal=USR1", "nginx.service"]
+    )
+    if kill_code != 0:
+        raise ActivationError("USR1 nginx tramite systemd fallita")
+    watched = frozenset(
+        (item.device, item.inode) for pair in rotated for item in pair
+    )
+    deadline = time.monotonic() + LOGROTATE_REOPEN_TIMEOUT_SECONDS
+    while True:
+        _observed_unit, processes = _attest_logrotate_active_unit(unit)
+        if any(_log_inode(item.path) != item for item in current):
+            raise ActivationError("Current log path sostituito durante reopen")
+        counts = _nginx_open_log_inodes(processes, watched)
+        _confirmed_unit, confirmed_processes = _attest_logrotate_active_unit(unit)
+        if tuple(process.pid for process in processes) != tuple(
+            process.pid for process in confirmed_processes
+        ):
+            raise ActivationError("Process set nginx cambiato durante scansione FD")
+        confirmed_counts = _nginx_open_log_inodes(confirmed_processes, watched)
+        _final_unit, final_processes = _attest_logrotate_active_unit(unit)
+        if tuple(process.pid for process in confirmed_processes) != tuple(
+            process.pid for process in final_processes
+        ):
+            raise ActivationError("Process set nginx cambiato dopo scansione FD")
+        if all(
+            counts[(old.device, old.inode)] == 0
+            and counts[(new.device, new.inode)] >= 1
+            and confirmed_counts[(old.device, old.inode)] == 0
+            and confirmed_counts[(new.device, new.inode)] >= 1
+            for old, new in rotated
+        ):
+            LOGROTATE_SNAPSHOT.unlink()
+            _fsync_directory(LOGROTATE_RUNTIME_DIRECTORY)
+            return
+        if time.monotonic() >= deadline:
+            raise ActivationError("Timeout reopen nginx: transizione FD/inode non provata")
+        time.sleep(LOGROTATE_REOPEN_POLL_SECONDS)
+
+
 def _attest_preflight_nginx_runtime() -> None:
     state, code = _nginx_service_state()
     if (state, code) == ("active", 0):
@@ -1783,6 +2547,8 @@ def _install_migration_guard() -> None:
         if NGINX_WANTS_LINK.parent.is_dir() and not NGINX_WANTS_LINK.parent.is_symlink():
             _fsync_directory(NGINX_WANTS_LINK.parent)
         _fault("after_pre_guard_disable")
+    # Closed local-unit inventory immediately precedes the manager-mediated boundary.
+    _attest_systemd_boot_surface()
     code, _ = _systemctl_result(["mask", "--now", "nginx.service"])
     if code != 0:
         raise ActivationError("Mask manager-mediated nginx.service fallita")
@@ -1795,7 +2561,9 @@ def _remove_migration_guard() -> None:
     _disable_nginx_autostart_link()
     _fault("after_nginx_disable")
 
-    # Final guarded linearization point: no process/listener may survive immediately pre-unmask.
+    # Final guarded linearization point: no process/listener or local boot unit may survive.
+    _verify_migration_guard()
+    _attest_systemd_boot_surface()
     _verify_migration_guard()
     code, _ = _systemctl_result(["unmask", "nginx.service"])
     if code != 0:
@@ -1834,6 +2602,9 @@ def _start_nginx_service() -> None:
     _attest_nginx_service_runtime(disabled_unit)
     _fault("after_nginx_runtime_attestation")
 
+    # Keep the last boot-surface check adjacent to final persistent enablement.
+    _attest_systemd_boot_surface()
+    _attest_nginx_service_runtime(disabled_unit)
     code, _ = _systemctl_result(["enable", "nginx.service"])
     if code != 0:
         raise ActivationError("Riabilitazione persistente nginx.service fallita")
@@ -1855,6 +2626,7 @@ def _apply_bundle_links(bundle: Path) -> None:
 
 
 def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> None:
+    _attest_systemd_boot_surface()
     verified = verify_bundle(info.path)
     verify_host_configuration_trust(
         verified, guard_required=guard_required, require_complete_links=True
@@ -2025,6 +2797,7 @@ def recover(bundle: Path | None = None, state_path: Path = STATE_FILE) -> None:
 
     if os.geteuid() != 0:
         raise ActivationError("Recovery Ubuntu richiede root")
+    _attest_systemd_boot_surface()
     if not _state_exists(state_path):
         if not _symlink_state(NGINX_MIGRATION_GUARD)["present"]:
             raise ActivationError("Nessuna transition persistente da recuperare")
@@ -2120,6 +2893,8 @@ def main(argv: list[str] | None = None) -> int:
     complete_parser = subparsers.add_parser("complete")
     complete_parser.add_argument("--state-file", type=Path, default=STATE_FILE)
     complete_parser.add_argument("--archive", type=Path, required=True)
+    subparsers.add_parser("logrotate-snapshot")
+    subparsers.add_parser("logrotate-reopen")
     subparsers.add_parser("runtime-info")
     args = parser.parse_args(argv)
     try:
@@ -2134,8 +2909,12 @@ def main(argv: list[str] | None = None) -> int:
             rollback(args.state_file)
         elif args.command == "recover":
             recover(args.bundle, args.state_file)
-        else:
+        elif args.command == "complete":
             complete(args.state_file, args.archive)
+        elif args.command == "logrotate-snapshot":
+            logrotate_snapshot()
+        else:
+            logrotate_reopen()
     except (ActivationError, deployment.DeploymentValidationError, KeyError, OSError) as exc:
         print(f"ERRORE: {exc}", file=sys.stderr)
         return 2

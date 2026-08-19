@@ -50,7 +50,7 @@
         "bind_host": {"const": "127.0.0.1"},
         "port": {"type": "integer", "minimum": 1024, "maximum": 65535},
         "environment_file": {"$ref": "#/$defs/absolutePath"},
-        "lock_directory": {"const": "/run/thebitlab"}
+        "lock_directory": {"const": "/run/thebitlab/app"}
       }
     },
     "data": {
