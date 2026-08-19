@@ -2,13 +2,24 @@
 
 ## Stato
 
-**Proposto** nell'ambito di #723. Il contratto nasce dal pacchetto sperimentale TPSI quarto (#625) e viene consolidato prima di avviare TPSI quinto Full Stack e il corso SQL.
+**Accettato** il 19 agosto 2026 nell'ambito di #723, dopo adozione reale su due corsi differenti e verifica della tassonomia Activity A-E.
 
 Schema canonico:
 
 ```text
 thebitlab.content-pack.v1
 ```
+
+### Evidenze di accettazione
+
+La v1 non viene accettata sulla sola base delle fixture. Il gate ha richiesto consumer reali:
+
+- `TheBitPoets/tpsi-quarto-docente`: migrazione conservativa `content-pack.v0 -> v1`, mantenendo il manifest v0 affiancato, coverage, provenance, Course Design e Activity; PR #3 mergiata allo SHA `6e0f1e662a50e8e6feac50cd1e9c80576cd0c9f3`, con CI verde su Ubuntu Python 3.11/3.12 e Windows Python 3.11;
+- `TheBitPoets/tpsi-quinto-docente`: consumer nato direttamente in v1, con fonti locali/remoto-pinned, reference tecniche e teacher-reference licensed, Course Design da 33 settimane e Activity reali A-E; il gate finale include la milestone Bootstrap/Feisbuc mergiata allo SHA `9c333d0ebe3d0bffc133e27edcb0d3ec6293783a`, con CI verde su Ubuntu Python 3.11/3.12 e Windows Python 3.11;
+- regressione del projector per source `local` alla root: `path: ""` resta valido nel Content Pack ma viene omesso dalla proiezione `CourseDesign.sources`, risultando accettato dal `course_source_catalog` reale (#727);
+- l'intera suite `2cornot2c` resta il gate finale prima del merge dell'accettazione.
+
+L'accettazione riguarda **il contratto di authoring `thebitlab.content-pack.v1`**. Non implica che i corsi consumer siano `approved` o congelati, non sceglie framework/ORM/TypeScript per TPSI5 e non dichiara implementato il grading HTML/browser, che resta governato separatamente da #729.
 
 ## Scopo
 
@@ -192,6 +203,8 @@ Ogni source e un `source-package` e deve dichiarare almeno:
 ```
 
 Per `github`/`gitlab` restano necessari `repository` e `ref`, coerentemente con `course_source_catalog`.
+
+Una source locale puo usare `path: ""` per indicare la root del repository. Nella proiezione verso `CourseDesign.sources`, il campo `path` viene omesso quando e vuoto, cosi il risultato resta compatibile con il catalogo corrente.
 
 Un Content Pack v1 deve poter proiettare `sources` direttamente nella forma `CourseDesign.sources` senza perdere i campi necessari all'indicizzazione.
 
@@ -401,7 +414,7 @@ Course Bundle 1.0.0
 BundleReference esterno con tag/SHA
 ```
 
-La conversione automatica non fa parte del primo incremento #723; il boundary e pero vincolante per evitare che i due manifest evolvano in formati concorrenti.
+La conversione automatica non fa parte della v1; il boundary e pero vincolante per evitare che i due manifest evolvano in formati concorrenti.
 
 ## Conformance
 
@@ -432,18 +445,19 @@ I test di conformita verificano almeno:
 - provenance obbligatoria;
 - coverage quando esiste un riferimento curricolare;
 - lifecycle `approved`;
-- proiezione `sources -> CourseDesign.sources`;
+- proiezione `sources -> CourseDesign.sources`, inclusa una source locale alla root senza `path` vuoto serializzato;
 - migrazione v0 -> v1 senza perdita dei metadati legacy rilevanti.
 
 ## Evoluzioni successive
 
-Non fanno parte della v1 iniziale:
+Non fanno parte della v1 accettata:
 
 - ingestione diretta di siti/PDF/provider licensed;
 - credenziali nel manifest;
 - marketplace/licensing runtime;
 - ContentBlock/ContentVersion persistenti lato server;
 - builder automatico Content Pack -> Course Bundle;
-- modifica dell'Activity schema.
+- modifica dell'Activity schema;
+- grading HTML/browser automatico.
 
 Queste evoluzioni devono preservare gli ID e il significato editoriale della v1.
