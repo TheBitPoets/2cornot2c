@@ -178,7 +178,7 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
     assert "maxage 30" in logrotate
     assert "create 0640 www-data adm" in logrotate
     assert "systemctl is-active nginx.service" in logrotate
-    assert "systemctl kill --kill-whom=main --signal=USR1 nginx.service" in logrotate
+    assert "systemctl kill --kill-whom=all --signal=USR1 nginx.service" in logrotate
     assert "active:0)" in logrotate
     assert "inactive:3)" in logrotate
     assert "/run/nginx.pid" not in logrotate
@@ -284,7 +284,7 @@ def test_logrotate_reopen_uses_systemd_unit_identity_and_fails_closed(
     )
     assert result.returncode == expected_code
     recorded = calls.read_text(encoding="utf-8")
-    assert ("kill --kill-whom=main --signal=USR1 nginx.service" in recorded) is expect_kill
+    assert ("kill --kill-whom=all --signal=USR1 nginx.service" in recorded) is expect_kill
     assert recorded.count("is-active nginx.service") == (2 if state == "active" and kill_code == 0 else 1)
     assert "pid" not in recorded.lower()
 

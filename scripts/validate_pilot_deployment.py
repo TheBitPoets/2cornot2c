@@ -368,7 +368,7 @@ def validate_rendered_logging(
         or 'systemctl is-active nginx.service' not in logrotate_config
         or 'active:0)' not in logrotate_config
         or 'inactive:3)' not in logrotate_config
-        or 'systemctl kill --kill-whom=main --signal=USR1 nginx.service || exit 1' not in logrotate_config
+        or 'systemctl kill --kill-whom=all --signal=USR1 nginx.service || exit 1' not in logrotate_config
         or 'post_state="$(systemctl is-active nginx.service' not in logrotate_config
         or '[ "$post_state:$post_result" = active:0 ] || exit 1' not in logrotate_config
         or "/run/nginx.pid" in logrotate_config
