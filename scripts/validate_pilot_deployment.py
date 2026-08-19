@@ -330,7 +330,10 @@ def validate_rendered_logging(
         expected_header not in normalized_lines
         or not required_lines.issubset(normalized_lines)
         or "copytruncate" in normalized_lines
-        or 'kill -USR1 "$(cat /run/nginx.pid)"' not in logrotate_config
+        or 'executable="$(readlink -f "/proc/$pid/exe"' not in logrotate_config
+        or '"nginx: master process "*) kill -USR1 "$pid"' not in logrotate_config
+        or '[ "$executable" = /usr/sbin/nginx ]' not in logrotate_config
+        or '[ "$uid" = 0 ]' not in logrotate_config
     ):
         raise DeploymentValidationError("Policy logrotate incompleta o non sicura")
 

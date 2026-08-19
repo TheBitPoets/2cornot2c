@@ -1,0 +1,47 @@
+[Unit]
+Description=TheBitLab pilot application (@@DEPLOYMENT_ID@@)
+Documentation=file://@@REPOSITORY_ROOT@@/doc/PILOT_DEPLOYMENT.md
+Wants=network-online.target
+After=network-online.target
+ConditionPathIsDirectory=@@REPOSITORY_ROOT@@
+ConditionPathIsDirectory=@@DATA_ROOT@@
+ConditionPathExists=@@ENVIRONMENT_FILE@@
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_GROUP@@
+WorkingDirectory=@@REPOSITORY_ROOT@@
+RuntimeDirectory=thebitlab
+RuntimeDirectoryMode=0700
+UMask=0077
+
+# Do not use EnvironmentFile= here: systemd gives it precedence over
+# Environment=. The launcher validates the protected file at every start,
+# imports only allowlisted secrets, and sets manifest-owned topology itself.
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=@@HOME_DIRECTORY@@
+
+ExecStart=@@PYTHON_EXECUTABLE@@ scripts/pilot_service_launcher.py --environment-file @@ENVIRONMENT_FILE@@ --deployment-id @@DEPLOYMENT_ID@@ --deployment-revision @@RELEASE_COMMIT@@ --lock-directory @@LOCK_DIRECTORY@@ --auth-db-path @@AUTH_DB_PATH@@ --trusted-proxy-cidrs 127.0.0.1/32 --google-redirect-uri @@GOOGLE_REDIRECT_URI@@@@GITHUB_OAUTH_ARGUMENTS@@ --host @@BIND_HOST@@ --port @@APP_PORT@@ --root @@DATA_ROOT@@ --enable-google-auth@@GITHUB_APP_FLAG@@
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=30s
+TimeoutStopSec=45s
+KillSignal=SIGINT
+SuccessExitStatus=130
+
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=@@DATA_ROOT@@ @@LOCK_DIRECTORY@@@@GITHUB_APP_WRITE_PATH@@
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

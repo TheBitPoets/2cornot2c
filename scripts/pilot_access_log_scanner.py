@@ -29,12 +29,19 @@ class ScanFinding:
 
 
 def scan_stream(stream: BinaryIO) -> tuple[ScanFinding, ...]:
-    """Return metadata-only findings; log bytes are never decoded or returned."""
+    """Return metadata-only findings while keeping each materialized record bounded."""
 
     findings: list[ScanFinding] = []
-    for line_number, line in enumerate(stream, start=1):
+    line_number = 0
+    while True:
+        line = stream.readline(MAX_LOG_LINE_BYTES + 1)
+        if not line:
+            break
+        line_number += 1
         if len(line) > MAX_LOG_LINE_BYTES:
             findings.append(ScanFinding(line_number, "line_too_long"))
+            while line and not line.endswith(b"\n"):
+                line = stream.readline(MAX_LOG_LINE_BYTES + 1)
             continue
         request = _REQUEST_TARGET.search(line)
         if request is not None and b"?" in request.group(1):

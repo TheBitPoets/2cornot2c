@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Exercise pilot activation and secret-safe runtime on an ephemeral Ubuntu 24.04 host."""
+"""Exercise secure v1 migration, v2 runtime, and rollback on ephemeral Ubuntu 24.04."""
 
 from __future__ import annotations
 
 import argparse
 import base64
 import copy
+import glob
 import http.server
+import json
 import os
 import re
 import shutil
@@ -96,6 +98,7 @@ def _send(
     *,
     host: str,
     use_tls: bool,
+    sni: str | None = None,
     headers: tuple[str, ...] = (),
     family: socket.AddressFamily = socket.AF_INET,
 ) -> int | None:
@@ -109,7 +112,7 @@ def _send(
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             context.check_hostname = False
             context.verify_mode = ssl.CERT_NONE
-            stream = context.wrap_socket(connection, server_hostname=host)
+            stream = context.wrap_socket(connection, server_hostname=sni or host)
         request = (
             f"GET {target} HTTP/1.1\r\nHost: {host}\r\n"
             + "".join(f"{header}\r\n" for header in headers)
@@ -125,14 +128,24 @@ def _send(
     return int(match.group(1))
 
 
-def _send_malformed(marker: str) -> None:
+def _send_raw(request: bytes) -> None:
     with socket.create_connection(("127.0.0.1", 80), timeout=5) as connection:
-        connection.sendall(
-            f"GET /malformed?code={marker} HTTP/1.1\r\nHost: bad host\r\n\r\n".encode(
-                "ascii"
-            )
-        )
+        connection.sendall(request)
         connection.recv(4096)
+
+
+def _send_malformed_host(marker: str) -> None:
+    _send_raw(
+        f"GET /malformed-host?code={marker} HTTP/1.1\r\nHost: bad host\r\n\r\n".encode("ascii")
+    )
+
+
+def _send_malformed_request(marker: str) -> None:
+    _send_raw(
+        f"G?ET /malformed-line?code={marker} HTTP/1.1\r\nHost: {ORIGIN_HOST}\r\n\r\n".encode(
+            "ascii"
+        )
+    )
 
 
 def _unknown_sni(marker: str) -> None:
@@ -158,6 +171,23 @@ def _wait_nginx(process: subprocess.Popen[str]) -> None:
         except OSError:
             time.sleep(0.05)
     raise RuntimeError("Timeout avvio nginx effettivo")
+
+
+def _effective_persistent_logs(effective: str) -> tuple[Path, ...]:
+    sources = activation._split_effective_sources(effective)
+    paths: set[Path] = set()
+    for source, text in sources.items():
+        directives = activation._parse_nginx_source(source, text)
+        for directive, _ in activation._walk_directives(directives):
+            if directive.name not in {"access_log", "error_log"} or not directive.args:
+                continue
+            destination = directive.args[0]
+            if destination in {"off", "/dev/null", "stderr"} or destination.startswith("syslog:"):
+                continue
+            if destination.startswith("/") and "$" not in destination:
+                paths.add(Path(destination))
+    paths.update(Path(name) for name in glob.glob("/var/log/nginx/*.log"))
+    return tuple(sorted(paths))
 
 
 def _assert_markers_absent(paths: tuple[Path, ...], markers: tuple[str, ...]) -> None:
@@ -186,30 +216,38 @@ def _verify_audit() -> None:
         raise RuntimeError("Diagnostica process-level assente")
 
 
-def _verify_metadata(manifest: dict) -> None:
+def _verify_metadata() -> None:
     import grp
     import pwd
 
-    directory = Path(manifest["logging"]["directory"])
+    directory = Path("/var/log/thebitlab")
     metadata = directory.stat()
-    if stat.S_IMODE(metadata.st_mode) != 0o750:
-        raise RuntimeError("Modo directory log diverso da 0750")
-    if metadata.st_uid != 0 or metadata.st_gid != grp.getgrnam("adm").gr_gid:
-        raise RuntimeError("Ownership directory log diversa da root:adm")
+    if (
+        stat.S_IMODE(metadata.st_mode) != 0o750
+        or metadata.st_uid != 0
+        or metadata.st_gid != grp.getgrnam("adm").gr_gid
+    ):
+        raise RuntimeError("Metadata directory log diversi da root:adm 0750")
     for path in (ACCESS_LOG, PROCESS_LOG):
         metadata = path.stat()
-        if stat.S_IMODE(metadata.st_mode) != 0o640:
-            raise RuntimeError("Modo file log diverso da 0640")
-        if metadata.st_uid != pwd.getpwnam("www-data").pw_uid:
-            raise RuntimeError("Owner file log diverso da www-data")
-        if metadata.st_gid != grp.getgrnam("adm").gr_gid:
-            raise RuntimeError("Gruppo file log diverso da adm")
+        if (
+            stat.S_IMODE(metadata.st_mode) != 0o640
+            or metadata.st_uid != pwd.getpwnam("www-data").pw_uid
+            or metadata.st_gid != grp.getgrnam("adm").gr_gid
+        ):
+            raise RuntimeError("Metadata file log diversi da www-data:adm 0640")
+        acl = _run(["getfacl", "-cp", "--", str(path)])
+        if any(
+            line.startswith(("default:", "mask:"))
+            or (line.startswith("user:") and not line.startswith("user::"))
+            or (line.startswith("group:") and not line.startswith("group::"))
+            for line in acl.splitlines()
+        ):
+            raise RuntimeError("ACL log estesa inattesa")
 
 
 def _render_bundle(temporary: Path, bundle: Path) -> dict:
-    manifest = copy.deepcopy(
-        deployment.load_json(ROOT / "deploy/pilot/candidate.example.json")
-    )
+    manifest = copy.deepcopy(deployment.load_json(ROOT / "deploy/pilot/candidate.example.json"))
     release = temporary / "release"
     release.mkdir()
     python_link = release / "python"
@@ -253,33 +291,45 @@ def _render_bundle(temporary: Path, bundle: Path) -> dict:
     return manifest
 
 
-def _reproduce_distro_collision(bundle: Path, manifest: dict) -> None:
-    activation.prepare_log_directory(manifest)
+def _legacy_from_v2(manifest: dict, bundle: Path) -> dict:
+    legacy = copy.deepcopy(manifest)
+    legacy["schema_version"] = "thebitlab.pilot-deployment.v1"
+    legacy["origin"]["access_log"] = "/var/log/nginx/thebitlab-access.log"
+    legacy["origin"]["error_log"] = "/var/log/nginx/thebitlab-error.log"
+    del legacy["logging"]
+    activation.render_legacy_v1_bundle(legacy, bundle)
+    return legacy
+
+
+def _install_legacy(bundle: Path, manifest: dict) -> None:
+    activation._remove_symlink(activation.DISTRO_DEFAULT)
+    for path in activation.INTEGRATION_LINKS:
+        activation._remove_symlink(path)
     activation._replace_symlink(activation.CURRENT_LINK, str(bundle))
-    nginx_links = tuple(list(activation.INTEGRATION_LINKS.items())[:3])
-    try:
-        for path, target in nginx_links:
-            activation._replace_symlink(path, target)
-        output = _run(["nginx", "-t", "-c", "/etc/nginx/nginx.conf"], expect_failure=True)
-        if "duplicate default server" not in output:
-            raise RuntimeError("Failure mode distro default diverso dalla collisione attesa")
-    finally:
-        for path, _ in reversed(nginx_links):
-            path.unlink(missing_ok=True)
-        activation.CURRENT_LINK.unlink(missing_ok=True)
+    for path, target in activation.LEGACY_LINKS.items():
+        activation._replace_symlink(path, target)
+    _run(["nginx", "-t", "-c", "/etc/nginx/nginx.conf"])
+    info = activation.verify_legacy_v1_bundle(bundle)
+    activation.validate_effective_nginx(
+        activation._nginx_effective(),
+        manifest,
+        topology="legacy-v1",
+        expected_sources=info.sources,
+    )
 
 
-def _check_ephemeral_host() -> None:
+def _check_ephemeral_host() -> str:
     if os.geteuid() != 0:
         raise RuntimeError("Lo smoke Ubuntu effettivo richiede root")
     os_release = Path("/etc/os-release").read_text(encoding="utf-8")
     if 'ID=ubuntu' not in os_release or 'VERSION_ID="24.04"' not in os_release:
         raise RuntimeError("Lo smoke richiede Ubuntu 24.04 effimero")
-    for tool in ("nginx", "logrotate", "systemd-analyze", "openssl"):
+    for tool in ("nginx", "logrotate", "systemd-analyze", "openssl", "getfacl"):
         if shutil.which(tool) is None:
             raise RuntimeError(f"Tool Ubuntu mancante: {tool}")
     if not activation.DISTRO_DEFAULT.is_symlink():
         raise RuntimeError("Default site distro iniziale richiesto per lo smoke")
+    original_default = os.readlink(activation.DISTRO_DEFAULT)
     protected = (activation.CURRENT_LINK, activation.STATE_FILE, *activation.INTEGRATION_LINKS)
     if any(path.exists() or path.is_symlink() for path in protected):
         raise RuntimeError("Host non pristine: artifact pilot già presenti")
@@ -287,13 +337,22 @@ def _check_ephemeral_host() -> None:
         raise RuntimeError("Host non pristine: directory log pilot già presente")
     if Path("/run/nginx.pid").exists():
         raise RuntimeError("Host non pristine: nginx risulta già avviato")
+    return original_default
 
 
 def run() -> None:
-    _check_ephemeral_host()
-    state = Path("/etc/thebitlab/integration-activation-state.json")
-    bundle = Path(f"/etc/thebitlab/deployments/integration-{os.getpid()}")
-    activated = False
+    original_default = _check_ephemeral_host()
+    state = activation.STATE_FILE
+    deployments = activation.DEPLOYMENTS_ROOT
+    v2_bundle = deployments / f"integration-v2-{os.getpid()}"
+    v2_next = deployments / f"integration-v2-next-{os.getpid()}"
+    legacy_bundle = deployments / f"integration-v1-{os.getpid()}"
+    archives = (
+        state.with_name("activation-state.default-first.json"),
+        state.with_name("activation-state.failure.json"),
+        state.with_name("activation-state.first.json"),
+        state.with_name("activation-state.previous-v2.json"),
+    )
     process: subprocess.Popen[str] | None = None
     backend: _Backend | None = None
     backend_thread: threading.Thread | None = None
@@ -301,38 +360,178 @@ def run() -> None:
     markers = (
         "tb704-callback-code", "tb704-callback-state",
         "tb704-error-code", "tb704-error-state", "tb704-error-cookie",
-        "tb704.error.bearer", "tb704-unknown-http", "tb704-unknown-sni.invalid",
-        "tb704-malformed", "tb704-ipv6",
+        "tb704.error.bearer", "tb704-unknown-http", "tb704-unknown-tls-host",
+        "tb704-unknown-sni.invalid", "tb704-malformed-host", "tb704-malformed-line",
+        "tb704-ipv6", "tb704-after-no-rollback", "tb704-after-v2-rollback",
     )
     try:
         with tempfile.TemporaryDirectory(prefix="thebitlab-ubuntu-integration-") as name:
             temporary = Path(name)
-            bundle.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
-            manifest = _render_bundle(temporary, bundle)
-            activation.verify_host_preflight(bundle)
-            unmanaged = Path("/etc/nginx/conf.d/tb704-unmanaged.conf")
-            unmanaged.write_text(
-                "server { listen 18081; error_log /var/log/nginx/error.log; }\n",
+            deployments.mkdir(mode=0o750, parents=True, exist_ok=True)
+            manifest = _render_bundle(temporary, v2_bundle)
+            legacy_manifest = _legacy_from_v2(manifest, legacy_bundle)
+
+            # Trusted-root, ownership, mode and symlink checks on the actual POSIX filesystem.
+            outside = temporary / "unsafe-bundle"
+            shutil.copytree(v2_bundle, outside)
+            for candidate_path, mutation in (
+                (outside, "outside"),
+                (v2_bundle, "group-writable"),
+                (v2_bundle, "wrong-owner"),
+                (v2_bundle, "symlink-artifact"),
+            ):
+                site_path = v2_bundle / "nginx/thebitlab.conf"
+                original_bytes = site_path.read_bytes()
+                try:
+                    if mutation == "group-writable":
+                        v2_bundle.chmod(0o775)
+                    elif mutation == "wrong-owner":
+                        os.chown(site_path, 65534, 65534)
+                    elif mutation == "symlink-artifact":
+                        target = temporary / "site-target.conf"
+                        target.write_bytes(original_bytes)
+                        site_path.unlink()
+                        site_path.symlink_to(target)
+                    try:
+                        activation.verify_bundle(candidate_path)
+                    except activation.ActivationError:
+                        pass
+                    else:
+                        raise RuntimeError(f"Bundle unsafe accettato: {mutation}")
+                finally:
+                    v2_bundle.chmod(0o755)
+                    if site_path.is_symlink():
+                        site_path.unlink()
+                        site_path.write_bytes(original_bytes)
+                    os.chown(site_path, 0, 0)
+                    site_path.chmod(0o644)
+
+            ancestor_link = deployments / "symlink-bundle"
+            ancestor_link.symlink_to(outside, target_is_directory=True)
+            try:
+                try:
+                    activation.verify_bundle(ancestor_link)
+                except activation.ActivationError:
+                    pass
+                else:
+                    raise RuntimeError("Bundle con symlink ancestor accettato")
+            finally:
+                ancestor_link.unlink()
+
+            log_directory = Path("/var/log/thebitlab")
+            log_directory.mkdir(mode=0o777)
+            ACCESS_LOG.touch(mode=0o666)
+            PROCESS_LOG.touch(mode=0o666)
+            _run(["setfacl", "-m", "d:u:nobody:rx", str(log_directory)])
+            try:
+                activation.prepare_log_directory(manifest)
+            except activation.ActivationError:
+                pass
+            else:
+                raise RuntimeError("Default ACL inattesa accettata")
+            _run(["setfacl", "-k", str(log_directory)])
+            _run(["setfacl", "-m", "u:nobody:r", str(ACCESS_LOG)])
+            try:
+                activation.prepare_log_directory(manifest)
+            except activation.ActivationError:
+                pass
+            else:
+                raise RuntimeError("Named ACL inattesa accettata")
+            _run(["setfacl", "-b", str(ACCESS_LOG)])
+
+            # Actual package config: prove multiline inline servers are rejected by nginx -T analysis.
+            nginx_original = activation.NGINX_CONFIG.read_text(encoding="utf-8")
+            inline = (
+                "server\n{ listen 18081; server_name unmanaged.example; }\n"
+                "include /etc/nginx/sites-enabled/*;"
+            )
+            activation.NGINX_CONFIG.write_text(
+                nginx_original.replace("include /etc/nginx/sites-enabled/*;", inline),
                 encoding="utf-8",
             )
             try:
                 try:
-                    activation.verify_host_preflight(bundle)
+                    activation.verify_host_preflight(v2_bundle)
                 except activation.ActivationError:
                     pass
                 else:
-                    raise RuntimeError("Preflight non ha rifiutato un vhost unmanaged")
+                    raise RuntimeError("Parser nginx -T non ha rifiutato server inline multiline")
             finally:
-                unmanaged.unlink()
-            _reproduce_distro_collision(bundle, manifest)
+                activation.NGINX_CONFIG.write_text(nginx_original, encoding="utf-8")
 
-            activation.activate(bundle, state)
-            activated = True
-            _verify_metadata(manifest)
+            # First install with distro default present: rollback can never recreate it.
+            default_preflight = activation.verify_host_preflight(v2_bundle)
+            if default_preflight.source_kind != "preinstall-default":
+                raise RuntimeError("Topologia pristine/default non riconosciuta")
+            activation.activate(v2_bundle, state)
+            try:
+                activation.rollback(state)
+            except activation.ActivationError as exc:
+                if "Nessuna previous v2" not in str(exc):
+                    raise
+            else:
+                raise RuntimeError("Rollback first install doveva restare su v2")
+            if activation.DISTRO_DEFAULT.exists() or activation.DISTRO_DEFAULT.is_symlink():
+                raise RuntimeError("Rollback first install ha ricreato default distro")
+            activation.complete(state, archives[0])
+            for path in activation.INTEGRATION_LINKS:
+                activation._remove_symlink(path)
+            activation._remove_symlink(activation.CURRENT_LINK)
+            empty_preflight = activation.verify_host_preflight(v2_bundle)
+            if empty_preflight.source_kind != "preinstall-empty":
+                raise RuntimeError("Topologia preinstall senza default non riconosciuta")
+            activation._replace_symlink(activation.DISTRO_DEFAULT, original_default)
+
+            _install_legacy(legacy_bundle, legacy_manifest)
+            activation.verify_host_preflight(v2_bundle)
+
+            # Actual first-migration fault: candidate v2 or no-server, never legacy/default.
+            original_fault = activation._fault
+
+            def fail_after_switch(point: str) -> None:
+                if point == "after_current_switch":
+                    raise activation.ActivationError("fault integration sintetico")
+
+            activation._fault = fail_after_switch
+            try:
+                try:
+                    activation.activate(v2_bundle, state)
+                except activation.ActivationError as exc:
+                    if "fault integration sintetico" not in str(exc):
+                        raise
+                else:
+                    raise RuntimeError("Fault migration atteso non riprodotto")
+            finally:
+                activation._fault = original_fault
+            if activation.DISTRO_DEFAULT.exists() or activation.DISTRO_DEFAULT.is_symlink():
+                raise RuntimeError("Failure migration ha ripristinato default distro")
+            failed_state = activation._read_state(state)
+            if failed_state["status"] not in {"failed_candidate_retained", "failed_no_server"}:
+                raise RuntimeError("Failure migration non ha prodotto stato fail-closed")
+            if activation.SITE_LINK.is_symlink():
+                activation._validate_activated(activation.verify_bundle(v2_bundle))
+            else:
+                _run(["nginx", "-t", "-c", "/etc/nginx/nginx.conf"])
+            activation.complete(state, archives[1])
+
+            # Recreate exact v1 and execute the successful transactional migration.
+            _install_legacy(legacy_bundle, legacy_manifest)
+            activation.activate(v2_bundle, state)
+            state_bytes = state.read_bytes()
+            state_mtime = state.stat().st_mtime_ns
+            activation.activate(v2_bundle, state)
+            if state.read_bytes() != state_bytes or state.stat().st_mtime_ns != state_mtime:
+                raise RuntimeError("Repeated activation ha modificato provenance/state")
+            _verify_metadata()
             if activation.DISTRO_DEFAULT.exists() or activation.DISTRO_DEFAULT.is_symlink():
                 raise RuntimeError("Default distro ancora attivo")
-            effective = _run(["nginx", "-T", "-c", "/etc/nginx/nginx.conf"])
-            activation.validate_effective_nginx(effective, manifest, activated=True)
+            effective = activation._nginx_effective()
+            activation.validate_effective_nginx(
+                effective,
+                manifest,
+                topology="v2",
+                expected_sources=activation.verify_bundle(v2_bundle).sources,
+            )
 
             backend, backend_thread = _start_backend(manifest["service"]["port"])
             process = subprocess.Popen(
@@ -365,28 +564,38 @@ def run() -> None:
                 "127.0.0.1", 80, "/?code=tb704-unknown-http",
                 host="unknown.invalid", use_tls=False,
             )
+            unknown_tls_host = _send(
+                "127.0.0.1", 443, "/?state=tb704-unknown-tls-host",
+                host="unknown.invalid", sni=ORIGIN_HOST, use_tls=True,
+            )
             _unknown_sni("tb704-unknown-sni.invalid")
-            _send_malformed("tb704-malformed")
-            if (callback, upstream, health, unknown_http) != (204, 502, 204, None):
-                raise RuntimeError("Status runtime nginx effettivo inattesi")
+            _send_malformed_host("tb704-malformed-host")
+            _send_malformed_request("tb704-malformed-line")
+            if (
+                (callback, upstream, health, unknown_http) != (204, 502, 204, None)
+                or unknown_tls_host == 204
+            ):
+                raise RuntimeError(
+                    "Status runtime nginx effettivo inattesi: "
+                    f"{(callback, upstream, health, unknown_http, unknown_tls_host)}"
+                )
 
-            ipv6_available = False
             if socket.has_ipv6:
                 try:
                     ipv6_status = _send(
                         "::1", 443, "/health?state=tb704-ipv6", host=ORIGIN_HOST,
                         use_tls=True, family=socket.AF_INET6,
                     )
-                    ipv6_available = ipv6_status == 204
+                    if ipv6_status != 204:
+                        raise RuntimeError("IPv6 loopback disponibile ma non operativo")
                 except OSError:
-                    ipv6_available = False
-            if not ipv6_available:
-                print("INFO: IPv6 loopback non disponibile nel container/kernel effimero")
+                    print("INFO: IPv6 loopback non disponibile nel kernel effimero")
 
             time.sleep(0.2)
             _verify_audit()
-            _assert_markers_absent((ACCESS_LOG, PROCESS_LOG), markers)
-            _verify_metadata(manifest)
+            all_logs = _effective_persistent_logs(effective)
+            _assert_markers_absent(all_logs, markers)
+            _verify_metadata()
             _run(["logrotate", "--debug", "/etc/logrotate.conf"])
             _run(
                 [
@@ -394,17 +603,77 @@ def run() -> None:
                     "/etc/logrotate.d/thebitlab",
                 ]
             )
-            postrotate = _send(
-                "127.0.0.1", 443, "/health", host=ORIGIN_HOST, use_tls=True
-            )
-            if postrotate != 204:
+            if _send("127.0.0.1", 443, "/health", host=ORIGIN_HOST, use_tls=True) != 204:
                 raise RuntimeError("nginx non operativo dopo logrotate + USR1")
             time.sleep(0.2)
-            _verify_metadata(manifest)
-            rotated = (ACCESS_LOG.with_name(ACCESS_LOG.name + ".1"), PROCESS_LOG.with_name(PROCESS_LOG.name + ".1"))
+            _verify_metadata()
+            rotated = (
+                ACCESS_LOG.with_name(ACCESS_LOG.name + ".1"),
+                PROCESS_LOG.with_name(PROCESS_LOG.name + ".1"),
+            )
             if not all(path.is_file() for path in rotated):
                 raise RuntimeError("Rotazione pilot non ha prodotto i file .1 attesi")
-            _assert_markers_absent((ACCESS_LOG, PROCESS_LOG, *rotated), markers)
+            _assert_markers_absent((*all_logs, *rotated), markers)
+
+            # No previous v2: production rollback retains v2 and never restores distro/v1.
+            try:
+                activation.rollback(state)
+            except activation.ActivationError as exc:
+                if "Nessuna previous v2" not in str(exc):
+                    raise
+            else:
+                raise RuntimeError("Rollback senza previous v2 doveva segnalare indisponibilità")
+            if activation.DISTRO_DEFAULT.exists() or activation.DISTRO_DEFAULT.is_symlink():
+                raise RuntimeError("Rollback first migration ha ricreato default distro")
+            _send(
+                "127.0.0.1", 443,
+                "/auth/google/callback?code=tb704-after-no-rollback&state=tb704-after-no-rollback",
+                host=ORIGIN_HOST, use_tls=True,
+            )
+            _assert_markers_absent(_effective_persistent_logs(activation._nginx_effective()), markers)
+            activation.complete(state, archives[2])
+
+            # Upgrade to another v2 and prove rollback only targets the verified previous v2.
+            next_manifest = copy.deepcopy(manifest)
+            next_manifest["deployment_id"] = "pilot-integration-next"
+            next_manifest["release"]["commit"] = "1" * 40
+            deployment.render_bundle(next_manifest, v2_next)
+            activation.activate(v2_next, state)
+            activation.rollback(state)
+            if activation._current_bundle_path() != v2_bundle:
+                raise RuntimeError("Rollback previous v2 non ha ripristinato il bundle sicuro")
+            if activation.DISTRO_DEFAULT.exists() or activation.DISTRO_DEFAULT.is_symlink():
+                raise RuntimeError("Rollback previous v2 ha ricreato default distro")
+            _run(["nginx", "-s", "reload"])
+            _send(
+                "127.0.0.1", 443,
+                "/auth/google/callback?code=tb704-after-v2-rollback&state=tb704-after-v2-rollback",
+                host=ORIGIN_HOST, use_tls=True,
+            )
+            time.sleep(0.2)
+            _assert_markers_absent(_effective_persistent_logs(activation._nginx_effective()), markers)
+            activation.complete(state, archives[3])
+
+            # Stop nginx, then prove stale/reused PID cannot receive USR1.
+            process.terminate()
+            try:
+                captured = process.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                captured = process.communicate(timeout=5)
+            process = None
+            Path("/run/nginx.pid").write_text(str(os.getpid()) + "\n", encoding="ascii")
+            ACCESS_LOG.write_text("safe audit line\n", encoding="utf-8")
+            PROCESS_LOG.write_text("safe process line\n", encoding="utf-8")
+            _run(
+                [
+                    "logrotate", "--force", "--state", str(temporary / "stale.state"),
+                    "/etc/logrotate.d/thebitlab",
+                ]
+            )
+            Path("/run/nginx.pid").unlink(missing_ok=True)
+            if any(marker in stream for stream in captured for marker in markers):
+                raise RuntimeError("Marker sintetico emesso su stdout/stderr")
     finally:
         if backend is not None and backend_thread is not None:
             _stop_backend(backend, backend_thread)
@@ -415,32 +684,39 @@ def run() -> None:
             except subprocess.TimeoutExpired:
                 process.kill()
                 captured = process.communicate(timeout=5)
-        stream_marker_leak = any(
-            marker in stream for stream in captured for marker in markers
-        )
-        if activated:
-            activation.rollback(state)
-        elif state.exists():
-            activation.rollback(state)
-        distro_available = Path("/etc/nginx/sites-available/default")
-        if (
-            not activation.DISTRO_DEFAULT.is_symlink()
-            or activation.DISTRO_DEFAULT.resolve(strict=True)
-            != distro_available.resolve(strict=True)
-        ):
-            raise RuntimeError("Rollback non ha ripristinato il symlink default distro")
-        if bundle.exists():
-            shutil.rmtree(bundle)
+        Path("/run/nginx.pid").unlink(missing_ok=True)
+        # Explicit ephemeral decommission cleanup; production rollback never calls this.
+        for path in activation.INTEGRATION_LINKS:
+            try:
+                activation._remove_symlink(path)
+            except activation.ActivationError:
+                pass
+        try:
+            activation._remove_symlink(activation.CURRENT_LINK)
+        except activation.ActivationError:
+            pass
+        if not activation.DISTRO_DEFAULT.exists() and not activation.DISTRO_DEFAULT.is_symlink():
+            activation._replace_symlink(activation.DISTRO_DEFAULT, original_default)
+        for path in (state, *archives):
+            path.unlink(missing_ok=True)
+        for bundle in (v2_bundle, v2_next, legacy_bundle):
+            if bundle.exists():
+                shutil.rmtree(bundle)
         log_directory = Path("/var/log/thebitlab")
         if log_directory.exists():
             shutil.rmtree(log_directory)
-        for directory in (bundle.parent, bundle.parent.parent):
+        for legacy_log in (
+            Path("/var/log/nginx/thebitlab-access.log"),
+            Path("/var/log/nginx/thebitlab-error.log"),
+        ):
+            legacy_log.unlink(missing_ok=True)
+        for directory in (deployments, deployments.parent):
             try:
                 directory.rmdir()
             except OSError:
                 pass
-        if stream_marker_leak:
-            raise RuntimeError("Marker sintetico emesso su stdout/stderr")
+        if activation.DISTRO_DEFAULT.is_symlink():
+            _run(["nginx", "-t", "-c", "/etc/nginx/nginx.conf"])
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -461,7 +737,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(
         "PASS: integrazione Ubuntu 24.04 effettiva "
-        "(default collision/rollback, nginx -t/-T, runtime, logrotate globale/USR1)"
+        "(v1 migration/fault, nginx -t/-T, runtime+distro logs, v2-only rollback, logrotate/USR1)"
     )
     return 0
 

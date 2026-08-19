@@ -116,8 +116,8 @@
         "rotation": {"const": "daily"},
         "retention_days": {"const": 30},
         "file_mode": {"const": "0640"},
-        "owner": {"$ref": "#/$defs/account"},
-        "group": {"$ref": "#/$defs/account"}
+        "owner": {"const": "www-data"},
+        "group": {"const": "adm"}
       }
     },
     "features": {

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import base64
 import copy
+import hashlib
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -44,9 +46,54 @@ def valid_environment() -> dict[str, str]:
     }
 
 
+def effective_v2(
+    bundle: Path,
+    *,
+    inline_http: str = "",
+    extra_sources: dict[str, str] | None = None,
+    site: str | None = None,
+) -> tuple[str, dict[str, str]]:
+    process = (bundle / "nginx/thebitlab-process-error-log.conf").read_text(encoding="utf-8")
+    log_format = (bundle / "nginx/thebitlab-log-format.conf").read_text(encoding="utf-8")
+    pilot_site = site or (bundle / "nginx/thebitlab.conf").read_text(encoding="utf-8")
+    root = (
+        "user www-data;\n"
+        "error_log /var/log/nginx/error.log;\n"
+        "include /etc/nginx/modules-enabled/*.conf;\n"
+        "events {}\n"
+        "http {\n"
+        "  include /etc/nginx/mime.types;\n"
+        "  access_log /var/log/nginx/access.log;\n"
+        f"  {inline_http}\n"
+        "  include /etc/nginx/conf.d/*.conf;\n"
+        "  include /etc/nginx/sites-enabled/*;\n"
+        "}\n"
+    )
+    sources = {
+        "/etc/nginx/nginx.conf": root,
+        "/etc/nginx/mime.types": "types { text/html html htm; }\n",
+        ubuntu_activation._source_path(ubuntu_activation.PROCESS_LINK): process,
+        ubuntu_activation._source_path(ubuntu_activation.FORMAT_LINK): log_format,
+        ubuntu_activation._source_path(ubuntu_activation.SITE_LINK): pilot_site,
+    }
+    sources.update(extra_sources or {})
+    effective = "".join(
+        f"# configuration file {path}:\n{content}" for path, content in sources.items()
+    )
+    expected = {
+        ubuntu_activation._source_path(ubuntu_activation.PROCESS_LINK): process,
+        ubuntu_activation._source_path(ubuntu_activation.FORMAT_LINK): log_format,
+        ubuntu_activation._source_path(ubuntu_activation.SITE_LINK): (
+            bundle / "nginx/thebitlab.conf"
+        ).read_text(encoding="utf-8"),
+    }
+    return effective, expected
+
+
 def test_deployment_schemas_are_closed_valid_draft_2020_12_documents() -> None:
     for name in (
         "pilot-deployment.schema.json",
+        "pilot-deployment-v1-legacy.schema.json",
         "pilot-environment.schema.json",
         "pilot-backup-manifest.schema.json",
     ):
@@ -105,6 +152,7 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
 
     assert "listen 443 ssl default_server;" in site
     assert "ssl_reject_handshake on;" in site
+    assert site.count("return 444;") == 2
     assert "allow 192.0.2.0/24;" in site
     assert "allow 2001:db8::/32;" in site
     assert site.count("deny all;") == 2
@@ -129,7 +177,9 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
     assert "rotate 30" in logrotate
     assert "maxage 30" in logrotate
     assert "create 0640 www-data adm" in logrotate
-    assert 'kill -USR1 "$(cat /run/nginx.pid)"' in logrotate
+    assert '"nginx: master process "*) kill -USR1 "$pid"' in logrotate
+    assert '[ "$executable" = /usr/sbin/nginx ]' in logrotate
+    assert '[ "$uid" = 0 ]' in logrotate
     assert "copytruncate" not in logrotate
     assert payload["logging"]["directory"] == "/var/log/thebitlab"
     assert payload["logging"]["directory_mode"] == "0750"
@@ -277,6 +327,17 @@ def test_secret_safe_scanner_and_synthetic_callback_audit_do_not_echo_values(
     assert "query_bearing_request_target" in serialized
 
 
+def test_scanner_bounds_memory_for_giant_newline_free_records() -> None:
+    class GuardedStream(io.BytesIO):
+        def readline(self, size: int = -1) -> bytes:
+            assert 0 < size <= log_scanner.MAX_LOG_LINE_BYTES + 1
+            return super().readline(size)
+
+    giant = GuardedStream(b"A" * (log_scanner.MAX_LOG_LINE_BYTES * 8) + b"\nGET /health\n")
+    findings = log_scanner.scan_stream(giant)
+    assert findings == (log_scanner.ScanFinding(1, "line_too_long"),)
+
+
 def test_public_origin_requires_explicit_empty_allowlist(tmp_path: Path) -> None:
     payload = manifest()
     payload["origin"]["exposure"] = "public"
@@ -319,6 +380,14 @@ def test_manifest_rejects_incomplete_ambiguous_or_unsafe_root_configuration() ->
             deployment.validate_manifest(payload)
 
 
+def test_manifest_rejects_noncanonical_ubuntu_log_owner_or_group() -> None:
+    for field, value in (("owner", "root"), ("group", "thebitlab")):
+        payload = manifest()
+        payload["logging"][field] = value
+        with pytest.raises(deployment.DeploymentValidationError):
+            deployment.validate_manifest(payload)
+
+
 def test_manifest_rejects_logs_outside_dedicated_directory_or_under_nginx() -> None:
     for access_log, error_log in (
         ("/var/log/nginx/thebitlab-access.log", "/var/log/nginx/thebitlab-error.log"),
@@ -332,99 +401,373 @@ def test_manifest_rejects_logs_outside_dedicated_directory_or_under_nginx() -> N
             deployment.validate_manifest(payload)
 
 
-def test_effective_nginx_validator_rejects_unmanaged_vhosts_and_default_collisions(
+@pytest.mark.parametrize(
+    ("source", "server_text"),
+    (
+        ("/etc/nginx/nginx.conf", "server { listen 18081; server_name unmanaged.example; }"),
+        ("/etc/nginx/nginx.conf", "server\n{ listen 18081; server_name unmanaged.example; }"),
+        ("/etc/nginx/nginx.conf", "server\n# comment\n{ listen 18081; server_name unmanaged.example; }"),
+        ("/etc/nginx/nginx.conf", "server\t { listen 18081; server_name unmanaged.example; }"),
+        ("/etc/nginx/conf.d/unmanaged.conf", "server { listen 18081; }\n"),
+        ("/etc/nginx/sites-enabled/unexpected", "server\n{ listen 18081; }\n"),
+    ),
+)
+def test_effective_nginx_token_parser_rejects_every_unmanaged_server(
+    tmp_path: Path, source: str, server_text: str
+) -> None:
+    payload = manifest()
+    output = tmp_path / "bundle"
+    deployment.render_bundle(payload, output)
+    if source == "/etc/nginx/nginx.conf":
+        effective, expected = effective_v2(output, inline_http=server_text)
+    else:
+        effective, expected = effective_v2(output, extra_sources={source: server_text})
+    with pytest.raises(ubuntu_activation.ActivationError, match="unmanaged"):
+        ubuntu_activation.validate_effective_nginx(
+            effective, payload, topology="v2", expected_sources=expected
+        )
+
+
+def test_effective_nginx_token_parser_accepts_only_exact_locked_pilot(
     tmp_path: Path,
 ) -> None:
     payload = manifest()
     output = tmp_path / "bundle"
     deployment.render_bundle(payload, output)
-    site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8")
-    process = (output / "nginx/thebitlab-process-error-log.conf").read_text(encoding="utf-8")
-    effective = (
-        "# configuration file /etc/nginx/modules-enabled/90-thebitlab-process-error-log.conf:\n"
-        + process
-        + "# configuration file /etc/nginx/sites-enabled/thebitlab.conf:\n"
-        + site
+    nested = 'map $request_method $safe { default "quoted } ; #"; # ignored {\n default safe; }'
+    effective, expected = effective_v2(output, inline_http=nested)
+    ubuntu_activation.validate_effective_nginx(
+        effective, payload, topology="v2", expected_sources=expected
     )
 
-    ubuntu_activation.validate_effective_nginx(effective, payload, activated=True)
+    changed_site = expected[ubuntu_activation._source_path(ubuntu_activation.SITE_LINK)] + "server { listen 18082; }\n"
+    changed, expected_locked = effective_v2(output, site=changed_site)
+    with pytest.raises(ubuntu_activation.ActivationError, match="divergente"):
+        ubuntu_activation.validate_effective_nginx(
+            changed, payload, topology="v2", expected_sources=expected_locked
+        )
 
-    unmanaged = (
-        effective
-        + "# configuration file /etc/nginx/conf.d/unmanaged.conf:\n"
-        + "server { listen 8080; error_log /var/log/nginx/error.log; }\n"
+
+@pytest.mark.parametrize(
+    "malformed",
+    (
+        "server {",
+        "server; }",
+        'server "unterminated',
+        "server \\",
+        "{ listen 80; }",
+    ),
+)
+def test_nginx_token_parser_fails_closed_on_malformed_or_ambiguous_input(malformed: str) -> None:
+    with pytest.raises(ubuntu_activation.ActivationError):
+        ubuntu_activation._parse_nginx_source("/etc/nginx/nginx.conf", malformed)
+
+
+def test_trusted_bundle_rejects_outside_mutation_and_lock_mismatch(tmp_path: Path) -> None:
+    deployment_root = tmp_path / "etc/thebitlab/deployments"
+    output = deployment_root / "candidate"
+    deployment.render_bundle(manifest(), output)
+    info = ubuntu_activation.verify_bundle(
+        output, deployments_root=deployment_root, require_root_owner=False
+    )
+    assert info.path == output
+
+    outside = tmp_path / "outside"
+    deployment.render_bundle(manifest(), outside)
+    with pytest.raises(ubuntu_activation.ActivationError, match="fuori"):
+        ubuntu_activation.verify_bundle(
+            outside, deployments_root=deployment_root, require_root_owner=False
+        )
+
+    site = output / "nginx/thebitlab.conf"
+    original = site.read_bytes()
+    site.write_bytes(original + b"# mutation\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="Digest"):
+        ubuntu_activation.verify_bundle(
+            output, deployments_root=deployment_root, require_root_owner=False
+        )
+    site.write_bytes(original)
+
+    lock_path = output / "deployment.lock.json"
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    lock["release_commit"] = "f" * 40
+    lock_path.write_text(json.dumps(lock), encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="coerente"):
+        ubuntu_activation.verify_bundle(
+            output, deployments_root=deployment_root, require_root_owner=False
+        )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink/mode POSIX richiesti")
+def test_trusted_bundle_rejects_symlink_hardlink_and_group_writable(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "deployments"
+    output = root / "candidate"
+    deployment.render_bundle(manifest(), output)
+    artifact = output / "nginx/thebitlab.conf"
+    target = tmp_path / "target.conf"
+    target.write_bytes(artifact.read_bytes())
+    artifact.unlink()
+    artifact.symlink_to(target)
+    with pytest.raises(ubuntu_activation.ActivationError, match="non regolare"):
+        ubuntu_activation.verify_bundle(output, deployments_root=root, require_root_owner=False)
+
+    shutil.rmtree(output)
+    deployment.render_bundle(manifest(), output)
+    os.chmod(output, 0o775)
+    with pytest.raises(ubuntu_activation.ActivationError, match="scrivibile"):
+        ubuntu_activation.verify_bundle(output, deployments_root=root, require_root_owner=False)
+
+    os.chmod(output, 0o755)
+    artifact = output / "nginx/thebitlab.conf"
+    hardlink = output / "nginx/hardlink.conf"
+    os.link(artifact, hardlink)
+    with pytest.raises(ubuntu_activation.ActivationError, match="inventario|hardlink"):
+        ubuntu_activation.verify_bundle(output, deployments_root=root, require_root_owner=False)
+
+
+def legacy_manifest() -> dict:
+    payload = manifest()
+    payload["schema_version"] = "thebitlab.pilot-deployment.v1"
+    payload["origin"]["access_log"] = "/var/log/nginx/thebitlab-access.log"
+    payload["origin"]["error_log"] = "/var/log/nginx/thebitlab-error.log"
+    del payload["logging"]
+    return payload
+
+
+def test_exact_legacy_v1_fingerprint_is_migratable_but_mutation_is_rejected(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "deployments"
+    root.mkdir(parents=True)
+    bundle = root / "legacy"
+    payload = legacy_manifest()
+    ubuntu_activation.render_legacy_v1_bundle(payload, bundle)
+    info = ubuntu_activation.verify_legacy_v1_bundle(
+        bundle, deployments_root=root, require_root_owner=False
+    )
+    root_config = (
+        "include /etc/nginx/modules-enabled/*.conf;\n"
+        "events {}\nhttp {\n"
+        "include /etc/nginx/mime.types;\n"
+        "include /etc/nginx/conf.d/*.conf;\n"
+        "include /etc/nginx/sites-enabled/*;\n}\n"
+    )
+    sources = {
+        "/etc/nginx/nginx.conf": root_config,
+        "/etc/nginx/mime.types": "types { text/html html; }\n",
+        ubuntu_activation._source_path(ubuntu_activation.FORMAT_LINK): info.sources[
+            ubuntu_activation._source_path(ubuntu_activation.FORMAT_LINK)
+        ],
+        ubuntu_activation._source_path(ubuntu_activation.SITE_LINK): info.sources[
+            ubuntu_activation._source_path(ubuntu_activation.SITE_LINK)
+        ],
+    }
+    effective = "".join(
+        f"# configuration file {path}:\n{content}" for path, content in sources.items()
+    )
+    ubuntu_activation.validate_effective_nginx(
+        effective, payload, topology="legacy-v1", expected_sources=info.sources
+    )
+    unmanaged = effective + (
+        "# configuration file /etc/nginx/conf.d/unmanaged.conf:\n"
+        "server\n{ listen 18081; }\n"
     )
     with pytest.raises(ubuntu_activation.ActivationError, match="unmanaged"):
-        ubuntu_activation.validate_effective_nginx(unmanaged, payload, activated=True)
+        ubuntu_activation.validate_effective_nginx(
+            unmanaged, payload, topology="legacy-v1", expected_sources=info.sources
+        )
 
-    collision = effective.replace(
-        "listen 80 default_server;", "listen 80 default_server;\n    listen 8080 default_server;", 1
+    extra = bundle / "unexpected.conf"
+    extra.write_text("server { listen 18082; }\n", encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="[Ii]nventario"):
+        ubuntu_activation.verify_legacy_v1_bundle(
+            bundle, deployments_root=root, require_root_owner=False
+        )
+    extra.unlink()
+
+    site = bundle / "nginx/thebitlab.conf"
+    site.write_text(site.read_text(encoding="utf-8") + "server { listen 18081; }\n", encoding="utf-8")
+    lock_path = bundle / "deployment.lock.json"
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    lock["files"]["nginx/thebitlab.conf"] = hashlib.sha256(site.read_bytes()).hexdigest()
+    lock_path.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="modificato"):
+        ubuntu_activation.verify_legacy_v1_bundle(
+            bundle, deployments_root=root, require_root_owner=False
+        )
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32" or not all(shutil.which(tool) for tool in ("getfacl", "setfacl")),
+    reason="ACL POSIX tools richiesti",
+)
+def test_extended_and_default_acl_are_rejected(tmp_path: Path) -> None:
+    file_path = tmp_path / "access.log"
+    file_path.write_text("", encoding="utf-8")
+    subprocess.run(["setfacl", "-m", "u:nobody:r", str(file_path)], check=True)
+    with pytest.raises(ubuntu_activation.ActivationError, match="ACL"):
+        ubuntu_activation._verify_no_extended_acl(file_path)
+
+    directory = tmp_path / "logs"
+    directory.mkdir()
+    subprocess.run(["setfacl", "-m", "d:u:nobody:rx", str(directory)], check=True)
+    with pytest.raises(ubuntu_activation.ActivationError, match="ACL"):
+        ubuntu_activation._verify_no_extended_acl(directory)
+
+
+def test_activation_state_is_atomic_secure_and_preserves_provenance(tmp_path: Path) -> None:
+    state_path = tmp_path / "state.json"
+    state = {
+        "schema_version": "thebitlab.pilot-activation-state.v2",
+        "status": "active",
+        "candidate_bundle": "/etc/thebitlab/deployments/candidate",
+        "candidate_lock_digest": "a" * 64,
+        "previous_v2_bundle": None,
+        "previous_v2_lock_digest": None,
+        "unsafe_provenance": {"distro_default": {"present": True}},
+    }
+    ubuntu_activation._write_state(
+        state_path, state, exclusive=True, require_root_owner=False
     )
-    with pytest.raises(ubuntu_activation.ActivationError, match="default_server"):
-        ubuntu_activation.validate_effective_nginx(collision, payload, activated=True)
+    before = state_path.read_bytes()
+    assert ubuntu_activation._read_state(
+        state_path, require_root_owner=False
+    ) == state
+    if os.name != "nt":
+        assert state_path.stat().st_mode & 0o777 == 0o600
+    with pytest.raises(ubuntu_activation.ActivationError, match="già esistente"):
+        ubuntu_activation._write_state(
+            state_path, state, exclusive=True, require_root_owner=False
+        )
+    assert state_path.read_bytes() == before
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Symlink Unix richiesti")
-def test_activation_state_restores_exact_distro_default_and_managed_links(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    current = tmp_path / "etc/thebitlab/current"
-    distro_default = tmp_path / "etc/nginx/sites-enabled/default"
-    first = tmp_path / "etc/nginx/conf.d/thebitlab.conf"
-    second = tmp_path / "etc/systemd/system/thebitlab.service"
-    for path in (current, distro_default, first, second):
-        path.parent.mkdir(parents=True, exist_ok=True)
-    distro_default.symlink_to("../sites-available/default")
-    first.symlink_to("/old/managed-target")
-    links = {first: "/new/first", second: "/new/second"}
-    monkeypatch.setattr(ubuntu_activation, "CURRENT_LINK", current)
-    monkeypatch.setattr(ubuntu_activation, "DISTRO_DEFAULT", distro_default)
-    monkeypatch.setattr(ubuntu_activation, "INTEGRATION_LINKS", links)
-
-    saved = ubuntu_activation._capture_state()
-    distro_default.unlink()
-    current.symlink_to("/candidate")
-    ubuntu_activation._replace_symlink(first, links[first])
-    ubuntu_activation._replace_symlink(second, links[second])
-    ubuntu_activation._restore(saved)
-
-    assert not current.exists() and not current.is_symlink()
-    assert distro_default.readlink() == Path("../sites-available/default")
-    assert first.readlink() == Path("/old/managed-target")
-    assert not second.exists() and not second.is_symlink()
-
-
-@pytest.mark.skipif(sys.platform == "win32", reason="Symlink Unix richiesti")
-def test_activation_failure_restores_previous_topology(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    bundle = tmp_path / "bundle"
-    bundle.mkdir()
-    current = tmp_path / "current"
-    distro_default = tmp_path / "default"
-    managed = tmp_path / "managed"
-    current.symlink_to("/previous-bundle")
-    distro_default.symlink_to("../sites-available/default")
-    managed.symlink_to("/previous-managed")
-    monkeypatch.setattr(ubuntu_activation, "CURRENT_LINK", current)
-    monkeypatch.setattr(ubuntu_activation, "DISTRO_DEFAULT", distro_default)
-    monkeypatch.setattr(ubuntu_activation, "INTEGRATION_LINKS", {managed: "/candidate-managed"})
-    monkeypatch.setattr(ubuntu_activation, "verify_host_preflight", lambda _: manifest())
-    monkeypatch.setattr(ubuntu_activation, "prepare_log_directory", lambda _: None)
-    monkeypatch.setattr(ubuntu_activation, "_run", lambda _: "")
-
-    def fail_validation(_: dict) -> None:
-        raise ubuntu_activation.ActivationError("synthetic nginx -t failure")
-
-    monkeypatch.setattr(ubuntu_activation, "_validate_activated", fail_validation)
+def test_corrupt_or_incomplete_activation_state_is_rejected(tmp_path: Path) -> None:
     state = tmp_path / "state.json"
-    with pytest.raises(ubuntu_activation.ActivationError, match="synthetic"):
-        ubuntu_activation.activate(bundle, state)
+    state.write_text("{not-json", encoding="utf-8")
+    if os.name != "nt":
+        state.chmod(0o600)
+    with pytest.raises(ubuntu_activation.ActivationError, match="non valido"):
+        ubuntu_activation._read_state(state, require_root_owner=False)
+    state.write_text(json.dumps({"schema_version": "wrong"}), encoding="utf-8")
+    if os.name != "nt":
+        state.chmod(0o600)
+    with pytest.raises(ubuntu_activation.ActivationError, match="struttura"):
+        ubuntu_activation._read_state(state, require_root_owner=False)
 
-    assert current.readlink() == Path("/previous-bundle")
-    assert distro_default.readlink() == Path("../sites-available/default")
-    assert managed.readlink() == Path("/previous-managed")
-    assert not state.exists()
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink POSIX richiesto")
+def test_repeated_identical_activation_is_idempotent_and_keeps_state_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    candidate = tmp_path / "deployments/candidate"
+    candidate.mkdir(parents=True)
+    current = tmp_path / "current"
+    default = tmp_path / "default"
+    current.symlink_to(candidate)
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.symlink_to("/managed/first")
+    second.symlink_to("/managed/second")
+    state_path = tmp_path / "state.json"
+    state_path.write_text("authoritative-state", encoding="utf-8")
+    info = ubuntu_activation.BundleInfo(candidate, manifest(), "a" * 64, {})
+    state = {
+        "schema_version": "thebitlab.pilot-activation-state.v2",
+        "status": "active",
+        "candidate_bundle": str(candidate),
+        "candidate_lock_digest": "a" * 64,
+        "previous_v2_bundle": "/previous",
+        "previous_v2_lock_digest": "b" * 64,
+        "unsafe_provenance": {},
+    }
+    monkeypatch.setattr(ubuntu_activation, "CURRENT_LINK", current)
+    monkeypatch.setattr(ubuntu_activation, "DISTRO_DEFAULT", default)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "INTEGRATION_LINKS",
+        {first: "/managed/first", second: "/managed/second"},
+    )
+    monkeypatch.setattr(ubuntu_activation, "_read_state", lambda _: state)
+    monkeypatch.setattr(ubuntu_activation, "verify_bundle", lambda _: info)
+    monkeypatch.setattr(ubuntu_activation, "_validate_activated", lambda _: None)
+    before = state_path.read_bytes()
+    assert ubuntu_activation._idempotent_activation(candidate, state_path) is True
+    assert state_path.read_bytes() == before
+
+    different = dict(state, candidate_bundle="/different")
+    monkeypatch.setattr(ubuntu_activation, "_read_state", lambda _: different)
+    with pytest.raises(ubuntu_activation.ActivationError, match="diversa"):
+        ubuntu_activation._idempotent_activation(candidate, state_path)
+
+
+@pytest.mark.parametrize(
+    "fault_point",
+    (
+        "after_state_write",
+        "after_distro_default_disable",
+        "after_current_switch",
+        "before_validation",
+        "before_nginx_test",
+        "after_nginx_test",
+        "after_effective_validation",
+        "after_logrotate_validation",
+        "after_systemd_validation",
+    ),
+)
+def test_first_migration_faults_never_restore_unsafe_provenance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault_point: str
+) -> None:
+    candidate = ubuntu_activation.BundleInfo(
+        Path("/etc/thebitlab/deployments/candidate"), manifest(), "a" * 64, {}
+    )
+    preflight = ubuntu_activation.Preflight(
+        candidate,
+        "legacy-v1",
+        None,
+        {"distro_default": {"present": True}, "current": {"present": True}},
+    )
+    writes: list[str] = []
+    monkeypatch.setattr(ubuntu_activation, "_idempotent_activation", lambda *_: False)
+    monkeypatch.setattr(ubuntu_activation, "verify_host_preflight", lambda _: preflight)
+    monkeypatch.setattr(ubuntu_activation, "_nginx_may_be_running", lambda: False)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_write_state",
+        lambda _path, state, **_kwargs: writes.append(state["status"]),
+    )
+    monkeypatch.setattr(ubuntu_activation, "prepare_log_directory", lambda _: None)
+    monkeypatch.setattr(ubuntu_activation, "_remove_symlink", lambda _: None)
+    monkeypatch.setattr(ubuntu_activation, "_replace_symlink", lambda *_: None)
+    monkeypatch.setattr(ubuntu_activation, "verify_bundle", lambda _path, **_kwargs: candidate)
+    monkeypatch.setattr(ubuntu_activation, "_run", lambda _: "")
+    monkeypatch.setattr(ubuntu_activation, "_nginx_effective", lambda: "synthetic")
+    monkeypatch.setattr(ubuntu_activation, "validate_effective_nginx", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        ubuntu_activation, "_ensure_candidate_or_no_server", lambda _: "failed_candidate_retained"
+    )
+
+    def inject(point: str) -> None:
+        if point == fault_point:
+            raise ubuntu_activation.ActivationError("injected")
+
+    monkeypatch.setattr(ubuntu_activation, "_fault", inject)
+    with pytest.raises(ubuntu_activation.ActivationError, match="injected"):
+        ubuntu_activation.activate(candidate.path, tmp_path / "state.json")
+    assert writes == ["prepared", "failed_candidate_retained"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink POSIX richiesto")
+def test_activation_state_symlink_is_rejected(tmp_path: Path) -> None:
+    target = tmp_path / "target.json"
+    target.write_text("{}", encoding="utf-8")
+    target.chmod(0o600)
+    state = tmp_path / "state.json"
+    state.symlink_to(target)
+    with pytest.raises(ubuntu_activation.ActivationError, match="non-symlink"):
+        ubuntu_activation._read_state(state, require_root_owner=False)
 
 
 def test_edge_only_manifest_rejects_missing_invalid_or_redundant_proxy_ranges() -> None:
