@@ -1375,6 +1375,9 @@ def _install_migration_guard() -> None:
     code, _ = _systemctl_result(["mask", "--now", "nginx.service"])
     if code != 0:
         raise ActivationError("Mask manager-mediated nginx.service fallita")
+    code, _ = _systemctl_result(["reset-failed", "nginx.service"])
+    if code != 0:
+        raise ActivationError("Reset dello stato failed nginx.service fallito dopo il mask")
     _fsync_directory(NGINX_MIGRATION_GUARD.parent)
     _verify_migration_guard()
     if _nginx_may_be_running():

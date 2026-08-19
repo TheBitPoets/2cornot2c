@@ -1093,7 +1093,7 @@ def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
     def systemctl(arguments: list[str]) -> tuple[int, str]:
         call = tuple(arguments)
         calls.append(call)
-        if arguments[0] in {"stop", "mask"}:
+        if arguments[0] in {"stop", "mask", "reset-failed"}:
             return 0, ""
         if arguments[0] == "is-active":
             return 3, "inactive"
