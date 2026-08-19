@@ -56,6 +56,7 @@ def scan_stream(stream: BinaryIO) -> ScanResult:
         total_count += 1
         if len(findings) < MAX_STORED_FINDINGS:
             findings.append(ScanFinding(line_number, rule))
+
     line_number = 0
     while True:
         line = stream.readline(MAX_LOG_LINE_BYTES + 1)

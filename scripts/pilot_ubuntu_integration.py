@@ -784,7 +784,9 @@ def run() -> None:
                 "/auth/google/callback?code=tb704-after-no-rollback&state=tb704-after-no-rollback",
                 host=ORIGIN_HOST, use_tls=True,
             )
-            _assert_markers_absent(_effective_persistent_logs(activation._nginx_effective()), markers)
+            _assert_markers_absent(
+                (*_effective_persistent_logs(activation._nginx_effective()), *rotated), markers
+            )
             activation.complete(state, archives[2])
 
             # Upgrade to another v2 and prove rollback only targets the verified previous v2.
@@ -805,7 +807,9 @@ def run() -> None:
                 host=ORIGIN_HOST, use_tls=True,
             )
             time.sleep(0.2)
-            _assert_markers_absent(_effective_persistent_logs(activation._nginx_effective()), markers)
+            _assert_markers_absent(
+                (*_effective_persistent_logs(activation._nginx_effective()), *rotated), markers
+            )
             _assert_service_streams_absent(markers)
             activation.complete(state, archives[3])
 

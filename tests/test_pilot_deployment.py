@@ -838,6 +838,49 @@ def test_activation_state_fsync_failure_is_fatal_and_not_published(
     assert not list(tmp_path.glob(".state.json.*"))
 
 
+def test_activation_state_directory_fsync_failure_leaves_recoverable_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state_path = tmp_path / "state.json"
+    state = {
+        "schema_version": "thebitlab.pilot-activation-state.v3",
+        "status": "prepared",
+        "candidate_bundle": "/etc/thebitlab/deployments/candidate",
+        "candidate_lock_digest": "a" * 64,
+        "previous_v2_bundle": None,
+        "previous_v2_lock_digest": None,
+        "unsafe_provenance": {},
+    }
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_fsync_directory",
+        lambda _path: (_ for _ in ()).throw(OSError("injected directory fsync failure")),
+    )
+    with pytest.raises(OSError, match="directory fsync failure"):
+        ubuntu_activation._write_state(
+            state_path, state, exclusive=True, require_root_owner=False
+        )
+    assert state_path.exists()
+    assert ubuntu_activation._read_state(state_path, require_root_owner=False) == state
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink POSIX richiesto")
+def test_atomic_symlink_replace_treats_directory_fsync_failure_as_fatal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    link = tmp_path / "current"
+    link.symlink_to("/old")
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_fsync_directory",
+        lambda _path: (_ for _ in ()).throw(OSError("injected symlink fsync failure")),
+    )
+    with pytest.raises(OSError, match="symlink fsync failure"):
+        ubuntu_activation._replace_symlink(link, "/new")
+    assert link.is_symlink()
+    assert os.readlink(link) == "/new"
+
+
 def test_corrupt_or_incomplete_activation_state_is_rejected(tmp_path: Path) -> None:
     state = tmp_path / "state.json"
     state.write_text("{not-json", encoding="utf-8")
