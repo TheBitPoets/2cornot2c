@@ -278,13 +278,14 @@ def test_logrotate_reopen_uses_systemd_unit_identity_and_fails_closed(
     result = subprocess.run(
         ["/bin/sh", "-c", shell],
         check=False,
-        env={"PATH": str(bin_dir)},
+        env={"PATH": str(bin_dir) + os.pathsep + os.defpath},
         capture_output=True,
         text=True,
     )
     assert result.returncode == expected_code
     recorded = calls.read_text(encoding="utf-8")
     assert ("kill --kill-whom=main --signal=USR1 nginx.service" in recorded) is expect_kill
+    assert recorded.count("is-active nginx.service") == (2 if state == "active" and kill_code == 0 else 1)
     assert "pid" not in recorded.lower()
 
 

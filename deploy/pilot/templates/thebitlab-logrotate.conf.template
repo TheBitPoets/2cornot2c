@@ -16,7 +16,12 @@
         result=$?
         case "$state:$result" in
             active:0)
-                systemctl kill --kill-whom=main --signal=USR1 nginx.service
+                systemctl kill --kill-whom=main --signal=USR1 nginx.service || exit 1
+                # Signal delivery is asynchronous; do not declare success before nginx settles.
+                sleep 1
+                post_state="$(systemctl is-active nginx.service 2>/dev/null)"
+                post_result=$?
+                [ "$post_state:$post_result" = active:0 ] || exit 1
                 ;;
             inactive:3)
                 # A truly inactive unit has no open descriptors; the next start opens new files.
