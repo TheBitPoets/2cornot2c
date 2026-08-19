@@ -584,7 +584,9 @@ def project_course_design_sources(pack: dict[str, Any]) -> list[dict[str, Any]]:
         }
         provider = source.get("provider")
         if provider == "local":
-            item["path"] = source.get("path", "")
+            path = _text(source.get("path"))
+            if path:
+                item["path"] = path
         elif provider in {"github", "gitlab"}:
             item["repository"] = source.get("repository")
             item["ref"] = source.get("ref")
