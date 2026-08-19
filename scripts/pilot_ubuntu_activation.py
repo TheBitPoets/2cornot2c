@@ -828,7 +828,10 @@ def _verify_modules_enabled_entries() -> None:
 
 
 def verify_host_configuration_trust(
-    info: BundleInfo | None = None, *, guard_required: bool | None = None
+    info: BundleInfo | None = None,
+    *,
+    guard_required: bool | None = None,
+    require_complete_links: bool = False,
 ) -> None:
     """Validate the root-owned host configuration chain and its allowed symlinks."""
 
@@ -897,7 +900,11 @@ def verify_host_configuration_trust(
         verified = verify_bundle(info.path)
         if verified.lock_digest != info.lock_digest:
             raise ActivationError("Bundle target mutato durante host trust validation")
-        if current_state["present"] and Path(current_state["target"]) == info.path:
+        if (
+            require_complete_links
+            and current_state["present"]
+            and Path(current_state["target"]) == info.path
+        ):
             for path, expected in INTEGRATION_LINKS.items():
                 _assert_root_symlink(path, expected)
 
@@ -1347,7 +1354,9 @@ def _apply_bundle_links(bundle: Path) -> None:
 
 def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> None:
     verified = verify_bundle(info.path)
-    verify_host_configuration_trust(verified, guard_required=guard_required)
+    verify_host_configuration_trust(
+        verified, guard_required=guard_required, require_complete_links=True
+    )
     if verified.lock_digest != info.lock_digest:
         raise ActivationError("Bundle mutato durante activation")
     _fault("before_nginx_test")
@@ -1364,7 +1373,9 @@ def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> Non
     _fault("after_logrotate_validation")
     _run(["systemd-analyze", "verify", str(SYSTEMD_LINK)])
     _fault("after_systemd_validation")
-    verify_host_configuration_trust(verified, guard_required=guard_required)
+    verify_host_configuration_trust(
+        verified, guard_required=guard_required, require_complete_links=True
+    )
 
 
 def _state_for(preflight: Preflight) -> dict[str, Any]:
@@ -1423,7 +1434,9 @@ def _finish_transition(
         _fault("after_current_switch")
         for path, link_target in INTEGRATION_LINKS.items():
             _replace_symlink(path, link_target)
-        verify_host_configuration_trust(target, guard_required=True)
+        verify_host_configuration_trust(
+            target, guard_required=True, require_complete_links=True
+        )
         _write_status(state_path, state, switched)
         _fault("after_switched_state")
         status = switched
@@ -1431,7 +1444,9 @@ def _finish_transition(
     if status == switched:
         # Reapply idempotently: a crash may have persisted only a prefix of the symlink set.
         _apply_bundle_links(target.path)
-        verify_host_configuration_trust(target, guard_required=True)
+        verify_host_configuration_trust(
+            target, guard_required=True, require_complete_links=True
+        )
         _fault("before_validation")
         _validate_activated(target, guard_required=True)
         _write_status(state_path, state, validated)
