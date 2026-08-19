@@ -59,6 +59,9 @@ PROC_ROOT = Path("/proc")
 NGINX_CONTROL_GROUP = "/system.slice/nginx.service"
 NGINX_WANTS_LINK = Path("/etc/systemd/system/multi-user.target.wants/nginx.service")
 CANONICAL_NGINX_PORTS = frozenset({80, 443})
+ENABLED_NGINX_UNIT_FILE_STATES = frozenset({"enabled"})
+DISABLED_NGINX_UNIT_FILE_STATES = frozenset({"disabled"})
+PREFLIGHT_NGINX_UNIT_FILE_STATES = frozenset({"enabled", "disabled"})
 INTEGRATION_LINKS = {
     PROCESS_LINK: "/etc/thebitlab/current/nginx/thebitlab-process-error-log.conf",
     FORMAT_LINK: "/etc/thebitlab/current/nginx/thebitlab-log-format.conf",
@@ -924,6 +927,7 @@ def verify_host_configuration_trust(
     *,
     guard_required: bool | None = None,
     require_complete_links: bool = False,
+    allowed_unit_file_states: frozenset[str] = ENABLED_NGINX_UNIT_FILE_STATES,
 ) -> None:
     """Validate the root-owned host configuration chain and its allowed symlinks."""
 
@@ -958,7 +962,10 @@ def verify_host_configuration_trust(
     if guard_present:
         _verify_migration_guard()
     else:
-        _attest_effective_nginx_unit(expect_running=None)
+        _attest_effective_nginx_unit(
+            expect_running=None,
+            allowed_unit_file_states=allowed_unit_file_states,
+        )
 
     if DISTRO_AVAILABLE.exists() or DISTRO_AVAILABLE.is_symlink():
         _assert_trusted_metadata(DISTRO_AVAILABLE, directory=False, require_root_owner=True)
@@ -1118,7 +1125,15 @@ def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) 
         raise ActivationError("Il preflight host Ubuntu richiede root")
     verify_ubuntu_layout()
     candidate = verify_bundle(bundle)
-    verify_host_configuration_trust(candidate, guard_required=guard_required)
+    verify_host_configuration_trust(
+        candidate,
+        guard_required=guard_required,
+        allowed_unit_file_states=(
+            PREFLIGHT_NGINX_UNIT_FILE_STATES
+            if guard_required is not True
+            else ENABLED_NGINX_UNIT_FILE_STATES
+        ),
+    )
 
     site_entries = _directory_entries(Path("/etc/nginx/sites-enabled"))
     if site_entries - {"default", "thebitlab.conf"}:
@@ -1420,16 +1435,20 @@ def _expected_exec(
 
 
 def _attest_effective_nginx_unit(
-    *, expect_running: bool | None, unit_file_state: str = "enabled"
+    *,
+    expect_running: bool | None,
+    allowed_unit_file_states: frozenset[str] = ENABLED_NGINX_UNIT_FILE_STATES,
 ) -> EffectiveNginxUnit:
     """Attest the effective Ubuntu 24.04 package unit loaded by systemd."""
 
-    if unit_file_state not in {"enabled", "disabled"}:
-        raise ActivationError("UnitFileState nginx atteso non supportato")
+    if (
+        not allowed_unit_file_states
+        or not allowed_unit_file_states <= PREFLIGHT_NGINX_UNIT_FILE_STATES
+    ):
+        raise ActivationError("Allowlist UnitFileState nginx attesa non supportata")
     scalar_contract = {
         "Id": "nginx.service",
         "LoadState": "loaded",
-        "UnitFileState": unit_file_state,
         "Type": "forking",
         "PIDFile": "/run/nginx.pid",
         "User": "",
@@ -1444,6 +1463,13 @@ def _attest_effective_nginx_unit(
             raise ActivationError(
                 f"Contratto systemd nginx divergente: {name}={actual!r}, atteso {expected!r}"
             )
+    unit_file_state = _systemd_property("UnitFileState")
+    if unit_file_state not in allowed_unit_file_states:
+        raise ActivationError(
+            "Contratto systemd nginx divergente: "
+            f"UnitFileState={unit_file_state!r}, atteso uno di "
+            f"{sorted(allowed_unit_file_states)!r}"
+        )
     names = set(_systemd_property("Names").split())
     if names != {"nginx.service"}:
         raise ActivationError(f"Alias systemd nginx inatteso: {sorted(names)}")
@@ -1675,11 +1701,17 @@ def _attest_preflight_nginx_runtime() -> None:
     state, code = _nginx_service_state()
     if (state, code) == ("active", 0):
         _attest_nginx_service_runtime(
-            _attest_effective_nginx_unit(expect_running=True)
+            _attest_effective_nginx_unit(
+                expect_running=True,
+                allowed_unit_file_states=PREFLIGHT_NGINX_UNIT_FILE_STATES,
+            )
         )
         return
     if code == 3 and state in {"inactive", "failed"}:
-        _attest_effective_nginx_unit(expect_running=False)
+        _attest_effective_nginx_unit(
+            expect_running=False,
+            allowed_unit_file_states=PREFLIGHT_NGINX_UNIT_FILE_STATES,
+        )
         _assert_zero_nginx_processes()
         _assert_no_canonical_listeners()
         return
@@ -1773,7 +1805,10 @@ def _remove_migration_guard() -> None:
     code, _ = _systemctl_result(["daemon-reload"])
     if code != 0:
         raise ActivationError("systemd daemon-reload fallito durante rimozione guard")
-    _attest_effective_nginx_unit(expect_running=False, unit_file_state="disabled")
+    _attest_effective_nginx_unit(
+        expect_running=False,
+        allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
+    )
     _require_nginx_not_running()
     _assert_zero_nginx_processes()
     _assert_no_canonical_listeners()
@@ -1782,7 +1817,10 @@ def _remove_migration_guard() -> None:
 
 def _start_nginx_service() -> None:
     # Start while disabled: no crash/reboot can autostart before runtime attestation.
-    _attest_effective_nginx_unit(expect_running=False, unit_file_state="disabled")
+    _attest_effective_nginx_unit(
+        expect_running=False,
+        allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
+    )
     _require_nginx_not_running()
     _assert_zero_nginx_processes()
     _assert_no_canonical_listeners()
@@ -1790,7 +1828,8 @@ def _start_nginx_service() -> None:
     if code != 0:
         raise ActivationError("Avvio nginx.service fallito")
     disabled_unit = _attest_effective_nginx_unit(
-        expect_running=True, unit_file_state="disabled"
+        expect_running=True,
+        allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
     )
     _attest_nginx_service_runtime(disabled_unit)
     _fault("after_nginx_runtime_attestation")

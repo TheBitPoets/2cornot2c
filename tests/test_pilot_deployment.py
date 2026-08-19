@@ -1181,6 +1181,127 @@ def test_effective_systemd_unit_contract_accepts_only_pristine_package_definitio
             ubuntu_activation._attest_effective_nginx_unit(expect_running=False)
 
 
+@pytest.mark.parametrize(
+    ("service_state", "service_code", "unit_file_state", "main_pid", "control_group"),
+    (
+        ("inactive", 3, "enabled", "0", ""),
+        ("inactive", 3, "disabled", "0", ""),
+        ("active", 0, "enabled", "10", ubuntu_activation.NGINX_CONTROL_GROUP),
+        ("active", 0, "disabled", "10", ubuntu_activation.NGINX_CONTROL_GROUP),
+    ),
+)
+def test_preflight_accepts_only_canonical_enabled_or_disabled_package_unit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    service_state: str,
+    service_code: int,
+    unit_file_state: str,
+    main_pid: str,
+    control_group: str,
+) -> None:
+    fragment = tmp_path / "nginx.service"
+    fragment.write_text("package unit\n", encoding="utf-8")
+    properties = dict(
+        _effective_unit_properties(fragment),
+        UnitFileState=unit_file_state,
+        MainPID=main_pid,
+        ControlGroup=control_group,
+    )
+    canonical = ubuntu_activation.NginxProcess(
+        10, frozenset({ubuntu_activation.NGINX_CONTROL_GROUP})
+    )
+    monkeypatch.setattr(ubuntu_activation, "NGINX_PACKAGE_UNIT", fragment)
+    monkeypatch.setattr(
+        ubuntu_activation, "_canonical_path", lambda value, **_kwargs: Path(value)
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_property",
+        lambda name, **_kwargs: properties[name],
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_nginx_service_state",
+        lambda: (service_state, service_code),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_nginx_processes",
+        lambda: (canonical,) if service_state == "active" else (),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_canonical_listener_owners",
+        lambda: {
+            80: frozenset({10}) if service_state == "active" else frozenset(),
+            443: frozenset({10}) if service_state == "active" else frozenset(),
+        },
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_read_process_control_groups",
+        lambda _pid: canonical.control_groups,
+    )
+
+    ubuntu_activation._attest_preflight_nginx_runtime()
+
+
+@pytest.mark.parametrize(
+    "unit_file_state",
+    ("masked", "static", "enabled-runtime", "linked", "unknown-future-state"),
+)
+def test_preflight_rejects_unit_file_state_outside_closed_allowlist(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    unit_file_state: str,
+) -> None:
+    fragment = tmp_path / "nginx.service"
+    fragment.write_text("package unit\n", encoding="utf-8")
+    properties = dict(
+        _effective_unit_properties(fragment), UnitFileState=unit_file_state
+    )
+    monkeypatch.setattr(ubuntu_activation, "NGINX_PACKAGE_UNIT", fragment)
+    monkeypatch.setattr(
+        ubuntu_activation, "_canonical_path", lambda value, **_kwargs: Path(value)
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_property",
+        lambda name, **_kwargs: properties[name],
+    )
+
+    with pytest.raises(ubuntu_activation.ActivationError, match="UnitFileState"):
+        ubuntu_activation._attest_effective_nginx_unit(
+            expect_running=False,
+            allowed_unit_file_states=(
+                ubuntu_activation.PREFLIGHT_NGINX_UNIT_FILE_STATES
+            ),
+        )
+
+
+def test_effective_unit_state_allowlist_cannot_be_widened_by_a_caller(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fragment = tmp_path / "nginx.service"
+    fragment.write_text("package unit\n", encoding="utf-8")
+    properties = _effective_unit_properties(fragment)
+    monkeypatch.setattr(ubuntu_activation, "NGINX_PACKAGE_UNIT", fragment)
+    monkeypatch.setattr(
+        ubuntu_activation, "_canonical_path", lambda value, **_kwargs: Path(value)
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_property",
+        lambda name, **_kwargs: properties[name],
+    )
+
+    with pytest.raises(ubuntu_activation.ActivationError, match="Allowlist"):
+        ubuntu_activation._attest_effective_nginx_unit(
+            expect_running=False,
+            allowed_unit_file_states=frozenset({"enabled", "static"}),
+        )
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="Symlink /proc POSIX richiesto")
 def test_nginx_process_discovery_uses_executable_identity_not_process_name(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1358,9 +1479,13 @@ def test_unmask_start_and_enable_preserve_crash_safe_order(
         return 0, ""
 
     def attest(
-        *, expect_running: bool | None, unit_file_state: str = "enabled"
+        *,
+        expect_running: bool | None,
+        allowed_unit_file_states: frozenset[str] = (
+            ubuntu_activation.ENABLED_NGINX_UNIT_FILE_STATES
+        ),
     ) -> ubuntu_activation.EffectiveNginxUnit:
-        calls.append(("attest", expect_running, unit_file_state))
+        calls.append(("attest", expect_running, allowed_unit_file_states))
         return ubuntu_activation.EffectiveNginxUnit(
             10 if expect_running else 0,
             ubuntu_activation.NGINX_CONTROL_GROUP if expect_running else "",
@@ -1391,8 +1516,12 @@ def test_unmask_start_and_enable_preserve_crash_safe_order(
     unmask = calls.index(("systemctl", "unmask", "nginx.service"))
     start = calls.index(("systemctl", "start", "nginx.service"))
     enable = calls.index(("systemctl", "enable", "nginx.service"))
-    disabled_runtime = calls.index(("attest", True, "disabled"))
-    enabled_runtime = calls.index(("attest", True, "enabled"))
+    disabled_runtime = calls.index(
+        ("attest", True, ubuntu_activation.DISABLED_NGINX_UNIT_FILE_STATES)
+    )
+    enabled_runtime = calls.index(
+        ("attest", True, ubuntu_activation.ENABLED_NGINX_UNIT_FILE_STATES)
+    )
     assert disable < unmask < start < disabled_runtime < enable < enabled_runtime
 
 

@@ -453,7 +453,10 @@ def _expect_dropin_rejected(
         path.unlink(missing_ok=True)
         directory.rmdir()
         _run(["systemctl", "daemon-reload"])
-    activation._attest_effective_nginx_unit(expect_running=False)
+    activation._attest_effective_nginx_unit(
+        expect_running=False,
+        allowed_unit_file_states=activation.PREFLIGHT_NGINX_UNIT_FILE_STATES,
+    )
 
 
 def _check_ephemeral_host() -> str:
@@ -605,9 +608,19 @@ def run() -> None:
             manifest = _render_bundle(temporary, v2_bundle)
             legacy_manifest = _legacy_from_v2(manifest, legacy_bundle)
 
-            # Effective systemd contract: pristine package passes; every dedicated-host drop-in
-            # is rejected through manager state before guard acquisition or start.
-            activation._attest_effective_nginx_unit(expect_running=False)
+            # Effective systemd contract: a pristine package unit may initially be enabled or
+            # disabled; every dedicated-host drop-in is rejected before guard acquisition/start.
+            initial_unit_file_state = activation._systemd_property("UnitFileState")
+            if initial_unit_file_state not in activation.PREFLIGHT_NGINX_UNIT_FILE_STATES:
+                raise RuntimeError(
+                    "UnitFileState package iniziale fuori dal contratto preflight: "
+                    f"{initial_unit_file_state}"
+                )
+            activation._attest_preflight_nginx_runtime()
+            print(
+                "EVIDENCE: package nginx initial "
+                f"UnitFileState={initial_unit_file_state}; preflight PASS"
+            )
             leaky_unit_config, _ = _write_foreign_nginx_config(temporary, "unit-leaky")
             _expect_dropin_rejected(
                 v2_bundle,
@@ -787,7 +800,11 @@ def run() -> None:
             trusted_module.symlink_to(trusted_target)
             try:
                 activation.verify_host_configuration_trust(
-                    activation.verify_bundle(v2_bundle), guard_required=False
+                    activation.verify_bundle(v2_bundle),
+                    guard_required=False,
+                    allowed_unit_file_states=(
+                        activation.PREFLIGHT_NGINX_UNIT_FILE_STATES
+                    ),
                 )
             finally:
                 trusted_module.unlink()
@@ -1088,7 +1105,10 @@ def run() -> None:
                     elif crash_point in disabled_boundaries:
                         running = crash_point == "after_nginx_runtime_attestation"
                         unit = activation._attest_effective_nginx_unit(
-                            expect_running=running, unit_file_state="disabled"
+                            expect_running=running,
+                            allowed_unit_file_states=(
+                                activation.DISABLED_NGINX_UNIT_FILE_STATES
+                            ),
                         )
                         if running:
                             activation._attest_nginx_service_runtime(unit)
@@ -1124,6 +1144,12 @@ def run() -> None:
             backend, backend_thread = _start_backend(manifest["service"]["port"])
             if activation._nginx_service_state() != ("active", 0):
                 raise RuntimeError("nginx.service non attiva dopo activation")
+            final_unit = activation._attest_effective_nginx_unit(expect_running=True)
+            activation._attest_nginx_service_runtime(final_unit)
+            print(
+                "EVIDENCE: migration UnitFileState path "
+                f"{initial_unit_file_state}->masked->disabled(start)->enabled; runtime PASS"
+            )
             callback = _send(
                 "127.0.0.1", 443,
                 "/auth/google/callback?code=tb704-callback-code&state=tb704-callback-state",
