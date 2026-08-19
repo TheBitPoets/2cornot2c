@@ -2,7 +2,9 @@
 
 ## Stato
 
-Implementato da #706. La verifica integrata sulla root/installazione unica resta dipendente da #705.
+Implementato da #706 e verificato sulla root/installazione unica introdotta da #705. L'E2E
+riproducibile usa bootstrap canonico, pairing e vere richieste HTTP in
+[`test_student_api_authorization_pilot_root_e2e.py`](../../tests/test_student_api_authorization_pilot_root_e2e.py).
 
 ## Modello
 
