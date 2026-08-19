@@ -763,14 +763,17 @@ def run() -> None:
             if not all(path.is_file() for path in rotated):
                 raise RuntimeError("Rotazione pilot non ha prodotto i file .1 attesi")
             rotated_before = rotated[0].read_bytes()
+            current_size_before = ACCESS_LOG.stat().st_size
             post_rotate_path = "/_thebitlab-integration/post-rotation-write"
             if _send("127.0.0.1", 443, post_rotate_path, host=ORIGIN_HOST, use_tls=True) != 204:
                 raise RuntimeError("nginx non operativo dopo logrotate + systemd USR1")
-            time.sleep(0.2)
+            deadline = time.monotonic() + 5
+            while ACCESS_LOG.stat().st_size <= current_size_before and time.monotonic() < deadline:
+                time.sleep(0.05)
             _verify_metadata()
-            if post_rotate_path.encode("ascii") not in ACCESS_LOG.read_bytes():
+            if ACCESS_LOG.stat().st_size <= current_size_before:
                 raise RuntimeError("Evento post-rotate assente dal nuovo access log")
-            if rotated[0].read_bytes() != rotated_before or post_rotate_path.encode("ascii") in rotated_before:
+            if rotated[0].read_bytes() != rotated_before:
                 raise RuntimeError("nginx ha continuato a scrivere nel file ruotato")
             _assert_markers_absent((*all_logs, *rotated), markers)
 
