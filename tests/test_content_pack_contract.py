@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import json
 from pathlib import Path
 
@@ -46,6 +45,57 @@ def test_sources_project_to_current_course_source_catalog() -> None:
         "README.md",
         "COVERAGE.md",
         "01_WEB_FOUNDATIONS.md",
+    )
+
+
+def test_remote_source_projects_without_local_path() -> None:
+    pack = load(V1_FIXTURE)
+    pack["sources"] = [
+        {
+            "id": "tpsi5-source-web-upstream",
+            "kind": "source-package",
+            "label": "Web course upstream",
+            "type": "markdown",
+            "provider": "github",
+            "role": "technical-reference",
+            "files": ["README.md"],
+            "repository": "TheBitPoets/web-course",
+            "ref": "main",
+            "license_status": "review-required",
+            "indexing_status": "ready"
+        }
+    ]
+    pack["content_items"][0]["source_refs"] = [
+        {
+            "id": "tpsi5-ref-mdn-html",
+            "role": "technical-reference",
+            "locator": "HTML reference"
+        }
+    ]
+
+    assert validate_content_pack(pack) == []
+    projected = project_course_design_sources(pack)
+    assert "path" not in projected[0]
+    assert projected[0]["repository"] == "TheBitPoets/web-course"
+    assert projected[0]["ref"] == "main"
+
+    normalized = course_source_catalog.normalize_course_sources(
+        {"sources": projected}
+    )
+    assert normalized[0].provider == "github"
+    assert normalized[0].repository == "TheBitPoets/web-course"
+
+
+def test_indexable_source_must_really_be_markdown() -> None:
+    pack = load(V1_FIXTURE)
+    pack["sources"][0]["files"] = ["README.txt"]
+
+    errors = validate_content_pack(pack)
+
+    assert any(
+        "sources non compatibili col Course Source Catalog" in error
+        and "Markdown" in error
+        for error in errors
     )
 
 
