@@ -487,7 +487,10 @@ def run() -> None:
                 nginx_backup.replace(activation.NGINX_CONFIG)
 
             trusted_module = Path("/etc/nginx/modules-enabled/99-thebitlab-trusted.conf")
-            trusted_target = Path("/usr/share/nginx/modules-available/99-thebitlab-trusted.conf")
+            modules_available = Path("/usr/share/nginx/modules-available")
+            modules_available_existed = modules_available.exists()
+            modules_available.mkdir(mode=0o755, parents=True, exist_ok=True)
+            trusted_target = modules_available / "99-thebitlab-trusted.conf"
             trusted_target.write_text("load_module modules/ngx_fake.so;\n", encoding="utf-8")
             trusted_target.chmod(0o644)
             trusted_module.symlink_to(trusted_target)
@@ -498,6 +501,8 @@ def run() -> None:
             finally:
                 trusted_module.unlink()
                 trusted_target.unlink()
+                if not modules_available_existed:
+                    modules_available.rmdir()
 
             untrusted_module = Path("/etc/nginx/modules-enabled/99-thebitlab-untrusted.conf")
             untrusted_target = temporary / "untrusted-module.conf"
