@@ -1,0 +1,86 @@
+{
+  "schema_version": "thebitlab.content-pack.v0",
+  "id": "tpsi4-pack-example-2026",
+  "title": "TPSI quarto - example migration pack",
+  "version": "0.1.0",
+  "status": "draft",
+  "language": "it",
+  "audience": {
+    "school_level": "secondaria-secondo-grado",
+    "subject": "TPSI",
+    "year": 4
+  },
+  "ownership": {
+    "content_origin": "original-course-material",
+    "redistribution_status": "project-license-to-review",
+    "editorial_copying_allowed": false
+  },
+  "curriculum_references": [
+    {
+      "id": "tpsi4-curriculum-example",
+      "kind": "bibliographic-index",
+      "role": "coverage-reference",
+      "title": "TPSI quarto - indice pubblico",
+      "provider": "publisher",
+      "uri": "https://example.invalid/catalog",
+      "license_status": "reference-only",
+      "text_imported": false
+    }
+  ],
+  "sources": [
+    {
+      "id": "tpsi4-source-originali",
+      "kind": "source-package",
+      "type": "markdown",
+      "provider": "local",
+      "role": "approved-course-content",
+      "path": "content/tpsi_quarto",
+      "files": [
+        "README.md",
+        "COVERAGE.md",
+        "01_PROCESSI.md"
+      ],
+      "license_status": "project-license-to-review",
+      "indexing_status": "ready"
+    }
+  ],
+  "content_items": [
+    {
+      "id": "tpsi4-content-processi",
+      "kind": "module",
+      "path": "content/tpsi_quarto/01_PROCESSI.md",
+      "order": 1,
+      "status": "draft",
+      "curriculum_topics": [
+        "processi"
+      ],
+      "activity_ids": [
+        "tpsi4-activity-c-processi-001"
+      ]
+    }
+  ],
+  "course_designs": [
+    {
+      "id": "tpsi4-course-2026-2027",
+      "path": "doc/course_designs/tpsi_quarto_2026_2027.json",
+      "status": "draft"
+    }
+  ],
+  "activity_roots": [
+    "activities/tpsi_quarto"
+  ],
+  "policies": {
+    "provenance_required": true,
+    "teacher_review_required_before_publish": true,
+    "student_teacher_asset_separation_required": true,
+    "ai_is_not_primary_source": true,
+    "book_text_reproduction_forbidden": true
+  },
+  "compatibility": {
+    "current": [
+      "course-source-catalog-markdown",
+      "course-design-json-v1",
+      "activity-schema-1.0"
+    ]
+  }
+}
