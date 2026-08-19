@@ -56,16 +56,17 @@ def _portable_id(value: Any, *, source_id: bool = False) -> bool:
 
 
 def _safe_relative_path(value: Any, *, allow_empty: bool = False) -> bool:
-    if not isinstance(value, str):
+    if not isinstance(value, str) or value != value.strip():
         return False
-    text = value.strip()
-    if not text:
+    if not value:
         return allow_empty
-    if "\\" in text or text.startswith("/"):
+    if "\\" in value or ":" in value or value.startswith("/"):
         return False
-    path = PurePosixPath(text)
-    return not path.is_absolute() and all(
-        part not in {"", ".", ".."} for part in path.parts
+    path = PurePosixPath(value)
+    return (
+        not path.is_absolute()
+        and all(part not in {"", ".", ".."} for part in path.parts)
+        and path.as_posix() == value
     )
 
 
@@ -238,13 +239,20 @@ def _validate_sources(value: Any, source: str, errors: list[str]) -> set[str]:
         if not _safe_relative_path(item.get("path", ""), allow_empty=True):
             errors.append(f"{prefix}.path deve essere un path relativo sicuro")
         files = item.get("files")
-        if not _list_of_unique_strings(files):
+        if not isinstance(files, list) or not files or not _list_of_unique_strings(files):
             errors.append(
-                f"{prefix}.files deve essere una lista di path unici non vuoti"
+                f"{prefix}.files deve essere una lista non vuota di path unici"
             )
         elif any(not _safe_relative_path(file) for file in files):
             errors.append(f"{prefix}.files contiene path non sicuri")
-        if provider in {"github", "gitlab"}:
+        if provider == "local":
+            if item.get("repository") is not None or item.get("ref") is not None:
+                errors.append(
+                    f"{prefix}: una fonte locale non accetta repository o ref"
+                )
+        elif provider in {"github", "gitlab"}:
+            if _text(item.get("path")):
+                errors.append(f"{prefix}: una fonte remota non accetta path locale")
             if not _text(item.get("repository")):
                 errors.append(f"{prefix}.repository richiesto per fonte remota")
             if not _text(item.get("ref")):
@@ -456,6 +464,18 @@ def validate_content_pack(
         )
     known_ids = reference_ids | source_ids
 
+    if isinstance(pack.get("sources"), list):
+        try:
+            from scripts import course_source_catalog
+
+            course_source_catalog.normalize_course_sources(
+                {"sources": project_course_design_sources(pack)}
+            )
+        except (TypeError, ValueError) as error:
+            errors.append(
+                f"{source}: sources non compatibili col Course Source Catalog: {error}"
+            )
+
     _validate_coverage(
         pack.get("coverage"),
         required=has_coverage_reference,
@@ -526,10 +546,13 @@ def validate_content_pack_paths(
         if not isinstance(source_item, dict) or source_item.get("provider") != "local":
             continue
         base = _text(source_item.get("path"))
-        for filename in source_item.get("files", []):
-            relative = (
-                str(PurePosixPath(base) / filename) if base else filename
-            )
+        files = source_item.get("files", [])
+        if not isinstance(files, list):
+            continue
+        for filename in files:
+            if not isinstance(filename, str):
+                continue
+            relative = str(PurePosixPath(base) / filename) if base else filename
             check_file(relative, f"source {source_item.get('id')}")
     for index, value in enumerate(pack.get("activity_roots", [])):
         if not _safe_relative_path(value):
@@ -556,13 +579,17 @@ def project_course_design_sources(pack: dict[str, Any]) -> list[dict[str, Any]]:
             "label": source.get("label"),
             "type": source.get("type"),
             "provider": source.get("provider"),
-            "path": source.get("path", ""),
             "files": deepcopy(source.get("files", [])),
             "indexing_status": source.get("indexing_status"),
         }
-        for key in ("repository", "ref", "updated_at"):
-            if key in source:
-                item[key] = source.get(key)
+        provider = source.get("provider")
+        if provider == "local":
+            item["path"] = source.get("path", "")
+        elif provider in {"github", "gitlab"}:
+            item["repository"] = source.get("repository")
+            item["ref"] = source.get("ref")
+        if "updated_at" in source:
+            item["updated_at"] = source.get("updated_at")
         projected.append(item)
     return projected
 
