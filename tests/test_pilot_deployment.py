@@ -177,9 +177,12 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
     assert "rotate 30" in logrotate
     assert "maxage 30" in logrotate
     assert "create 0640 www-data adm" in logrotate
-    assert '"nginx: master process "*) kill -USR1 "$pid"' in logrotate
-    assert '[ "$executable" = /usr/sbin/nginx ]' in logrotate
-    assert '[ "$uid" = 0 ]' in logrotate
+    assert "systemctl is-active nginx.service" in logrotate
+    assert "systemctl kill --kill-whom=main --signal=USR1 nginx.service" in logrotate
+    assert "active:0)" in logrotate
+    assert "inactive:3)" in logrotate
+    assert "/run/nginx.pid" not in logrotate
+    assert "/proc/$pid" not in logrotate
     assert "copytruncate" not in logrotate
     assert payload["logging"]["directory"] == "/var/log/thebitlab"
     assert payload["logging"]["directory_mode"] == "0750"
@@ -234,6 +237,75 @@ def test_logging_validator_rejects_query_header_or_redirect_fields(
         )
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Shell logrotate POSIX richiesto")
+@pytest.mark.parametrize(
+    ("state", "state_code", "kill_code", "expected_code", "expect_kill"),
+    (
+        ("active", 0, 0, 0, True),
+        ("active", 0, 1, 1, True),
+        ("inactive", 3, 0, 0, False),
+        ("failed", 3, 0, 1, False),
+        ("activating", 3, 0, 1, False),
+        ("deactivating", 3, 0, 1, False),
+        ("unknown", 4, 0, 1, False),
+    ),
+)
+def test_logrotate_reopen_uses_systemd_unit_identity_and_fails_closed(
+    tmp_path: Path,
+    state: str,
+    state_code: int,
+    kill_code: int,
+    expected_code: int,
+    expect_kill: bool,
+) -> None:
+    output = tmp_path / "bundle"
+    deployment.render_bundle(manifest(), output)
+    text = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
+    shell = text.split("    postrotate\n", 1)[1].split("    endscript", 1)[0]
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    calls = tmp_path / "calls"
+    fake = bin_dir / "systemctl"
+    fake.write_text(
+        "#!/bin/sh\n"
+        f'echo "$*" >> "{calls}"\n'
+        f'if [ "$1" = is-active ]; then echo "{state}"; exit {state_code}; fi\n'
+        f'if [ "$1" = kill ]; then exit {kill_code}; fi\n'
+        "exit 99\n",
+        encoding="utf-8",
+    )
+    fake.chmod(0o755)
+    result = subprocess.run(
+        ["/bin/sh", "-c", shell],
+        check=False,
+        env={"PATH": str(bin_dir)},
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == expected_code
+    recorded = calls.read_text(encoding="utf-8")
+    assert ("kill --kill-whom=main --signal=USR1 nginx.service" in recorded) is expect_kill
+    assert "pid" not in recorded.lower()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Shell logrotate POSIX richiesto")
+def test_logrotate_reopen_fails_when_systemctl_is_unavailable(tmp_path: Path) -> None:
+    output = tmp_path / "bundle"
+    deployment.render_bundle(manifest(), output)
+    text = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
+    shell = text.split("    postrotate\n", 1)[1].split("    endscript", 1)[0]
+    empty_path = tmp_path / "empty-bin"
+    empty_path.mkdir()
+    result = subprocess.run(
+        ["/bin/sh", "-c", shell],
+        check=False,
+        env={"PATH": str(empty_path)},
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+
+
 def test_logging_validator_rejects_unformatted_access_log_and_copytruncate(tmp_path: Path) -> None:
     payload = manifest()
     output = tmp_path / "bundle"
@@ -279,6 +351,47 @@ def test_logging_validator_rejects_unformatted_access_log_and_copytruncate(tmp_p
         )
 
 
+@pytest.mark.parametrize(
+    "injected",
+    (
+        "location = /leak { access_log /var/log/thebitlab/thebitlab-access.log combined; return 204; }",
+        "location = /leak {\n access_log /var/log/thebitlab/thebitlab-access.log combined;\n return 204;\n}",
+        "location /outer { location = /leak { access_log /tmp/leak.log combined; return 204; } }",
+        "location = /leak { error_log /var/log/nginx/leak-error.log warn; return 204; }",
+    ),
+)
+def test_nested_logging_bypass_is_rejected_by_bundle_and_effective_ast(
+    tmp_path: Path, injected: str
+) -> None:
+    payload = manifest()
+    root = tmp_path / "deployments"
+    output = root / "candidate"
+    deployment.render_bundle(payload, output)
+    site_path = output / "nginx/thebitlab.conf"
+    site = site_path.read_text(encoding="utf-8")
+    closing = site.rfind("}")
+    mutated = site[:closing] + "\n    " + injected + "\n" + site[closing:]
+    site_path.write_text(mutated, encoding="utf-8", newline="\n")
+    lock_path = output / "deployment.lock.json"
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    lock["files"]["nginx/thebitlab.conf"] = hashlib.sha256(site_path.read_bytes()).hexdigest()
+    lock_path.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    with pytest.raises(
+        (ubuntu_activation.ActivationError, deployment.DeploymentValidationError),
+        match="[Ll]ogging|access_log|request-context",
+    ):
+        ubuntu_activation.verify_bundle(
+            output, deployments_root=root, require_root_owner=False
+        )
+
+    effective, expected = effective_v2(output)
+    with pytest.raises(ubuntu_activation.ActivationError, match="[Ll]ogging|Access log"):
+        ubuntu_activation.validate_effective_nginx(
+            effective, payload, topology="v2", expected_sources=expected
+        )
+
+
 def test_secret_safe_scanner_and_synthetic_callback_audit_do_not_echo_values(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -290,7 +403,9 @@ def test_secret_safe_scanner_and_synthetic_callback_audit_do_not_echo_values(
         b'"GET /health HTTP/1.1" 204 0 '
         b'request_time=0.001 request_id=ordinary-request-id\n'
     )
-    assert log_scanner.scan_stream(io.BytesIO(clean)) == ()
+    clean_result = log_scanner.scan_stream(io.BytesIO(clean))
+    assert clean_result.findings == ()
+    assert clean_result.total_count == 0
 
     access_log = tmp_path / "access.log"
     process_error_log = tmp_path / "process-error.log"
@@ -335,7 +450,38 @@ def test_scanner_bounds_memory_for_giant_newline_free_records() -> None:
 
     giant = GuardedStream(b"A" * (log_scanner.MAX_LOG_LINE_BYTES * 8) + b"\nGET /health\n")
     findings = log_scanner.scan_stream(giant)
-    assert findings == (log_scanner.ScanFinding(1, "line_too_long"),)
+    assert findings.findings == (log_scanner.ScanFinding(1, "line_too_long"),)
+    assert findings.total_count == 1
+
+
+def test_scanner_consumes_many_sensitive_records_but_bounds_findings_and_output(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    marker = b"tb704-scanner-marker-never-echo"
+
+    class RepeatedStream:
+        def __init__(self, count: int) -> None:
+            self.remaining = count
+
+        def readline(self, size: int = -1) -> bytes:
+            assert 0 < size <= log_scanner.MAX_LOG_LINE_BYTES + 1
+            if not self.remaining:
+                return b""
+            self.remaining -= 1
+            return b'"GET /callback?code=' + marker + b' HTTP/1.1"\n'
+
+    result = log_scanner.scan_stream(RepeatedStream(100_000))
+    assert result.total_count == 200_000
+    assert len(result.findings) == log_scanner.MAX_STORED_FINDINGS
+    assert result.omitted_count == 200_000 - log_scanner.MAX_STORED_FINDINGS
+
+    path = tmp_path / "many.log"
+    path.write_bytes((b'"GET /?code=' + marker + b' HTTP/1.1"\n') * 1_000)
+    assert log_scanner.main([str(path)]) == 1
+    output = capsys.readouterr().err
+    assert len(output) < 4_000
+    assert marker.decode() not in output
+    assert "omessi" in output
 
 
 def test_public_origin_requires_explicit_empty_allowlist(tmp_path: Path) -> None:
@@ -498,6 +644,28 @@ def test_trusted_bundle_rejects_outside_mutation_and_lock_mismatch(tmp_path: Pat
         )
 
 
+def test_self_locked_previous_v2_must_be_byte_reproducible_by_current_renderer(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "deployments"
+    output = root / "previous"
+    deployment.render_bundle(manifest(), output)
+    artifact = output / "firewall/origin-exposure.json"
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+    artifact.write_text(json.dumps(payload, separators=(",", ":")) + "\n", encoding="utf-8")
+    lock_path = output / "deployment.lock.json"
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    lock["files"]["firewall/origin-exposure.json"] = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    lock_path.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    with pytest.raises(ubuntu_activation.ActivationError, match="renderer trusted"):
+        ubuntu_activation.verify_bundle(
+            output,
+            deployments_root=root,
+            require_root_owner=False,
+        )
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="Symlink/mode POSIX richiesti")
 def test_trusted_bundle_rejects_symlink_hardlink_and_group_writable(
     tmp_path: Path,
@@ -620,7 +788,7 @@ def test_extended_and_default_acl_are_rejected(tmp_path: Path) -> None:
 def test_activation_state_is_atomic_secure_and_preserves_provenance(tmp_path: Path) -> None:
     state_path = tmp_path / "state.json"
     state = {
-        "schema_version": "thebitlab.pilot-activation-state.v2",
+        "schema_version": "thebitlab.pilot-activation-state.v3",
         "status": "active",
         "candidate_bundle": "/etc/thebitlab/deployments/candidate",
         "candidate_lock_digest": "a" * 64,
@@ -642,6 +810,32 @@ def test_activation_state_is_atomic_secure_and_preserves_provenance(tmp_path: Pa
             state_path, state, exclusive=True, require_root_owner=False
         )
     assert state_path.read_bytes() == before
+
+
+def test_activation_state_fsync_failure_is_fatal_and_not_published(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state_path = tmp_path / "state.json"
+    state = {
+        "schema_version": "thebitlab.pilot-activation-state.v3",
+        "status": "prepared",
+        "candidate_bundle": "/etc/thebitlab/deployments/candidate",
+        "candidate_lock_digest": "a" * 64,
+        "previous_v2_bundle": None,
+        "previous_v2_lock_digest": None,
+        "unsafe_provenance": {},
+    }
+    monkeypatch.setattr(
+        ubuntu_activation.os,
+        "fsync",
+        lambda _descriptor: (_ for _ in ()).throw(OSError("injected fsync failure")),
+    )
+    with pytest.raises(OSError, match="fsync failure"):
+        ubuntu_activation._write_state(
+            state_path, state, exclusive=True, require_root_owner=False
+        )
+    assert not state_path.exists()
+    assert not list(tmp_path.glob(".state.json.*"))
 
 
 def test_corrupt_or_incomplete_activation_state_is_rejected(tmp_path: Path) -> None:
@@ -675,7 +869,7 @@ def test_repeated_identical_activation_is_idempotent_and_keeps_state_bytes(
     state_path.write_text("authoritative-state", encoding="utf-8")
     info = ubuntu_activation.BundleInfo(candidate, manifest(), "a" * 64, {})
     state = {
-        "schema_version": "thebitlab.pilot-activation-state.v2",
+        "schema_version": "thebitlab.pilot-activation-state.v3",
         "status": "active",
         "candidate_bundle": str(candidate),
         "candidate_lock_digest": "a" * 64,
@@ -692,7 +886,8 @@ def test_repeated_identical_activation_is_idempotent_and_keeps_state_bytes(
     )
     monkeypatch.setattr(ubuntu_activation, "_read_state", lambda _: state)
     monkeypatch.setattr(ubuntu_activation, "verify_bundle", lambda _: info)
-    monkeypatch.setattr(ubuntu_activation, "_validate_activated", lambda _: None)
+    monkeypatch.setattr(ubuntu_activation, "_validate_activated", lambda _info, **_kwargs: None)
+    monkeypatch.setattr(ubuntu_activation, "_nginx_service_state", lambda: ("active", 0))
     before = state_path.read_bytes()
     assert ubuntu_activation._idempotent_activation(candidate, state_path) is True
     assert state_path.read_bytes() == before
@@ -704,50 +899,60 @@ def test_repeated_identical_activation_is_idempotent_and_keeps_state_bytes(
 
 
 @pytest.mark.parametrize(
-    "fault_point",
+    ("fault_point", "durable_status", "guard_remains"),
     (
-        "after_state_write",
-        "after_distro_default_disable",
-        "after_current_switch",
-        "before_validation",
-        "before_nginx_test",
-        "after_nginx_test",
-        "after_effective_validation",
-        "after_logrotate_validation",
-        "after_systemd_validation",
+        ("after_distro_default_disable", "prepared", True),
+        ("after_current_switch", "prepared", True),
+        ("after_switched_state", "switched", True),
+        ("after_validated_state", "validated", True),
+        ("after_guard_remove", "validated", False),
+        ("after_nginx_start", "validated", False),
     ),
 )
-def test_first_migration_faults_never_restore_unsafe_provenance(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault_point: str
+def test_transition_faults_preserve_a_recoverable_durable_boundary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fault_point: str,
+    durable_status: str,
+    guard_remains: bool,
 ) -> None:
     candidate = ubuntu_activation.BundleInfo(
         Path("/etc/thebitlab/deployments/candidate"), manifest(), "a" * 64, {}
     )
-    preflight = ubuntu_activation.Preflight(
-        candidate,
-        "legacy-v1",
-        None,
-        {"distro_default": {"present": True}, "current": {"present": True}},
-    )
-    writes: list[str] = []
-    monkeypatch.setattr(ubuntu_activation, "_idempotent_activation", lambda *_: False)
-    monkeypatch.setattr(ubuntu_activation, "verify_host_preflight", lambda _: preflight)
-    monkeypatch.setattr(ubuntu_activation, "_nginx_may_be_running", lambda: False)
-    monkeypatch.setattr(
-        ubuntu_activation,
-        "_write_state",
-        lambda _path, state, **_kwargs: writes.append(state["status"]),
-    )
+    state = {
+        "schema_version": "thebitlab.pilot-activation-state.v3",
+        "status": "prepared",
+        "candidate_bundle": str(candidate.path),
+        "candidate_lock_digest": candidate.lock_digest,
+        "previous_v2_bundle": None,
+        "previous_v2_lock_digest": None,
+        "unsafe_provenance": {},
+    }
+    writes = ["prepared"]
+    guarded = True
+    monkeypatch.setattr(ubuntu_activation, "verify_host_configuration_trust", lambda *_a, **_k: None)
     monkeypatch.setattr(ubuntu_activation, "prepare_log_directory", lambda _: None)
     monkeypatch.setattr(ubuntu_activation, "_remove_symlink", lambda _: None)
     monkeypatch.setattr(ubuntu_activation, "_replace_symlink", lambda *_: None)
-    monkeypatch.setattr(ubuntu_activation, "verify_bundle", lambda _path, **_kwargs: candidate)
-    monkeypatch.setattr(ubuntu_activation, "_run", lambda _: "")
-    monkeypatch.setattr(ubuntu_activation, "_nginx_effective", lambda: "synthetic")
-    monkeypatch.setattr(ubuntu_activation, "validate_effective_nginx", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ubuntu_activation, "_apply_bundle_links", lambda _: None)
+    monkeypatch.setattr(ubuntu_activation, "_validate_activated", lambda *_a, **_k: None)
     monkeypatch.setattr(
-        ubuntu_activation, "_ensure_candidate_or_no_server", lambda _: "failed_candidate_retained"
+        ubuntu_activation,
+        "_write_state",
+        lambda _path, payload, **_kwargs: writes.append(payload["status"]),
     )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_symlink_state",
+        lambda path: {"present": guarded} if path == ubuntu_activation.NGINX_MIGRATION_GUARD else {"present": False},
+    )
+
+    def remove_guard() -> None:
+        nonlocal guarded
+        guarded = False
+
+    monkeypatch.setattr(ubuntu_activation, "_remove_migration_guard", remove_guard)
+    monkeypatch.setattr(ubuntu_activation, "_start_nginx_service", lambda: None)
 
     def inject(point: str) -> None:
         if point == fault_point:
@@ -755,8 +960,11 @@ def test_first_migration_faults_never_restore_unsafe_provenance(
 
     monkeypatch.setattr(ubuntu_activation, "_fault", inject)
     with pytest.raises(ubuntu_activation.ActivationError, match="injected"):
-        ubuntu_activation.activate(candidate.path, tmp_path / "state.json")
-    assert writes == ["prepared", "failed_candidate_retained"]
+        ubuntu_activation._finish_transition(
+            tmp_path / "state.json", state, candidate, rollback_transition=False
+        )
+    assert writes[-1] == durable_status
+    assert guarded is guard_remains
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Symlink POSIX richiesto")

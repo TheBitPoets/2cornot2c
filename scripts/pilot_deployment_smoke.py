@@ -91,8 +91,11 @@ def _verify_runtime_logs(
     process_error_log: Path,
     markers: tuple[str, ...],
 ) -> None:
-    findings = log_scanner.scan_path(access_log) + log_scanner.scan_path(process_error_log)
-    if findings:
+    findings = (
+        log_scanner.scan_path(access_log),
+        log_scanner.scan_path(process_error_log),
+    )
+    if any(result.total_count for result in findings):
         raise RuntimeError("Scanner log secret-safe fallito; contenuto omesso")
     for persisted_log in (access_log, process_error_log):
         content = persisted_log.read_bytes()

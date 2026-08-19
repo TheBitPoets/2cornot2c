@@ -11,22 +11,20 @@
     create @@LOG_FILE_MODE@@ @@LOG_OWNER@@ @@LOG_GROUP@@
     sharedscripts
     postrotate
-        pid_file=/run/nginx.pid
-        if [ -f "$pid_file" ] && [ ! -L "$pid_file" ]; then
-            pid="$(cat "$pid_file" 2>/dev/null || true)"
-            case "$pid" in
-                ''|*[!0-9]*) ;;
-                *)
-                    executable="$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)"
-                    command="$(tr '\000' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)"
-                    uid="$(awk '/^Uid:/ { print $2; exit }' "/proc/$pid/status" 2>/dev/null || true)"
-                    if [ "$executable" = /usr/sbin/nginx ] && [ "$uid" = 0 ]; then
-                        case "$command" in
-                            "nginx: master process "*) kill -USR1 "$pid" ;;
-                        esac
-                    fi
-                    ;;
-            esac
-        fi
+        # systemd owns the service identity. Never reinterpret nginx.pid as authority.
+        state="$(systemctl is-active nginx.service 2>/dev/null)"
+        result=$?
+        case "$state:$result" in
+            active:0)
+                systemctl kill --kill-whom=main --signal=USR1 nginx.service
+                ;;
+            inactive:3)
+                # A truly inactive unit has no open descriptors; the next start opens new files.
+                ;;
+            *)
+                # failed/activating/deactivating/unknown and manager errors are ambiguous.
+                exit 1
+                ;;
+        esac
     endscript
 }

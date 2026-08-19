@@ -160,19 +160,6 @@ def _unknown_sni(marker: str) -> None:
         return
 
 
-def _wait_nginx(process: subprocess.Popen[str]) -> None:
-    deadline = time.monotonic() + 10
-    while time.monotonic() < deadline:
-        if process.poll() is not None:
-            raise RuntimeError("nginx effettivo non avviato")
-        try:
-            with socket.create_connection(("127.0.0.1", 80), timeout=0.25):
-                return
-        except OSError:
-            time.sleep(0.05)
-    raise RuntimeError("Timeout avvio nginx effettivo")
-
-
 def _effective_persistent_logs(effective: str) -> tuple[Path, ...]:
     sources = activation._split_effective_sources(effective)
     paths: set[Path] = set()
@@ -199,6 +186,20 @@ def _assert_markers_absent(paths: tuple[Path, ...], markers: tuple[str, ...]) ->
         content = path.read_bytes()
         if any(marker.encode("ascii") in content for marker in markers):
             raise RuntimeError("Marker sintetico persistito; contenuto omesso")
+
+
+def _assert_service_streams_absent(markers: tuple[str, ...]) -> None:
+    result = subprocess.run(
+        ["journalctl", "--unit=nginx.service", "--no-pager", "--output=cat"],
+        check=False,
+        capture_output=True,
+        timeout=30,
+    )
+    if result.returncode not in {0, 1}:
+        raise RuntimeError("Journal stdout/stderr nginx non verificabile")
+    streams = result.stdout + result.stderr
+    if any(marker.encode("ascii") in streams for marker in markers):
+        raise RuntimeError("Marker sintetico emesso su stdout/stderr systemd; contenuto omesso")
 
 
 def _verify_audit() -> None:
@@ -302,6 +303,9 @@ def _legacy_from_v2(manifest: dict, bundle: Path) -> dict:
 
 
 def _install_legacy(bundle: Path, manifest: dict) -> None:
+    activation._stop_nginx_service()
+    if activation.NGINX_MIGRATION_GUARD.exists() or activation.NGINX_MIGRATION_GUARD.is_symlink():
+        raise RuntimeError("Guard migration inatteso durante installazione fixture legacy")
     activation._remove_symlink(activation.DISTRO_DEFAULT)
     for path in activation.INTEGRATION_LINKS:
         activation._remove_symlink(path)
@@ -349,14 +353,12 @@ def run() -> None:
     legacy_bundle = deployments / f"integration-v1-{os.getpid()}"
     archives = (
         state.with_name("activation-state.default-first.json"),
-        state.with_name("activation-state.failure.json"),
+        state.with_name("activation-state.crash.json"),
         state.with_name("activation-state.first.json"),
         state.with_name("activation-state.previous-v2.json"),
     )
-    process: subprocess.Popen[str] | None = None
     backend: _Backend | None = None
     backend_thread: threading.Thread | None = None
-    captured = ("", "")
     markers = (
         "tb704-callback-code", "tb704-callback-state",
         "tb704-error-code", "tb704-error-state", "tb704-error-cookie",
@@ -439,6 +441,78 @@ def run() -> None:
                 raise RuntimeError("Named ACL inattesa accettata")
             _run(["setfacl", "-b", str(ACCESS_LOG)])
 
+            # Host configuration trust boundary: structural paths must remain root-owned/non-writable.
+            activation.verify_host_preflight(v2_bundle)
+            for structural in (
+                Path("/etc/nginx/sites-enabled"),
+                Path("/etc/nginx/conf.d"),
+                Path("/etc/logrotate.d"),
+            ):
+                original_mode = stat.S_IMODE(structural.stat().st_mode)
+                structural.chmod(original_mode | 0o002)
+                try:
+                    try:
+                        activation.verify_host_preflight(v2_bundle)
+                    except activation.ActivationError:
+                        pass
+                    else:
+                        raise RuntimeError(f"Directory host world-writable accettata: {structural}")
+                finally:
+                    structural.chmod(original_mode)
+
+            nginx_original_mode = stat.S_IMODE(activation.NGINX_CONFIG.stat().st_mode)
+            activation.NGINX_CONFIG.chmod(nginx_original_mode | 0o022)
+            try:
+                try:
+                    activation.verify_host_preflight(v2_bundle)
+                except activation.ActivationError:
+                    pass
+                else:
+                    raise RuntimeError("nginx.conf writable accettato")
+            finally:
+                activation.NGINX_CONFIG.chmod(nginx_original_mode)
+
+            nginx_backup = activation.NGINX_CONFIG.with_name("nginx.conf.thebitlab-test")
+            activation.NGINX_CONFIG.replace(nginx_backup)
+            activation.NGINX_CONFIG.symlink_to(nginx_backup)
+            try:
+                try:
+                    activation.verify_host_preflight(v2_bundle)
+                except activation.ActivationError:
+                    pass
+                else:
+                    raise RuntimeError("nginx.conf symlink inatteso accettato")
+            finally:
+                activation.NGINX_CONFIG.unlink()
+                nginx_backup.replace(activation.NGINX_CONFIG)
+
+            trusted_module = Path("/etc/nginx/modules-enabled/99-thebitlab-trusted.conf")
+            trusted_target = Path("/usr/share/nginx/modules-available/99-thebitlab-trusted.conf")
+            trusted_target.write_text("load_module modules/ngx_fake.so;\n", encoding="utf-8")
+            trusted_target.chmod(0o644)
+            trusted_module.symlink_to(trusted_target)
+            try:
+                activation.verify_host_configuration_trust(
+                    activation.verify_bundle(v2_bundle), guard_required=False
+                )
+            finally:
+                trusted_module.unlink()
+                trusted_target.unlink()
+
+            untrusted_module = Path("/etc/nginx/modules-enabled/99-thebitlab-untrusted.conf")
+            untrusted_target = temporary / "untrusted-module.conf"
+            untrusted_target.write_text("load_module modules/ngx_fake.so;\n", encoding="utf-8")
+            untrusted_module.symlink_to(untrusted_target)
+            try:
+                try:
+                    activation.verify_host_preflight(v2_bundle)
+                except activation.ActivationError:
+                    pass
+                else:
+                    raise RuntimeError("Package module symlink con target untrusted accettato")
+            finally:
+                untrusted_module.unlink()
+
             # Actual package config: prove multiline inline servers are rejected by nginx -T analysis.
             nginx_original = activation.NGINX_CONFIG.read_text(encoding="utf-8")
             inline = (
@@ -474,6 +548,7 @@ def run() -> None:
             if activation.DISTRO_DEFAULT.exists() or activation.DISTRO_DEFAULT.is_symlink():
                 raise RuntimeError("Rollback first install ha ricreato default distro")
             activation.complete(state, archives[0])
+            activation._stop_nginx_service()
             for path in activation.INTEGRATION_LINKS:
                 activation._remove_symlink(path)
             activation._remove_symlink(activation.CURRENT_LINK)
@@ -485,37 +560,114 @@ def run() -> None:
             _install_legacy(legacy_bundle, legacy_manifest)
             activation.verify_host_preflight(v2_bundle)
 
-            # Actual first-migration fault: candidate v2 or no-server, never legacy/default.
-            original_fault = activation._fault
+            # Recheck host trust both between preflight/switch and after switch/validation.
+            for mutation_point, structural in (
+                ("after_guard_install", Path("/etc/nginx/sites-enabled")),
+                ("after_validated_state", Path("/etc/nginx/conf.d")),
+            ):
+                original_fault = activation._fault
+                original_mode = stat.S_IMODE(structural.stat().st_mode)
 
-            def fail_after_switch(point: str) -> None:
-                if point == "after_current_switch":
-                    raise activation.ActivationError("fault integration sintetico")
+                def mutate_host(point: str, *, expected: str = mutation_point) -> None:
+                    if point == expected:
+                        structural.chmod(original_mode | 0o002)
 
-            activation._fault = fail_after_switch
-            try:
+                activation._fault = mutate_host
                 try:
-                    activation.activate(v2_bundle, state)
-                except activation.ActivationError as exc:
-                    if "fault integration sintetico" not in str(exc):
-                        raise
-                else:
-                    raise RuntimeError("Fault migration atteso non riprodotto")
-            finally:
-                activation._fault = original_fault
-            if activation.DISTRO_DEFAULT.exists() or activation.DISTRO_DEFAULT.is_symlink():
-                raise RuntimeError("Failure migration ha ripristinato default distro")
-            failed_state = activation._read_state(state)
-            if failed_state["status"] not in {"failed_candidate_retained", "failed_no_server"}:
-                raise RuntimeError("Failure migration non ha prodotto stato fail-closed")
-            if activation.SITE_LINK.is_symlink():
-                activation._validate_activated(activation.verify_bundle(v2_bundle))
-            else:
-                _run(["nginx", "-t", "-c", "/etc/nginx/nginx.conf"])
-            activation.complete(state, archives[1])
+                    try:
+                        activation.activate(v2_bundle, state)
+                    except activation.ActivationError:
+                        pass
+                    else:
+                        raise RuntimeError(f"Mutation host TOCTOU accettata a {mutation_point}")
+                finally:
+                    activation._fault = original_fault
+                    structural.chmod(original_mode)
+                activation._verify_migration_guard()
+                activation.recover(v2_bundle, state)
+                activation.complete(state, archives[1])
+                archives[1].unlink()
+                _install_legacy(legacy_bundle, legacy_manifest)
 
-            # Recreate exact v1 and execute the successful transactional migration.
-            _install_legacy(legacy_bundle, legacy_manifest)
+            # Real process-boundary crash matrix. Each child exits via os._exit(97), then
+            # recovery reconstructs authority solely from guard/state/symlinks on disk.
+            crash_points = (
+                "after_guard_install",
+                "after_state_write",
+                "after_distro_default_disable",
+                "after_current_switch",
+                "after_switched_state",
+                "after_nginx_test",
+                "after_effective_validation",
+                "after_logrotate_validation",
+                "after_systemd_validation",
+                "after_validated_state",
+                "after_guard_remove",
+                "after_nginx_start",
+            )
+            activation_script = ROOT / "scripts/pilot_ubuntu_activation.py"
+            for crash_point in crash_points:
+                environment = os.environ.copy()
+                environment.update(
+                    {
+                        "THEBITLAB_EPHEMERAL_CRASH_TEST": "1",
+                        "THEBITLAB_ACTIVATION_CRASH_POINT": crash_point,
+                    }
+                )
+                crashed = subprocess.run(
+                    [
+                        sys.executable,
+                        str(activation_script),
+                        "activate",
+                        "--bundle",
+                        str(v2_bundle),
+                        "--state-file",
+                        str(state),
+                    ],
+                    cwd=ROOT,
+                    env=environment,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=90,
+                )
+                if crashed.returncode != 97:
+                    raise RuntimeError(
+                        f"Crash non-catchable non riprodotto a {crash_point}: "
+                        f"rc={crashed.returncode} stderr={crashed.stderr[-500:]}"
+                    )
+                guarded = (
+                    activation.NGINX_MIGRATION_GUARD.exists()
+                    or activation.NGINX_MIGRATION_GUARD.is_symlink()
+                )
+                if guarded:
+                    activation._verify_migration_guard()
+                    service_state, service_code = activation._nginx_service_state()
+                    if (service_state, service_code) != ("inactive", 3):
+                        raise RuntimeError(f"nginx non fail-closed dopo crash {crash_point}")
+                    start_attempt = subprocess.run(
+                        ["systemctl", "start", "nginx.service"],
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if start_attempt.returncode == 0:
+                        raise RuntimeError("Persistent mask non ha bloccato systemctl start")
+                else:
+                    if activation._current_bundle_path() != v2_bundle:
+                        raise RuntimeError("Guard rimosso prima di una topologia v2 durable")
+                    activation._validate_activated(
+                        activation.verify_bundle(v2_bundle), guard_required=False
+                    )
+                activation.recover(v2_bundle, state)
+                if activation._current_bundle_path() != v2_bundle:
+                    raise RuntimeError(f"Recovery crash {crash_point} non ha attivato v2")
+                activation.complete(state, archives[1])
+                archives[1].unlink()
+                _install_legacy(legacy_bundle, legacy_manifest)
+
+            # Execute the successful transactional migration after all crash recoveries.
             activation.activate(v2_bundle, state)
             state_bytes = state.read_bytes()
             state_mtime = state.stat().st_mtime_ns
@@ -534,13 +686,8 @@ def run() -> None:
             )
 
             backend, backend_thread = _start_backend(manifest["service"]["port"])
-            process = subprocess.Popen(
-                ["nginx", "-g", "daemon off;"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            _wait_nginx(process)
+            if activation._nginx_service_state() != ("active", 0):
+                raise RuntimeError("nginx.service non attiva dopo activation")
             callback = _send(
                 "127.0.0.1", 443,
                 "/auth/google/callback?code=tb704-callback-code&state=tb704-callback-state",
@@ -595,6 +742,7 @@ def run() -> None:
             _verify_audit()
             all_logs = _effective_persistent_logs(effective)
             _assert_markers_absent(all_logs, markers)
+            _assert_service_streams_absent(markers)
             _verify_metadata()
             _run(["logrotate", "--debug", "/etc/logrotate.conf"])
             _run(
@@ -603,16 +751,22 @@ def run() -> None:
                     "/etc/logrotate.d/thebitlab",
                 ]
             )
-            if _send("127.0.0.1", 443, "/health", host=ORIGIN_HOST, use_tls=True) != 204:
-                raise RuntimeError("nginx non operativo dopo logrotate + USR1")
-            time.sleep(0.2)
-            _verify_metadata()
             rotated = (
                 ACCESS_LOG.with_name(ACCESS_LOG.name + ".1"),
                 PROCESS_LOG.with_name(PROCESS_LOG.name + ".1"),
             )
             if not all(path.is_file() for path in rotated):
                 raise RuntimeError("Rotazione pilot non ha prodotto i file .1 attesi")
+            rotated_before = rotated[0].read_bytes()
+            post_rotate_path = "/_thebitlab-integration/post-rotation-write"
+            if _send("127.0.0.1", 443, post_rotate_path, host=ORIGIN_HOST, use_tls=True) != 204:
+                raise RuntimeError("nginx non operativo dopo logrotate + systemd USR1")
+            time.sleep(0.2)
+            _verify_metadata()
+            if post_rotate_path.encode("ascii") not in ACCESS_LOG.read_bytes():
+                raise RuntimeError("Evento post-rotate assente dal nuovo access log")
+            if rotated[0].read_bytes() != rotated_before or post_rotate_path.encode("ascii") in rotated_before:
+                raise RuntimeError("nginx ha continuato a scrivere nel file ruotato")
             _assert_markers_absent((*all_logs, *rotated), markers)
 
             # No previous v2: production rollback retains v2 and never restores distro/v1.
@@ -644,7 +798,7 @@ def run() -> None:
                 raise RuntimeError("Rollback previous v2 non ha ripristinato il bundle sicuro")
             if activation.DISTRO_DEFAULT.exists() or activation.DISTRO_DEFAULT.is_symlink():
                 raise RuntimeError("Rollback previous v2 ha ricreato default distro")
-            _run(["nginx", "-s", "reload"])
+            _run(["systemctl", "reload", "nginx.service"])
             _send(
                 "127.0.0.1", 443,
                 "/auth/google/callback?code=tb704-after-v2-rollback&state=tb704-after-v2-rollback",
@@ -652,16 +806,11 @@ def run() -> None:
             )
             time.sleep(0.2)
             _assert_markers_absent(_effective_persistent_logs(activation._nginx_effective()), markers)
+            _assert_service_streams_absent(markers)
             activation.complete(state, archives[3])
 
-            # Stop nginx, then prove stale/reused PID cannot receive USR1.
-            process.terminate()
-            try:
-                captured = process.communicate(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                captured = process.communicate(timeout=5)
-            process = None
+            # Stop the unit, then prove stale/reused PID data is never signal authority.
+            activation._stop_nginx_service()
             Path("/run/nginx.pid").write_text(str(os.getpid()) + "\n", encoding="ascii")
             ACCESS_LOG.write_text("safe audit line\n", encoding="utf-8")
             PROCESS_LOG.write_text("safe process line\n", encoding="utf-8")
@@ -672,19 +821,21 @@ def run() -> None:
                 ]
             )
             Path("/run/nginx.pid").unlink(missing_ok=True)
-            if any(marker in stream for stream in captured for marker in markers):
-                raise RuntimeError("Marker sintetico emesso su stdout/stderr")
+            _assert_service_streams_absent(markers)
     finally:
         if backend is not None and backend_thread is not None:
             _stop_backend(backend, backend_thread)
-        if process is not None:
-            process.terminate()
-            try:
-                captured = process.communicate(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                captured = process.communicate(timeout=5)
+        try:
+            activation._stop_nginx_service()
+        except activation.ActivationError:
+            pass
         Path("/run/nginx.pid").unlink(missing_ok=True)
+        if activation.NGINX_MIGRATION_GUARD.exists() or activation.NGINX_MIGRATION_GUARD.is_symlink():
+            try:
+                activation._remove_symlink(activation.NGINX_MIGRATION_GUARD)
+                subprocess.run(["systemctl", "daemon-reload"], check=False, timeout=30)
+            except (OSError, activation.ActivationError):
+                pass
         # Explicit ephemeral decommission cleanup; production rollback never calls this.
         for path in activation.INTEGRATION_LINKS:
             try:
@@ -737,7 +888,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(
         "PASS: integrazione Ubuntu 24.04 effettiva "
-        "(v1 migration/fault, nginx -t/-T, runtime+distro logs, v2-only rollback, logrotate/USR1)"
+        "(systemd guard/crash recovery, host trust, nginx -t/-T, runtime redaction, "
+        "v2-only rollback, systemd reopen/post-rotate write)"
     )
     return 0
 

@@ -27,6 +27,15 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts import validate_pilot_deployment as deployment  # noqa: E402
+from scripts.nginx_config_ast import (  # noqa: E402
+    Directive,
+    NginxConfigError,
+    Token,
+    direct as _shared_direct,
+    parse_nginx_source as _shared_parse_nginx_source,
+    tokenize_nginx as _shared_tokenize_nginx,
+    walk_directives as _shared_walk_directives,
+)
 
 
 NGINX_CONFIG = Path("/etc/nginx/nginx.conf")
@@ -40,6 +49,8 @@ FORMAT_LINK = Path("/etc/nginx/conf.d/thebitlab-log-format.conf")
 SITE_LINK = Path("/etc/nginx/sites-enabled/thebitlab.conf")
 LOGROTATE_LINK = Path("/etc/logrotate.d/thebitlab")
 SYSTEMD_LINK = Path("/etc/systemd/system/thebitlab.service")
+NGINX_MIGRATION_GUARD = Path("/etc/systemd/system/nginx.service")
+NGINX_PACKAGE_UNIT = Path("/usr/lib/systemd/system/nginx.service")
 INTEGRATION_LINKS = {
     PROCESS_LINK: "/etc/thebitlab/current/nginx/thebitlab-process-error-log.conf",
     FORMAT_LINK: "/etc/thebitlab/current/nginx/thebitlab-log-format.conf",
@@ -79,28 +90,11 @@ def _source_path(path: Path) -> str:
 
 
 @dataclass(frozen=True)
-class Token:
-    value: str
-    line: int
-    structural: bool = False
-
-
-@dataclass(frozen=True)
-class Directive:
-    source: str
-    name: str
-    args: tuple[str, ...]
-    children: tuple["Directive", ...] | None
-    line: int
-
-
-@dataclass(frozen=True)
 class BundleInfo:
     path: Path
     manifest: dict[str, Any]
     lock_digest: str
     sources: Mapping[str, str]
-    current_renderer: bool = True
 
 
 @dataclass(frozen=True)
@@ -144,7 +138,26 @@ def _nginx_effective() -> str:
 
 
 def _fault(point: str) -> None:
-    """Fault-injection hook used by tests; production deliberately does nothing."""
+    """Terminate non-catchably only when the ephemeral crash-test interlock is set."""
+
+    if (
+        os.environ.get("THEBITLAB_EPHEMERAL_CRASH_TEST") == "1"
+        and os.environ.get("THEBITLAB_ACTIVATION_CRASH_POINT") == point
+    ):
+        os._exit(97)
+
+
+def _fsync_directory(path: Path) -> None:
+    """Persist directory-entry changes on POSIX; fsync failure is fatal."""
+
+    if os.name == "nt":
+        return
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_CLOEXEC", 0)
+    descriptor = os.open(path, flags)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def _symlink_state(path: Path) -> dict[str, Any]:
@@ -158,12 +171,16 @@ def _symlink_state(path: Path) -> dict[str, Any]:
 
 
 def _replace_symlink(path: Path, target: str) -> None:
+    parent_existed = path.parent.exists()
     path.parent.mkdir(parents=True, exist_ok=True)
+    if not parent_existed:
+        _fsync_directory(path.parent.parent)
     temporary = path.with_name(f".{path.name}.thebitlab-{os.getpid()}")
     try:
         temporary.unlink(missing_ok=True)
         temporary.symlink_to(target)
         os.replace(temporary, path)
+        _fsync_directory(path.parent)
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -172,6 +189,7 @@ def _remove_symlink(path: Path) -> None:
     state = _symlink_state(path)
     if state["present"]:
         path.unlink()
+        _fsync_directory(path.parent)
 
 
 def _directory_entries(path: Path) -> set[str]:
@@ -227,147 +245,27 @@ def _split_effective_sources(effective: str) -> dict[str, str]:
 
 
 def _tokenize_nginx(source: str, text: str) -> tuple[Token, ...]:
-    tokens: list[Token] = []
-    value: list[str] = []
-    token_line = 1
-    line = 1
-    quote: str | None = None
-    escaped = False
-    index = 0
-
-    def flush() -> None:
-        nonlocal value
-        if value:
-            tokens.append(Token("".join(value), token_line))
-            value = []
-
-    while index < len(text):
-        char = text[index]
-        if escaped:
-            value.append(char)
-            escaped = False
-            if char == "\n":
-                line += 1
-            index += 1
-            continue
-        if char == "\\":
-            if not value:
-                token_line = line
-            escaped = True
-            index += 1
-            continue
-        if quote is not None:
-            if char == quote:
-                quote = None
-            else:
-                value.append(char)
-                if char == "\n":
-                    line += 1
-            index += 1
-            continue
-        if char in {"'", '"'}:
-            if not value:
-                token_line = line
-            quote = char
-            index += 1
-            continue
-        if char == "#":
-            flush()
-            newline = text.find("\n", index)
-            if newline < 0:
-                index = len(text)
-            else:
-                index = newline
-            continue
-        if char in "{};":
-            flush()
-            tokens.append(Token(char, line, structural=True))
-            index += 1
-            continue
-        if char.isspace():
-            flush()
-            if char == "\n":
-                line += 1
-            index += 1
-            continue
-        if not value:
-            token_line = line
-        value.append(char)
-        index += 1
-    if escaped or quote is not None:
-        raise ActivationError(f"Configurazione nginx ambigua in {source}: quote/escape incompleto")
-    flush()
-    return tuple(tokens)
+    try:
+        return _shared_tokenize_nginx(source, text)
+    except NginxConfigError as exc:
+        raise ActivationError(str(exc)) from exc
 
 
 def _parse_nginx_source(source: str, text: str) -> tuple[Directive, ...]:
-    tokens = _tokenize_nginx(source, text)
-
-    def parse_sequence(index: int, *, nested: bool) -> tuple[tuple[Directive, ...], int]:
-        directives: list[Directive] = []
-        words: list[Token] = []
-        while index < len(tokens):
-            token = tokens[index]
-            if token.structural and token.value == "}":
-                if words or not nested:
-                    raise ActivationError(
-                        f"Configurazione nginx malformata in {source}:{token.line}"
-                    )
-                return tuple(directives), index + 1
-            if token.structural and token.value == ";":
-                if not words:
-                    raise ActivationError(
-                        f"Direttiva nginx vuota in {source}:{token.line}"
-                    )
-                directives.append(
-                    Directive(source, words[0].value, tuple(item.value for item in words[1:]), None, words[0].line)
-                )
-                words = []
-                index += 1
-                continue
-            if token.structural and token.value == "{":
-                if not words:
-                    raise ActivationError(
-                        f"Blocco nginx senza direttiva in {source}:{token.line}"
-                    )
-                children, index = parse_sequence(index + 1, nested=True)
-                directives.append(
-                    Directive(
-                        source,
-                        words[0].value,
-                        tuple(item.value for item in words[1:]),
-                        children,
-                        words[0].line,
-                    )
-                )
-                words = []
-                continue
-            words.append(token)
-            index += 1
-        if words or nested:
-            line_number = words[0].line if words else (tokens[-1].line if tokens else 1)
-            raise ActivationError(
-                f"Configurazione nginx incompleta in {source}:{line_number}"
-            )
-        return tuple(directives), index
-
-    parsed, end = parse_sequence(0, nested=False)
-    if end != len(tokens):
-        raise ActivationError(f"Configurazione nginx non consumata in {source}")
-    return parsed
+    try:
+        return _shared_parse_nginx_source(source, text)
+    except NginxConfigError as exc:
+        raise ActivationError(str(exc)) from exc
 
 
 def _walk_directives(
     directives: Sequence[Directive], context: tuple[str, ...] = ()
 ) -> Iterable[tuple[Directive, tuple[str, ...]]]:
-    for directive in directives:
-        yield directive, context
-        if directive.children is not None:
-            yield from _walk_directives(directive.children, context + (directive.name,))
+    return _shared_walk_directives(directives, context)
 
 
 def _direct(directives: Sequence[Directive], name: str) -> list[Directive]:
-    return [directive for directive in directives if directive.name == name]
+    return _shared_direct(directives, name)
 
 
 def _assert_source_exact(sources: Mapping[str, str], path: str, expected: str) -> None:
@@ -422,6 +320,9 @@ def _validate_pilot_servers(servers: Sequence[Directive], *, request_sink: str |
             values = [" ".join(item.args) for item in errors]
             if values != [request_sink]:
                 raise ActivationError("Vhost pilot capace di persistere errori request-context")
+            for directive, context in _walk_directives(server.children):
+                if context and directive.name in {"access_log", "error_log"}:
+                    raise ActivationError("Logging request-context annidato non ammesso")
     defaults: list[str] = []
     for server in servers:
         assert server.children is not None
@@ -504,11 +405,30 @@ def validate_effective_nginx(
                 "Vhost nginx unmanaged rilevato: " + ", ".join(sorted({item.source for item in unmanaged}))
             )
         _validate_pilot_servers(pilot_servers, request_sink="/dev/null")
+        origin_host = urlsplit(manifest["origin"]["url"]).hostname
+        expected_access = (manifest["origin"]["access_log"], "thebitlab")
+        for server in pilot_servers:
+            assert server.children is not None
+            names = [item.args for item in _direct(server.children, "server_name")]
+            default_server = names == [("_",)]
+            if names not in [[("_",)], [(origin_host,)]]:
+                raise ActivationError("Identità vhost pilot inattesa")
+            accesses = [item.args for item in _direct(server.children, "access_log")]
+            if accesses != ([("off",)] if default_server else [expected_access]):
+                raise ActivationError("Access log pilot fuori dalla policy path-only")
         process_source = parsed.get(_source_path(PROCESS_LINK), ())
         process = _direct(process_source, "error_log")
         expected_process = (manifest["origin"]["error_log"], "notice")
         if len(process) != 1 or process[0].args != expected_process:
             raise ActivationError("Error log process-level main-context assente o duplicato")
+        try:
+            deployment._validate_nginx_logging_tree(
+                sources[_source_path(PROCESS_LINK)],
+                sources[_source_path(SITE_LINK)],
+                manifest,
+            )
+        except deployment.DeploymentValidationError as exc:
+            raise ActivationError("Logging nginx effettivo fuori policy") from exc
     elif topology == "legacy-v1":
         if unmanaged:
             raise ActivationError("Legacy v1 contiene vhost unmanaged")
@@ -644,7 +564,6 @@ def verify_bundle(
     *,
     deployments_root: Path = DEPLOYMENTS_ROOT,
     require_root_owner: bool = True,
-    require_current_renderer: bool = True,
 ) -> BundleInfo:
     expected_files = set(deployment.GENERATED_FILES) | {"deployment.lock.json"}
     trusted = _verify_trusted_tree(
@@ -672,17 +591,16 @@ def verify_bundle(
     deployment.validate_rendered_logging(
         process_text, format_text, site_text, logrotate_text, manifest
     )
-    if require_current_renderer:
-        with tempfile.TemporaryDirectory(prefix="thebitlab-verify-bundle-") as temporary_name:
-            expected = Path(temporary_name) / "bundle"
-            deployment.render_bundle(manifest, expected)
-            _compare_expected_bundle(trusted, expected, deployment.GENERATED_FILES)
+    with tempfile.TemporaryDirectory(prefix="thebitlab-verify-bundle-") as temporary_name:
+        expected = Path(temporary_name) / "bundle"
+        deployment.render_bundle(manifest, expected)
+        _compare_expected_bundle(trusted, expected, deployment.GENERATED_FILES)
     sources = {
         _source_path(PROCESS_LINK): process_text,
         _source_path(FORMAT_LINK): format_text,
         _source_path(SITE_LINK): site_text,
     }
-    return BundleInfo(trusted, manifest, lock_digest, sources, require_current_renderer)
+    return BundleInfo(trusted, manifest, lock_digest, sources)
 
 
 def _legacy_manifest_errors(manifest: Mapping[str, Any]) -> list[str]:
@@ -867,6 +785,30 @@ def verify_legacy_v1_bundle(
     return BundleInfo(trusted, manifest, lock_digest, sources)
 
 
+def _assert_root_symlink(path: Path, expected_target: str) -> None:
+    state = _symlink_state(path)
+    if not state["present"] or state["target"] != expected_target:
+        raise ActivationError(f"Symlink trusted inatteso: {path}")
+    metadata = path.lstat()
+    if os.name != "nt" and metadata.st_uid != 0:
+        raise ActivationError(f"Symlink trusted non root-owned: {path}")
+
+
+def _verify_trusted_ancestry(path: Path, boundary: Path) -> None:
+    lexical = Path(os.path.abspath(path))
+    root = Path(os.path.abspath(boundary))
+    try:
+        relative = lexical.relative_to(root)
+    except ValueError as exc:
+        raise ActivationError(f"Target fuori dal trust boundary: {path}") from exc
+    current = root
+    _assert_trusted_metadata(current, directory=True, require_root_owner=True)
+    for part in relative.parts[:-1]:
+        current /= part
+        _assert_trusted_metadata(current, directory=True, require_root_owner=True)
+    _assert_trusted_metadata(lexical, directory=False, require_root_owner=True)
+
+
 def _verify_modules_enabled_entries() -> None:
     directory = Path("/etc/nginx/modules-enabled")
     for entry in directory.iterdir():
@@ -880,9 +822,84 @@ def _verify_modules_enabled_entries() -> None:
             target.relative_to(Path("/usr/share/nginx/modules-available"))
         except (OSError, ValueError) as exc:
             raise ActivationError(f"Modulo nginx non attribuibile al package Ubuntu: {entry}") from exc
-        _assert_trusted_metadata(target, directory=False, require_root_owner=True)
+        _verify_trusted_ancestry(target, Path("/usr/share/nginx/modules-available"))
         directives = _parse_nginx_source(entry.as_posix(), target.read_text(encoding="utf-8"))
         _validate_module_source(entry.as_posix(), directives)
+
+
+def verify_host_configuration_trust(
+    info: BundleInfo | None = None, *, guard_required: bool | None = None
+) -> None:
+    """Validate the root-owned host configuration chain and its allowed symlinks."""
+
+    directories = (
+        Path("/etc"),
+        Path("/etc/nginx"),
+        Path("/etc/nginx/conf.d"),
+        Path("/etc/nginx/sites-enabled"),
+        Path("/etc/nginx/sites-available"),
+        Path("/etc/nginx/modules-enabled"),
+        Path("/etc/logrotate.d"),
+        Path("/etc/thebitlab"),
+        DEPLOYMENTS_ROOT,
+        Path("/etc/systemd/system"),
+    )
+    for directory in directories:
+        _assert_trusted_metadata(directory, directory=True, require_root_owner=True)
+    for config in (
+        NGINX_CONFIG,
+        Path("/etc/nginx/mime.types"),
+        Path("/etc/logrotate.conf"),
+        NGINX_PACKAGE_UNIT,
+    ):
+        _assert_trusted_metadata(config, directory=False, require_root_owner=True)
+
+    guard_present = _symlink_state(NGINX_MIGRATION_GUARD)["present"]
+    if guard_required is True and not guard_present:
+        raise ActivationError("Migration guard persistente assente")
+    if guard_required is False and guard_present:
+        raise ActivationError("Migration guard orphan presente: recovery esplicita richiesta")
+    if guard_present:
+        _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
+
+    if DISTRO_AVAILABLE.exists() or DISTRO_AVAILABLE.is_symlink():
+        _assert_trusted_metadata(DISTRO_AVAILABLE, directory=False, require_root_owner=True)
+    if _symlink_state(DISTRO_DEFAULT)["present"]:
+        _assert_root_symlink(DISTRO_DEFAULT, os.readlink(DISTRO_DEFAULT))
+        if DISTRO_DEFAULT.resolve(strict=True) != DISTRO_AVAILABLE.resolve(strict=True):
+            raise ActivationError("Default distro fuori dal trust boundary atteso")
+
+    current_state = _symlink_state(CURRENT_LINK)
+    if current_state["present"]:
+        target = current_state["target"]
+        if not isinstance(target, str) or not target.startswith("/"):
+            raise ActivationError("Symlink current non canonico")
+        _assert_root_symlink(CURRENT_LINK, target)
+        current_target = Path(target)
+        lexical_target = Path(os.path.abspath(current_target))
+        if current_target != lexical_target or ".." in PurePosixPath(target).parts:
+            raise ActivationError("Current target non canonico")
+        try:
+            current_target.relative_to(DEPLOYMENTS_ROOT)
+        except ValueError as exc:
+            raise ActivationError("Current fuori dalla deployment root trusted") from exc
+        _assert_trusted_metadata(current_target, directory=True, require_root_owner=True)
+
+    for path, expected in INTEGRATION_LINKS.items():
+        if not _symlink_state(path)["present"]:
+            continue
+        _assert_root_symlink(path, expected)
+        target = path.resolve(strict=True)
+        _verify_trusted_ancestry(target, DEPLOYMENTS_ROOT)
+
+    _verify_modules_enabled_entries()
+    if info is not None:
+        verified = verify_bundle(info.path)
+        if verified.lock_digest != info.lock_digest:
+            raise ActivationError("Bundle target mutato durante host trust validation")
+        if current_state["present"] and Path(current_state["target"]) == info.path:
+            for path, expected in INTEGRATION_LINKS.items():
+                _assert_root_symlink(path, expected)
 
 
 def verify_ubuntu_layout() -> None:
@@ -964,7 +981,7 @@ def _classify_existing_topology(effective: str) -> tuple[str, BundleInfo | None]
         raise ActivationError("Default distro e site pilot attivi simultaneamente")
     current = _current_bundle_path()
     try:
-        previous_v2 = verify_bundle(current, require_current_renderer=False)
+        previous_v2 = verify_bundle(current)
     except (ActivationError, deployment.DeploymentValidationError):
         previous_v2 = None
     if previous_v2 is not None:
@@ -994,11 +1011,12 @@ def _classify_existing_topology(effective: str) -> tuple[str, BundleInfo | None]
     return "legacy-v1", None
 
 
-def verify_host_preflight(bundle: Path) -> Preflight:
+def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) -> Preflight:
     if os.geteuid() != 0:
         raise ActivationError("Il preflight host Ubuntu richiede root")
     verify_ubuntu_layout()
     candidate = verify_bundle(bundle)
+    verify_host_configuration_trust(candidate, guard_required=guard_required)
 
     site_entries = _directory_entries(Path("/etc/nginx/sites-enabled"))
     if site_entries - {"default", "thebitlab.conf"}:
@@ -1136,8 +1154,14 @@ def _read_state(path: Path, *, require_root_owner: bool = True) -> dict[str, Any
     }
     if not isinstance(state, dict) or set(state) != required:
         raise ActivationError("Activation state con struttura inattesa")
-    if state["schema_version"] != "thebitlab.pilot-activation-state.v2":
+    if state["schema_version"] != "thebitlab.pilot-activation-state.v3":
         raise ActivationError("Versione activation state non supportata")
+    allowed_statuses = {
+        "prepared", "switched", "validated", "active",
+        "rollback_prepared", "rollback_switched", "rollback_validated", "rolled_back_v2",
+    }
+    if not isinstance(state["status"], str) or state["status"] not in allowed_statuses:
+        raise ActivationError("Activation state status non supportato")
     if (
         not isinstance(state["candidate_bundle"], str)
         or not isinstance(state["candidate_lock_digest"], str)
@@ -1169,7 +1193,10 @@ def _write_state(
         if exclusive:
             raise ActivationError("Activation state già esistente")
         _state_security(path, require_root_owner=require_root_owner)
+    parent_existed = path.parent.exists()
     path.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
+    if not parent_existed:
+        _fsync_directory(path.parent.parent)
     if path.parent.is_symlink() or not path.parent.is_dir():
         raise ActivationError("Directory activation state non sicura")
     parent_meta = path.parent.stat()
@@ -1180,19 +1207,116 @@ def _write_state(
     temporary = path.with_name(f".{path.name}.{os.getpid()}")
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
+        if hasattr(os, "fchmod"):
+            os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
             json.dump(state, stream, indent=2, sort_keys=True)
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, path)
-        os.chmod(path, 0o600)
+        _fsync_directory(path.parent)
     finally:
         temporary.unlink(missing_ok=True)
 
 
 def _state_exists(path: Path) -> bool:
     return path.exists() or path.is_symlink()
+
+
+def _systemctl_result(arguments: Sequence[str]) -> tuple[int, str]:
+    try:
+        result = subprocess.run(
+            ["systemctl", *arguments], check=False, capture_output=True, text=True, timeout=30
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ActivationError("systemctl non disponibile o non responsivo") from exc
+    return result.returncode, result.stdout.strip()
+
+
+def _nginx_service_state() -> tuple[str, int]:
+    code, output = _systemctl_result(["is-active", "nginx.service"])
+    if "\n" in output or not output:
+        raise ActivationError("Stato systemd nginx ambiguo")
+    return output, code
+
+
+def _require_nginx_inactive() -> None:
+    state, code = _nginx_service_state()
+    if (state, code) != ("inactive", 3):
+        raise ActivationError(f"nginx.service non sicuramente inattiva: {state}")
+
+
+def _stop_nginx_service() -> None:
+    code, _ = _systemctl_result(["stop", "nginx.service"])
+    if code != 0:
+        raise ActivationError("Arresto nginx.service fallito")
+    _require_nginx_inactive()
+
+
+def _verify_migration_guard() -> None:
+    _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
+    code, load_state = _systemctl_result(
+        ["show", "--property=LoadState", "--value", "nginx.service"]
+    )
+    if code != 0 or load_state != "masked":
+        raise ActivationError("nginx.service non risulta masked al service manager")
+    code, unit_state = _systemctl_result(
+        ["show", "--property=UnitFileState", "--value", "nginx.service"]
+    )
+    if code != 0 or unit_state != "masked":
+        raise ActivationError("Mask persistente nginx.service non verificata")
+
+
+def _install_migration_guard() -> None:
+    """Stop nginx and durably mask its systemd unit; presence alone is the orphan marker."""
+
+    _stop_nginx_service()
+    if _nginx_may_be_running():
+        raise ActivationError("Processo nginx fuori dalla service identity systemd")
+    state = _symlink_state(NGINX_MIGRATION_GUARD)
+    if not state["present"]:
+        _replace_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
+    else:
+        _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
+    code, _ = _systemctl_result(["daemon-reload"])
+    if code != 0:
+        raise ActivationError("systemd daemon-reload fallito durante installazione guard")
+    _verify_migration_guard()
+    # Close a start race that could have occurred before the manager observed the mask.
+    _stop_nginx_service()
+    _verify_migration_guard()
+
+
+def _remove_migration_guard() -> None:
+    _verify_migration_guard()
+    _remove_symlink(NGINX_MIGRATION_GUARD)
+    code, _ = _systemctl_result(["daemon-reload"])
+    if code != 0:
+        raise ActivationError("systemd daemon-reload fallito durante rimozione guard")
+    code, load_state = _systemctl_result(
+        ["show", "--property=LoadState", "--value", "nginx.service"]
+    )
+    if code != 0 or load_state != "loaded":
+        raise ActivationError("nginx.service non caricabile dopo rimozione guard")
+    code, _ = _systemctl_result(["enable", "nginx.service"])
+    if code != 0:
+        raise ActivationError("Riabilitazione persistente nginx.service fallita")
+    code, unit_state = _systemctl_result(["is-enabled", "nginx.service"])
+    if code != 0 or unit_state != "enabled":
+        raise ActivationError("nginx.service non risulta enabled dopo il guard")
+    wants = Path("/etc/systemd/system/multi-user.target.wants")
+    if wants.is_dir() and not wants.is_symlink():
+        _fsync_directory(wants)
+
+
+def _start_nginx_service() -> None:
+    code, _ = _systemctl_result(["start", "nginx.service"])
+    if code != 0:
+        raise ActivationError("Avvio nginx.service fallito")
+    state, status = _nginx_service_state()
+    if (state, status) != ("active", 0):
+        raise ActivationError(f"nginx.service non attiva dopo start: {state}")
 
 
 def _nginx_may_be_running() -> bool:
@@ -1221,10 +1345,9 @@ def _apply_bundle_links(bundle: Path) -> None:
         _replace_symlink(path, target)
 
 
-def _validate_activated(info: BundleInfo) -> None:
-    verified = verify_bundle(
-        info.path, require_current_renderer=info.current_renderer
-    )
+def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> None:
+    verified = verify_bundle(info.path)
+    verify_host_configuration_trust(verified, guard_required=guard_required)
     if verified.lock_digest != info.lock_digest:
         raise ActivationError("Bundle mutato durante activation")
     _fault("before_nginx_test")
@@ -1241,29 +1364,12 @@ def _validate_activated(info: BundleInfo) -> None:
     _fault("after_logrotate_validation")
     _run(["systemd-analyze", "verify", str(SYSTEMD_LINK)])
     _fault("after_systemd_validation")
-
-
-def _ensure_candidate_or_no_server(info: BundleInfo) -> str:
-    """Never restore unsafe links; retain candidate v2 or disable the pilot site."""
-
-    try:
-        _apply_bundle_links(info.path)
-        prepare_log_directory(info.manifest)
-        _validate_activated(info)
-        return "failed_candidate_retained"
-    except Exception:
-        _remove_symlink(DISTRO_DEFAULT)
-        _remove_symlink(SITE_LINK)
-        try:
-            _run(["nginx", "-t", "-c", str(NGINX_CONFIG)])
-        except Exception as exc:
-            raise ActivationError("Failure non recuperabile: nginx non è fail-closed") from exc
-        return "failed_no_server"
+    verify_host_configuration_trust(verified, guard_required=guard_required)
 
 
 def _state_for(preflight: Preflight) -> dict[str, Any]:
     return {
-        "schema_version": "thebitlab.pilot-activation-state.v2",
+        "schema_version": "thebitlab.pilot-activation-state.v3",
         "status": "prepared",
         "candidate_bundle": str(preflight.candidate.path),
         "candidate_lock_digest": preflight.candidate.lock_digest,
@@ -1277,12 +1383,90 @@ def _state_for(preflight: Preflight) -> dict[str, Any]:
     }
 
 
+def _state_bundle(state: Mapping[str, Any], *, previous: bool = False) -> BundleInfo:
+    path_key = "previous_v2_bundle" if previous else "candidate_bundle"
+    digest_key = "previous_v2_lock_digest" if previous else "candidate_lock_digest"
+    raw = state[path_key]
+    if raw is None:
+        raise ActivationError("Previous v2 assente nello state")
+    info = verify_bundle(Path(raw))
+    if info.lock_digest != state[digest_key]:
+        raise ActivationError("Bundle reale dello state mutato o sostituito")
+    return info
+
+
+def _write_status(path: Path, state: dict[str, Any], status: str) -> None:
+    state["status"] = status
+    _write_state(path, state, exclusive=False)
+
+
+def _finish_transition(
+    state_path: Path,
+    state: dict[str, Any],
+    target: BundleInfo,
+    *,
+    rollback_transition: bool,
+) -> None:
+    prepared = "rollback_prepared" if rollback_transition else "prepared"
+    switched = "rollback_switched" if rollback_transition else "switched"
+    validated = "rollback_validated" if rollback_transition else "validated"
+    final = "rolled_back_v2" if rollback_transition else "active"
+    status = state["status"]
+
+    if status == prepared:
+        verify_host_configuration_trust(target, guard_required=True)
+        prepare_log_directory(target.manifest)
+        verify_host_configuration_trust(target, guard_required=True)
+        _remove_symlink(DISTRO_DEFAULT)
+        _fault("after_distro_default_disable")
+        _replace_symlink(CURRENT_LINK, str(target.path))
+        _fault("after_current_switch")
+        for path, link_target in INTEGRATION_LINKS.items():
+            _replace_symlink(path, link_target)
+        verify_host_configuration_trust(target, guard_required=True)
+        _write_status(state_path, state, switched)
+        _fault("after_switched_state")
+        status = switched
+
+    if status == switched:
+        # Reapply idempotently: a crash may have persisted only a prefix of the symlink set.
+        _apply_bundle_links(target.path)
+        verify_host_configuration_trust(target, guard_required=True)
+        _fault("before_validation")
+        _validate_activated(target, guard_required=True)
+        _write_status(state_path, state, validated)
+        _fault("after_validated_state")
+        status = validated
+
+    if status != validated:
+        raise ActivationError(f"Stato transition non recuperabile automaticamente: {status}")
+
+    guard_present = _symlink_state(NGINX_MIGRATION_GUARD)["present"]
+    _validate_activated(target, guard_required=guard_present)
+    if guard_present:
+        try:
+            _remove_migration_guard()
+        except Exception:
+            if not _symlink_state(NGINX_MIGRATION_GUARD)["present"]:
+                _install_migration_guard()
+            raise
+    _fault("after_guard_remove")
+    try:
+        _start_nginx_service()
+    except Exception:
+        # A catchable start failure returns to the durable offline boundary.
+        _install_migration_guard()
+        raise
+    _fault("after_nginx_start")
+    _write_status(state_path, state, final)
+
+
 def _idempotent_activation(bundle: Path, state_path: Path) -> bool:
     if not _state_exists(state_path):
         return False
     state = _read_state(state_path)
     if state["status"] != "active":
-        raise ActivationError("Activation state esistente non completato; archiviazione esplicita richiesta")
+        raise ActivationError("Activation incompleta: usare il comando recover, non archiviare lo state")
     candidate = verify_bundle(bundle)
     if (
         state["candidate_bundle"] != str(candidate.path)
@@ -1293,51 +1477,72 @@ def _idempotent_activation(bundle: Path, state_path: Path) -> bool:
         raise ActivationError("Topologia attiva divergente dall'activation state")
     for path, target in INTEGRATION_LINKS.items():
         _check_managed_link(path, target, allow_absent=False)
-    _validate_activated(candidate)
+    _validate_activated(candidate, guard_required=False)
+    service_state, code = _nginx_service_state()
+    if (service_state, code) != ("active", 0):
+        raise ActivationError("Activation state active ma nginx.service non è attiva")
     return True
 
 
 def activate(bundle: Path, state_path: Path = STATE_FILE) -> None:
-    if _idempotent_activation(bundle, state_path):
-        return
-    preflight = verify_host_preflight(bundle)
-    unsafe_source = preflight.source_kind != "v2"
-    if unsafe_source and _nginx_may_be_running():
-        raise ActivationError("Prima migrazione richiede nginx fermo per non mantenere logging v1 in memoria")
+    if _state_exists(state_path):
+        if _idempotent_activation(bundle, state_path):
+            return
+    if _symlink_state(NGINX_MIGRATION_GUARD)["present"]:
+        raise ActivationError("Migration guard orphan: usare recover; rimozione automatica vietata")
+    preflight = verify_host_preflight(bundle, guard_required=False)
+    _install_migration_guard()
+    _fault("after_guard_install")
+    verify_host_configuration_trust(preflight.candidate, guard_required=True)
     state = _state_for(preflight)
     _write_state(state_path, state, exclusive=True)
-    try:
-        _fault("after_state_write")
-        prepare_log_directory(preflight.candidate.manifest)
-        _remove_symlink(DISTRO_DEFAULT)
-        _fault("after_distro_default_disable")
-        _replace_symlink(CURRENT_LINK, str(preflight.candidate.path))
-        _fault("after_current_switch")
-        for path, target in INTEGRATION_LINKS.items():
-            _replace_symlink(path, target)
-        verified = verify_bundle(preflight.candidate.path)
-        if verified.lock_digest != preflight.candidate.lock_digest:
-            raise ActivationError("Bundle mutato prima dello switch")
-        _fault("before_validation")
-        _validate_activated(verified)
-        state["status"] = "active"
-        _write_state(state_path, state, exclusive=False)
-    except Exception as exc:
-        if preflight.previous_v2 is not None:
-            try:
-                _apply_bundle_links(preflight.previous_v2.path)
-                _validate_activated(preflight.previous_v2)
-                state["status"] = "failed_rolled_back_v2"
-            except Exception as rollback_exc:
-                state["status"] = _ensure_candidate_or_no_server(preflight.candidate)
-                _write_state(state_path, state, exclusive=False)
-                raise ActivationError(
-                    f"Activation fallita; previous v2 non ripristinabile, host fail-closed: {rollback_exc}"
-                ) from exc
-        else:
-            state["status"] = _ensure_candidate_or_no_server(preflight.candidate)
-        _write_state(state_path, state, exclusive=False)
-        raise
+    _fault("after_state_write")
+    _finish_transition(
+        state_path, state, preflight.candidate, rollback_transition=False
+    )
+
+
+def recover(bundle: Path | None = None, state_path: Path = STATE_FILE) -> None:
+    """Resume solely from durable guard/state/filesystem evidence; never force through failure."""
+
+    if os.geteuid() != 0:
+        raise ActivationError("Recovery Ubuntu richiede root")
+    if not _state_exists(state_path):
+        if not _symlink_state(NGINX_MIGRATION_GUARD)["present"]:
+            raise ActivationError("Nessuna transition persistente da recuperare")
+        if bundle is None:
+            raise ActivationError("Guard orphan: --bundle trusted richiesto per recovery")
+        preflight = verify_host_preflight(bundle, guard_required=True)
+        state = _state_for(preflight)
+        _write_state(state_path, state, exclusive=True)
+        _finish_transition(state_path, state, preflight.candidate, rollback_transition=False)
+        return
+
+    state = _read_state(state_path)
+    if state["status"] == "active":
+        selected = Path(state["candidate_bundle"]) if bundle is None else bundle
+        _idempotent_activation(selected, state_path)
+        return
+    if state["status"] == "rolled_back_v2":
+        target = _state_bundle(state, previous=True)
+        _validate_activated(target, guard_required=False)
+        return
+
+    if not _symlink_state(NGINX_MIGRATION_GUARD)["present"]:
+        # This includes the durable validated -> unmask crash window. Re-mask before retry.
+        _install_migration_guard()
+    else:
+        _verify_migration_guard()
+        _stop_nginx_service()
+
+    if state["status"].startswith("rollback_"):
+        target = _state_bundle(state, previous=True)
+        _finish_transition(state_path, state, target, rollback_transition=True)
+    else:
+        target = _state_bundle(state)
+        if bundle is not None and target.path != verify_bundle(bundle).path:
+            raise ActivationError("Recovery bundle diversa dalla candidate dello state")
+        _finish_transition(state_path, state, target, rollback_transition=False)
 
 
 def rollback(state_path: Path = STATE_FILE) -> None:
@@ -1346,45 +1551,34 @@ def rollback(state_path: Path = STATE_FILE) -> None:
     state = _read_state(state_path)
     if state["status"] != "active":
         raise ActivationError("Activation state non è in stato active")
-    candidate = verify_bundle(Path(state["candidate_bundle"]))
-    if candidate.lock_digest != state["candidate_lock_digest"]:
-        raise ActivationError("Candidate dello state non verificabile")
+    candidate = _state_bundle(state)
     previous_raw = state["previous_v2_bundle"]
     if previous_raw is None:
-        _apply_bundle_links(candidate.path)
-        _validate_activated(candidate)
-        state["status"] = "rollback_unavailable_candidate_retained"
-        _write_state(state_path, state, exclusive=False)
-        raise ActivationError("Nessuna previous v2 sicura: candidate v2 mantenuta, rollback app separato richiesto")
-    previous = verify_bundle(Path(previous_raw), require_current_renderer=False)
-    if previous.lock_digest != state["previous_v2_lock_digest"]:
-        raise ActivationError("Previous v2 dello state mutata o sostituita")
-    try:
-        _apply_bundle_links(previous.path)
-        _validate_activated(previous)
-        state["status"] = "rolled_back_v2"
-        _write_state(state_path, state, exclusive=False)
-    except Exception as exc:
-        try:
-            _apply_bundle_links(candidate.path)
-            _validate_activated(candidate)
-            state["status"] = "rollback_failed_candidate_retained"
-        except Exception:
-            state["status"] = _ensure_candidate_or_no_server(candidate)
-        _write_state(state_path, state, exclusive=False)
-        raise ActivationError("Rollback previous v2 fallito; host mantenuto fail-closed") from exc
+        _validate_activated(candidate, guard_required=False)
+        raise ActivationError(
+            "Nessuna previous v2 riproducibile: candidate mantenuta, rollback app separato richiesto"
+        )
+    previous = _state_bundle(state, previous=True)
+    verify_host_configuration_trust(candidate, guard_required=False)
+    _install_migration_guard()
+    _fault("after_guard_install")
+    _write_status(state_path, state, "rollback_prepared")
+    _fault("after_state_write")
+    _finish_transition(state_path, state, previous, rollback_transition=True)
 
 
 def complete(state_path: Path, archive_path: Path) -> None:
     if os.geteuid() != 0:
         raise ActivationError("Complete Ubuntu richiede root")
-    _read_state(state_path)
+    state = _read_state(state_path)
+    if state["status"] not in {"active", "rolled_back_v2"}:
+        raise ActivationError("State incompleto non archiviabile: eseguire recover")
     if archive_path.exists() or archive_path.is_symlink():
         raise ActivationError("Archive activation state già esistente")
     if not archive_path.is_absolute() or archive_path.parent != state_path.parent:
         raise ActivationError("Archive activation state deve essere un nuovo file sibling")
     os.replace(state_path, archive_path)
-    os.chmod(archive_path, 0o600)
+    _fsync_directory(archive_path.parent)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1397,6 +1591,9 @@ def main(argv: list[str] | None = None) -> int:
     activate_parser.add_argument("--state-file", type=Path, default=STATE_FILE)
     rollback_parser = subparsers.add_parser("rollback")
     rollback_parser.add_argument("--state-file", type=Path, default=STATE_FILE)
+    recover_parser = subparsers.add_parser("recover")
+    recover_parser.add_argument("--bundle", type=Path)
+    recover_parser.add_argument("--state-file", type=Path, default=STATE_FILE)
     complete_parser = subparsers.add_parser("complete")
     complete_parser.add_argument("--state-file", type=Path, default=STATE_FILE)
     complete_parser.add_argument("--archive", type=Path, required=True)
@@ -1408,6 +1605,8 @@ def main(argv: list[str] | None = None) -> int:
             activate(args.bundle, args.state_file)
         elif args.command == "rollback":
             rollback(args.state_file)
+        elif args.command == "recover":
+            recover(args.bundle, args.state_file)
         else:
             complete(args.state_file, args.archive)
     except (ActivationError, deployment.DeploymentValidationError, KeyError, OSError) as exc:

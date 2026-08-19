@@ -12,6 +12,7 @@ from typing import BinaryIO
 
 
 MAX_LOG_LINE_BYTES = 256 * 1024
+MAX_STORED_FINDINGS = 100
 _REQUEST_TARGET = re.compile(rb'"[A-Z]{1,16}\s+([^\s"]+)\s+HTTP/[0-9.]+"', re.IGNORECASE)
 _SENSITIVE_ASSIGNMENT = re.compile(
     rb"(?:^|[?&;\s\"'])"
@@ -28,10 +29,33 @@ class ScanFinding:
     rule: str
 
 
-def scan_stream(stream: BinaryIO) -> tuple[ScanFinding, ...]:
-    """Return metadata-only findings while keeping each materialized record bounded."""
+@dataclass(frozen=True)
+class ScanResult:
+    findings: tuple[ScanFinding, ...]
+    total_count: int
+
+    @property
+    def omitted_count(self) -> int:
+        return self.total_count - len(self.findings)
+
+    def __iter__(self):
+        return iter(self.findings)
+
+    def __len__(self) -> int:
+        return len(self.findings)
+
+
+def scan_stream(stream: BinaryIO) -> ScanResult:
+    """Scan every record while retaining only a bounded metadata sample."""
 
     findings: list[ScanFinding] = []
+    total_count = 0
+
+    def record(line_number: int, rule: str) -> None:
+        nonlocal total_count
+        total_count += 1
+        if len(findings) < MAX_STORED_FINDINGS:
+            findings.append(ScanFinding(line_number, rule))
     line_number = 0
     while True:
         line = stream.readline(MAX_LOG_LINE_BYTES + 1)
@@ -39,21 +63,21 @@ def scan_stream(stream: BinaryIO) -> tuple[ScanFinding, ...]:
             break
         line_number += 1
         if len(line) > MAX_LOG_LINE_BYTES:
-            findings.append(ScanFinding(line_number, "line_too_long"))
+            record(line_number, "line_too_long")
             while line and not line.endswith(b"\n"):
                 line = stream.readline(MAX_LOG_LINE_BYTES + 1)
             continue
         request = _REQUEST_TARGET.search(line)
         if request is not None and b"?" in request.group(1):
-            findings.append(ScanFinding(line_number, "query_bearing_request_target"))
+            record(line_number, "query_bearing_request_target")
         if _SENSITIVE_ASSIGNMENT.search(line):
-            findings.append(ScanFinding(line_number, "sensitive_field"))
+            record(line_number, "sensitive_field")
         if _BEARER.search(line):
-            findings.append(ScanFinding(line_number, "bearer_credential"))
-    return tuple(findings)
+            record(line_number, "bearer_credential")
+    return ScanResult(tuple(findings), total_count)
 
 
-def scan_path(path: Path) -> tuple[ScanFinding, ...]:
+def scan_path(path: Path) -> ScanResult:
     with path.open("rb") as stream:
         return scan_stream(stream)
 
@@ -70,12 +94,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         for path in args.logs:
             findings = scan_path(path)
-            total += len(findings)
-            if findings:
+            total += findings.total_count
+            if findings.total_count:
                 summary = ", ".join(
-                    f"linea {finding.line_number}: {finding.rule}" for finding in findings[:20]
+                    f"linea {finding.line_number}: {finding.rule}"
+                    for finding in findings.findings[:20]
                 )
-                omitted = len(findings) - 20
+                omitted = findings.total_count - min(20, len(findings.findings))
                 if omitted:
                     summary += f", altri {omitted} finding omessi"
                 print(f"ERRORE: possibili dati sensibili nel log ({summary})", file=sys.stderr)

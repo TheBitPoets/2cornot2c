@@ -23,6 +23,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in os.sys.path:
     os.sys.path.insert(0, str(ROOT))
 
+from scripts.nginx_config_ast import (  # noqa: E402
+    Directive,
+    NginxConfigError,
+    parse_nginx_source,
+    walk_directives,
+)
 from scripts.pilot_environment import (  # noqa: E402
     DeploymentValidationError,
     check_environment_file,
@@ -273,6 +279,57 @@ _ALLOWED_ACCESS_LOG_VARIABLES = frozenset(
 _LOG_VARIABLE_RE = re.compile(r"(?<!\\)[$][A-Za-z0-9_]+")
 
 
+def _parse_logging_source(source: str, text: str) -> tuple[Directive, ...]:
+    try:
+        return parse_nginx_source(source, text)
+    except NginxConfigError as exc:
+        raise DeploymentValidationError(str(exc)) from exc
+
+
+def _validate_nginx_logging_tree(
+    process_error_log: str, nginx_site: str, manifest: Mapping[str, Any]
+) -> None:
+    process = _parse_logging_source("process-error-log", process_error_log)
+    process_logs = [item for item, _ in walk_directives(process) if item.name == "error_log"]
+    expected_process = (manifest["origin"]["error_log"], "notice")
+    if (
+        len(process_logs) != 1
+        or process_logs[0].args != expected_process
+        or any(item.children is not None for item in process)
+        or any(item.name == "access_log" for item, _ in walk_directives(process))
+    ):
+        raise DeploymentValidationError(
+            "Diagnostica nginx process-level non vincolata al file main-context"
+        )
+
+    site = _parse_logging_source("pilot-site", nginx_site)
+    servers = [item for item in site if item.name == "server" and item.children is not None]
+    if len(servers) != 4 or len(servers) != len(site):
+        raise DeploymentValidationError("Topologia server nginx renderizzata inattesa")
+    origin_host = urlsplit(manifest["origin"]["url"]).hostname
+    expected_access = (manifest["origin"]["access_log"], "thebitlab")
+    for server in servers:
+        assert server.children is not None
+        names = [item.args for item in server.children if item.name == "server_name"]
+        if names not in [[("_",)], [(origin_host,)]]:
+            raise DeploymentValidationError("Server nginx senza identità attesa")
+        default_server = names == [("_",)]
+        direct_access = [item.args for item in server.children if item.name == "access_log"]
+        direct_error = [item.args for item in server.children if item.name == "error_log"]
+        expected = [("off",)] if default_server else [expected_access]
+        if direct_access != expected:
+            raise DeploymentValidationError("Direttiva access_log non vincolata al formato secret-safe")
+        if direct_error != [("/dev/null",)]:
+            raise DeploymentValidationError(
+                "Diagnostica nginx request-context non vincolata al sink non persistente"
+            )
+        for directive, context in walk_directives(server.children):
+            if context and directive.name in {"access_log", "error_log"}:
+                raise DeploymentValidationError(
+                    "Logging nginx annidato in request-context non ammesso"
+                )
+
+
 def validate_rendered_logging(
     process_error_log: str,
     log_format: str,
@@ -288,29 +345,7 @@ def validate_rendered_logging(
     if log_format.count("log_format thebitlab ") != 1:
         raise DeploymentValidationError("Formato access log thebitlab assente o duplicato")
 
-    directives = re.findall(r"(?m)^\s*access_log\s+([^;]+);", nginx_site)
-    expected = f'{manifest["origin"]["access_log"]} thebitlab'
-    active = [directive.strip() for directive in directives if directive.strip() != "off"]
-    if len(active) != 2 or any(directive != expected for directive in active):
-        raise DeploymentValidationError("Direttiva access_log non vincolata al formato secret-safe")
-    process_error_directives = [
-        directive.strip()
-        for directive in re.findall(r"(?m)^\s*error_log\s+([^;]+);", process_error_log)
-    ]
-    expected_process_error = f'{manifest["origin"]["error_log"]} notice'
-    if process_error_directives != [expected_process_error]:
-        raise DeploymentValidationError(
-            "Diagnostica nginx process-level non vincolata al file main-context"
-        )
-
-    request_error_directives = [
-        directive.strip()
-        for directive in re.findall(r"(?m)^\s*error_log\s+([^;]+);", nginx_site)
-    ]
-    if request_error_directives != ["/dev/null"] * 4:
-        raise DeploymentValidationError(
-            "Diagnostica nginx request-context non vincolata al sink non persistente"
-        )
+    _validate_nginx_logging_tree(process_error_log, nginx_site, manifest)
 
     logging = manifest["logging"]
     required_lines = {
@@ -330,10 +365,12 @@ def validate_rendered_logging(
         expected_header not in normalized_lines
         or not required_lines.issubset(normalized_lines)
         or "copytruncate" in normalized_lines
-        or 'executable="$(readlink -f "/proc/$pid/exe"' not in logrotate_config
-        or '"nginx: master process "*) kill -USR1 "$pid"' not in logrotate_config
-        or '[ "$executable" = /usr/sbin/nginx ]' not in logrotate_config
-        or '[ "$uid" = 0 ]' not in logrotate_config
+        or 'systemctl is-active nginx.service' not in logrotate_config
+        or 'active:0)' not in logrotate_config
+        or 'inactive:3)' not in logrotate_config
+        or 'systemctl kill --kill-whom=main --signal=USR1 nginx.service' not in logrotate_config
+        or "/run/nginx.pid" in logrotate_config
+        or "/proc/$pid" in logrotate_config
     ):
         raise DeploymentValidationError("Policy logrotate incompleta o non sicura")
 

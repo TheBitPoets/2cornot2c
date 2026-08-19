@@ -11,7 +11,7 @@ Questo documento è il contratto canonico per preparare una nuova candidate TheB
 | `schemas/pilot-environment.schema.json` | nomi e forma dell'`EnvironmentFile` esterno |
 | `deploy/pilot/templates/` | template nginx main/http/server, formato log secret-safe, logrotate e unit systemd |
 | `deploy/pilot/legacy-v1/` + `schemas/pilot-deployment-v1-legacy.schema.json` | fingerprint migration-only degli artifact v1 storici; non sono renderer per nuove candidate |
-| `scripts/validate_pilot_deployment.py` | validazione semantica, lint logging fail-closed e rendering deterministico |
+| `scripts/nginx_config_ast.py` + `scripts/validate_pilot_deployment.py` | parser AST nginx condiviso, validazione logging fail-closed e rendering deterministico |
 | `scripts/pilot_service_launcher.py` | import fail-closed dei secret e avvio con topologia autorevole |
 | `scripts/pilot_access_log_scanner.py` | scanner metadata-only che non ristampa il contenuto sensibile |
 | `scripts/pilot_deployment_smoke.py` | smoke non privilegiato su copie temporanee e dati sintetici |
@@ -46,7 +46,7 @@ Il gate Ubuntu reale non è sostituito da questo smoke. Su una VM/container **Ub
 python scripts/pilot_ubuntu_integration.py --ephemeral-host
 ```
 
-L'integrazione parte dal default site e dalle include reali del package, installa l'esatto fingerprint v1 supportato, inietta failure, migra a v2 e usa `nginx -t`/`nginx -T` su `/etc/nginx/nginx.conf`. Valida insieme `/etc/logrotate.conf`, policy distro e pilot; prova runtime IPv4/IPv6 quando disponibile, callback/errori, unknown Host/SNI, request line e Host malformati; cerca i marker anche in `/var/log/nginx/*.log`; verifica rollback solo-v2 e rotazione+`USR1`. Il ripristino finale del default distro è esclusivamente cleanup/decommission del container effimero, non semantica del rollback production. Il flag è una barriera contro l'uso accidentale su host persistenti; non usarlo su VPS/staging/live.
+L'integrazione parte dal default site e dalle include reali del package, installa l'esatto fingerprint v1 supportato, migra a v2 e usa `nginx -t`/`nginx -T` su `/etc/nginx/nginx.conf`. Su systemd reale verifica mask persistente e recovery dopo `os._exit()` in ogni boundary critica, mutazioni TOCTOU dei path host, stati service ambigui e rollback solo-v2. Valida insieme `/etc/logrotate.conf`, policy distro e pilot; prova runtime IPv4/IPv6, callback/errori, unknown Host/SNI e input malformati; cerca marker nei log effettivi, ruotati e nel journal stdout/stderr. La rotazione segnala il main process tramite systemd e una richiesta successiva deve comparire nel file nuovo, mai nel `.1`. Il ripristino finale del default distro è esclusivamente cleanup/decommission dell'host effimero, non semantica del rollback production. Il flag è una barriera contro l'uso accidentale su host persistenti; non usarlo su VPS/staging/live.
 
 ## Contratto della data root
 
@@ -122,7 +122,7 @@ Verifiche candidate obbligatorie, da un ambiente controllato e senza pubblicare 
 5. porta backend non è raggiungibile da rete;
 6. callback OAuth sintetica e richiesta ordinaria producono metodo/path/status/timing/request ID senza query o marker dummy;
 7. lint allowlist e scanner rifiutano request target, query, cookie, authorization/bearer, redirect `Location` o campi equivalenti;
-8. `logrotate --debug /etc/logrotate.conf` valida simultaneamente policy distro e pilot senza entry duplicate; rotazione+`USR1` ricrea file `0640` con owner/gruppo versionati;
+8. `logrotate --debug /etc/logrotate.conf` valida simultaneamente policy distro e pilot senza entry duplicate; rotazione+`systemctl kill --kill-whom=main --signal=USR1 nginx.service` ricrea file `0640` e una scrittura successiva entra soltanto nel nuovo path;
 9. `nginx -T` conferma quattro soli vhost pilot, default IPv4/IPv6 autorevoli, process log main-context e nessuna destinazione request-context persistente.
 
 Non trasferire automaticamente i PASS della topologia precedente.
@@ -133,9 +133,9 @@ Il formato `thebitlab` usa `$uri` e una allowlist chiusa di variabili. Non regis
 
 Il livello non è una barriera di redazione. Nel sorgente upstream nginx 1.24, [`ngx_log_error_core`](https://github.com/nginx/nginx/blob/release-1.24.0/src/core/ngx_log.c#L148-L149) invoca l'handler HTTP dopo aver formato ogni evento non-debug; [`ngx_http_log_error_handler`](https://github.com/nginx/nginx/blob/release-1.24.0/src/http/ngx_http_request.c#L3814-L3827) aggiunge poi la request line completa quando disponibile. La direttiva [`error_log`](https://nginx.org/en/docs/ngx_core_module.html#error_log) filtra soltanto la severità.
 
-La baseline separa quindi i canali: tutti e quattro i server candidate, inclusi i default HTTP/TLS, impostano `error_log /dev/null`, e le location lo ereditano. Il merge upstream della configurazione usa il parent soltanto quando il livello corrente non definisce `error_log` ([`ngx_http_core_module.c`](https://github.com/nginx/nginx/blob/release-1.24.0/src/http/ngx_http_core_module.c#L3770-L3775)); il listener usa inizialmente il log del `default_server` ([`ngx_http.c`](https://github.com/nginx/nginx/blob/release-1.24.0/src/http/ngx_http.c#L1812-L1819)). Nessun livello request-context del pilot ha quindi una destinazione persistente. Status, timing e correlation restano nell'access log path-only.
+La baseline separa quindi i canali: tutti e quattro i server candidate, inclusi i default HTTP/TLS, impostano `error_log /dev/null`, e le location lo ereditano. Il validator AST token-aware percorre però ogni profondità e vieta a `location`, location annidate, `if` o altri scope request-context di ridefinire `access_log` o `error_log`; i default ammettono soltanto `access_log off`, gli origin soltanto l'esatto path con formato `thebitlab`. Il merge upstream usa il parent soltanto quando il livello corrente non definisce `error_log` ([`ngx_http_core_module.c`](https://github.com/nginx/nginx/blob/release-1.24.0/src/http/ngx_http_core_module.c#L3770-L3775)); il listener usa inizialmente il log del `default_server` ([`ngx_http.c`](https://github.com/nginx/nginx/blob/release-1.24.0/src/http/ngx_http.c#L1812-L1819)). Status, timing e correlation restano nell'access log path-only.
 
-`nginx/thebitlab-process-error-log.conf` entra invece nel contesto `main` e conserva in `origin.error_log`, a livello `notice`, diagnostica di ciclo/master/worker non associata alle richieste. La topologia Ubuntu impone, non rende configurabili, `logging.directory=/var/log/thebitlab`, directory `root:adm` `0750` e file access/process `www-data:adm` `0640`, figli diretti distinti `.log`. L'attivatore rifiuta ACL POSIX nominate, mask estese e default ACL tramite `getfacl`; owner/mode errati senza ACL vengono riparati e poi verificati. Il validator rifiuta `/var/log/nginx` e quindi evita la wildcard del package. Logrotate applica `daily`, `rotate 30`, `maxage 30`, compressione differita, ricrea `0640`, vieta `copytruncate` e invia `USR1` soltanto se PID, UID root, executable `/usr/sbin/nginx` e command line identificano realmente il master nginx. Incident/legal hold seguono un'eccezione separata e motivata, non una retention implicita.
+`nginx/thebitlab-process-error-log.conf` entra invece nel contesto `main` e conserva in `origin.error_log`, a livello `notice`, diagnostica di ciclo/master/worker non associata alle richieste. La topologia Ubuntu impone, non rende configurabili, `logging.directory=/var/log/thebitlab`, directory `root:adm` `0750` e file access/process `www-data:adm` `0640`, figli diretti distinti `.log`. L'attivatore rifiuta ACL POSIX nominate, mask estese e default ACL tramite `getfacl`; owner/mode errati senza ACL vengono riparati e poi verificati. Il validator rifiuta `/var/log/nginx` e quindi evita la wildcard del package. Logrotate applica `daily`, `rotate 30`, `maxage 30`, compressione differita, ricrea `0640`, vieta `copytruncate` e interroga `systemctl is-active nginx.service`: `active` richiede il `systemctl kill` del main process e ogni failure fallisce la rotazione; soltanto `inactive` consente di non segnalare. `failed`, `activating`, `deactivating`, unknown o manager indisponibile falliscono chiusi. PID file e `/proc` non sono mai autorità. Incident/legal hold seguono un'eccezione separata e motivata, non una retention implicita.
 
 La procedura canonica per classificare, quarantinare e disporre in sicurezza lo storico potenzialmente query-bearing è [`PILOT_SENSITIVE_LOG_HANDLING.md`](PILOT_SENSITIVE_LOG_HANDLING.md). Non leggere o pubblicare log grezzi per produrre evidenza.
 
@@ -148,6 +148,7 @@ Una candidate deve conservare separatamente release e configurazione immutabili,
 /opt/thebitlab/current -> releases/<commit>
 /etc/thebitlab/deployments/<id>-<commit>/
 /etc/thebitlab/current -> deployments/<id>-<commit>
+/etc/systemd/system/nginx.service -> /dev/null   guard transitorio persistente
 /etc/systemd/system/thebitlab.service -> /etc/thebitlab/current/systemd/thebitlab.service
 /etc/nginx/modules-enabled/90-thebitlab-process-error-log.conf -> /etc/thebitlab/current/nginx/thebitlab-process-error-log.conf
 /etc/nginx/conf.d/thebitlab-log-format.conf -> /etc/thebitlab/current/nginx/thebitlab-log-format.conf
@@ -161,18 +162,36 @@ Una candidate deve conservare separatamente release e configurazione immutabili,
 
 ### Topologia host supportata e attivazione
 
-La baseline supporta **nginx dedicato al pilot**, non nginx condiviso. Il preflight tokenizza ogni source esposto da `nginx -T`: gestisce whitespace/newline, commenti, quoting, escape, direttive e contesti annidati e fallisce chiuso su sintassi ambigua. Ogni `server` deve provenire dall'esatto source `/etc/nginx/sites-enabled/thebitlab.conf`, il cui contenuto deve coincidere con l'artifact riproducibile e locked; server inline in `nginx.conf`, source/filename alternativi, `conf.d`, site inattesi o contenuto aggiunto allo stesso file sono rifiutati. Anche include chain e moduli package sono attribuiti: i moduli non-pilot devono essere symlink root-owned del package con sole direttive `load_module`. Prima installazione ammette soltanto il default distro riconosciuto o nessun vhost; una topologia shared/unmanaged non è supportata.
+La baseline supporta **nginx dedicato al pilot**, non nginx condiviso. Il preflight tokenizza ogni source esposto da `nginx -T`: gestisce whitespace/newline, commenti, quoting, escape, direttive e contesti annidati e fallisce chiuso su sintassi ambigua. Ogni `server` deve provenire dall'esatto source `/etc/nginx/sites-enabled/thebitlab.conf`, il cui contenuto deve coincidere con l'artifact riproducibile e locked; server inline in `nginx.conf`, source/filename alternativi, `conf.d`, site inattesi o contenuto aggiunto allo stesso file sono rifiutati. Anche include chain e moduli package sono attribuiti: i moduli non-pilot devono essere symlink root-owned del package, con target e ancestry trusted, e sole direttive `load_module`. Prima installazione ammette soltanto il default distro riconosciuto o nessun vhost; una topologia shared/unmanaged non è supportata.
 
-Prima dell'attivazione verificare SHA, digest del lock, riferimenti esterni, environment, firewall, root canonica con `pilot_data_root.py validate` e smoke. Il bundle è accettato soltanto sotto `/etc/thebitlab/deployments/`: tutti gli ancestor e file devono essere root-owned e non scrivibili da group/other; symlink, artifact non regolari, hardlink, file extra, lock/manifest incoerenti o output non riproducibile dal renderer sono rifiutati. Copiare e rendere immutabile il bundle prima del preflight, quindi:
+Il trust boundary host comprende almeno `/etc`, l'intero layout strutturale nginx (`nginx.conf`, `conf.d`, `sites-enabled`, `sites-available`, `modules-enabled`), configurazione globale/pilot logrotate, `/etc/thebitlab`, `current`, `deployments`, target artifact e unit package. Directory e file devono essere root-owned, del tipo atteso e non group/world-writable. Sono ammessi soltanto i symlink dichiarati (`current`, link pilot, default distro e moduli package); target e ancestry vengono verificati. Il controllo avviene al preflight, dopo il guard e prima delle mutazioni, dopo lo switch, durante la validazione e subito prima dell'unmask/rollback.
+
+Prima dell'attivazione verificare SHA, digest del lock, riferimenti esterni, environment, firewall, root canonica con `pilot_data_root.py validate` e smoke. Il bundle è accettato soltanto sotto `/etc/thebitlab/deployments/`: tutti gli ancestor e file devono essere root-owned e non scrivibili da group/other; symlink, artifact non regolari, hardlink, file extra, lock/manifest incoerenti o output non riproducibile dal **renderer trusted corrente** sono rifiutati. La stessa riproducibilità byte-for-byte, inclusi manifest normalizzato, inventario, lock e digest, è obbligatoria per `previous_v2`: un lock auto-generato dal bundle non è root of trust. Copiare e rendere immutabile il bundle prima del preflight, quindi:
 
 ```bash
 sudo python scripts/pilot_ubuntu_activation.py preflight --bundle <bundle-assoluto>
 sudo python scripts/pilot_ubuntu_activation.py activate --bundle <bundle-assoluto>
 ```
 
-L'attivatore classifica lo stato iniziale come default/empty, exact legacy v1 oppure previous v2. La sola eccezione migration accetta un bundle v1 trusted con manifest/lock/inventario e tutti gli artifact byte-per-byte riprodotti dai template storici versionati; qualunque modifica o vhost/link aggiuntivo fallisce chiuso. Per default/v1 nginx deve essere fermo prima di scrivere lo state, così nessun worker mantiene in memoria il logging storico. Lo state v2 `root:root 0600` viene scritto e sincronizzato atomicamente **prima** della mutazione, conserva il default soltanto come provenance di uninstall e non come rollback target. L'attivatore prepara log/ACL, rimuove il default, commuta `current` e i cinque link, riverifica il bundle subito prima dello switch, quindi esegue `nginx -t`, parser `nginx -T`, logrotate globale e `systemd-analyze verify`.
+L'attivatore classifica lo stato iniziale come default/empty, exact legacy v1 oppure previous v2. La sola eccezione migration accetta il fingerprint v1 byte-per-byte; legacy non è mai rollback target. Dopo il preflight arresta `nginx.service`, crea atomicamente e sincronizza `/etc/systemd/system/nginx.service -> /dev/null`, esegue `daemon-reload` e verifica `LoadState=masked`, `UnitFileState=masked` e servizio inattivo. **Soltanto dopo** scrive lo state v3 `root:root 0600` e può rimuovere default/v1 o commutare `current`. File state e symlink usano temp+`fsync`+replace e ogni directory contenente un rename/unlink viene `fsync`-ata; un errore di sync blocca l'operazione.
 
-Su failure con previous v2 viene ripristinata e riverificata soltanto quella v2. Su first install/migration viene mantenuta la candidate v2 verificabile; se nemmeno questa è valida il site link viene rimosso e `nginx -t` deve passare senza server pilot. Legacy v1 e default distro non vengono mai ricreati. Una seconda activation identica valida la topologia e ritorna senza modificare byte/mtime/provenance dello state; candidate diversa o state non `active` falliscono. Prima di un deploy distinto archiviare esplicitamente lo state concluso con `pilot_ubuntu_activation.py complete --archive <nuovo-file-sibling>`. I link restano attraverso `/etc/thebitlab/current`; nessun artifact va editato.
+La state machine persistente ha queste semantiche di reboot:
+
+| Stato su disco | Risultato dopo power loss/reboot |
+|---|---|
+| legacy/default senza guard né state | nginx può partire legacy; è soltanto lo stato **prima** dell'ingresso v2 |
+| guard presente, state assente | orphan fail-closed: systemd non può avviare nginx; il guard non viene rimosso automaticamente |
+| `prepared` | guard presente, legacy/default ancora possibile su disco ma non avviabile |
+| `switched` | guard presente, link v2 durable ma configurazione non ancora dichiarata valida |
+| `validated` + guard | guard presente, v2 completa e validata; nginx resta offline |
+| `validated` senza guard | unica finestra post-unmask: al boot può partire soltanto la v2 già validata e durable |
+| `active` | guard assente, v2 riverificabile e `nginx.service` attiva |
+| `rollback_prepared` / `rollback_switched` / `rollback_validated` | le stesse proprietà, con target previous-v2 riproducibile |
+| `rolled_back_v2` | guard assente e soltanto previous-v2 validata attiva |
+
+Dopo switch l'attivatore riverifica renderer/lock, AST logging, host trust, `nginx -t/-T`, logrotate globale e unit systemd; scrive durable `validated`, ripete l'intero gate, poi rimuove il guard e avvia nginx. Availability loss è accettabile; un ritorno a logging query-bearing non lo è. Candidate mancante/mutata, previous non riproducibile, host trust fallita o validazione fallita lasciano il servizio guarded/offline.
+
+Una transition incompleta si riprende esplicitamente con `sudo python scripts/pilot_ubuntu_activation.py recover [--bundle <bundle>]`. Guard orphan richiede il bundle trusted; `prepared`, `switched` e `validated` ripartono deterministicamente dallo state e dal filesystem reale. Se il guard manca in uno stato intermedio, recovery lo reinstalla prima di proseguire. Nessuna recovery rimuove il guard o avvia nginx prima di una nuova validazione v2; non esiste `--force`. Una seconda activation `active` identica valida topologia e service e non modifica byte/mtime dello state. Prima di un deploy distinto archiviare soltanto uno state finale con `complete --archive <nuovo-file-sibling>`.
 
 ## Rollback bounded
 
@@ -180,10 +199,10 @@ Target operativo: decisione e rollback tecnico entro **15 minuti**, con un solo 
 
 1. Dichiarare rollback, bloccare deploy e fermare l'app se può scrivere dati incoerenti.
 2. Eseguire una sola volta `sudo python scripts/pilot_ubuntu_activation.py rollback`.
-3. Se esiste previous v2, l'attivatore commuta i link, lascia il default assente ed esegue bundle verification, `nginx -t`, parser `nginx -T`, logrotate globale e systemd verify. Se la previous fallisce, ripristina la candidate v2; se anche questa fallisce rimuove il site e pretende `nginx -t` fail-closed.
-4. Se non esiste previous v2, il comando segnala rollback indisponibile e mantiene la configurazione proxy/logging v2. Arretrare separatamente soltanto la release applicativa compatibile; altrimenti lasciare app/nginx fermi ed escalare.
-5. Dopo il cambio esplicito eseguire reload/start controllati, health, origin edge-only, backend chiuso e flusso demo; poi archiviare lo state. Non ricreare link a mano.
-6. Uninstall/decommission è un change distinto: può consultare la provenance del default originario, ma non è implementato né autorizzato dal comando `rollback`.
+3. Previous-v2 viene riletta dal path reale e deve superare deployment path/metadata, renderer corrente byte-for-byte, inventario/lock/digest, AST logging e host trust. Lo state non rende autorevole un path arbitrario.
+4. L'attivatore installa lo stesso guard persistente, scrive gli stati `rollback_*`, commuta i link e ripete `nginx -t/-T`, logrotate globale, systemd e host trust prima di unmask/start. Un crash usa il medesimo comando `recover`.
+5. Se previous manca o non è riproducibile, non avviene alcuno switch. Se il failure avviene dopo l'ingresso guarded, il servizio resta offline: non si tenta una catena automatica verso candidate, v1 o default.
+6. Dopo il cambio eseguire health, origin edge-only, backend chiuso e flusso demo; poi archiviare lo state. Non ricreare link a mano. Uninstall/decommission è un change distinto e non è autorizzato da `rollback`.
 
 Il rollback del bundle **non** ripristina dati né segreti. Prima del deploy bisogna dichiarare la compatibilità backward dello schema auth/dati. Se la release precedente non può leggere lo schema corrente, il rollback applicativo è bloccato: mantenere il servizio fermo e usare soltanto la procedura di restore isolato approvata. Un'eventuale rotazione secret si annulla dal secret store secondo procedura separata; i valori precedenti non vengono archiviati nel repository.
 
