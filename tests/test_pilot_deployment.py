@@ -17,6 +17,7 @@ from jsonschema import Draft202012Validator
 from scripts import pilot_access_log_scanner as log_scanner
 from scripts import pilot_deployment_smoke as smoke
 from scripts import pilot_service_launcher as service_launcher
+from scripts import pilot_ubuntu_activation as ubuntu_activation
 from scripts import validate_pilot_deployment as deployment
 
 
@@ -93,8 +94,9 @@ def test_rendered_service_pins_root_auth_resolution_and_generated_topology(tmp_p
 
 
 def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path: Path) -> None:
+    payload = manifest()
     output = tmp_path / "bundle"
-    deployment.render_bundle(manifest(), output)
+    deployment.render_bundle(payload, output)
     site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8")
     log_format = (output / "nginx/thebitlab-log-format.conf").read_text(encoding="utf-8")
     process_error_log = (output / "nginx/thebitlab-process-error-log.conf").read_text(
@@ -116,15 +118,21 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
     assert "$remote_user" not in log_format
     assert "$http_user_agent" not in log_format
     assert site.count("error_log /dev/null;") == 4
-    assert "/var/log/nginx/thebitlab-error.log" not in site
-    assert "error_log /var/log/nginx/thebitlab-error.log notice;" in process_error_log
+    assert "/var/log/nginx/" not in site
+    assert "error_log /var/log/thebitlab/thebitlab-process-error.log notice;" in process_error_log
     logrotate = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
-    assert "/var/log/nginx/thebitlab-access.log /var/log/nginx/thebitlab-error.log {" in logrotate
+    assert (
+        "/var/log/thebitlab/thebitlab-access.log "
+        "/var/log/thebitlab/thebitlab-process-error.log {"
+    ) in logrotate
     assert "daily" in logrotate
     assert "rotate 30" in logrotate
     assert "maxage 30" in logrotate
     assert "create 0640 www-data adm" in logrotate
+    assert 'kill -USR1 "$(cat /run/nginx.pid)"' in logrotate
     assert "copytruncate" not in logrotate
+    assert payload["logging"]["directory"] == "/var/log/thebitlab"
+    assert payload["logging"]["directory_mode"] == "0750"
     firewall = json.loads((output / "firewall/origin-exposure.json").read_text(encoding="utf-8"))
     assert firewall == {
         "schema_version": "thebitlab.origin-exposure.v1",
@@ -309,6 +317,114 @@ def test_manifest_rejects_incomplete_ambiguous_or_unsafe_root_configuration() ->
     for payload in cases:
         with pytest.raises(deployment.DeploymentValidationError):
             deployment.validate_manifest(payload)
+
+
+def test_manifest_rejects_logs_outside_dedicated_directory_or_under_nginx() -> None:
+    for access_log, error_log in (
+        ("/var/log/nginx/thebitlab-access.log", "/var/log/nginx/thebitlab-error.log"),
+        ("/var/log/thebitlab-access.log", "/var/log/thebitlab-error.log"),
+        ("/var/log/thebitlab/access.txt", "/var/log/thebitlab/process.log"),
+    ):
+        payload = manifest()
+        payload["origin"]["access_log"] = access_log
+        payload["origin"]["error_log"] = error_log
+        with pytest.raises(deployment.DeploymentValidationError):
+            deployment.validate_manifest(payload)
+
+
+def test_effective_nginx_validator_rejects_unmanaged_vhosts_and_default_collisions(
+    tmp_path: Path,
+) -> None:
+    payload = manifest()
+    output = tmp_path / "bundle"
+    deployment.render_bundle(payload, output)
+    site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8")
+    process = (output / "nginx/thebitlab-process-error-log.conf").read_text(encoding="utf-8")
+    effective = (
+        "# configuration file /etc/nginx/modules-enabled/90-thebitlab-process-error-log.conf:\n"
+        + process
+        + "# configuration file /etc/nginx/sites-enabled/thebitlab.conf:\n"
+        + site
+    )
+
+    ubuntu_activation.validate_effective_nginx(effective, payload, activated=True)
+
+    unmanaged = (
+        effective
+        + "# configuration file /etc/nginx/conf.d/unmanaged.conf:\n"
+        + "server { listen 8080; error_log /var/log/nginx/error.log; }\n"
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="unmanaged"):
+        ubuntu_activation.validate_effective_nginx(unmanaged, payload, activated=True)
+
+    collision = effective.replace(
+        "listen 80 default_server;", "listen 80 default_server;\n    listen 8080 default_server;", 1
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="default_server"):
+        ubuntu_activation.validate_effective_nginx(collision, payload, activated=True)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink Unix richiesti")
+def test_activation_state_restores_exact_distro_default_and_managed_links(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    current = tmp_path / "etc/thebitlab/current"
+    distro_default = tmp_path / "etc/nginx/sites-enabled/default"
+    first = tmp_path / "etc/nginx/conf.d/thebitlab.conf"
+    second = tmp_path / "etc/systemd/system/thebitlab.service"
+    for path in (current, distro_default, first, second):
+        path.parent.mkdir(parents=True, exist_ok=True)
+    distro_default.symlink_to("../sites-available/default")
+    first.symlink_to("/old/managed-target")
+    links = {first: "/new/first", second: "/new/second"}
+    monkeypatch.setattr(ubuntu_activation, "CURRENT_LINK", current)
+    monkeypatch.setattr(ubuntu_activation, "DISTRO_DEFAULT", distro_default)
+    monkeypatch.setattr(ubuntu_activation, "INTEGRATION_LINKS", links)
+
+    saved = ubuntu_activation._capture_state()
+    distro_default.unlink()
+    current.symlink_to("/candidate")
+    ubuntu_activation._replace_symlink(first, links[first])
+    ubuntu_activation._replace_symlink(second, links[second])
+    ubuntu_activation._restore(saved)
+
+    assert not current.exists() and not current.is_symlink()
+    assert distro_default.readlink() == Path("../sites-available/default")
+    assert first.readlink() == Path("/old/managed-target")
+    assert not second.exists() and not second.is_symlink()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink Unix richiesti")
+def test_activation_failure_restores_previous_topology(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    current = tmp_path / "current"
+    distro_default = tmp_path / "default"
+    managed = tmp_path / "managed"
+    current.symlink_to("/previous-bundle")
+    distro_default.symlink_to("../sites-available/default")
+    managed.symlink_to("/previous-managed")
+    monkeypatch.setattr(ubuntu_activation, "CURRENT_LINK", current)
+    monkeypatch.setattr(ubuntu_activation, "DISTRO_DEFAULT", distro_default)
+    monkeypatch.setattr(ubuntu_activation, "INTEGRATION_LINKS", {managed: "/candidate-managed"})
+    monkeypatch.setattr(ubuntu_activation, "verify_host_preflight", lambda _: manifest())
+    monkeypatch.setattr(ubuntu_activation, "prepare_log_directory", lambda _: None)
+    monkeypatch.setattr(ubuntu_activation, "_run", lambda _: "")
+
+    def fail_validation(_: dict) -> None:
+        raise ubuntu_activation.ActivationError("synthetic nginx -t failure")
+
+    monkeypatch.setattr(ubuntu_activation, "_validate_activated", fail_validation)
+    state = tmp_path / "state.json"
+    with pytest.raises(ubuntu_activation.ActivationError, match="synthetic"):
+        ubuntu_activation.activate(bundle, state)
+
+    assert current.readlink() == Path("/previous-bundle")
+    assert distro_default.readlink() == Path("../sites-available/default")
+    assert managed.readlink() == Path("/previous-managed")
+    assert not state.exists()
 
 
 def test_edge_only_manifest_rejects_missing_invalid_or_redundant_proxy_ranges() -> None:

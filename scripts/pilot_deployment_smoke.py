@@ -301,8 +301,6 @@ def run_smoke(config: Path) -> None:
         manifest["origin"]["tls_private_key_file"] = str(private_key)
         access_log = temporary / "access.log"
         process_error_log = temporary / "process-error.log"
-        manifest["origin"]["access_log"] = str(access_log)
-        manifest["origin"]["error_log"] = str(process_error_log)
         deployment.validate_manifest(manifest)
         values = deployment.parse_environment_file(environment_file)
         deployment.validate_environment(values, github_oauth=False)
@@ -322,6 +320,10 @@ def run_smoke(config: Path) -> None:
             http_port=http_port,
             https_port=https_port,
         )
+        canonical_access_log = manifest["origin"]["access_log"]
+        if smoke_site.count(canonical_access_log) != 2:
+            raise RuntimeError("Path access log inatteso nello smoke logging")
+        smoke_site = smoke_site.replace(canonical_access_log, str(access_log))
         proxy_directive = f'        proxy_pass http://127.0.0.1:{manifest["service"]["port"]};'
         if smoke_site.count(proxy_directive) != 1:
             raise RuntimeError("Proxy location inattesa nello smoke logging")
@@ -339,12 +341,23 @@ def run_smoke(config: Path) -> None:
         )
         smoke_site = smoke_site.replace(location_anchor, fault_location + location_anchor)
         nginx_smoke_site.write_text(smoke_site, encoding="utf-8")
+        process_config = temporary / "nginx-smoke-process.conf"
+        canonical_process_log = manifest["origin"]["error_log"]
+        rendered_process_config = (
+            bundle / "nginx/thebitlab-process-error-log.conf"
+        ).read_text(encoding="utf-8")
+        if rendered_process_config.count(canonical_process_log) != 1:
+            raise RuntimeError("Path process log inatteso nello smoke logging")
+        process_config.write_text(
+            rendered_process_config.replace(canonical_process_log, str(process_error_log)),
+            encoding="utf-8",
+        )
         nginx_config = temporary / "nginx-smoke.conf"
         nginx_config.write_text(
             "\n".join(
                 (
                     f"pid {temporary / 'nginx.pid'};",
-                    f"include {bundle / 'nginx/thebitlab-process-error-log.conf'};",
+                    f"include {process_config};",
                     "events {}",
                     "http {",
                     "    include /etc/nginx/mime.types;",

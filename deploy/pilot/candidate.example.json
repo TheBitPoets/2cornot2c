@@ -29,10 +29,12 @@
     ],
     "tls_certificate_file": "/etc/thebitlab/tls/origin.crt",
     "tls_private_key_file": "/etc/thebitlab/tls/origin.key",
-    "access_log": "/var/log/nginx/thebitlab-access.log",
-    "error_log": "/var/log/nginx/thebitlab-error.log"
+    "access_log": "/var/log/thebitlab/thebitlab-access.log",
+    "error_log": "/var/log/thebitlab/thebitlab-process-error.log"
   },
   "logging": {
+    "directory": "/var/log/thebitlab",
+    "directory_mode": "0750",
     "rotation": "daily",
     "retention_days": 30,
     "file_mode": "0640",

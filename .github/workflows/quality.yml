@@ -40,7 +40,7 @@ on:
 
 jobs:
   python:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       THEBITLAB_REQUIRE_UTUI: "1"
     steps:
@@ -56,10 +56,15 @@ jobs:
         run: python -m pip install -r requirements-dev.txt -r requirements-utui.txt -r requirements-auth.txt
 
       - name: Install deployment lint tools
-        run: sudo apt-get update && sudo apt-get install -y nginx
+        run: sudo apt-get update && sudo apt-get install -y nginx logrotate openssl
 
       - name: Run Python tests
         run: python -m pytest
+
+      - name: Run effective Ubuntu deployment integration
+        run: |
+          sudo systemctl stop nginx || true
+          sudo "$(command -v python)" scripts/pilot_ubuntu_integration.py --ephemeral-host
 
       - name: Check generated course plan
         run: python scripts/generate_course_plan.py --check

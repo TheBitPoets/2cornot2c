@@ -102,6 +102,7 @@ def _semantic_manifest_errors(manifest: Mapping[str, Any]) -> list[str]:
     service = manifest["service"]
     data = manifest["data"]
     origin = manifest["origin"]
+    logging = manifest["logging"]
 
     repository_root = _posix_path(release["repository_root"])
     python_executable = _posix_path(release["python_executable"])
@@ -112,6 +113,7 @@ def _semantic_manifest_errors(manifest: Mapping[str, Any]) -> list[str]:
     tls_private_key = _posix_path(origin["tls_private_key_file"])
     access_log = _posix_path(origin["access_log"])
     error_log = _posix_path(origin["error_log"])
+    log_directory = _posix_path(logging["directory"])
 
     if service["user"] in {"root", "nobody"} or service["group"] in {"root", "nogroup"}:
         errors.append("service: usare un account dedicato non privilegiato")
@@ -143,9 +145,19 @@ def _semantic_manifest_errors(manifest: Mapping[str, Any]) -> list[str]:
         errors.append("secret references: environment, certificato e chiave devono avere path distinti")
     if access_log == error_log:
         errors.append("origin: access_log e error_log devono avere path distinti")
+    if log_directory != PurePosixPath("/var/log/thebitlab"):
+        errors.append("logging.directory: la baseline Ubuntu richiede /var/log/thebitlab")
+    if _is_within(log_directory, repository_root) or _is_within(log_directory, data_root):
+        errors.append("logging.directory: deve stare fuori da release e data root")
     for name, path in (("origin.access_log", access_log), ("origin.error_log", error_log)):
         if _is_within(path, repository_root) or _is_within(path, data_root):
             errors.append(f"{name}: il log deve stare fuori da release e data root")
+        if path.parent != log_directory:
+            errors.append(f"{name}: deve essere un file figlio diretto di logging.directory")
+        if path.suffix != ".log":
+            errors.append(f"{name}: estensione .log richiesta")
+        if _is_within(path, PurePosixPath("/var/log/nginx")):
+            errors.append(f"{name}: la wildcard logrotate nginx distro non è ammessa")
 
     try:
         parsed_origin = urlsplit(origin["url"])
@@ -318,6 +330,7 @@ def validate_rendered_logging(
         expected_header not in normalized_lines
         or not required_lines.issubset(normalized_lines)
         or "copytruncate" in normalized_lines
+        or 'kill -USR1 "$(cat /run/nginx.pid)"' not in logrotate_config
     ):
         raise DeploymentValidationError("Policy logrotate incompleta o non sicura")
 

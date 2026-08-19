@@ -102,6 +102,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "directory",
+        "directory_mode",
         "rotation",
         "retention_days",
         "file_mode",
@@ -109,6 +111,8 @@
         "group"
       ],
       "properties": {
+        "directory": {"const": "/var/log/thebitlab"},
+        "directory_mode": {"const": "0750"},
         "rotation": {"const": "daily"},
         "retention_days": {"const": 30},
         "file_mode": {"const": "0640"},
