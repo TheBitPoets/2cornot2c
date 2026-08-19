@@ -39,6 +39,7 @@ _ORIGIN_HOST_RE = re.compile(
     r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
 )
 GENERATED_FILES = (
+    "nginx/thebitlab-process-error-log.conf",
     "nginx/thebitlab-log-format.conf",
     "nginx/thebitlab.conf",
     "logrotate/thebitlab",
@@ -261,6 +262,7 @@ _LOG_VARIABLE_RE = re.compile(r"(?<!\\)[$][A-Za-z0-9_]+")
 
 
 def validate_rendered_logging(
+    process_error_log: str,
     log_format: str,
     nginx_site: str,
     logrotate_config: str,
@@ -279,15 +281,24 @@ def validate_rendered_logging(
     active = [directive.strip() for directive in directives if directive.strip() != "off"]
     if len(active) != 2 or any(directive != expected for directive in active):
         raise DeploymentValidationError("Direttiva access_log non vincolata al formato secret-safe")
-    error_directives = [
+    process_error_directives = [
+        directive.strip()
+        for directive in re.findall(r"(?m)^\s*error_log\s+([^;]+);", process_error_log)
+    ]
+    expected_process_error = f'{manifest["origin"]["error_log"]} notice'
+    if process_error_directives != [expected_process_error]:
+        raise DeploymentValidationError(
+            "Diagnostica nginx process-level non vincolata al file main-context"
+        )
+
+    request_error_directives = [
         directive.strip()
         for directive in re.findall(r"(?m)^\s*error_log\s+([^;]+);", nginx_site)
     ]
-    expected_error = f'{manifest["origin"]["error_log"]} crit'
-    if len(error_directives) != 2 or any(
-        directive != expected_error for directive in error_directives
-    ):
-        raise DeploymentValidationError("Direttiva error_log non vincolata al livello crit secret-safe")
+    if request_error_directives != ["/dev/null"] * 4:
+        raise DeploymentValidationError(
+            "Diagnostica nginx request-context non vincolata al sink non persistente"
+        )
 
     logging = manifest["logging"]
     required_lines = {
@@ -330,6 +341,7 @@ def validate_versioned_logging(manifest: Mapping[str, Any]) -> None:
         "LOG_GROUP": manifest["logging"]["group"],
     }
     validate_rendered_logging(
+        _render_template("thebitlab-process-error-log.conf.template", replacements),
         _render_template("thebitlab-log-format.conf.template", replacements),
         _render_template("thebitlab-nginx.conf.template", replacements),
         _render_template("thebitlab-logrotate.conf.template", replacements),
@@ -405,6 +417,9 @@ def render_bundle(manifest: Mapping[str, Any], output: Path) -> None:
         "backend_bind": f"{service['bind_host']}:{service['port']}",
     }
     contents = {
+        "nginx/thebitlab-process-error-log.conf": _render_template(
+            "thebitlab-process-error-log.conf.template", replacements
+        ),
         "nginx/thebitlab-log-format.conf": _render_template("thebitlab-log-format.conf.template", replacements),
         "nginx/thebitlab.conf": _render_template("thebitlab-nginx.conf.template", replacements),
         "logrotate/thebitlab": _render_template("thebitlab-logrotate.conf.template", replacements),
@@ -413,6 +428,7 @@ def render_bundle(manifest: Mapping[str, Any], output: Path) -> None:
         "manifest.normalized.json": normalized_manifest_bytes(manifest).decode("utf-8"),
     }
     validate_rendered_logging(
+        contents["nginx/thebitlab-process-error-log.conf"],
         contents["nginx/thebitlab-log-format.conf"],
         contents["nginx/thebitlab.conf"],
         contents["logrotate/thebitlab"],

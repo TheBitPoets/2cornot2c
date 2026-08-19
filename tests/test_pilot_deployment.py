@@ -97,6 +97,9 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
     deployment.render_bundle(manifest(), output)
     site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8")
     log_format = (output / "nginx/thebitlab-log-format.conf").read_text(encoding="utf-8")
+    process_error_log = (output / "nginx/thebitlab-process-error-log.conf").read_text(
+        encoding="utf-8"
+    )
 
     assert "listen 443 ssl default_server;" in site
     assert "ssl_reject_handshake on;" in site
@@ -112,8 +115,9 @@ def test_edge_only_nginx_blocks_direct_origin_and_does_not_log_queries(tmp_path:
     assert "$http_referer" not in log_format
     assert "$remote_user" not in log_format
     assert "$http_user_agent" not in log_format
-    assert site.count("error_log /var/log/nginx/thebitlab-error.log crit;") == 2
-    assert "thebitlab-error.log warn;" not in site
+    assert site.count("error_log /dev/null;") == 4
+    assert "/var/log/nginx/thebitlab-error.log" not in site
+    assert "error_log /var/log/nginx/thebitlab-error.log notice;" in process_error_log
     logrotate = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
     assert "/var/log/nginx/thebitlab-access.log /var/log/nginx/thebitlab-error.log {" in logrotate
     assert "daily" in logrotate
@@ -155,13 +159,20 @@ def test_logging_validator_rejects_query_header_or_redirect_fields(
     payload = manifest()
     output = tmp_path / "bundle"
     deployment.render_bundle(payload, output)
+    process_error_log = (output / "nginx/thebitlab-process-error-log.conf").read_text(
+        encoding="utf-8"
+    )
     log_format = (output / "nginx/thebitlab-log-format.conf").read_text(encoding="utf-8")
     site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8")
     logrotate = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
 
     with pytest.raises(deployment.DeploymentValidationError, match="allowlist"):
         deployment.validate_rendered_logging(
-            log_format + f"\n# unsafe {forbidden}\n", site, logrotate, payload
+            process_error_log,
+            log_format + f"\n# unsafe {forbidden}\n",
+            site,
+            logrotate,
+            payload,
         )
 
 
@@ -169,21 +180,44 @@ def test_logging_validator_rejects_unformatted_access_log_and_copytruncate(tmp_p
     payload = manifest()
     output = tmp_path / "bundle"
     deployment.render_bundle(payload, output)
+    process_error_log = (output / "nginx/thebitlab-process-error-log.conf").read_text(
+        encoding="utf-8"
+    )
     log_format = (output / "nginx/thebitlab-log-format.conf").read_text(encoding="utf-8")
     site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8")
     logrotate = (output / "logrotate/thebitlab").read_text(encoding="utf-8")
 
     with pytest.raises(deployment.DeploymentValidationError, match="access_log"):
         deployment.validate_rendered_logging(
-            log_format, site.replace(" thebitlab;", ";", 1), logrotate, payload
+            process_error_log,
+            log_format,
+            site.replace(" thebitlab;", ";", 1),
+            logrotate,
+            payload,
         )
-    with pytest.raises(deployment.DeploymentValidationError, match="error_log"):
+    with pytest.raises(deployment.DeploymentValidationError, match="process-level"):
         deployment.validate_rendered_logging(
-            log_format, site.replace(" crit;", " warn;", 1), logrotate, payload
+            process_error_log.replace(" notice;", " crit;"),
+            log_format,
+            site,
+            logrotate,
+            payload,
+        )
+    with pytest.raises(deployment.DeploymentValidationError, match="request-context"):
+        deployment.validate_rendered_logging(
+            process_error_log,
+            log_format,
+            site.replace("error_log /dev/null;", "error_log /tmp/request-error.log;", 1),
+            logrotate,
+            payload,
         )
     with pytest.raises(deployment.DeploymentValidationError, match="logrotate"):
         deployment.validate_rendered_logging(
-            log_format, site, logrotate.replace("    sharedscripts", "    copytruncate"), payload
+            process_error_log,
+            log_format,
+            site,
+            logrotate.replace("    sharedscripts", "    copytruncate"),
+            payload,
         )
 
 
@@ -201,10 +235,15 @@ def test_secret_safe_scanner_and_synthetic_callback_audit_do_not_echo_values(
     assert log_scanner.scan_stream(io.BytesIO(clean)) == ()
 
     access_log = tmp_path / "access.log"
-    error_log = tmp_path / "error.log"
-    access_log.write_bytes(clean)
-    error_log.write_bytes(b"")
-    smoke._verify_runtime_access_log(access_log, error_log)
+    process_error_log = tmp_path / "process-error.log"
+    access_log.write_bytes(
+        clean
+        + b'127.0.0.1 [18/Aug/2026:00:00:02 +0000] '
+        + b'"GET /_thebitlab-smoke/request-context-error HTTP/1.1" 502 0 '
+        + b'request_time=0.001 request_id=error-request-id\n'
+    )
+    process_error_log.write_bytes(b"nginx process lifecycle diagnostic\n")
+    smoke._verify_runtime_logs(access_log, process_error_log, ())
 
     dummy_code = "tb704-synthetic-code-never-publish"
     dummy_state = "tb704-synthetic-state-never-publish"

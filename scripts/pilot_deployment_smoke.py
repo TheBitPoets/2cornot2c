@@ -54,39 +54,63 @@ def _verify_lock(bundle: Path) -> None:
             raise RuntimeError(f"Digest bundle non valido: {name}")
 
 
-def _send_https_request(host: str, port: int, target: str) -> int:
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
+def _send_request(
+    host: str,
+    port: int,
+    target: str,
+    *,
+    use_tls: bool,
+    headers: tuple[str, ...] = (),
+) -> int | None:
     with socket.create_connection(("127.0.0.1", port), timeout=5) as connection:
-        with context.wrap_socket(connection, server_hostname=host) as tls:
-            request = (
-                f"GET {target} HTTP/1.1\r\n"
-                f"Host: {host}\r\n"
-                "User-Agent: thebitlab-deployment-smoke\r\n"
-                "Connection: close\r\n\r\n"
-            )
-            tls.sendall(request.encode("ascii"))
-            response = tls.recv(4096)
+        stream: socket.socket | ssl.SSLSocket = connection
+        if use_tls:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            stream = context.wrap_socket(connection, server_hostname=host)
+        request = (
+            f"GET {target} HTTP/1.1\r\n"
+            f"Host: {host}\r\n"
+            "User-Agent: thebitlab-deployment-smoke\r\n"
+            + "".join(f"{header}\r\n" for header in headers)
+            + "Connection: close\r\n\r\n"
+        )
+        stream.sendall(request.encode("ascii"))
+        response = stream.recv(4096)
+    if not response:
+        return None
     match = re.match(rb"HTTP/[0-9.]+\s+([0-9]{3})", response)
     if match is None:
-        raise RuntimeError("Risposta HTTPS non valida nello smoke logging")
+        raise RuntimeError("Risposta HTTP non valida nello smoke logging")
     return int(match.group(1))
 
 
-def _verify_runtime_access_log(access_log: Path, error_log: Path) -> None:
-    findings = log_scanner.scan_path(access_log) + log_scanner.scan_path(error_log)
+def _verify_runtime_logs(
+    access_log: Path,
+    process_error_log: Path,
+    markers: tuple[str, ...],
+) -> None:
+    findings = log_scanner.scan_path(access_log) + log_scanner.scan_path(process_error_log)
     if findings:
         raise RuntimeError("Scanner log secret-safe fallito; contenuto omesso")
+    for persisted_log in (access_log, process_error_log):
+        content = persisted_log.read_bytes()
+        if any(marker.encode("ascii") in content for marker in markers):
+            raise RuntimeError("Marker sensibile persistito nei log nginx; contenuto omesso")
+
     records = access_log.read_text(encoding="utf-8").splitlines()
     expected = (
         '"GET /auth/google/callback HTTP/1.1" 204',
+        '"GET /_thebitlab-smoke/request-context-error HTTP/1.1" 502',
         '"GET /health HTTP/1.1" 204',
     )
     if any(not any(fragment in record for record in records) for fragment in expected):
-        raise RuntimeError("Audit runtime incompleto per callback o richiesta ordinaria")
+        raise RuntimeError("Audit runtime incompleto per callback, errore o richiesta ordinaria")
     if any("request_time=" not in record or "request_id=" not in record for record in records):
         raise RuntimeError("Timing o correlation identifier assenti dall'audit runtime")
+    if process_error_log.stat().st_size == 0:
+        raise RuntimeError("Diagnostica nginx process-level assente")
 
 
 def _run_nginx_logging_smoke(
@@ -94,10 +118,19 @@ def _run_nginx_logging_smoke(
     nginx_config: Path,
     temporary: Path,
     origin_host: str,
+    http_port: int,
     https_port: int,
     access_log: Path,
-    error_log: Path,
+    process_error_log: Path,
 ) -> None:
+    callback_markers = ("tb704-callback-code", "tb704-callback-state")
+    error_markers = (
+        "tb704-error-code",
+        "tb704-error-state",
+        "tb704-error-cookie",
+        "tb704.error.bearer",
+    )
+    unknown_markers = ("tb704-unknown-code", "tb704-unknown-state")
     process = subprocess.Popen(
         [nginx, "-p", str(temporary), "-c", str(nginx_config), "-g", "daemon off;"],
         stdout=subprocess.PIPE,
@@ -114,28 +147,65 @@ def _run_nginx_logging_smoke(
                 if process.poll() is not None or time.monotonic() >= deadline:
                     raise RuntimeError("nginx non avviato per lo smoke logging")
                 time.sleep(0.05)
-        callback_status = _send_https_request(
+        callback_status = _send_request(
             origin_host,
             https_port,
-            "/auth/google/callback?code=tb704-synthetic-code&state=tb704-synthetic-state",
+            "/auth/google/callback?code=tb704-callback-code&state=tb704-callback-state",
+            use_tls=True,
         )
-        ordinary_status = _send_https_request(origin_host, https_port, "/health")
-        if (callback_status, ordinary_status) != (204, 204):
+        error_status = _send_request(
+            origin_host,
+            https_port,
+            "/_thebitlab-smoke/request-context-error?code=tb704-error-code&state=tb704-error-state",
+            use_tls=True,
+            headers=(
+                "Cookie: session=tb704-error-cookie",
+                "Authorization: Bearer tb704.error.bearer",
+            ),
+        )
+        unknown_status = _send_request(
+            "unknown.invalid",
+            http_port,
+            "/auth/google/callback?code=tb704-unknown-code&state=tb704-unknown-state",
+            use_tls=False,
+        )
+        ordinary_status = _send_request(
+            origin_host, https_port, "/health", use_tls=True
+        )
+        if (callback_status, error_status, unknown_status, ordinary_status) != (
+            204,
+            502,
+            None,
+            204,
+        ):
             raise RuntimeError("Status inatteso nello smoke logging")
     finally:
         process.terminate()
         try:
-            process.communicate(timeout=10)
+            captured = process.communicate(timeout=10)
         except subprocess.TimeoutExpired:
             process.kill()
-            process.communicate(timeout=5)
-    _verify_runtime_access_log(access_log, error_log)
+            captured = process.communicate(timeout=5)
+    markers = callback_markers + error_markers + unknown_markers
+    if any(marker in stream for stream in captured for marker in markers):
+        raise RuntimeError("Marker sensibile emesso da nginx; contenuto omesso")
+    _verify_runtime_logs(access_log, process_error_log, markers)
 
 
 def _available_loopback_port() -> int:
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         return int(listener.getsockname()[1])
+
+
+def _reserve_unconnectable_port(excluded: frozenset[int]) -> tuple[socket.socket, int]:
+    while True:
+        guard = socket.socket()
+        guard.bind(("127.0.0.1", 0))
+        port = int(guard.getsockname()[1])
+        if port not in excluded:
+            return guard, port
+        guard.close()
 
 
 def _nginx_site_for_unprivileged_smoke(
@@ -230,9 +300,9 @@ def run_smoke(config: Path) -> None:
         manifest["origin"]["tls_certificate_file"] = str(certificate)
         manifest["origin"]["tls_private_key_file"] = str(private_key)
         access_log = temporary / "access.log"
-        error_log = temporary / "error.log"
+        process_error_log = temporary / "process-error.log"
         manifest["origin"]["access_log"] = str(access_log)
-        manifest["origin"]["error_log"] = str(error_log)
+        manifest["origin"]["error_log"] = str(process_error_log)
         deployment.validate_manifest(manifest)
         values = deployment.parse_environment_file(environment_file)
         deployment.validate_environment(values, github_oauth=False)
@@ -256,13 +326,25 @@ def run_smoke(config: Path) -> None:
         if smoke_site.count(proxy_directive) != 1:
             raise RuntimeError("Proxy location inattesa nello smoke logging")
         smoke_site = smoke_site.replace(proxy_directive, "        return 204;")
+        location_anchor = "    location / {\n"
+        if smoke_site.count(location_anchor) != 1:
+            raise RuntimeError("Location nginx inattesa nello smoke logging")
+        fault_guard, fault_port = _reserve_unconnectable_port(
+            frozenset((http_port, https_port))
+        )
+        fault_location = (
+            "    location = /_thebitlab-smoke/request-context-error {\n"
+            f"        proxy_pass http://127.0.0.1:{fault_port};\n"
+            "    }\n\n"
+        )
+        smoke_site = smoke_site.replace(location_anchor, fault_location + location_anchor)
         nginx_smoke_site.write_text(smoke_site, encoding="utf-8")
         nginx_config = temporary / "nginx-smoke.conf"
         nginx_config.write_text(
             "\n".join(
                 (
                     f"pid {temporary / 'nginx.pid'};",
-                    f"error_log {temporary / 'nginx-global.log'};",
+                    f"include {bundle / 'nginx/thebitlab-process-error-log.conf'};",
                     "events {}",
                     "http {",
                     "    include /etc/nginx/mime.types;",
@@ -274,16 +356,20 @@ def run_smoke(config: Path) -> None:
             ),
             encoding="utf-8",
         )
-        _run([nginx, "-t", "-p", str(temporary), "-c", str(nginx_config)])
-        _run_nginx_logging_smoke(
-            nginx,
-            nginx_config,
-            temporary,
-            manifest["origin"]["url"].removeprefix("https://"),
-            https_port,
-            access_log,
-            error_log,
-        )
+        try:
+            _run([nginx, "-t", "-p", str(temporary), "-c", str(nginx_config)])
+            _run_nginx_logging_smoke(
+                nginx,
+                nginx_config,
+                temporary,
+                manifest["origin"]["url"].removeprefix("https://"),
+                http_port,
+                https_port,
+                access_log,
+                process_error_log,
+            )
+        finally:
+            fault_guard.close()
         _run(
             [
                 logrotate,

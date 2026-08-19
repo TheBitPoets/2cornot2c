@@ -1,4 +1,4 @@
-# Generated policy: ordinary minimized proxy logs are retained for 30 days.
+# Generated policy: path-only access and process-only nginx logs are retained for 30 days.
 # Incident/legal-hold evidence is preserved separately under the approved procedure.
 @@ACCESS_LOG@@ @@ERROR_LOG@@ {
     daily

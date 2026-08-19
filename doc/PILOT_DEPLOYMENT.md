@@ -9,7 +9,7 @@ Questo documento è il contratto canonico per preparare una nuova candidate TheB
 | `deploy/pilot/candidate.example.json` | manifest di esempio senza segreti né valori live |
 | `schemas/pilot-deployment.schema.json` | schema chiuso di release, servizio, root e origin |
 | `schemas/pilot-environment.schema.json` | nomi e forma dell'`EnvironmentFile` esterno |
-| `deploy/pilot/templates/` | template nginx, formato log secret-safe, logrotate e unit systemd |
+| `deploy/pilot/templates/` | template nginx main/http/server, formato log secret-safe, logrotate e unit systemd |
 | `scripts/validate_pilot_deployment.py` | validazione semantica, lint logging fail-closed e rendering deterministico |
 | `scripts/pilot_service_launcher.py` | import fail-closed dei secret e avvio con topologia autorevole |
 | `scripts/pilot_access_log_scanner.py` | scanner metadata-only che non ristampa il contenuto sensibile |
@@ -35,7 +35,7 @@ python scripts/pilot_deployment_smoke.py \
   --config deploy/pilot/candidate.example.json
 ```
 
-Lo smoke crea root, `EnvironmentFile`, certificato e output in una directory temporanea; esegue `nginx -t`, avvia soltanto il processo nginx temporaneo, invia una callback con marker dummy e una richiesta ordinaria, passa lo scanner su access/error log, valida logrotate in debug ed esegue `systemd-analyze verify`. Per restare senza privilegi, la sola copia nginx temporanea usa due porte loopback non privilegiate assegnate localmente e una risposta statica; il bundle resta invariato su 80/443 e sul proxy reale. Il processo temporaneo viene sempre terminato; nessun servizio host viene avviato o ricaricato.
+Lo smoke crea root, `EnvironmentFile`, certificato e output in una directory temporanea; esegue `nginx -t`, avvia soltanto il processo nginx temporaneo, invia una callback con marker dummy, una richiesta ordinaria, un fault request-scoped verso un upstream intenzionalmente irraggiungibile e una richiesta query-bearing al default server. Verifica audit path-only, assenza dei marker in ogni destinazione log persistente, diagnostica process-level disponibile, scanner, logrotate in debug e `systemd-analyze verify`. Per restare senza privilegi, la sola copia nginx temporanea usa due porte loopback non privilegiate assegnate localmente e una risposta statica; il bundle resta invariato su 80/443 e sul proxy reale. Il processo temporaneo viene sempre terminato; nessun servizio host viene avviato o ricaricato.
 
 ## Contratto della data root
 
@@ -119,7 +119,11 @@ Non trasferire automaticamente i PASS della topologia precedente.
 
 Il formato `thebitlab` usa `$uri` e una allowlist chiusa di variabili. Non registra `$request`, `$request_uri`, `$args`, `$query_string`, header/cookie/authorization, `Referer`, `Location` upstream/sent o user-agent arbitrari. Conserva audit operativo minimo: sorgente, timestamp, metodo, path canonico, protocollo, status, byte, `$request_time` e `$request_id`. Il validator blocca il rendering se il formato o una direttiva `access_log` escono dal contratto.
 
-Poiché il log errori nginx request-context può includere il target non redatto, i server candidate lo limitano a `crit`; status, timing e correlation restano nell'access log path-only. Il manifest rende espliciti rotazione `daily`, retention ordinaria di 30 giorni, modo `0640`, owner e gruppo. Logrotate comprime, usa `rotate 30` + `maxage 30`, riapre nginx con `USR1` e vieta `copytruncate`. Incident/legal hold seguono un'eccezione separata e motivata, non una retention implicita.
+Il livello non è una barriera di redazione. Nel sorgente upstream nginx 1.24, [`ngx_log_error_core`](https://github.com/nginx/nginx/blob/release-1.24.0/src/core/ngx_log.c#L148-L149) invoca l'handler HTTP dopo aver formato ogni evento non-debug; [`ngx_http_log_error_handler`](https://github.com/nginx/nginx/blob/release-1.24.0/src/http/ngx_http_request.c#L3814-L3827) aggiunge poi la request line completa quando disponibile. La direttiva [`error_log`](https://nginx.org/en/docs/ngx_core_module.html#error_log) filtra soltanto la severità.
+
+La baseline separa quindi i canali: tutti e quattro i server candidate, inclusi i default HTTP/TLS, impostano `error_log /dev/null`, e le location lo ereditano. Il merge upstream della configurazione usa il parent soltanto quando il livello corrente non definisce `error_log` ([`ngx_http_core_module.c`](https://github.com/nginx/nginx/blob/release-1.24.0/src/http/ngx_http_core_module.c#L3770-L3775)); il listener usa inizialmente il log del `default_server` ([`ngx_http.c`](https://github.com/nginx/nginx/blob/release-1.24.0/src/http/ngx_http.c#L1812-L1819)). Nessun livello request-context del pilot ha quindi una destinazione persistente. Status, timing e correlation restano nell'access log path-only.
+
+`nginx/thebitlab-process-error-log.conf` entra invece nel contesto `main` e conserva in `origin.error_log`, a livello `notice`, diagnostica di ciclo/master/worker non associata alle richieste. Il manifest rende espliciti rotazione `daily`, retention ordinaria di 30 giorni, modo `0640`, owner e gruppo per access e process log. Logrotate comprime, usa `rotate 30` + `maxage 30`, riapre nginx con `USR1` e vieta `copytruncate`. Incident/legal hold seguono un'eccezione separata e motivata, non una retention implicita.
 
 La procedura canonica per classificare, quarantinare e disporre in sicurezza lo storico potenzialmente query-bearing è [`PILOT_SENSITIVE_LOG_HANDLING.md`](PILOT_SENSITIVE_LOG_HANDLING.md). Non leggere o pubblicare log grezzi per produrre evidenza.
 
@@ -133,6 +137,7 @@ Una candidate deve conservare separatamente release e configurazione immutabili,
 /etc/thebitlab/deployments/<id>-<commit>/
 /etc/thebitlab/current -> deployments/<id>-<commit>
 /etc/systemd/system/thebitlab.service -> /etc/thebitlab/current/systemd/thebitlab.service
+/etc/nginx/modules-enabled/90-thebitlab-process-error-log.conf -> /etc/thebitlab/current/nginx/thebitlab-process-error-log.conf
 /etc/nginx/conf.d/thebitlab-log-format.conf -> /etc/thebitlab/current/nginx/thebitlab-log-format.conf
 /etc/nginx/sites-enabled/thebitlab.conf -> /etc/thebitlab/current/nginx/thebitlab.conf
 /etc/logrotate.d/thebitlab -> /etc/thebitlab/current/logrotate/thebitlab
@@ -140,11 +145,11 @@ Una candidate deve conservare separatamente release e configurazione immutabili,
 /srv/thebitlab/data/                    root persistente al rollback
 ```
 
-Prima dell'attivazione verificare SHA, digest del lock, metadata dei riferimenti esterni, schema dell'environment, ownership/root, contratto firewall, root canonica con `pilot_data_root.py validate` e tool smoke. Il launcher appartiene alla release fissata da `release.commit`; l'unit deve invocarlo e non deve contenere `EnvironmentFile=`. I quattro symlink di integrazione nginx/logrotate/systemd devono puntare **attraverso** `/etc/thebitlab/current`, non a copie o direttamente a una versione: in questo modo lo switch del bundle cambia tutti gli artifact attivi. Il formato log entra nel contesto nginx `http`; nessun file renderizzato va editato sul target. Conservare bundle, checkout e virtualenv precedenti finché termina la finestra di rollback. Qualunque differenza manuale fra bundle e host invalida il gate topologia.
+Prima dell'attivazione verificare SHA, digest del lock, metadata dei riferimenti esterni, schema dell'environment, ownership/root, contratto firewall, root canonica con `pilot_data_root.py validate` e tool smoke. Il launcher appartiene alla release fissata da `release.commit`; l'unit deve invocarlo e non deve contenere `EnvironmentFile=`. I cinque symlink di integrazione nginx/logrotate/systemd devono puntare **attraverso** `/etc/thebitlab/current`, non a copie o direttamente a una versione: in questo modo lo switch del bundle cambia tutti gli artifact attivi. Su Ubuntu il link `modules-enabled` è incluso dal file nginx di distribuzione nel contesto `main`; questa precondizione va verificata e non sostituita con un include nel contesto `http`. Il formato access log entra invece nel contesto `http`. Nessun file renderizzato va editato sul target. Conservare bundle, checkout e virtualenv precedenti finché termina la finestra di rollback. Qualunque differenza manuale fra bundle e host invalida il gate topologia.
 
 ## Rollback bounded
 
-Target operativo: decisione e rollback tecnico entro **15 minuti**, con un solo tentativo. Il rollback è ammesso soltanto verso il bundle precedente già validato, il cui checkout e lock sono ancora presenti. Dopo il confine #704, anche il bundle di rollback deve essere schema v2 e mantenere formato path-only, livello errori `crit`, logrotate e access mode: una candidate v1 o un formato query-bearing non è un rollback ammissibile. Se non esiste una precedente candidate conforme, mantenere la configurazione proxy/logging v2 e arretrare soltanto la release applicativa compatibile, oppure fermare il servizio ed escalare.
+Target operativo: decisione e rollback tecnico entro **15 minuti**, con un solo tentativo. Il rollback è ammesso soltanto verso il bundle precedente già validato, il cui checkout e lock sono ancora presenti. Dopo il confine #704, anche il bundle di rollback deve essere schema v2 e mantenere formato path-only, sink non persistente in ogni server, diagnostica process-level separata, logrotate e access mode: una candidate v1 o un formato query-bearing non è un rollback ammissibile. Se non esiste una precedente candidate conforme, mantenere la configurazione proxy/logging v2 e arretrare soltanto la release applicativa compatibile, oppure fermare il servizio ed escalare.
 
 1. Dichiarare rollback, bloccare nuovi deploy e registrare release corrente/precedente senza copiare environment o log sensibili.
 2. Fermare l'app se il failure mode può scrivere dati incoerenti.

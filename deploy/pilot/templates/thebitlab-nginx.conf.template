@@ -6,6 +6,8 @@ server {
     listen [::]:80 default_server;
     server_name _;
     access_log off;
+    # Never persist request-context diagnostics; the main-context process log remains active.
+    error_log /dev/null;
     return 444;
 }
 
@@ -15,6 +17,8 @@ server {
     server_name _;
     ssl_reject_handshake on;
     access_log off;
+    # Cover pre-request TLS/connection failures on the default listener too.
+    error_log /dev/null;
 }
 
 server {
@@ -23,8 +27,9 @@ server {
     server_name @@ORIGIN_HOST@@;
 @@ORIGIN_ACCESS_RULES@@
     access_log @@ACCESS_LOG@@ thebitlab;
-    # Request-context errors can include an unredacted target; access audit remains authoritative.
-    error_log @@ERROR_LOG@@ crit;
+    # Nginx appends the raw request line to every persisted request-context error.
+    # Keep request diagnostics non-persistent; path-only access audit remains authoritative.
+    error_log /dev/null;
     return 308 https://@@ORIGIN_HOST@@$request_uri;
 }
 
@@ -41,8 +46,9 @@ server {
     ssl_session_tickets off;
 
     access_log @@ACCESS_LOG@@ thebitlab;
-    # Keep only infrastructure-critical diagnostics; request outcomes remain in the path-only access log.
-    error_log @@ERROR_LOG@@ crit;
+    # Locations inherit this non-persistent request-error destination.
+    # Process/cycle diagnostics use the separate main-context artifact.
+    error_log /dev/null;
     server_tokens off;
     client_max_body_size 32m;
 
