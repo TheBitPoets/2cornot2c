@@ -1077,14 +1077,15 @@ def prepare_log_directory(manifest: Mapping[str, Any]) -> None:
         raise ActivationError("Contratto ownership/mode Ubuntu logging non canonico")
     directory = Path(logging["directory"])
     owner_id = pwd.getpwnam("root").pw_uid
-    group_id = grp.getgrnam("adm").gr_gid
+    directory_group_id = grp.getgrnam("www-data").gr_gid
+    file_group_id = grp.getgrnam("adm").gr_gid
     file_owner_id = pwd.getpwnam("www-data").pw_uid
     directory.mkdir(mode=0o750, parents=False, exist_ok=True)
     metadata = directory.lstat()
     if directory.is_symlink() or not stat.S_ISDIR(metadata.st_mode):
         raise ActivationError(f"Directory log non regolare: {directory}")
     _verify_no_extended_acl(directory)
-    os.chown(directory, owner_id, group_id)
+    os.chown(directory, owner_id, directory_group_id)
     os.chmod(directory, 0o750)
     _verify_no_extended_acl(directory)
 
@@ -1105,7 +1106,7 @@ def prepare_log_directory(manifest: Mapping[str, Any]) -> None:
             metadata = os.fstat(descriptor)
             if not stat.S_ISREG(metadata.st_mode):
                 raise ActivationError(f"Log non regolare: {path}")
-            os.fchown(descriptor, file_owner_id, group_id)
+            os.fchown(descriptor, file_owner_id, file_group_id)
             os.fchmod(descriptor, 0o640)
         finally:
             os.close(descriptor)
@@ -1114,14 +1115,14 @@ def prepare_log_directory(manifest: Mapping[str, Any]) -> None:
         if (
             stat.S_IMODE(metadata.st_mode) != 0o640
             or metadata.st_uid != file_owner_id
-            or metadata.st_gid != group_id
+            or metadata.st_gid != file_group_id
         ):
             raise ActivationError(f"Metadata log non canonici: {path}")
     metadata = directory.stat()
     if (
         stat.S_IMODE(metadata.st_mode) != 0o750
         or metadata.st_uid != owner_id
-        or metadata.st_gid != group_id
+        or metadata.st_gid != directory_group_id
     ):
         raise ActivationError("Metadata directory log non canonici")
 

@@ -226,9 +226,9 @@ def _verify_metadata() -> None:
     if (
         stat.S_IMODE(metadata.st_mode) != 0o750
         or metadata.st_uid != 0
-        or metadata.st_gid != grp.getgrnam("adm").gr_gid
+        or metadata.st_gid != grp.getgrnam("www-data").gr_gid
     ):
-        raise RuntimeError("Metadata directory log diversi da root:adm 0750")
+        raise RuntimeError("Metadata directory log diversi da root:www-data 0750")
     for path in (ACCESS_LOG, PROCESS_LOG):
         metadata = path.stat()
         if (

@@ -16,7 +16,7 @@
         result=$?
         case "$state:$result" in
             active:0)
-                systemctl kill --kill-whom=all --signal=USR1 nginx.service || exit 1
+                systemctl kill --kill-whom=main --signal=USR1 nginx.service || exit 1
                 # Signal delivery is asynchronous; do not declare success before nginx settles.
                 sleep 1
                 post_state="$(systemctl is-active nginx.service 2>/dev/null)"
