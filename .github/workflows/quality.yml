@@ -62,9 +62,7 @@ jobs:
         run: python -m pytest
 
       - name: Run effective Ubuntu deployment integration
-        run: |
-          sudo systemctl stop nginx || true
-          sudo "$(command -v python)" scripts/pilot_ubuntu_integration.py --ephemeral-host
+        run: scripts/run_pilot_ubuntu_integration_container.sh
 
       - name: Check generated course plan
         run: python scripts/generate_course_plan.py --check

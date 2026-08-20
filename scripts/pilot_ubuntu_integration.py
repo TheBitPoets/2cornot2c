@@ -1098,10 +1098,14 @@ def run(*, ephemeral_host: bool = False) -> None:
             workspace.systemd_surface = prepare_ephemeral_dedicated_systemd_surface(
                 temporary, ephemeral_host=ephemeral_host
             )
-            print(
-                "EVIDENCE: ephemeral dedicated systemd surface quarantined "
-                f"{len(workspace.systemd_surface.artifacts)} ambient artifact(s)"
-            )
+            ambient_artifacts = len(workspace.systemd_surface.artifacts)
+            if ambient_artifacts == 0:
+                print("EVIDENCE: ephemeral dedicated systemd surface: 0 ambient artifacts")
+            else:
+                print(
+                    "EVIDENCE: ephemeral dedicated systemd surface quarantined "
+                    f"{ambient_artifacts} ambient artifact(s)"
+                )
             installed_toolchain, installed_launcher, installed_pin = _install_ephemeral_toolchain(temporary)
             Path("/run/thebitlab-ephemeral-activation-test").write_text(
                 "ephemeral-only\n", encoding="ascii"
@@ -1709,7 +1713,8 @@ def run(*, ephemeral_host: bool = False) -> None:
             activation._attest_nginx_service_runtime(final_unit)
             print(
                 "EVIDENCE: migration UnitFileState path "
-                f"{initial_unit_file_state}->masked->disabled(start)->enabled; runtime PASS"
+                f"{initial_unit_file_state}->masked->disabled(start)->enabled; "
+                f"ControlGroup={final_unit.control_group}; runtime PASS"
             )
             callback = _send(
                 "127.0.0.1", 443,

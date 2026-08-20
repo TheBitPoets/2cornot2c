@@ -1,0 +1,25 @@
+# CI-only effective Ubuntu deployment integration environment.
+# Ubuntu 24.04 (Noble), pinned to the reviewed official multi-architecture digest.
+FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea
+
+ENV container=docker
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        acl \
+        bash \
+        dbus \
+        logrotate \
+        nginx \
+        openssl \
+        procps \
+        python3 \
+        python3-jsonschema \
+        systemd \
+        systemd-sysv \
+    && systemctl disable nginx.service \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]
