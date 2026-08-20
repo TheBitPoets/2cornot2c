@@ -1528,7 +1528,23 @@ def _install_ephemeral_systemd_surface_fixture(
     return local_unit_root, local_generator_root
 
 
-def _systemd_artifact_identity(path: Path) -> tuple[int, int, int, int, int, int]:
+def _observed_systemd_artifact_identity(
+    path: Path,
+) -> tuple[int, int, int, int, int, int]:
+    metadata = path.lstat()
+    return (
+        metadata.st_mode,
+        metadata.st_uid,
+        metadata.st_gid,
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_size,
+    )
+
+
+def _raw_systemd_artifact_identity(
+    path: Path,
+) -> tuple[int, int, int, int, int, int]:
     metadata = os.lstat(path)
     return (
         metadata.st_mode,
@@ -1580,8 +1596,10 @@ def test_ephemeral_systemd_surface_quarantines_and_exactly_restores_local_genera
     contents = b"#!/bin/sh\nexit 0\n"
     generator.write_bytes(contents)
     generator.chmod(0o751)
-    before = _systemd_artifact_identity(generator)
-    digest = hashlib.sha256(contents).hexdigest()
+    observed_before = _observed_systemd_artifact_identity(generator)
+    raw_before = _raw_systemd_artifact_identity(generator)
+    bytes_before = generator.read_bytes()
+    digest = hashlib.sha256(bytes_before).hexdigest()
 
     # Production remains fail-closed without the explicit ephemeral preparation.
     with pytest.raises(ubuntu_activation.ActivationError, match="Generator systemd locale"):
@@ -1599,9 +1617,10 @@ def test_ephemeral_systemd_surface_quarantines_and_exactly_restores_local_genera
         assert len(surface.artifacts) == 1
         snapshot = surface.artifacts[0]
         assert snapshot.sha256 == digest
-        assert snapshot.mode == stat.S_IMODE(before[0])
-        assert (snapshot.uid, snapshot.gid) == before[1:3]
-        assert (snapshot.device, snapshot.inode) == before[3:5]
+        assert snapshot.mode == stat.S_IMODE(observed_before[0])
+        assert (snapshot.uid, snapshot.gid) == observed_before[1:3]
+        assert (snapshot.device, snapshot.inode) == observed_before[3:5]
+        assert snapshot.size == observed_before[5]
         manifest = json.loads(surface.manifest_path.read_text(encoding="utf-8"))
         record = manifest["artifacts"][0]
         assert set(record) == {
@@ -1619,9 +1638,11 @@ def test_ephemeral_systemd_surface_quarantines_and_exactly_restores_local_genera
             ubuntu_activation._attest_systemd_boot_surface()
         attack.unlink()
 
-    assert generator.read_bytes() == contents
-    assert hashlib.sha256(generator.read_bytes()).hexdigest() == digest
-    assert _systemd_artifact_identity(generator) == before
+    raw_after = _raw_systemd_artifact_identity(generator)
+    contents_after = generator.read_bytes()
+    assert raw_after == raw_before
+    assert contents_after == bytes_before
+    assert hashlib.sha256(contents_after).hexdigest() == digest
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="renameat2 Linux richiesto")
@@ -1633,7 +1654,7 @@ def test_ephemeral_systemd_surface_restores_after_integration_exception(
     )
     generator = generator_root / "ambient-generator"
     generator.write_bytes(b"ambient\n")
-    before = _systemd_artifact_identity(generator)
+    raw_before = _raw_systemd_artifact_identity(generator)
 
     with pytest.raises(RuntimeError, match="failure after quarantine"):
         with ubuntu_integration._EphemeralIntegrationWorkspace(parent=tmp_path) as workspace:
@@ -1647,7 +1668,7 @@ def test_ephemeral_systemd_surface_restores_after_integration_exception(
             raise RuntimeError("failure after quarantine")
 
     assert generator.read_bytes() == b"ambient\n"
-    assert _systemd_artifact_identity(generator) == before
+    assert _raw_systemd_artifact_identity(generator) == raw_before
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="renameat2 Linux richiesto")
@@ -1691,7 +1712,9 @@ def test_ephemeral_systemd_surface_restores_symlink_target_exactly(
     generator = generator_root / "ambient-generator-link"
     relative_target = os.path.relpath(target, generator_root)
     generator.symlink_to(relative_target)
-    before = _systemd_artifact_identity(generator)
+    observed_before = _observed_systemd_artifact_identity(generator)
+    raw_before = _raw_systemd_artifact_identity(generator)
+    symlink_target_before = os.readlink(generator)
 
     temporary = tmp_path / "integration"
     temporary.mkdir()
@@ -1699,12 +1722,19 @@ def test_ephemeral_systemd_surface_restores_symlink_target_exactly(
         temporary, ephemeral_host=True
     )
     assert not generator.is_symlink()
-    assert surface.artifacts[0].symlink_target == relative_target
+    snapshot = surface.artifacts[0]
+    assert snapshot.file_type == "symlink"
+    assert snapshot.symlink_target == symlink_target_before
+    assert snapshot.sha256 is None
+    assert snapshot.mode == stat.S_IMODE(observed_before[0])
+    assert (snapshot.uid, snapshot.gid) == observed_before[1:3]
+    assert (snapshot.device, snapshot.inode) == observed_before[3:5]
+    assert snapshot.size == observed_before[5]
     surface.restore()
 
     assert generator.is_symlink()
-    assert os.readlink(generator) == relative_target
-    assert _systemd_artifact_identity(generator) == before
+    assert os.readlink(generator) == symlink_target_before
+    assert _raw_systemd_artifact_identity(generator) == raw_before
 
 
 @pytest.mark.parametrize("enabled", (False, True), ids=("disabled", "enabled"))
