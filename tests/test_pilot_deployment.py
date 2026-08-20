@@ -825,6 +825,125 @@ def test_effective_nginx_token_parser_accepts_only_exact_locked_pilot(
         )
 
 
+def test_effective_nginx_requires_exact_attested_module_source_set(tmp_path: Path) -> None:
+    payload = manifest()
+    output = tmp_path / "bundle"
+    deployment.render_bundle(payload, output)
+    module_source = "/etc/nginx/modules-enabled/50-official.conf"
+    effective, expected = effective_v2(
+        output, extra_sources={module_source: "load_module modules/ngx_official.so;\n"}
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="non attestate"):
+        ubuntu_activation.validate_effective_nginx(
+            effective, payload, topology="v2", expected_sources=expected
+        )
+    ubuntu_activation.validate_effective_nginx(
+        effective,
+        payload,
+        topology="v2",
+        expected_sources=expected,
+        trusted_module_sources=frozenset({module_source}),
+    )
+
+
+def _install_nginx_module_provenance_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[dict[str, Path], set[Path]]:
+    enabled = tmp_path / "etc/nginx/modules-enabled"
+    available = tmp_path / "usr/share/nginx/modules-available"
+    prefix = tmp_path / "usr/share/nginx"
+    module_root = tmp_path / "usr/lib/nginx/modules"
+    for directory in (enabled, available, module_root):
+        directory.mkdir(parents=True, exist_ok=True)
+    modules_link = prefix / "modules"
+    modules_link.symlink_to("../../lib/nginx/modules", target_is_directory=True)
+    binary = module_root / "ngx_official.so"
+    binary.write_bytes(b"official module fixture")
+    config = available / "official.conf"
+    config.write_text("load_module modules/ngx_official.so;\n", encoding="utf-8")
+    entry = enabled / "50-official.conf"
+    entry.symlink_to(config)
+
+    original_lstat = Path.lstat
+
+    def root_lstat(path: Path):
+        values = list(original_lstat(path))
+        values[4] = 0
+        return os.stat_result(values)
+
+    monkeypatch.setattr(Path, "lstat", root_lstat)
+    monkeypatch.setattr(ubuntu_activation, "NGINX_MODULES_ENABLED_ROOT", enabled)
+    monkeypatch.setattr(ubuntu_activation, "NGINX_PREFIX", prefix)
+    monkeypatch.setattr(ubuntu_activation, "NGINX_MODULES_LINK", modules_link)
+    monkeypatch.setattr(ubuntu_activation, "NGINX_MODULES_ROOT", module_root)
+    monkeypatch.setattr(ubuntu_activation, "NGINX_MODULES_AVAILABLE_ROOT", available)
+    monkeypatch.setattr(
+        ubuntu_activation, "_assert_systemd_directory_ancestry", lambda _path: None
+    )
+    paths = {
+        "enabled": enabled,
+        "available": available,
+        "modules_link": modules_link,
+        "module_root": module_root,
+        "binary": binary,
+        "config": config,
+        "entry": entry,
+    }
+    return paths, {config, modules_link, binary}
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink/mode POSIX richiesti")
+def test_official_package_nginx_module_config_and_binary_are_accepted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    paths, owned = _install_nginx_module_provenance_fixture(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        ubuntu_activation, "_dpkg_owned_paths", lambda candidates: frozenset(owned & set(candidates))
+    )
+    assert ubuntu_activation._verify_modules_enabled_entries() == frozenset(
+        {paths["entry"].as_posix()}
+    )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink/mode POSIX richiesti")
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        "local-config",
+        "local-binary",
+        "local-config-and-binary",
+        "binary-symlink",
+        "binary-writable",
+        "binary-hardlink",
+        "non-load-module-directive",
+    ),
+)
+def test_nginx_module_provenance_rejects_unmanaged_or_unsafe_native_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+) -> None:
+    paths, owned = _install_nginx_module_provenance_fixture(tmp_path, monkeypatch)
+    if mutation in {"local-config", "local-config-and-binary"}:
+        owned.remove(paths["config"])
+    if mutation in {"local-binary", "local-config-and-binary"}:
+        owned.remove(paths["binary"])
+    elif mutation == "binary-symlink":
+        outside = tmp_path / "local-module.so"
+        outside.write_bytes(b"local")
+        paths["binary"].unlink()
+        paths["binary"].symlink_to(outside)
+    elif mutation == "binary-writable":
+        paths["binary"].chmod(0o664)
+    elif mutation == "binary-hardlink":
+        os.link(paths["binary"], tmp_path / "unexpected-hardlink.so")
+    elif mutation == "non-load-module-directive":
+        paths["config"].write_text("env LEAK;\n", encoding="utf-8")
+    monkeypatch.setattr(
+        ubuntu_activation, "_dpkg_owned_paths", lambda candidates: frozenset(owned & set(candidates))
+    )
+    with pytest.raises(ubuntu_activation.ActivationError):
+        ubuntu_activation._verify_modules_enabled_entries()
+
+
 @pytest.mark.parametrize(
     "malformed",
     (
@@ -1475,6 +1594,129 @@ def test_systemd_closed_inventory_accepts_package_owned_enabled_unit(
 ) -> None:
     _install_systemd_inventory_fixture(tmp_path, monkeypatch)
     ubuntu_activation._attest_systemd_boot_surface()
+
+
+def test_dpkg_path_attribution_requires_exact_installed_package_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    installed = Path("/usr/lib/nginx/modules/installed.so")
+    stale = Path("/usr/lib/nginx/modules/stale.so")
+
+    def dpkg_run(arguments, **_kwargs):
+        if arguments[1] == "--search":
+            return subprocess.CompletedProcess(
+                arguments,
+                0,
+                f"official-module: {installed.as_posix()}\n"
+                f"removed-module: {stale.as_posix()}\n",
+                "",
+            )
+        assert arguments[1] == "--show"
+        return subprocess.CompletedProcess(
+            arguments,
+            0,
+            "official-module\tinstall ok installed\n"
+            "removed-module\tdeinstall ok config-files\n",
+            "",
+        )
+
+    monkeypatch.setattr(ubuntu_activation.subprocess, "run", dpkg_run)
+    assert ubuntu_activation._dpkg_owned_paths((installed, stale)) == frozenset(
+        {installed}
+    )
+
+
+def _install_generated_sysv_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[tuple[Path, ...], set[Path], dict[Path, Path | None], Path]:
+    generated_root = tmp_path / "run/systemd/generator.late"
+    generated_root.mkdir(parents=True)
+    generated_unit = generated_root / "legacy-package.service"
+    generated_unit.write_text("[Unit]\n", encoding="utf-8")
+    wants = generated_root / "multi-user.target.wants"
+    wants.mkdir()
+    enablement = wants / generated_unit.name
+    init_root = tmp_path / "etc/init.d"
+    init_root.mkdir(parents=True)
+    source = init_root / "legacy-package"
+    source.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    source.chmod(0o755)
+
+    original_lstat = Path.lstat
+
+    def root_lstat(path: Path):
+        values = list(original_lstat(path))
+        values[4] = 0
+        return os.stat_result(values)
+
+    monkeypatch.setattr(Path, "lstat", root_lstat)
+    monkeypatch.setattr(ubuntu_activation, "SYSV_INIT_ROOT", init_root)
+    monkeypatch.setattr(
+        ubuntu_activation, "_assert_systemd_directory_ancestry", lambda _path: None
+    )
+    properties = {
+        "FragmentPath": generated_unit.as_posix(),
+        "SourcePath": source.as_posix(),
+    }
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_property",
+        lambda name, _unit="nginx.service", **_kwargs: properties[name],
+    )
+    artifacts = (generated_unit, enablement)
+    targets = {enablement: generated_unit}
+    return artifacts, {generated_root}, targets, source
+
+
+def test_generated_sysv_unit_rejects_local_unmanaged_source_before_trust(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    artifacts, roots, targets, _source = _install_generated_sysv_fixture(
+        tmp_path, monkeypatch
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_dpkg_owned_paths", lambda _paths: frozenset()
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="Input generator non attribuito"):
+        ubuntu_activation._attest_generated_systemd_artifacts(
+            artifacts, roots, targets, frozenset()
+        )
+
+
+def test_generated_sysv_unit_accepts_only_installed_package_source_and_enablement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    artifacts, roots, targets, source = _install_generated_sysv_fixture(
+        tmp_path, monkeypatch
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_owned_paths",
+        lambda paths: frozenset(path for path in paths if path == source),
+    )
+    trusted_artifacts, trusted_units = (
+        ubuntu_activation._attest_generated_systemd_artifacts(
+            artifacts, roots, targets, frozenset()
+        )
+    )
+    assert trusted_artifacts == frozenset(artifacts)
+    assert trusted_units == frozenset({"legacy-package.service"})
+
+
+def test_generated_package_target_link_without_closed_input_policy_is_rejected(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run/systemd/generator"
+    wants = root / "multi-user.target.wants"
+    wants.mkdir(parents=True)
+    target = tmp_path / "usr/lib/systemd/system/mystery.service"
+    target.parent.mkdir(parents=True)
+    target.write_text("[Service]\nExecStart=/bin/true\n", encoding="utf-8")
+    link = wants / target.name
+    with pytest.raises(ubuntu_activation.ActivationError, match="provenance chiusa"):
+        ubuntu_activation._attest_generated_systemd_artifacts(
+            (link,), {root}, {link: target}, frozenset({target})
+        )
 
 
 def test_systemd_generator_search_path_rejects_unmanaged_local_generator(

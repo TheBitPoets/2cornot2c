@@ -9,6 +9,7 @@ RUN apt-get update \
         acl \
         bash \
         dbus \
+        libnginx-mod-http-geoip2 \
         logrotate \
         nginx \
         openssl \

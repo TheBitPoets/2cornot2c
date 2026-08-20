@@ -43,6 +43,11 @@ from scripts.nginx_config_ast import (  # noqa: E402
 
 
 NGINX_CONFIG = Path("/etc/nginx/nginx.conf")
+NGINX_MODULES_ENABLED_ROOT = Path("/etc/nginx/modules-enabled")
+NGINX_PREFIX = Path("/usr/share/nginx")
+NGINX_MODULES_LINK = NGINX_PREFIX / "modules"
+NGINX_MODULES_ROOT = Path("/usr/lib/nginx/modules")
+NGINX_MODULES_AVAILABLE_ROOT = NGINX_PREFIX / "modules-available"
 DEPLOYMENTS_ROOT = Path("/etc/thebitlab/deployments")
 CURRENT_LINK = Path("/etc/thebitlab/current")
 STATE_FILE = Path("/etc/thebitlab/activation-state.json")
@@ -67,6 +72,17 @@ SYSTEMD_GENERATOR_SEARCH_PATH_NAME = "systemd-search-system-generator"
 SYSTEMD_GENERATED_DIRECTORY_NAMES = frozenset(
     {"generator", "generator.early", "generator.late"}
 )
+SYSV_INIT_ROOT = Path("/etc/init.d")
+RC_LOCAL_PATH = Path("/etc/rc.local")
+# Closed, input-independent outputs observed from package generators in the supported
+# Ubuntu 24.04 isolated container. Any other package-unit link needs an explicit
+# provenance policy instead of inheriting trust from /run/systemd/generator*.
+GENERATED_PACKAGE_UNIT_LINKS = {
+    ("generator", "getty.target.wants", "console-getty.service"):
+        Path("/usr/lib/systemd/system/console-getty.service"),
+    ("generator", "local-fs.target.wants", "systemd-remount-fs.service"):
+        Path("/usr/lib/systemd/system/systemd-remount-fs.service"),
+}
 SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES = (".wants", ".requires", ".upholds")
 SYSTEMD_ENABLED_STATES = frozenset(
     {"enabled", "enabled-runtime", "linked", "linked-runtime"}
@@ -496,6 +512,7 @@ def validate_effective_nginx(
     *,
     topology: str,
     expected_sources: Mapping[str, str],
+    trusted_module_sources: frozenset[str] = frozenset(),
 ) -> None:
     """Validate source attribution and active server topology from real nginx -T output."""
 
@@ -511,6 +528,11 @@ def validate_effective_nginx(
         for source in sources
         if source.startswith(module_prefix) and source.endswith(".conf")
     }
+    expected_pilot_modules = {
+        source for source in expected_sources if source.startswith(module_prefix)
+    }
+    if module_sources != expected_pilot_modules | set(trusted_module_sources):
+        raise ActivationError("Source module nginx effettive non attestate dall'inventario")
     allowed |= module_sources
     if topology == "preinstall-default":
         allowed.add(_source_path(DISTRO_DEFAULT))
@@ -946,22 +968,95 @@ def _verify_trusted_ancestry(path: Path, boundary: Path) -> None:
     _assert_trusted_metadata(lexical, directory=False, require_root_owner=True)
 
 
-def _verify_modules_enabled_entries() -> None:
-    directory = Path("/etc/nginx/modules-enabled")
+def _verify_modules_enabled_entries() -> frozenset[str]:
+    """Return only module sources whose config and native code are package-attributed."""
+
+    directory = NGINX_MODULES_ENABLED_ROOT
+    trusted_sources: set[str] = set()
+    package_configs: list[Path] = []
+    module_binaries: list[Path] = []
+    _assert_systemd_directory_ancestry(NGINX_MODULES_AVAILABLE_ROOT)
     for entry in directory.iterdir():
+        source = _source_path(entry)
         if entry == PROCESS_LINK:
             _check_managed_link(entry, INTEGRATION_LINKS[PROCESS_LINK], allow_absent=True)
+            if entry.is_symlink():
+                trusted_sources.add(source)
             continue
         if not entry.name.endswith(".conf") or not entry.is_symlink():
             raise ActivationError(f"modules-enabled contiene artifact unmanaged: {entry}")
         try:
+            link_target = os.readlink(entry)
+            if not link_target.startswith("/") or Path(link_target) != Path(os.path.abspath(link_target)):
+                raise OSError("target symlink non assoluto/canonico")
+            _assert_root_symlink(entry, link_target)
             target = entry.resolve(strict=True)
-            target.relative_to(Path("/usr/share/nginx/modules-available"))
-        except (OSError, ValueError) as exc:
+            if (
+                link_target != target.as_posix()
+                or target != NGINX_MODULES_AVAILABLE_ROOT / target.name
+            ):
+                raise OSError("target config fuori dalla root distro/non canonico")
+        except OSError as exc:
             raise ActivationError(f"Modulo nginx non attribuibile al package Ubuntu: {entry}") from exc
-        _verify_trusted_ancestry(target, Path("/usr/share/nginx/modules-available"))
-        directives = _parse_nginx_source(entry.as_posix(), target.read_text(encoding="utf-8"))
-        _validate_module_source(entry.as_posix(), directives)
+        _verify_trusted_ancestry(target, NGINX_MODULES_AVAILABLE_ROOT)
+        try:
+            directives = _parse_nginx_source(source, target.read_text(encoding="utf-8"))
+        except OSError as exc:
+            raise ActivationError(f"Config modulo nginx non leggibile: {target}") from exc
+        _validate_module_source(source, directives)
+        package_configs.append(target)
+        for directive in directives:
+            raw_module = directive.args[0]
+            relative = PurePosixPath(raw_module)
+            if (
+                relative.is_absolute()
+                or raw_module != relative.as_posix()
+                or len(relative.parts) != 2
+                or relative.parts[0] != "modules"
+                or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.+-]*[.]so", relative.parts[1]) is None
+            ):
+                raise ActivationError(f"Path load_module Ubuntu non canonico: {source}")
+            semantic_path = NGINX_PREFIX / Path(*relative.parts)
+            try:
+                binary_metadata = semantic_path.lstat()
+                binary = semantic_path.resolve(strict=True)
+            except OSError as exc:
+                raise ActivationError(f"Binary modulo nginx non risolvibile: {source}") from exc
+            if stat.S_ISLNK(binary_metadata.st_mode):
+                raise ActivationError(f"Binary modulo nginx symlink non ammesso: {semantic_path}")
+            if binary != NGINX_MODULES_ROOT / relative.parts[1]:
+                raise ActivationError(f"Binary modulo nginx fuori dalla root distro: {semantic_path}")
+            _verify_trusted_ancestry(binary, NGINX_MODULES_ROOT)
+            module_binaries.append(binary)
+        trusted_sources.add(source)
+
+    if package_configs:
+        try:
+            link_metadata = NGINX_MODULES_LINK.lstat()
+            link_target = os.readlink(NGINX_MODULES_LINK)
+            resolved_link = NGINX_MODULES_LINK.resolve(strict=True)
+        except OSError as exc:
+            raise ActivationError("Bridge modules nginx Ubuntu non verificabile") from exc
+        if (
+            not stat.S_ISLNK(link_metadata.st_mode)
+            or (os.name != "nt" and link_metadata.st_uid != 0)
+            or link_target != "../../lib/nginx/modules"
+            or resolved_link != NGINX_MODULES_ROOT
+        ):
+            raise ActivationError("Bridge modules nginx Ubuntu non canonico")
+        _assert_systemd_directory_ancestry(NGINX_MODULES_ROOT)
+        package_owned = _dpkg_owned_paths(
+            (*package_configs, NGINX_MODULES_LINK, *module_binaries)
+        )
+        for config in package_configs:
+            if config not in package_owned:
+                raise ActivationError(f"Config modulo nginx non attribuita a package installato: {config}")
+        if NGINX_MODULES_LINK not in package_owned:
+            raise ActivationError("Bridge modules nginx non attribuito a package installato")
+        for binary in module_binaries:
+            if binary not in package_owned:
+                raise ActivationError(f"Binary modulo nginx non attribuito a package installato: {binary}")
+    return frozenset(trusted_sources)
 
 
 def verify_host_configuration_trust(
@@ -970,7 +1065,7 @@ def verify_host_configuration_trust(
     guard_required: bool | None = None,
     require_complete_links: bool = False,
     allowed_unit_file_states: frozenset[str] = ENABLED_NGINX_UNIT_FILE_STATES,
-) -> None:
+) -> frozenset[str]:
     """Validate the root-owned host configuration chain and its allowed symlinks."""
 
     directories = (
@@ -1039,7 +1134,7 @@ def verify_host_configuration_trust(
         target = path.resolve(strict=True)
         _verify_trusted_ancestry(target, DEPLOYMENTS_ROOT)
 
-    _verify_modules_enabled_entries()
+    trusted_module_sources = _verify_modules_enabled_entries()
     if info is not None:
         verified = verify_bundle(info.path)
         if verified.lock_digest != info.lock_digest:
@@ -1051,9 +1146,10 @@ def verify_host_configuration_trust(
         ):
             for path, expected in INTEGRATION_LINKS.items():
                 _assert_root_symlink(path, expected)
+    return trusted_module_sources
 
 
-def verify_ubuntu_layout() -> None:
+def verify_ubuntu_layout() -> frozenset[str]:
     for directory in (
         Path("/etc/nginx/modules-enabled"),
         Path("/etc/nginx/conf.d"),
@@ -1062,7 +1158,7 @@ def verify_ubuntu_layout() -> None:
     ):
         if not directory.is_dir() or directory.is_symlink():
             raise ActivationError(f"Directory Ubuntu non supportata: {directory}")
-    _verify_modules_enabled_entries()
+    trusted_module_sources = _verify_modules_enabled_entries()
     try:
         text = NGINX_CONFIG.read_text(encoding="utf-8")
     except OSError as exc:
@@ -1083,6 +1179,7 @@ def verify_ubuntu_layout() -> None:
     }
     if includes != required:
         raise ActivationError("Layout nginx Ubuntu con include non gestite")
+    return trusted_module_sources
 
 
 def _current_bundle_path() -> Path:
@@ -1112,7 +1209,9 @@ def _validate_default_link() -> dict[str, Any]:
     return state
 
 
-def _classify_existing_topology(effective: str) -> tuple[str, BundleInfo | None]:
+def _classify_existing_topology(
+    effective: str, trusted_module_sources: frozenset[str]
+) -> tuple[str, BundleInfo | None]:
     site_state = _symlink_state(SITE_LINK)
     default_state = _validate_default_link()
     if not site_state["present"]:
@@ -1125,7 +1224,13 @@ def _classify_existing_topology(effective: str) -> tuple[str, BundleInfo | None]
         expected = {}
         if default_state["present"]:
             expected[_source_path(DISTRO_DEFAULT)] = DISTRO_DEFAULT.read_text(encoding="utf-8")
-        validate_effective_nginx(effective, None, topology=topology, expected_sources=expected)
+        validate_effective_nginx(
+            effective,
+            None,
+            topology=topology,
+            expected_sources=expected,
+            trusted_module_sources=trusted_module_sources,
+        )
         return topology, None
 
     if default_state["present"]:
@@ -1143,6 +1248,7 @@ def _classify_existing_topology(effective: str) -> tuple[str, BundleInfo | None]
             previous_v2.manifest,
             topology="v2",
             expected_sources=previous_v2.sources,
+            trusted_module_sources=trusted_module_sources,
         )
         return "v2", previous_v2
 
@@ -1158,6 +1264,7 @@ def _classify_existing_topology(effective: str) -> tuple[str, BundleInfo | None]
         legacy.manifest,
         topology="legacy-v1",
         expected_sources=legacy.sources,
+        trusted_module_sources=trusted_module_sources,
     )
     return "legacy-v1", None
 
@@ -1166,9 +1273,9 @@ def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) 
     if os.geteuid() != 0:
         raise ActivationError("Il preflight host Ubuntu richiede root")
     _attest_systemd_boot_surface()
-    verify_ubuntu_layout()
+    layout_module_sources = verify_ubuntu_layout()
     candidate = verify_bundle(bundle)
-    verify_host_configuration_trust(
+    trusted_module_sources = verify_host_configuration_trust(
         candidate,
         guard_required=guard_required,
         allowed_unit_file_states=(
@@ -1190,8 +1297,12 @@ def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) 
     for path, target in INTEGRATION_LINKS.items():
         _check_managed_link(path, target, allow_absent=True)
 
+    if trusted_module_sources != layout_module_sources:
+        raise ActivationError("Inventario moduli nginx mutato durante il preflight")
     effective = _nginx_effective()
-    source_kind, previous_v2 = _classify_existing_topology(effective)
+    source_kind, previous_v2 = _classify_existing_topology(
+        effective, trusted_module_sources
+    )
     if previous_v2 is not None and previous_v2.path == candidate.path:
         raise ActivationError("Candidate già attiva senza activation state autorevole")
     if guard_required is True:
@@ -1637,6 +1748,103 @@ def _systemd_command_output(arguments: Sequence[str], *, label: str) -> str:
     return output
 
 
+def _attest_package_owned_generator_input(path: Path, boundary: Path) -> None:
+    _assert_systemd_directory_ancestry(boundary)
+    if path.parent != boundary:
+        raise ActivationError(f"Input generator fuori dal boundary atteso: {path}")
+    _verify_trusted_ancestry(path, boundary)
+    if path not in _dpkg_owned_paths((path,)):
+        raise ActivationError(f"Input generator non attribuito a package installato: {path}")
+
+
+def _attest_generated_systemd_artifacts(
+    artifacts: Sequence[Path],
+    generated_roots: set[Path],
+    resolved_targets: Mapping[Path, Path | None],
+    package_owned: frozenset[Path],
+) -> tuple[frozenset[Path], frozenset[str]]:
+    """Trust generated artifacts only from a closed, attested input provenance."""
+
+    generated = tuple(
+        path
+        for path in artifacts
+        if any(path == root or root in path.parents for root in generated_roots)
+    )
+    trusted_artifacts: set[Path] = set()
+    trusted_units: set[str] = set()
+    sysv_units: dict[str, Path] = {}
+
+    # systemd-sysv-generator regular units authoritatively expose SourcePath. Attest
+    # the exact input before considering the generated identity trusted.
+    for path in generated:
+        if path in resolved_targets:
+            continue
+        identity = _systemd_unit_identity(path)
+        if identity is None or not identity.endswith(".service"):
+            raise ActivationError(f"Output generator regolare senza provenance supportata: {path}")
+        fragment_value = _systemd_property("FragmentPath", identity)
+        fragment = _canonical_path(
+            fragment_value, label=f"{identity} FragmentPath"
+        )
+        if fragment_value != path.as_posix() or fragment != path:
+            raise ActivationError(f"Fragment generated ambiguo per {identity}")
+        source_value = _systemd_property("SourcePath", identity)
+        source = _canonical_path(source_value, label=f"{identity} SourcePath")
+        if source_value != source.as_posix() or source.parent != SYSV_INIT_ROOT:
+            raise ActivationError(f"SourcePath SysV non canonico per {identity}")
+        _attest_package_owned_generator_input(source, SYSV_INIT_ROOT)
+        if identity in sysv_units:
+            raise ActivationError(f"Output SysV generated duplicato: {identity}")
+        sysv_units[identity] = path
+        trusted_artifacts.add(path)
+        trusted_units.add(identity)
+
+    for path in generated:
+        if path not in resolved_targets:
+            continue
+        target = resolved_targets[path]
+        identity = _systemd_unit_identity(path)
+        if target is None or identity is None:
+            raise ActivationError(f"Symlink generator senza identity/provenance: {path}")
+        containing_roots = [
+            root for root in generated_roots if path == root or root in path.parents
+        ]
+        if len(containing_roots) != 1:
+            raise ActivationError(f"Output generator con root ambigua: {path}")
+        root = containing_roots[0]
+        relative_key = (root.name, *path.relative_to(root).parts)
+
+        generated_target = sysv_units.get(identity)
+        if (
+            generated_target is not None
+            and target == generated_target
+            and path.parent.name.endswith(SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES)
+            and _systemd_enablement_name_matches(path.name, generated_target.name)
+        ):
+            trusted_artifacts.add(path)
+            continue
+
+        if relative_key == ("generator", "multi-user.target.wants", "rc-local.service"):
+            expected = Path("/usr/lib/systemd/system/rc-local.service").resolve(strict=True)
+            if target != expected or target not in package_owned:
+                raise ActivationError("Output rc-local generator non canonico")
+            _attest_package_owned_generator_input(RC_LOCAL_PATH, Path("/etc"))
+            trusted_artifacts.add(path)
+            trusted_units.add(identity)
+            continue
+
+        expected_target = GENERATED_PACKAGE_UNIT_LINKS.get(relative_key)
+        if expected_target is None:
+            raise ActivationError(f"Output generator senza provenance chiusa: {path}")
+        expected = expected_target.resolve(strict=True)
+        if target != expected or target not in package_owned:
+            raise ActivationError(f"Output generator package target divergente: {path}")
+        trusted_artifacts.add(path)
+        trusted_units.add(identity)
+
+    return frozenset(trusted_artifacts), frozenset(trusted_units)
+
+
 def _attest_systemd_boot_surface() -> None:
     """Fail closed on every non-package/local artifact in the boot unit surface."""
 
@@ -1678,6 +1886,11 @@ def _attest_systemd_boot_surface() -> None:
         target for target in resolved_targets.values() if target is not None
     )
     package_owned = _dpkg_owned_paths(package_candidates)
+    trusted_generated_artifacts, trusted_generated_units = (
+        _attest_generated_systemd_artifacts(
+            artifacts, generated_roots, resolved_targets, package_owned
+        )
+    )
     unit_files = _systemd_command_output(
         ["list-unit-files", "--all", "--no-legend", "--no-pager", "--plain"],
         label="Inventario unit-file",
@@ -1691,7 +1904,7 @@ def _attest_systemd_boot_surface() -> None:
         if unit_name in unit_file_states:
             raise ActivationError(f"Unit file duplicata nell'inventario: {unit_name}")
         unit_file_states[unit_name] = unit_state
-    trusted_units: set[str] = set()
+    trusted_units: set[str] = set(trusted_generated_units)
 
     for directory in directories:
         if any(directory == root or root in directory.parents for root in generated_roots):
@@ -1706,17 +1919,8 @@ def _attest_systemd_boot_surface() -> None:
         identity = _systemd_unit_identity(path)
         generated = any(path == root or root in path.parents for root in generated_roots)
         if generated:
-            target = resolved_targets.get(path)
-            if target is not None and not (
-                target == Path("/dev/null")
-                or target in package_owned
-                or any(target == root or root in target.parents for root in generated_roots)
-            ):
-                raise ActivationError(
-                    f"Symlink generator output con target non trusted: {path}"
-                )
-            if identity is not None:
-                trusted_units.add(identity)
+            if path not in trusted_generated_artifacts:
+                raise ActivationError(f"Output generator non attestato: {path}")
             continue
         if path in package_owned:
             target = resolved_targets.get(path)
@@ -2628,7 +2832,7 @@ def _apply_bundle_links(bundle: Path) -> None:
 def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> None:
     _attest_systemd_boot_surface()
     verified = verify_bundle(info.path)
-    verify_host_configuration_trust(
+    trusted_module_sources = verify_host_configuration_trust(
         verified, guard_required=guard_required, require_complete_links=True
     )
     if verified.lock_digest != info.lock_digest:
@@ -2641,15 +2845,18 @@ def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> Non
         verified.manifest,
         topology="v2",
         expected_sources=verified.sources,
+        trusted_module_sources=trusted_module_sources,
     )
     _fault("after_effective_validation")
     _run(["logrotate", "--debug", "/etc/logrotate.conf"])
     _fault("after_logrotate_validation")
     _run(["systemd-analyze", "verify", str(SYSTEMD_LINK)])
     _fault("after_systemd_validation")
-    verify_host_configuration_trust(
+    final_module_sources = verify_host_configuration_trust(
         verified, guard_required=guard_required, require_complete_links=True
     )
+    if final_module_sources != trusted_module_sources:
+        raise ActivationError("Inventario moduli nginx mutato durante la validazione")
 
 
 def _state_for(preflight: Preflight) -> dict[str, Any]:

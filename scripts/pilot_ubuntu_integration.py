@@ -751,6 +751,7 @@ def _install_legacy(bundle: Path, manifest: dict) -> None:
         manifest,
         topology="legacy-v1",
         expected_sources=info.sources,
+        trusted_module_sources=activation._verify_modules_enabled_entries(),
     )
 
 
@@ -952,13 +953,243 @@ def _expect_local_unit_rejected(
         _run(["systemctl", "daemon-reload"])
 
 
+def _inventory_supported_package_generators() -> tuple[str, ...]:
+    expected = {
+        "systemd-cryptsetup-generator",
+        "systemd-debug-generator",
+        "systemd-fstab-generator",
+        "systemd-getty-generator",
+        "systemd-gpt-auto-generator",
+        "systemd-hibernate-resume-generator",
+        "systemd-integritysetup-generator",
+        "systemd-rc-local-generator",
+        "systemd-run-generator",
+        "systemd-system-update-generator",
+        "systemd-sysv-generator",
+        "systemd-veritysetup-generator",
+    }
+    roots = activation._systemd_path(activation.SYSTEMD_GENERATOR_SEARCH_PATH_NAME)
+    _directories, artifacts, targets, package_owned = _systemd_surface_inventory(roots)
+    names = {path.name for path in artifacts}
+    if names != expected or any(path not in package_owned for path in artifacts):
+        raise RuntimeError("Inventario generator package Ubuntu 24.04 divergente")
+    if any(target not in package_owned and target != Path("/dev/null") for target in targets.values()):
+        raise RuntimeError("Target generator package Ubuntu non attribuito")
+    return tuple(sorted(names))
+
+
+def _expect_generated_sysv_rejected(config: Path) -> None:
+    script = Path("/etc/init.d/leaky-nginx")
+    if script.exists() or script.is_symlink():
+        raise RuntimeError("Fixture SysV locale già presente")
+    script.write_text(
+        "#!/bin/sh\n"
+        "### BEGIN INIT INFO\n"
+        "# Provides:          leaky-nginx\n"
+        "# Required-Start:    $remote_fs $network\n"
+        "# Required-Stop:     $remote_fs $network\n"
+        "# Default-Start:     2 3 4 5\n"
+        "# Default-Stop:      0 1 6\n"
+        "# Short-Description: local query-bearing nginx\n"
+        "### END INIT INFO\n"
+        "case \"$1\" in\n"
+        f"  start) exec /usr/sbin/nginx -c {config} ;;\n"
+        f"  stop) /usr/sbin/nginx -c {config} -s quit ;;\n"
+        "  *) exit 0 ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    try:
+        _run(["update-rc.d", "leaky-nginx", "defaults"])
+        _run(["systemctl", "daemon-reload"])
+        fragment = activation._systemd_property("FragmentPath", "leaky-nginx.service")
+        source = activation._systemd_property("SourcePath", "leaky-nginx.service")
+        state = activation._systemd_property("UnitFileState", "leaky-nginx.service")
+        if (
+            not fragment.startswith("/run/systemd/generator")
+            or source != str(script)
+            or state != "generated"
+        ):
+            raise RuntimeError("systemd-sysv-generator non ha materializzato la fixture attesa")
+        graph = _run(
+            [
+                "systemctl", "list-dependencies", "--all", "--plain", "--no-pager",
+                "multi-user.target",
+            ]
+        )
+        if "leaky-nginx.service" not in graph:
+            raise RuntimeError("Fixture SysV enabled non boot-reachable")
+        inactive = subprocess.run(
+            ["systemctl", "is-active", "leaky-nginx.service"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if inactive.returncode != 3 or inactive.stdout.strip() != "inactive":
+            raise RuntimeError("Fixture SysV non è enabled/boot-reachable ma inattiva")
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError:
+            pass
+        else:
+            raise RuntimeError("Output systemd-sysv-generator da input locale accettato")
+        _assert_guard_absent_after_preflight_reject("leaky-nginx SysV")
+    finally:
+        subprocess.run(
+            ["update-rc.d", "-f", "leaky-nginx", "remove"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        script.unlink(missing_ok=True)
+        _run(["systemctl", "daemon-reload"])
+    activation._attest_systemd_boot_surface()
+
+
+def _expect_rc_local_rejected(config: Path) -> None:
+    rc_local = Path("/etc/rc.local")
+    if rc_local.exists() or rc_local.is_symlink():
+        raise RuntimeError("Fixture rc.local già presente")
+    rc_local.write_text(
+        f"#!/bin/sh\nexec /usr/sbin/nginx -c {config}\n", encoding="utf-8"
+    )
+    rc_local.chmod(0o755)
+    generated = Path("/run/systemd/generator/multi-user.target.wants/rc-local.service")
+    try:
+        _run(["systemctl", "daemon-reload"])
+        if (
+            not generated.is_symlink()
+            or generated.resolve(strict=True)
+            != Path("/usr/lib/systemd/system/rc-local.service").resolve(strict=True)
+        ):
+            raise RuntimeError("systemd-rc-local-generator non ha creato l'activation link")
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError:
+            pass
+        else:
+            raise RuntimeError("rc.local locale attivato da unit package accettato")
+    finally:
+        rc_local.unlink(missing_ok=True)
+        _run(["systemctl", "daemon-reload"])
+    activation._attest_systemd_boot_surface()
+
+
+def _exercise_nginx_module_provenance() -> None:
+    trusted_sources = activation._verify_modules_enabled_entries()
+    official_entries = sorted(
+        Path(source) for source in trusted_sources if Path(source) != activation.PROCESS_LINK
+    )
+    if not official_entries:
+        raise RuntimeError("Modulo dinamico package Ubuntu ufficiale assente dalla fixture")
+    entry = official_entries[0]
+    config = entry.resolve(strict=True)
+    original_config = config.read_bytes()
+    directives = activation._parse_nginx_source(
+        entry.as_posix(), original_config.decode("utf-8")
+    )
+    if len(directives) != 1:
+        raise RuntimeError("Config modulo package positiva non minimale")
+    official_argument = directives[0].args[0]
+    official_binary = (activation.NGINX_PREFIX / official_argument).resolve(strict=True)
+    if {config, official_binary} - activation._dpkg_owned_paths((config, official_binary)):
+        raise RuntimeError("Config/binary modulo ufficiale non attribuiti a package installato")
+    _run(["nginx", "-t", "-c", str(activation.NGINX_CONFIG)])
+
+    available = activation.NGINX_MODULES_AVAILABLE_ROOT
+    local_config = available / "99-thebitlab-local-test.conf"
+    local_entry = activation.NGINX_MODULES_ENABLED_ROOT / local_config.name
+    local_binary = activation.NGINX_MODULES_ROOT / "ngx_thebitlab_local_test.so"
+
+    def reject(label: str) -> None:
+        try:
+            activation._verify_modules_enabled_entries()
+        except activation.ActivationError:
+            return
+        raise RuntimeError(f"Modulo nginx unsafe accettato: {label}")
+
+    try:
+        # A: local config target loading an otherwise official binary.
+        local_config.write_text(f"load_module {official_argument};\n", encoding="utf-8")
+        local_config.chmod(0o644)
+        local_entry.symlink_to(local_config)
+        reject("local config")
+        local_entry.unlink()
+        local_config.unlink()
+
+        # C: both config and native object are local/unmanaged.
+        local_binary.write_bytes(b"local native module fixture")
+        local_binary.chmod(0o644)
+        local_config.write_text(
+            f"load_module modules/{local_binary.name};\n", encoding="utf-8"
+        )
+        local_entry.symlink_to(local_config)
+        reject("local config + local binary")
+        local_entry.unlink()
+        local_config.unlink()
+
+        # B: package-attributed config path loading a local/unmanaged object.
+        config.write_text(
+            f"load_module modules/{local_binary.name};\n", encoding="utf-8"
+        )
+        reject("package config + local binary")
+        config.write_bytes(original_config)
+        local_binary.unlink()
+
+        # D: module code reached through a leaf symlink/path redirect.
+        outside = Path("/tmp/ngx_thebitlab_redirect_target.so")
+        outside.write_bytes(b"redirect target")
+        local_binary.symlink_to(outside)
+        config.write_text(
+            f"load_module modules/{local_binary.name};\n", encoding="utf-8"
+        )
+        reject("module binary symlink")
+        config.write_bytes(original_config)
+        local_binary.unlink()
+        outside.unlink()
+
+        # E: a package module binary writable by group/other.
+        original_mode = stat.S_IMODE(official_binary.stat().st_mode)
+        official_binary.chmod(original_mode | 0o022)
+        try:
+            reject("module binary writable")
+        finally:
+            official_binary.chmod(original_mode)
+
+        # F: even a package binary path with an unexpected hardlink is rejected.
+        hardlink = activation.NGINX_MODULES_ROOT / "ngx_thebitlab_hardlink_test.so"
+        os.link(official_binary, hardlink)
+        try:
+            reject("module binary hardlink")
+        finally:
+            hardlink.unlink()
+
+        # G: package config may contain only exact load_module directives.
+        config.write_bytes(original_config + b"env THEBITLAB_UNMANAGED;\n")
+        reject("non-load_module directive")
+        config.write_bytes(original_config)
+    finally:
+        config.write_bytes(original_config)
+        for path in (local_entry, local_config, local_binary, Path("/tmp/ngx_thebitlab_redirect_target.so")):
+            path.unlink(missing_ok=True)
+    if activation._verify_modules_enabled_entries() != trusted_sources:
+        raise RuntimeError("Inventario moduli ufficiali non ripristinato byte-for-byte")
+    _run(["nginx", "-t", "-c", str(activation.NGINX_CONFIG)])
+
+
 def _check_ephemeral_host() -> str:
     if os.geteuid() != 0:
         raise RuntimeError("Lo smoke Ubuntu effettivo richiede root")
     os_release = Path("/etc/os-release").read_text(encoding="utf-8")
     if 'ID=ubuntu' not in os_release or 'VERSION_ID="24.04"' not in os_release:
         raise RuntimeError("Lo smoke richiede Ubuntu 24.04 effimero")
-    for tool in ("nginx", "logrotate", "systemd-analyze", "openssl", "getfacl", "bash"):
+    for tool in (
+        "nginx", "logrotate", "systemd-analyze", "openssl", "getfacl", "bash",
+        "update-rc.d",
+    ):
         if shutil.which(tool) is None:
             raise RuntimeError(f"Tool Ubuntu mancante: {tool}")
     if not activation.DISTRO_DEFAULT.is_symlink():
@@ -1129,11 +1360,27 @@ def run(*, ephemeral_host: bool = False) -> None:
                 f"UnitFileState={initial_unit_file_state}; preflight PASS"
             )
             activation._attest_systemd_boot_surface()
-            print("EVIDENCE: package-owned enabled unit inventory PASS")
+            generator_names = _inventory_supported_package_generators()
+            print(
+                "EVIDENCE: package-owned enabled unit inventory PASS; Ubuntu generators="
+                + ",".join(generator_names)
+            )
+            _exercise_nginx_module_provenance()
+            print(
+                "EVIDENCE: official package module config+binary PASS; local config/binary, "
+                "symlink, writable, hardlink and non-load_module REJECT"
+            )
 
             leaky_unit_config, _ = _write_foreign_nginx_config(temporary, "unit-leaky")
             if "combined" not in leaky_unit_config.read_text(encoding="utf-8"):
                 raise RuntimeError("Config leaky reproduction non è query-bearing")
+            _expect_generated_sysv_rejected(leaky_unit_config)
+            print(
+                "EVIDENCE: enabled+boot-reachable inactive SysV generated service from "
+                "local /etc/init.d input REJECT before activation"
+            )
+            _expect_rc_local_rejected(leaky_unit_config)
+            print("EVIDENCE: package rc-local.service activated by local /etc/rc.local REJECT")
             _expect_local_unit_rejected(
                 v2_bundle,
                 "leaky-nginx.service",
@@ -1352,42 +1599,6 @@ def run(*, ephemeral_host: bool = False) -> None:
             finally:
                 activation.NGINX_CONFIG.unlink()
                 nginx_backup.replace(activation.NGINX_CONFIG)
-
-            trusted_module = Path("/etc/nginx/modules-enabled/99-thebitlab-trusted.conf")
-            modules_available = Path("/usr/share/nginx/modules-available")
-            modules_available_existed = modules_available.exists()
-            modules_available.mkdir(mode=0o755, parents=True, exist_ok=True)
-            trusted_target = modules_available / "99-thebitlab-trusted.conf"
-            trusted_target.write_text("load_module modules/ngx_fake.so;\n", encoding="utf-8")
-            trusted_target.chmod(0o644)
-            trusted_module.symlink_to(trusted_target)
-            try:
-                activation.verify_host_configuration_trust(
-                    activation.verify_bundle(v2_bundle),
-                    guard_required=False,
-                    allowed_unit_file_states=(
-                        activation.PREFLIGHT_NGINX_UNIT_FILE_STATES
-                    ),
-                )
-            finally:
-                trusted_module.unlink()
-                trusted_target.unlink()
-                if not modules_available_existed:
-                    modules_available.rmdir()
-
-            untrusted_module = Path("/etc/nginx/modules-enabled/99-thebitlab-untrusted.conf")
-            untrusted_target = temporary / "untrusted-module.conf"
-            untrusted_target.write_text("load_module modules/ngx_fake.so;\n", encoding="utf-8")
-            untrusted_module.symlink_to(untrusted_target)
-            try:
-                try:
-                    activation.verify_host_preflight(v2_bundle)
-                except activation.ActivationError:
-                    pass
-                else:
-                    raise RuntimeError("Package module symlink con target untrusted accettato")
-            finally:
-                untrusted_module.unlink()
 
             # Actual package config: prove multiline inline servers are rejected by nginx -T analysis.
             nginx_original = activation.NGINX_CONFIG.read_text(encoding="utf-8")
@@ -1704,6 +1915,7 @@ def run(*, ephemeral_host: bool = False) -> None:
                 manifest,
                 topology="v2",
                 expected_sources=activation.verify_bundle(v2_bundle).sources,
+                trusted_module_sources=activation._verify_modules_enabled_entries(),
             )
 
             backend, backend_thread = _start_backend(manifest["service"]["port"])

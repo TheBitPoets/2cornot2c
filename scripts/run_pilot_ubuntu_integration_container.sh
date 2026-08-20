@@ -164,7 +164,7 @@ docker exec "$container" systemctl show nginx.service \
     --property=FragmentPath --property=UnitFileState --property=ControlGroup --no-pager
 docker exec "$container" dpkg-query -W \
     -f='${binary:Package}=${Version}\n' \
-    acl dbus logrotate nginx openssl procps python3 python3-jsonschema systemd systemd-sysv
+    acl dbus libnginx-mod-http-geoip2 logrotate nginx openssl procps python3 python3-jsonschema systemd systemd-sysv
 
 docker exec --interactive --workdir /workspace "$container" python3 - <<'PY'
 from scripts import pilot_ubuntu_activation as activation
