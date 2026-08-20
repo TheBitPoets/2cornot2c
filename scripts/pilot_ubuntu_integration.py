@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import base64
 import copy
+import ctypes
+import errno
 import glob
 import hashlib
 import http.server
@@ -23,6 +25,7 @@ import sys
 import tempfile
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -40,6 +43,429 @@ from scripts import validate_pilot_deployment as deployment  # noqa: E402
 ORIGIN_HOST = "candidate.example.edu"
 ACCESS_LOG = Path("/var/log/thebitlab/thebitlab-access.log")
 PROCESS_LOG = Path("/var/log/thebitlab/thebitlab-process-error.log")
+LOCAL_SYSTEMD_PREFIX = Path("/usr/local")
+SYSTEMD_QUARANTINE_DIRECTORY = "systemd-surface-quarantine"
+SYSTEMD_QUARANTINE_MANIFEST = "manifest.json"
+
+
+@dataclass(frozen=True)
+class EphemeralSystemdArtifact:
+    original_path: Path
+    quarantine_path: Path
+    file_type: str
+    symlink_target: str | None
+    mode: int
+    uid: int
+    gid: int
+    device: int
+    inode: int
+    size: int
+    parent_device: int
+    parent_inode: int
+    sha256: str | None
+
+    def manifest_record(self) -> dict[str, object]:
+        return {
+            "original_path": str(self.original_path),
+            "quarantine_path": str(self.quarantine_path),
+            "file_type": self.file_type,
+            "symlink_target": self.symlink_target,
+            "mode": self.mode,
+            "uid": self.uid,
+            "gid": self.gid,
+            "device": self.device,
+            "inode": self.inode,
+            "size": self.size,
+            "parent_device": self.parent_device,
+            "parent_inode": self.parent_inode,
+            "sha256": self.sha256,
+        }
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _rename_noreplace(source: Path, destination: Path) -> None:
+    """Atomically rename without ever replacing a colliding path (Linux/Ubuntu only)."""
+
+    try:
+        renameat2 = ctypes.CDLL(None, use_errno=True).renameat2
+    except (AttributeError, OSError) as exc:
+        raise RuntimeError("renameat2(RENAME_NOREPLACE) non disponibile") from exc
+    renameat2.argtypes = (
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    )
+    renameat2.restype = ctypes.c_int
+    result = renameat2(
+        -100,
+        os.fsencode(source),
+        -100,
+        os.fsencode(destination),
+        1,
+    )
+    if result == 0:
+        return
+    error = ctypes.get_errno()
+    if error == errno.EEXIST:
+        raise FileExistsError(error, os.strerror(error), destination)
+    raise OSError(error, os.strerror(error), source, destination)
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _systemd_daemon_reload(label: str) -> None:
+    code, _ = activation._systemctl_result(["daemon-reload"])
+    if code != 0:
+        raise RuntimeError(f"systemd daemon-reload fallita {label}")
+
+
+def _path_exists(path: Path) -> bool:
+    return path.exists() or path.is_symlink()
+
+
+def _capture_ephemeral_systemd_artifact(
+    path: Path, quarantine_path: Path
+) -> EphemeralSystemdArtifact:
+    parent_metadata = path.parent.lstat()
+    if not stat.S_ISDIR(parent_metadata.st_mode) or stat.S_ISLNK(parent_metadata.st_mode):
+        raise RuntimeError(f"Parent generator ambientale non è una directory: {path.parent}")
+    metadata = path.lstat()
+    if os.name != "nt" and metadata.st_uid != 0:
+        raise RuntimeError(f"Generator ambientale non root-owned: {path}")
+    if stat.S_ISREG(metadata.st_mode):
+        if metadata.st_nlink != 1 or metadata.st_mode & 0o022:
+            raise RuntimeError(f"Generator ambientale con metadata unsafe: {path}")
+        file_type = "regular"
+        target = None
+        digest = _sha256_file(path)
+    elif stat.S_ISLNK(metadata.st_mode):
+        target = os.readlink(path)
+        if not target:
+            raise RuntimeError(f"Symlink generator ambientale senza target: {path}")
+        file_type = "symlink"
+        digest = None
+    else:
+        raise RuntimeError(f"Tipo generator ambientale non quarantinabile: {path}")
+    return EphemeralSystemdArtifact(
+        original_path=path,
+        quarantine_path=quarantine_path,
+        file_type=file_type,
+        symlink_target=target,
+        mode=stat.S_IMODE(metadata.st_mode),
+        uid=metadata.st_uid,
+        gid=metadata.st_gid,
+        device=metadata.st_dev,
+        inode=metadata.st_ino,
+        size=metadata.st_size,
+        parent_device=parent_metadata.st_dev,
+        parent_inode=parent_metadata.st_ino,
+        sha256=digest,
+    )
+
+
+def _verify_ephemeral_systemd_parent(artifact: EphemeralSystemdArtifact) -> None:
+    try:
+        metadata = artifact.original_path.parent.lstat()
+    except OSError as exc:
+        raise RuntimeError(
+            f"Parent originale systemd non verificabile: {artifact.original_path.parent}"
+        ) from exc
+    if (
+        not stat.S_ISDIR(metadata.st_mode)
+        or stat.S_ISLNK(metadata.st_mode)
+        or metadata.st_dev != artifact.parent_device
+        or metadata.st_ino != artifact.parent_inode
+    ):
+        raise RuntimeError(
+            f"Parent originale systemd mutato: {artifact.original_path.parent}"
+        )
+
+
+def _verify_ephemeral_systemd_artifact(
+    artifact: EphemeralSystemdArtifact, path: Path
+) -> None:
+    try:
+        metadata = path.lstat()
+    except OSError as exc:
+        raise RuntimeError(f"Artifact systemd quarantine/restore mancante: {path}") from exc
+    actual_type = (
+        "regular"
+        if stat.S_ISREG(metadata.st_mode)
+        else "symlink" if stat.S_ISLNK(metadata.st_mode) else "other"
+    )
+    if (
+        actual_type != artifact.file_type
+        or stat.S_IMODE(metadata.st_mode) != artifact.mode
+        or metadata.st_uid != artifact.uid
+        or metadata.st_gid != artifact.gid
+        or metadata.st_dev != artifact.device
+        or metadata.st_ino != artifact.inode
+        or metadata.st_size != artifact.size
+    ):
+        raise RuntimeError(f"Metadata artifact systemd mutate: {path}")
+    if artifact.file_type == "regular":
+        if _sha256_file(path) != artifact.sha256:
+            raise RuntimeError(f"Digest artifact systemd mutato: {path}")
+    elif os.readlink(path) != artifact.symlink_target:
+        raise RuntimeError(f"Target symlink systemd mutato: {path}")
+
+
+def _write_ephemeral_systemd_manifest(
+    path: Path, artifacts: tuple[EphemeralSystemdArtifact, ...]
+) -> None:
+    temporary = path.with_name(f".{path.name}.{os.getpid()}")
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
+            json.dump(
+                {"version": 1, "artifacts": [item.manifest_record() for item in artifacts]},
+                stream,
+                indent=2,
+                sort_keys=True,
+            )
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        _fsync_directory(path.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _systemd_surface_inventory(
+    roots: tuple[Path, ...],
+) -> tuple[tuple[Path, ...], tuple[Path, ...], dict[Path, Path], frozenset[Path]]:
+    directories: list[Path] = []
+    artifacts: list[Path] = []
+    for root in roots:
+        tree_directories, tree_artifacts = activation._collect_systemd_tree(root)
+        directories.extend(tree_directories)
+        artifacts.extend(tree_artifacts)
+    targets: dict[Path, Path] = {}
+    for path in artifacts:
+        if not path.is_symlink():
+            continue
+        try:
+            targets[path] = path.resolve(strict=True)
+        except OSError:
+            continue
+    package_owned = activation._dpkg_owned_paths(
+        (*directories, *artifacts, *targets.values())
+    )
+    return tuple(directories), tuple(artifacts), targets, package_owned
+
+
+def _ephemeral_generator_candidates(
+    roots: tuple[Path, ...],
+) -> tuple[Path, ...]:
+    directories, artifacts, _targets, package_owned = _systemd_surface_inventory(roots)
+    unmanaged_directories = [path for path in directories if path not in package_owned]
+    if unmanaged_directories:
+        raise RuntimeError(
+            "Directory generator locale non quarantinabile: "
+            f"{unmanaged_directories[0]}"
+        )
+    candidates: list[Path] = []
+    for path in artifacts:
+        if path in package_owned:
+            continue
+        containing_roots = [root for root in roots if path == root or root in path.parents]
+        if len(containing_roots) != 1:
+            raise RuntimeError(f"Generator locale con search root ambigua: {path}")
+        root = containing_roots[0]
+        if not (root == LOCAL_SYSTEMD_PREFIX or LOCAL_SYSTEMD_PREFIX in root.parents):
+            raise RuntimeError(f"Generator locale fuori /usr/local non quarantinabile: {path}")
+        candidates.append(path)
+    return tuple(sorted(candidates))
+
+
+def _reject_unmanaged_ephemeral_unit_artifacts(roots: tuple[Path, ...]) -> None:
+    directories, artifacts, targets, package_owned = _systemd_surface_inventory(roots)
+    generated_roots = {root for root in roots if activation._is_generated_systemd_root(root)}
+
+    def generated(path: Path) -> bool:
+        return any(path == root or root in path.parents for root in generated_roots)
+
+    for directory in directories:
+        if (
+            generated(directory)
+            or directory in package_owned
+            or directory.name.endswith(activation.SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES)
+        ):
+            continue
+        raise RuntimeError(f"Directory unit locale non auto-quarantinabile: {directory}")
+    protected = {activation.SYSTEMD_LINK, activation.NGINX_MIGRATION_GUARD}
+    for path in artifacts:
+        if generated(path) or path in package_owned:
+            continue
+        target = targets.get(path)
+        if target is not None and target in package_owned:
+            # Production applies the stricter enablement/default/alias checks afterwards.
+            continue
+        if path in protected:
+            raise RuntimeError(f"Artifact TheBitLab/guard preesistente non modificabile: {path}")
+        raise RuntimeError(f"Unit locale non auto-quarantinabile: {path}")
+
+
+class EphemeralDedicatedSystemdSurface:
+    def __init__(
+        self,
+        quarantine_root: Path,
+        artifacts: tuple[EphemeralSystemdArtifact, ...],
+        manifest_path: Path,
+    ) -> None:
+        self.quarantine_root = quarantine_root
+        self.artifacts = artifacts
+        self.manifest_path = manifest_path
+        self._quarantined: list[EphemeralSystemdArtifact] = []
+        self._restored = False
+
+    def quarantine(self) -> None:
+        for artifact in self.artifacts:
+            _verify_ephemeral_systemd_parent(artifact)
+            _rename_noreplace(artifact.original_path, artifact.quarantine_path)
+            self._quarantined.append(artifact)
+            _verify_ephemeral_systemd_artifact(artifact, artifact.quarantine_path)
+            if _path_exists(artifact.original_path):
+                raise RuntimeError(
+                    f"Generator rimasto nella search path dopo quarantine: {artifact.original_path}"
+                )
+            _verify_ephemeral_systemd_parent(artifact)
+            _fsync_directory(artifact.original_path.parent)
+            _fsync_directory(self.quarantine_root)
+
+    def restore(self) -> None:
+        if self._restored:
+            return
+        restore_error: BaseException | None = None
+        try:
+            for artifact in self._quarantined:
+                _verify_ephemeral_systemd_parent(artifact)
+                _verify_ephemeral_systemd_artifact(artifact, artifact.quarantine_path)
+                if _path_exists(artifact.original_path):
+                    raise RuntimeError(
+                        f"Collisione restore systemd, path non sovrascritto: {artifact.original_path}"
+                    )
+            for artifact in reversed(self._quarantined):
+                _rename_noreplace(artifact.quarantine_path, artifact.original_path)
+                _verify_ephemeral_systemd_parent(artifact)
+                _verify_ephemeral_systemd_artifact(artifact, artifact.original_path)
+                _fsync_directory(artifact.original_path.parent)
+                _fsync_directory(self.quarantine_root)
+        except BaseException as exc:
+            restore_error = exc
+        try:
+            _systemd_daemon_reload("dopo restore ephemeral")
+        except BaseException as exc:
+            if restore_error is None:
+                restore_error = exc
+        if restore_error is not None:
+            raise RuntimeError(
+                f"Restore exact della surface systemd fallito; quarantine preservata in "
+                f"{self.quarantine_root}"
+            ) from restore_error
+        self.manifest_path.unlink()
+        _fsync_directory(self.quarantine_root)
+        self.quarantine_root.rmdir()
+        _fsync_directory(self.quarantine_root.parent)
+        self._restored = True
+
+
+class _EphemeralIntegrationWorkspace:
+    """Keep a failed quarantine instead of letting temporary cleanup delete artifacts."""
+
+    def __init__(self, *, parent: Path | None = None) -> None:
+        self.parent = parent
+        self.path: Path | None = None
+        self.systemd_surface: EphemeralDedicatedSystemdSurface | None = None
+
+    def __enter__(self) -> _EphemeralIntegrationWorkspace:
+        self.path = Path(
+            tempfile.mkdtemp(
+                prefix="thebitlab-ubuntu-integration-",
+                dir=str(self.parent) if self.parent is not None else None,
+            )
+        )
+        return self
+
+    def __exit__(self, _kind, error, _traceback) -> bool:
+        assert self.path is not None
+        restore_error: BaseException | None = None
+        if self.systemd_surface is not None:
+            try:
+                self.systemd_surface.restore()
+            except BaseException as exc:
+                restore_error = exc
+        quarantine = self.path / SYSTEMD_QUARANTINE_DIRECTORY
+        retained = quarantine.exists() and any(quarantine.iterdir())
+        if not retained:
+            shutil.rmtree(self.path)
+        if restore_error is not None:
+            if error is not None:
+                raise restore_error from error
+            raise restore_error
+        return False
+
+
+def prepare_ephemeral_dedicated_systemd_surface(
+    temporary: Path, *, ephemeral_host: bool
+) -> EphemeralDedicatedSystemdSurface:
+    """Quarantine CI ambient generators; never relax production boot attestation."""
+
+    if not ephemeral_host:
+        raise RuntimeError("Preparazione surface systemd consentita soltanto da --ephemeral-host")
+    unit_roots = activation._systemd_path(activation.SYSTEMD_UNIT_SEARCH_PATH_NAME)
+    generator_roots = activation._systemd_path(activation.SYSTEMD_GENERATOR_SEARCH_PATH_NAME)
+    _reject_unmanaged_ephemeral_unit_artifacts(unit_roots)
+    candidates = _ephemeral_generator_candidates(generator_roots)
+
+    quarantine_root = temporary / SYSTEMD_QUARANTINE_DIRECTORY
+    quarantine_root.mkdir(mode=0o700, exist_ok=False)
+    metadata = quarantine_root.lstat()
+    if (
+        not stat.S_ISDIR(metadata.st_mode)
+        or (os.name != "nt" and metadata.st_uid != 0)
+        or stat.S_IMODE(metadata.st_mode) != 0o700
+    ):
+        raise RuntimeError("Directory quarantine systemd non privata/root-owned")
+    artifacts = tuple(
+        _capture_ephemeral_systemd_artifact(path, quarantine_root / f"artifact-{index:04d}")
+        for index, path in enumerate(candidates)
+    )
+    for artifact in artifacts:
+        if artifact.device != metadata.st_dev:
+            raise RuntimeError(
+                f"Quarantine systemd non è sul filesystem dell'artifact: {artifact.original_path}"
+            )
+    manifest_path = quarantine_root / SYSTEMD_QUARANTINE_MANIFEST
+    _write_ephemeral_systemd_manifest(manifest_path, artifacts)
+    surface = EphemeralDedicatedSystemdSurface(quarantine_root, artifacts, manifest_path)
+    try:
+        surface.quarantine()
+        _systemd_daemon_reload("dopo quarantine ephemeral")
+        activation._attest_systemd_boot_surface()
+    except BaseException as error:
+        try:
+            surface.restore()
+        except BaseException as restore_error:
+            raise restore_error from error
+        raise
+    return surface
 
 
 def _run(command: list[str], *, expect_failure: bool = False) -> str:
@@ -638,7 +1064,9 @@ def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
     return toolchain, launcher, pin_path
 
 
-def run() -> None:
+def run(*, ephemeral_host: bool = False) -> None:
+    if not ephemeral_host:
+        raise RuntimeError("Integrazione consentita soltanto da --ephemeral-host")
     original_default = _check_ephemeral_host()
     state = activation.STATE_FILE
     deployments = activation.DEPLOYMENTS_ROOT
@@ -664,8 +1092,16 @@ def run() -> None:
         "tb704-ipv6", "tb704-after-no-rollback", "tb704-after-v2-rollback",
     )
     try:
-        with tempfile.TemporaryDirectory(prefix="thebitlab-ubuntu-integration-") as name:
-            temporary = Path(name)
+        with _EphemeralIntegrationWorkspace() as workspace:
+            assert workspace.path is not None
+            temporary = workspace.path
+            workspace.systemd_surface = prepare_ephemeral_dedicated_systemd_surface(
+                temporary, ephemeral_host=ephemeral_host
+            )
+            print(
+                "EVIDENCE: ephemeral dedicated systemd surface quarantined "
+                f"{len(workspace.systemd_surface.artifacts)} ambient artifact(s)"
+            )
             installed_toolchain, installed_launcher, installed_pin = _install_ephemeral_toolchain(temporary)
             Path("/run/thebitlab-ephemeral-activation-test").write_text(
                 "ephemeral-only\n", encoding="ascii"
@@ -1531,7 +1967,7 @@ def main(argv: list[str] | None = None) -> int:
         print("ERRORE: usare soltanto --ephemeral-host su una macchina effimera", file=sys.stderr)
         return 2
     try:
-        run()
+        run(ephemeral_host=args.ephemeral_host)
     except (OSError, RuntimeError, activation.ActivationError, deployment.DeploymentValidationError) as exc:
         print(f"ERRORE: {exc}", file=sys.stderr)
         return 2

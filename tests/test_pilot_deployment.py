@@ -9,6 +9,7 @@ import io
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -22,6 +23,7 @@ from scripts import pilot_deployment_smoke as smoke
 from scripts import pilot_service_launcher as service_launcher
 from scripts import pilot_toolchain_launcher as toolchain_launcher
 from scripts import pilot_ubuntu_activation as ubuntu_activation
+from scripts import pilot_ubuntu_integration as ubuntu_integration
 from scripts import validate_pilot_deployment as deployment
 
 
@@ -1502,6 +1504,207 @@ def test_systemd_generator_search_path_rejects_unmanaged_local_generator(
     )
     with pytest.raises(ubuntu_activation.ActivationError, match="Generator systemd locale"):
         ubuntu_activation._attest_systemd_generators()
+
+
+def _install_ephemeral_systemd_surface_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path]:
+    local_unit_root, package_root, package_generator_root = (
+        _install_systemd_inventory_fixture(tmp_path, monkeypatch)
+    )
+    local_prefix = tmp_path / "usr/local"
+    local_generator_root = local_prefix / "lib/systemd/system-generators"
+    local_generator_root.mkdir(parents=True)
+
+    def systemd_path(name: str) -> tuple[Path, ...]:
+        if name == ubuntu_activation.SYSTEMD_UNIT_SEARCH_PATH_NAME:
+            return local_unit_root, package_root
+        if name == ubuntu_activation.SYSTEMD_GENERATOR_SEARCH_PATH_NAME:
+            return local_generator_root, package_generator_root
+        raise AssertionError(name)
+
+    monkeypatch.setattr(ubuntu_activation, "_systemd_path", systemd_path)
+    monkeypatch.setattr(ubuntu_integration, "LOCAL_SYSTEMD_PREFIX", local_prefix)
+    return local_unit_root, local_generator_root
+
+
+def _systemd_artifact_identity(path: Path) -> tuple[int, int, int, int, int, int]:
+    metadata = os.lstat(path)
+    return (
+        metadata.st_mode,
+        metadata.st_uid,
+        metadata.st_gid,
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_size,
+    )
+
+
+def test_ephemeral_systemd_surface_preparation_requires_explicit_cli_interlock(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(RuntimeError, match="--ephemeral-host"):
+        ubuntu_integration.prepare_ephemeral_dedicated_systemd_surface(
+            tmp_path, ephemeral_host=False
+        )
+
+
+def test_ephemeral_systemd_surface_does_not_auto_quarantine_local_units(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_unit_root, generator_root = _install_ephemeral_systemd_surface_fixture(
+        tmp_path, monkeypatch
+    )
+    unit = local_unit_root / "ambient-local.service"
+    unit.write_text("[Service]\nExecStart=/usr/local/bin/ambient\n", encoding="utf-8")
+    generator = generator_root / "ambient-generator"
+    generator.write_text("#!/bin/sh\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="Unit locale non auto-quarantinabile"):
+        ubuntu_integration.prepare_ephemeral_dedicated_systemd_surface(
+            tmp_path, ephemeral_host=True
+        )
+    assert unit.exists()
+    assert generator.exists()
+    assert not (tmp_path / ubuntu_integration.SYSTEMD_QUARANTINE_DIRECTORY).exists()
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="renameat2 Linux richiesto")
+def test_ephemeral_systemd_surface_quarantines_and_exactly_restores_local_generator(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_unit_root, generator_root = _install_ephemeral_systemd_surface_fixture(
+        tmp_path, monkeypatch
+    )
+    generator = generator_root / "podman-system-generator"
+    contents = b"#!/bin/sh\nexit 0\n"
+    generator.write_bytes(contents)
+    generator.chmod(0o751)
+    before = _systemd_artifact_identity(generator)
+    digest = hashlib.sha256(contents).hexdigest()
+
+    # Production remains fail-closed without the explicit ephemeral preparation.
+    with pytest.raises(ubuntu_activation.ActivationError, match="Generator systemd locale"):
+        ubuntu_activation._attest_systemd_boot_surface()
+
+    with ubuntu_integration._EphemeralIntegrationWorkspace(parent=tmp_path) as workspace:
+        assert workspace.path is not None
+        workspace.systemd_surface = (
+            ubuntu_integration.prepare_ephemeral_dedicated_systemd_surface(
+                workspace.path, ephemeral_host=True
+            )
+        )
+        surface = workspace.systemd_surface
+        assert not generator.exists()
+        assert len(surface.artifacts) == 1
+        snapshot = surface.artifacts[0]
+        assert snapshot.sha256 == digest
+        assert snapshot.mode == stat.S_IMODE(before[0])
+        assert (snapshot.uid, snapshot.gid) == before[1:3]
+        assert (snapshot.device, snapshot.inode) == before[3:5]
+        manifest = json.loads(surface.manifest_path.read_text(encoding="utf-8"))
+        record = manifest["artifacts"][0]
+        assert set(record) == {
+            "device", "file_type", "gid", "inode", "mode", "original_path",
+            "parent_device", "parent_inode", "quarantine_path", "sha256", "size",
+            "symlink_target", "uid",
+        }
+        assert record["sha256"] == digest
+        ubuntu_activation._attest_systemd_boot_surface()
+
+        # Deliberate attack fixtures created after baseline preparation remain visible.
+        attack = local_unit_root / "wrapper-local.service"
+        attack.write_text("[Service]\nExecStart=/usr/local/bin/wrapper\n", encoding="utf-8")
+        with pytest.raises(ubuntu_activation.ActivationError, match="locale/unmanaged"):
+            ubuntu_activation._attest_systemd_boot_surface()
+        attack.unlink()
+
+    assert generator.read_bytes() == contents
+    assert hashlib.sha256(generator.read_bytes()).hexdigest() == digest
+    assert _systemd_artifact_identity(generator) == before
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="renameat2 Linux richiesto")
+def test_ephemeral_systemd_surface_restores_after_integration_exception(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _local_unit_root, generator_root = _install_ephemeral_systemd_surface_fixture(
+        tmp_path, monkeypatch
+    )
+    generator = generator_root / "ambient-generator"
+    generator.write_bytes(b"ambient\n")
+    before = _systemd_artifact_identity(generator)
+
+    with pytest.raises(RuntimeError, match="failure after quarantine"):
+        with ubuntu_integration._EphemeralIntegrationWorkspace(parent=tmp_path) as workspace:
+            assert workspace.path is not None
+            workspace.systemd_surface = (
+                ubuntu_integration.prepare_ephemeral_dedicated_systemd_surface(
+                    workspace.path, ephemeral_host=True
+                )
+            )
+            assert not generator.exists()
+            raise RuntimeError("failure after quarantine")
+
+    assert generator.read_bytes() == b"ambient\n"
+    assert _systemd_artifact_identity(generator) == before
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="renameat2 Linux richiesto")
+def test_ephemeral_systemd_surface_restore_collision_fails_without_overwrite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _local_unit_root, generator_root = _install_ephemeral_systemd_surface_fixture(
+        tmp_path, monkeypatch
+    )
+    generator = generator_root / "ambient-generator"
+    original = b"original ambient generator\n"
+    collision = b"created during integration\n"
+    generator.write_bytes(original)
+    temporary = tmp_path / "integration"
+    temporary.mkdir()
+    surface = ubuntu_integration.prepare_ephemeral_dedicated_systemd_surface(
+        temporary, ephemeral_host=True
+    )
+    quarantined = surface.artifacts[0].quarantine_path
+    generator.write_bytes(collision)
+
+    with pytest.raises(RuntimeError, match="Restore exact"):
+        surface.restore()
+    assert generator.read_bytes() == collision
+    assert quarantined.read_bytes() == original
+
+    generator.unlink()
+    surface.restore()
+    assert generator.read_bytes() == original
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="renameat2 Linux richiesto")
+def test_ephemeral_systemd_surface_restores_symlink_target_exactly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _local_unit_root, generator_root = _install_ephemeral_systemd_surface_fixture(
+        tmp_path, monkeypatch
+    )
+    target = tmp_path / "ambient-generator-target"
+    target.write_text("target remains outside search path\n", encoding="utf-8")
+    generator = generator_root / "ambient-generator-link"
+    relative_target = os.path.relpath(target, generator_root)
+    generator.symlink_to(relative_target)
+    before = _systemd_artifact_identity(generator)
+
+    temporary = tmp_path / "integration"
+    temporary.mkdir()
+    surface = ubuntu_integration.prepare_ephemeral_dedicated_systemd_surface(
+        temporary, ephemeral_host=True
+    )
+    assert not generator.is_symlink()
+    assert surface.artifacts[0].symlink_target == relative_target
+    surface.restore()
+
+    assert generator.is_symlink()
+    assert os.readlink(generator) == relative_target
+    assert _systemd_artifact_identity(generator) == before
 
 
 @pytest.mark.parametrize("enabled", (False, True), ids=("disabled", "enabled"))
