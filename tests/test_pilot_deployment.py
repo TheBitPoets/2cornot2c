@@ -1722,18 +1722,63 @@ def test_logrotate_closed_inventory_rejects_local_symlink_and_hardlink(
 
 
 def test_logrotate_global_include_contract_rejects_any_unexpected_effective_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config = tmp_path / "logrotate.conf"
-    config.write_text(
-        "include /etc/logrotate.d\ninclude /other/local/path\n", encoding="utf-8"
+    malicious = (
+        b"include /etc/logrotate.d\n"
+        b"include /other/local/path\n"
     )
-    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_CONFIG", config)
+
+    def fake_trusted_read(path: Path) -> bytes:
+        assert path == ubuntu_activation.LOGROTATE_CONFIG
+        return malicious
+
+    monkeypatch.setattr(
+        ubuntu_activation, "_read_stable_trusted_file", fake_trusted_read
+    )
     monkeypatch.setattr(
         ubuntu_activation, "LOGROTATE_DIRECTORY", Path("/etc/logrotate.d")
     )
     with pytest.raises(ubuntu_activation.ActivationError, match="policy chiusa"):
         ubuntu_activation._validate_logrotate_include_contract()
+
+
+@pytest.mark.parametrize(
+    ("contents", "error"),
+    (
+        (b"include /etc/logrotate.d\n", None),
+        (b"include /other/local/path\n", "policy chiusa"),
+        (
+            b"include /etc/logrotate.d\ninclude /etc/logrotate.d\n",
+            "duplicata",
+        ),
+        (
+            b"# Noble package policy\n\ninclude /etc/logrotate.d\n# retained\n",
+            None,
+        ),
+    ),
+    ids=("canonical", "unexpected-only", "duplicate-canonical", "comments-and-blanks"),
+)
+def test_logrotate_global_include_contract_preserves_canonical_grammar(
+    monkeypatch: pytest.MonkeyPatch,
+    contents: bytes,
+    error: str | None,
+) -> None:
+    def fake_trusted_read(path: Path) -> bytes:
+        assert path == ubuntu_activation.LOGROTATE_CONFIG
+        return contents
+
+    monkeypatch.setattr(
+        ubuntu_activation, "_read_stable_trusted_file", fake_trusted_read
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "LOGROTATE_DIRECTORY", Path("/etc/logrotate.d")
+    )
+    if error is None:
+        ubuntu_activation._validate_logrotate_include_contract()
+    else:
+        with pytest.raises(ubuntu_activation.ActivationError, match=error):
+            ubuntu_activation._validate_logrotate_include_contract()
 
 
 @pytest.mark.parametrize(
