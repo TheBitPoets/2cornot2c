@@ -19,8 +19,8 @@ def test_run_assignment_dispatches_runtime_before_code_backend(monkeypatch, tmp_
     monkeypatch.setattr(student_lab_runner, "load_activity", lambda root, item: runtime_activity)
     calls = []
 
-    def fake_runtime(item, *, root, timeout_seconds):
-        calls.append((item, root, timeout_seconds))
+    def fake_runtime(item, *, root, timeout_seconds, backend):
+        calls.append((item, root, timeout_seconds, backend))
         return {"status": "passed", "passed": True, "backend": "runtime"}
 
     monkeypatch.setattr(student_lab_runner.student_runtime, "run_runtime_assignment", fake_runtime)
@@ -39,7 +39,7 @@ def test_run_assignment_dispatches_runtime_before_code_backend(monkeypatch, tmp_
     )
 
     assert report["backend"] == "runtime"
-    assert calls == [(assignment, tmp_path, 17)]
+    assert calls == [(assignment, tmp_path, 17, "docker")]
 
 
 def test_run_assignment_keeps_legacy_backend_for_non_runtime_activity(monkeypatch, tmp_path: Path) -> None:

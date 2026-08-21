@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from scripts import student_lab_service, thebitlab_runtime_contracts, thebitlab_runtime_plugins
-
+from scripts import (
+    student_lab_service,
+    thebitlab_runtime_contracts,
+    thebitlab_runtime_plugins,
+    thebitlab_runtime_sandbox,
+)
 
 DEFAULT_REGISTRY = thebitlab_runtime_plugins.RuntimePluginRegistry()
 
@@ -136,7 +141,9 @@ def run_runtime_assignment(
     *,
     root: Path,
     timeout_seconds: int,
+    backend: str = "local",
     registry: thebitlab_runtime_plugins.RuntimePluginRegistry = DEFAULT_REGISTRY,
+    sandbox_service: thebitlab_runtime_sandbox.RuntimeSandboxExecutionService | None = None,
 ) -> dict[str, Any]:
     runtime_id = "unknown"
     source = root
@@ -154,7 +161,51 @@ def run_runtime_assignment(
             registry=registry,
         )
         source = _source_from_request(request)
-        execution = thebitlab_runtime_plugins.run_runtime(loaded, request)
+        if backend == "local":
+            execution = thebitlab_runtime_plugins.run_runtime(loaded, request)
+        elif backend == "docker":
+            plan = thebitlab_runtime_plugins.prepare_sandbox_runtime(loaded, request)
+            service = (
+                sandbox_service
+                or thebitlab_runtime_sandbox.DockerRuntimeSandboxExecutionService()
+            )
+            try:
+                sandbox_result = service.run(plan, request)
+            except subprocess.TimeoutExpired as error:
+                return runtime_error_report(
+                    assignment,
+                    runtime_id=runtime_id,
+                    source=source,
+                    error=f"Sandbox runtime interrotta dopo {error.timeout} secondi.",
+                    status="timeout",
+                )
+            except FileNotFoundError:
+                return runtime_error_report(
+                    assignment,
+                    runtime_id=runtime_id,
+                    source=source,
+                    error=(
+                        "Docker non trovato; il grading runtime autorevole "
+                        "non e disponibile."
+                    ),
+                )
+            if sandbox_result.get("worker_schema") != plan.profile.worker_schema:
+                raise thebitlab_runtime_plugins.RuntimePluginIncompatibleError(
+                    "Il worker schema restituito dalla sandbox non coincide con il piano"
+                )
+            execution = thebitlab_runtime_plugins.finalize_sandbox_runtime(
+                loaded, request, sandbox_result
+            )
+        else:
+            raise ValueError(f"Backend runtime non supportato: {backend}")
+    except FileNotFoundError as error:
+        missing = error.filename or str(error)
+        return runtime_error_report(
+            assignment,
+            runtime_id=runtime_id,
+            source=source,
+            error=f"File runtime non trovato: {missing}",
+        )
     except (ValueError, thebitlab_runtime_plugins.RuntimePluginError) as error:
         return runtime_error_report(
             assignment,
@@ -190,6 +241,7 @@ def run_runtime_assignment(
         "detail": execution.detail,
         "runtime": {
             "plugin_version": loaded.descriptor.plugin_version,
+            "backend": backend,
             "metadata": execution.metadata,
         },
     }

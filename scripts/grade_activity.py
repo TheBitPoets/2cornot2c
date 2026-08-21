@@ -6,18 +6,19 @@ import argparse
 import json
 import os
 import re
-import signal
 import shutil
+import signal
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import threading
-import sys
 import time
 import uuid
 from pathlib import Path
 from typing import Any
 
+from scripts.thebitlab_runtime_sandbox import docker_boundary_command
 
 DEFAULT_TIMEOUT_SECONDS = 5
 DEFAULT_NODE_STARTUP_GRACE_SECONDS = 10
@@ -744,9 +745,9 @@ def confined_regular_input(path: Path, root: Path, label: str) -> Path:
     """Resolve one input without following links outside its authorized root."""
 
     resolved_root = root.resolve(strict=True)
-    resolved = path.resolve(strict=True)
+    lexical = Path(os.path.abspath(path))
     try:
-        relative = resolved.relative_to(resolved_root)
+        relative = lexical.relative_to(resolved_root)
     except ValueError as error:
         raise ValueError(f"{label} deve trovarsi dentro {resolved_root}.") from error
     candidate = resolved_root
@@ -754,6 +755,11 @@ def confined_regular_input(path: Path, root: Path, label: str) -> Path:
         candidate = candidate / part
         if candidate.is_symlink():
             raise ValueError(f"{label} non puo essere un collegamento simbolico.")
+    resolved = lexical.resolve(strict=True)
+    try:
+        resolved.relative_to(resolved_root)
+    except ValueError as error:
+        raise ValueError(f"{label} deve trovarsi dentro {resolved_root}.") from error
     if not resolved.is_file():
         raise ValueError(f"{label} deve essere un file regolare.")
     return resolved
@@ -793,42 +799,14 @@ def docker_command(
     """Build the docker command used to run grading in a container."""
     workspace = (workspace or Path.cwd()).resolve()
     source_path = source.resolve()
-    command = [
-        "docker",
-        "run",
-        "-i",
-        "--rm",
-        "--network",
-        "none",
-        "--user",
-        "runner",
-        "--read-only",
-        "--cap-drop",
-        "ALL",
-        "--security-opt",
-        "no-new-privileges",
-        "--pids-limit",
-        "128",
-        "--memory",
-        "256m",
-        "--cpus",
-        "1",
-        "-v",
-        f"{workspace}:/submission:ro",
-        "--tmpfs",
-        "/thebitlab-work:rw,exec,nosuid,nodev,mode=1777,size=64m",
-        "-e",
-        "TMPDIR=/thebitlab-work",
-        "-w",
-        "/submission",
-    ]
-    if cidfile is not None:
-        command.extend(["--cidfile", str(cidfile.resolve())])
-    if container_name is not None:
-        command.extend(["--name", container_name])
+    command = docker_boundary_command(
+        image=image,
+        workspace=workspace,
+        cidfile=cidfile,
+        container_name=container_name,
+    )
     command.extend(
         [
-        image,
         "--worker",
         "--source",
         path_inside_workspace(source_path, workspace, "source"),
