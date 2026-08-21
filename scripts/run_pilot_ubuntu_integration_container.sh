@@ -164,7 +164,7 @@ docker exec "$container" systemctl show nginx.service \
     --property=FragmentPath --property=UnitFileState --property=ControlGroup --no-pager
 docker exec "$container" dpkg-query -W \
     -f='${binary:Package}=${Version}\n' \
-    acl dbus libnginx-mod-http-geoip2 logrotate nginx openssl procps python3 python3-jsonschema systemd systemd-sysv
+    acl apt base-files dbus e2fsprogs libnginx-mod-http-geoip2 logrotate nginx openssl procps python3 python3-jsonschema systemd systemd-sysv wget
 
 docker exec --interactive --workdir /workspace "$container" python3 - <<'PY'
 from scripts import pilot_ubuntu_activation as activation
@@ -182,5 +182,6 @@ PY
 docker exec \
     --workdir /workspace \
     --env "GITHUB_SHA=${GITHUB_SHA:-cccccccccccccccccccccccccccccccccccccccc}" \
+    --env PYTHONUNBUFFERED=1 \
     "$container" \
     python3 scripts/pilot_ubuntu_integration.py --ephemeral-host

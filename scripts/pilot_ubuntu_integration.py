@@ -953,6 +953,486 @@ def _expect_local_unit_rejected(
         _run(["systemctl", "daemon-reload"])
 
 
+def _expect_scheduler_preflight_rejected(
+    bundle: Path, label: str, expected: tuple[str, ...]
+) -> None:
+    try:
+        activation.verify_host_preflight(bundle)
+    except activation.ActivationError as exc:
+        if not any(token in str(exc) for token in expected):
+            raise RuntimeError(
+                f"{label}: reject estraneo alla unit-input provenance: {exc}"
+            ) from exc
+    else:
+        raise RuntimeError(f"Input scheduler unsafe accettato: {label}")
+    _assert_guard_absent_after_preflight_reject(label)
+
+
+def _exercise_apt_input_provenance(bundle: Path, temporary: Path) -> None:
+    trusted = activation._attest_apt_inputs()
+    package_snippets = tuple(sorted(activation.APT_CONFIG_PARTS.iterdir()))
+    if set(package_snippets) - trusted:
+        raise RuntimeError("Baseline config APT package non integrity-verified")
+    package_snippet = package_snippets[0]
+    package_original = package_snippet.read_bytes()
+    package_mode = stat.S_IMODE(package_snippet.stat().st_mode)
+    local = activation.APT_CONFIG_PARTS / "99-thebitlab-fixture"
+    marker = temporary / "apt-hook-marker"
+    hardlink_source = temporary / "apt-hardlink-source"
+    empty_sources = temporary / "apt-empty-sources.list"
+    empty_source_parts = temporary / "apt-empty-sources.list.d"
+    empty_sources.write_text("", encoding="utf-8")
+    empty_source_parts.mkdir()
+    try:
+        local.write_text("Acquire::Retries \"3\";\n", encoding="utf-8")
+        local.chmod(0o644)
+        _expect_scheduler_preflight_rejected(bundle, "harmless local APT config", ("APT",))
+        local.unlink()
+
+        local.write_text(
+            'APT::Update::Pre-Invoke { "printf apt-hook > '
+            + marker.as_posix()
+            + '"; };\n',
+            encoding="utf-8",
+        )
+        local.chmod(0o644)
+        _run(
+            [
+                "apt-get", "update",
+                "-o", f"Dir::Etc::sourcelist={empty_sources}",
+                "-o", f"Dir::Etc::sourceparts={empty_source_parts}",
+                "-o", "APT::Get::List-Cleanup=0",
+            ]
+        )
+        if marker.read_text(encoding="utf-8") != "apt-hook":
+            raise RuntimeError("Hook APT reale non ha prodotto il marker controllato")
+        _expect_scheduler_preflight_rejected(bundle, "executable local APT hook", ("APT",))
+        local.unlink()
+        marker.unlink()
+
+        local.symlink_to(package_snippet)
+        _expect_scheduler_preflight_rejected(bundle, "symlink APT config", ("APT",))
+        local.unlink()
+
+        hardlink_source.write_text("Acquire::Retries \"2\";\n", encoding="utf-8")
+        os.link(hardlink_source, local)
+        _expect_scheduler_preflight_rejected(bundle, "hardlink APT config", ("APT",))
+        local.unlink()
+        hardlink_source.unlink()
+
+        local.write_text("Acquire::Retries \"2\";\n", encoding="utf-8")
+        local.chmod(0o664)
+        _expect_scheduler_preflight_rejected(bundle, "writable APT config", ("APT",))
+        local.unlink()
+
+        package_snippet.write_bytes(package_original + b"\n// package mutation fixture\n")
+        package_snippet.chmod(package_mode)
+        _expect_scheduler_preflight_rejected(bundle, "modified package APT snippet", ("APT",))
+        package_snippet.write_bytes(package_original)
+        package_snippet.chmod(package_mode)
+
+        alternate = temporary / "alternate-apt.conf"
+        alternate.write_text("Dir::Etc \"/tmp/alternate-apt\";\n", encoding="utf-8")
+        _run(["systemctl", "set-environment", f"APT_CONFIG={alternate}"])
+        try:
+            _expect_scheduler_preflight_rejected(
+                bundle, "APT_CONFIG manager override", ("APT_CONFIG", "Environment scheduler")
+            )
+        finally:
+            _run(["systemctl", "unset-environment", "APT_CONFIG"])
+
+        activation._attest_apt_inputs()
+    finally:
+        _run(["systemctl", "unset-environment", "APT_CONFIG"])
+        if local.exists() or local.is_symlink():
+            local.unlink()
+        marker.unlink(missing_ok=True)
+        hardlink_source.unlink(missing_ok=True)
+        package_snippet.write_bytes(package_original)
+        package_snippet.chmod(package_mode)
+    print(
+        "EVIDENCE: APT package config PASS; real Pre-Invoke marker executed in empty-source "
+        "sandbox; production REJECT harmless/hook/symlink/hardlink/writable/modified/APT_CONFIG"
+    )
+
+
+def _exercise_e2scrub_input_provenance(bundle: Path, temporary: Path) -> None:
+    config = activation.E2SCRUB_CONFIG
+    original = config.read_bytes()
+    original_mode = stat.S_IMODE(config.stat().st_mode)
+    marker = temporary / "e2scrub-marker"
+    alternate = temporary / "e2scrub-alternate.conf"
+    try:
+        if activation._attest_e2scrub_inputs() != frozenset({config}):
+            raise RuntimeError("Baseline e2scrub config non chiusa")
+        config.write_bytes(
+            original + f"\nprintf e2scrub > {marker.as_posix()}\n".encode("utf-8")
+        )
+        config.chmod(original_mode)
+        _run(["env", "SERVICE_MODE=1", "/usr/sbin/e2scrub_all"])
+        if marker.read_text(encoding="utf-8") != "e2scrub":
+            raise RuntimeError("Source e2scrub reale non ha eseguito il marker")
+        _expect_scheduler_preflight_rejected(bundle, "modified executable e2scrub config", ("e2scrub",))
+        config.write_bytes(original)
+        config.chmod(original_mode)
+        marker.unlink()
+
+        alternate.write_bytes(original)
+        config.unlink()
+        config.symlink_to(alternate)
+        _expect_scheduler_preflight_rejected(bundle, "symlink e2scrub config", ("e2scrub",))
+        config.unlink()
+
+        os.link(alternate, config)
+        _expect_scheduler_preflight_rejected(bundle, "hardlink e2scrub config", ("e2scrub",))
+        config.unlink()
+
+        config.write_bytes(original)
+        config.chmod(0o664)
+        _expect_scheduler_preflight_rejected(bundle, "writable e2scrub config", ("e2scrub",))
+        config.chmod(original_mode)
+        activation._attest_e2scrub_inputs()
+    finally:
+        if config.exists() or config.is_symlink():
+            config.unlink()
+        config.write_bytes(original)
+        config.chmod(original_mode)
+        marker.unlink(missing_ok=True)
+        alternate.unlink(missing_ok=True)
+    print(
+        "EVIDENCE: e2scrub timer/service package activation PASS; real sourced marker executed; "
+        "production REJECT modified/symlink/hardlink/writable config"
+    )
+
+
+def _exercise_motd_news_input_provenance(bundle: Path, temporary: Path) -> None:
+    script = Path("/etc/update-motd.d/50-motd-news")
+    config = activation.MOTD_NEWS_CONFIG
+    lsb = activation.MOTD_LSB_RELEASE
+    lsb_original = lsb.read_bytes()
+    lsb_mode = stat.S_IMODE(lsb.stat().st_mode)
+    marker = temporary / "motd-marker"
+    hardlink_source = temporary / "motd-hardlink-source"
+    if config.exists() or config.is_symlink():
+        raise RuntimeError("Baseline motd-news optional config inatteso")
+    try:
+        if activation._attest_motd_news_inputs() != frozenset({lsb}):
+            raise RuntimeError("Baseline motd-news source inventory non chiuso")
+        config.write_text(
+            f"printf motd-default > {marker.as_posix()}\nENABLED=0\n", encoding="utf-8"
+        )
+        config.chmod(0o644)
+        _run([str(script), "--force"])
+        if marker.read_text(encoding="utf-8") != "motd-default":
+            raise RuntimeError("Source motd-news default reale non ha eseguito il marker")
+        _expect_scheduler_preflight_rejected(bundle, "local motd-news source", ("motd-news",))
+        config.unlink()
+        marker.unlink()
+
+        config.symlink_to(lsb)
+        _expect_scheduler_preflight_rejected(bundle, "symlink motd-news source", ("motd-news",))
+        config.unlink()
+
+        hardlink_source.write_text("ENABLED=0\n", encoding="utf-8")
+        os.link(hardlink_source, config)
+        _expect_scheduler_preflight_rejected(bundle, "hardlink motd-news source", ("motd-news",))
+        config.unlink()
+        hardlink_source.unlink()
+
+        config.write_text("ENABLED=0\n", encoding="utf-8")
+        config.chmod(0o664)
+        _expect_scheduler_preflight_rejected(bundle, "writable motd-news source", ("motd-news",))
+        config.unlink()
+
+        lsb.write_bytes(
+            lsb_original + f"\nprintf motd-lsb > {marker.as_posix()}\n".encode("utf-8")
+        )
+        lsb.chmod(lsb_mode)
+        _run(["env", "ENABLED=1", "URLS=http://fixture.invalid", str(script), "--force"])
+        if marker.read_text(encoding="utf-8") != "motd-lsb":
+            raise RuntimeError("Source /etc/lsb-release reale non ha eseguito il marker")
+        _expect_scheduler_preflight_rejected(bundle, "modified package motd source", ("motd-news",))
+        lsb.write_bytes(lsb_original)
+        lsb.chmod(lsb_mode)
+        marker.unlink()
+        activation._attest_motd_news_inputs()
+    finally:
+        if config.exists() or config.is_symlink():
+            config.unlink()
+        lsb.write_bytes(lsb_original)
+        lsb.chmod(lsb_mode)
+        marker.unlink(missing_ok=True)
+        hardlink_source.unlink(missing_ok=True)
+    print(
+        "EVIDENCE: motd-news timer/service and complete source chain PASS; real default+lsb "
+        "markers executed; production REJECT local/symlink/hardlink/writable/modified sources"
+    )
+
+
+def _build_fixture_deb(root: Path, output: Path, *, package: str) -> Path:
+    control = root / "DEBIAN/control"
+    control.parent.mkdir(parents=True, exist_ok=True)
+    control.write_text(
+        "Package: " + package + "\n"
+        "Version: 1.0\n"
+        "Architecture: all\n"
+        "Maintainer: TheBitLab Integration <noreply@example.invalid>\n"
+        "Description: isolated provenance fixture\n",
+        encoding="utf-8",
+    )
+    _run(["dpkg-deb", "--build", str(root), str(output)])
+    return output
+
+
+def _exercise_real_dpkg_removed_status(temporary: Path) -> None:
+    package = "thebitlab-provenance-fixture"
+    root = temporary / "dpkg-status-package"
+    path = root / "etc/thebitlab-provenance-fixture.conf"
+    path.parent.mkdir(parents=True)
+    path.write_text("canonical fixture\n", encoding="utf-8")
+    (root / "DEBIAN/conffiles").parent.mkdir(parents=True, exist_ok=True)
+    (root / "DEBIAN/conffiles").write_text(
+        "/etc/thebitlab-provenance-fixture.conf\n", encoding="utf-8"
+    )
+    deb = _build_fixture_deb(root, temporary / f"{package}.deb", package=package)
+    installed = False
+    try:
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        live = Path("/etc/thebitlab-provenance-fixture.conf")
+        if live not in activation._dpkg_integrity_verified_paths((live,)):
+            raise RuntimeError("Conffile fixture installed non integrity-verified")
+        _run(["dpkg", "--remove", package])
+        installed = False
+        status = _run(["dpkg-query", "-W", "-f=${Status}", package]).strip()
+        if status != "deinstall ok config-files" or live in activation._dpkg_integrity_verified_paths((live,)):
+            raise RuntimeError("Package config-files-only accettato dalla provenance")
+    finally:
+        _run(["dpkg", "--purge", package], expect_failure=not installed and not Path(
+            "/etc/thebitlab-provenance-fixture.conf"
+        ).exists())
+    print("EVIDENCE: real dpkg install ok installed PASS; config-files-only REJECT")
+
+
+def _exercise_unknown_package_timer_rejected(temporary: Path) -> None:
+    package = "thebitlab-unknown-timer-fixture"
+    root = temporary / "unknown-timer-package"
+    unit_root = root / "usr/lib/systemd/system"
+    unit_root.mkdir(parents=True)
+    (unit_root / "thebitlab-unknown.timer").write_text(
+        "[Unit]\nDescription=Unknown root timer fixture\n"
+        "[Timer]\nOnBootSec=1h\n"
+        "[Install]\nWantedBy=timers.target\n",
+        encoding="utf-8",
+    )
+    (unit_root / "thebitlab-unknown.service").write_text(
+        "[Unit]\nDescription=Unknown root service fixture\n"
+        "[Service]\nType=oneshot\nExecStart=/usr/bin/true\n",
+        encoding="utf-8",
+    )
+    deb = _build_fixture_deb(root, temporary / f"{package}.deb", package=package)
+    installed = False
+    try:
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        _run(["systemctl", "daemon-reload"])
+        _run(["systemctl", "enable", "thebitlab-unknown.timer"])
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError as exc:
+            if "UNKNOWN" not in str(exc):
+                raise RuntimeError(f"Unknown package timer rifiutato per causa estranea: {exc}") from exc
+        else:
+            raise RuntimeError("Unknown package-owned root timer accettato")
+    finally:
+        _run(["systemctl", "disable", "thebitlab-unknown.timer"], expect_failure=False)
+        if installed:
+            _run(["dpkg", "--purge", package])
+        _run(["systemctl", "daemon-reload"])
+    print("EVIDENCE: additional package-owned boot-reachable root timer => UNKNOWN REJECT")
+
+
+def _exercise_scheduler_policy_inventory(temporary: Path) -> None:
+    report = activation._attest_systemd_boot_surface()
+    expected = set(activation.BOOT_REACHABLE_ROOT_TIMER_POLICIES)
+    observed = {record["timer"] for record in report}
+    if observed != expected:
+        raise RuntimeError(
+            f"Inventario scheduler Noble divergente: missing={sorted(expected-observed)} "
+            f"unexpected={sorted(observed-expected)}"
+        )
+    observed_report: list[dict[str, str]] = []
+    for record in report:
+        timer = record["timer"]
+        enabled_code, enabled = activation._systemctl_result(["is-enabled", timer])
+        active_code, active = activation._systemctl_result(["is-active", timer])
+        if enabled_code != 0:
+            raise RuntimeError(f"Timer Noble non enabled/static: {timer}={enabled}")
+        if record["classification"] == "CLOSED-INPUT" and (
+            active_code != 0 or active != "active"
+        ):
+            raise RuntimeError(f"Timer CLOSED-INPUT non attivo nel baseline: {timer}={active}")
+        observed_report.append(
+            {**record, "unit_file_state": enabled, "active_state": active}
+        )
+    print(
+        "SCHEDULER_POLICY_JSON="
+        + json.dumps(observed_report, sort_keys=True, separators=(",", ":"))
+    )
+    print("EVIDENCE: supported Noble root scheduler classification ZERO UNKNOWN")
+    _exercise_real_dpkg_removed_status(temporary)
+    _exercise_unknown_package_timer_rejected(temporary)
+    activation._attest_systemd_boot_surface()
+
+
+def _expect_logrotate_preflight_rejected(bundle: Path, label: str) -> None:
+    try:
+        activation.verify_host_preflight(bundle)
+    except activation.ActivationError as exc:
+        if "logrotate" not in str(exc) or (
+            "integrity-verified" not in str(exc)
+            and "trusted" not in str(exc)
+            and "policy" not in str(exc)
+        ):
+            raise RuntimeError(
+                f"{label}: reject non attribuibile alla provenance logrotate: {exc}"
+            ) from exc
+    else:
+        raise RuntimeError(f"Input logrotate unsafe accettato: {label}")
+    _assert_guard_absent_after_preflight_reject(label)
+
+
+def _exercise_logrotate_input_provenance(bundle: Path, temporary: Path) -> None:
+    trusted = activation._attest_logrotate_inputs()
+    package_inputs = {
+        activation.LOGROTATE_CONFIG,
+        *(
+            entry
+            for entry in activation.LOGROTATE_DIRECTORY.iterdir()
+            if entry != activation.LOGROTATE_LINK
+        ),
+    }
+    if package_inputs - trusted or package_inputs - activation._dpkg_integrity_verified_paths(
+        package_inputs
+    ):
+        raise RuntimeError("Baseline snippet logrotate package non integrity-verified")
+    activation.verify_host_preflight(bundle)
+
+    timer_state = _run(["systemctl", "is-enabled", "logrotate.timer"]).strip()
+    timer_active = _run(["systemctl", "is-active", "logrotate.timer"]).strip()
+    graph = _run(
+        [
+            "systemctl", "list-dependencies", "--all", "--plain", "--no-pager",
+            _run(["systemctl", "get-default"]).strip(),
+        ]
+    )
+    fragments = {
+        name: Path(activation._systemd_property("FragmentPath", name))
+        for name in ("logrotate.service", "logrotate.timer")
+    }
+    if (
+        timer_state != "enabled"
+        or timer_active != "active"
+        or "logrotate.timer" not in graph
+        or set(fragments.values()) - activation._dpkg_owned_paths(fragments.values())
+    ):
+        raise RuntimeError("Surface timer/service logrotate Ubuntu non canonica")
+    print(
+        "EVIDENCE: Ubuntu logrotate.timer enabled+active+boot-reachable; "
+        "timer/service package-owned; closed package snippet inventory PASS"
+    )
+
+    local = activation.LOGROTATE_DIRECTORY / "local-nginx"
+    wrapper = Path("/usr/local/bin/thebitlab-logrotate-indirect-fixture")
+    fixture_log = Path("/var/log/thebitlab-logrotate-fixture.log")
+    hardlink_source = temporary / "local-logrotate-hardlink-source"
+    package_snippet = sorted(package_inputs - {activation.LOGROTATE_CONFIG})[0]
+    package_original = package_snippet.read_bytes()
+    package_mode = stat.S_IMODE(package_snippet.stat().st_mode)
+    global_original = activation.LOGROTATE_CONFIG.read_bytes()
+    try:
+        fixture_log.write_text("safe fixture\n", encoding="utf-8")
+        wrapper.write_text(
+            "#!/bin/sh\n"
+            "systemctl stop nginx.service\n"
+            "exec /usr/sbin/nginx -c /usr/local/etc/query-bearing-nginx.conf\n",
+            encoding="utf-8",
+        )
+        wrapper.chmod(0o755)
+
+        local.write_text(
+            f"{fixture_log} {{\n  missingok\n  rotate 1\n}}\n", encoding="utf-8"
+        )
+        local.chmod(0o644)
+        _expect_logrotate_preflight_rejected(bundle, "local harmless regular snippet")
+        local.unlink()
+
+        local.write_text(
+            f"{fixture_log} {{\n"
+            "  missingok\n  rotate 1\n"
+            "  postrotate\n"
+            f"    {wrapper}\n"
+            "  endscript\n}\n",
+            encoding="utf-8",
+        )
+        local.chmod(0o644)
+        _run(["logrotate", "--debug", str(activation.LOGROTATE_CONFIG)])
+        _expect_logrotate_preflight_rejected(bundle, "local indirect-wrapper snippet")
+        local.unlink()
+
+        local.symlink_to(package_snippet)
+        _expect_logrotate_preflight_rejected(bundle, "local symlink snippet")
+        local.unlink()
+
+        hardlink_source.write_text("/var/log/local-hardlink.log { missingok }\n", encoding="utf-8")
+        os.link(hardlink_source, local)
+        _expect_logrotate_preflight_rejected(bundle, "local hardlinked snippet")
+        local.unlink()
+        hardlink_source.unlink()
+
+        local.write_text("/var/log/local-writable.log { missingok }\n", encoding="utf-8")
+        local.chmod(0o664)
+        _expect_logrotate_preflight_rejected(bundle, "group-writable local snippet")
+        local.unlink()
+
+        package_snippet.write_bytes(package_original + b"\n# local mutation fixture\n")
+        package_snippet.chmod(package_mode)
+        _expect_logrotate_preflight_rejected(bundle, "modified package conffile")
+        package_snippet.write_bytes(package_original)
+        package_snippet.chmod(package_mode)
+
+        unexpected = temporary / "unexpected-logrotate.conf"
+        unexpected.write_text("/var/log/unexpected.log { missingok }\n", encoding="utf-8")
+        activation.LOGROTATE_CONFIG.write_bytes(
+            global_original + f"\ninclude {unexpected}\n".encode("utf-8")
+        )
+        try:
+            activation._validate_logrotate_include_contract()
+        except activation.ActivationError:
+            pass
+        else:
+            raise RuntimeError("Unexpected include logrotate accettato dal closed contract")
+        _expect_logrotate_preflight_rejected(bundle, "modified global unexpected include")
+        unexpected.unlink()
+        activation.LOGROTATE_CONFIG.write_bytes(global_original)
+
+        activation._attest_logrotate_inputs()
+    finally:
+        if local.exists() or local.is_symlink():
+            local.unlink()
+        wrapper.unlink(missing_ok=True)
+        fixture_log.unlink(missing_ok=True)
+        hardlink_source.unlink(missing_ok=True)
+        package_snippet.write_bytes(package_original)
+        package_snippet.chmod(package_mode)
+        activation.LOGROTATE_CONFIG.write_bytes(global_original)
+    print(
+        "EVIDENCE: logrotate --debug accepted indirect local hook; production preflight "
+        "rejected harmless/hook/symlink/hardlink/writable local inputs, modified package "
+        "conffile and unexpected global include before activation"
+    )
+
+
 def _inventory_supported_package_generators() -> tuple[str, ...]:
     expected = {
         "systemd-cryptsetup-generator",
@@ -1370,6 +1850,11 @@ def run(*, ephemeral_host: bool = False) -> None:
                 "EVIDENCE: official package module config+binary PASS; local config/binary, "
                 "symlink, writable, hardlink and non-load_module REJECT"
             )
+            _exercise_scheduler_policy_inventory(temporary)
+            _exercise_apt_input_provenance(v2_bundle, temporary)
+            _exercise_e2scrub_input_provenance(v2_bundle, temporary)
+            _exercise_motd_news_input_provenance(v2_bundle, temporary)
+            _exercise_logrotate_input_provenance(v2_bundle, temporary)
 
             leaky_unit_config, _ = _write_foreign_nginx_config(temporary, "unit-leaky")
             if "combined" not in leaky_unit_config.read_text(encoding="utf-8"):
@@ -1780,6 +2265,38 @@ def run(*, ephemeral_host: bool = False) -> None:
                 archives[1].unlink()
                 _install_legacy(legacy_bundle, legacy_manifest)
 
+            # A root-only test mutation after syntax validation is caught by the final
+            # closed-inventory re-attestation before any persistent unmask/enable boundary.
+            raced_logrotate = activation.LOGROTATE_DIRECTORY / "local-after-debug"
+            original_fault = activation._fault
+
+            def mutate_logrotate_after_debug(point: str) -> None:
+                if point == "after_logrotate_validation":
+                    raced_logrotate.write_text(
+                        "/var/log/raced.log { missingok }\n", encoding="utf-8"
+                    )
+                    raced_logrotate.chmod(0o644)
+                original_fault(point)
+
+            activation._fault = mutate_logrotate_after_debug
+            try:
+                try:
+                    activation.activate(v2_bundle, state)
+                except activation.ActivationError as exc:
+                    if "logrotate" not in str(exc):
+                        raise RuntimeError("Race logrotate rifiutata per causa estranea") from exc
+                else:
+                    raise RuntimeError("Input logrotate aggiunto dopo --debug accettato")
+            finally:
+                activation._fault = original_fault
+                raced_logrotate.unlink(missing_ok=True)
+            activation._verify_migration_guard()
+            activation.recover(v2_bundle, state)
+            activation.complete(state, archives[1])
+            archives[1].unlink()
+            _install_legacy(legacy_bundle, legacy_manifest)
+            print("EVIDENCE: logrotate input TOCTOU after --debug REJECT before unmask")
+
             # Real process-boundary crash matrix. Each child exits via os._exit(97), then
             # recovery reconstructs authority solely from guard/state/symlinks on disk.
             crash_points = (
@@ -1917,6 +2434,25 @@ def run(*, ephemeral_host: bool = False) -> None:
                 expected_sources=activation.verify_bundle(v2_bundle).sources,
                 trusted_module_sources=activation._verify_modules_enabled_entries(),
             )
+            activation._attest_logrotate_inputs()
+            activation._replace_symlink(
+                activation.LOGROTATE_LINK,
+                "/etc/thebitlab/current/nginx/thebitlab.conf",
+            )
+            try:
+                try:
+                    activation._attest_logrotate_inputs()
+                except activation.ActivationError:
+                    pass
+                else:
+                    raise RuntimeError("Target alternativo LOGROTATE_LINK accettato")
+            finally:
+                activation._replace_symlink(
+                    activation.LOGROTATE_LINK,
+                    activation.INTEGRATION_LINKS[activation.LOGROTATE_LINK],
+                )
+            activation._attest_logrotate_inputs()
+            print("EVIDENCE: exact TheBitLab LOGROTATE_LINK locked-bundle target PASS; alternate REJECT")
 
             backend, backend_thread = _start_backend(manifest["service"]["port"])
             if activation._nginx_service_state() != ("active", 0):

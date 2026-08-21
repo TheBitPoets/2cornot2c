@@ -1626,6 +1626,469 @@ def test_dpkg_path_attribution_requires_exact_installed_package_status(
     )
 
 
+def _install_logrotate_inventory_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path, Path]:
+    config = tmp_path / "etc/logrotate.conf"
+    directory = tmp_path / "etc/logrotate.d"
+    config.parent.mkdir(parents=True)
+    directory.mkdir()
+    config.write_text("weekly\ninclude " + directory.as_posix() + "\n", encoding="utf-8")
+    package_snippet = directory / "package-policy"
+    package_snippet.write_text("/var/log/package.log { missingok }\n", encoding="utf-8")
+    managed = directory / "thebitlab"
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_CONFIG", config)
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_DIRECTORY", directory)
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_LINK", managed)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "INTEGRATION_LINKS",
+        {managed: "/etc/thebitlab/current/logrotate/thebitlab"},
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_assert_systemd_directory_ancestry", lambda _path: None
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_verify_trusted_ancestry", lambda _path, _boundary: None
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(
+            path for path in paths if path in {config, package_snippet}
+        ),
+    )
+    return config, directory, package_snippet
+
+
+def test_logrotate_closed_inventory_accepts_only_integrity_verified_package_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config, _directory, package_snippet = _install_logrotate_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    assert ubuntu_activation._attest_logrotate_inputs() == frozenset(
+        {config, package_snippet}
+    )
+
+
+@pytest.mark.parametrize(
+    "contents",
+    (
+        "/var/log/local.log { missingok }\n",
+        "/var/log/local.log { postrotate\n /usr/local/bin/wrapper\n endscript\n }\n",
+    ),
+    ids=("harmless", "indirect-hook"),
+)
+def test_logrotate_closed_inventory_rejects_local_regular_input_by_provenance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, contents: str
+) -> None:
+    _config, directory, _package_snippet = _install_logrotate_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    (directory / "local-nginx").write_text(contents, encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="integrity-verified"):
+        ubuntu_activation._attest_logrotate_inputs()
+
+
+def test_logrotate_named_thebitlab_ordinary_file_is_never_managed_equivalent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _config, directory, _package_snippet = _install_logrotate_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    (directory / "thebitlab").write_text(
+        "/var/log/thebitlab.log { missingok }\n", encoding="utf-8"
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="exact symlink"):
+        ubuntu_activation._attest_logrotate_inputs()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink logrotate POSIX richiesto")
+def test_logrotate_closed_inventory_rejects_local_symlink_and_hardlink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _config, directory, package_snippet = _install_logrotate_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    local = directory / "local-link"
+    local.symlink_to(package_snippet)
+    with pytest.raises(ubuntu_activation.ActivationError, match="integrity-verified"):
+        ubuntu_activation._attest_logrotate_inputs()
+    local.unlink()
+    os.link(package_snippet, local)
+    with pytest.raises(ubuntu_activation.ActivationError, match="integrity-verified"):
+        ubuntu_activation._attest_logrotate_inputs()
+
+
+def test_logrotate_global_include_contract_rejects_any_unexpected_effective_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = tmp_path / "logrotate.conf"
+    config.write_text(
+        "include /etc/logrotate.d\ninclude /other/local/path\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_CONFIG", config)
+    monkeypatch.setattr(
+        ubuntu_activation, "LOGROTATE_DIRECTORY", Path("/etc/logrotate.d")
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="policy chiusa"):
+        ubuntu_activation._validate_logrotate_include_contract()
+
+
+@pytest.mark.parametrize(
+    ("status", "packaged_bytes", "expected"),
+    (
+        ("install ok installed", b"canonical\n", True),
+        ("install ok installed", b"locally modified\n", False),
+        ("deinstall ok config-files", b"canonical\n", False),
+    ),
+    ids=("canonical", "modified-conffile", "config-files-only"),
+)
+def test_dpkg_integrity_requires_installed_status_and_conffile_digest(
+    monkeypatch: pytest.MonkeyPatch,
+    status: str,
+    packaged_bytes: bytes,
+    expected: bool,
+) -> None:
+    path = Path("/etc/logrotate.conf")
+    canonical_digest = hashlib.md5(b"canonical\n", usedforsecurity=False).hexdigest()
+    def read_stable(candidate: Path) -> bytes:
+        assert candidate == path
+        return packaged_bytes
+
+    def dpkg_run(arguments, **_kwargs):
+        if arguments[1] == "--search":
+            return subprocess.CompletedProcess(
+                arguments, 0, f"logrotate: {path.as_posix()}\n", ""
+            )
+        assert arguments[1] == "--show"
+        return subprocess.CompletedProcess(
+            arguments,
+            0,
+            f"logrotate\n{status}\n {path.as_posix()} {canonical_digest}\n",
+            "",
+        )
+
+    monkeypatch.setattr(ubuntu_activation, "_read_stable_trusted_file", read_stable)
+    monkeypatch.setattr(ubuntu_activation.subprocess, "run", dpkg_run)
+    result = ubuntu_activation._dpkg_integrity_verified_paths((path,))
+    assert (path in result) is expected
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Symlink logrotate POSIX richiesto")
+def test_exact_thebitlab_logrotate_link_requires_locked_current_bundle_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = tmp_path / "deployments/candidate"
+    expected = bundle / "logrotate/thebitlab"
+    expected.parent.mkdir(parents=True)
+    expected.write_text("policy\n", encoding="utf-8")
+    link = tmp_path / "logrotate.d/thebitlab"
+    link.parent.mkdir()
+    link.symlink_to(expected)
+    current = tmp_path / "current"
+    current.symlink_to(bundle, target_is_directory=True)
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_LINK", link)
+    monkeypatch.setattr(ubuntu_activation, "CURRENT_LINK", current)
+    monkeypatch.setattr(ubuntu_activation, "DEPLOYMENTS_ROOT", bundle.parent)
+    monkeypatch.setattr(ubuntu_activation, "INTEGRATION_LINKS", {link: str(expected)})
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "verify_bundle",
+        lambda path: ubuntu_activation.BundleInfo(path, {}, "digest", {}),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_verify_trusted_ancestry", lambda _path, _boundary: None
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_assert_root_symlink",
+        lambda path, target: (
+            None
+            if path.is_symlink() and os.readlink(path) == target
+            else (_ for _ in ()).throw(ubuntu_activation.ActivationError("target"))
+        ),
+    )
+    assert ubuntu_activation._attest_thebitlab_logrotate_link() == expected
+
+    alternate = bundle / "logrotate/alternate"
+    alternate.write_text("other\n", encoding="utf-8")
+    link.unlink()
+    link.symlink_to(alternate)
+    with pytest.raises(ubuntu_activation.ActivationError):
+        ubuntu_activation._attest_thebitlab_logrotate_link()
+
+
+def test_systemd_logrotate_units_require_positive_input_inventory_binding(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _local_root, package_root, _generator_root = _install_systemd_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    for name in ("logrotate.service", "logrotate.timer"):
+        (package_root / name).write_text("[Unit]\n", encoding="utf-8")
+    original_systemctl = ubuntu_activation._systemctl_result
+
+    def systemctl(arguments: list[str]) -> tuple[int, str]:
+        if arguments[0] == "list-unit-files":
+            return 0, (
+                "default.target static enabled\n"
+                "multi-user.target static enabled\n"
+                "normal.service enabled enabled\n"
+                "logrotate.service static enabled\n"
+                "logrotate.timer enabled enabled\n"
+            )
+        if arguments[0] == "list-dependencies":
+            return 0, (
+                "default.target\nmulti-user.target\nnormal.service\nlogrotate.timer"
+            )
+        return original_systemctl(arguments)
+
+    calls: list[bool] = []
+    monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_supported_system_manager_environment", lambda: None
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_root_timer_activation",
+        lambda _timer, _policy: frozenset(),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_logrotate_inputs", lambda: calls.append(True)
+    )
+    ubuntu_activation._attest_systemd_boot_surface()
+    assert calls == [True]
+
+
+def _install_apt_input_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path]:
+    root = tmp_path / "etc/apt"
+    parts = root / "apt.conf.d"
+    parts.mkdir(parents=True)
+    vendor = parts / "01-vendor"
+    vendor.write_text("APT::Periodic::Enable \"0\";\n", encoding="utf-8")
+    monkeypatch.setattr(ubuntu_activation, "APT_CONFIG_ROOT", root)
+    monkeypatch.setattr(ubuntu_activation, "APT_CONFIG_MAIN", root / "apt.conf")
+    monkeypatch.setattr(ubuntu_activation, "APT_CONFIG_PARTS", parts)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_supported_system_manager_environment",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_apt_effective_config_paths",
+        lambda: (ubuntu_activation.APT_CONFIG_MAIN, parts),
+    )
+    canonical = vendor.read_bytes()
+
+    def integrity(paths):
+        return frozenset(
+            path
+            for path in paths
+            if path == vendor
+            and not path.is_symlink()
+            and path.stat().st_nlink == 1
+            and path.read_bytes() == canonical
+        )
+
+    monkeypatch.setattr(ubuntu_activation, "_dpkg_integrity_verified_paths", integrity)
+    monkeypatch.setattr(
+        ubuntu_activation, "_assert_systemd_directory_ancestry", lambda _path: None
+    )
+    return parts, vendor
+
+
+def test_apt_closed_inventory_accepts_only_canonical_package_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _parts, vendor = _install_apt_input_fixture(tmp_path, monkeypatch)
+    assert ubuntu_activation._attest_apt_inputs() == frozenset({vendor})
+
+
+@pytest.mark.parametrize(
+    "contents",
+    (
+        "Acquire::Retries \"3\";\n",
+        'APT::Update::Pre-Invoke { "touch /tmp/marker"; };\n',
+    ),
+    ids=("harmless-local", "executable-hook"),
+)
+def test_apt_closed_inventory_rejects_every_local_config_by_provenance(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    contents: str,
+) -> None:
+    parts, _vendor = _install_apt_input_fixture(tmp_path, monkeypatch)
+    (parts / "99-local").write_text(contents, encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="Input APT"):
+        ubuntu_activation._attest_apt_inputs()
+
+
+def test_apt_closed_inventory_rejects_modified_package_snippet(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _parts, vendor = _install_apt_input_fixture(tmp_path, monkeypatch)
+    vendor.write_text("APT::Periodic::Enable \"1\";\n", encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="Input APT"):
+        ubuntu_activation._attest_apt_inputs()
+
+
+def test_apt_effective_root_and_manager_apt_config_override_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    attest_environment = ubuntu_activation._attest_supported_system_manager_environment
+    _install_apt_input_fixture(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_apt_effective_config_paths",
+        lambda: (Path("/alternate/apt.conf"), ubuntu_activation.APT_CONFIG_PARTS),
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="Effective config path"):
+        ubuntu_activation._attest_apt_inputs()
+
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_supported_system_manager_environment", attest_environment
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemctl_result",
+        lambda arguments: (
+            (0, "LANG=C.UTF-8\nPATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin\nAPT_CONFIG=/tmp/evil")
+            if arguments == ["show-environment"]
+            else (_ for _ in ()).throw(AssertionError(arguments))
+        ),
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="APT_CONFIG"):
+        ubuntu_activation._attest_supported_system_manager_environment()
+
+
+def test_e2scrub_and_motd_news_close_all_sourced_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    e2scrub = tmp_path / "etc/e2scrub.conf"
+    lsb = tmp_path / "etc/lsb-release"
+    motd = tmp_path / "etc/default/motd-news"
+    e2scrub.parent.mkdir(parents=True)
+    motd.parent.mkdir(parents=True)
+    e2scrub.write_text("periodic_e2scrub=0\n", encoding="utf-8")
+    lsb.write_text("DISTRIB_CODENAME=noble\n", encoding="utf-8")
+    monkeypatch.setattr(ubuntu_activation, "E2SCRUB_CONFIG", e2scrub)
+    monkeypatch.setattr(ubuntu_activation, "MOTD_LSB_RELEASE", lsb)
+    monkeypatch.setattr(ubuntu_activation, "MOTD_NEWS_CONFIG", motd)
+    originals = {e2scrub: e2scrub.read_bytes(), lsb: lsb.read_bytes()}
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(
+            path for path in paths if path in originals and path.read_bytes() == originals[path]
+        ),
+    )
+    assert ubuntu_activation._attest_e2scrub_inputs() == frozenset({e2scrub})
+    assert ubuntu_activation._attest_motd_news_inputs() == frozenset({lsb})
+
+    e2scrub.write_text("touch /tmp/e2-marker\n", encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="e2scrub"):
+        ubuntu_activation._attest_e2scrub_inputs()
+    e2scrub.write_bytes(originals[e2scrub])
+
+    motd.write_text("touch /tmp/motd-marker\nENABLED=0\n", encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="motd-news"):
+        ubuntu_activation._attest_motd_news_inputs()
+
+
+def test_supported_noble_scheduler_policy_is_closed_and_zero_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    validated: list[str] = []
+    called: list[str] = []
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_supported_system_manager_environment", lambda: None
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_root_timer_activation",
+        lambda timer, _policy: (validated.append(timer), frozenset())[1],
+    )
+    for name in set(ubuntu_activation.UNIT_INPUT_ATTESTORS.values()):
+        monkeypatch.setattr(ubuntu_activation, name, lambda name=name: called.append(name))
+    expected = frozenset(ubuntu_activation.BOOT_REACHABLE_ROOT_TIMER_POLICIES)
+    report = ubuntu_activation._attest_boot_reachable_root_schedulers(expected)
+    assert validated == sorted(expected)
+    assert called == sorted(set(ubuntu_activation.UNIT_INPUT_ATTESTORS.values()))
+    assert {record["timer"] for record in report} == expected
+    assert {record["classification"] for record in report} == {
+        "CLOSED-INPUT", "INPUT-INDEPENDENT"
+    }
+
+
+def test_unknown_boot_reachable_root_timer_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_supported_system_manager_environment", lambda: None
+    )
+
+    def property_value(name: str, unit: str, *, allow_empty: bool = False) -> str:
+        values = {
+            ("Triggers", "unknown.timer"): "indirect.service",
+            ("User", "indirect.service"): "",
+        }
+        return values[(name, unit)]
+
+    monkeypatch.setattr(ubuntu_activation, "_systemd_property", property_value)
+    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN"):
+        ubuntu_activation._attest_boot_reachable_root_schedulers(
+            frozenset({"unknown.timer"})
+        )
+
+
+def test_known_closed_timer_cannot_bypass_its_input_attestor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_supported_system_manager_environment", lambda: None
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_root_timer_activation",
+        lambda _timer, _policy: frozenset(),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_e2scrub_inputs",
+        lambda: (_ for _ in ()).throw(ubuntu_activation.ActivationError("e2 input")),
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="e2 input"):
+        ubuntu_activation._attest_boot_reachable_root_schedulers(
+            frozenset({"e2scrub_all.timer"})
+        )
+
+
+def test_known_timer_rejects_alias_or_indirect_trigger(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    policy = ubuntu_activation.BOOT_REACHABLE_ROOT_TIMER_POLICIES["logrotate.timer"]
+
+    def property_value(name: str, unit: str, *, allow_empty: bool = False) -> str:
+        values = {
+            "Id": "logrotate.timer",
+            "Names": "logrotate.timer",
+            "LoadState": "loaded",
+            "DropInPaths": "",
+            "Triggers": "indirect.service",
+            "UnitFileState": "enabled",
+        }
+        return values[name]
+
+    monkeypatch.setattr(ubuntu_activation, "_systemd_property", property_value)
+    with pytest.raises(ubuntu_activation.ActivationError, match="Triggers"):
+        ubuntu_activation._attest_root_timer_activation("logrotate.timer", policy)
+
+
 def _install_generated_sysv_fixture(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[tuple[Path, ...], set[Path], dict[Path, Path | None], Path]:
