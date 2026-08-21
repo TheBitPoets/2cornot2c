@@ -7,3 +7,4 @@ docker/assignment-runner/*
 !scripts/
 scripts/*
 !scripts/grade_activity.py
+!scripts/thebitlab_sandbox_boundary.py
