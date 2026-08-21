@@ -751,7 +751,7 @@ def _install_legacy(bundle: Path, manifest: dict) -> None:
         manifest,
         topology="legacy-v1",
         expected_sources=info.sources,
-        trusted_module_sources=activation._verify_modules_enabled_entries(),
+        trusted_module_loads=activation._verify_modules_enabled_entries(),
     )
 
 
@@ -966,6 +966,155 @@ def _expect_scheduler_preflight_rejected(
     else:
         raise RuntimeError(f"Input scheduler unsafe accettato: {label}")
     _assert_guard_absent_after_preflight_reject(label)
+
+
+def _exercise_runtime_executable_shadows(bundle: Path, temporary: Path) -> None:
+    marker = temporary / "runtime-shadow-marker"
+    created: list[Path] = []
+
+    def install_shadow(
+        command: str, official: Path, *, local_sbin: bool = False, version_only: bool = False
+    ) -> Path:
+        directory = Path("/usr/local/sbin" if local_sbin else "/usr/local/bin")
+        path = directory / command
+        if path.exists() or path.is_symlink():
+            raise RuntimeError(f"Shadow fixture preesistente: {path}")
+        exec_arguments = " --version" if version_only else ' "$@"'
+        path.write_text(
+            "#!/bin/sh\n"
+            f"printf '%s\\n' {command} >> {marker.as_posix()}\n"
+            f"exec {official.as_posix()}{exec_arguments}\n",
+            encoding="utf-8",
+        )
+        path.chmod(0o755)
+        created.append(path)
+        return path
+
+    def prove_and_reject(
+        command: str,
+        official: Path,
+        real_command: list[str],
+        *,
+        local_sbin: bool = False,
+        version_only: bool = False,
+    ) -> None:
+        marker.unlink(missing_ok=True)
+        shadow = install_shadow(
+            command, official, local_sbin=local_sbin, version_only=version_only
+        )
+        _run(real_command)
+        observed = (
+            marker.read_text(encoding="utf-8").splitlines() if marker.exists() else []
+        )
+        if command not in observed:
+            raise RuntimeError(
+                f"Script package reale non ha risolto lo shadow {command}; observed={observed}"
+            )
+        _expect_scheduler_preflight_rejected(
+            bundle, f"runtime shadow {command}", ("shadowed", "Executable runtime")
+        )
+        shadow.unlink()
+        created.remove(shadow)
+
+    httpd_prerotate = Path("/etc/logrotate.d/httpd-prerotate")
+    nginx_fixture_log = Path("/var/log/nginx/runtime-shadow.log")
+    try:
+        for command, official in (
+            ("apt-config", Path("/usr/bin/apt-config")),
+            ("apt-get", Path("/usr/bin/apt-get")),
+            ("flock", Path("/usr/bin/flock")),
+        ):
+            prove_and_reject(
+                command,
+                official,
+                ["/usr/lib/apt/apt.systemd.daily", "update"],
+            )
+        prove_and_reject(
+            "readlink",
+            Path("/usr/bin/readlink"),
+            ["env", "SERVICE_MODE=1", "/usr/sbin/e2scrub_all", "-r"],
+        )
+        prove_and_reject(
+            "wget",
+            Path("/usr/bin/wget"),
+            [
+                "env",
+                "ENABLED=1",
+                "URLS=https://fixture.invalid",
+                "/etc/update-motd.d/50-motd-news",
+                "--force",
+            ],
+            version_only=True,
+        )
+        prove_and_reject(
+            "basename",
+            Path("/usr/bin/basename"),
+            ["/usr/libexec/dpkg/dpkg-db-backup"],
+        )
+        nginx_fixture_log.write_text("invoke fixture\n", encoding="utf-8")
+        prove_and_reject(
+            "invoke-rc.d",
+            Path("/usr/sbin/invoke-rc.d"),
+            ["logrotate", "--force", "/etc/logrotate.conf"],
+            local_sbin=True,
+        )
+
+        httpd_prerotate.mkdir()
+        try:
+            nginx_fixture_log.write_text("run-parts fixture\n", encoding="utf-8")
+            marker.unlink(missing_ok=True)
+            shadow = install_shadow("run-parts", Path("/usr/bin/run-parts"))
+            _run(["logrotate", "--force", "/etc/logrotate.conf"])
+            observed = (
+                marker.read_text(encoding="utf-8").splitlines() if marker.exists() else []
+            )
+            if "run-parts" not in observed:
+                raise RuntimeError(
+                    f"Hook nginx reale non ha risolto lo shadow run-parts; observed={observed}"
+                )
+            httpd_prerotate.rmdir()
+            _expect_scheduler_preflight_rejected(
+                bundle, "runtime shadow run-parts", ("shadowed", "Executable runtime")
+            )
+            shadow.unlink()
+            created.remove(shadow)
+        finally:
+            if httpd_prerotate.exists():
+                httpd_prerotate.rmdir()
+
+        activator_marker = temporary / "activator-shadow-marker"
+        for command, official, local_sbin in (
+            ("nginx", Path("/usr/sbin/nginx"), True),
+            ("systemctl", Path("/usr/bin/systemctl"), False),
+            ("dpkg-query", Path("/usr/bin/dpkg-query"), False),
+        ):
+            shadow = install_shadow(command, official, local_sbin=local_sbin)
+            before = marker.read_bytes() if marker.exists() else b""
+            if command == "nginx":
+                activation._nginx_effective()
+            elif command == "systemctl":
+                activation._systemctl_result(["is-active", "nginx.service"])
+            else:
+                activation._dpkg_owned_paths((Path("/usr/bin/apt-get"),))
+            after = marker.read_bytes() if marker.exists() else b""
+            if after != before or activator_marker.exists():
+                raise RuntimeError(f"Activator ha selezionato shadow locale {command}")
+            shadow.unlink()
+            created.remove(shadow)
+    finally:
+        for path in reversed(created):
+            path.unlink(missing_ok=True)
+        if httpd_prerotate.exists():
+            httpd_prerotate.rmdir()
+        marker.unlink(missing_ok=True)
+        nginx_fixture_log.unlink(missing_ok=True)
+        for rotated in nginx_fixture_log.parent.glob(nginx_fixture_log.name + ".*"):
+            rotated.unlink(missing_ok=True)
+    print(
+        "EVIDENCE: real Noble scripts resolved harmless local wrappers for apt-config/apt-get/"
+        "flock/readlink/wget/basename/invoke-rc.d/run-parts; production executable provenance "
+        "REJECT before timer execution; activator nginx/systemctl/dpkg-query stayed absolute"
+    )
 
 
 def _exercise_apt_input_provenance(bundle: Path, temporary: Path) -> None:
@@ -1268,7 +1417,9 @@ def _exercise_scheduler_policy_inventory(temporary: Path) -> None:
         active_code, active = activation._systemctl_result(["is-active", timer])
         if enabled_code != 0:
             raise RuntimeError(f"Timer Noble non enabled/static: {timer}={enabled}")
-        if record["classification"] == "CLOSED-INPUT" and (
+        if record["execution_classification"] != "CLOSED-EXECUTABLE":
+            raise RuntimeError(f"Timer senza execution closure: {timer}")
+        if record["input_classification"] == "CLOSED-INPUT" and (
             active_code != 0 or active != "active"
         ):
             raise RuntimeError(f"Timer CLOSED-INPUT non attivo nel baseline: {timer}={active}")
@@ -1575,8 +1726,11 @@ def _exercise_nginx_module_provenance() -> None:
         raise RuntimeError("Config modulo package positiva non minimale")
     official_argument = directives[0].args[0]
     official_binary = (activation.NGINX_PREFIX / official_argument).resolve(strict=True)
-    if {config, official_binary} - activation._dpkg_owned_paths((config, official_binary)):
-        raise RuntimeError("Config/binary modulo ufficiale non attribuiti a package installato")
+    original_binary = official_binary.read_bytes()
+    if {config, official_binary} - activation._dpkg_integrity_verified_paths(
+        (config, official_binary)
+    ):
+        raise RuntimeError("Config/binary modulo ufficiale non integrity-verified")
     _run(["nginx", "-t", "-c", str(activation.NGINX_CONFIG)])
 
     available = activation.NGINX_MODULES_AVAILABLE_ROOT
@@ -1631,7 +1785,15 @@ def _exercise_nginx_module_provenance() -> None:
         local_binary.unlink()
         outside.unlink()
 
-        # E: a package module binary writable by group/other.
+        # E: locally modified bytes at official config/binary paths are not package trust.
+        config.write_bytes(original_config + b"# local byte mutation\n")
+        reject("modified package module config")
+        config.write_bytes(original_config)
+        official_binary.write_bytes(original_binary + b"local-byte-mutation")
+        reject("modified package module binary")
+        official_binary.write_bytes(original_binary)
+
+        # F: a package module binary writable by group/other.
         original_mode = stat.S_IMODE(official_binary.stat().st_mode)
         official_binary.chmod(original_mode | 0o022)
         try:
@@ -1639,7 +1801,7 @@ def _exercise_nginx_module_provenance() -> None:
         finally:
             official_binary.chmod(original_mode)
 
-        # F: even a package binary path with an unexpected hardlink is rejected.
+        # G: even a package binary path with an unexpected hardlink is rejected.
         hardlink = activation.NGINX_MODULES_ROOT / "ngx_thebitlab_hardlink_test.so"
         os.link(official_binary, hardlink)
         try:
@@ -1647,17 +1809,64 @@ def _exercise_nginx_module_provenance() -> None:
         finally:
             hardlink.unlink()
 
-        # G: package config may contain only exact load_module directives.
+        # H: package config may contain only exact load_module directives.
         config.write_bytes(original_config + b"env THEBITLAB_UNMANAGED;\n")
         reject("non-load_module directive")
         config.write_bytes(original_config)
     finally:
         config.write_bytes(original_config)
+        official_binary.write_bytes(original_binary)
         for path in (local_entry, local_config, local_binary, Path("/tmp/ngx_thebitlab_redirect_target.so")):
             path.unlink(missing_ok=True)
     if activation._verify_modules_enabled_entries() != trusted_sources:
         raise RuntimeError("Inventario moduli ufficiali non ripristinato byte-for-byte")
     _run(["nginx", "-t", "-c", str(activation.NGINX_CONFIG)])
+
+
+def _exercise_behavior_bearing_package_byte_integrity() -> None:
+    nginx_config = activation.NGINX_CONFIG
+    generator = Path("/usr/lib/systemd/system-generators/systemd-run-generator")
+    boot_unit = Path("/usr/lib/systemd/system/multi-user.target")
+    originals = {
+        path: (path.read_bytes(), stat.S_IMODE(path.stat().st_mode))
+        for path in (nginx_config, generator, boot_unit)
+    }
+    try:
+        nginx_config.write_bytes(originals[nginx_config][0] + b"# modified package config\n")
+        try:
+            activation._attest_nginx_package_behavior_files()
+        except activation.ActivationError:
+            pass
+        else:
+            raise RuntimeError("Modified package nginx.conf accepted")
+        nginx_config.write_bytes(originals[nginx_config][0])
+
+        generator.write_bytes(originals[generator][0] + b"modified-generator")
+        try:
+            activation._attest_systemd_generators()
+        except activation.ActivationError:
+            pass
+        else:
+            raise RuntimeError("Modified package systemd generator accepted")
+        generator.write_bytes(originals[generator][0])
+
+        boot_unit.write_bytes(originals[boot_unit][0] + b"\n# modified boot unit\n")
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError:
+            pass
+        else:
+            raise RuntimeError("Modified boot-reachable package unit accepted")
+        boot_unit.write_bytes(originals[boot_unit][0])
+    finally:
+        for path, (contents, mode) in originals.items():
+            path.write_bytes(contents)
+            path.chmod(mode)
+    activation._attest_systemd_boot_surface()
+    print(
+        "EVIDENCE: modified package nginx.conf, systemd generator executable and "
+        "boot-reachable package unit bytes => production REJECT"
+    )
 
 
 def _check_ephemeral_host() -> str:
@@ -1847,10 +2056,12 @@ def run(*, ephemeral_host: bool = False) -> None:
             )
             _exercise_nginx_module_provenance()
             print(
-                "EVIDENCE: official package module config+binary PASS; local config/binary, "
-                "symlink, writable, hardlink and non-load_module REJECT"
+                "EVIDENCE: official package module config+binary PASS; local/modified "
+                "config/binary, symlink, writable, hardlink and non-load_module REJECT"
             )
+            _exercise_behavior_bearing_package_byte_integrity()
             _exercise_scheduler_policy_inventory(temporary)
+            _exercise_runtime_executable_shadows(v2_bundle, temporary)
             _exercise_apt_input_provenance(v2_bundle, temporary)
             _exercise_e2scrub_input_provenance(v2_bundle, temporary)
             _exercise_motd_news_input_provenance(v2_bundle, temporary)
@@ -2432,7 +2643,7 @@ def run(*, ephemeral_host: bool = False) -> None:
                 manifest,
                 topology="v2",
                 expected_sources=activation.verify_bundle(v2_bundle).sources,
-                trusted_module_sources=activation._verify_modules_enabled_entries(),
+                trusted_module_loads=activation._verify_modules_enabled_entries(),
             )
             activation._attest_logrotate_inputs()
             activation._replace_symlink(

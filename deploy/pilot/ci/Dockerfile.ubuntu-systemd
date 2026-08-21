@@ -29,6 +29,7 @@ RUN apt-get update \
         /etc/apt/apt.conf.d/docker-disable-periodic-update \
         /etc/apt/apt.conf.d/docker-gzip-indexes \
         /etc/apt/apt.conf.d/docker-no-languages \
+        /usr/sbin/policy-rc.d \
     && rm -rf /var/lib/apt/lists/*
 
 STOPSIGNAL SIGRTMIN+3

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import ast
 import base64
 import copy
 import hashlib
+import inspect
 import io
 import json
 import os
@@ -842,7 +844,7 @@ def test_effective_nginx_requires_exact_attested_module_source_set(tmp_path: Pat
         payload,
         topology="v2",
         expected_sources=expected,
-        trusted_module_sources=frozenset({module_source}),
+        trusted_module_loads={module_source: ("modules/ngx_official.so",)},
     )
 
 
@@ -878,6 +880,9 @@ def _install_nginx_module_provenance_fixture(
     monkeypatch.setattr(ubuntu_activation, "NGINX_MODULES_ROOT", module_root)
     monkeypatch.setattr(ubuntu_activation, "NGINX_MODULES_AVAILABLE_ROOT", available)
     monkeypatch.setattr(
+        ubuntu_activation, "SUPPORTED_NGINX_MODULE_LINKS", {entry: config.as_posix()}
+    )
+    monkeypatch.setattr(
         ubuntu_activation, "_assert_systemd_directory_ancestry", lambda _path: None
     )
     paths = {
@@ -900,9 +905,14 @@ def test_official_package_nginx_module_config_and_binary_are_accepted(
     monkeypatch.setattr(
         ubuntu_activation, "_dpkg_owned_paths", lambda candidates: frozenset(owned & set(candidates))
     )
-    assert ubuntu_activation._verify_modules_enabled_entries() == frozenset(
-        {paths["entry"].as_posix()}
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda candidates: frozenset(owned & set(candidates)),
     )
+    assert ubuntu_activation._verify_modules_enabled_entries() == {
+        paths["entry"].as_posix(): ("modules/ngx_official.so",)
+    }
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Symlink/mode POSIX richiesti")
@@ -912,6 +922,8 @@ def test_official_package_nginx_module_config_and_binary_are_accepted(
         "local-config",
         "local-binary",
         "local-config-and-binary",
+        "modified-config",
+        "modified-binary",
         "binary-symlink",
         "binary-writable",
         "binary-hardlink",
@@ -922,10 +934,20 @@ def test_nginx_module_provenance_rejects_unmanaged_or_unsafe_native_code(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
 ) -> None:
     paths, owned = _install_nginx_module_provenance_fixture(tmp_path, monkeypatch)
+    canonical = {
+        paths["config"]: paths["config"].read_bytes(),
+        paths["binary"]: paths["binary"].read_bytes(),
+    }
     if mutation in {"local-config", "local-config-and-binary"}:
         owned.remove(paths["config"])
     if mutation in {"local-binary", "local-config-and-binary"}:
         owned.remove(paths["binary"])
+    elif mutation == "modified-config":
+        paths["config"].write_text(
+            "# local mutation\nload_module modules/ngx_official.so;\n", encoding="utf-8"
+        )
+    elif mutation == "modified-binary":
+        paths["binary"].write_bytes(b"locally modified module fixture")
     elif mutation == "binary-symlink":
         outside = tmp_path / "local-module.so"
         outside.write_bytes(b"local")
@@ -939,6 +961,16 @@ def test_nginx_module_provenance_rejects_unmanaged_or_unsafe_native_code(
         paths["config"].write_text("env LEAK;\n", encoding="utf-8")
     monkeypatch.setattr(
         ubuntu_activation, "_dpkg_owned_paths", lambda candidates: frozenset(owned & set(candidates))
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda candidates: frozenset(
+            path
+            for path in owned & set(candidates)
+            if path == paths["modules_link"]
+            or (path in canonical and path.read_bytes() == canonical[path])
+        ),
     )
     with pytest.raises(ubuntu_activation.ActivationError):
         ubuntu_activation._verify_modules_enabled_entries()
@@ -1585,6 +1617,20 @@ def _install_systemd_inventory_fixture(
 
     monkeypatch.setattr(ubuntu_activation, "_systemd_path", systemd_path)
     monkeypatch.setattr(ubuntu_activation, "_dpkg_owned_paths", package_owned)
+    monkeypatch.setattr(
+        ubuntu_activation, "_dpkg_integrity_verified_paths", package_owned
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_activator_subprocess_toolchain", lambda: None
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_boot_reachable_package_unit_files",
+        lambda _units, _roots: frozenset(),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_show_properties", lambda _units, _names: {}
+    )
     monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
     return local_root, package_root, generator_root
 
@@ -1657,6 +1703,9 @@ def _install_logrotate_inventory_fixture(
         lambda paths: frozenset(
             path for path in paths if path in {config, package_snippet}
         ),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "LOGROTATE_EXECUTABLE_SNIPPET_SHA256", {}
     )
     return config, directory, package_snippet
 
@@ -1796,6 +1845,9 @@ def test_dpkg_integrity_requires_installed_status_and_conffile_digest(
     packaged_bytes: bytes,
     expected: bool,
 ) -> None:
+    monkeypatch.setattr(
+        ubuntu_activation, "DPKG_STATUS_PATH", Path("/nonexistent-test-dpkg-status")
+    )
     path = Path("/etc/logrotate.conf")
     canonical_digest = hashlib.md5(b"canonical\n", usedforsecurity=False).hexdigest()
     def read_stable(candidate: Path) -> bytes:
@@ -1898,7 +1950,12 @@ def test_systemd_logrotate_units_require_positive_input_inventory_binding(
     monkeypatch.setattr(
         ubuntu_activation,
         "_attest_root_timer_activation",
-        lambda _timer, _policy: frozenset(),
+        lambda _timer, _policy, *_args: frozenset(),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_runtime_executable_closure",
+        lambda _policy: frozenset(),
     )
     monkeypatch.setattr(
         ubuntu_activation, "_attest_logrotate_inputs", lambda: calls.append(True)
@@ -1918,6 +1975,14 @@ def _install_apt_input_fixture(
     monkeypatch.setattr(ubuntu_activation, "APT_CONFIG_ROOT", root)
     monkeypatch.setattr(ubuntu_activation, "APT_CONFIG_MAIN", root / "apt.conf")
     monkeypatch.setattr(ubuntu_activation, "APT_CONFIG_PARTS", parts)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "APT_CONFIG_INVENTORY_SHA256",
+        {vendor.name: hashlib.sha256(vendor.read_bytes()).hexdigest()},
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_apt_executable_hook_policy", lambda _entries: None
+    )
     monkeypatch.setattr(
         ubuntu_activation,
         "_attest_supported_system_manager_environment",
@@ -2056,17 +2121,39 @@ def test_supported_noble_scheduler_policy_is_closed_and_zero_unknown(
     monkeypatch.setattr(
         ubuntu_activation,
         "_attest_root_timer_activation",
-        lambda timer, _policy: (validated.append(timer), frozenset())[1],
+        lambda timer, _policy, *_args: (validated.append(timer), frozenset())[1],
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_show_properties", lambda _units, _names: {}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_runtime_executable_closure",
+        lambda name: called.append("execution:" + name),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_package_input_files", lambda *_args, **_kwargs: frozenset()
     )
     for name in set(ubuntu_activation.UNIT_INPUT_ATTESTORS.values()):
         monkeypatch.setattr(ubuntu_activation, name, lambda name=name: called.append(name))
     expected = frozenset(ubuntu_activation.BOOT_REACHABLE_ROOT_TIMER_POLICIES)
     report = ubuntu_activation._attest_boot_reachable_root_schedulers(expected)
     assert validated == sorted(expected)
-    assert called == sorted(set(ubuntu_activation.UNIT_INPUT_ATTESTORS.values()))
+    input_calls = [name for name in called if not name.startswith("execution:")]
+    execution_calls = [name for name in called if name.startswith("execution:")]
+    assert input_calls == sorted(set(ubuntu_activation.UNIT_INPUT_ATTESTORS.values()))
+    assert execution_calls == [
+        "execution:" + name
+        for name in sorted(
+            {policy.execution_policy for policy in ubuntu_activation.BOOT_REACHABLE_ROOT_TIMER_POLICIES.values()}
+        )
+    ]
     assert {record["timer"] for record in report} == expected
-    assert {record["classification"] for record in report} == {
+    assert {record["input_classification"] for record in report} == {
         "CLOSED-INPUT", "INPUT-INDEPENDENT"
+    }
+    assert {record["execution_classification"] for record in report} == {
+        "CLOSED-EXECUTABLE"
     }
 
 
@@ -2100,7 +2187,15 @@ def test_known_closed_timer_cannot_bypass_its_input_attestor(
     monkeypatch.setattr(
         ubuntu_activation,
         "_attest_root_timer_activation",
-        lambda _timer, _policy: frozenset(),
+        lambda _timer, _policy, *_args: frozenset(),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_show_properties", lambda _units, _names: {}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_runtime_executable_closure",
+        lambda _policy: frozenset(),
     )
     monkeypatch.setattr(
         ubuntu_activation,
@@ -2183,9 +2278,9 @@ def test_generated_sysv_unit_rejects_local_unmanaged_source_before_trust(
         tmp_path, monkeypatch
     )
     monkeypatch.setattr(
-        ubuntu_activation, "_dpkg_owned_paths", lambda _paths: frozenset()
+        ubuntu_activation, "_dpkg_integrity_verified_paths", lambda _paths: frozenset()
     )
-    with pytest.raises(ubuntu_activation.ActivationError, match="Input generator non attribuito"):
+    with pytest.raises(ubuntu_activation.ActivationError, match="generator source"):
         ubuntu_activation._attest_generated_systemd_artifacts(
             artifacts, roots, targets, frozenset()
         )
@@ -2199,7 +2294,7 @@ def test_generated_sysv_unit_accepts_only_installed_package_source_and_enablemen
     )
     monkeypatch.setattr(
         ubuntu_activation,
-        "_dpkg_owned_paths",
+        "_dpkg_integrity_verified_paths",
         lambda paths: frozenset(path for path in paths if path == source),
     )
     trusted_artifacts, trusted_units = (
@@ -2252,7 +2347,10 @@ def test_systemd_generator_search_path_rejects_unmanaged_local_generator(
     monkeypatch.setattr(
         ubuntu_activation, "_dpkg_owned_paths", lambda _paths: frozenset()
     )
-    with pytest.raises(ubuntu_activation.ActivationError, match="Generator systemd locale"):
+    monkeypatch.setattr(
+        ubuntu_activation, "_dpkg_integrity_verified_paths", lambda _paths: frozenset()
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="systemd generator executable"):
         ubuntu_activation._attest_systemd_generators()
 
 
@@ -3198,6 +3296,345 @@ def test_smoke_cli_entrypoint_resolves_repository_package() -> None:
     assert result.returncode == 0, result.stderr
     assert "non-destructive nginx/systemd smoke" in result.stdout
     assert "Traceback" not in result.stderr
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Executable PATH POSIX richiesto")
+@pytest.mark.parametrize(
+    ("policy_name", "command_name"),
+    (
+        ("apt-systemd-daily", "apt-config"),
+        ("apt-systemd-daily", "apt-get"),
+        ("e2scrub-all", "readlink"),
+        ("e2scrub-all", "lsblk"),
+        ("motd-news", "wget"),
+        ("logrotate", "invoke-rc.d"),
+        ("logrotate", "run-parts"),
+        ("dpkg-db-backup", "basename"),
+    ),
+)
+def test_runtime_command_resolution_rejects_first_local_shadow(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    policy_name: str,
+    command_name: str,
+) -> None:
+    local = tmp_path / "usr/local/bin"
+    package = tmp_path / "usr/bin"
+    local.mkdir(parents=True)
+    package.mkdir(parents=True)
+    official = package / command_name
+    official.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    official.chmod(0o755)
+    shadow = local / command_name
+    shadow.write_text(f"#!/bin/sh\nexec {official}\n", encoding="utf-8")
+    shadow.chmod(0o755)
+
+    original_lstat = Path.lstat
+
+    def root_lstat(path: Path):
+        values = list(original_lstat(path))
+        values[4] = 0
+        return os.stat_result(values)
+
+    monkeypatch.setattr(Path, "lstat", root_lstat)
+    monkeypatch.setattr(ubuntu_activation, "_assert_runtime_directory", lambda _path: None)
+    command = ubuntu_activation.RuntimeCommandPolicy(command_name, official)
+    runtime_path = f"{local}:{package}"
+    with pytest.raises(ubuntu_activation.ActivationError, match="shadowed"):
+        ubuntu_activation._resolve_runtime_command(command, runtime_path)
+    shadow.unlink()
+    resolved = ubuntu_activation._resolve_runtime_command(command, runtime_path)
+    assert resolved is not None and resolved[0] == official
+    assert command_name in {
+        item.name
+        for item in ubuntu_activation.EXECUTABLE_CLOSURE_POLICIES[policy_name].commands
+    }
+
+
+def test_reviewed_script_digest_change_invalidates_executable_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "reviewed-script"
+    source.write_bytes(b"#!/bin/sh\nexit 0\n")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    policy = ubuntu_activation.ExecutableClosurePolicy(
+        "fixture", "", {source: digest}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "EXECUTABLE_CLOSURE_POLICIES", {"fixture": policy}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_package_input_files", lambda paths, **_kwargs: frozenset(paths)
+    )
+    assert ubuntu_activation._attest_runtime_executable_closure("fixture") == frozenset(
+        {source}
+    )
+    source.write_bytes(b"#!/bin/sh\nprintf new-command\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN EXECUTION POLICY"):
+        ubuntu_activation._attest_runtime_executable_closure("fixture")
+
+
+def test_activator_security_subprocesses_use_only_absolute_registered_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: list[Path] = []
+
+    def fake_run(arguments, **_kwargs):
+        executable = Path(arguments[0])
+        observed.append(executable)
+        if executable == ubuntu_activation.NGINX_BINARY:
+            return subprocess.CompletedProcess(arguments, 0, "effective\n", "")
+        if executable == ubuntu_activation.SYSTEMD_PATH_BINARY:
+            path_output = "C:/Windows" if sys.platform == "win32" else "/usr/lib/systemd/system"
+            return subprocess.CompletedProcess(arguments, 0, path_output + "\n", "")
+        if executable == ubuntu_activation.DPKG_QUERY_BINARY:
+            return subprocess.CompletedProcess(arguments, 1, "", "")
+        return subprocess.CompletedProcess(arguments, 0, "ok\n", "")
+
+    monkeypatch.setattr(ubuntu_activation.subprocess, "run", fake_run)
+    assert ubuntu_activation._nginx_effective() == "effective\n"
+    assert ubuntu_activation._systemctl_result(["is-active", "nginx.service"])[0] == 0
+    if sys.platform != "win32":
+        assert ubuntu_activation._systemd_path("fixture") == (
+            Path("/usr/lib/systemd/system"),
+        )
+    assert ubuntu_activation._dpkg_owned_paths((Path("/usr/bin/fixture"),)) == frozenset()
+    assert observed
+    assert all(
+        path.is_absolute() if sys.platform != "win32" else str(path).startswith("\\usr")
+        for path in observed
+    )
+    assert set(observed) <= ubuntu_activation.ACTIVATOR_SUBPROCESS_EXECUTABLES
+
+
+@pytest.mark.parametrize("location", ("nginx.conf", "http", "conf.d", "site"))
+def test_every_effective_load_module_requires_exact_module_inventory_source(
+    tmp_path: Path, location: str
+) -> None:
+    payload = manifest()
+    output = tmp_path / "bundle"
+    deployment.render_bundle(payload, output)
+    directive = "load_module modules/ngx_unattested.so;\n"
+    if location == "http":
+        effective, expected = effective_v2(output, inline_http=directive)
+    elif location == "conf.d":
+        effective, expected = effective_v2(
+            output, extra_sources={"/etc/nginx/conf.d/extra.conf": directive}
+        )
+    elif location == "site":
+        site = (output / "nginx/thebitlab.conf").read_text(encoding="utf-8") + directive
+        effective, expected = effective_v2(output, site=site)
+    else:
+        effective, expected = effective_v2(output)
+        effective = effective.replace(
+            "error_log /var/log/nginx/error.log;\n",
+            "error_log /var/log/nginx/error.log;\n" + directive,
+            1,
+        )
+    with pytest.raises(ubuntu_activation.ActivationError):
+        ubuntu_activation.validate_effective_nginx(
+            effective, payload, topology="v2", expected_sources=expected
+        )
+
+
+def test_multiple_official_nginx_modules_require_exact_source_to_binary_mapping(
+    tmp_path: Path,
+) -> None:
+    payload = manifest()
+    output = tmp_path / "bundle"
+    deployment.render_bundle(payload, output)
+    modules = {
+        "/etc/nginx/modules-enabled/50-one.conf": "load_module modules/one.so;\n",
+        "/etc/nginx/modules-enabled/50-two.conf": "load_module modules/two.so;\n",
+    }
+    effective, expected = effective_v2(output, extra_sources=modules)
+    ubuntu_activation.validate_effective_nginx(
+        effective,
+        payload,
+        topology="v2",
+        expected_sources=expected,
+        trusted_module_loads={
+            source: (text.split()[1].rstrip(";"),) for source, text in modules.items()
+        },
+    )
+
+
+def test_unknown_package_executable_hook_configs_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _config, directory, package_snippet = _install_logrotate_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    package_snippet.write_text(
+        "/var/log/package.log {\npostrotate\n/usr/bin/true\nendscript\n}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(paths),
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN executable hook"):
+        ubuntu_activation._attest_logrotate_inputs()
+    package_snippet.write_text(
+        "/var/log/package.log {\ncompresscmd /usr/local/bin/compressor\n}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN executable directive"):
+        ubuntu_activation._attest_logrotate_inputs()
+
+    apt_parts, _vendor = _install_apt_input_fixture(tmp_path / "apt", monkeypatch)
+    unknown = apt_parts / "71unknown-package-hook"
+    unknown.write_text('APT::Update::Post-Invoke { "true"; };\n', encoding="utf-8")
+    with pytest.raises(ubuntu_activation.ActivationError, match="Input APT"):
+        ubuntu_activation._attest_apt_inputs()
+
+
+def test_modified_sysv_and_generator_bytes_are_not_package_trust(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    artifacts, roots, targets, source = _install_generated_sysv_fixture(
+        tmp_path, monkeypatch
+    )
+    canonical = source.read_bytes()
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(
+            path for path in paths if path == source and path.read_bytes() == canonical
+        ),
+    )
+    ubuntu_activation._attest_generated_systemd_artifacts(
+        artifacts, roots, targets, frozenset()
+    )
+    source.write_bytes(canonical + b"# modified\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="generator source"):
+        ubuntu_activation._attest_generated_systemd_artifacts(
+            artifacts, roots, targets, frozenset()
+        )
+
+
+def test_modified_package_nginx_conf_fails_byte_integrity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    paths = {
+        "config": tmp_path / "etc/nginx/nginx.conf",
+        "mime": tmp_path / "etc/nginx/mime.types",
+        "unit": tmp_path / "usr/lib/systemd/system/nginx.service",
+        "binary": tmp_path / "usr/sbin/nginx",
+        "start_stop_daemon": tmp_path / "usr/sbin/start-stop-daemon",
+    }
+    for path in paths.values():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes((path.name + "\n").encode())
+    canonical = {path: path.read_bytes() for path in paths.values()}
+    monkeypatch.setattr(ubuntu_activation, "NGINX_CONFIG", paths["config"])
+    monkeypatch.setattr(ubuntu_activation, "NGINX_MIME_TYPES", paths["mime"])
+    monkeypatch.setattr(ubuntu_activation, "NGINX_PACKAGE_UNIT", paths["unit"])
+    monkeypatch.setattr(ubuntu_activation, "NGINX_BINARY", paths["binary"])
+    monkeypatch.setattr(
+        ubuntu_activation, "START_STOP_DAEMON_BINARY", paths["start_stop_daemon"]
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda candidates: frozenset(
+            path for path in candidates if path.read_bytes() == canonical[path]
+        ),
+    )
+    assert ubuntu_activation._attest_nginx_package_behavior_files()
+    paths["config"].write_bytes(canonical[paths["config"]] + b"load_module local.so;\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="nginx package behavior"):
+        ubuntu_activation._attest_nginx_package_behavior_files()
+
+
+def test_modified_systemd_generator_executable_fails_byte_integrity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _local_root, _package_root, generator_root = _install_systemd_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    generator = generator_root / "systemd-test-generator"
+    canonical = generator.read_bytes()
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(
+            path for path in paths if path == generator and path.read_bytes() == canonical
+        ),
+    )
+    ubuntu_activation._attest_systemd_generators()
+    generator.write_bytes(canonical + b"# modified\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="systemd generator executable"):
+        ubuntu_activation._attest_systemd_generators()
+
+
+def test_modified_boot_reachable_package_unit_bytes_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fragment = tmp_path / "usr/lib/systemd/system/package.service"
+    fragment.parent.mkdir(parents=True)
+    fragment.write_bytes(b"[Service]\nExecStart=/usr/bin/true\n")
+    canonical = fragment.read_bytes()
+    properties = {
+        "LoadState": "loaded",
+        "FragmentPath": fragment.as_posix(),
+        "DropInPaths": "",
+    }
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_show_properties",
+        lambda units, _names: {
+            unit: {"Id": unit, **properties} for unit in units
+        },
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_canonical_path",
+        lambda value, **_kwargs: Path(value),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(
+            path for path in paths if path == fragment and path.read_bytes() == canonical
+        ),
+    )
+    assert ubuntu_activation._attest_boot_reachable_package_unit_files(
+        frozenset({"package.service"}), set()
+    ) == frozenset({fragment})
+    fragment.write_bytes(canonical + b"# modified\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="boot-reachable"):
+        ubuntu_activation._attest_boot_reachable_package_unit_files(
+            frozenset({"package.service"}), set()
+        )
+
+
+def test_remaining_dpkg_ownership_calls_are_metadata_or_symlink_only() -> None:
+    tree = ast.parse(inspect.getsource(ubuntu_activation))
+    callers: set[str] = set()
+
+    class Visitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self.function = ""
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            previous = self.function
+            self.function = node.name
+            self.generic_visit(node)
+            self.function = previous
+
+        def visit_Call(self, node: ast.Call) -> None:
+            if isinstance(node.func, ast.Name) and node.func.id == "_dpkg_owned_paths":
+                callers.add(self.function)
+            self.generic_visit(node)
+
+    Visitor().visit(tree)
+    assert callers == {
+        "_verify_modules_enabled_entries",  # exact-target bridge symlink only
+        "_attest_systemd_generators",  # directories and exact generator symlink only
+        "_attest_systemd_boot_surface",  # inventory classification; reachable bytes re-attested
+    }
 
 
 def test_cli_validates_example_without_touching_external_references() -> None:

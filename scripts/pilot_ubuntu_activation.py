@@ -43,11 +43,18 @@ from scripts.nginx_config_ast import (  # noqa: E402
 
 
 NGINX_CONFIG = Path("/etc/nginx/nginx.conf")
+NGINX_MIME_TYPES = Path("/etc/nginx/mime.types")
 NGINX_MODULES_ENABLED_ROOT = Path("/etc/nginx/modules-enabled")
 NGINX_PREFIX = Path("/usr/share/nginx")
 NGINX_MODULES_LINK = NGINX_PREFIX / "modules"
 NGINX_MODULES_ROOT = Path("/usr/lib/nginx/modules")
 NGINX_MODULES_AVAILABLE_ROOT = NGINX_PREFIX / "modules-available"
+SUPPORTED_NGINX_MODULE_LINKS: Mapping[Path, str] = {
+    NGINX_MODULES_ENABLED_ROOT / "50-mod-http-geoip2.conf":
+        "/usr/share/nginx/modules-available/mod-http-geoip2.conf",
+    NGINX_MODULES_ENABLED_ROOT / "50-mod-stream.conf":
+        "/usr/share/nginx/modules-available/mod-stream.conf",
+}
 DEPLOYMENTS_ROOT = Path("/etc/thebitlab/deployments")
 CURRENT_LINK = Path("/etc/thebitlab/current")
 STATE_FILE = Path("/etc/thebitlab/activation-state.json")
@@ -67,10 +74,22 @@ E2SCRUB_CONFIG = Path("/etc/e2scrub.conf")
 MOTD_NEWS_CONFIG = Path("/etc/default/motd-news")
 MOTD_LSB_RELEASE = Path("/etc/lsb-release")
 DPKG_INFO_ROOT = Path("/var/lib/dpkg/info")
+DPKG_STATUS_PATH = Path("/var/lib/dpkg/status")
+_DPKG_INTEGRITY_CACHE_TOKEN: tuple[tuple[int, ...], tuple[int, ...]] | None = None
+_DPKG_INTEGRITY_EXPECTED_MD5: dict[Path, str | None] = {}
+_DPKG_OWNERSHIP_CACHE_TOKEN: tuple[tuple[int, ...], tuple[int, ...]] | None = None
+_DPKG_INSTALLED_OWNERSHIP: dict[Path, bool] = {}
 SYSTEMD_LINK = Path("/etc/systemd/system/thebitlab.service")
 NGINX_MIGRATION_GUARD = Path("/etc/systemd/system/nginx.service")
 NGINX_PACKAGE_UNIT = Path("/usr/lib/systemd/system/nginx.service")
 NGINX_BINARY = Path("/usr/sbin/nginx")
+START_STOP_DAEMON_BINARY = Path("/usr/sbin/start-stop-daemon")
+SYSTEMCTL_BINARY = Path("/usr/bin/systemctl")
+SYSTEMD_PATH_BINARY = Path("/usr/bin/systemd-path")
+DPKG_QUERY_BINARY = Path("/usr/bin/dpkg-query")
+GETFACL_BINARY = Path("/usr/bin/getfacl")
+LOGROTATE_BINARY = Path("/usr/sbin/logrotate")
+SYSTEMD_ANALYZE_BINARY = Path("/usr/bin/systemd-analyze")
 PROC_ROOT = Path("/proc")
 NGINX_CONTROL_GROUP = "/system.slice/nginx.service"
 NGINX_WANTS_LINK = Path("/etc/systemd/system/multi-user.target.wants/nginx.service")
@@ -92,6 +111,9 @@ GENERATED_PACKAGE_UNIT_LINKS = {
         Path("/usr/lib/systemd/system/console-getty.service"),
     ("generator", "local-fs.target.wants", "systemd-remount-fs.service"):
         Path("/usr/lib/systemd/system/systemd-remount-fs.service"),
+}
+SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS: Mapping[Path, str] = {
+    Path("/etc/systemd/system-generators/systemd-gpt-auto-generator"): "/dev/null",
 }
 SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES = (".wants", ".requires", ".upholds")
 SYSTEMD_ENABLED_STATES = frozenset(
@@ -269,9 +291,29 @@ class LogInode:
 
 
 @dataclass(frozen=True)
+class RuntimeCommandPolicy:
+    name: str
+    expected_path: Path | None
+    expected_final: Path | None = None
+    symlink_targets: tuple[tuple[Path, str], ...] = ()
+
+
+@dataclass(frozen=True)
+class ExecutableClosurePolicy:
+    name: str
+    path: str
+    reviewed_sources: Mapping[Path, str]
+    commands: tuple[RuntimeCommandPolicy, ...] = ()
+    interpreters: tuple[RuntimeCommandPolicy, ...] = ()
+    absent_paths: tuple[Path, ...] = ()
+    closed_directories: Mapping[Path, tuple[str, ...]] | None = None
+
+
+@dataclass(frozen=True)
 class RootTimerPolicy:
     service: str
-    classification: str
+    input_classification: str
+    execution_policy: str
     timer_fragment: Path
     service_fragment: Path
     unit_file_state: str
@@ -285,6 +327,7 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
     "apt-daily.timer": RootTimerPolicy(
         "apt-daily.service",
         "CLOSED-INPUT",
+        "apt-systemd-daily",
         Path("/usr/lib/systemd/system/apt-daily.timer"),
         Path("/usr/lib/systemd/system/apt-daily.service"),
         "enabled",
@@ -302,6 +345,7 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
     "apt-daily-upgrade.timer": RootTimerPolicy(
         "apt-daily-upgrade.service",
         "CLOSED-INPUT",
+        "apt-systemd-daily",
         Path("/usr/lib/systemd/system/apt-daily-upgrade.timer"),
         Path("/usr/lib/systemd/system/apt-daily-upgrade.service"),
         "enabled",
@@ -319,6 +363,7 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
     "dpkg-db-backup.timer": RootTimerPolicy(
         "dpkg-db-backup.service",
         "INPUT-INDEPENDENT",
+        "dpkg-db-backup",
         Path("/usr/lib/systemd/system/dpkg-db-backup.timer"),
         Path("/usr/lib/systemd/system/dpkg-db-backup.service"),
         "enabled",
@@ -331,6 +376,7 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
     "e2scrub_all.timer": RootTimerPolicy(
         "e2scrub_all.service",
         "CLOSED-INPUT",
+        "e2scrub-all",
         Path("/usr/lib/systemd/system/e2scrub_all.timer"),
         Path("/usr/lib/systemd/system/e2scrub_all.service"),
         "enabled",
@@ -342,6 +388,7 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
     "fstrim.timer": RootTimerPolicy(
         "fstrim.service",
         "INPUT-INDEPENDENT",
+        "fstrim",
         Path("/usr/lib/systemd/system/fstrim.timer"),
         Path("/usr/lib/systemd/system/fstrim.service"),
         "enabled",
@@ -355,6 +402,7 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
     "logrotate.timer": RootTimerPolicy(
         "logrotate.service",
         "CLOSED-INPUT",
+        "logrotate",
         Path("/usr/lib/systemd/system/logrotate.timer"),
         Path("/usr/lib/systemd/system/logrotate.service"),
         "enabled",
@@ -364,6 +412,7 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
     "motd-news.timer": RootTimerPolicy(
         "motd-news.service",
         "CLOSED-INPUT",
+        "motd-news",
         Path("/usr/lib/systemd/system/motd-news.timer"),
         Path("/usr/lib/systemd/system/motd-news.service"),
         "enabled",
@@ -374,6 +423,7 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
     "systemd-tmpfiles-clean.timer": RootTimerPolicy(
         "systemd-tmpfiles-clean.service",
         "INPUT-INDEPENDENT",
+        "systemd-tmpfiles-clean",
         Path("/usr/lib/systemd/system/systemd-tmpfiles-clean.timer"),
         Path("/usr/lib/systemd/system/systemd-tmpfiles-clean.service"),
         "static",
@@ -393,9 +443,253 @@ SUPPORTED_SYSTEM_MANAGER_ENVIRONMENT = {
 SYSTEMD_BARE_EXECUTABLES = {
     "systemd-tmpfiles": Path("/usr/bin/systemd-tmpfiles"),
 }
+MANAGER_RUNTIME_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+SCRIPT_RUNTIME_PATH = MANAGER_RUNTIME_PATH + ":/sbin:/bin"
+TRUSTED_RUNTIME_COMMAND_PATHS: Mapping[str, Path] = {
+    "apt-config": Path("/usr/bin/apt-config"),
+    "apt-get": Path("/usr/bin/apt-get"),
+    "awk": Path("/usr/bin/awk"),
+    "basename": Path("/usr/bin/basename"),
+    "cat": Path("/usr/bin/cat"),
+    "chgrp": Path("/usr/bin/chgrp"),
+    "chmod": Path("/usr/bin/chmod"),
+    "chown": Path("/usr/bin/chown"),
+    "cmp": Path("/usr/bin/cmp"),
+    "cp": Path("/usr/bin/cp"),
+    "cut": Path("/usr/bin/cut"),
+    "date": Path("/usr/bin/date"),
+    "dirname": Path("/usr/bin/dirname"),
+    "dpkg": Path("/usr/bin/dpkg"),
+    "du": Path("/usr/bin/du"),
+    "env": Path("/usr/bin/env"),
+    "find": Path("/usr/bin/find"),
+    "flock": Path("/usr/bin/flock"),
+    "grep": Path("/usr/bin/grep"),
+    "gzip": Path("/usr/bin/gzip"),
+    "head": Path("/usr/bin/head"),
+    "id": Path("/usr/bin/id"),
+    "invoke-rc.d": Path("/usr/sbin/invoke-rc.d"),
+    "ln": Path("/usr/bin/ln"),
+    "ls": Path("/usr/bin/ls"),
+    "lsblk": Path("/usr/bin/lsblk"),
+    "mkdir": Path("/usr/bin/mkdir"),
+    "mktemp": Path("/usr/bin/mktemp"),
+    "mv": Path("/usr/bin/mv"),
+    "ps": Path("/usr/bin/ps"),
+    "readlink": Path("/usr/bin/readlink"),
+    "rm": Path("/usr/bin/rm"),
+    "run-parts": Path("/usr/bin/run-parts"),
+    "savelog": Path("/usr/bin/savelog"),
+    "sed": Path("/usr/bin/sed"),
+    "seq": Path("/usr/bin/seq"),
+    "sort": Path("/usr/bin/sort"),
+    "start-stop-daemon": Path("/usr/sbin/start-stop-daemon"),
+    "stat": Path("/usr/bin/stat"),
+    "systemctl": SYSTEMCTL_BINARY,
+    "systemd-escape": Path("/usr/bin/systemd-escape"),
+    "tar": Path("/usr/bin/tar"),
+    "touch": Path("/usr/bin/touch"),
+    "tr": Path("/usr/bin/tr"),
+    "uname": Path("/usr/bin/uname"),
+    "uniq": Path("/usr/bin/uniq"),
+    "wc": Path("/usr/bin/wc"),
+    "wget": Path("/usr/bin/wget"),
+    "xargs": Path("/usr/bin/xargs"),
+}
+
+
+def _runtime_commands(*names: str) -> tuple[RuntimeCommandPolicy, ...]:
+    policies: list[RuntimeCommandPolicy] = []
+    for name in names:
+        expected = TRUSTED_RUNTIME_COMMAND_PATHS[name]
+        if name == "awk":
+            policies.append(
+                RuntimeCommandPolicy(
+                    name,
+                    expected,
+                    Path("/usr/bin/mawk"),
+                    (
+                        (Path("/usr/bin/awk"), "/etc/alternatives/awk"),
+                        (Path("/etc/alternatives/awk"), "/usr/bin/mawk"),
+                    ),
+                )
+            )
+        else:
+            policies.append(RuntimeCommandPolicy(name, expected))
+    return tuple(policies)
+
+
+SH_INTERPRETER = RuntimeCommandPolicy(
+    "/bin/sh",
+    Path("/bin/sh"),
+    Path("/usr/bin/dash"),
+    ((Path("/bin/sh"), "dash"),),
+)
+BASH_INTERPRETER = RuntimeCommandPolicy("/usr/bin/bash", Path("/usr/bin/bash"))
+PERL_INTERPRETER = RuntimeCommandPolicy("/usr/bin/perl", Path("/usr/bin/perl"))
+RUNLEVEL_EXECUTABLE = RuntimeCommandPolicy(
+    "/sbin/runlevel",
+    Path("/sbin/runlevel"),
+    SYSTEMCTL_BINARY,
+    ((Path("/sbin/runlevel"), "../bin/systemctl"),),
+)
+SAVELOG_SOURCE = {
+    Path("/usr/bin/savelog"):
+        "6a0f55fea1a81f1930c86f534fb5570785b2f12f3da49709e76c3148a89e0197"
+}
+SAVELOG_COMMANDS = _runtime_commands(
+    "date", "basename", "gzip", "touch", "chown", "chgrp", "chmod",
+    "dirname", "mkdir", "rm", "mv", "ls", "sed", "ln",
+)
+APT_CONFIG_INVENTORY_SHA256: Mapping[str, str] = {
+    "01-vendor-ubuntu": "364d5eeac5475b7dddfd629899ea88b91ed8d8e8e319c29bb9dbd6772e87ed55",
+    "01autoremove": "35b4360d9126e5e5efc1ce42cea8a957ba42921de749ad8502922d536c9f385c",
+    "70debconf": "db749e19baf3b72ca2c157c70c52522cae23d94bc8b2dc5793fd43d427445367",
+}
+LOGROTATE_EXECUTABLE_SNIPPET_SHA256: Mapping[str, str] = {
+    "nginx": "c6f585f3a98e424c30c5208f2f52c8e39665b76744cd5bcc523efdee0a7d69ee",
+}
+EXECUTABLE_CLOSURE_POLICIES: Mapping[str, ExecutableClosurePolicy] = {
+    "apt-systemd-daily": ExecutableClosurePolicy(
+        "apt-systemd-daily",
+        SCRIPT_RUNTIME_PATH,
+        {
+            Path("/usr/lib/apt/apt.systemd.daily"):
+                "4949c220a844071ee4709115aadfc00684578d5c7dda9c1b5a5c65a75de9d50f",
+            **SAVELOG_SOURCE,
+        },
+        _runtime_commands(
+            "apt-config", "apt-get", "flock", "cmp", "cp", "savelog", "date",
+            "find", "xargs", "rm", "ls", "du", "stat", "basename", "seq",
+            "sort", "uniq", "wc", "mkdir", "mv", "touch", "env", "grep",
+        ) + SAVELOG_COMMANDS + (
+            RuntimeCommandPolicy("debdelta-upgrade", None),
+            RuntimeCommandPolicy("unattended-upgrade", None),
+        ),
+        (SH_INTERPRETER,),
+    ),
+    "dpkg-db-backup": ExecutableClosurePolicy(
+        "dpkg-db-backup",
+        SCRIPT_RUNTIME_PATH,
+        {
+            Path("/usr/libexec/dpkg/dpkg-db-backup"):
+                "82565872502df70d74a919e089185aaa39b90e25ca1abc1fff6831ba8966d27e",
+            Path("/usr/share/dpkg/sh/dpkg-error.sh"):
+                "ee1c4bfdd26d2d22f6af3aa1123e7f30e0c5983a5cc3af5bc3aaacab1da7bac1",
+            **SAVELOG_SOURCE,
+        },
+        _runtime_commands("basename", "tar", "savelog", "cmp", "cp", "touch")
+        + SAVELOG_COMMANDS,
+        (SH_INTERPRETER,),
+    ),
+    "e2scrub-all": ExecutableClosurePolicy(
+        "e2scrub-all",
+        "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin",
+        {
+            Path("/usr/sbin/e2scrub_all"):
+                "ca2883dfcc5568121cf4afe5d1556a4fdaa5e24c6677d56e1c03da07bfc5356b",
+            # Direct fallback source is reviewed too; lvcreate/lvs are required
+            # absent in this Noble baseline, so its invocation branch is unreachable.
+            Path("/usr/sbin/e2scrub"):
+                "c5e1eda9531d83b3dabcc5d54d6ead03af0180f903a626fa429a02d2e9acd056",
+        },
+        _runtime_commands(
+            "readlink", "lsblk", "grep", "sed", "systemd-escape", "systemctl"
+        ) + (
+            RuntimeCommandPolicy("lvcreate", None),
+            RuntimeCommandPolicy("lvs", None),
+        ),
+        (BASH_INTERPRETER,),
+    ),
+    "motd-news": ExecutableClosurePolicy(
+        "motd-news",
+        MANAGER_RUNTIME_PATH,
+        {Path("/etc/update-motd.d/50-motd-news"):
+            "12d09f922c013d07b62cca4fda15a567d94133b196c23193784f1725562ad754"},
+        _runtime_commands(
+            "wget", "mktemp", "dpkg", "awk", "cat", "head", "tr", "cut",
+            "rm", "id", "sed", "uname", "grep",
+        ),
+        (SH_INTERPRETER,),
+        (Path("/usr/bin/cloud-id"),),
+    ),
+    "logrotate": ExecutableClosurePolicy(
+        "logrotate",
+        SCRIPT_RUNTIME_PATH,
+        {
+            Path("/etc/logrotate.d/nginx"):
+                "c6f585f3a98e424c30c5208f2f52c8e39665b76744cd5bcc523efdee0a7d69ee",
+            Path("/usr/sbin/invoke-rc.d"):
+                "1d389fa6f6297e77b2ba1d2df4a6ec60f4d4d37815b727889f38ba602e713f77",
+            Path("/etc/init.d/nginx"):
+                "d856e15d5604ac0f430afe70b90ead159314049c431292f0c6a07238d0717627",
+            Path("/etc/default/nginx"):
+                "97106f4c380619c45d8a9091a17bb9bb7cbd96b51ef55dea50ddb88b92d36f1a",
+            Path("/usr/lib/init/vars.sh"):
+                "49d734860b46c62805fc29a67b9d61210113b6eac2409e4ffd5cf14589f4f0a3",
+            Path("/usr/lib/lsb/init-functions"):
+                "f58bfadf2419d6036a2c7440e574c3c3e7a35aea380375f6ab1b590d64e5e952",
+            Path("/usr/lib/lsb/init-functions.d/00-verbose"):
+                "e1c1b915d3e45deaddd57fd4bdd1ff490e0f8dd1e842b22cf2bdc963bbd29e13",
+            Path("/usr/lib/lsb/init-functions.d/40-systemd"):
+                "deab4c161571359f3e74deab9f555c3f0774d2fd7e49258ef26891053cfbe5c2",
+            Path("/usr/lib/lsb/init-functions.d/50-ubuntu-logging"):
+                "94c415c6d3a3782831998ae625c21c338f98102cbf994e8e90e32f94270616ee",
+        },
+        _runtime_commands(
+            "run-parts", "invoke-rc.d", "basename", "sed", "systemctl", "ls",
+            "xargs", "ps", "grep", "cat", "awk", "head", "start-stop-daemon",
+            "readlink", "id",
+        ) + (
+            RUNLEVEL_EXECUTABLE,
+            RuntimeCommandPolicy("/etc/init.d/nginx", Path("/etc/init.d/nginx")),
+            RuntimeCommandPolicy("/usr/sbin/nginx", Path("/usr/sbin/nginx")),
+            RuntimeCommandPolicy(
+                "/bin/gzip", Path("/bin/gzip"), Path("/usr/bin/gzip")
+            ),
+        ),
+        (SH_INTERPRETER,),
+        (
+            Path("/usr/sbin/policy-rc.d"),
+            Path("/etc/logrotate.d/httpd-prerotate"),
+            Path("/etc/lsb-base-logging.sh"),
+        ),
+        {Path("/usr/lib/lsb/init-functions.d"): (
+            "00-verbose", "40-systemd", "50-ubuntu-logging"
+        )},
+    ),
+    "fstrim": ExecutableClosurePolicy("fstrim", MANAGER_RUNTIME_PATH, {}),
+    "systemd-tmpfiles-clean": ExecutableClosurePolicy(
+        "systemd-tmpfiles-clean", MANAGER_RUNTIME_PATH, {}
+    ),
+}
+
+ACTIVATOR_SUBPROCESS_EXECUTABLES = frozenset(
+    {
+        SYSTEMCTL_BINARY,
+        SYSTEMD_PATH_BINARY,
+        DPKG_QUERY_BINARY,
+        GETFACL_BINARY,
+        NGINX_BINARY,
+        LOGROTATE_BINARY,
+        SYSTEMD_ANALYZE_BINARY,
+        Path("/usr/bin/apt-config"),
+    }
+)
+# Bootstrap dpkg-query without trusting dpkg-query to attest itself. A package
+# update that changes these reviewed bytes intentionally fails closed.
+DPKG_QUERY_REVIEWED_SHA256 = (
+    "cc2a19017c37132e4ad46c1fbddea6472262d0a62a0b8585c383706c20005ea1"
+)
 
 
 def _run(command: list[str]) -> str:
+    if (
+        not command
+        or not Path(command[0]).is_absolute()
+        or Path(command[0]) not in ACTIVATOR_SUBPROCESS_EXECUTABLES
+    ):
+        raise ActivationError("Subprocess activator con executable non assoluto/attestato")
     result = subprocess.run(
         command,
         check=False,
@@ -411,7 +705,7 @@ def _run(command: list[str]) -> str:
 
 
 def _nginx_effective() -> str:
-    command = ["nginx", "-T", "-c", str(NGINX_CONFIG)]
+    command = [str(NGINX_BINARY), "-T", "-c", str(NGINX_CONFIG)]
     result = subprocess.run(
         command,
         check=False,
@@ -649,7 +943,7 @@ def validate_effective_nginx(
     *,
     topology: str,
     expected_sources: Mapping[str, str],
-    trusted_module_sources: frozenset[str] = frozenset(),
+    trusted_module_loads: Mapping[str, tuple[str, ...]] | None = None,
 ) -> None:
     """Validate source attribution and active server topology from real nginx -T output."""
 
@@ -660,6 +954,7 @@ def validate_effective_nginx(
     base_sources = {_source_path(NGINX_CONFIG), "/etc/nginx/mime.types"}
     allowed = base_sources | set(expected_sources)
     module_prefix = "/etc/nginx/modules-enabled/"
+    trusted_module_loads = trusted_module_loads or {}
     module_sources = {
         source
         for source in sources
@@ -668,7 +963,7 @@ def validate_effective_nginx(
     expected_pilot_modules = {
         source for source in expected_sources if source.startswith(module_prefix)
     }
-    if module_sources != expected_pilot_modules | set(trusted_module_sources):
+    if module_sources != expected_pilot_modules | set(trusted_module_loads):
         raise ActivationError("Source module nginx effettive non attestate dall'inventario")
     allowed |= module_sources
     if topology == "preinstall-default":
@@ -683,6 +978,22 @@ def validate_effective_nginx(
         _assert_source_exact(sources, path, expected)
     for source in module_sources - set(expected_sources):
         _validate_module_source(source, parsed[source])
+
+    effective_loads: dict[str, list[str]] = {}
+    for source, directives in parsed.items():
+        for directive, context in _walk_directives(directives):
+            if directive.name != "load_module":
+                continue
+            if directive.children is not None or len(directive.args) != 1 or context:
+                raise ActivationError(
+                    f"load_module fuori dal main context atteso: {source}:{directive.line}"
+                )
+            effective_loads.setdefault(source, []).append(directive.args[0])
+    normalized_loads = {
+        source: tuple(arguments) for source, arguments in effective_loads.items()
+    }
+    if normalized_loads != dict(trusted_module_loads):
+        raise ActivationError("load_module effettivi senza exact source+binary provenance")
 
     servers = [
         directive
@@ -1105,11 +1416,11 @@ def _verify_trusted_ancestry(path: Path, boundary: Path) -> None:
     _assert_trusted_metadata(lexical, directory=False, require_root_owner=True)
 
 
-def _verify_modules_enabled_entries() -> frozenset[str]:
-    """Return only module sources whose config and native code are package-attributed."""
+def _verify_modules_enabled_entries() -> Mapping[str, tuple[str, ...]]:
+    """Return exact source->load mapping after config and native byte integrity."""
 
     directory = NGINX_MODULES_ENABLED_ROOT
-    trusted_sources: set[str] = set()
+    trusted_loads: dict[str, tuple[str, ...]] = {}
     package_configs: list[Path] = []
     module_binaries: list[Path] = []
     _assert_systemd_directory_ancestry(NGINX_MODULES_AVAILABLE_ROOT)
@@ -1117,15 +1428,19 @@ def _verify_modules_enabled_entries() -> frozenset[str]:
         source = _source_path(entry)
         if entry == PROCESS_LINK:
             _check_managed_link(entry, INTEGRATION_LINKS[PROCESS_LINK], allow_absent=True)
-            if entry.is_symlink():
-                trusted_sources.add(source)
+            # The managed process-level config is allowed through expected_sources;
+            # it is never part of the distro load_module mapping.
             continue
         if not entry.name.endswith(".conf") or not entry.is_symlink():
             raise ActivationError(f"modules-enabled contiene artifact unmanaged: {entry}")
         try:
             link_target = os.readlink(entry)
-            if not link_target.startswith("/") or Path(link_target) != Path(os.path.abspath(link_target)):
-                raise OSError("target symlink non assoluto/canonico")
+            if (
+                not link_target.startswith("/")
+                or Path(link_target) != Path(os.path.abspath(link_target))
+                or SUPPORTED_NGINX_MODULE_LINKS.get(entry) != link_target
+            ):
+                raise OSError("target symlink non assoluto/canonico/revisionato")
             _assert_root_symlink(entry, link_target)
             target = entry.resolve(strict=True)
             if (
@@ -1137,8 +1452,9 @@ def _verify_modules_enabled_entries() -> frozenset[str]:
             raise ActivationError(f"Modulo nginx non attribuibile al package Ubuntu: {entry}") from exc
         _verify_trusted_ancestry(target, NGINX_MODULES_AVAILABLE_ROOT)
         try:
-            directives = _parse_nginx_source(source, target.read_text(encoding="utf-8"))
-        except OSError as exc:
+            config_bytes = _read_stable_trusted_file(target)
+            directives = _parse_nginx_source(source, config_bytes.decode("utf-8"))
+        except (ActivationError, OSError, UnicodeError) as exc:
             raise ActivationError(f"Config modulo nginx non leggibile: {target}") from exc
         _validate_module_source(source, directives)
         package_configs.append(target)
@@ -1165,7 +1481,7 @@ def _verify_modules_enabled_entries() -> frozenset[str]:
                 raise ActivationError(f"Binary modulo nginx fuori dalla root distro: {semantic_path}")
             _verify_trusted_ancestry(binary, NGINX_MODULES_ROOT)
             module_binaries.append(binary)
-        trusted_sources.add(source)
+        trusted_loads[source] = tuple(item.args[0] for item in directives)
 
     if package_configs:
         try:
@@ -1182,18 +1498,27 @@ def _verify_modules_enabled_entries() -> frozenset[str]:
         ):
             raise ActivationError("Bridge modules nginx Ubuntu non canonico")
         _assert_systemd_directory_ancestry(NGINX_MODULES_ROOT)
-        package_owned = _dpkg_owned_paths(
-            (*package_configs, NGINX_MODULES_LINK, *module_binaries)
+        _attest_package_input_files(
+            (*package_configs, *module_binaries), label="nginx dynamic module"
         )
-        for config in package_configs:
-            if config not in package_owned:
-                raise ActivationError(f"Config modulo nginx non attribuita a package installato: {config}")
-        if NGINX_MODULES_LINK not in package_owned:
+        # dpkg has no content digest for this symlink. Its trust is deliberately
+        # exact target + root metadata + package attribution + final directory closure.
+        if NGINX_MODULES_LINK not in _dpkg_owned_paths((NGINX_MODULES_LINK,)):
             raise ActivationError("Bridge modules nginx non attribuito a package installato")
-        for binary in module_binaries:
-            if binary not in package_owned:
-                raise ActivationError(f"Binary modulo nginx non attribuito a package installato: {binary}")
-    return frozenset(trusted_sources)
+    return trusted_loads
+
+
+def _attest_nginx_package_behavior_files() -> frozenset[Path]:
+    return _attest_package_input_files(
+        (
+            NGINX_CONFIG,
+            NGINX_MIME_TYPES,
+            NGINX_PACKAGE_UNIT,
+            NGINX_BINARY,
+            START_STOP_DAEMON_BINARY,
+        ),
+        label="nginx package behavior",
+    )
 
 
 def verify_host_configuration_trust(
@@ -1202,7 +1527,7 @@ def verify_host_configuration_trust(
     guard_required: bool | None = None,
     require_complete_links: bool = False,
     allowed_unit_file_states: frozenset[str] = ENABLED_NGINX_UNIT_FILE_STATES,
-) -> frozenset[str]:
+) -> Mapping[str, tuple[str, ...]]:
     """Validate the root-owned host configuration chain and its allowed symlinks."""
 
     directories = (
@@ -1219,13 +1544,16 @@ def verify_host_configuration_trust(
     )
     for directory in directories:
         _assert_trusted_metadata(directory, directory=True, require_root_owner=True)
-    for config in (
+    nginx_package_inputs = (
         NGINX_CONFIG,
-        Path("/etc/nginx/mime.types"),
+        NGINX_MIME_TYPES,
         NGINX_PACKAGE_UNIT,
         NGINX_BINARY,
-    ):
+        START_STOP_DAEMON_BINARY,
+    )
+    for config in nginx_package_inputs:
         _assert_trusted_metadata(config, directory=False, require_root_owner=True)
+    _attest_nginx_package_behavior_files()
 
     guard_present = _symlink_state(NGINX_MIGRATION_GUARD)["present"]
     if guard_required is True and not guard_present:
@@ -1271,7 +1599,7 @@ def verify_host_configuration_trust(
         _verify_trusted_ancestry(target, DEPLOYMENTS_ROOT)
 
     _attest_logrotate_inputs()
-    trusted_module_sources = _verify_modules_enabled_entries()
+    trusted_module_loads = _verify_modules_enabled_entries()
     if info is not None:
         verified = verify_bundle(info.path)
         if verified.lock_digest != info.lock_digest:
@@ -1283,10 +1611,10 @@ def verify_host_configuration_trust(
         ):
             for path, expected in INTEGRATION_LINKS.items():
                 _assert_root_symlink(path, expected)
-    return trusted_module_sources
+    return trusted_module_loads
 
 
-def verify_ubuntu_layout() -> frozenset[str]:
+def verify_ubuntu_layout() -> Mapping[str, tuple[str, ...]]:
     for directory in (
         Path("/etc/nginx/modules-enabled"),
         Path("/etc/nginx/conf.d"),
@@ -1295,10 +1623,10 @@ def verify_ubuntu_layout() -> frozenset[str]:
     ):
         if not directory.is_dir() or directory.is_symlink():
             raise ActivationError(f"Directory Ubuntu non supportata: {directory}")
-    trusted_module_sources = _verify_modules_enabled_entries()
+    trusted_module_loads = _verify_modules_enabled_entries()
     try:
-        text = NGINX_CONFIG.read_text(encoding="utf-8")
-    except OSError as exc:
+        text = _read_stable_trusted_file(NGINX_CONFIG).decode("utf-8")
+    except (ActivationError, OSError, UnicodeError) as exc:
         raise ActivationError(f"nginx.conf Ubuntu assente o non accessibile: {NGINX_CONFIG}") from exc
     nginx_source = _source_path(NGINX_CONFIG)
     parsed = {nginx_source: _parse_nginx_source(nginx_source, text)}
@@ -1316,7 +1644,7 @@ def verify_ubuntu_layout() -> frozenset[str]:
     }
     if includes != required:
         raise ActivationError("Layout nginx Ubuntu con include non gestite")
-    return trusted_module_sources
+    return trusted_module_loads
 
 
 def _current_bundle_path() -> Path:
@@ -1347,7 +1675,7 @@ def _validate_default_link() -> dict[str, Any]:
 
 
 def _classify_existing_topology(
-    effective: str, trusted_module_sources: frozenset[str]
+    effective: str, trusted_module_loads: Mapping[str, tuple[str, ...]]
 ) -> tuple[str, BundleInfo | None]:
     site_state = _symlink_state(SITE_LINK)
     default_state = _validate_default_link()
@@ -1366,7 +1694,7 @@ def _classify_existing_topology(
             None,
             topology=topology,
             expected_sources=expected,
-            trusted_module_sources=trusted_module_sources,
+            trusted_module_loads=trusted_module_loads,
         )
         return topology, None
 
@@ -1385,7 +1713,7 @@ def _classify_existing_topology(
             previous_v2.manifest,
             topology="v2",
             expected_sources=previous_v2.sources,
-            trusted_module_sources=trusted_module_sources,
+            trusted_module_loads=trusted_module_loads,
         )
         return "v2", previous_v2
 
@@ -1401,7 +1729,7 @@ def _classify_existing_topology(
         legacy.manifest,
         topology="legacy-v1",
         expected_sources=legacy.sources,
-        trusted_module_sources=trusted_module_sources,
+        trusted_module_loads=trusted_module_loads,
     )
     return "legacy-v1", None
 
@@ -1412,7 +1740,7 @@ def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) 
     _attest_systemd_boot_surface()
     layout_module_sources = verify_ubuntu_layout()
     candidate = verify_bundle(bundle)
-    trusted_module_sources = verify_host_configuration_trust(
+    trusted_module_loads = verify_host_configuration_trust(
         candidate,
         guard_required=guard_required,
         allowed_unit_file_states=(
@@ -1434,11 +1762,11 @@ def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) 
     for path, target in INTEGRATION_LINKS.items():
         _check_managed_link(path, target, allow_absent=True)
 
-    if trusted_module_sources != layout_module_sources:
+    if trusted_module_loads != layout_module_sources:
         raise ActivationError("Inventario moduli nginx mutato durante il preflight")
     effective = _nginx_effective()
     source_kind, previous_v2 = _classify_existing_topology(
-        effective, trusted_module_sources
+        effective, trusted_module_loads
     )
     if previous_v2 is not None and previous_v2.path == candidate.path:
         raise ActivationError("Candidate già attiva senza activation state autorevole")
@@ -1455,7 +1783,7 @@ def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) 
 
 
 def _verify_no_extended_acl(path: Path) -> None:
-    output = _run(["getfacl", "-cp", "--", str(path)])
+    output = _run([str(GETFACL_BINARY), "-cp", "--", str(path)])
     allowed_prefixes = ("user::", "group::", "other::")
     for line in output.splitlines():
         stripped = line.strip()
@@ -1640,7 +1968,7 @@ def _state_exists(path: Path) -> bool:
 def _systemctl_result(arguments: Sequence[str]) -> tuple[int, str]:
     try:
         result = subprocess.run(
-            ["systemctl", *arguments], check=False, capture_output=True, text=True, timeout=30
+            [str(SYSTEMCTL_BINARY), *arguments], check=False, capture_output=True, text=True, timeout=30
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ActivationError("systemctl non disponibile o non responsivo") from exc
@@ -1650,7 +1978,7 @@ def _systemctl_result(arguments: Sequence[str]) -> tuple[int, str]:
 def _systemd_path(name: str) -> tuple[Path, ...]:
     try:
         result = subprocess.run(
-            ["systemd-path", name],
+            [str(SYSTEMD_PATH_BINARY), name],
             check=False,
             capture_output=True,
             text=True,
@@ -1675,18 +2003,41 @@ def _systemd_path(name: str) -> tuple[Path, ...]:
 def _dpkg_path_spellings(path: Path) -> tuple[str, ...]:
     value = path.as_posix()
     spellings = [value]
-    if value == "/usr/lib" or value.startswith("/usr/lib/"):
-        spellings.append(value.removeprefix("/usr"))
-    elif value == "/lib" or value.startswith("/lib/"):
-        spellings.append("/usr" + value)
+    for directory in ("bin", "sbin", "lib", "lib64"):
+        usr_prefix = f"/usr/{directory}"
+        legacy_prefix = f"/{directory}"
+        if value == usr_prefix or value.startswith(usr_prefix + "/"):
+            spellings.append(value.removeprefix("/usr"))
+            break
+        if value == legacy_prefix or value.startswith(legacy_prefix + "/"):
+            spellings.append("/usr" + value)
+            break
     return tuple(spellings)
 
 
 def _dpkg_owned_paths(paths: Iterable[Path]) -> frozenset[Path]:
     """Attribute exact filesystem artifacts to currently installed Ubuntu packages."""
 
+    requested = tuple(dict.fromkeys(paths))
+    global _DPKG_OWNERSHIP_CACHE_TOKEN
+    try:
+        cache_token = (
+            _file_identity(DPKG_STATUS_PATH.lstat()),
+            _file_identity(DPKG_INFO_ROOT.lstat()),
+        )
+    except OSError:
+        cache_token = None
+    if cache_token is not None and cache_token != _DPKG_OWNERSHIP_CACHE_TOKEN:
+        _DPKG_INSTALLED_OWNERSHIP.clear()
+        _DPKG_OWNERSHIP_CACHE_TOKEN = cache_token
+    missing = tuple(
+        path for path in requested if path not in _DPKG_INSTALLED_OWNERSHIP
+    ) if cache_token is not None else requested
+    if not missing:
+        return frozenset(path for path in requested if _DPKG_INSTALLED_OWNERSHIP[path])
+
     candidates: dict[str, set[Path]] = {}
-    for path in paths:
+    for path in missing:
         for spelling in _dpkg_path_spellings(path):
             candidates.setdefault(spelling, set()).add(path)
     owners_by_spelling: dict[str, set[str]] = {}
@@ -1699,7 +2050,7 @@ def _dpkg_owned_paths(paths: Iterable[Path]) -> frozenset[Path]:
         chunk = names[offset : offset + 100]
         try:
             result = subprocess.run(
-                ["dpkg-query", "--search", "--", *chunk],
+                [str(DPKG_QUERY_BINARY), "--search", "--", *chunk],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -1732,7 +2083,7 @@ def _dpkg_owned_paths(paths: Iterable[Path]) -> frozenset[Path]:
         try:
             result = subprocess.run(
                 [
-                    "dpkg-query",
+                    str(DPKG_QUERY_BINARY),
                     "--show",
                     "--showformat=${binary:Package}\\t${Status}\\n",
                     *chunk,
@@ -1762,6 +2113,12 @@ def _dpkg_owned_paths(paths: Iterable[Path]) -> frozenset[Path]:
             for package in packages
         ):
             owned.update(candidates[spelling])
+    if cache_token is not None:
+        for path in missing:
+            _DPKG_INSTALLED_OWNERSHIP[path] = path in owned
+        return frozenset(
+            path for path in requested if _DPKG_INSTALLED_OWNERSHIP.get(path, False)
+        )
     return frozenset(owned)
 
 
@@ -1799,7 +2156,12 @@ def _read_stable_trusted_file(path: Path) -> bytes:
         if resolved_before != path:
             raise ActivationError(f"Path package risolto tramite symlink: {path}")
         before = path.lstat()
-        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        flags = (
+            os.O_RDONLY
+            | getattr(os, "O_BINARY", 0)
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0)
+        )
         descriptor = os.open(path, flags)
         try:
             opened_before = os.fstat(descriptor)
@@ -1832,8 +2194,38 @@ def _read_stable_trusted_file(path: Path) -> bytes:
 def _dpkg_integrity_verified_paths(paths: Iterable[Path]) -> frozenset[Path]:
     """Verify unique installed owner and stable bytes against authoritative dpkg metadata."""
 
+    requested = tuple(dict.fromkeys(paths))
+    global _DPKG_INTEGRITY_CACHE_TOKEN
+    try:
+        cache_token = (
+            _file_identity(DPKG_STATUS_PATH.lstat()),
+            _file_identity(DPKG_INFO_ROOT.lstat()),
+        )
+    except OSError:
+        cache_token = None
+    if cache_token is not None and cache_token != _DPKG_INTEGRITY_CACHE_TOKEN:
+        _DPKG_INTEGRITY_EXPECTED_MD5.clear()
+        _DPKG_INTEGRITY_CACHE_TOKEN = cache_token
+    if cache_token is not None and all(
+        path in _DPKG_INTEGRITY_EXPECTED_MD5 for path in requested
+    ):
+        verified_from_cache: set[Path] = set()
+        for path in requested:
+            expected = _DPKG_INTEGRITY_EXPECTED_MD5[path]
+            if expected is None:
+                continue
+            try:
+                actual = hashlib.md5(
+                    _read_stable_trusted_file(path), usedforsecurity=False
+                ).hexdigest()
+            except ActivationError:
+                continue
+            if actual == expected:
+                verified_from_cache.add(path)
+        return frozenset(verified_from_cache)
+
     candidates: dict[str, set[Path]] = {}
-    for path in paths:
+    for path in requested:
         for spelling in _dpkg_path_spellings(path):
             candidates.setdefault(spelling, set()).add(path)
     if not candidates:
@@ -1847,7 +2239,7 @@ def _dpkg_integrity_verified_paths(paths: Iterable[Path]) -> frozenset[Path]:
     for offset in range(0, len(patterns), 100):
         try:
             result = subprocess.run(
-                ["dpkg-query", "--search", "--", *patterns[offset : offset + 100]],
+                [str(DPKG_QUERY_BINARY), "--search", "--", *patterns[offset : offset + 100]],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -1876,6 +2268,7 @@ def _dpkg_integrity_verified_paths(paths: Iterable[Path]) -> frozenset[Path]:
     package_cache: dict[str, tuple[str, dict[str, tuple[str, str]]] | None] = {}
     md5sums_cache: dict[str, dict[str, list[str]] | None] = {}
     verified: set[Path] = set()
+    expected_by_path: dict[Path, str | None] = {}
     for path, path_owners in owners.items():
         if len(path_owners) != 1:
             continue
@@ -1884,7 +2277,7 @@ def _dpkg_integrity_verified_paths(paths: Iterable[Path]) -> frozenset[Path]:
             try:
                 result = subprocess.run(
                     [
-                        "dpkg-query",
+                        str(DPKG_QUERY_BINARY),
                         "--show",
                         "--showformat=${binary:Package}\\n${Status}\\n${Conffiles}\\n",
                         owner,
@@ -1975,6 +2368,7 @@ def _dpkg_integrity_verified_paths(paths: Iterable[Path]) -> frozenset[Path]:
                 ]
                 if len(matches) == 1:
                     expected_digest = matches[0]
+        expected_by_path[path] = expected_digest
         if expected_digest is None:
             continue
         try:
@@ -1984,6 +2378,9 @@ def _dpkg_integrity_verified_paths(paths: Iterable[Path]) -> frozenset[Path]:
         actual_digest = hashlib.md5(actual_bytes, usedforsecurity=False).hexdigest()
         if actual_digest == expected_digest:
             verified.add(path)
+    if cache_token is not None:
+        for path in requested:
+            _DPKG_INTEGRITY_EXPECTED_MD5[path] = expected_by_path.get(path)
     return frozenset(verified)
 
 
@@ -2009,6 +2406,235 @@ def _attest_package_input_files(paths: Iterable[Path], *, label: str) -> frozens
             f"Input {label} non attribuito/integrity-verified da package installato: {missing[0]}"
         )
     return verified
+
+
+_USR_MERGE_DIRECTORY_TARGETS: Mapping[Path, str] = {
+    Path("/bin"): "usr/bin",
+    Path("/sbin"): "usr/sbin",
+    Path("/lib"): "usr/lib",
+    Path("/lib64"): "usr/lib64",
+}
+
+
+def _assert_runtime_directory(path: Path) -> None:
+    """Attest each PATH directory, allowing only Noble's exact usrmerge links."""
+
+    if not path.is_absolute() or path != Path(os.path.abspath(path)):
+        raise ActivationError(f"Directory PATH non canonica: {path}")
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        current /= part
+        try:
+            metadata = current.lstat()
+        except OSError as exc:
+            raise ActivationError(f"Directory PATH non verificabile: {current}") from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            expected_target = _USR_MERGE_DIRECTORY_TARGETS.get(current)
+            try:
+                target = os.readlink(current)
+            except OSError as exc:
+                raise ActivationError(f"Symlink PATH non verificabile: {current}") from exc
+            if (
+                expected_target is None
+                or target != expected_target
+                or (os.name != "nt" and metadata.st_uid != 0)
+            ):
+                raise ActivationError(f"Symlink PATH fuori policy usrmerge: {current}")
+            continue
+        if (
+            not stat.S_ISDIR(metadata.st_mode)
+            or (os.name != "nt" and (metadata.st_uid != 0 or metadata.st_mode & 0o022))
+        ):
+            raise ActivationError(f"Directory PATH non trusted: {current}")
+
+
+def _runtime_lexical_aliases(path: Path) -> frozenset[Path]:
+    aliases = {path}
+    value = path.as_posix()
+    if value.startswith("/usr/bin/"):
+        aliases.add(Path(value.removeprefix("/usr")))
+    elif value.startswith("/usr/sbin/"):
+        aliases.add(Path(value.removeprefix("/usr")))
+    return frozenset(aliases)
+
+
+def _first_runtime_candidate(name: str, runtime_path: str) -> Path | None:
+    if "/" in name:
+        candidate = Path(name)
+        if not candidate.is_absolute() or candidate != Path(os.path.abspath(candidate)):
+            raise ActivationError(f"Executable assoluto non canonico: {name}")
+        _assert_runtime_directory(candidate.parent)
+        candidates = (candidate,)
+    else:
+        components = runtime_path.split(":")
+        if not components or any(not item for item in components):
+            raise ActivationError("PATH runtime vuoto/relativo")
+        directories = tuple(Path(item) for item in components)
+        if len(set(directories)) != len(directories):
+            raise ActivationError("PATH runtime duplicato")
+        for directory in directories:
+            _assert_runtime_directory(directory)
+        candidates = tuple(directory / name for directory in directories)
+    for candidate in candidates:
+        try:
+            metadata = candidate.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise ActivationError(f"Candidate executable non verificabile: {candidate}") from exc
+        try:
+            executable = os.access(candidate, os.X_OK)
+        except OSError as exc:
+            raise ActivationError(f"Mode executable non verificabile: {candidate}") from exc
+        if not executable:
+            continue
+        if not (stat.S_ISREG(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode)):
+            raise ActivationError(f"Candidate executable con tipo unsafe: {candidate}")
+        return candidate
+    return None
+
+
+def _resolve_runtime_command(
+    policy: RuntimeCommandPolicy, runtime_path: str
+) -> tuple[Path, tuple[tuple[Path, tuple[int, ...], str | None], ...]] | None:
+    """Resolve the first executable exactly as PATH lookup would, without ambient PATH."""
+
+    candidate = _first_runtime_candidate(policy.name, runtime_path)
+    if policy.expected_path is None:
+        if candidate is not None:
+            raise ActivationError(
+                f"Executable opzionale fuori closure presente: {policy.name} -> {candidate}"
+            )
+        return None
+    if candidate is None:
+        raise ActivationError(f"Executable runtime assente: {policy.name}")
+    if candidate not in _runtime_lexical_aliases(policy.expected_path):
+        raise ActivationError(
+            f"Executable runtime shadowed: {policy.name} -> {candidate}, "
+            f"atteso {policy.expected_path}"
+        )
+
+    expected_links = dict(policy.symlink_targets)
+    observed: list[tuple[Path, tuple[int, ...], str | None]] = []
+    current = candidate
+    seen: set[Path] = set()
+    for _depth in range(16):
+        if current in seen:
+            raise ActivationError(f"Loop symlink executable: {policy.name}")
+        seen.add(current)
+        try:
+            metadata = current.lstat()
+        except OSError as exc:
+            raise ActivationError(f"Executable runtime non verificabile: {current}") from exc
+        if stat.S_ISLNK(metadata.st_mode):
+            try:
+                target = os.readlink(current)
+            except OSError as exc:
+                raise ActivationError(f"Symlink executable non leggibile: {current}") from exc
+            if expected_links.get(current) != target:
+                raise ActivationError(f"Symlink/alternatives executable fuori policy: {current}")
+            if os.name != "nt" and metadata.st_uid != 0:
+                raise ActivationError(f"Symlink executable non root-owned: {current}")
+            observed.append((current, _file_identity(metadata), target))
+            next_path = Path(target)
+            current = (
+                next_path if next_path.is_absolute() else current.parent / next_path
+            )
+            current = Path(os.path.normpath(current))
+            _assert_runtime_directory(current.parent)
+            continue
+        if expected_links.get(current) is not None:
+            raise ActivationError(f"Symlink executable atteso ma assente: {current}")
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or getattr(metadata, "st_nlink", 1) != 1
+            or not metadata.st_mode & 0o111
+            or (os.name != "nt" and (metadata.st_uid != 0 or metadata.st_mode & 0o022))
+        ):
+            raise ActivationError(f"Executable finale con metadata unsafe: {current}")
+        observed.append((current, _file_identity(metadata), None))
+        break
+    else:
+        raise ActivationError(f"Chain symlink executable troppo profonda: {policy.name}")
+
+    final = current.resolve(strict=True)
+    expected_final = (policy.expected_final or policy.expected_path).resolve(strict=True)
+    if final != expected_final or set(expected_links) != {
+        path for path, _identity, target in observed if target is not None
+    }:
+        raise ActivationError(f"Target finale executable fuori policy: {policy.name}")
+    return final, tuple(observed)
+
+
+def _recheck_runtime_resolution(
+    name: str, observed: tuple[tuple[Path, tuple[int, ...], str | None], ...]
+) -> None:
+    for path, identity, target in observed:
+        try:
+            metadata = path.lstat()
+            current_target = os.readlink(path) if target is not None else None
+        except OSError as exc:
+            raise ActivationError(f"Executable mutato dopo resolution: {name}") from exc
+        if _file_identity(metadata) != identity or current_target != target:
+            raise ActivationError(f"Executable mutato durante attestation: {name}")
+
+
+def _attest_runtime_executable_closure(policy_name: str) -> frozenset[Path]:
+    policy = EXECUTABLE_CLOSURE_POLICIES.get(policy_name)
+    if policy is None:
+        raise ActivationError(f"UNKNOWN EXECUTION POLICY: {policy_name}")
+
+    sources = tuple(policy.reviewed_sources)
+    _attest_package_input_files(sources, label=f"execution policy {policy.name}")
+    for source, expected_digest in policy.reviewed_sources.items():
+        actual = hashlib.sha256(_read_stable_trusted_file(source)).hexdigest()
+        if actual != expected_digest:
+            raise ActivationError(f"UNKNOWN EXECUTION POLICY bytes: {source}")
+
+    for path in policy.absent_paths:
+        try:
+            path.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise ActivationError(f"Executable input opzionale non verificabile: {path}") from exc
+        raise ActivationError(f"Executable input set fuori policy: {path}")
+
+    if policy.closed_directories:
+        for directory, expected_names in policy.closed_directories.items():
+            _identity, entries = _directory_snapshot(directory)
+            if tuple(item.name for item in entries) != expected_names:
+                raise ActivationError(f"Executable input directory fuori policy: {directory}")
+
+    resolved: list[tuple[str, Path, tuple[tuple[Path, tuple[int, ...], str | None], ...]]] = []
+    for command in (*policy.interpreters, *policy.commands):
+        result = _resolve_runtime_command(command, policy.path)
+        if result is not None:
+            final, observed = result
+            resolved.append((command.name, final, observed))
+    finals = tuple(dict.fromkeys(final for _name, final, _observed in resolved))
+    _attest_package_input_files(finals, label=f"runtime executable {policy.name}")
+    reviewed_canonical = {path.resolve(strict=True) for path in sources}
+    for name, final, observed in resolved:
+        _recheck_runtime_resolution(name, observed)
+        try:
+            header = _read_stable_trusted_file(final)[:2]
+        except ActivationError:
+            raise
+        if header == b"#!" and final not in reviewed_canonical and name not in {
+            item.name for item in policy.interpreters
+        }:
+            raise ActivationError(f"Script transitive senza policy revisionata: {name}")
+    return frozenset((*sources, *finals))
+
+
+def _attest_activator_subprocess_toolchain() -> None:
+    bootstrap = _read_stable_trusted_file(DPKG_QUERY_BINARY)
+    if hashlib.sha256(bootstrap).hexdigest() != DPKG_QUERY_REVIEWED_SHA256:
+        raise ActivationError("dpkg-query activator fuori dalla policy revisionata")
+    _attest_package_input_files(
+        ACTIVATOR_SUBPROCESS_EXECUTABLES, label="activator subprocess"
+    )
 
 
 def _optional_existing_path(path: Path) -> tuple[Path, ...]:
@@ -2063,6 +2689,7 @@ def _apt_effective_config_paths() -> tuple[Path, Path]:
                 "AUTOCLEAN", "APT::Periodic::AutocleanInterval",
                 "CLEAN", "APT::Periodic::CleanInterval",
                 "BACKUP", "APT::Periodic::BackupArchiveInterval",
+                "CACHE", "Dir::Cache::archives/d",
             ],
             check=False,
             capture_output=True,
@@ -2072,10 +2699,36 @@ def _apt_effective_config_paths() -> tuple[Path, Path]:
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ActivationError("Lookup effective config APT non disponibile") from exc
-    expected = "ROOT='/'\nETC='etc/apt'\nMAIN='apt.conf'\nPARTS='apt.conf.d'\n"
+    expected = (
+        "ROOT='/'\nETC='etc/apt'\nMAIN='apt.conf'\nPARTS='apt.conf.d'\n"
+        "CACHE='/var/cache/apt/archives/'\n"
+    )
     if result.returncode != 0 or result.stderr or result.stdout != expected:
         raise ActivationError("Effective config root APT alternata/non canonica")
     return APT_CONFIG_MAIN, APT_CONFIG_PARTS
+
+
+def _attest_apt_executable_hook_policy(entries: Sequence[Path]) -> None:
+    """Accept only Noble's reviewed, unreachable-under-periodic-zero debconf hook."""
+
+    hook = APT_CONFIG_PARTS / "70debconf"
+    if hook not in entries:
+        raise ActivationError("APT executable-hook inventory privo di 70debconf")
+    preconfigure = Path("/usr/sbin/dpkg-preconfigure")
+    # The exact periodic-zero contract makes DPkg::Pre-Install-Pkgs unreachable
+    # from apt.systemd.daily. Bind the hook script bytes, but do not pretend its
+    # Perl/package-maintainer execution graph is an active timer closure.
+    _attest_package_input_files((preconfigure,), label="APT executable hook")
+    if hashlib.sha256(_read_stable_trusted_file(preconfigure)).hexdigest() != (
+        "8f389d049e6b15029ca7311cd449861f47b7e3381f4083646b812380f07f28c9"
+    ):
+        raise ActivationError("UNKNOWN EXECUTION POLICY: dpkg-preconfigure")
+    for optional in (Path("/usr/lib/cdebconf/dpkg-preconfigure"),):
+        if optional.exists() or optional.is_symlink():
+            raise ActivationError(f"APT hook executable opzionale fuori policy: {optional}")
+    _resolve_runtime_command(
+        RuntimeCommandPolicy("apt-extracttemplates", None), MANAGER_RUNTIME_PATH
+    )
 
 
 def _attest_apt_inputs() -> frozenset[Path]:
@@ -2086,12 +2739,16 @@ def _attest_apt_inputs() -> frozenset[Path]:
     if main != APT_CONFIG_MAIN or parts != APT_CONFIG_PARTS:
         raise ActivationError("Effective config path APT fuori policy")
     directory_identity, entries = _directory_snapshot(parts)
-    # In the accepted Noble package config all periodic actions are unset/zero, so
-    # apt.systemd.daily exits before its conditional /etc/default/locale source.
-    # Any config that makes that local source reachable changes the shell output
-    # checked above and is rejected together with the closed package inventory.
-    package_inputs = [*entries, *_optional_existing_path(main)]
-    verified = _attest_package_input_files(package_inputs, label="APT")
+    if tuple(item.name for item in entries) != tuple(sorted(APT_CONFIG_INVENTORY_SHA256)):
+        raise ActivationError("Input APT: inventario fuori dalla policy Noble revisionata")
+    if main.exists() or main.is_symlink():
+        raise ActivationError("apt.conf principale non previsto dalla policy Noble")
+    verified = _attest_package_input_files(entries, label="APT")
+    for entry in entries:
+        actual = hashlib.sha256(_read_stable_trusted_file(entry)).hexdigest()
+        if actual != APT_CONFIG_INVENTORY_SHA256[entry.name]:
+            raise ActivationError(f"Config APT fuori dalla policy revisionata: {entry}")
+    _attest_apt_executable_hook_policy(entries)
     final_identity, final_entries = _directory_snapshot(parts)
     if final_identity != directory_identity or final_entries != entries:
         raise ActivationError("Inventario config APT mutato durante l'attestazione")
@@ -2162,6 +2819,40 @@ def _attest_thebitlab_logrotate_link() -> Path:
     return resolved
 
 
+def _attest_logrotate_executable_hooks(package_inputs: Sequence[Path]) -> None:
+    hook_directives = {"prerotate", "postrotate", "firstaction", "lastaction"}
+    unsupported_executable_directives = {
+        "compresscmd", "uncompresscmd", "mail", "mailfirst", "maillast", "shred"
+    }
+    observed: set[str] = set()
+    for path in package_inputs:
+        try:
+            text = _read_stable_trusted_file(path).decode("utf-8")
+        except (ActivationError, UnicodeError) as exc:
+            raise ActivationError(f"Snippet logrotate non leggibile: {path}") from exc
+        has_hook = False
+        for raw_line in text.splitlines():
+            semantic = raw_line.split("#", 1)[0].strip()
+            if not semantic:
+                continue
+            directive_name = semantic.split(None, 1)[0]
+            if directive_name in unsupported_executable_directives:
+                raise ActivationError(
+                    f"UNKNOWN executable directive logrotate: {path} {directive_name}"
+                )
+            if directive_name in hook_directives:
+                has_hook = True
+        if not has_hook:
+            continue
+        expected_digest = LOGROTATE_EXECUTABLE_SNIPPET_SHA256.get(path.name)
+        actual_digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if expected_digest is None or actual_digest != expected_digest:
+            raise ActivationError(f"UNKNOWN executable hook logrotate: {path}")
+        observed.add(path.name)
+    if observed != set(LOGROTATE_EXECUTABLE_SNIPPET_SHA256):
+        raise ActivationError("Inventario executable hook logrotate Noble divergente")
+
+
 def _attest_logrotate_inputs() -> frozenset[Path]:
     """Close every effective logrotate input by package or exact bundle provenance."""
 
@@ -2181,6 +2872,7 @@ def _attest_logrotate_inputs() -> frozenset[Path]:
         trusted_inputs.add(entry)
 
     _attest_package_input_files(package_inputs, label="logrotate")
+    _attest_logrotate_executable_hooks(package_inputs)
     _validate_logrotate_include_contract()
     final_identity, final_entries = _directory_snapshot(LOGROTATE_DIRECTORY)
     if final_identity != directory_identity or final_entries != entries:
@@ -2263,35 +2955,35 @@ def _attest_systemd_generators() -> None:
         tree_directories, tree_artifacts = _collect_systemd_tree(root)
         directories.extend(tree_directories)
         artifacts.extend(tree_artifacts)
-    resolved_targets: dict[Path, Path] = {}
-    for path in artifacts:
-        if path.is_symlink():
-            _assert_systemd_symlink_metadata(path)
-            try:
-                resolved_targets[path] = path.resolve(strict=True)
-            except OSError as exc:
-                raise ActivationError(f"Symlink generator systemd broken: {path}") from exc
-    package_owned = _dpkg_owned_paths(
-        (*directories, *artifacts, *resolved_targets.values())
-    )
-    unmanaged = [path for path in (*directories, *artifacts) if path not in package_owned]
+    symlinks = tuple(path for path in artifacts if path.is_symlink())
+    regulars = tuple(path for path in artifacts if not path.is_symlink())
+    metadata_owned = _dpkg_owned_paths((*directories, *symlinks))
+    unmanaged = [path for path in (*directories, *symlinks) if path not in metadata_owned]
     if unmanaged:
-        raise ActivationError(
-            f"Generator systemd locale/unmanaged: {unmanaged[0]}"
-        )
-    for path in artifacts:
+        raise ActivationError(f"Generator systemd locale/unmanaged: {unmanaged[0]}")
+    expected_symlinks = {
+        path
+        for path in SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS
+        if any(path == root or root in path.parents for root in roots)
+    }
+    if set(symlinks) != expected_symlinks:
+        raise ActivationError("Inventario symlink generator systemd fuori policy")
+    for path in symlinks:
+        target = _assert_systemd_symlink_metadata(path)
+        if target != SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS[path]:
+            raise ActivationError(f"Symlink generator systemd target divergente: {path}")
+        try:
+            if path.resolve(strict=True) != Path("/dev/null"):
+                raise ActivationError(f"Symlink generator systemd non canonico: {path}")
+        except OSError as exc:
+            raise ActivationError(f"Symlink generator systemd broken: {path}") from exc
+    for path in regulars:
         metadata = path.lstat()
-        if path.is_symlink():
-            target = resolved_targets[path]
-            if target != Path("/dev/null") and target not in package_owned:
-                raise ActivationError(
-                    f"Symlink generator package con target non attribuito: {path}"
-                )
-            continue
         if not stat.S_ISREG(metadata.st_mode):
             raise ActivationError(f"Generator systemd package non regolare: {path}")
         if os.name != "nt" and (metadata.st_uid != 0 or metadata.st_mode & 0o022):
             raise ActivationError(f"Generator systemd package con metadata unsafe: {path}")
+    _attest_package_input_files(regulars, label="systemd generator executable")
 
 
 def _systemd_command_output(arguments: Sequence[str], *, label: str) -> str:
@@ -2306,8 +2998,8 @@ def _attest_package_owned_generator_input(path: Path, boundary: Path) -> None:
     if path.parent != boundary:
         raise ActivationError(f"Input generator fuori dal boundary atteso: {path}")
     _verify_trusted_ancestry(path, boundary)
-    if path not in _dpkg_owned_paths((path,)):
-        raise ActivationError(f"Input generator non attribuito a package installato: {path}")
+    if path not in _attest_package_input_files((path,), label="generator source"):
+        raise ActivationError(f"Input generator non integrity-verified: {path}")
 
 
 def _attest_generated_systemd_artifacts(
@@ -2381,6 +3073,7 @@ def _attest_generated_systemd_artifacts(
             expected = Path("/usr/lib/systemd/system/rc-local.service").resolve(strict=True)
             if target != expected or target not in package_owned:
                 raise ActivationError("Output rc-local generator non canonico")
+            _attest_package_input_files((expected,), label="rc-local generated unit")
             _attest_package_owned_generator_input(RC_LOCAL_PATH, Path("/etc"))
             trusted_artifacts.add(path)
             trusted_units.add(identity)
@@ -2392,13 +3085,29 @@ def _attest_generated_systemd_artifacts(
         expected = expected_target.resolve(strict=True)
         if target != expected or target not in package_owned:
             raise ActivationError(f"Output generator package target divergente: {path}")
+        _attest_package_input_files((expected,), label="generated package unit target")
         trusted_artifacts.add(path)
         trusted_units.add(identity)
 
     return frozenset(trusted_artifacts), frozenset(trusted_units)
 
 
-def _attest_root_timer_activation(timer: str, policy: RootTimerPolicy) -> frozenset[Path]:
+def _attest_root_timer_activation(
+    timer: str,
+    policy: RootTimerPolicy,
+    properties: Mapping[str, Mapping[str, str]] | None = None,
+) -> frozenset[Path]:
+    def property_value(name: str, unit: str, *, allow_empty: bool = False) -> str:
+        if properties is None:
+            return _systemd_property(name, unit, allow_empty=allow_empty)
+        try:
+            value = properties[unit][name]
+        except KeyError as exc:
+            raise ActivationError(f"Proprietà scheduler bulk assente: {unit} {name}") from exc
+        if not allow_empty and not value:
+            raise ActivationError(f"Proprietà scheduler bulk vuota: {unit} {name}")
+        return value
+
     timer_contract = {
         "Id": timer,
         "Names": timer,
@@ -2408,13 +3117,13 @@ def _attest_root_timer_activation(timer: str, policy: RootTimerPolicy) -> frozen
         "UnitFileState": policy.unit_file_state,
     }
     for name, expected in timer_contract.items():
-        actual = _systemd_property(name, timer, allow_empty=expected == "")
+        actual = property_value(name, timer, allow_empty=expected == "")
         if actual != expected:
             raise ActivationError(
                 f"Contratto scheduler divergente: {timer} {name}={actual!r}"
             )
     timer_fragment = _canonical_path(
-        _systemd_property("FragmentPath", timer), label=f"{timer} FragmentPath"
+        property_value("FragmentPath", timer), label=f"{timer} FragmentPath"
     )
     expected_timer_fragment = policy.timer_fragment.resolve(strict=True)
     if timer_fragment != expected_timer_fragment:
@@ -2435,13 +3144,13 @@ def _attest_root_timer_activation(timer: str, policy: RootTimerPolicy) -> frozen
         "UnsetEnvironment": "",
     }
     for name, expected in service_contract.items():
-        actual = _systemd_property(name, policy.service, allow_empty=expected == "")
+        actual = property_value(name, policy.service, allow_empty=expected == "")
         if actual != expected:
             raise ActivationError(
                 f"Contratto scheduler divergente: {policy.service} {name}={actual!r}"
             )
     service_fragment = _canonical_path(
-        _systemd_property("FragmentPath", policy.service),
+        property_value("FragmentPath", policy.service),
         label=f"{policy.service} FragmentPath",
     )
     expected_service_fragment = policy.service_fragment.resolve(strict=True)
@@ -2465,7 +3174,7 @@ def _attest_root_timer_activation(timer: str, policy: RootTimerPolicy) -> frozen
         "ExecStop",
         "ExecStopPost",
     ):
-        raw = _systemd_property(property_name, policy.service, allow_empty=True)
+        raw = property_value(property_name, policy.service, allow_empty=True)
         expected = expected_commands.get(property_name, ())
         actual = _parse_systemd_exec(raw, name=property_name) if raw else ()
         if actual != expected:
@@ -2484,6 +3193,110 @@ def _triggered_services(timer: str) -> tuple[str, ...]:
     return services
 
 
+def _systemd_show_properties(
+    units: Sequence[str], names: Sequence[str]
+) -> Mapping[str, Mapping[str, str]]:
+    if not units:
+        return {}
+    properties = ("Id", *names)
+
+    def run_show(selected_units: Sequence[str]) -> str:
+        try:
+            result = subprocess.run(
+                [
+                    str(SYSTEMCTL_BINARY),
+                    "show",
+                    "--no-pager",
+                    *(f"--property={name}" for name in properties),
+                    *selected_units,
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise ActivationError("Bulk unit properties systemd non disponibile") from exc
+        if result.returncode != 0 or result.stderr:
+            raise ActivationError("Bulk unit properties systemd fallita")
+        return result.stdout
+
+    records: dict[str, dict[str, str]] = {}
+    pending: dict[str, str] = {}
+    observed_order: list[str] = []
+    # systemctl emits one block per D-Bus interface. Service-specific blocks
+    # precede the Unit block that contains Id; accumulate them until that Id.
+    for block in re.split(r"\n\s*\n", run_show(units).strip()):
+        for line in block.splitlines():
+            key, separator, value = line.partition("=")
+            if (
+                not separator
+                or key not in properties
+                or key in pending
+            ):
+                raise ActivationError("Output bulk systemd ambiguo")
+            pending[key] = value
+        unit = pending.get("Id")
+        if unit is None:
+            continue
+        if unit in records or unit not in units:
+            raise ActivationError("Record bulk systemd incompleto/duplicato")
+        for name in properties:
+            pending.setdefault(name, "")
+        records[unit] = pending
+        observed_order.append(unit)
+        pending = {}
+    if pending or observed_order != list(units):
+        raise ActivationError("Inventario bulk systemd divergente")
+    return records
+
+
+def _attest_boot_reachable_package_unit_files(
+    boot_units: frozenset[str], generated_roots: set[Path]
+) -> frozenset[Path]:
+    """Integrity-check effective regular FragmentPath/DropInPaths in the boot graph."""
+
+    relevant_units = tuple(
+        unit
+        for unit in sorted(boot_units)
+        if not unit.endswith((".device", ".scope", ".slice"))
+    )
+    properties = _systemd_show_properties(
+        relevant_units, ("LoadState", "FragmentPath", "DropInPaths")
+    )
+    package_inputs: set[Path] = set()
+    for unit in relevant_units:
+        load_state = properties[unit]["LoadState"]
+        if load_state in {"not-found", "masked"}:
+            continue
+        if load_state != "loaded":
+            raise ActivationError(f"LoadState boot unit fuori policy: {unit}={load_state}")
+        fragment_value = properties[unit]["FragmentPath"]
+        if not fragment_value:
+            if unit.endswith((".mount", ".automount", ".swap")):
+                continue
+            raise ActivationError(f"Boot unit senza FragmentPath attestabile: {unit}")
+        fragment = _canonical_path(fragment_value, label=f"{unit} FragmentPath")
+        dropin_value = properties[unit]["DropInPaths"]
+        try:
+            dropins = tuple(shlex.split(dropin_value, posix=True)) if dropin_value else ()
+        except ValueError as exc:
+            raise ActivationError(f"DropInPaths boot unit ambiguo: {unit}") from exc
+        behavior_paths = (fragment, *(
+            _canonical_path(value, label=f"{unit} DropInPaths") for value in dropins
+        ))
+        for path in behavior_paths:
+            if any(path == root or root in path.parents for root in generated_roots):
+                continue
+            if DEPLOYMENTS_ROOT in path.parents:
+                _verify_trusted_ancestry(path, DEPLOYMENTS_ROOT)
+                continue
+            package_inputs.add(path)
+    return _attest_package_input_files(
+        package_inputs, label="boot-reachable systemd unit bytes"
+    )
+
+
 def _attest_boot_reachable_root_schedulers(
     boot_units: frozenset[str],
 ) -> tuple[Mapping[str, str], ...]:
@@ -2495,7 +3308,30 @@ def _attest_boot_reachable_root_schedulers(
     _attest_supported_system_manager_environment()
     reports: list[Mapping[str, str]] = []
     attestors: set[str] = set()
+    execution_policies: set[str] = set()
     activation_files: set[Path] = set()
+    known_policies = {
+        timer: BOOT_REACHABLE_ROOT_TIMER_POLICIES[timer]
+        for timer in timers
+        if timer in BOOT_REACHABLE_ROOT_TIMER_POLICIES
+    }
+    scheduler_units = tuple(
+        dict.fromkeys(
+            unit
+            for timer, policy in known_policies.items()
+            for unit in (timer, policy.service)
+        )
+    )
+    scheduler_properties = _systemd_show_properties(
+        scheduler_units,
+        (
+            "Names", "LoadState", "DropInPaths", "Triggers", "UnitFileState",
+            "FragmentPath", "SourcePath", "User", "Group", "Type", "Environment",
+            "EnvironmentFiles", "PassEnvironment", "UnsetEnvironment", "ExecCondition",
+            "ExecStartPre", "ExecStart", "ExecStartPost", "ExecReload", "ExecStop",
+            "ExecStopPost",
+        ),
+    )
     for timer in timers:
         policy = BOOT_REACHABLE_ROOT_TIMER_POLICIES.get(timer)
         if policy is None:
@@ -2510,22 +3346,34 @@ def _attest_boot_reachable_root_schedulers(
                     f"Scheduler root boot-reachable UNKNOWN senza policy: {timer}"
                 )
             continue
-        activation_files.update(_attest_root_timer_activation(timer, policy))
-        if policy.classification == "CLOSED-INPUT":
+        activation_files.update(
+            _attest_root_timer_activation(timer, policy, scheduler_properties)
+        )
+        if policy.input_classification == "CLOSED-INPUT":
             if policy.input_attestor is None:
                 raise ActivationError(f"Scheduler CLOSED-INPUT senza attestor: {timer}")
             attestors.add(policy.input_attestor)
-        elif policy.classification != "INPUT-INDEPENDENT" or policy.input_attestor is not None:
+        elif (
+            policy.input_classification != "INPUT-INDEPENDENT"
+            or policy.input_attestor is not None
+        ):
             raise ActivationError(f"Classificazione scheduler non valida: {timer}")
+        if policy.execution_policy not in EXECUTABLE_CLOSURE_POLICIES:
+            raise ActivationError(f"Scheduler con UNKNOWN execution closure: {timer}")
+        execution_policies.add(policy.execution_policy)
         reports.append(
             {
                 "timer": timer,
                 "service": policy.service,
-                "classification": policy.classification,
+                "input_classification": policy.input_classification,
+                "execution_classification": "CLOSED-EXECUTABLE",
                 "input_attestor": policy.input_attestor or "",
+                "execution_policy": policy.execution_policy,
             }
         )
     _attest_package_input_files(activation_files, label="root scheduler activation")
+    for policy_name in sorted(execution_policies):
+        _attest_runtime_executable_closure(policy_name)
     for name in sorted(attestors):
         attestor = globals().get(name)
         if not callable(attestor):
@@ -2537,6 +3385,7 @@ def _attest_boot_reachable_root_schedulers(
 def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
     """Fail closed on local artifacts and unknown root schedulers in the boot surface."""
 
+    _attest_activator_subprocess_toolchain()
     code, _ = _systemctl_result(["daemon-reload"])
     if code != 0:
         raise ActivationError("systemd daemon-reload fallita durante boot attestation")
@@ -2719,7 +3568,9 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
             continue
         raise ActivationError(f"Unit boot-reachable non attribuita: {unit_name}")
 
-    return _attest_boot_reachable_root_schedulers(frozenset(boot_units))
+    closed_boot_units = frozenset(boot_units)
+    _attest_boot_reachable_package_unit_files(closed_boot_units, generated_roots)
+    return _attest_boot_reachable_root_schedulers(closed_boot_units)
 
 
 def _nginx_service_state() -> tuple[str, int]:
@@ -3528,30 +4379,30 @@ def _apply_bundle_links(bundle: Path) -> None:
 def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> None:
     _attest_systemd_boot_surface()
     verified = verify_bundle(info.path)
-    trusted_module_sources = verify_host_configuration_trust(
+    trusted_module_loads = verify_host_configuration_trust(
         verified, guard_required=guard_required, require_complete_links=True
     )
     if verified.lock_digest != info.lock_digest:
         raise ActivationError("Bundle mutato durante activation")
     _fault("before_nginx_test")
-    _run(["nginx", "-t", "-c", str(NGINX_CONFIG)])
+    _run([str(NGINX_BINARY), "-t", "-c", str(NGINX_CONFIG)])
     _fault("after_nginx_test")
     validate_effective_nginx(
         _nginx_effective(),
         verified.manifest,
         topology="v2",
         expected_sources=verified.sources,
-        trusted_module_sources=trusted_module_sources,
+        trusted_module_loads=trusted_module_loads,
     )
     _fault("after_effective_validation")
-    _run(["logrotate", "--debug", "/etc/logrotate.conf"])
+    _run([str(LOGROTATE_BINARY), "--debug", "/etc/logrotate.conf"])
     _fault("after_logrotate_validation")
-    _run(["systemd-analyze", "verify", str(SYSTEMD_LINK)])
+    _run([str(SYSTEMD_ANALYZE_BINARY), "verify", str(SYSTEMD_LINK)])
     _fault("after_systemd_validation")
     final_module_sources = verify_host_configuration_trust(
         verified, guard_required=guard_required, require_complete_links=True
     )
-    if final_module_sources != trusted_module_sources:
+    if final_module_sources != trusted_module_loads:
         raise ActivationError("Inventario moduli nginx mutato durante la validazione")
 
 
@@ -3804,6 +4655,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "runtime-info":
             print(json.dumps(_runtime_information(), indent=2, sort_keys=True))
             return 0
+        _attest_activator_subprocess_toolchain()
         if args.command == "preflight":
             verify_host_preflight(args.bundle)
         elif args.command == "activate":
