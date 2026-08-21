@@ -36,6 +36,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
 RUN useradd --create-home --shell /usr/sbin/nologin runner
 
 COPY scripts/grade_activity.py /opt/thebitlab/grade_activity.py
+COPY scripts/thebitlab_sandbox_boundary.py /opt/thebitlab/thebitlab_sandbox_boundary.py
 
 WORKDIR /submission
 

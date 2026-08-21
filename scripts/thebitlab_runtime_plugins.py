@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from importlib import metadata
@@ -12,7 +13,6 @@ from scripts.thebitlab_runtime_contracts import (
 )
 from scripts.thebitlab_technical_services import ExecutionResult, RunnerTestResult
 
-
 RUNTIME_PLUGIN_API_VERSION = "runtime_plugin.v1"
 RUNTIME_ENTRY_POINT_GROUP = "thebitlab.runtimes"
 RUNTIME_DESCRIPTOR_SCHEMA_VERSION = "runtime_descriptor.v1"
@@ -20,7 +20,16 @@ RUNTIME_REQUEST_SCHEMA_VERSION = "runtime_request.v1"
 RUNTIME_PROBE_SCHEMA_VERSION = "runtime_probe.v1"
 RUNTIME_LAUNCH_SCHEMA_VERSION = "runtime_launch.v1"
 RUNTIME_EXECUTION_SCHEMA_VERSION = "runtime_execution.v1"
+RUNTIME_SANDBOX_PLAN_SCHEMA_VERSION = "runtime_sandbox_plan.v1"
+RUNTIME_SANDBOX_RESULT_SCHEMA_VERSION = "runtime_sandbox_result.v1"
+RUNTIME_SANDBOX_CAPABILITY = "sandbox-plan.v1"
 _RUNTIME_TOKEN_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+_OCI_DIGEST_RE = re.compile(
+    r"^[a-z0-9][a-z0-9._/-]*(?::[a-z0-9._-]+)?@sha256:[0-9a-f]{64}$"
+)
+_SAFE_RELATIVE_RE = re.compile(r"^[^\\:]+$")
+MAX_RUNTIME_SANDBOX_INPUTS = 32
+MAX_RUNTIME_WORKER_REQUEST_BYTES = 64 * 1024
 
 RuntimeLaunchStatus = Literal[
     "started",
@@ -77,6 +86,30 @@ class RuntimeArtifactSpec:
             "media_type": self.media_type,
             "required": self.required,
         }
+
+
+@dataclass(frozen=True)
+class RuntimeSandboxProfile:
+    image: str
+    platform: str
+    worker_schema: str
+
+
+@dataclass(frozen=True)
+class RuntimeSandboxInput:
+    source: Literal["submission", "activity"]
+    target: str
+    artifact_id: str = ""
+    path: str = ""
+
+
+@dataclass(frozen=True)
+class RuntimeSandboxPlan:
+    """Validated plan produced by a trusted plugin for the common broker."""
+
+    profile: RuntimeSandboxProfile
+    inputs: tuple[RuntimeSandboxInput, ...]
+    worker_request: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -161,6 +194,14 @@ class RuntimePlugin(Protocol):
     def launch(self, request: Mapping[str, Any]) -> Mapping[str, Any]: ...
 
     def run(self, request: Mapping[str, Any]) -> Mapping[str, Any]: ...
+
+    def prepare_sandbox(self, request: Mapping[str, Any]) -> Mapping[str, Any]: ...
+
+    def finalize_sandbox(
+        self,
+        request: Mapping[str, Any],
+        sandbox_result: Mapping[str, Any],
+    ) -> Mapping[str, Any]: ...
 
     def close(self, session_id: str) -> None: ...
 
@@ -380,6 +421,127 @@ def execution_result_from_payload(payload: Any) -> ExecutionResult:
     )
 
 
+def sandbox_plan_from_payload(payload: Any) -> RuntimeSandboxPlan:
+    """Validate the declarative plan; commands and host controls are forbidden."""
+
+    raw = _mapping(payload, field_name="runtime sandbox plan")
+    schema = _text(raw.get("schema_version"), field_name="sandbox.schema_version", required=True)
+    if schema != RUNTIME_SANDBOX_PLAN_SCHEMA_VERSION:
+        raise RuntimePluginIncompatibleError(
+            f"Piano sandbox con schema {schema}; richiesto {RUNTIME_SANDBOX_PLAN_SCHEMA_VERSION}"
+        )
+    allowed_keys = {"schema_version", "profile", "inputs", "worker_request"}
+    unexpected = sorted(set(raw) - allowed_keys)
+    if unexpected:
+        raise RuntimePluginIncompatibleError(
+            f"Piano sandbox contiene campi non autorizzati: {', '.join(unexpected)}"
+        )
+    profile_raw = _mapping(raw.get("profile"), field_name="sandbox.profile")
+    if set(profile_raw) - {"image", "platform", "worker_schema"}:
+        raise RuntimePluginIncompatibleError(
+            "sandbox.profile puo dichiarare solo image, platform e worker_schema"
+        )
+    image = _text(profile_raw.get("image"), field_name="sandbox.profile.image", required=True)
+    if not _OCI_DIGEST_RE.fullmatch(image):
+        raise RuntimePluginIncompatibleError(
+            "sandbox.profile.image deve essere un riferimento OCI con digest sha256 immutabile"
+        )
+    platform = _text(
+        profile_raw.get("platform"), field_name="sandbox.profile.platform", required=True
+    )
+    if platform != "linux/amd64":
+        raise RuntimePluginIncompatibleError("sandbox.profile.platform deve essere linux/amd64")
+    worker_schema = _text(
+        profile_raw.get("worker_schema"),
+        field_name="sandbox.profile.worker_schema",
+        required=True,
+    )
+    if not _RUNTIME_TOKEN_RE.fullmatch(worker_schema):
+        raise RuntimePluginIncompatibleError("sandbox.profile.worker_schema non valido")
+
+    inputs_raw = raw.get("inputs")
+    if not isinstance(inputs_raw, list) or not inputs_raw:
+        raise RuntimePluginIncompatibleError("sandbox.inputs deve essere una lista non vuota")
+    if len(inputs_raw) > MAX_RUNTIME_SANDBOX_INPUTS:
+        raise RuntimePluginIncompatibleError(
+            f"sandbox.inputs supera il limite di {MAX_RUNTIME_SANDBOX_INPUTS} elementi"
+        )
+    inputs: list[RuntimeSandboxInput] = []
+    targets: set[str] = set()
+    for index, item in enumerate(inputs_raw):
+        entry = _mapping(item, field_name=f"sandbox.inputs[{index}]")
+        source = _text(
+            entry.get("source"), field_name=f"sandbox.inputs[{index}].source", required=True
+        )
+        target = _portable_relative(
+            entry.get("target"), field_name=f"sandbox.inputs[{index}].target"
+        )
+        target_key = target.casefold()
+        if target_key in targets:
+            raise RuntimePluginIncompatibleError(f"sandbox.inputs target duplicato: {target}")
+        targets.add(target_key)
+        if source == "submission":
+            if set(entry) - {"source", "artifact_id", "target"}:
+                raise RuntimePluginIncompatibleError(
+                    f"sandbox.inputs[{index}] submission contiene campi non autorizzati"
+                )
+            artifact_id = _text(
+                entry.get("artifact_id"),
+                field_name=f"sandbox.inputs[{index}].artifact_id",
+                required=True,
+            )
+            if not _RUNTIME_TOKEN_RE.fullmatch(artifact_id):
+                raise RuntimePluginIncompatibleError(
+                    f"sandbox.inputs[{index}].artifact_id non valido"
+                )
+            inputs.append(RuntimeSandboxInput("submission", target, artifact_id=artifact_id))
+        elif source == "activity":
+            if set(entry) - {"source", "path", "target"}:
+                raise RuntimePluginIncompatibleError(
+                    f"sandbox.inputs[{index}] activity contiene campi non autorizzati"
+                )
+            path = _portable_relative(
+                entry.get("path"), field_name=f"sandbox.inputs[{index}].path"
+            )
+            inputs.append(RuntimeSandboxInput("activity", target, path=path))
+        else:
+            raise RuntimePluginIncompatibleError(
+                f"sandbox.inputs[{index}].source deve essere submission o activity"
+            )
+
+    worker_request = _metadata_dict(
+        raw.get("worker_request"), field_name="sandbox.worker_request"
+    )
+    try:
+        encoded_request = json.dumps(worker_request, allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError) as error:
+        raise RuntimePluginIncompatibleError(
+            "sandbox.worker_request deve essere JSON serializzabile senza NaN o Infinity"
+        ) from error
+    if len(encoded_request) > MAX_RUNTIME_WORKER_REQUEST_BYTES:
+        raise RuntimePluginIncompatibleError(
+            "sandbox.worker_request supera il limite di 64 KiB"
+        )
+    return RuntimeSandboxPlan(
+        profile=RuntimeSandboxProfile(image, platform, worker_schema),
+        inputs=tuple(inputs),
+        worker_request=worker_request,
+    )
+
+
+def _portable_relative(value: Any, *, field_name: str) -> str:
+    text = _text(value, field_name=field_name, required=True)
+    path = Path(text)
+    parts = text.split("/")
+    if (
+        not _SAFE_RELATIVE_RE.fullmatch(text)
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in parts)
+    ):
+        raise RuntimePluginIncompatibleError(f"{field_name} deve essere un path relativo POSIX sicuro")
+    return text
+
+
 class RuntimePluginRegistry:
     """Resolve administrator-installed runtime plugins through Python entry points."""
 
@@ -594,6 +756,92 @@ def run_runtime(
             **result.metadata,
             "runtime_id": loaded.descriptor.runtime_id,
             "runtime_plugin_version": loaded.descriptor.plugin_version,
+            "authoritative": False,
+            "execution_isolation": "process-only",
+        },
+    )
+
+
+def prepare_sandbox_runtime(
+    loaded: LoadedRuntimePlugin,
+    request: RuntimeRequest,
+) -> RuntimeSandboxPlan:
+    """Ask a trusted plugin for a declarative, host-enforced sandbox plan."""
+
+    if RUNTIME_SANDBOX_CAPABILITY not in loaded.descriptor.capabilities:
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} non dichiara {RUNTIME_SANDBOX_CAPABILITY}"
+        )
+    prepare = getattr(loaded.plugin, "prepare_sandbox", None)
+    finalize = getattr(loaded.plugin, "finalize_sandbox", None)
+    if not callable(prepare) or not callable(finalize):
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} dichiara {RUNTIME_SANDBOX_CAPABILITY} "
+            "ma non implementa prepare_sandbox() e finalize_sandbox()"
+        )
+    try:
+        payload = prepare(request.to_payload())
+    except Exception as error:
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} ha fallito prepare_sandbox(): {error}"
+        ) from error
+    return sandbox_plan_from_payload(payload)
+
+
+def finalize_sandbox_runtime(
+    loaded: LoadedRuntimePlugin,
+    request: RuntimeRequest,
+    sandbox_result: Mapping[str, Any],
+) -> ExecutionResult:
+    """Let the trusted host plugin reconstruct grading from untrusted output."""
+
+    finalize = getattr(loaded.plugin, "finalize_sandbox", None)
+    if not callable(finalize):
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} non implementa finalize_sandbox()"
+        )
+    if sandbox_result.get("schema_version") != RUNTIME_SANDBOX_RESULT_SCHEMA_VERSION:
+        raise RuntimePluginIncompatibleError("Risultato sandbox runtime con schema non valido")
+    if sandbox_result.get("status") != "completed":
+        raise RuntimePluginIncompatibleError("Risultato sandbox runtime non completato")
+    unexpected = set(sandbox_result) - {
+        "schema_version",
+        "worker_schema",
+        "status",
+        "payload",
+    }
+    if unexpected:
+        raise RuntimePluginIncompatibleError(
+            "Risultato sandbox runtime contiene campi non autorizzati"
+        )
+    worker_schema = _text(
+        sandbox_result.get("worker_schema"),
+        field_name="sandbox_result.worker_schema",
+        required=True,
+    )
+    if not _RUNTIME_TOKEN_RE.fullmatch(worker_schema):
+        raise RuntimePluginIncompatibleError("sandbox_result.worker_schema non valido")
+    _mapping(sandbox_result.get("payload"), field_name="sandbox_result.payload")
+    try:
+        payload = finalize(request.to_payload(), dict(sandbox_result))
+    except Exception as error:
+        raise RuntimePluginIncompatibleError(
+            f"Runtime {loaded.descriptor.runtime_id} ha fallito finalize_sandbox(): {error}"
+        ) from error
+    result = execution_result_from_payload(payload)
+    return ExecutionResult(
+        status=result.status,
+        tests=result.tests,
+        stdout=result.stdout,
+        stderr=result.stderr,
+        duration_ms=result.duration_ms,
+        detail=result.detail,
+        metadata={
+            **result.metadata,
+            "runtime_id": loaded.descriptor.runtime_id,
+            "runtime_plugin_version": loaded.descriptor.plugin_version,
+            "authoritative": True,
+            "execution_isolation": "docker",
         },
     )
 
