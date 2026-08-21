@@ -52,6 +52,49 @@ def valid_environment() -> dict[str, str]:
     }
 
 
+def _install_synthetic_stable_reader(
+    monkeypatch: pytest.MonkeyPatch, expected_paths: set[Path]
+) -> None:
+    """Isolate absolute trusted ancestry while still reading exact fixture bytes."""
+
+    expected = frozenset(expected_paths)
+
+    def read_fixture(path: Path) -> bytes:
+        assert path in expected, f"unexpected synthetic stable read: {path}"
+        before = os.lstat(path)
+        assert stat.S_ISREG(before.st_mode) and before.st_nlink == 1
+        assert path.resolve(strict=True) == path
+        flags = (
+            os.O_RDONLY
+            | getattr(os, "O_BINARY", 0)
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0)
+        )
+        descriptor = os.open(path, flags)
+        try:
+            opened_before = os.fstat(descriptor)
+            assert ubuntu_activation._file_identity(opened_before) == (
+                ubuntu_activation._file_identity(before)
+            )
+            chunks: list[bytes] = []
+            while chunk := os.read(descriptor, 1024 * 1024):
+                chunks.append(chunk)
+            opened_after = os.fstat(descriptor)
+        finally:
+            os.close(descriptor)
+        after = os.lstat(path)
+        assert ubuntu_activation._file_identity(opened_after) == (
+            ubuntu_activation._file_identity(opened_before)
+        )
+        assert ubuntu_activation._file_identity(after) == (
+            ubuntu_activation._file_identity(before)
+        )
+        assert path.resolve(strict=True) == path
+        return b"".join(chunks)
+
+    monkeypatch.setattr(ubuntu_activation, "_read_stable_trusted_file", read_fixture)
+
+
 def effective_v2(
     bundle: Path,
     *,
@@ -885,6 +928,7 @@ def _install_nginx_module_provenance_fixture(
     monkeypatch.setattr(
         ubuntu_activation, "_assert_systemd_directory_ancestry", lambda _path: None
     )
+    _install_synthetic_stable_reader(monkeypatch, {config, binary})
     paths = {
         "enabled": enabled,
         "available": available,
@@ -2009,6 +2053,7 @@ def _install_apt_input_fixture(
     monkeypatch.setattr(
         ubuntu_activation, "_assert_systemd_directory_ancestry", lambda _path: None
     )
+    _install_synthetic_stable_reader(monkeypatch, {vendor})
     return parts, vendor
 
 
@@ -2450,8 +2495,16 @@ def test_ephemeral_systemd_surface_quarantines_and_exactly_restores_local_genera
     digest = hashlib.sha256(bytes_before).hexdigest()
 
     # Production remains fail-closed without the explicit ephemeral preparation.
-    with pytest.raises(ubuntu_activation.ActivationError, match="Generator systemd locale"):
+    with pytest.raises(ubuntu_activation.ActivationError) as captured:
         ubuntu_activation._attest_systemd_boot_surface()
+    failure = str(captured.value)
+    assert (
+        "Generator systemd locale" in failure
+        or (
+            "Input systemd generator executable non attribuito/integrity-verified" in failure
+            and generator.as_posix() in failure
+        )
+    )
 
     with ubuntu_integration._EphemeralIntegrationWorkspace(parent=tmp_path) as workspace:
         assert workspace.path is not None
@@ -3366,12 +3419,21 @@ def test_reviewed_script_digest_change_invalidates_executable_policy(
     monkeypatch.setattr(
         ubuntu_activation, "_attest_package_input_files", lambda paths, **_kwargs: frozenset(paths)
     )
+    _install_synthetic_stable_reader(monkeypatch, {source})
     assert ubuntu_activation._attest_runtime_executable_closure("fixture") == frozenset(
         {source}
     )
     source.write_bytes(b"#!/bin/sh\nprintf new-command\n")
     with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN EXECUTION POLICY"):
         ubuntu_activation._attest_runtime_executable_closure("fixture")
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Ancestry /tmp Linux richiesta")
+def test_stable_trusted_reader_rejects_world_writable_ancestry(tmp_path: Path) -> None:
+    source = tmp_path / "package-input"
+    source.write_bytes(b"package bytes\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="scrivibile da group/other"):
+        ubuntu_activation._read_stable_trusted_file(source)
 
 
 def test_activator_security_subprocesses_use_only_absolute_registered_paths(
