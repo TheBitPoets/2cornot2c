@@ -3,7 +3,7 @@
 - **Data:** 2026-08-21
 - **Obiettivo:** estendere il boundary Docker ufficiale alle Activity runtime mantenendo
   submission e grading host separati.
-- **Stato:** implementazione upstream completata e integrata con Romeo; nessun commit o push.
+- **Stato:** implementazione upstream completata e integrata con Romeo nella PR draft #732.
 - **Worktree:** `F:\dev\romeo\.worktrees\2cornot2c-runtime`, base
   `5472eef86568a4e7ce59ad34ba937220df27efd7`.
 
@@ -43,6 +43,8 @@ documentazione sandbox/adapter/servizi tecnici. Vedere `git status --short` per 
   due failure host-specific preesistenti (privilegio symlink Windows e lancio diretto di uno
   script macOS `.sh` su Windows), nessuno nei moduli runtime/sandbox.
 - Piano Romeo Y2 validato direttamente con `sandbox_plan_from_payload()` upstream.
+- CI Docker build e smoke test verificati dopo aver preservato l'entry point diretto di
+  `grade_activity.py` e incluso il boundary condiviso nell'immagine.
 
 ## Prossimo passo
 
