@@ -678,7 +678,7 @@ def test_prepare_docker_workspace_rejects_input_outside_authorized_root(tmp_path
     activity_path.write_text("{}", encoding="utf-8")
     source_path.write_text("print(1)\n", encoding="utf-8")
 
-    with pytest.raises(ValueError, match="source"):
+    with pytest.raises(ValueError, match="source deve trovarsi dentro"):
         grade_activity.prepare_docker_workspace(
             activity_path,
             source_path,
@@ -703,7 +703,7 @@ def test_prepare_docker_workspace_rejects_symlink_escaping_source_root(tmp_path)
     except OSError:
         pytest.skip("Creazione symlink non consentita su questa piattaforma.")
 
-    with pytest.raises(ValueError, match="source deve trovarsi dentro"):
+    with pytest.raises(ValueError, match="source non puo essere un collegamento simbolico"):
         grade_activity.prepare_docker_workspace(
             activity_path,
             linked_source,
