@@ -1333,6 +1333,207 @@ def _build_fixture_deb(root: Path, output: Path, *, package: str) -> Path:
     return output
 
 
+def _exercise_package_logrotate_same_line_hook_rejected(temporary: Path) -> None:
+    package = "thebitlab-logrotate-hook-fixture"
+    root = temporary / "package-logrotate-hook"
+    snippet = root / "etc/logrotate.d/thebitlab-package-hook"
+    snippet.parent.mkdir(parents=True)
+    marker = Path("/run/thebitlab-logrotate-package-hook-executed")
+    fixture_log = Path("/var/log/thebitlab-package-hook.log")
+    helper = Path("/usr/local/bin/thebitlab-logrotate-package-helper")
+    snippet.write_text(
+        "/var/log/thebitlab-package-hook.log { postrotate\n"
+        f"  {helper}\n"
+        "endscript\n}\n",
+        encoding="utf-8",
+    )
+    (root / "DEBIAN/conffiles").parent.mkdir(parents=True, exist_ok=True)
+    (root / "DEBIAN/conffiles").write_text(
+        "/etc/logrotate.d/thebitlab-package-hook\n", encoding="utf-8"
+    )
+    deb = _build_fixture_deb(root, temporary / f"{package}.deb", package=package)
+    live = Path("/etc/logrotate.d/thebitlab-package-hook")
+    installed = False
+    try:
+        marker.unlink(missing_ok=True)
+        fixture_log.write_text("synthetic package hook fixture\n", encoding="utf-8")
+        helper.write_text(
+            f"#!/bin/sh\nprintf executed > {marker}\n", encoding="utf-8"
+        )
+        helper.chmod(0o755)
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        if live not in activation._dpkg_integrity_verified_paths((live,)):
+            raise RuntimeError("Synthetic logrotate package digest non valido")
+        _run(["logrotate", "--debug", str(activation.LOGROTATE_CONFIG)])
+        try:
+            activation._attest_logrotate_inputs()
+        except activation.ActivationError as exc:
+            if "logrotate" not in str(exc) or "policy" not in str(exc):
+                raise RuntimeError(
+                    f"Same-line package hook rifiutato per causa estranea: {exc}"
+                ) from exc
+        else:
+            raise RuntimeError("Same-line package logrotate hook accettato")
+        if marker.exists():
+            raise RuntimeError("Helper logrotate eseguito prima del reject")
+    finally:
+        if installed:
+            _run(["dpkg", "--purge", package])
+        helper.unlink(missing_ok=True)
+        marker.unlink(missing_ok=True)
+        fixture_log.unlink(missing_ok=True)
+    activation._attest_logrotate_inputs()
+    print(
+        "EVIDENCE: valid synthetic dpkg logrotate snippet with same-line "
+        "{ postrotate + unmanaged helper => REJECT; helper not executed"
+    )
+
+
+def _exercise_package_sysv_path_shadow_rejected(temporary: Path) -> None:
+    package = "thebitlab-sysv-shadow-fixture"
+    root = temporary / "package-sysv-shadow"
+    script = root / "etc/init.d/thebitlab-review-sysv"
+    script.parent.mkdir(parents=True)
+    marker = Path("/run/thebitlab-sysv-shadow-executed")
+    helper = Path("/usr/local/bin/review-helper")
+    script.write_text(
+        "#!/bin/sh\n"
+        "### BEGIN INIT INFO\n"
+        "# Provides:          thebitlab-review-sysv\n"
+        "# Required-Start:    $remote_fs\n"
+        "# Required-Stop:     $remote_fs\n"
+        "# Default-Start:     2 3 4 5\n"
+        "# Default-Stop:      0 1 6\n"
+        "# Short-Description: package SysV PATH-shadow fixture\n"
+        "### END INIT INFO\n"
+        "case \"$1\" in\n"
+        "  start) review-helper ;;\n"
+        "  *) exit 0 ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    (root / "DEBIAN/conffiles").parent.mkdir(parents=True, exist_ok=True)
+    (root / "DEBIAN/conffiles").write_text(
+        "/etc/init.d/thebitlab-review-sysv\n", encoding="utf-8"
+    )
+    deb = _build_fixture_deb(root, temporary / f"{package}.deb", package=package)
+    live = Path("/etc/init.d/thebitlab-review-sysv")
+    installed = False
+    try:
+        marker.unlink(missing_ok=True)
+        helper.write_text(
+            f"#!/bin/sh\nprintf executed > {marker}\n", encoding="utf-8"
+        )
+        helper.chmod(0o755)
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        if live not in activation._dpkg_integrity_verified_paths((live,)):
+            raise RuntimeError("Synthetic SysV package digest non valido")
+        if shutil.which("review-helper", path=activation.SCRIPT_RUNTIME_PATH) != str(helper):
+            raise RuntimeError("Fixture SysV non prova il first PATH candidate locale")
+        _run(["update-rc.d", "thebitlab-review-sysv", "defaults"])
+        _run(["systemctl", "daemon-reload"])
+        if activation._systemd_property(
+            "SourcePath", "thebitlab-review-sysv.service"
+        ) != str(live):
+            raise RuntimeError("Synthetic package SysV non materializzato dal generator")
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError as exc:
+            if "UNKNOWN EXECUTION POLICY SysV" not in str(exc):
+                raise RuntimeError(f"SysV shadow rifiutato per causa estranea: {exc}") from exc
+        else:
+            raise RuntimeError("Package SysV con PATH shadow accettato")
+        if marker.exists():
+            raise RuntimeError("Helper SysV eseguito prima del reject")
+    finally:
+        subprocess.run(
+            ["update-rc.d", "-f", "thebitlab-review-sysv", "remove"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if installed:
+            _run(["dpkg", "--purge", package])
+        helper.unlink(missing_ok=True)
+        marker.unlink(missing_ok=True)
+        _run(["systemctl", "daemon-reload"])
+    activation._attest_systemd_boot_surface()
+    print(
+        "EVIDENCE: valid package boot-reachable SysV + bare review-helper + "
+        "/usr/local first candidate => UNKNOWN REJECT; helper not executed"
+    )
+
+
+def _exercise_modified_boot_service_executable_rejected() -> None:
+    executable = Path("/usr/lib/systemd/systemd-user-sessions")
+    original = executable.read_bytes()
+    mode = stat.S_IMODE(executable.stat().st_mode)
+    try:
+        executable.write_bytes(original + b"\nmodified-package-executable-fixture\n")
+        executable.chmod(mode)
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError as exc:
+            if "boot service executable systemd-user-sessions.service" not in str(exc):
+                raise RuntimeError(
+                    f"Modified package executable rifiutato per causa estranea: {exc}"
+                ) from exc
+        else:
+            raise RuntimeError("Modified boot service package executable accettato")
+    finally:
+        executable.write_bytes(original)
+        executable.chmod(mode)
+    activation._attest_systemd_boot_surface()
+    print(
+        "EVIDENCE: unchanged boot unit + modified referenced package executable bytes "
+        "=> boot surface REJECT"
+    )
+
+
+def _exercise_unknown_package_service_rejected(temporary: Path) -> None:
+    package = "thebitlab-unknown-service-fixture"
+    root = temporary / "unknown-service-package"
+    unit_root = root / "usr/lib/systemd/system"
+    executable = root / "usr/libexec/thebitlab-unknown-service"
+    unit_root.mkdir(parents=True)
+    executable.parent.mkdir(parents=True)
+    shutil.copyfile("/usr/bin/true", executable)
+    executable.chmod(0o755)
+    (unit_root / "thebitlab-unknown-package.service").write_text(
+        "[Unit]\nDescription=Unknown package native service fixture\n"
+        "[Service]\nType=oneshot\nExecStart=/usr/libexec/thebitlab-unknown-service\n"
+        "[Install]\nWantedBy=multi-user.target\n",
+        encoding="utf-8",
+    )
+    deb = _build_fixture_deb(root, temporary / f"{package}.deb", package=package)
+    installed = False
+    try:
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        _run(["systemctl", "daemon-reload"])
+        _run(["systemctl", "enable", "thebitlab-unknown-package.service"])
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError as exc:
+            if "UNKNOWN EXECUTION POLICY boot service" not in str(exc):
+                raise RuntimeError(
+                    f"Unknown package service rifiutato per causa estranea: {exc}"
+                ) from exc
+        else:
+            raise RuntimeError("New package-owned native boot service accettato")
+    finally:
+        if installed:
+            _run(["systemctl", "disable", "thebitlab-unknown-package.service"])
+            _run(["dpkg", "--purge", package])
+        _run(["systemctl", "daemon-reload"])
+    activation._attest_systemd_boot_surface()
+    print("EVIDENCE: new package-owned native boot service => UNKNOWN REJECT")
+
+
 def _exercise_real_dpkg_removed_status(temporary: Path) -> None:
     package = "thebitlab-provenance-fixture"
     root = temporary / "dpkg-status-package"
@@ -2054,6 +2255,13 @@ def run(*, ephemeral_host: bool = False) -> None:
                 "EVIDENCE: package-owned enabled unit inventory PASS; Ubuntu generators="
                 + ",".join(generator_names)
             )
+
+            # Mandatory HIGH reproductions run before the wider security matrix.
+            _exercise_package_logrotate_same_line_hook_rejected(temporary)
+            _exercise_package_sysv_path_shadow_rejected(temporary)
+            _exercise_modified_boot_service_executable_rejected()
+            _exercise_unknown_package_service_rejected(temporary)
+
             _exercise_nginx_module_provenance()
             print(
                 "EVIDENCE: official package module config+binary PASS; local/modified "

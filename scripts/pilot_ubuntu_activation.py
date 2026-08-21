@@ -441,7 +441,14 @@ SUPPORTED_SYSTEM_MANAGER_ENVIRONMENT = {
     "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin",
 }
 SYSTEMD_BARE_EXECUTABLES = {
+    "journalctl": Path("/usr/bin/journalctl"),
+    "systemctl": SYSTEMCTL_BINARY,
+    "systemd-firstboot": Path("/usr/bin/systemd-firstboot"),
+    "systemd-machine-id-setup": Path("/usr/bin/systemd-machine-id-setup"),
+    "systemd-sysusers": Path("/usr/bin/systemd-sysusers"),
+    "systemd-sysext": Path("/usr/bin/systemd-sysext"),
     "systemd-tmpfiles": Path("/usr/bin/systemd-tmpfiles"),
+    "systemd-tty-ask-password-agent": Path("/usr/bin/systemd-tty-ask-password-agent"),
 }
 MANAGER_RUNTIME_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 SCRIPT_RUNTIME_PATH = MANAGER_RUNTIME_PATH + ":/sbin:/bin"
@@ -460,6 +467,7 @@ TRUSTED_RUNTIME_COMMAND_PATHS: Mapping[str, Path] = {
     "date": Path("/usr/bin/date"),
     "dirname": Path("/usr/bin/dirname"),
     "dpkg": Path("/usr/bin/dpkg"),
+    "dpkg-trigger": Path("/usr/bin/dpkg-trigger"),
     "du": Path("/usr/bin/du"),
     "env": Path("/usr/bin/env"),
     "find": Path("/usr/bin/find"),
@@ -546,8 +554,18 @@ APT_CONFIG_INVENTORY_SHA256: Mapping[str, str] = {
     "01autoremove": "35b4360d9126e5e5efc1ce42cea8a957ba42921de749ad8502922d536c9f385c",
     "70debconf": "db749e19baf3b72ca2c157c70c52522cae23d94bc8b2dc5793fd43d427445367",
 }
-LOGROTATE_EXECUTABLE_SNIPPET_SHA256: Mapping[str, str] = {
+LOGROTATE_PACKAGE_INPUT_SHA256: Mapping[str, str] = {
+    "logrotate.conf": "fc0877189d2feacbfca441dfa4ddeffaebbd074635c48fbf1c70672e62954fe9",
+    "alternatives": "edd383958ce315a642cdfa6aa3fbe2779aa5c674b305fe910449b90cee594c58",
+    "apt": "fcc2510172fd914ca22762c4b2dc43d36152e65becf8e84abec59f7652da5e3f",
+    "btmp": "7f64bae051c1727236f9dabe11526f1d1aad26aa53c1d0b8425efee746f5fbe8",
+    "dpkg": "e4103352545278e47a88b2ca2f2d3681ca474d400d8057ba6ac4f18d71c32042",
     "nginx": "c6f585f3a98e424c30c5208f2f52c8e39665b76744cd5bcc523efdee0a7d69ee",
+    "wtmp": "81eec3d3e01e4263ffc6aab6aeee74f3b260f1df4c692525312608f7a60db048",
+}
+LOGROTATE_EXECUTABLE_SNIPPET_SHA256: Mapping[str, str] = {
+    name: LOGROTATE_PACKAGE_INPUT_SHA256[name]
+    for name in ("alternatives", "apt", "dpkg", "nginx")
 }
 EXECUTABLE_CLOSURE_POLICIES: Mapping[str, ExecutableClosurePolicy] = {
     "apt-systemd-daily": ExecutableClosurePolicy(
@@ -662,7 +680,89 @@ EXECUTABLE_CLOSURE_POLICIES: Mapping[str, ExecutableClosurePolicy] = {
     "systemd-tmpfiles-clean": ExecutableClosurePolicy(
         "systemd-tmpfiles-clean", MANAGER_RUNTIME_PATH, {}
     ),
+    "ldconfig": ExecutableClosurePolicy(
+        "ldconfig",
+        MANAGER_RUNTIME_PATH,
+        {
+            Path("/usr/sbin/ldconfig"):
+                "bfd5df90c7f070feab584435f106f254ffffaa268a04de5b5c3bd61d59c092f3",
+        },
+        _runtime_commands("dpkg-trigger") + (
+            RuntimeCommandPolicy(
+                "/sbin/ldconfig.real", Path("/sbin/ldconfig.real")
+            ),
+        ),
+        (SH_INTERPRETER,),
+    ),
 }
+
+# A package update may add files, but it cannot add a boot execution policy.  These
+# are the exact root services in the reviewed Ubuntu 24.04 dedicated-host graph.
+# Values name the transitive script closure; None means every effective Exec* must
+# terminate at a native, byte-integrity-verified package executable.
+BOOT_ROOT_SERVICE_EXECUTION_POLICIES: Mapping[str, str | None] = {
+    name: None
+    for name in (
+        "console-getty.service", "dbus.service", "getty-static.service",
+        "getty@tty1.service", "kmod-static-nodes.service", "ldconfig.service",
+        "modprobe@configfs.service", "modprobe@dm_mod.service",
+        "modprobe@drm.service", "modprobe@efi_pstore.service",
+        "modprobe@fuse.service", "modprobe@loop.service",
+        "systemd-ask-password-console.service",
+        "systemd-ask-password-wall.service", "systemd-binfmt.service",
+        "systemd-firstboot.service", "systemd-initctl.service",
+        "systemd-journal-catalog-update.service",
+        "systemd-journal-flush.service", "systemd-journald.service",
+        "systemd-logind.service", "systemd-machine-id-commit.service",
+        "systemd-modules-load.service", "systemd-pcrmachine.service",
+        "systemd-pcrphase-sysinit.service", "systemd-pcrphase.service",
+        "systemd-pstore.service", "systemd-random-seed.service",
+        "systemd-remount-fs.service", "systemd-repart.service",
+        "systemd-sysctl.service", "systemd-sysusers.service",
+        "systemd-tmpfiles-setup-dev-early.service",
+        "systemd-tmpfiles-setup-dev.service",
+        "systemd-tmpfiles-setup.service", "systemd-tpm2-setup-early.service",
+        "systemd-tpm2-setup.service", "systemd-update-done.service",
+        "systemd-update-utmp-runlevel.service", "systemd-update-utmp.service",
+        "systemd-user-sessions.service",
+    )
+} | {
+    "e2scrub_reap.service": "e2scrub-all",
+    "ldconfig.service": "ldconfig",
+    "nginx.service": "@nginx",
+    "thebitlab.service": "@managed-nonroot",
+}
+BOOT_ROOT_SERVICE_FRAGMENT_POLICIES: Mapping[str, Path] = {
+    service: Path("/usr/lib/systemd/system") / service
+    for service in BOOT_ROOT_SERVICE_EXECUTION_POLICIES
+    if service != "thebitlab.service"
+} | {
+    "getty@tty1.service": Path("/usr/lib/systemd/system/getty@.service"),
+    **{
+        f"modprobe@{instance}.service":
+            Path("/usr/lib/systemd/system/modprobe@.service")
+        for instance in ("configfs", "dm_mod", "drm", "efi_pstore", "fuse", "loop")
+    },
+}
+# Accept=yes sockets can instantiate these reviewed package templates even though
+# no instance exists while the boot graph is inspected.
+BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES: Mapping[
+    str, tuple[Path, Path, str]
+] = {
+    "systemd-pcrextend.socket": (
+        Path("/usr/lib/systemd/system/systemd-pcrextend@.service"),
+        Path("/usr/lib/systemd/systemd-pcrextend"),
+        "3bf975fbb9737019c65718d9796cc17c031296b439a412e45f3a92495fb9fc2e",
+    ),
+    "systemd-sysext.socket": (
+        Path("/usr/lib/systemd/system/systemd-sysext@.service"),
+        Path("/usr/bin/systemd-sysext"),
+        "d81e6de39167e27385ecfaafb04b2f96f06acb1586d47968ab4887d229b7cbec",
+    ),
+}
+# The supported baseline intentionally contains no generated SysV service.  A
+# source becomes admissible only after an explicit source+execution review.
+SYSV_EXECUTION_POLICIES: Mapping[Path, str] = {}
 
 ACTIVATOR_SUBPROCESS_EXECUTABLES = frozenset(
     {
@@ -2819,38 +2919,87 @@ def _attest_thebitlab_logrotate_link() -> Path:
     return resolved
 
 
-def _attest_logrotate_executable_hooks(package_inputs: Sequence[Path]) -> None:
+def _logrotate_execution_directives(contents: bytes, *, path: Path) -> frozenset[str]:
+    """Find execution-capable directives outside hook bodies, regardless of layout."""
+
     hook_directives = {"prerotate", "postrotate", "firstaction", "lastaction"}
-    unsupported_executable_directives = {
-        "compresscmd", "uncompresscmd", "mail", "mailfirst", "maillast", "shred"
+    unsupported = {
+        "compresscmd", "uncompresscmd", "mail", "mailfirst", "maillast", "shred",
     }
     observed: set[str] = set()
-    for path in package_inputs:
-        try:
-            text = _read_stable_trusted_file(path).decode("utf-8")
-        except (ActivationError, UnicodeError) as exc:
-            raise ActivationError(f"Snippet logrotate non leggibile: {path}") from exc
-        has_hook = False
-        for raw_line in text.splitlines():
-            semantic = raw_line.split("#", 1)[0].strip()
-            if not semantic:
+    in_hook = False
+    try:
+        text = contents.decode("utf-8")
+    except UnicodeError as exc:
+        raise ActivationError(f"Snippet logrotate non UTF-8: {path}") from exc
+    for raw_line in text.splitlines():
+        # Reviewed Noble inputs do not use quoted '#'.  Rejecting an unknown digest
+        # happens before this parser, so this comment grammar is itself closed.
+        semantic = raw_line.split("#", 1)[0]
+        tokens = re.findall(r"[{}]|[^\s{}]+", semantic)
+        for token in tokens:
+            directive = token.lower()
+            if in_hook:
+                if directive == "endscript":
+                    in_hook = False
                 continue
-            directive_name = semantic.split(None, 1)[0]
-            if directive_name in unsupported_executable_directives:
+            if directive == "endscript":
+                raise ActivationError(f"Grammatica hook logrotate ambigua: {path}")
+            if directive in unsupported:
                 raise ActivationError(
-                    f"UNKNOWN executable directive logrotate: {path} {directive_name}"
+                    f"UNKNOWN executable directive logrotate: {path} {directive}"
                 )
-            if directive_name in hook_directives:
-                has_hook = True
-        if not has_hook:
+            if directive in hook_directives:
+                observed.add(directive)
+                in_hook = True
+            elif directive == "compress":
+                observed.add(directive)
+    if in_hook:
+        raise ActivationError(f"Hook logrotate senza endscript: {path}")
+    return frozenset(observed)
+
+
+def _attest_logrotate_executable_hooks(package_inputs: Sequence[Path]) -> None:
+    observed: set[str] = set()
+    for path in package_inputs:
+        contents = _read_stable_trusted_file(path)
+        directives = _logrotate_execution_directives(contents, path=path)
+        if not directives:
             continue
         expected_digest = LOGROTATE_EXECUTABLE_SNIPPET_SHA256.get(path.name)
-        actual_digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        actual_digest = hashlib.sha256(contents).hexdigest()
         if expected_digest is None or actual_digest != expected_digest:
             raise ActivationError(f"UNKNOWN executable hook logrotate: {path}")
         observed.add(path.name)
     if observed != set(LOGROTATE_EXECUTABLE_SNIPPET_SHA256):
         raise ActivationError("Inventario executable hook logrotate Noble divergente")
+    if observed:
+        _attest_runtime_executable_closure("logrotate")
+
+
+def _attest_managed_logrotate_hooks(paths: Sequence[Path]) -> None:
+    if len(paths) != 1:
+        raise ActivationError("Inventario hook logrotate managed divergente")
+    path = paths[0]
+    contents = _read_stable_trusted_file(path)
+    directives = _logrotate_execution_directives(contents, path=path)
+    if directives != {"compress", "firstaction", "postrotate"}:
+        raise ActivationError("UNKNOWN executable hook logrotate managed")
+    text = contents.decode("utf-8")
+    expected_commands = (
+        "/usr/sbin/thebitlab-pilot-activate logrotate-snapshot",
+        "/usr/sbin/thebitlab-pilot-activate logrotate-reopen",
+    )
+    semantic_lines = [
+        line.split("#", 1)[0].strip() for line in text.splitlines()
+        if line.split("#", 1)[0].strip()
+    ]
+    if any(semantic_lines.count(command) != 1 for command in expected_commands):
+        raise ActivationError("Execution policy logrotate managed divergente")
+    # The canonical launcher is the current production entrypoint: it verifies its
+    # external root-owned pin, exact launcher digest and complete toolchain before
+    # entering this activator.  The two reviewed subcommands then reuse all runtime
+    # and boot attestations below; no ambient shell/PATH is involved.
 
 
 def _attest_logrotate_inputs() -> frozenset[Path]:
@@ -2860,19 +3009,37 @@ def _attest_logrotate_inputs() -> frozenset[Path]:
     _verify_trusted_ancestry(LOGROTATE_CONFIG, Path("/etc"))
 
     package_inputs = [LOGROTATE_CONFIG]
+    managed_inputs: list[Path] = []
     trusted_inputs: set[Path] = {LOGROTATE_CONFIG}
     for entry in entries:
         if entry == LOGROTATE_LINK:
             if not entry.is_symlink():
                 raise ActivationError("Policy logrotate TheBitLab non è l'exact symlink gestito")
-            trusted_inputs.add(_attest_thebitlab_logrotate_link())
+            managed = _attest_thebitlab_logrotate_link()
+            trusted_inputs.add(managed)
+            managed_inputs.append(managed)
             continue
         _verify_trusted_ancestry(entry, LOGROTATE_DIRECTORY)
         package_inputs.append(entry)
         trusted_inputs.add(entry)
 
-    _attest_package_input_files(package_inputs, label="logrotate")
+    verified = _attest_package_input_files(package_inputs, label="logrotate")
+    expected_names = set(LOGROTATE_PACKAGE_INPUT_SHA256)
+    observed_names = {
+        "logrotate.conf" if path == LOGROTATE_CONFIG else path.name
+        for path in package_inputs
+    }
+    if observed_names != expected_names or verified != frozenset(package_inputs):
+        raise ActivationError("Inventario package logrotate fuori dalla policy revisionata")
+    for path in package_inputs:
+        name = "logrotate.conf" if path == LOGROTATE_CONFIG else path.name
+        if hashlib.sha256(_read_stable_trusted_file(path)).hexdigest() != (
+            LOGROTATE_PACKAGE_INPUT_SHA256[name]
+        ):
+            raise ActivationError(f"Config logrotate fuori dalla policy revisionata: {path}")
     _attest_logrotate_executable_hooks(package_inputs)
+    if managed_inputs:
+        _attest_managed_logrotate_hooks(managed_inputs)
     _validate_logrotate_include_contract()
     final_identity, final_entries = _directory_snapshot(LOGROTATE_DIRECTORY)
     if final_identity != directory_identity or final_entries != entries:
@@ -3038,6 +3205,10 @@ def _attest_generated_systemd_artifacts(
         if source_value != source.as_posix() or source.parent != SYSV_INIT_ROOT:
             raise ActivationError(f"SourcePath SysV non canonico per {identity}")
         _attest_package_owned_generator_input(source, SYSV_INIT_ROOT)
+        execution_policy = SYSV_EXECUTION_POLICIES.get(source)
+        if execution_policy is None:
+            raise ActivationError(f"UNKNOWN EXECUTION POLICY SysV: {source}")
+        _attest_runtime_executable_closure(execution_policy)
         if identity in sysv_units:
             raise ActivationError(f"Output SysV generated duplicato: {identity}")
         sysv_units[identity] = path
@@ -3382,6 +3553,183 @@ def _attest_boot_reachable_root_schedulers(
     return tuple(reports)
 
 
+def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None:
+    """Close every effective root service command reachable from the boot graph."""
+
+    activation_units = tuple(
+        sorted(unit for unit in boot_units if unit.endswith((".path", ".socket")))
+    )
+    triggered_services: set[str] = set()
+    activation_properties: Mapping[str, Mapping[str, str]] = {}
+    if activation_units:
+        activation_properties = _systemd_show_properties(
+            activation_units, ("LoadState", "Triggers", "Accept")
+        )
+        for unit in activation_units:
+            values = activation_properties[unit]
+            if values["LoadState"] != "loaded":
+                raise ActivationError(f"Activation unit boot fuori policy: {unit}")
+            triggers = tuple(values["Triggers"].split())
+            if any(not item.endswith(".service") for item in triggers):
+                raise ActivationError(f"Trigger service non classificabile: {unit}")
+            if not triggers and values["Accept"] != "yes":
+                raise ActivationError(f"Activation unit senza execution target: {unit}")
+            triggered_services.update(triggers)
+            if values["Accept"] == "yes":
+                template_policy = BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES.get(unit)
+                if template_policy is None:
+                    raise ActivationError(
+                        f"UNKNOWN EXECUTION POLICY Accept socket: {unit}"
+                    )
+                template, executable, expected_digest = template_policy
+                _attest_package_input_files(
+                    (template, executable), label=f"Accept socket execution {unit}"
+                )
+                if hashlib.sha256(_read_stable_trusted_file(template)).hexdigest() != (
+                    expected_digest
+                ):
+                    raise ActivationError(
+                        f"UNKNOWN EXECUTION POLICY Accept socket bytes: {unit}"
+                    )
+            elif values["Accept"] not in {"", "no"}:
+                raise ActivationError(f"Accept socket ambiguo: {unit}")
+    expected_accept_sockets = set(BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES) & set(
+        activation_units
+    )
+    observed_accept_sockets = {
+        unit for unit in activation_units
+        if activation_properties[unit]["Accept"] == "yes"
+    }
+    if observed_accept_sockets != expected_accept_sockets:
+        raise ActivationError("Inventario Accept socket boot divergente")
+
+    timer_services = {
+        policy.service
+        for timer, policy in BOOT_REACHABLE_ROOT_TIMER_POLICIES.items()
+        if timer in boot_units
+    }
+    services = tuple(
+        sorted(
+            (
+                {unit for unit in boot_units if unit.endswith(".service")}
+                | triggered_services
+            )
+            - timer_services
+        )
+    )
+    if not services:
+        return
+    exec_properties = (
+        "ExecCondition", "ExecStartPre", "ExecStart", "ExecStartPost",
+        "ExecReload", "ExecStop", "ExecStopPost",
+    )
+    properties = _systemd_show_properties(
+        services,
+        (
+            "LoadState", "FragmentPath", "SourcePath", "DropInPaths", "User", "Group",
+            *exec_properties,
+        ),
+    )
+    for service in services:
+        values = properties[service]
+        if values["LoadState"] in {"masked", "not-found"}:
+            continue
+        if values["LoadState"] != "loaded":
+            raise ActivationError(f"LoadState service boot fuori policy: {service}")
+        policy_name = BOOT_ROOT_SERVICE_EXECUTION_POLICIES.get(service)
+        if service not in BOOT_ROOT_SERVICE_EXECUTION_POLICIES:
+            raise ActivationError(f"UNKNOWN EXECUTION POLICY boot service: {service}")
+        if policy_name != "@managed-nonroot":
+            expected_fragment = BOOT_ROOT_SERVICE_FRAGMENT_POLICIES.get(service)
+            if (
+                expected_fragment is None
+                or values["FragmentPath"] != expected_fragment.as_posix()
+            ):
+                raise ActivationError(
+                    f"Fragment execution service fuori policy: {service}"
+                )
+        if values["User"] not in {"", "root"}:
+            if policy_name != "@managed-nonroot" or not values["Group"]:
+                raise ActivationError(f"Identity service boot fuori policy: {service}")
+            # This unit is the exact renderer-locked bundle artifact verified while
+            # admitting SYSTEMD_LINK.  It cannot carry systemd '+'/'!' privilege
+            # prefixes or alternate Exec* without invalidating the bundle.
+            continue
+        if values["Group"] not in {"", "root"}:
+            raise ActivationError(f"Group service root fuori policy: {service}")
+        if values["SourcePath"]:
+            raise ActivationError(f"UNKNOWN EXECUTION POLICY SysV: {values['SourcePath']}")
+        # Every effective drop-in byte was already closed by
+        # _attest_boot_reachable_package_unit_files; commands below are parsed after merge.
+
+        commands: list[tuple[Path, tuple[str, ...], bool]] = []
+        for name in exec_properties:
+            raw = values[name]
+            if raw:
+                commands.extend(
+                    _parse_systemd_exec(
+                        raw, name=f"{service} {name}", allow_missing=True
+                    )
+                )
+        if not commands:
+            raise ActivationError(f"Service root senza execution attestabile: {service}")
+        executables = frozenset(command[0] for command in commands)
+        existing_executables: set[Path] = set()
+        for executable in executables:
+            try:
+                executable.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                raise ActivationError(
+                    f"Executable service non verificabile: {service} {executable}"
+                ) from exc
+            existing_executables.add(executable)
+        _attest_package_input_files(
+            existing_executables, label=f"boot service executable {service}"
+        )
+
+        trampoline_names = {
+            "sh", "dash", "bash", "env", "perl", "ruby", "node",
+            "python", "python2", "python3",
+        }
+        if policy_name is None and any(
+            executable.name in trampoline_names
+            or executable.name.startswith(("python2.", "python3."))
+            for executable in existing_executables
+        ):
+            raise ActivationError(
+                f"UNKNOWN EXECUTION POLICY interpreter/trampoline: {service}"
+            )
+        script_paths: set[Path] = set()
+        for executable in existing_executables:
+            if _read_stable_trusted_file(executable)[:2] == b"#!":
+                script_paths.add(executable.resolve(strict=True))
+        if policy_name == "@nginx":
+            if script_paths:
+                raise ActivationError("nginx.service ha acquisito uno script interpreter")
+            _attest_nginx_package_behavior_files()
+            _attest_effective_nginx_unit(
+                expect_running=None,
+                allowed_unit_file_states=PREFLIGHT_NGINX_UNIT_FILE_STATES,
+            )
+        elif policy_name is None:
+            if script_paths:
+                raise ActivationError(
+                    f"UNKNOWN EXECUTION POLICY interpreted service: {service}"
+                )
+        else:
+            closure = EXECUTABLE_CLOSURE_POLICIES.get(policy_name)
+            if closure is None:
+                raise ActivationError(f"UNKNOWN EXECUTION POLICY: {policy_name}")
+            reviewed = {path.resolve(strict=True) for path in closure.reviewed_sources}
+            if not script_paths or not script_paths <= reviewed:
+                raise ActivationError(
+                    f"Interpreted source service fuori policy: {service}"
+                )
+            _attest_runtime_executable_closure(policy_name)
+
+
 def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
     """Fail closed on local artifacts and unknown root schedulers in the boot surface."""
 
@@ -3570,6 +3918,7 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
 
     closed_boot_units = frozenset(boot_units)
     _attest_boot_reachable_package_unit_files(closed_boot_units, generated_roots)
+    _attest_boot_reachable_service_execution(closed_boot_units)
     return _attest_boot_reachable_root_schedulers(closed_boot_units)
 
 
@@ -3602,7 +3951,9 @@ def _systemd_property(
     return value
 
 
-def _canonical_path(value: str, *, label: str) -> Path:
+def _canonical_path(
+    value: str, *, label: str, allow_missing: bool = False
+) -> Path:
     try:
         path = Path(value)
         if not path.is_absolute():
@@ -3610,12 +3961,14 @@ def _canonical_path(value: str, *, label: str) -> Path:
             if mapped is None:
                 raise OSError("path non assoluto")
             path = mapped
-        return path.resolve(strict=True)
+        return path.resolve(strict=not allow_missing)
     except OSError as exc:
         raise ActivationError(f"Path systemd {label} non canonico: {value}") from exc
 
 
-def _parse_systemd_exec(value: str, *, name: str) -> tuple[tuple[Path, tuple[str, ...], bool], ...]:
+def _parse_systemd_exec(
+    value: str, *, name: str, allow_missing: bool = False
+) -> tuple[tuple[Path, tuple[str, ...], bool], ...]:
     """Parse systemd's normalized Exec* records and preserve their security semantics."""
 
     record = re.compile(
@@ -3633,10 +3986,19 @@ def _parse_systemd_exec(value: str, *, name: str) -> tuple[tuple[Path, tuple[str
             raise ActivationError(f"{name} systemd non interpretabile") from exc
         if not arguments:
             raise ActivationError(f"{name} systemd senza argv")
-        executable = _canonical_path(match.group("path"), label=name)
-        argv0 = _canonical_path(arguments[0], label=f"{name} argv[0]")
-        if executable != argv0:
-            raise ActivationError(f"{name} systemd con executable/argv[0] divergenti")
+        executable = _canonical_path(
+            match.group("path"), label=name, allow_missing=allow_missing
+        )
+        raw_argv0 = arguments[0]
+        if raw_argv0.startswith("@"):
+            if raw_argv0 != "@" + executable.name:
+                raise ActivationError(f"{name} systemd con argv[0] override inatteso")
+        else:
+            argv0 = _canonical_path(
+                raw_argv0, label=f"{name} argv[0]", allow_missing=allow_missing
+            )
+            if executable != argv0:
+                raise ActivationError(f"{name} systemd con executable/argv[0] divergenti")
         parsed.append((executable, arguments[1:], match.group("ignore") == "yes"))
         cursor = match.end()
     if not parsed or value[cursor:].strip():

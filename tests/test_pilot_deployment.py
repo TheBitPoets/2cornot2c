@@ -1675,6 +1675,9 @@ def _install_systemd_inventory_fixture(
     monkeypatch.setattr(
         ubuntu_activation, "_systemd_show_properties", lambda _units, _names: {}
     )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_boot_reachable_service_execution", lambda _units: None
+    )
     monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
     return local_root, package_root, generator_root
 
@@ -1749,7 +1752,18 @@ def _install_logrotate_inventory_fixture(
         ),
     )
     monkeypatch.setattr(
+        ubuntu_activation,
+        "LOGROTATE_PACKAGE_INPUT_SHA256",
+        {
+            "logrotate.conf": hashlib.sha256(config.read_bytes()).hexdigest(),
+            package_snippet.name: hashlib.sha256(package_snippet.read_bytes()).hexdigest(),
+        },
+    )
+    monkeypatch.setattr(
         ubuntu_activation, "LOGROTATE_EXECUTABLE_SNIPPET_SHA256", {}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_runtime_executable_closure", lambda _name: frozenset()
     )
     return config, directory, package_snippet
 
@@ -2331,7 +2345,7 @@ def test_generated_sysv_unit_rejects_local_unmanaged_source_before_trust(
         )
 
 
-def test_generated_sysv_unit_accepts_only_installed_package_source_and_enablement(
+def test_generated_sysv_unit_requires_explicit_reviewed_execution_policy(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     artifacts, roots, targets, source = _install_generated_sysv_fixture(
@@ -2342,10 +2356,21 @@ def test_generated_sysv_unit_accepts_only_installed_package_source_and_enablemen
         "_dpkg_integrity_verified_paths",
         lambda paths: frozenset(path for path in paths if path == source),
     )
-    trusted_artifacts, trusted_units = (
+    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN EXECUTION POLICY SysV"):
         ubuntu_activation._attest_generated_systemd_artifacts(
             artifacts, roots, targets, frozenset()
         )
+
+    monkeypatch.setattr(
+        ubuntu_activation, "SYSV_EXECUTION_POLICIES", {source: "reviewed-sysv"}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_runtime_executable_closure",
+        lambda name: frozenset({source}) if name == "reviewed-sysv" else frozenset(),
+    )
+    trusted_artifacts, trusted_units = ubuntu_activation._attest_generated_systemd_artifacts(
+        artifacts, roots, targets, frozenset()
     )
     assert trusted_artifacts == frozenset(artifacts)
     assert trusted_units == frozenset({"legacy-package.service"})
@@ -3536,12 +3561,18 @@ def test_unknown_package_executable_hook_configs_fail_closed(
         "_dpkg_integrity_verified_paths",
         lambda paths: frozenset(paths),
     )
+    package_mapping = dict(ubuntu_activation.LOGROTATE_PACKAGE_INPUT_SHA256)
+    package_mapping[package_snippet.name] = hashlib.sha256(package_snippet.read_bytes()).hexdigest()
+    monkeypatch.setattr(
+        ubuntu_activation, "LOGROTATE_PACKAGE_INPUT_SHA256", package_mapping
+    )
     with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN executable hook"):
         ubuntu_activation._attest_logrotate_inputs()
     package_snippet.write_text(
         "/var/log/package.log {\ncompresscmd /usr/local/bin/compressor\n}\n",
         encoding="utf-8",
     )
+    package_mapping[package_snippet.name] = hashlib.sha256(package_snippet.read_bytes()).hexdigest()
     with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN executable directive"):
         ubuntu_activation._attest_logrotate_inputs()
 
@@ -3550,6 +3581,289 @@ def test_unknown_package_executable_hook_configs_fail_closed(
     unknown.write_text('APT::Update::Post-Invoke { "true"; };\n', encoding="utf-8")
     with pytest.raises(ubuntu_activation.ActivationError, match="Input APT"):
         ubuntu_activation._attest_apt_inputs()
+
+
+def test_package_logrotate_same_line_hook_is_unknown_even_with_valid_package_digest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _config, _directory, package_snippet = _install_logrotate_inventory_fixture(
+        tmp_path, monkeypatch
+    )
+    package_snippet.write_text(
+        "/var/log/example.log { postrotate\n"
+        "  /usr/local/bin/helper\n"
+        "endscript\n}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_dpkg_integrity_verified_paths", lambda paths: frozenset(paths)
+    )
+    package_mapping = dict(ubuntu_activation.LOGROTATE_PACKAGE_INPUT_SHA256)
+    package_mapping[package_snippet.name] = hashlib.sha256(package_snippet.read_bytes()).hexdigest()
+    monkeypatch.setattr(
+        ubuntu_activation, "LOGROTATE_PACKAGE_INPUT_SHA256", package_mapping
+    )
+    assert ubuntu_activation._logrotate_execution_directives(
+        package_snippet.read_bytes(), path=package_snippet
+    ) == frozenset({"postrotate"})
+    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN executable hook"):
+        ubuntu_activation._attest_logrotate_inputs()
+
+
+@pytest.mark.parametrize(
+    ("directive", "prefix"),
+    (
+        ("prerotate", "{ "),
+        ("postrotate", "/var/log/example.log    {    "),
+        ("firstaction", "\t{\t"),
+        ("lastaction", "{ # comment\n "),
+    ),
+)
+def test_logrotate_hook_parser_is_layout_independent(
+    tmp_path: Path, directive: str, prefix: str
+) -> None:
+    path = tmp_path / "snippet"
+    contents = (
+        f"/var/log/example.log {prefix}{directive}\n"
+        " /usr/bin/true # hook body\n"
+        " endscript\n}\n"
+    ).encode()
+    assert ubuntu_activation._logrotate_execution_directives(
+        contents, path=path
+    ) == frozenset({directive})
+
+
+def test_managed_logrotate_hooks_require_exact_pinned_launcher_commands(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = tmp_path / "bundle"
+    deployment.render_bundle(manifest(), bundle)
+    path = bundle / "logrotate/thebitlab"
+    _install_synthetic_stable_reader(monkeypatch, {path})
+    ubuntu_activation._attest_managed_logrotate_hooks((path,))
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "/usr/sbin/thebitlab-pilot-activate logrotate-reopen",
+            "/usr/local/bin/unmanaged-reopen",
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="Execution policy"):
+        ubuntu_activation._attest_managed_logrotate_hooks((path,))
+
+
+def _boot_service_properties(service: str, executable: Path) -> dict[str, dict[str, str]]:
+    values = {
+        "Id": service,
+        "LoadState": "loaded",
+        "FragmentPath": "/usr/lib/systemd/system/" + service,
+        "SourcePath": "",
+        "DropInPaths": "",
+        "User": "",
+        "Group": "",
+        "ExecCondition": "",
+        "ExecStartPre": "",
+        "ExecStart": (
+            f"{{ path={executable.as_posix()} ; argv[]={executable.as_posix()} --fixture ; "
+            "ignore_errors=no ; start_time=[n/a] }"
+        ),
+        "ExecStartPost": "",
+        "ExecReload": "",
+        "ExecStop": "",
+        "ExecStopPost": "",
+    }
+    return {service: values}
+
+
+def _install_boot_service_registry(
+    monkeypatch: pytest.MonkeyPatch, service: str, policy: str | None
+) -> None:
+    monkeypatch.setattr(
+        ubuntu_activation, "BOOT_ROOT_SERVICE_EXECUTION_POLICIES", {service: policy}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "BOOT_ROOT_SERVICE_FRAGMENT_POLICIES",
+        {service: Path("/usr/lib/systemd/system") / service},
+    )
+
+
+def test_accept_socket_template_requires_exact_reviewed_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    socket_unit = "fixture.socket"
+    template = tmp_path / "usr/lib/systemd/system/fixture@.service"
+    executable = tmp_path / "usr/lib/systemd/fixture"
+    template.parent.mkdir(parents=True)
+    executable.parent.mkdir(parents=True, exist_ok=True)
+    template.write_bytes(b"[Service]\nExecStart=/usr/lib/systemd/fixture\n")
+    executable.write_bytes(b"ELF fixture\n")
+    digest = hashlib.sha256(template.read_bytes()).hexdigest()
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES",
+        {socket_unit: (template, executable, digest)},
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_show_properties",
+        lambda units, _names: {
+            unit: {
+                "Id": unit,
+                "LoadState": "loaded",
+                "Triggers": "",
+                "Accept": "yes",
+            }
+            for unit in units
+        },
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_package_input_files", lambda paths, **_kwargs: frozenset(paths)
+    )
+    _install_synthetic_stable_reader(monkeypatch, {template})
+    ubuntu_activation._attest_boot_reachable_service_execution(frozenset({socket_unit}))
+    template.write_bytes(template.read_bytes() + b"# changed execution\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="Accept socket bytes"):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({socket_unit}))
+
+
+def test_modified_boot_reachable_package_executable_bytes_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = "fixture-native.service"
+    executable = tmp_path / "usr/bin/fixture-native"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"ELF reviewed fixture\n")
+    executable.chmod(0o755)
+    canonical = executable.read_bytes()
+    _install_boot_service_registry(monkeypatch, service, None)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_show_properties",
+        lambda units, _names: {
+            unit: _boot_service_properties(unit, executable)[unit] for unit in units
+        },
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(
+            path for path in paths if path == executable and path.read_bytes() == canonical
+        ),
+    )
+    _install_synthetic_stable_reader(monkeypatch, {executable})
+    ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+    executable.write_bytes(canonical + b"modified\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="boot service executable"):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+
+def test_new_package_boot_service_has_unknown_execution_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = "new-package.service"
+    executable = tmp_path / "usr/bin/new-package"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"ELF package fixture\n")
+    executable.chmod(0o755)
+    monkeypatch.setattr(
+        ubuntu_activation, "BOOT_ROOT_SERVICE_EXECUTION_POLICIES", {}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_show_properties",
+        lambda units, _names: {
+            unit: _boot_service_properties(unit, executable)[unit] for unit in units
+        },
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN EXECUTION POLICY"):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+
+def test_package_cannot_shadow_known_service_from_alternate_fragment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = "known-package.service"
+    executable = tmp_path / "usr/bin/known-package"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"ELF package fixture\n")
+    executable.chmod(0o755)
+    properties = _boot_service_properties(service, executable)
+    properties[service]["FragmentPath"] = "/etc/systemd/system/known-package.service"
+    _install_boot_service_registry(monkeypatch, service, None)
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_show_properties", lambda _units, _names: properties
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="Fragment execution service"):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+
+def test_new_nonroot_package_service_cannot_bypass_unknown_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = "new-nonroot-package.service"
+    executable = tmp_path / "usr/bin/new-nonroot-package"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"ELF package fixture\n")
+    executable.chmod(0o755)
+    properties = _boot_service_properties(service, executable)
+    properties[service]["User"] = "nobody"
+    properties[service]["Group"] = "nogroup"
+    monkeypatch.setattr(
+        ubuntu_activation, "BOOT_ROOT_SERVICE_EXECUTION_POLICIES", {}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_show_properties", lambda _units, _names: properties
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN EXECUTION POLICY"):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+
+def test_known_boot_service_rejects_direct_unknown_interpreter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = "fixture-interpreter.service"
+    executable = tmp_path / "usr/bin/dash"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"ELF interpreter fixture\n")
+    executable.chmod(0o755)
+    _install_boot_service_registry(monkeypatch, service, None)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_show_properties",
+        lambda units, _names: {
+            unit: _boot_service_properties(unit, executable)[unit] for unit in units
+        },
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_dpkg_integrity_verified_paths", lambda paths: frozenset(paths)
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="interpreter/trampoline"):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+
+def test_known_boot_service_rejects_unknown_interpreted_source(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = "fixture-script.service"
+    executable = tmp_path / "usr/bin/fixture-script"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"#!/bin/sh\n/usr/local/bin/helper\n")
+    executable.chmod(0o755)
+    _install_boot_service_registry(monkeypatch, service, None)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_show_properties",
+        lambda units, _names: {
+            unit: _boot_service_properties(unit, executable)[unit] for unit in units
+        },
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_dpkg_integrity_verified_paths", lambda paths: frozenset(paths)
+    )
+    _install_synthetic_stable_reader(monkeypatch, {executable})
+    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN EXECUTION POLICY interpreted"):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
 
 
 def test_modified_sysv_and_generator_bytes_are_not_package_trust(
@@ -3565,6 +3879,14 @@ def test_modified_sysv_and_generator_bytes_are_not_package_trust(
         lambda paths: frozenset(
             path for path in paths if path == source and path.read_bytes() == canonical
         ),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "SYSV_EXECUTION_POLICIES", {source: "reviewed-sysv"}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_runtime_executable_closure",
+        lambda name: frozenset({source}) if name == "reviewed-sysv" else frozenset(),
     )
     ubuntu_activation._attest_generated_systemd_artifacts(
         artifacts, roots, targets, frozenset()
