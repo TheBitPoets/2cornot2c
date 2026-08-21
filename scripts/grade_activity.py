@@ -18,7 +18,10 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from scripts.thebitlab_runtime_sandbox import docker_boundary_command
+try:
+    from scripts.thebitlab_sandbox_boundary import docker_boundary_command
+except ModuleNotFoundError:  # direct ``python scripts/grade_activity.py`` execution
+    from thebitlab_sandbox_boundary import docker_boundary_command
 
 DEFAULT_TIMEOUT_SECONDS = 5
 DEFAULT_NODE_STARTUP_GRACE_SECONDS = 10
