@@ -309,6 +309,58 @@ class ExecutableClosurePolicy:
     closed_directories: Mapping[Path, tuple[str, ...]] | None = None
 
 
+EXPECTED_PRESENT = "EXPECTED_PRESENT"
+EXPECTED_ABSENT = "EXPECTED_ABSENT"
+NATIVE_PACKAGE_BINARY = "NATIVE_PACKAGE_BINARY"
+INTERPRETED_SCRIPT = "INTERPRETED_SCRIPT"
+REVIEWED_TRAMPOLINE = "REVIEWED_TRAMPOLINE"
+EXPECTED_ABSENT_EXECUTABLE = "EXPECTED_ABSENT_EXECUTABLE"
+SYSTEMD_EXEC_SLOTS = (
+    "ExecCondition",
+    "ExecStartPre",
+    "ExecStart",
+    "ExecStartPost",
+    "ExecReload",
+    "ExecStop",
+    "ExecStopPost",
+)
+
+
+@dataclass(frozen=True)
+class PackageFileIdentityPolicy:
+    path: Path
+    expected_packages: frozenset[str]
+    expected_presence: str = EXPECTED_PRESENT
+    reviewed_sha256: str | None = None
+
+
+@dataclass(frozen=True)
+class BootExecCommandPolicy:
+    file: PackageFileIdentityPolicy
+    arguments: tuple[str, ...]
+    ignore_errors: bool
+    execution_class: str
+
+
+@dataclass(frozen=True)
+class BootServiceExecutionPolicy:
+    unit_name: str
+    fragment: PackageFileIdentityPolicy | None
+    exec_slots: Mapping[str, tuple[BootExecCommandPolicy, ...]]
+    closure_policy: str | None = None
+    dropins: tuple[PackageFileIdentityPolicy, ...] = ()
+    managed_nonroot: bool = False
+
+
+@dataclass(frozen=True)
+class BootAcceptSocketExecutionPolicy:
+    template: PackageFileIdentityPolicy
+    executable: PackageFileIdentityPolicy
+    execution_class: str
+    probe_instance: str
+    exec_slots: Mapping[str, tuple[BootExecCommandPolicy, ...]]
+
+
 @dataclass(frozen=True)
 class RootTimerPolicy:
     service: str
@@ -321,6 +373,8 @@ class RootTimerPolicy:
     environment: str = ""
     input_attestor: str | None = None
     support_files: tuple[Path, ...] = ()
+    timer_sha256: str = ""
+    service_sha256: str = ""
 
 
 BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
@@ -341,6 +395,8 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
             Path("/usr/bin/apt-get"),
             Path("/usr/bin/dash"),
         ),
+        timer_sha256="0075e974af4e3a94757e219ba50ccb8348d4d1a8834d938f6cc9b1f4fd1db4e5",
+        service_sha256="90f87047f4ea2f261f9117d02870de8719f808b911bb1808bf039ff3c162e5e9",
     ),
     "apt-daily-upgrade.timer": RootTimerPolicy(
         "apt-daily-upgrade.service",
@@ -359,6 +415,8 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
             Path("/usr/bin/apt-get"),
             Path("/usr/bin/dash"),
         ),
+        timer_sha256="b804d7bab8eb41202384f9270e25d5383346ace8b3d7c4f5029c150638d77bcd",
+        service_sha256="da0651537cad0ed384291bd50c0bbc3268e6c625626ec9344150de4e8db3925e",
     ),
     "dpkg-db-backup.timer": RootTimerPolicy(
         "dpkg-db-backup.service",
@@ -372,6 +430,8 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
             Path("/usr/bin/dash"),
             Path("/usr/share/dpkg/sh/dpkg-error.sh"),
         ),
+        timer_sha256="2e0dd766329313bfabd86b1acbd40069510afcfef3935cdea010168b503afde1",
+        service_sha256="85249c5a74e9c47bf39d34e78612f0a0fe56cb8b35145482b40f8f73f08b2d5c",
     ),
     "e2scrub_all.timer": RootTimerPolicy(
         "e2scrub_all.service",
@@ -384,6 +444,8 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
         environment="SERVICE_MODE=1",
         input_attestor="_attest_e2scrub_inputs",
         support_files=(Path("/usr/bin/bash"),),
+        timer_sha256="23f20fb6edc9fd54bf4754ef4311f88cba45ba65c6aecfa1885e8fb99531c211",
+        service_sha256="59a0a04718fcd5e608c9291d41ff378cd531debfa2e6d539add1b716c958a128",
     ),
     "fstrim.timer": RootTimerPolicy(
         "fstrim.service",
@@ -398,6 +460,8 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
             "--listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported",
             False,
         ),),
+        timer_sha256="699161252ffaa35a0272aae055e51332df694ff4d28c39f8b666d47ecced3397",
+        service_sha256="9d5ab55ca0f12257edd33d154e5dc523ddea4d5f2525557cbf96e30b97deab56",
     ),
     "logrotate.timer": RootTimerPolicy(
         "logrotate.service",
@@ -408,6 +472,8 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
         "enabled",
         (("ExecStart", "/usr/sbin/logrotate", "/etc/logrotate.conf", False),),
         input_attestor="_attest_logrotate_inputs",
+        timer_sha256="42f723dc5d90247a5fda11a3358d1a67eccceed856192b2264aa222d6aa240f4",
+        service_sha256="cc5c35e740bce405c1177903f675e8beb471c2fba394732eaf8100e4e9a5e0fb",
     ),
     "motd-news.timer": RootTimerPolicy(
         "motd-news.service",
@@ -419,6 +485,8 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
         (("ExecStart", "/etc/update-motd.d/50-motd-news", "--force", False),),
         input_attestor="_attest_motd_news_inputs",
         support_files=(Path("/usr/bin/dash"),),
+        timer_sha256="f18dbd0f64344440d7d6e8f1ff302d26fe383921be2a3f13948a8e2e2545ee58",
+        service_sha256="b39d6da1bf420221beedb50b2d65f82ce5932c0ec9dba4f5dee5fcad874d6a37",
     ),
     "systemd-tmpfiles-clean.timer": RootTimerPolicy(
         "systemd-tmpfiles-clean.service",
@@ -428,6 +496,8 @@ BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
         Path("/usr/lib/systemd/system/systemd-tmpfiles-clean.service"),
         "static",
         (("ExecStart", "/usr/bin/systemd-tmpfiles", "--clean", False),),
+        timer_sha256="5d0d5e43fba69a001527d4ef354971c9a089b64d7d88973f2c190f7d80b25c61",
+        service_sha256="91c07d7c7e13eae3dfe5c475eea3df4dc12f93d00b3b6c0b4e6f3f50e8f6cccf",
     ),
 }
 UNIT_INPUT_ATTESTORS: Mapping[str, str] = {
@@ -696,68 +766,667 @@ EXECUTABLE_CLOSURE_POLICIES: Mapping[str, ExecutableClosurePolicy] = {
     ),
 }
 
-# A package update may add files, but it cannot add a boot execution policy.  These
-# are the exact root services in the reviewed Ubuntu 24.04 dedicated-host graph.
-# Values name the transitive script closure; None means every effective Exec* must
-# terminate at a native, byte-integrity-verified package executable.
-BOOT_ROOT_SERVICE_EXECUTION_POLICIES: Mapping[str, str | None] = {
-    name: None
-    for name in (
-        "console-getty.service", "dbus.service", "getty-static.service",
-        "getty@tty1.service", "kmod-static-nodes.service", "ldconfig.service",
-        "modprobe@configfs.service", "modprobe@dm_mod.service",
-        "modprobe@drm.service", "modprobe@efi_pstore.service",
-        "modprobe@fuse.service", "modprobe@loop.service",
-        "systemd-ask-password-console.service",
-        "systemd-ask-password-wall.service", "systemd-binfmt.service",
-        "systemd-firstboot.service", "systemd-initctl.service",
-        "systemd-journal-catalog-update.service",
-        "systemd-journal-flush.service", "systemd-journald.service",
-        "systemd-logind.service", "systemd-machine-id-commit.service",
-        "systemd-modules-load.service", "systemd-pcrmachine.service",
-        "systemd-pcrphase-sysinit.service", "systemd-pcrphase.service",
-        "systemd-pstore.service", "systemd-random-seed.service",
-        "systemd-remount-fs.service", "systemd-repart.service",
-        "systemd-sysctl.service", "systemd-sysusers.service",
-        "systemd-tmpfiles-setup-dev-early.service",
-        "systemd-tmpfiles-setup-dev.service",
-        "systemd-tmpfiles-setup.service", "systemd-tpm2-setup-early.service",
-        "systemd-tpm2-setup.service", "systemd-update-done.service",
-        "systemd-update-utmp-runlevel.service", "systemd-update-utmp.service",
-        "systemd-user-sessions.service",
+# Package ownership is inventory metadata, not trust.  Every behavior-bearing
+# package path below is bound to the reviewed binary package identity.
+REVIEWED_PACKAGE_IDENTITIES: Mapping[Path, frozenset[str]] = {
+    Path('/etc/default/nginx'): frozenset({'nginx-common'}),
+    Path('/etc/init.d/nginx'): frozenset({'nginx-common'}),
+    Path('/etc/logrotate.d/nginx'): frozenset({'nginx-common'}),
+    Path('/etc/update-motd.d/50-motd-news'): frozenset({'base-files'}),
+    Path('/usr/bin/apt-config'): frozenset({'apt'}),
+    Path('/usr/bin/apt-get'): frozenset({'apt'}),
+    Path('/usr/bin/basename'): frozenset({'coreutils'}),
+    Path('/usr/bin/bash'): frozenset({'bash'}),
+    Path('/usr/bin/cat'): frozenset({'coreutils'}),
+    Path('/usr/bin/chgrp'): frozenset({'coreutils'}),
+    Path('/usr/bin/chmod'): frozenset({'coreutils'}),
+    Path('/usr/bin/chown'): frozenset({'coreutils'}),
+    Path('/usr/bin/cmp'): frozenset({'diffutils'}),
+    Path('/usr/bin/cp'): frozenset({'coreutils'}),
+    Path('/usr/bin/cut'): frozenset({'coreutils'}),
+    Path('/usr/bin/dash'): frozenset({'dash'}),
+    Path('/usr/bin/date'): frozenset({'coreutils'}),
+    Path('/usr/bin/dbus-daemon'): frozenset({'dbus-daemon'}),
+    Path('/usr/bin/dbus-send'): frozenset({'dbus-bin'}),
+    Path('/usr/bin/dirname'): frozenset({'coreutils'}),
+    Path('/usr/bin/dpkg'): frozenset({'dpkg'}),
+    Path('/usr/bin/dpkg-trigger'): frozenset({'dpkg'}),
+    Path('/usr/bin/du'): frozenset({'coreutils'}),
+    Path('/usr/bin/env'): frozenset({'coreutils'}),
+    Path('/usr/bin/find'): frozenset({'findutils'}),
+    Path('/usr/bin/flock'): frozenset({'util-linux'}),
+    Path('/usr/bin/grep'): frozenset({'grep'}),
+    Path('/usr/bin/gzip'): frozenset({'gzip'}),
+    Path('/usr/bin/head'): frozenset({'coreutils'}),
+    Path('/usr/bin/id'): frozenset({'coreutils'}),
+    Path('/usr/bin/journalctl'): frozenset({'systemd'}),
+    Path('/usr/bin/ln'): frozenset({'coreutils'}),
+    Path('/usr/bin/ls'): frozenset({'coreutils'}),
+    Path('/usr/bin/lsblk'): frozenset({'util-linux'}),
+    Path('/usr/bin/mawk'): frozenset({'mawk'}),
+    Path('/usr/bin/mkdir'): frozenset({'coreutils'}),
+    Path('/usr/bin/mktemp'): frozenset({'coreutils'}),
+    Path('/usr/bin/mv'): frozenset({'coreutils'}),
+    Path('/usr/bin/ps'): frozenset({'procps'}),
+    Path('/usr/bin/readlink'): frozenset({'coreutils'}),
+    Path('/usr/bin/rm'): frozenset({'coreutils'}),
+    Path('/usr/bin/run-parts'): frozenset({'debianutils'}),
+    Path('/usr/bin/savelog'): frozenset({'debianutils'}),
+    Path('/usr/bin/sed'): frozenset({'sed'}),
+    Path('/usr/bin/seq'): frozenset({'coreutils'}),
+    Path('/usr/bin/sort'): frozenset({'coreutils'}),
+    Path('/usr/bin/stat'): frozenset({'coreutils'}),
+    Path('/usr/bin/systemctl'): frozenset({'systemd'}),
+    Path('/usr/bin/systemd-escape'): frozenset({'systemd'}),
+    Path('/usr/bin/systemd-firstboot'): frozenset({'systemd'}),
+    Path('/usr/bin/systemd-machine-id-setup'): frozenset({'systemd'}),
+    Path('/usr/bin/systemd-repart'): frozenset({'systemd'}),
+    Path('/usr/bin/systemd-sysext'): frozenset({'systemd'}),
+    Path('/usr/bin/systemd-sysusers'): frozenset({'systemd'}),
+    Path('/usr/bin/systemd-tmpfiles'): frozenset({'systemd'}),
+    Path('/usr/bin/systemd-tty-ask-password-agent'): frozenset({'systemd'}),
+    Path('/usr/bin/tar'): frozenset({'tar'}),
+    Path('/usr/bin/touch'): frozenset({'coreutils'}),
+    Path('/usr/bin/tr'): frozenset({'coreutils'}),
+    Path('/usr/bin/uname'): frozenset({'coreutils'}),
+    Path('/usr/bin/uniq'): frozenset({'coreutils'}),
+    Path('/usr/bin/wc'): frozenset({'coreutils'}),
+    Path('/usr/bin/wget'): frozenset({'wget'}),
+    Path('/usr/bin/xargs'): frozenset({'findutils'}),
+    Path('/usr/lib/apt/apt-helper'): frozenset({'apt'}),
+    Path('/usr/lib/apt/apt.systemd.daily'): frozenset({'apt'}),
+    Path('/usr/lib/init/vars.sh'): frozenset({'sysvinit-utils'}),
+    Path('/usr/lib/lsb/init-functions'): frozenset({'sysvinit-utils'}),
+    Path('/usr/lib/lsb/init-functions.d/00-verbose'): frozenset({'sysvinit-utils'}),
+    Path('/usr/lib/lsb/init-functions.d/40-systemd'): frozenset({'systemd'}),
+    Path('/usr/lib/lsb/init-functions.d/50-ubuntu-logging'): frozenset({'sysvinit-utils'}),
+    Path('/usr/lib/systemd/system/apt-daily-upgrade.service'): frozenset({'apt'}),
+    Path('/usr/lib/systemd/system/apt-daily-upgrade.timer'): frozenset({'apt'}),
+    Path('/usr/lib/systemd/system/apt-daily.service'): frozenset({'apt'}),
+    Path('/usr/lib/systemd/system/apt-daily.timer'): frozenset({'apt'}),
+    Path('/usr/lib/systemd/system/console-getty.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/dbus.service'): frozenset({'dbus'}),
+    Path('/usr/lib/systemd/system/dpkg-db-backup.service'): frozenset({'dpkg'}),
+    Path('/usr/lib/systemd/system/dpkg-db-backup.timer'): frozenset({'dpkg'}),
+    Path('/usr/lib/systemd/system/e2scrub_all.service'): frozenset({'e2fsprogs'}),
+    Path('/usr/lib/systemd/system/e2scrub_all.timer'): frozenset({'e2fsprogs'}),
+    Path('/usr/lib/systemd/system/e2scrub_reap.service'): frozenset({'e2fsprogs'}),
+    Path('/usr/lib/systemd/system/fstrim.service'): frozenset({'util-linux'}),
+    Path('/usr/lib/systemd/system/fstrim.timer'): frozenset({'util-linux'}),
+    Path('/usr/lib/systemd/system/getty-static.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/getty@.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/kmod-static-nodes.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/ldconfig.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/logrotate.service'): frozenset({'logrotate'}),
+    Path('/usr/lib/systemd/system/logrotate.timer'): frozenset({'logrotate'}),
+    Path('/usr/lib/systemd/system/modprobe@.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/motd-news.service'): frozenset({'base-files'}),
+    Path('/usr/lib/systemd/system/motd-news.timer'): frozenset({'base-files'}),
+    Path('/usr/lib/systemd/system/nginx.service'): frozenset({'nginx-common'}),
+    Path('/usr/lib/systemd/system/systemd-ask-password-console.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-ask-password-wall.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-binfmt.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-firstboot.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-initctl.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-journal-catalog-update.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-journal-flush.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-journald.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-journald.service.d/nice.conf'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-logind.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-logind.service.d/dbus.conf'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-machine-id-commit.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-modules-load.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-pcrextend@.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-pcrmachine.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-pcrphase-sysinit.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-pcrphase.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-pstore.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-random-seed.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-remount-fs.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-repart.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-sysctl.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-sysext@.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-sysusers.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-tmpfiles-clean.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-tmpfiles-clean.timer'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-tmpfiles-setup-dev-early.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-tmpfiles-setup-dev.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-tmpfiles-setup.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-tpm2-setup-early.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-tpm2-setup.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-update-done.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-update-utmp-runlevel.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-update-utmp.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system/systemd-user-sessions.service'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-binfmt'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-initctl'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-journald'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-logind'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-modules-load'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-pcrextend'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-pstore'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-random-seed'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-remount-fs'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-sysctl'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-tpm2-setup'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-update-done'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-update-utmp'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/systemd-user-sessions'): frozenset({'systemd'}),
+    Path('/usr/libexec/dpkg/dpkg-db-backup'): frozenset({'dpkg'}),
+    Path('/usr/sbin/agetty'): frozenset({'util-linux'}),
+    Path('/usr/sbin/e2scrub'): frozenset({'e2fsprogs'}),
+    Path('/usr/sbin/e2scrub_all'): frozenset({'e2fsprogs'}),
+    Path('/usr/sbin/fstrim'): frozenset({'util-linux'}),
+    Path('/usr/sbin/invoke-rc.d'): frozenset({'init-system-helpers'}),
+    Path('/usr/sbin/ldconfig'): frozenset({'libc-bin'}),
+    Path('/usr/sbin/ldconfig.real'): frozenset({'libc-bin'}),
+    Path('/usr/sbin/logrotate'): frozenset({'logrotate'}),
+    Path('/usr/sbin/nginx'): frozenset({'nginx'}),
+    Path('/usr/sbin/start-stop-daemon'): frozenset({'dpkg'}),
+    Path('/usr/share/dpkg/sh/dpkg-error.sh'): frozenset({'dpkg'}),
+}
+
+
+def _reviewed_package_file(
+    path: str | Path,
+    *,
+    expected_presence: str = EXPECTED_PRESENT,
+    reviewed_sha256: str | None = None,
+) -> PackageFileIdentityPolicy:
+    canonical = Path(path)
+    if expected_presence == EXPECTED_ABSENT:
+        expected_packages = frozenset()
+    else:
+        expected_packages = REVIEWED_PACKAGE_IDENTITIES.get(canonical, frozenset())
+        if not expected_packages:
+            raise ValueError(f"Package identity policy assente: {canonical}")
+    return PackageFileIdentityPolicy(
+        canonical, expected_packages, expected_presence, reviewed_sha256
     )
-} | {
-    "e2scrub_reap.service": "e2scrub-all",
-    "ldconfig.service": "ldconfig",
-    "nginx.service": "@nginx",
-    "thebitlab.service": "@managed-nonroot",
+
+
+def _boot_exec(
+    path: str,
+    arguments: tuple[str, ...],
+    *,
+    ignore_errors: bool,
+    execution_class: str,
+) -> BootExecCommandPolicy:
+    presence = (
+        EXPECTED_ABSENT
+        if execution_class == EXPECTED_ABSENT_EXECUTABLE
+        else EXPECTED_PRESENT
+    )
+    return BootExecCommandPolicy(
+        _reviewed_package_file(path, expected_presence=presence),
+        arguments,
+        ignore_errors,
+        execution_class,
+    )
+
+
+REVIEWED_BOOT_SERVICE_DROPINS: Mapping[str, tuple[tuple[str, str], ...]] = {
+    "systemd-journald.service": ((
+        "/usr/lib/systemd/system/systemd-journald.service.d/nice.conf",
+        "200fa6d390295aba030295ff1bd0d37090c9bb1903641d6d6df1d439592ac5a4",
+    ),),
+    "systemd-logind.service": ((
+        "/usr/lib/systemd/system/systemd-logind.service.d/dbus.conf",
+        "2325a2f34185f01f8ca3dc3c77f6e3676cdc08d0f5023db65f4fb19987d31367",
+    ),),
 }
-BOOT_ROOT_SERVICE_FRAGMENT_POLICIES: Mapping[str, Path] = {
-    service: Path("/usr/lib/systemd/system") / service
-    for service in BOOT_ROOT_SERVICE_EXECUTION_POLICIES
-    if service != "thebitlab.service"
-} | {
-    "getty@tty1.service": Path("/usr/lib/systemd/system/getty@.service"),
-    **{
-        f"modprobe@{instance}.service":
-            Path("/usr/lib/systemd/system/modprobe@.service")
-        for instance in ("configfs", "dm_mod", "drm", "efi_pstore", "fuse", "loop")
-    },
-}
-# Accept=yes sockets can instantiate these reviewed package templates even though
-# no instance exists while the boot graph is inspected.
-BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES: Mapping[
-    str, tuple[Path, Path, str]
-] = {
-    "systemd-pcrextend.socket": (
-        Path("/usr/lib/systemd/system/systemd-pcrextend@.service"),
-        Path("/usr/lib/systemd/systemd-pcrextend"),
-        "3bf975fbb9737019c65718d9796cc17c031296b439a412e45f3a92495fb9fc2e",
+
+
+def _boot_service_policy(
+    unit_name: str,
+    fragment: str,
+    fragment_sha256: str,
+    *,
+    closure_policy: str | None,
+    exec_slots: Mapping[str, tuple[BootExecCommandPolicy, ...]],
+) -> BootServiceExecutionPolicy:
+    if not exec_slots or not set(exec_slots) <= set(SYSTEMD_EXEC_SLOTS):
+        raise ValueError(f"Exec slot policy non valida: {unit_name}")
+    return BootServiceExecutionPolicy(
+        unit_name,
+        _reviewed_package_file(fragment, reviewed_sha256=fragment_sha256),
+        exec_slots,
+        closure_policy,
+        tuple(
+            _reviewed_package_file(path, reviewed_sha256=digest)
+            for path, digest in REVIEWED_BOOT_SERVICE_DROPINS.get(unit_name, ())
+        ),
+    )
+
+
+# Exact Ubuntu 24.04 service/fragment/slot identities.  A package update may keep
+# the same expected package, but changed unit semantics fail until these reviewed
+# fragment digests and effective command contracts are updated.
+BOOT_ROOT_SERVICE_EXECUTION_POLICIES: Mapping[str, BootServiceExecutionPolicy] = {
+    'console-getty.service': _boot_service_policy(
+        'console-getty.service', '/usr/lib/systemd/system/console-getty.service', '97009d9e2236871740c8fe4d28a7020c05d3f0ab943ce1610c3414e53d4b6db6',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/agetty', ('-o', '-p', '--', 'u', '--noclear', '--keep-baud', '-', '115200,38400,9600', '$TERM'), ignore_errors=True, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
     ),
-    "systemd-sysext.socket": (
-        Path("/usr/lib/systemd/system/systemd-sysext@.service"),
-        Path("/usr/bin/systemd-sysext"),
-        "d81e6de39167e27385ecfaafb04b2f96f06acb1586d47968ab4887d229b7cbec",
+    'dbus.service': _boot_service_policy(
+        'dbus.service', '/usr/lib/systemd/system/dbus.service', 'bf7ec47644997441174ef6aac992d34cc46b9d2d7b8dc2feba7074d719fdbef1',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/dbus-daemon', ('--system', '--address=systemd:', '--nofork', '--nopidfile', '--systemd-activation', '--syslog-only'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecReload': (
+                _boot_exec('/usr/bin/dbus-send', ('--print-reply', '--system', '--type=method_call', '--dest=org.freedesktop.DBus', '/', 'org.freedesktop.DBus.ReloadConfig'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'e2scrub_reap.service': _boot_service_policy(
+        'e2scrub_reap.service', '/usr/lib/systemd/system/e2scrub_reap.service', '35405e2a877fe17ccf05c96db2e037a29605f8719ba3e4b2f1670c721aa7b5aa',
+        closure_policy='e2scrub-all', exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/e2scrub_all', ('-A', '-r'), ignore_errors=False, execution_class=INTERPRETED_SCRIPT),
+            ),
+        },
+    ),
+    'getty-static.service': _boot_service_policy(
+        'getty-static.service', '/usr/lib/systemd/system/getty-static.service', 'c22a21a19c11278ccaa7e804594a4488e3d4a43751defeb00ec89dfb32b96359',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemctl', ('--no-block', 'start', 'getty@tty2.service', 'getty@tty3.service', 'getty@tty4.service', 'getty@tty5.service', 'getty@tty6.service'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'getty@tty1.service': _boot_service_policy(
+        'getty@tty1.service', '/usr/lib/systemd/system/getty@.service', '6aa3ee077105e9af6979d4be40126af8db7ac402e8600b29390b8e7ff7505684',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/agetty', ('-o', '-p', '--', 'u', '--noclear', '-', '$TERM'), ignore_errors=True, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'kmod-static-nodes.service': _boot_service_policy(
+        'kmod-static-nodes.service', '/usr/lib/systemd/system/kmod-static-nodes.service', 'b9b4525566b10f1f2bbd30d86c0c85495c2bab360714c2f4f8e549533fb6a2d7',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/kmod', ('static-nodes', '--format=tmpfiles', '--output=/run/tmpfiles.d/static-nodes.conf'), ignore_errors=False, execution_class=EXPECTED_ABSENT_EXECUTABLE),
+            ),
+        },
+    ),
+    'ldconfig.service': _boot_service_policy(
+        'ldconfig.service', '/usr/lib/systemd/system/ldconfig.service', 'f6e8fe16e30c2bb388b39546af5a9e5b03515b34ac9092d6f25e3c2fd27cd8f2',
+        closure_policy='ldconfig', exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/ldconfig', ('-X',), ignore_errors=False, execution_class=INTERPRETED_SCRIPT),
+            ),
+        },
+    ),
+    'modprobe@configfs.service': _boot_service_policy(
+        'modprobe@configfs.service', '/usr/lib/systemd/system/modprobe@.service', '739d06d77651c10207565eb519489d62b4e15438a464371273bd2effafc4e9a3',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/modprobe', ('-abq', 'configfs'), ignore_errors=True, execution_class=EXPECTED_ABSENT_EXECUTABLE),
+            ),
+        },
+    ),
+    'modprobe@dm_mod.service': _boot_service_policy(
+        'modprobe@dm_mod.service', '/usr/lib/systemd/system/modprobe@.service', '739d06d77651c10207565eb519489d62b4e15438a464371273bd2effafc4e9a3',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/modprobe', ('-abq', 'dm_mod'), ignore_errors=True, execution_class=EXPECTED_ABSENT_EXECUTABLE),
+            ),
+        },
+    ),
+    'modprobe@drm.service': _boot_service_policy(
+        'modprobe@drm.service', '/usr/lib/systemd/system/modprobe@.service', '739d06d77651c10207565eb519489d62b4e15438a464371273bd2effafc4e9a3',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/modprobe', ('-abq', 'drm'), ignore_errors=True, execution_class=EXPECTED_ABSENT_EXECUTABLE),
+            ),
+        },
+    ),
+    'modprobe@efi_pstore.service': _boot_service_policy(
+        'modprobe@efi_pstore.service', '/usr/lib/systemd/system/modprobe@.service', '739d06d77651c10207565eb519489d62b4e15438a464371273bd2effafc4e9a3',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/modprobe', ('-abq', 'efi_pstore'), ignore_errors=True, execution_class=EXPECTED_ABSENT_EXECUTABLE),
+            ),
+        },
+    ),
+    'modprobe@fuse.service': _boot_service_policy(
+        'modprobe@fuse.service', '/usr/lib/systemd/system/modprobe@.service', '739d06d77651c10207565eb519489d62b4e15438a464371273bd2effafc4e9a3',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/modprobe', ('-abq', 'fuse'), ignore_errors=True, execution_class=EXPECTED_ABSENT_EXECUTABLE),
+            ),
+        },
+    ),
+    'modprobe@loop.service': _boot_service_policy(
+        'modprobe@loop.service', '/usr/lib/systemd/system/modprobe@.service', '739d06d77651c10207565eb519489d62b4e15438a464371273bd2effafc4e9a3',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/sbin/modprobe', ('-abq', 'loop'), ignore_errors=True, execution_class=EXPECTED_ABSENT_EXECUTABLE),
+            ),
+        },
+    ),
+    'nginx.service': _boot_service_policy(
+        'nginx.service', '/usr/lib/systemd/system/nginx.service', '6c759c229d4dacf65c1f98c1733646f8b979d3e75e13a98bfbcfe26f8a2f793c',
+        closure_policy='@nginx', exec_slots={
+            'ExecStartPre': (
+                _boot_exec('/usr/sbin/nginx', ('-t', '-q', '-g', 'daemon', 'on;', 'master_process', 'on;'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStart': (
+                _boot_exec('/usr/sbin/nginx', ('-g', 'daemon', 'on;', 'master_process', 'on;'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecReload': (
+                _boot_exec('/usr/sbin/nginx', ('-g', 'daemon', 'on;', 'master_process', 'on;', '-s', 'reload'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStop': (
+                _boot_exec('/usr/sbin/start-stop-daemon', ('--quiet', '--stop', '--retry', 'QUIT/5', '--pidfile', '/run/nginx.pid'), ignore_errors=True, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-ask-password-console.service': _boot_service_policy(
+        'systemd-ask-password-console.service', '/usr/lib/systemd/system/systemd-ask-password-console.service', '339e74aeb29cc207061218b294213557feafc9c6e3962e32fda84d5dbd850804',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemd-tty-ask-password-agent', ('--watch', '--console'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-ask-password-wall.service': _boot_service_policy(
+        'systemd-ask-password-wall.service', '/usr/lib/systemd/system/systemd-ask-password-wall.service', 'f6c97f36c5089e8b00c180c463e46b7050cb65a5609233975e32f5adeb9c2ea0',
+        closure_policy=None, exec_slots={
+            'ExecStartPre': (
+                _boot_exec('/usr/bin/systemctl', ('stop', 'systemd-ask-password-console.path', 'systemd-ask-password-console.service', 'systemd-ask-password-plymouth.path', 'systemd-ask-password-plymouth.service'), ignore_errors=True, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemd-tty-ask-password-agent', ('--wall',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-binfmt.service': _boot_service_policy(
+        'systemd-binfmt.service', '/usr/lib/systemd/system/systemd-binfmt.service', 'e5ec1652385be97feb387d6125d455146d8c38e1f038b083125f530623a98f8b',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-binfmt', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStop': (
+                _boot_exec('/usr/lib/systemd/systemd-binfmt', ('--unregister',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-firstboot.service': _boot_service_policy(
+        'systemd-firstboot.service', '/usr/lib/systemd/system/systemd-firstboot.service', '6ee3c978f82e6949b0928a3b420fb3aa273ac5c1a85819d40c5bb67c89e84ad8',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemd-firstboot', ('--prompt-locale', '--prompt-timezone', '--prompt-root-password'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-initctl.service': _boot_service_policy(
+        'systemd-initctl.service', '/usr/lib/systemd/system/systemd-initctl.service', '7f41a09b8f5c478a4542ff8d7abbe42916e5db993cc4d5d5ab0191a831fdf86d',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-initctl', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-journal-catalog-update.service': _boot_service_policy(
+        'systemd-journal-catalog-update.service', '/usr/lib/systemd/system/systemd-journal-catalog-update.service', '9d06e11680ff85b40579106281faf56442dfac86bddff0151d8524464439ae9e',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/journalctl', ('--update-catalog',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-journal-flush.service': _boot_service_policy(
+        'systemd-journal-flush.service', '/usr/lib/systemd/system/systemd-journal-flush.service', 'eb3766378b08bfa70e283126808b78fb4577310181ef1d748b7cc957a022122f',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/journalctl', ('--flush',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStop': (
+                _boot_exec('/usr/bin/journalctl', ('--smart-relinquish-var',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-journald.service': _boot_service_policy(
+        'systemd-journald.service', '/usr/lib/systemd/system/systemd-journald.service', '99389b0e3329dad0828df1600cdd31ec271bcc3403bc014018903c5705ec68ef',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-journald', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-logind.service': _boot_service_policy(
+        'systemd-logind.service', '/usr/lib/systemd/system/systemd-logind.service', '528b9c24a93c52385a7c678dd4136f5f316d3ec82e21134dc3be1d2c12fda234',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-logind', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-machine-id-commit.service': _boot_service_policy(
+        'systemd-machine-id-commit.service', '/usr/lib/systemd/system/systemd-machine-id-commit.service', '5f114d1ac97b8b4dea2f96f3641322b5e231f8fd70995b88e5a367574c71f403',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemd-machine-id-setup', ('--commit',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-modules-load.service': _boot_service_policy(
+        'systemd-modules-load.service', '/usr/lib/systemd/system/systemd-modules-load.service', '3339bd38a056593c624e6de4df3f9efa077eb44a800ad983256169078dc636e0',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-modules-load', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-pcrmachine.service': _boot_service_policy(
+        'systemd-pcrmachine.service', '/usr/lib/systemd/system/systemd-pcrmachine.service', '0d3a82d232cc924ccf4bfd0f59f28ab13174c9b597782211b40ac3788701f339',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-pcrextend', ('--graceful', '--machine-id'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-pcrphase-sysinit.service': _boot_service_policy(
+        'systemd-pcrphase-sysinit.service', '/usr/lib/systemd/system/systemd-pcrphase-sysinit.service', 'e8c8ad78fae1d55ce5a3127960c431f024f7713e012926a9f58d4b006f70d7b1',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-pcrextend', ('--graceful', 'sysinit'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStop': (
+                _boot_exec('/usr/lib/systemd/systemd-pcrextend', ('--graceful', 'final'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-pcrphase.service': _boot_service_policy(
+        'systemd-pcrphase.service', '/usr/lib/systemd/system/systemd-pcrphase.service', '445cea129db7dd49047bb33f057fc75df98f5dd1ffb0c7d7f8b3c99e814e143e',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-pcrextend', ('--graceful', 'ready'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStop': (
+                _boot_exec('/usr/lib/systemd/systemd-pcrextend', ('--graceful', 'shutdown'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-pstore.service': _boot_service_policy(
+        'systemd-pstore.service', '/usr/lib/systemd/system/systemd-pstore.service', '6480e7b711ee6f6f4c2a96d0c197f4ee32601743d97de421b4a6d40f73fa851e',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-pstore', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-random-seed.service': _boot_service_policy(
+        'systemd-random-seed.service', '/usr/lib/systemd/system/systemd-random-seed.service', 'e4b935cc3c5aa680af2addebc0af1507d46c0f0f638bed3497a46b1db0ee51f6',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-random-seed', ('load',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStop': (
+                _boot_exec('/usr/lib/systemd/systemd-random-seed', ('save',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-remount-fs.service': _boot_service_policy(
+        'systemd-remount-fs.service', '/usr/lib/systemd/system/systemd-remount-fs.service', '644992444a1ca3650f10f5cf4a6ef0666888d4e677632a15ee76c91b88ffb1b1',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-remount-fs', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-repart.service': _boot_service_policy(
+        'systemd-repart.service', '/usr/lib/systemd/system/systemd-repart.service', 'd1062f6868ab451238522fd10ee1c0b98c31b7f0ef2df2d2ecba69fac3765278',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemd-repart', ('--dry-run=no',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-sysctl.service': _boot_service_policy(
+        'systemd-sysctl.service', '/usr/lib/systemd/system/systemd-sysctl.service', '67802699b135aa011f76ff08ecaf37b3a5d821de3a1e6f8ee55c3404e6df208a',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-sysctl', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-sysusers.service': _boot_service_policy(
+        'systemd-sysusers.service', '/usr/lib/systemd/system/systemd-sysusers.service', '22c1aa54692be4fc17b11c0e77230d88cae5d10794def3b4a9d6070f299a6165',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemd-sysusers', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-tmpfiles-setup-dev-early.service': _boot_service_policy(
+        'systemd-tmpfiles-setup-dev-early.service', '/usr/lib/systemd/system/systemd-tmpfiles-setup-dev-early.service', '6c9429db294f317608868337ca1befd1fc961886e0d4accf8997dfd33e1a61de',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemd-tmpfiles', ('--prefix=/dev', '--create', '--boot', '--graceful'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-tmpfiles-setup-dev.service': _boot_service_policy(
+        'systemd-tmpfiles-setup-dev.service', '/usr/lib/systemd/system/systemd-tmpfiles-setup-dev.service', '9f0a6b2414d3b398357b7508f6a841acae0d8f0ff079e096c0bed78f0572122e',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemd-tmpfiles', ('--prefix=/dev', '--create', '--boot'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-tmpfiles-setup.service': _boot_service_policy(
+        'systemd-tmpfiles-setup.service', '/usr/lib/systemd/system/systemd-tmpfiles-setup.service', '804df64beeb05eca99bfd657cdcfe2c160501b6d1dbe083b1c5e422239b4cc29',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/bin/systemd-tmpfiles', ('--create', '--remove', '--boot', '--exclude-prefix=/dev'), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-tpm2-setup-early.service': _boot_service_policy(
+        'systemd-tpm2-setup-early.service', '/usr/lib/systemd/system/systemd-tpm2-setup-early.service', '08bdc996bb54fcbb0b7f4beddab00635d4d84c1c552730b73c1f54f20880fad9',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-tpm2-setup', ('--early=yes',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-tpm2-setup.service': _boot_service_policy(
+        'systemd-tpm2-setup.service', '/usr/lib/systemd/system/systemd-tpm2-setup.service', '4f8c96a31b22fccbe16f66ecb7346e7a34fc1ad6d344d8a2ee0b3ecc03019a3a',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-tpm2-setup', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-update-done.service': _boot_service_policy(
+        'systemd-update-done.service', '/usr/lib/systemd/system/systemd-update-done.service', '5196e3618c02428ed18585ea31fe44574d421b5663bf12ce4e987697d117df62',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-update-done', (), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-update-utmp-runlevel.service': _boot_service_policy(
+        'systemd-update-utmp-runlevel.service', '/usr/lib/systemd/system/systemd-update-utmp-runlevel.service', '869d6606ab86543b1cb0963e70c510db0cbc6ab5c465bc16d42effbf6df65d2f',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-update-utmp', ('runlevel',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-update-utmp.service': _boot_service_policy(
+        'systemd-update-utmp.service', '/usr/lib/systemd/system/systemd-update-utmp.service', '92ed5c0d5a05ec76076cb41bc4c6318a4ca8f0f21d5179eeb315f0f1f2f7ea4d',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-update-utmp', ('reboot',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStop': (
+                _boot_exec('/usr/lib/systemd/systemd-update-utmp', ('shutdown',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'systemd-user-sessions.service': _boot_service_policy(
+        'systemd-user-sessions.service', '/usr/lib/systemd/system/systemd-user-sessions.service', 'e6680d505aefa23436ede13f05eba3ca7bc41531cc5f56c20efb340804a088de',
+        closure_policy=None, exec_slots={
+            'ExecStart': (
+                _boot_exec('/usr/lib/systemd/systemd-user-sessions', ('start',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+            'ExecStop': (
+                _boot_exec('/usr/lib/systemd/systemd-user-sessions', ('stop',), ignore_errors=False, execution_class=NATIVE_PACKAGE_BINARY),
+            ),
+        },
+    ),
+    'thebitlab.service': BootServiceExecutionPolicy('thebitlab.service', None, {}, managed_nonroot=True),
+}
+
+# Accept=yes sockets may instantiate these templates without a live instance.
+BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES: Mapping[
+    str, BootAcceptSocketExecutionPolicy
+] = {
+    "systemd-pcrextend.socket": BootAcceptSocketExecutionPolicy(
+        _reviewed_package_file(
+            "/usr/lib/systemd/system/systemd-pcrextend@.service",
+            reviewed_sha256="3bf975fbb9737019c65718d9796cc17c031296b439a412e45f3a92495fb9fc2e",
+        ),
+        _reviewed_package_file("/usr/lib/systemd/systemd-pcrextend"),
+        NATIVE_PACKAGE_BINARY,
+        "systemd-pcrextend@thebitlab-policy.service",
+        {
+            "ExecStart": (
+                _boot_exec(
+                    "/usr/lib/systemd/systemd-pcrextend",
+                    (),
+                    ignore_errors=True,
+                    execution_class=NATIVE_PACKAGE_BINARY,
+                ),
+            )
+        },
+    ),
+    "systemd-sysext.socket": BootAcceptSocketExecutionPolicy(
+        _reviewed_package_file(
+            "/usr/lib/systemd/system/systemd-sysext@.service",
+            reviewed_sha256="d81e6de39167e27385ecfaafb04b2f96f06acb1586d47968ab4887d229b7cbec",
+        ),
+        _reviewed_package_file("/usr/bin/systemd-sysext"),
+        NATIVE_PACKAGE_BINARY,
+        "systemd-sysext@thebitlab-policy.service",
+        {
+            "ExecStart": (
+                _boot_exec(
+                    "/usr/bin/systemd-sysext",
+                    (),
+                    ignore_errors=True,
+                    execution_class=NATIVE_PACKAGE_BINARY,
+                ),
+            )
+        },
     ),
 }
 # The supported baseline intentionally contains no generated SysV service.  A
@@ -2222,6 +2891,102 @@ def _dpkg_owned_paths(paths: Iterable[Path]) -> frozenset[Path]:
     return frozenset(owned)
 
 
+def _dpkg_installed_path_owners(
+    paths: Iterable[Path],
+) -> Mapping[Path, frozenset[str]]:
+    """Return exact installed binary-package owners without treating Provides as identity."""
+
+    requested = tuple(dict.fromkeys(paths))
+    candidates: dict[str, set[Path]] = {}
+    for path in requested:
+        for spelling in _dpkg_path_spellings(path):
+            candidates.setdefault(spelling, set()).add(path)
+    owners: dict[Path, set[str]] = {path: set() for path in requested}
+    patterns = sorted(
+        "".join(
+            "\\" + character if character in "\\*?[" else character
+            for character in spelling
+        )
+        for spelling in candidates
+    )
+    for offset in range(0, len(patterns), 100):
+        try:
+            result = subprocess.run(
+                [
+                    str(DPKG_QUERY_BINARY),
+                    "--search",
+                    "--",
+                    *patterns[offset : offset + 100],
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise ActivationError("Identità package attesa non disponibile") from exc
+        if result.returncode not in {0, 1}:
+            raise ActivationError("Identità package attesa non verificabile")
+        for line in result.stdout.splitlines():
+            try:
+                raw_packages, spelling = line.rsplit(": ", 1)
+            except ValueError as exc:
+                raise ActivationError("Output identità package ambiguo") from exc
+            if spelling not in candidates:
+                continue
+            packages = {item.strip() for item in raw_packages.split(",") if item.strip()}
+            if not packages or any(
+                re.fullmatch(
+                    r"[a-z0-9][a-z0-9+.-]*(?::[a-z0-9][a-z0-9-]*)?", item
+                )
+                is None
+                for item in packages
+            ):
+                raise ActivationError("Owner identità package non canonico")
+            for path in candidates[spelling]:
+                owners[path].update(packages)
+
+    raw_owners = sorted({owner for values in owners.values() for owner in values})
+    installed_identities: dict[str, str] = {}
+    for offset in range(0, len(raw_owners), 100):
+        chunk = raw_owners[offset : offset + 100]
+        if not chunk:
+            continue
+        try:
+            result = subprocess.run(
+                [
+                    str(DPKG_QUERY_BINARY),
+                    "--show",
+                    "--showformat=${binary:Package}\\t${Status}\\n",
+                    *chunk,
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise ActivationError("Stato identità package non disponibile") from exc
+        if result.returncode != 0:
+            raise ActivationError("Stato identità package non verificabile")
+        for raw_owner, line in zip(chunk, result.stdout.splitlines(), strict=True):
+            fields = line.split("\t")
+            if len(fields) != 2:
+                raise ActivationError("Output stato identità package ambiguo")
+            binary_package, package_status = fields
+            if package_status == "install ok installed":
+                installed_identities[raw_owner] = binary_package.split(":", 1)[0]
+
+    return {
+        path: frozenset(
+            installed_identities[owner]
+            for owner in path_owners
+            if owner in installed_identities
+        )
+        for path, path_owners in owners.items()
+    }
+
+
 def _assert_systemd_directory_ancestry(path: Path) -> None:
     current = Path(path.anchor)
     for part in path.parts[1:]:
@@ -2508,6 +3273,84 @@ def _attest_package_input_files(paths: Iterable[Path], *, label: str) -> frozens
     return verified
 
 
+def _attest_expected_package_files(
+    policies: Iterable[PackageFileIdentityPolicy], *, label: str
+) -> Mapping[Path, bytes]:
+    """Attest presence, reviewed package identity, package bytes, and reviewed bytes."""
+
+    by_path: dict[Path, PackageFileIdentityPolicy] = {}
+    present: list[PackageFileIdentityPolicy] = []
+    for policy in policies:
+        previous = by_path.setdefault(policy.path, policy)
+        if previous != policy:
+            raise ActivationError(f"Policy identità package contraddittoria: {policy.path}")
+        try:
+            policy.path.lstat()
+        except FileNotFoundError:
+            if policy.expected_presence != EXPECTED_ABSENT:
+                raise ActivationError(f"Expected-present package path assente: {policy.path}")
+            continue
+        except OSError as exc:
+            raise ActivationError(
+                f"Presenza package path non verificabile: {policy.path}"
+            ) from exc
+        if policy.expected_presence == EXPECTED_ABSENT:
+            raise ActivationError(f"Unexpected presence package path: {policy.path}")
+        if policy.expected_presence != EXPECTED_PRESENT or not policy.expected_packages:
+            raise ActivationError(f"Presence/package policy non valida: {policy.path}")
+        present.append(policy)
+
+    paths = tuple(policy.path for policy in present)
+    owners_before = _dpkg_installed_path_owners(paths)
+    for policy in present:
+        actual = owners_before.get(policy.path, frozenset())
+        if actual != policy.expected_packages:
+            raise ActivationError(
+                "Unexpected reviewed package identity: "
+                f"{policy.path} owner={sorted(actual)!r} "
+                f"expected={sorted(policy.expected_packages)!r}"
+            )
+
+    verified = _dpkg_integrity_verified_paths(paths)
+    for policy in present:
+        if policy.path not in verified:
+            raise ActivationError(
+                f"Package authoritative digest mismatch: {policy.path}"
+            )
+
+    contents: dict[Path, bytes] = {}
+    for policy in present:
+        contents[policy.path] = _read_stable_trusted_file(policy.path)
+        if (
+            policy.reviewed_sha256 is not None
+            and hashlib.sha256(contents[policy.path]).hexdigest()
+            != policy.reviewed_sha256
+        ):
+            raise ActivationError(f"Reviewed digest mismatch: {policy.path}")
+
+    owners_after = _dpkg_installed_path_owners(paths)
+    for policy in present:
+        if owners_after.get(policy.path, frozenset()) != owners_before[policy.path]:
+            raise ActivationError(
+                f"Package identity mutated during attestation: {policy.path}"
+            )
+    verified_after = _dpkg_integrity_verified_paths(paths)
+    if verified_after != frozenset(paths):
+        changed = next(path for path in paths if path not in verified_after)
+        raise ActivationError(f"Package bytes mutated during attestation: {changed}")
+    return contents
+
+
+def _reviewed_package_policies(
+    paths: Iterable[Path], *, reviewed_sha256: Mapping[Path, str] | None = None
+) -> tuple[PackageFileIdentityPolicy, ...]:
+    digests = reviewed_sha256 or {}
+    return tuple(
+        _reviewed_package_file(path, reviewed_sha256=digests.get(path))
+        for path in dict.fromkeys(paths)
+    )
+
+
 _USR_MERGE_DIRECTORY_TARGETS: Mapping[Path, str] = {
     Path("/bin"): "usr/bin",
     Path("/sbin"): "usr/sbin",
@@ -2685,7 +3528,10 @@ def _attest_runtime_executable_closure(policy_name: str) -> frozenset[Path]:
         raise ActivationError(f"UNKNOWN EXECUTION POLICY: {policy_name}")
 
     sources = tuple(policy.reviewed_sources)
-    _attest_package_input_files(sources, label=f"execution policy {policy.name}")
+    _attest_expected_package_files(
+        _reviewed_package_policies(sources),
+        label=f"execution policy {policy.name}",
+    )
     for source, expected_digest in policy.reviewed_sources.items():
         actual = hashlib.sha256(_read_stable_trusted_file(source)).hexdigest()
         if actual != expected_digest:
@@ -2713,7 +3559,10 @@ def _attest_runtime_executable_closure(policy_name: str) -> frozenset[Path]:
             final, observed = result
             resolved.append((command.name, final, observed))
     finals = tuple(dict.fromkeys(final for _name, final, _observed in resolved))
-    _attest_package_input_files(finals, label=f"runtime executable {policy.name}")
+    _attest_expected_package_files(
+        _reviewed_package_policies(finals),
+        label=f"runtime executable {policy.name}",
+    )
     reviewed_canonical = {path.resolve(strict=True) for path in sources}
     for name, final, observed in resolved:
         _recheck_runtime_resolution(name, observed)
@@ -3520,6 +4369,17 @@ def _attest_boot_reachable_root_schedulers(
         activation_files.update(
             _attest_root_timer_activation(timer, policy, scheduler_properties)
         )
+        _attest_expected_package_files(
+            (
+                _reviewed_package_file(
+                    policy.timer_fragment, reviewed_sha256=policy.timer_sha256
+                ),
+                _reviewed_package_file(
+                    policy.service_fragment, reviewed_sha256=policy.service_sha256
+                ),
+            ),
+            label=f"root scheduler identity {timer}",
+        )
         if policy.input_classification == "CLOSED-INPUT":
             if policy.input_attestor is None:
                 raise ActivationError(f"Scheduler CLOSED-INPUT senza attestor: {timer}")
@@ -3542,7 +4402,10 @@ def _attest_boot_reachable_root_schedulers(
                 "execution_policy": policy.execution_policy,
             }
         )
-    _attest_package_input_files(activation_files, label="root scheduler activation")
+    _attest_expected_package_files(
+        _reviewed_package_policies(activation_files),
+        label="root scheduler activation",
+    )
     for policy_name in sorted(execution_policies):
         _attest_runtime_executable_closure(policy_name)
     for name in sorted(attestors):
@@ -3581,15 +4444,57 @@ def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None
                     raise ActivationError(
                         f"UNKNOWN EXECUTION POLICY Accept socket: {unit}"
                     )
-                template, executable, expected_digest = template_policy
-                _attest_package_input_files(
-                    (template, executable), label=f"Accept socket execution {unit}"
-                )
-                if hashlib.sha256(_read_stable_trusted_file(template)).hexdigest() != (
-                    expected_digest
+                template_values = _systemd_show_properties(
+                    (template_policy.probe_instance,),
+                    (
+                        "LoadState", "FragmentPath", "DropInPaths", "SourcePath",
+                        "User", "Group", *SYSTEMD_EXEC_SLOTS,
+                    ),
+                )[template_policy.probe_instance]
+                if (
+                    template_values["LoadState"] != "loaded"
+                    or template_values["FragmentPath"]
+                    != template_policy.template.path.as_posix()
+                    or template_values["DropInPaths"]
+                    or template_values["SourcePath"]
+                    or template_values["User"]
+                    or template_values["Group"]
                 ):
                     raise ActivationError(
-                        f"UNKNOWN EXECUTION POLICY Accept socket bytes: {unit}"
+                        f"Accept template identity fuori policy: {unit}"
+                    )
+                for slot in SYSTEMD_EXEC_SLOTS:
+                    raw = template_values[slot]
+                    actual = (
+                        _parse_systemd_exec(
+                            raw,
+                            name=f"{template_policy.probe_instance} {slot}",
+                        )
+                        if raw
+                        else ()
+                    )
+                    expected = tuple(
+                        (
+                            command.file.path,
+                            command.arguments,
+                            command.ignore_errors,
+                        )
+                        for command in template_policy.exec_slots.get(slot, ())
+                    )
+                    if actual != expected:
+                        raise ActivationError(
+                            f"Accept template execution slot fuori policy: {unit} {slot}"
+                        )
+                accept_contents = _attest_expected_package_files(
+                    (template_policy.template, template_policy.executable),
+                    label=f"Accept socket execution {unit}",
+                )
+                if (
+                    template_policy.execution_class != NATIVE_PACKAGE_BINARY
+                    or accept_contents[template_policy.executable.path][:2] == b"#!"
+                ):
+                    raise ActivationError(
+                        f"UNKNOWN EXECUTION POLICY Accept socket identity: {unit}"
                     )
             elif values["Accept"] not in {"", "no"}:
                 raise ActivationError(f"Accept socket ambiguo: {unit}")
@@ -3636,98 +4541,124 @@ def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None
             continue
         if values["LoadState"] != "loaded":
             raise ActivationError(f"LoadState service boot fuori policy: {service}")
-        policy_name = BOOT_ROOT_SERVICE_EXECUTION_POLICIES.get(service)
-        if service not in BOOT_ROOT_SERVICE_EXECUTION_POLICIES:
+        policy = BOOT_ROOT_SERVICE_EXECUTION_POLICIES.get(service)
+        if policy is None:
             raise ActivationError(f"UNKNOWN EXECUTION POLICY boot service: {service}")
-        if policy_name != "@managed-nonroot":
-            expected_fragment = BOOT_ROOT_SERVICE_FRAGMENT_POLICIES.get(service)
-            if (
-                expected_fragment is None
-                or values["FragmentPath"] != expected_fragment.as_posix()
-            ):
-                raise ActivationError(
-                    f"Fragment execution service fuori policy: {service}"
-                )
-        if values["User"] not in {"", "root"}:
-            if policy_name != "@managed-nonroot" or not values["Group"]:
+        if policy.unit_name != service:
+            raise ActivationError(f"Service identity policy divergente: {service}")
+        try:
+            actual_dropins = (
+                tuple(Path(item) for item in shlex.split(values["DropInPaths"], posix=True))
+                if values["DropInPaths"]
+                else ()
+            )
+        except ValueError as exc:
+            raise ActivationError(f"DropInPaths service ambiguo: {service}") from exc
+        expected_dropins = tuple(item.path for item in policy.dropins)
+        if actual_dropins != expected_dropins:
+            raise ActivationError(f"DropIn execution service fuori policy: {service}")
+        if policy.managed_nonroot:
+            if values["User"] in {"", "root"} or not values["Group"]:
                 raise ActivationError(f"Identity service boot fuori policy: {service}")
-            # This unit is the exact renderer-locked bundle artifact verified while
-            # admitting SYSTEMD_LINK.  It cannot carry systemd '+'/'!' privilege
-            # prefixes or alternate Exec* without invalidating the bundle.
+            # The exact renderer-locked bundle artifact was verified while admitting
+            # SYSTEMD_LINK, including every Exec* and privilege prefix.
             continue
+        if policy.fragment is None or (
+            values["FragmentPath"] != policy.fragment.path.as_posix()
+        ):
+            raise ActivationError(f"Fragment execution service fuori policy: {service}")
+        if values["User"] not in {"", "root"}:
+            raise ActivationError(f"Identity service boot fuori policy: {service}")
         if values["Group"] not in {"", "root"}:
             raise ActivationError(f"Group service root fuori policy: {service}")
         if values["SourcePath"]:
             raise ActivationError(f"UNKNOWN EXECUTION POLICY SysV: {values['SourcePath']}")
-        # Every effective drop-in byte was already closed by
-        # _attest_boot_reachable_package_unit_files; commands below are parsed after merge.
 
-        commands: list[tuple[Path, tuple[str, ...], bool]] = []
-        for name in exec_properties:
-            raw = values[name]
-            if raw:
-                commands.extend(
-                    _parse_systemd_exec(
-                        raw, name=f"{service} {name}", allow_missing=True
-                    )
+        command_policies: list[BootExecCommandPolicy] = []
+        for slot in exec_properties:
+            raw = values[slot]
+            actual = (
+                _parse_systemd_exec(
+                    raw, name=f"{service} {slot}", allow_missing=True
                 )
-        if not commands:
-            raise ActivationError(f"Service root senza execution attestabile: {service}")
-        executables = frozenset(command[0] for command in commands)
-        existing_executables: set[Path] = set()
-        for executable in executables:
-            try:
-                executable.lstat()
-            except FileNotFoundError:
-                continue
-            except OSError as exc:
-                raise ActivationError(
-                    f"Executable service non verificabile: {service} {executable}"
-                ) from exc
-            existing_executables.add(executable)
-        _attest_package_input_files(
-            existing_executables, label=f"boot service executable {service}"
-        )
-
-        trampoline_names = {
-            "sh", "dash", "bash", "env", "perl", "ruby", "node",
-            "python", "python2", "python3",
-        }
-        if policy_name is None and any(
-            executable.name in trampoline_names
-            or executable.name.startswith(("python2.", "python3."))
-            for executable in existing_executables
-        ):
-            raise ActivationError(
-                f"UNKNOWN EXECUTION POLICY interpreter/trampoline: {service}"
+                if raw
+                else ()
             )
-        script_paths: set[Path] = set()
-        for executable in existing_executables:
-            if _read_stable_trusted_file(executable)[:2] == b"#!":
-                script_paths.add(executable.resolve(strict=True))
-        if policy_name == "@nginx":
-            if script_paths:
+            expected_policies = policy.exec_slots.get(slot, ())
+            expected = tuple(
+                (
+                    command.file.path,
+                    command.arguments,
+                    command.ignore_errors,
+                )
+                for command in expected_policies
+            )
+            if actual != expected:
+                raise ActivationError(
+                    f"Effective execution slot fuori policy: {service} {slot}"
+                )
+            command_policies.extend(expected_policies)
+        if not command_policies:
+            raise ActivationError(f"Service root senza execution attestabile: {service}")
+
+        contents = _attest_expected_package_files(
+            (
+                policy.fragment,
+                *policy.dropins,
+                *(command.file for command in command_policies),
+            ),
+            label=f"boot service identity {service}",
+        )
+        interpreted: set[Path] = set()
+        for command in command_policies:
+            executable = command.file.path
+            data = contents.get(executable)
+            if command.execution_class == EXPECTED_ABSENT_EXECUTABLE:
+                if data is not None or command.file.expected_presence != EXPECTED_ABSENT:
+                    raise ActivationError(
+                        f"Expected-absent execution identity divergente: {service}"
+                    )
+                continue
+            if data is None:
+                raise ActivationError(f"Executable identity assente: {service} {executable}")
+            if command.execution_class == NATIVE_PACKAGE_BINARY:
+                if data[:2] == b"#!":
+                    raise ActivationError(
+                        f"Native execution identity ha acquisito shebang: {service}"
+                    )
+            elif command.execution_class in {INTERPRETED_SCRIPT, REVIEWED_TRAMPOLINE}:
+                if command.execution_class == INTERPRETED_SCRIPT and data[:2] != b"#!":
+                    raise ActivationError(
+                        f"Interpreted execution identity senza shebang: {service}"
+                    )
+                interpreted.add(executable.resolve(strict=True))
+            else:
+                raise ActivationError(
+                    f"UNKNOWN execution class: {service} {command.execution_class}"
+                )
+
+        if policy.closure_policy == "@nginx":
+            if interpreted:
                 raise ActivationError("nginx.service ha acquisito uno script interpreter")
             _attest_nginx_package_behavior_files()
             _attest_effective_nginx_unit(
                 expect_running=None,
                 allowed_unit_file_states=PREFLIGHT_NGINX_UNIT_FILE_STATES,
             )
-        elif policy_name is None:
-            if script_paths:
-                raise ActivationError(
-                    f"UNKNOWN EXECUTION POLICY interpreted service: {service}"
-                )
-        else:
-            closure = EXECUTABLE_CLOSURE_POLICIES.get(policy_name)
+        elif interpreted:
+            closure = EXECUTABLE_CLOSURE_POLICIES.get(policy.closure_policy or "")
             if closure is None:
-                raise ActivationError(f"UNKNOWN EXECUTION POLICY: {policy_name}")
+                raise ActivationError(
+                    f"UNKNOWN EXECUTION POLICY interpreter/trampoline: {service}"
+                )
             reviewed = {path.resolve(strict=True) for path in closure.reviewed_sources}
-            if not script_paths or not script_paths <= reviewed:
+            if not interpreted <= reviewed:
                 raise ActivationError(
                     f"Interpreted source service fuori policy: {service}"
                 )
-            _attest_runtime_executable_closure(policy_name)
+            _attest_runtime_executable_closure(policy.closure_policy or "")
+        elif policy.closure_policy not in {None, "@nginx"}:
+            raise ActivationError(f"Execution closure non utilizzata: {service}")
 
 
 def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:

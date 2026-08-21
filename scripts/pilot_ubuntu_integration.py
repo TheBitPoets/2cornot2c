@@ -1318,7 +1318,14 @@ def _exercise_motd_news_input_provenance(bundle: Path, temporary: Path) -> None:
     )
 
 
-def _build_fixture_deb(root: Path, output: Path, *, package: str) -> Path:
+def _build_fixture_deb(
+    root: Path,
+    output: Path,
+    *,
+    package: str,
+    control_fields: tuple[str, ...] = (),
+    authoritative_digests: bool = False,
+) -> Path:
     control = root / "DEBIAN/control"
     control.parent.mkdir(parents=True, exist_ok=True)
     control.write_text(
@@ -1326,9 +1333,26 @@ def _build_fixture_deb(root: Path, output: Path, *, package: str) -> Path:
         "Version: 1.0\n"
         "Architecture: all\n"
         "Maintainer: TheBitLab Integration <noreply@example.invalid>\n"
-        "Description: isolated provenance fixture\n",
+        "Description: isolated provenance fixture\n"
+        + "".join(field + "\n" for field in control_fields),
         encoding="utf-8",
     )
+    if authoritative_digests:
+        files = tuple(
+            path
+            for path in sorted(root.rglob("*"))
+            if path.is_file() and "DEBIAN" not in path.parts
+        )
+        (control.parent / "md5sums").write_text(
+            "".join(
+                hashlib.md5(path.read_bytes(), usedforsecurity=False).hexdigest()
+                + "  "
+                + path.relative_to(root).as_posix()
+                + "\n"
+                for path in files
+            ),
+            encoding="ascii",
+        )
     _run(["dpkg-deb", "--build", str(root), str(output)])
     return output
 
@@ -1468,6 +1492,345 @@ def _exercise_package_sysv_path_shadow_rejected(temporary: Path) -> None:
     )
 
 
+def _clear_dpkg_attestation_caches() -> None:
+    activation._DPKG_INTEGRITY_EXPECTED_MD5.clear()
+    activation._DPKG_INSTALLED_OWNERSHIP.clear()
+
+
+def _restore_replaced_package_file(
+    *,
+    package: str,
+    path: Path,
+    contents: bytes,
+    mode: int,
+    package_list: Path,
+    package_list_contents: bytes,
+    package_list_mode: int,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(contents)
+    path.chmod(mode)
+    package_list.write_bytes(package_list_contents)
+    package_list.chmod(package_list_mode)
+    _clear_dpkg_attestation_caches()
+    owners = activation._dpkg_installed_path_owners((path,))[path]
+    if owners != frozenset({package}):
+        raise RuntimeError(f"Ripristino owner package fallito: {path} => {owners}")
+
+
+def _exercise_known_service_package_takeover_rejected(temporary: Path) -> None:
+    package = "thebitlab-known-service-takeover-fixture"
+    expected_package = "systemd"
+    fragment = Path("/usr/lib/systemd/system/systemd-user-sessions.service")
+    executable = Path("/usr/lib/systemd/systemd-user-sessions")
+    package_list = activation.DPKG_INFO_ROOT / f"{expected_package}.list"
+    original = fragment.read_bytes()
+    original_mode = stat.S_IMODE(fragment.stat().st_mode)
+    executable_original = executable.read_bytes()
+    executable_mode = stat.S_IMODE(executable.stat().st_mode)
+    root = temporary / "known-service-takeover"
+    packaged_fragment = root / fragment.relative_to("/")
+    packaged_executable = root / executable.relative_to("/")
+    packaged_fragment.parent.mkdir(parents=True)
+    packaged_executable.parent.mkdir(parents=True, exist_ok=True)
+    # Keep the reviewed unit bytes and effective slot contract exact.  Only package
+    # identity and the expected native executable bytes change.
+    packaged_fragment.write_bytes(original)
+    shutil.copyfile("/usr/bin/python3.12", packaged_executable)
+    packaged_executable.chmod(0o755)
+    deb = _build_fixture_deb(
+        root,
+        temporary / f"{package}.deb",
+        package=package,
+        control_fields=("Replaces: systemd", "Provides: systemd"),
+        authoritative_digests=True,
+    )
+    marker = Path("/run/thebitlab-h03-package-takeover-executed")
+    script = Path("/start")
+    list_original = package_list.read_bytes()
+    list_mode = stat.S_IMODE(package_list.stat().st_mode)
+    installed = False
+    try:
+        activation._attest_systemd_boot_surface()
+        marker.unlink(missing_ok=True)
+        script.write_text(
+            "from pathlib import Path\n"
+            "Path('/run/thebitlab-h03-package-takeover-executed').write_text('root')\n",
+            encoding="utf-8",
+        )
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        _clear_dpkg_attestation_caches()
+        policies = (fragment, executable)
+        owners = activation._dpkg_installed_path_owners(policies)
+        if any(owners[path] != frozenset({package}) for path in policies):
+            raise RuntimeError("Fixture H-03 non attribuita al foreign package")
+        if set(policies) - activation._dpkg_integrity_verified_paths(policies):
+            raise RuntimeError("Fixture H-03 non ha package-authoritative digest valido")
+        _run(["systemctl", "daemon-reload"])
+        _run(["systemctl", "stop", "systemd-user-sessions.service"])
+        _run(["systemctl", "start", "systemd-user-sessions.service"])
+        if marker.read_text(encoding="utf-8") != "root":
+            raise RuntimeError("Fixture H-03 non prova l'esecuzione root reale")
+        _run(["systemctl", "stop", "systemd-user-sessions.service"])
+        marker.unlink()
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError as exc:
+            if (
+                "Unexpected reviewed package identity" not in str(exc)
+                or str(fragment) not in str(exc)
+            ):
+                raise RuntimeError(f"H-03 rifiutato per causa estranea: {exc}") from exc
+        else:
+            raise RuntimeError("H-03 known-service foreign package takeover accettato")
+        if marker.exists():
+            raise RuntimeError("Marker H-03 eseguito durante il gate")
+    finally:
+        _run(["systemctl", "stop", "systemd-user-sessions.service"])
+        if installed:
+            _run(["dpkg", "--purge", package])
+        _restore_replaced_package_file(
+            package=expected_package,
+            path=fragment,
+            contents=original,
+            mode=original_mode,
+            package_list=package_list,
+            package_list_contents=list_original,
+            package_list_mode=list_mode,
+        )
+        executable.write_bytes(executable_original)
+        executable.chmod(executable_mode)
+        script.unlink(missing_ok=True)
+        marker.unlink(missing_ok=True)
+        _clear_dpkg_attestation_caches()
+        _run(["systemctl", "daemon-reload"])
+    activation._attest_systemd_boot_surface()
+    print(
+        "EVIDENCE: H-03 exact known FragmentPath + foreign Replaces/Provides owner + "
+        "package-valid native executable => unexpected reviewed package identity REJECT; "
+        "real root marker proven only before gate; pristine restore PASS"
+    )
+
+
+def _exercise_missing_boot_executable_fill_rejected(temporary: Path) -> None:
+    package = "thebitlab-missing-executable-fill-fixture"
+    executable = Path("/usr/bin/kmod")
+    if executable.exists() or executable.is_symlink():
+        raise RuntimeError("Baseline H-04 non ha /usr/bin/kmod expected-absent")
+    root = temporary / "missing-executable-fill"
+    packaged_executable = root / executable.relative_to("/")
+    packaged_executable.parent.mkdir(parents=True)
+    shutil.copyfile("/usr/bin/python3.12", packaged_executable)
+    packaged_executable.chmod(0o755)
+    deb = _build_fixture_deb(
+        root,
+        temporary / f"{package}.deb",
+        package=package,
+        authoritative_digests=True,
+    )
+    marker = Path("/run/thebitlab-h04-missing-fill-executed")
+    script = Path("/static-nodes")
+    modules = Path("/lib/modules") / os.uname().release / "modules.devname"
+    modules_existed = modules.exists()
+    modules_original = modules.read_bytes() if modules_existed else None
+    installed = False
+    try:
+        activation._attest_systemd_boot_surface()
+        script.write_text(
+            "from pathlib import Path\n"
+            "Path('/run/thebitlab-h04-missing-fill-executed').write_text('root')\n",
+            encoding="utf-8",
+        )
+        marker.unlink(missing_ok=True)
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        _clear_dpkg_attestation_caches()
+        if activation._dpkg_installed_path_owners((executable,))[executable] != frozenset(
+            {package}
+        ):
+            raise RuntimeError("Fixture H-04 non attribuita al foreign package")
+        if executable not in activation._dpkg_integrity_verified_paths((executable,)):
+            raise RuntimeError("Fixture H-04 non ha package-authoritative digest valido")
+        modules.parent.mkdir(parents=True, exist_ok=True)
+        modules.write_text("c 1 3 null\n", encoding="ascii")
+        _run(["systemctl", "reset-failed", "kmod-static-nodes.service"])
+        _run(["systemctl", "start", "kmod-static-nodes.service"])
+        if marker.read_text(encoding="utf-8") != "root":
+            raise RuntimeError("Fixture H-04 non prova l'interpreter disguise reale")
+        _run(["systemctl", "stop", "kmod-static-nodes.service"])
+        marker.unlink()
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError as exc:
+            if "Unexpected presence package path: /usr/bin/kmod" not in str(exc):
+                raise RuntimeError(f"H-04 rifiutato per causa estranea: {exc}") from exc
+        else:
+            raise RuntimeError("H-04 expected-absent executable fill accettato")
+        if marker.exists():
+            raise RuntimeError("Marker H-04 eseguito durante il gate")
+    finally:
+        _run(["systemctl", "stop", "kmod-static-nodes.service"])
+        if installed:
+            _run(["dpkg", "--purge", package])
+        script.unlink(missing_ok=True)
+        marker.unlink(missing_ok=True)
+        if modules_existed:
+            assert modules_original is not None
+            modules.write_bytes(modules_original)
+        else:
+            modules.unlink(missing_ok=True)
+        _clear_dpkg_attestation_caches()
+        _run(["systemctl", "daemon-reload"])
+    if executable.exists() or executable.is_symlink():
+        raise RuntimeError("Cleanup H-04 non ha ripristinato expected-absent")
+    activation._attest_systemd_boot_surface()
+    print(
+        "EVIDENCE: H-04 exact expected-absent /usr/bin/kmod filled by package-valid "
+        "renamed Python => unexpected presence REJECT; real root marker proven only "
+        "before gate; pristine restore PASS"
+    )
+
+
+def _exercise_accept_template_package_takeover_rejected(temporary: Path) -> None:
+    package = "thebitlab-accept-template-takeover-fixture"
+    expected_package = "systemd"
+    template = Path("/usr/lib/systemd/system/systemd-pcrextend@.service")
+    package_list = activation.DPKG_INFO_ROOT / f"{expected_package}.list"
+    root = temporary / "accept-template-takeover"
+    packaged = root / template.relative_to("/")
+    packaged.parent.mkdir(parents=True)
+    packaged.write_bytes(template.read_bytes())
+    deb = _build_fixture_deb(
+        root,
+        temporary / f"{package}.deb",
+        package=package,
+        control_fields=("Replaces: systemd", "Provides: systemd"),
+        authoritative_digests=True,
+    )
+    original = template.read_bytes()
+    mode = stat.S_IMODE(template.stat().st_mode)
+    list_original = package_list.read_bytes()
+    list_mode = stat.S_IMODE(package_list.stat().st_mode)
+    installed = False
+    try:
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        _clear_dpkg_attestation_caches()
+        if activation._dpkg_installed_path_owners((template,))[template] != frozenset(
+            {package}
+        ):
+            raise RuntimeError("Fixture Accept takeover non attribuita al foreign package")
+        if template not in activation._dpkg_integrity_verified_paths((template,)):
+            raise RuntimeError("Fixture Accept takeover non ha digest package valido")
+        _run(["systemctl", "daemon-reload"])
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError as exc:
+            if (
+                "Unexpected reviewed package identity" not in str(exc)
+                or str(template) not in str(exc)
+            ):
+                raise RuntimeError(f"Accept takeover rifiutato per causa estranea: {exc}") from exc
+        else:
+            raise RuntimeError("Accept template foreign package takeover accettato")
+    finally:
+        if installed:
+            _run(["dpkg", "--purge", package])
+        _restore_replaced_package_file(
+            package=expected_package,
+            path=template,
+            contents=original,
+            mode=mode,
+            package_list=package_list,
+            package_list_contents=list_original,
+            package_list_mode=list_mode,
+        )
+        _run(["systemctl", "daemon-reload"])
+    activation._attest_systemd_boot_surface()
+    print("EVIDENCE: Accept=yes exact template bytes + foreign package owner => REJECT")
+
+
+def _exercise_timer_executable_package_takeover_rejected(temporary: Path) -> None:
+    package = "thebitlab-timer-executable-takeover-fixture"
+    expected_package = "util-linux"
+    executable = Path("/usr/sbin/fstrim")
+    package_list = activation.DPKG_INFO_ROOT / f"{expected_package}.list"
+    root = temporary / "timer-executable-takeover"
+    packaged = root / executable.relative_to("/")
+    packaged.parent.mkdir(parents=True)
+    shutil.copyfile("/usr/bin/python3.12", packaged)
+    packaged.chmod(0o755)
+    deb = _build_fixture_deb(
+        root,
+        temporary / f"{package}.deb",
+        package=package,
+        control_fields=("Replaces: util-linux", "Provides: util-linux"),
+        authoritative_digests=True,
+    )
+    original = executable.read_bytes()
+    mode = stat.S_IMODE(executable.stat().st_mode)
+    list_original = package_list.read_bytes()
+    list_mode = stat.S_IMODE(package_list.stat().st_mode)
+    installed = False
+    try:
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        _clear_dpkg_attestation_caches()
+        if activation._dpkg_installed_path_owners((executable,))[executable] != frozenset(
+            {package}
+        ):
+            raise RuntimeError("Fixture timer takeover non attribuita al foreign package")
+        if executable not in activation._dpkg_integrity_verified_paths((executable,)):
+            raise RuntimeError("Fixture timer takeover non ha digest package valido")
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError as exc:
+            if (
+                "Unexpected reviewed package identity" not in str(exc)
+                or str(executable) not in str(exc)
+            ):
+                raise RuntimeError(f"Timer takeover rifiutato per causa estranea: {exc}") from exc
+        else:
+            raise RuntimeError("Timer executable foreign package takeover accettato")
+    finally:
+        if installed:
+            _run(["dpkg", "--purge", package])
+        _restore_replaced_package_file(
+            package=expected_package,
+            path=executable,
+            contents=original,
+            mode=mode,
+            package_list=package_list,
+            package_list_contents=list_original,
+            package_list_mode=list_mode,
+        )
+    activation._attest_systemd_boot_surface()
+    print("EVIDENCE: timer executable exact path + foreign package owner => REJECT")
+
+
+def _exercise_removed_boot_service_executable_rejected() -> None:
+    executable = Path("/usr/lib/systemd/systemd-user-sessions")
+    displaced = executable.with_name(".systemd-user-sessions.thebitlab-h04")
+    displaced.unlink(missing_ok=True)
+    os.replace(executable, displaced)
+    try:
+        try:
+            activation._attest_systemd_boot_surface()
+        except activation.ActivationError as exc:
+            if f"Expected-present package path assente: {executable}" not in str(exc):
+                raise RuntimeError(
+                    f"Expected-present removal rifiutato per causa estranea: {exc}"
+                ) from exc
+        else:
+            raise RuntimeError("Expected-present executable assente accettato")
+    finally:
+        os.replace(displaced, executable)
+        _clear_dpkg_attestation_caches()
+    activation._attest_systemd_boot_surface()
+    print("EVIDENCE: expected-present boot executable removed => REJECT; restore PASS")
+
+
 def _exercise_modified_boot_service_executable_rejected() -> None:
     executable = Path("/usr/lib/systemd/systemd-user-sessions")
     original = executable.read_bytes()
@@ -1478,7 +1841,7 @@ def _exercise_modified_boot_service_executable_rejected() -> None:
         try:
             activation._attest_systemd_boot_surface()
         except activation.ActivationError as exc:
-            if "boot service executable systemd-user-sessions.service" not in str(exc):
+            if "Package authoritative digest mismatch" not in str(exc) or str(executable) not in str(exc):
                 raise RuntimeError(
                     f"Modified package executable rifiutato per causa estranea: {exc}"
                 ) from exc
@@ -2250,13 +2613,42 @@ def run(*, ephemeral_host: bool = False) -> None:
                 f"UnitFileState={initial_unit_file_state}; preflight PASS"
             )
             activation._attest_systemd_boot_surface()
+            boot_policies = activation.BOOT_ROOT_SERVICE_EXECUTION_POLICIES
+            boot_commands = tuple(
+                command
+                for policy in boot_policies.values()
+                for commands in policy.exec_slots.values()
+                for command in commands
+            )
+            absent_commands = sum(
+                command.file.expected_presence == activation.EXPECTED_ABSENT
+                for command in boot_commands
+            )
+            print(
+                "EVIDENCE: reviewed boot identity inventory "
+                f"services={len(boot_policies)} package-fragments="
+                f"{sum(policy.fragment is not None for policy in boot_policies.values())} "
+                f"reviewed-dropins={sum(len(policy.dropins) for policy in boot_policies.values())} "
+                f"Exec*={len(boot_commands)} expected-present="
+                f"{len(boot_commands) - absent_commands} expected-absent={absent_commands}; "
+                "all present paths bind package identity and policy-driven execution class"
+            )
             generator_names = _inventory_supported_package_generators()
             print(
                 "EVIDENCE: package-owned enabled unit inventory PASS; Ubuntu generators="
                 + ",".join(generator_names)
             )
 
-            # Mandatory HIGH reproductions run before the wider security matrix.
+            # Mandatory H-03/H-04 real-package regressions run first and restore a
+            # pristine passing baseline before the wider closed-surface matrix.
+            _exercise_known_service_package_takeover_rejected(temporary)
+            _exercise_missing_boot_executable_fill_rejected(temporary)
+            _exercise_removed_boot_service_executable_rejected()
+            activation._attest_systemd_boot_surface()
+            print("EVIDENCE: reviewed boot execution identity pristine baseline PASS")
+            _exercise_accept_template_package_takeover_rejected(temporary)
+            _exercise_timer_executable_package_takeover_rejected(temporary)
+
             _exercise_package_logrotate_same_line_hook_rejected(temporary)
             _exercise_package_sysv_path_shadow_rejected(temporary)
             _exercise_modified_boot_service_executable_rejected()

@@ -15,6 +15,7 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
+from typing import Mapping
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -2016,6 +2017,11 @@ def test_systemd_logrotate_units_require_positive_input_inventory_binding(
         lambda _policy: frozenset(),
     )
     monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_expected_package_files",
+        lambda *_args, **_kwargs: {},
+    )
+    monkeypatch.setattr(
         ubuntu_activation, "_attest_logrotate_inputs", lambda: calls.append(True)
     )
     ubuntu_activation._attest_systemd_boot_surface()
@@ -2191,7 +2197,7 @@ def test_supported_noble_scheduler_policy_is_closed_and_zero_unknown(
         lambda name: called.append("execution:" + name),
     )
     monkeypatch.setattr(
-        ubuntu_activation, "_attest_package_input_files", lambda *_args, **_kwargs: frozenset()
+        ubuntu_activation, "_attest_expected_package_files", lambda *_args, **_kwargs: {}
     )
     for name in set(ubuntu_activation.UNIT_INPUT_ATTESTORS.values()):
         monkeypatch.setattr(ubuntu_activation, name, lambda name=name: called.append(name))
@@ -2255,6 +2261,11 @@ def test_known_closed_timer_cannot_bypass_its_input_attestor(
         ubuntu_activation,
         "_attest_runtime_executable_closure",
         lambda _policy: frozenset(),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_expected_package_files",
+        lambda *_args, **_kwargs: {},
     )
     monkeypatch.setattr(
         ubuntu_activation,
@@ -3442,7 +3453,16 @@ def test_reviewed_script_digest_change_invalidates_executable_policy(
         ubuntu_activation, "EXECUTABLE_CLOSURE_POLICIES", {"fixture": policy}
     )
     monkeypatch.setattr(
-        ubuntu_activation, "_attest_package_input_files", lambda paths, **_kwargs: frozenset(paths)
+        ubuntu_activation,
+        "REVIEWED_PACKAGE_IDENTITIES",
+        {source: frozenset({"fixture-package"})},
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_expected_package_files",
+        lambda policies, **_kwargs: {
+            item.path: item.path.read_bytes() for item in policies
+        },
     )
     _install_synthetic_stable_reader(monkeypatch, {source})
     assert ubuntu_activation._attest_runtime_executable_closure("fixture") == frozenset(
@@ -3652,11 +3672,13 @@ def test_managed_logrotate_hooks_require_exact_pinned_launcher_commands(
         ubuntu_activation._attest_managed_logrotate_hooks((path,))
 
 
-def _boot_service_properties(service: str, executable: Path) -> dict[str, dict[str, str]]:
+def _boot_service_properties(
+    service: str, executable: Path, *, fragment: Path | None = None
+) -> dict[str, dict[str, str]]:
     values = {
         "Id": service,
         "LoadState": "loaded",
-        "FragmentPath": "/usr/lib/systemd/system/" + service,
+        "FragmentPath": (fragment or Path("/usr/lib/systemd/system") / service).as_posix(),
         "SourcePath": "",
         "DropInPaths": "",
         "User": "",
@@ -3676,16 +3698,71 @@ def _boot_service_properties(service: str, executable: Path) -> dict[str, dict[s
 
 
 def _install_boot_service_registry(
-    monkeypatch: pytest.MonkeyPatch, service: str, policy: str | None
-) -> None:
+    monkeypatch: pytest.MonkeyPatch,
+    service: str,
+    executable: Path,
+    *,
+    closure_policy: str | None = None,
+    execution_class: str = ubuntu_activation.NATIVE_PACKAGE_BINARY,
+    expected_presence: str = ubuntu_activation.EXPECTED_PRESENT,
+) -> Path:
+    fragment = executable.parent / f"{service}.unit"
+    fragment.write_bytes(b"[Service]\nExecStart=" + str(executable).encode() + b"\n")
+    executable_policy = ubuntu_activation.PackageFileIdentityPolicy(
+        executable,
+        frozenset() if expected_presence == ubuntu_activation.EXPECTED_ABSENT else frozenset({"fixture-executable"}),
+        expected_presence,
+    )
+    policy = ubuntu_activation.BootServiceExecutionPolicy(
+        service,
+        ubuntu_activation.PackageFileIdentityPolicy(
+            fragment, frozenset({"fixture-fragment"})
+        ),
+        {
+            "ExecStart": (
+                ubuntu_activation.BootExecCommandPolicy(
+                    executable_policy,
+                    ("--fixture",),
+                    False,
+                    execution_class,
+                ),
+            )
+        },
+        closure_policy,
+    )
     monkeypatch.setattr(
         ubuntu_activation, "BOOT_ROOT_SERVICE_EXECUTION_POLICIES", {service: policy}
     )
+    return fragment
+
+
+def _install_expected_package_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+    fragment: Path,
+    executable: Path,
+    *,
+    canonical: Mapping[Path, bytes] | None = None,
+    owners: Mapping[Path, frozenset[str]] | None = None,
+) -> None:
+    expected_owners = owners or {
+        fragment: frozenset({"fixture-fragment"}),
+        executable: frozenset({"fixture-executable"}),
+    }
     monkeypatch.setattr(
         ubuntu_activation,
-        "BOOT_ROOT_SERVICE_FRAGMENT_POLICIES",
-        {service: Path("/usr/lib/systemd/system") / service},
+        "_dpkg_installed_path_owners",
+        lambda paths: {path: expected_owners.get(path, frozenset()) for path in paths},
     )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(
+            path
+            for path in paths
+            if canonical is None or path.read_bytes() == canonical[path]
+        ),
+    )
+    _install_synthetic_stable_reader(monkeypatch, {fragment, executable})
 
 
 def test_accept_socket_template_requires_exact_reviewed_bytes(
@@ -3702,28 +3779,75 @@ def test_accept_socket_template_requires_exact_reviewed_bytes(
     monkeypatch.setattr(
         ubuntu_activation,
         "BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES",
-        {socket_unit: (template, executable, digest)},
+        {
+            socket_unit: ubuntu_activation.BootAcceptSocketExecutionPolicy(
+                ubuntu_activation.PackageFileIdentityPolicy(
+                    template, frozenset({"fixture-accept"}), reviewed_sha256=digest
+                ),
+                ubuntu_activation.PackageFileIdentityPolicy(
+                    executable, frozenset({"fixture-accept"})
+                ),
+                ubuntu_activation.NATIVE_PACKAGE_BINARY,
+                "fixture@thebitlab-policy.service",
+                {
+                    "ExecStart": (
+                        ubuntu_activation.BootExecCommandPolicy(
+                            ubuntu_activation.PackageFileIdentityPolicy(
+                                executable, frozenset({"fixture-accept"})
+                            ),
+                            (),
+                            False,
+                            ubuntu_activation.NATIVE_PACKAGE_BINARY,
+                        ),
+                    )
+                },
+            )
+        },
+    )
+    def accept_properties(units, _names):
+        records = {}
+        for unit in units:
+            if unit == socket_unit:
+                records[unit] = {
+                    "Id": unit,
+                    "LoadState": "loaded",
+                    "Triggers": "",
+                    "Accept": "yes",
+                }
+            else:
+                records[unit] = {
+                    "Id": unit,
+                    "LoadState": "loaded",
+                    "FragmentPath": template.as_posix(),
+                    "DropInPaths": "",
+                    "SourcePath": "",
+                    "User": "",
+                    "Group": "",
+                    **{slot: "" for slot in ubuntu_activation.SYSTEMD_EXEC_SLOTS},
+                    "ExecStart": (
+                        f"{{ path={executable.as_posix()} ; argv[]={executable.as_posix()} ; "
+                        "ignore_errors=no ; start_time=[n/a] }"
+                    ),
+                }
+        return records
+
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_show_properties", accept_properties
     )
     monkeypatch.setattr(
         ubuntu_activation,
-        "_systemd_show_properties",
-        lambda units, _names: {
-            unit: {
-                "Id": unit,
-                "LoadState": "loaded",
-                "Triggers": "",
-                "Accept": "yes",
-            }
-            for unit in units
-        },
+        "_dpkg_installed_path_owners",
+        lambda paths: {path: frozenset({"fixture-accept"}) for path in paths},
     )
     monkeypatch.setattr(
-        ubuntu_activation, "_attest_package_input_files", lambda paths, **_kwargs: frozenset(paths)
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(paths),
     )
-    _install_synthetic_stable_reader(monkeypatch, {template})
+    _install_synthetic_stable_reader(monkeypatch, {template, executable})
     ubuntu_activation._attest_boot_reachable_service_execution(frozenset({socket_unit}))
     template.write_bytes(template.read_bytes() + b"# changed execution\n")
-    with pytest.raises(ubuntu_activation.ActivationError, match="Accept socket bytes"):
+    with pytest.raises(ubuntu_activation.ActivationError, match="Reviewed digest mismatch"):
         ubuntu_activation._attest_boot_reachable_service_execution(frozenset({socket_unit}))
 
 
@@ -3735,26 +3859,24 @@ def test_modified_boot_reachable_package_executable_bytes_fail_closed(
     executable.parent.mkdir(parents=True)
     executable.write_bytes(b"ELF reviewed fixture\n")
     executable.chmod(0o755)
-    canonical = executable.read_bytes()
-    _install_boot_service_registry(monkeypatch, service, None)
+    fragment = _install_boot_service_registry(monkeypatch, service, executable)
+    canonical = {fragment: fragment.read_bytes(), executable: executable.read_bytes()}
     monkeypatch.setattr(
         ubuntu_activation,
         "_systemd_show_properties",
         lambda units, _names: {
-            unit: _boot_service_properties(unit, executable)[unit] for unit in units
+            unit: _boot_service_properties(unit, executable, fragment=fragment)[unit]
+            for unit in units
         },
     )
-    monkeypatch.setattr(
-        ubuntu_activation,
-        "_dpkg_integrity_verified_paths",
-        lambda paths: frozenset(
-            path for path in paths if path == executable and path.read_bytes() == canonical
-        ),
+    _install_expected_package_fixture(
+        monkeypatch, fragment, executable, canonical=canonical
     )
-    _install_synthetic_stable_reader(monkeypatch, {executable})
     ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
-    executable.write_bytes(canonical + b"modified\n")
-    with pytest.raises(ubuntu_activation.ActivationError, match="boot service executable"):
+    executable.write_bytes(canonical[executable] + b"modified\n")
+    with pytest.raises(
+        ubuntu_activation.ActivationError, match="Package authoritative digest mismatch"
+    ):
         ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
 
 
@@ -3788,9 +3910,9 @@ def test_package_cannot_shadow_known_service_from_alternate_fragment(
     executable.parent.mkdir(parents=True)
     executable.write_bytes(b"ELF package fixture\n")
     executable.chmod(0o755)
-    properties = _boot_service_properties(service, executable)
+    fragment = _install_boot_service_registry(monkeypatch, service, executable)
+    properties = _boot_service_properties(service, executable, fragment=fragment)
     properties[service]["FragmentPath"] = "/etc/systemd/system/known-package.service"
-    _install_boot_service_registry(monkeypatch, service, None)
     monkeypatch.setattr(
         ubuntu_activation, "_systemd_show_properties", lambda _units, _names: properties
     )
@@ -3819,27 +3941,25 @@ def test_new_nonroot_package_service_cannot_bypass_unknown_policy(
         ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
 
 
-def test_known_boot_service_rejects_direct_unknown_interpreter(
+def test_native_execution_class_is_policy_driven_not_basename_driven(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    service = "fixture-interpreter.service"
+    service = "fixture-interpreter-name.service"
     executable = tmp_path / "usr/bin/dash"
     executable.parent.mkdir(parents=True)
-    executable.write_bytes(b"ELF interpreter fixture\n")
+    executable.write_bytes(b"ELF reviewed native fixture\n")
     executable.chmod(0o755)
-    _install_boot_service_registry(monkeypatch, service, None)
+    fragment = _install_boot_service_registry(monkeypatch, service, executable)
     monkeypatch.setattr(
         ubuntu_activation,
         "_systemd_show_properties",
         lambda units, _names: {
-            unit: _boot_service_properties(unit, executable)[unit] for unit in units
+            unit: _boot_service_properties(unit, executable, fragment=fragment)[unit]
+            for unit in units
         },
     )
-    monkeypatch.setattr(
-        ubuntu_activation, "_dpkg_integrity_verified_paths", lambda paths: frozenset(paths)
-    )
-    with pytest.raises(ubuntu_activation.ActivationError, match="interpreter/trampoline"):
-        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+    _install_expected_package_fixture(monkeypatch, fragment, executable)
+    ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
 
 
 def test_known_boot_service_rejects_unknown_interpreted_source(
@@ -3850,20 +3970,212 @@ def test_known_boot_service_rejects_unknown_interpreted_source(
     executable.parent.mkdir(parents=True)
     executable.write_bytes(b"#!/bin/sh\n/usr/local/bin/helper\n")
     executable.chmod(0o755)
-    _install_boot_service_registry(monkeypatch, service, None)
+    fragment = _install_boot_service_registry(monkeypatch, service, executable)
     monkeypatch.setattr(
         ubuntu_activation,
         "_systemd_show_properties",
         lambda units, _names: {
-            unit: _boot_service_properties(unit, executable)[unit] for unit in units
+            unit: _boot_service_properties(unit, executable, fragment=fragment)[unit]
+            for unit in units
         },
     )
-    monkeypatch.setattr(
-        ubuntu_activation, "_dpkg_integrity_verified_paths", lambda paths: frozenset(paths)
-    )
-    _install_synthetic_stable_reader(monkeypatch, {executable})
-    with pytest.raises(ubuntu_activation.ActivationError, match="UNKNOWN EXECUTION POLICY interpreted"):
+    _install_expected_package_fixture(monkeypatch, fragment, executable)
+    with pytest.raises(
+        ubuntu_activation.ActivationError, match="Native execution identity ha acquisito shebang"
+    ):
         ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+
+def test_expected_package_file_presence_identity_and_digest_matrix(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "usr/bin/reviewed-native"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"ELF reviewed bytes\n")
+    expected_digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    policy = ubuntu_activation.PackageFileIdentityPolicy(
+        path, frozenset({"reviewed-package"}), reviewed_sha256=expected_digest
+    )
+    owners = {path: frozenset({"reviewed-package"})}
+    authoritative = {path}
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_installed_path_owners",
+        lambda paths: {item: owners.get(item, frozenset()) for item in paths},
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_integrity_verified_paths",
+        lambda paths: frozenset(item for item in paths if item in authoritative),
+    )
+    _install_synthetic_stable_reader(monkeypatch, {path})
+    assert ubuntu_activation._attest_expected_package_files(
+        (policy,), label="fixture"
+    )[path] == b"ELF reviewed bytes\n"
+
+    owners[path] = frozenset({"foreign-package"})
+    with pytest.raises(
+        ubuntu_activation.ActivationError, match="Unexpected reviewed package identity"
+    ):
+        ubuntu_activation._attest_expected_package_files((policy,), label="fixture")
+    owners[path] = frozenset({"reviewed-package"})
+
+    authoritative.clear()
+    with pytest.raises(
+        ubuntu_activation.ActivationError, match="Package authoritative digest mismatch"
+    ):
+        ubuntu_activation._attest_expected_package_files((policy,), label="fixture")
+    authoritative.add(path)
+
+    path.write_bytes(b"ELF changed reviewed bytes\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="Reviewed digest mismatch"):
+        ubuntu_activation._attest_expected_package_files((policy,), label="fixture")
+    path.unlink()
+    with pytest.raises(
+        ubuntu_activation.ActivationError, match="Expected-present package path assente"
+    ):
+        ubuntu_activation._attest_expected_package_files((policy,), label="fixture")
+
+    absent = ubuntu_activation.PackageFileIdentityPolicy(
+        path, frozenset(), ubuntu_activation.EXPECTED_ABSENT
+    )
+    assert ubuntu_activation._attest_expected_package_files(
+        (absent,), label="fixture"
+    ) == {}
+    path.write_bytes(b"foreign fill\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="Unexpected presence"):
+        ubuntu_activation._attest_expected_package_files((absent,), label="fixture")
+
+
+def test_known_service_rejects_foreign_fragment_or_executable_owner(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = "fixture-owner.service"
+    executable = tmp_path / "usr/bin/fixture-owner"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"ELF reviewed native\n")
+    executable.chmod(0o755)
+    fragment = _install_boot_service_registry(monkeypatch, service, executable)
+    properties = _boot_service_properties(service, executable, fragment=fragment)
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_show_properties", lambda _units, _names: properties
+    )
+    owners = {
+        fragment: frozenset({"foreign-fragment"}),
+        executable: frozenset({"fixture-executable"}),
+    }
+    _install_expected_package_fixture(
+        monkeypatch, fragment, executable, owners=owners
+    )
+    with pytest.raises(
+        ubuntu_activation.ActivationError, match="Unexpected reviewed package identity"
+    ):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+    owners[fragment] = frozenset({"fixture-fragment"})
+    owners[executable] = frozenset({"foreign-executable"})
+    with pytest.raises(
+        ubuntu_activation.ActivationError, match="Unexpected reviewed package identity"
+    ):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+
+def test_known_service_effective_exec_contract_is_slot_aware(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = "fixture-slot.service"
+    executable = tmp_path / "usr/bin/fixture-slot"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"ELF reviewed native\n")
+    executable.chmod(0o755)
+    fragment = _install_boot_service_registry(monkeypatch, service, executable)
+    properties = _boot_service_properties(service, executable, fragment=fragment)
+    properties[service]["ExecStartPost"] = properties[service]["ExecStart"]
+    properties[service]["ExecStart"] = ""
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_show_properties", lambda _units, _names: properties
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="execution slot"):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+
+def test_known_service_rejects_unreviewed_effective_dropin(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = "fixture-dropin.service"
+    executable = tmp_path / "usr/bin/fixture-dropin"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"ELF reviewed native\n")
+    executable.chmod(0o755)
+    fragment = _install_boot_service_registry(monkeypatch, service, executable)
+    properties = _boot_service_properties(service, executable, fragment=fragment)
+    properties[service]["DropInPaths"] = (
+        "/usr/lib/systemd/system/fixture-dropin.service.d/foreign.conf"
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_show_properties", lambda _units, _names: properties
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="DropIn execution service"):
+        ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
+
+
+def test_reviewed_execution_registries_have_no_implicit_package_or_presence_policy() -> None:
+    policies = ubuntu_activation.BOOT_ROOT_SERVICE_EXECUTION_POLICIES
+    assert len(policies) == 44
+    package_paths = ubuntu_activation.REVIEWED_PACKAGE_IDENTITIES
+    for service, policy in policies.items():
+        assert policy.unit_name == service
+        if policy.managed_nonroot:
+            assert service == "thebitlab.service"
+            continue
+        assert policy.fragment is not None
+        assert policy.fragment.expected_packages
+        assert policy.fragment.reviewed_sha256
+        assert policy.fragment.path in package_paths
+        assert policy.exec_slots
+        assert set(policy.exec_slots) <= set(ubuntu_activation.SYSTEMD_EXEC_SLOTS)
+        for dropin in policy.dropins:
+            assert dropin.expected_packages
+            assert dropin.reviewed_sha256
+            assert dropin.path in package_paths
+        for commands in policy.exec_slots.values():
+            for command in commands:
+                if command.execution_class == ubuntu_activation.EXPECTED_ABSENT_EXECUTABLE:
+                    assert command.file.expected_presence == ubuntu_activation.EXPECTED_ABSENT
+                    assert not command.file.expected_packages
+                else:
+                    assert command.file.expected_presence == ubuntu_activation.EXPECTED_PRESENT
+                    assert command.file.expected_packages
+                    assert command.file.path in package_paths
+                    assert command.execution_class in {
+                        ubuntu_activation.NATIVE_PACKAGE_BINARY,
+                        ubuntu_activation.INTERPRETED_SCRIPT,
+                        ubuntu_activation.REVIEWED_TRAMPOLINE,
+                    }
+
+    for policy in ubuntu_activation.BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES.values():
+        assert policy.template.expected_packages
+        assert policy.template.reviewed_sha256
+        assert policy.executable.expected_packages
+        assert policy.execution_class == ubuntu_activation.NATIVE_PACKAGE_BINARY
+        assert policy.probe_instance.endswith("@thebitlab-policy.service")
+        assert policy.exec_slots
+
+    for timer in ubuntu_activation.BOOT_REACHABLE_ROOT_TIMER_POLICIES.values():
+        assert timer.timer_sha256 and timer.service_sha256
+        for path in (timer.timer_fragment, timer.service_fragment, *timer.support_files):
+            assert path in package_paths
+        for _slot, executable, _arguments, _ignore in timer.commands:
+            assert Path(executable) in package_paths
+    for closure in ubuntu_activation.EXECUTABLE_CLOSURE_POLICIES.values():
+        assert set(closure.reviewed_sources) <= set(package_paths)
+        for command in (*closure.interpreters, *closure.commands):
+            if command.expected_path is not None:
+                expected = command.expected_final or command.expected_path
+                aliases = set(ubuntu_activation._runtime_lexical_aliases(expected))
+                if expected.as_posix().startswith(("/bin/", "/sbin/")):
+                    aliases.add(Path("/usr" + expected.as_posix()))
+                assert aliases & set(package_paths)
 
 
 def test_modified_sysv_and_generator_bytes_are_not_package_trust(
