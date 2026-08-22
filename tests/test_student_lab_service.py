@@ -119,6 +119,102 @@ def write_assignment(root, assignment):
     return storage.write_assignment(assignment)
 
 
+def test_authorized_student_service_uses_pre_resolved_target_without_storage_selection(tmp_path) -> None:
+    subject_id = "subject:11111111111111111111111111111111"
+    assignment = sample_assignment(
+        tmp_path,
+        class_id="class:3a:2026-2027",
+        target_type="student",
+        targets=[
+            {
+                "subject_id": subject_id,
+                "student_id": "rossi-mario",
+                "path": "examples/assignment_tracking/student_repos/rossi-mario",
+            }
+        ],
+    )
+    target = assignment["targets"][0]
+    repo = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+    )
+    (repo / "assignments" / assignment["activity_id"]).mkdir(parents=True)
+
+    payload = student_lab_service.authorized_student_lab_payload(
+        root=tmp_path,
+        authorized_assignments=[(assignment, target)],
+        public_student_id="public-student",
+        server_student_key=subject_id,
+        now="2026-10-18T12:00:00+02:00",
+    )
+    provider = RecordingProvider()
+    event = student_lab_service.record_authorized_student_help_request(
+        root=tmp_path,
+        assignment=assignment,
+        target=target,
+        public_student_id="public-student",
+        server_student_key=subject_id,
+        help_type="teoria",
+        prompt="Una domanda guida",
+        provider=provider,
+        now="2026-10-18T12:00:00+02:00",
+    )
+    history = student_lab_service.authorized_student_help_history(
+        root=tmp_path,
+        assignment=assignment,
+        target=target,
+        public_student_id="public-student",
+        server_student_key=subject_id,
+        now="2026-10-18T12:00:00+02:00",
+    )
+    report_path = repo / "reports" / assignment["activity_id"] / "latest.json"
+    attempt_path, _ = student_lab_attempts.persist_attempt(
+        report_path,
+        assignment["id"],
+        {
+            "schema_version": "student_lab_run.v1",
+            "activity_id": assignment["activity_id"],
+            "student_id": "rossi-mario",
+            "status": "passed",
+            "passed": True,
+            "submitted_at": "2026-10-18T18:00:00+02:00",
+            "summary": {"passed": 1, "total": 1},
+            "tests": [],
+        },
+    )
+    selected = student_lab_service.select_authorized_student_final_attempt(
+        root=tmp_path,
+        assignment=assignment,
+        target=target,
+        public_student_id="public-student",
+        server_student_key=subject_id,
+        attempt_id=attempt_path.stem,
+        now="2026-10-18T19:00:00+02:00",
+    )
+
+    assert payload["student_id"] == "public-student"
+    assert payload["assignments"][0]["student_id"] == "public-student"
+    assert payload["assignments"][0]["workspace"]["exists"] is True
+    assert event["prompt"] == "Una domanda guida"
+    assert history["events"][0]["prompt"] == "Una domanda guida"
+    assert selected["attempts"]["final"]["id"] == attempt_path.stem
+    authoritative_log = student_help_service.server_help_log_path(
+        tmp_path,
+        subject_id,
+        assignment["id"],
+    )
+    legacy_identity_log = student_help_service.server_help_log_path(
+        tmp_path,
+        "rossi-mario",
+        assignment["id"],
+    )
+    assert authoritative_log.is_file()
+    assert not legacy_identity_log.exists()
+
+
 def test_student_lab_lists_only_requested_student_assignments(tmp_path) -> None:
     write_assignment(tmp_path, sample_assignment(tmp_path))
     workspace = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "assignments" / "python-base-somma-001"

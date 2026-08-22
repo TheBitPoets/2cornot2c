@@ -18,7 +18,8 @@ from scripts.thebitlab_auth_services import (
 )
 from scripts.thebitlab_edge_rate_limit import EdgeRequestMetadata, InMemoryAtomicRateLimitStore, TrustedProxyClientResolver
 from scripts.thebitlab_http_auth import HttpAuthenticationRequiredError, HttpSessionAuthBoundary, SessionCookiePolicy
-from scripts.thebitlab_identity import UserAccount
+from scripts.thebitlab_identity import ClassGroup, ClassMembership, UserAccount
+from scripts.thebitlab_identity_binding import LegacySubjectAlias, StudentSubjectBinding
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 from scripts.thebitlab_tui_pairing import TuiBrowserPairingBoundary
 from scripts import course_board_server
@@ -42,6 +43,30 @@ class CounterFactory:
 def graph(tmp_path):
     storage = SqliteIdentityStorage(tmp_path / "identity.sqlite3", clock=lambda: NOW)
     storage.create_user(UserAccount("student-01", "Student", "student", True, NOW, NOW))
+    storage.create_class(
+        ClassGroup("class:3a:2026-2027", "3A", "2026-2027", True, NOW, NOW)
+    )
+    storage.save_membership(
+        ClassMembership("student-01", "class:3a:2026-2027", "student", NOW)
+    )
+    storage.create_student_subject_binding(
+        StudentSubjectBinding(
+            "subject:11111111111111111111111111111111",
+            "student-01",
+            True,
+            1,
+            NOW,
+            NOW,
+        ),
+        (
+            LegacySubjectAlias(
+                "class:3a:2026-2027",
+                "student-01",
+                "subject:11111111111111111111111111111111",
+                NOW,
+            ),
+        ),
+    )
     pairings = PairingService(
         storage,
         pepper=b"p" * 32,
@@ -392,6 +417,244 @@ def test_unknown_path_is_not_claimed(graph) -> None:
     assert routes.dispatch(request("/auth/tui/unknown")) is None
 
 
+def test_federated_student_api_routes_share_authoritative_class_scope(
+    graph,
+    monkeypatch,
+    caplog,
+) -> None:
+    caplog.set_level("WARNING", logger="thebitlab.course_board_server")
+    storage, http, _boundary, routes = graph
+    begun = routes.dispatch(request("/auth/tui/pairings"))
+    start = json.loads(begun.body)
+    browser = http.establish_session("student-01")
+    assert routes.dispatch(
+        json_request(
+            "/auth/tui/pair",
+            {"code": start["user_code"]},
+            ("Cookie", cookie(browser)),
+            ("X-CSRF-Token", browser.context.csrf_token),
+        )
+    ).status_code == 204
+    consumed = routes.dispatch(
+        json_request(
+            f"/auth/tui/pairings/{start['pairing_id']}/token",
+            {"code": start["user_code"]},
+        )
+    )
+    bearer = json.loads(consumed.body)["bearer_token"]
+    consumed.delivery_guard.delivered()
+
+    def record(assignment_id, class_id, subject_id):
+        return course_board_server.assignment_records.build_assignment_record(
+            assignment_id=assignment_id,
+            activity_id="activity-demo",
+            activity_path="activities/demo.json",
+            target_type="student",
+            class_id=class_id,
+            class_label="3A",
+            github_team="",
+            assigned_at="2026-09-01T08:00:00+00:00",
+            due_at="2026-09-20T08:00:00+00:00",
+            targets=[
+                {
+                    "subject_id": subject_id,
+                    "student_id": "request-must-not-authorize",
+                    "path": "students/request-must-not-authorize",
+                }
+            ],
+        )
+
+    own = record(
+        "assignment-own",
+        "class:3a:2026-2027",
+        "subject:11111111111111111111111111111111",
+    )
+    cross_class = record(
+        "assignment-cross",
+        "class:4a:2026-2027",
+        "subject:11111111111111111111111111111111",
+    )
+    other_target = record(
+        "assignment-other",
+        "class:3a:2026-2027",
+        "subject:22222222222222222222222222222222",
+    )
+
+    class FakeAssignmentStorage:
+        malformed = False
+
+        def list_assignments_strict(self):
+            if self.malformed:
+                raise ValueError(r"C:\secret\assignment.json")
+            return [own, cross_class, other_target]
+
+        def read_assignment_strict(self, assignment_id):
+            values = {
+                own["id"]: own,
+                cross_class["id"]: cross_class,
+                other_target["id"]: other_target,
+            }
+            if assignment_id not in values:
+                raise FileNotFoundError(assignment_id)
+            return values[assignment_id]
+
+    assignment_storage = FakeAssignmentStorage()
+    monkeypatch.setattr(
+        course_board_server,
+        "assignment_record_storage",
+        lambda: assignment_storage,
+    )
+    calls = []
+
+    def payload(**kwargs):
+        calls.append(("assignments", kwargs))
+        return {
+            "schema_version": "student_lab.v1",
+            "student_id": kwargs["public_student_id"],
+            "assignments": [
+                {"assignment_id": item[0]["id"]}
+                for item in kwargs["authorized_assignments"]
+            ],
+        }
+
+    def history(**kwargs):
+        calls.append(("history", kwargs))
+        return {"assignment_id": kwargs["assignment"]["id"], "events": []}
+
+    def help_route(payload, *, scope, authorized):
+        calls.append(("help", payload, scope, authorized))
+        return {"ok": True}
+
+    def final_route(payload, *, scope, authorized):
+        calls.append(("final", payload, scope, authorized))
+        return {"ok": True}
+
+    monkeypatch.setattr(
+        course_board_server.student_lab_service,
+        "authorized_student_lab_payload",
+        payload,
+    )
+    monkeypatch.setattr(
+        course_board_server.student_lab_service,
+        "authorized_student_help_history",
+        history,
+    )
+    monkeypatch.setattr(course_board_server, "record_authorized_student_help", help_route)
+    monkeypatch.setattr(
+        course_board_server,
+        "select_authorized_student_final_attempt",
+        final_route,
+    )
+
+    server = BoundedThreadingHTTPServer(("127.0.0.1", 0), CourseBoardHandler)
+    server.tui_pairing_http_routes = routes
+    server.teacher_token = "T" * 32
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    def exchange(path, payload_value=None, method="GET"):
+        body = None
+        headers = {
+            "X-Forwarded-Proto": "https",
+            "Authorization": "Bearer " + bearer,
+        }
+        if payload_value is not None:
+            body = json.dumps(payload_value).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+        connection = http_client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+        try:
+            connection.request(method, path, body=body, headers=headers)
+            response = connection.getresponse()
+            return response.status, json.loads(response.read())
+        finally:
+            connection.close()
+
+    try:
+        me_status, me = exchange("/api/student-lab/me")
+        assignments_status, assignments = exchange("/api/student-lab/assignments")
+        history_status, _ = exchange(
+            "/api/student-lab/help-history?assignment_id=assignment-own"
+        )
+        help_status, _ = exchange(
+            "/api/student-lab/help",
+            {
+                "assignment_id": "assignment-own",
+                "student_id": "other-client-id",
+                "class_id": "class:4a:2026-2027",
+                "help_type": "teoria",
+                "prompt": "Una domanda",
+            },
+            "POST",
+        )
+        final_status, _ = exchange(
+            "/api/student-lab/final-attempt",
+            {
+                "assignment_id": "assignment-own",
+                "student_id": "other-client-id",
+                "attempt_id": "attempt-001",
+            },
+            "POST",
+        )
+        cross_status, cross = exchange(
+            "/api/student-lab/help-history?assignment_id=assignment-cross"
+        )
+        other_status, other = exchange(
+            "/api/student-lab/help-history?assignment_id=assignment-other"
+        )
+        mismatch_status, mismatch = exchange(
+            "/api/student-lab/help-history?assignment_id=assignment-slug-mismatch"
+        )
+        assignment_storage.malformed = True
+        malformed_status, malformed = exchange("/api/student-lab/assignments")
+        storage.delete_membership(
+            "student-01",
+            "class:3a:2026-2027",
+            "student",
+        )
+        removed_status, removed = exchange("/api/student-lab/me")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert (me_status, me["student_id"]) == (200, "student-01")
+    assert assignments_status == 200
+    assert assignments["assignments"] == [{"assignment_id": "assignment-own"}]
+    assert history_status == help_status == final_status == 200
+    assert [entry[0] for entry in calls] == ["assignments", "history", "help", "final"]
+    help_call = calls[2]
+    assert help_call[2].user_id == "student-01"
+    assert help_call[3].subject_id == "subject:11111111111111111111111111111111"
+    assert help_call[3].target_copy()["student_id"] == "request-must-not-authorize"
+    for status, body in (
+        (cross_status, cross),
+        (other_status, other),
+        (mismatch_status, mismatch),
+        (removed_status, removed),
+    ):
+        assert status == 403
+        assert body == {"error": "Accesso studente non consentito."}
+    assert malformed_status == 503
+    assert malformed == {"error": "Servizio studenti temporaneamente non disponibile."}
+    assert "assignment-cross" not in json.dumps(cross)
+    assert "assignment-other" not in json.dumps(other)
+    assert "secret" not in json.dumps(malformed)
+    authorization_logs = "\n".join(
+        record.getMessage()
+        for record in caplog.records
+        if "Student API authorization" in record.getMessage()
+    )
+    assert authorization_logs
+    for sensitive in (
+        "student-01",
+        "subject:11111111111111111111111111111111",
+        "assignment-cross",
+        "assignment-other",
+        r"C:\secret",
+    ):
+        assert sensitive not in authorization_logs
+
+
 def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) -> None:
     _storage, http, boundary, routes = graph
     monkeypatch.setattr(course_board_server, "PAIRING_BODY_DEADLINE_SECONDS", 0.1)
@@ -401,14 +664,14 @@ def test_course_board_socket_delivers_complete_pairing_flow(graph, monkeypatch) 
         "THEBITLAB_STUDENT_HELP_SECRET",
         "legacy-secret-that-must-not-downgrade-production",
     )
+    class EmptyAssignmentStorage:
+        def list_assignments_strict(self):
+            return []
+
     monkeypatch.setattr(
         course_board_server,
-        "locked_student_lab_payload",
-        lambda *, student_id, now=None: {
-            "schema_version": "student_lab.v1",
-            "student_id": student_id,
-            "assignments": [],
-        },
+        "assignment_record_storage",
+        lambda: EmptyAssignmentStorage(),
     )
     server = BoundedThreadingHTTPServer(("127.0.0.1", 0), CourseBoardHandler)
     server.tui_pairing_http_routes = routes
