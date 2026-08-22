@@ -387,6 +387,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         renderOverviewSummaryCards,
         renderOverviewFilters,
         filteredOverviewRows,
+        renderOverview,
         focusOverviewClassFromReport,
         summaryCounts,
         reportCounts,
@@ -735,6 +736,100 @@ def test_overview_activity_filter_limits_rows() -> None:
         const rows = tested.filteredOverviewRows();
         assert.equal(rows.length, 1);
         assert.equal(rows[0].activity_id, "somma");
+        """
+    )
+
+
+def test_overview_row_escapes_backend_and_attempt_id_and_omits_missing_values() -> None:
+    run_dashboard_js(
+        """
+        tested.state.overviewRows = [
+          {
+            class_id: "3A-TPSI",
+            student: "rossi-mario",
+            title: "Somma base",
+            activity_id: "somma",
+            kind: "lab",
+            status: "submitted_on_time",
+            submitted: true,
+            report_name: "demo/somma.json",
+            report_backend: 'docker<img src=x onerror="boom">',
+            attempt_id: "attempt-<script>boom</script>",
+            tests_passed: 2,
+            tests_total: 2,
+          },
+          {
+            student: "bianchi-luca",
+            activity_id: "somma",
+            status: "submitted_on_time",
+            submitted: true,
+            report_name: "demo/null.json",
+            report_backend: null,
+            attempt_id: null,
+          },
+          {
+            student: "verdi-anna",
+            activity_id: "somma",
+            status: "submitted_on_time",
+            submitted: true,
+            report_name: "demo/missing.json",
+          },
+        ];
+
+        tested.renderOverview();
+
+        const escapedHtml = tested.els.overviewBody.children[0].innerHTML;
+        assert.ok(escapedHtml.includes('backend docker&lt;img src=x onerror=&quot;boom&quot;&gt;'));
+        assert.ok(escapedHtml.includes('attempt-&lt;script&gt;boom&lt;/script&gt;'));
+        assert.doesNotMatch(escapedHtml, /<img|<script>/);
+        assert.doesNotMatch(tested.els.overviewBody.children[1].innerHTML, /backend |tentativo /);
+        assert.doesNotMatch(tested.els.overviewBody.children[2].innerHTML, /backend |tentativo /);
+        """
+    )
+
+
+def test_overview_row_button_still_loads_and_opens_submission() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.fetchResponses["/api/assignment-reports/load"] = {
+            report: {
+              activity_id: "somma",
+              students: [{
+                student: "rossi-mario",
+                submitted: true,
+                status: "submitted_on_time",
+                submission: { files: [{ path: "assignments/somma/main.py", role: "solution" }] },
+                grading: {},
+              }],
+            },
+          };
+          tested.fetchResponses["/api/assignment-submissions/read"] = {
+            file: { path: "assignments/somma/main.py", content: "print(3)" },
+          };
+          const button = new tested.FakeElement("button");
+          button.dataset.overviewReport = "demo/somma.json";
+          button.dataset.overviewStudent = "rossi-mario";
+          const event = {
+            target: {
+              closest(selector) {
+                return selector === "[data-overview-report]" ? button : null;
+              },
+            },
+            preventDefault() {},
+            stopPropagation() {},
+          };
+
+          await tested.els.overviewBody.listeners.click[0](event);
+          await new Promise((resolve) => setTimeout(resolve, 0));
+
+          assert.equal(tested.state.reportName, "demo/somma.json");
+          assert.equal(tested.state.reviewStudent, "rossi-mario");
+          assert.equal(tested.state.reviewSource, "overview");
+          assert.equal(tested.state.reviewFile.path, "assignments/somma/main.py");
+          const loadCall = tested.fetchCalls.find((entry) => entry.path === "/api/assignment-reports/load");
+          assert.equal(JSON.parse(loadCall.options.body).name, "demo/somma.json");
+        })();
         """
     )
 

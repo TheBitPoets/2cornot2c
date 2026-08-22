@@ -215,6 +215,7 @@ class AssignmentOverviewService:
                         "submitted_at": submission.get("submitted_at"),
                         "commit": submission.get("commit"),
                         "source_path": submission.get("source_path"),
+                        "report_backend": submission.get("report_backend"),
                         "attempt_id": submission.get("attempt_id"),
                         "report_selection": submission.get("report_selection"),
                         "final_selected": bool(submission.get("final_selected", False)),

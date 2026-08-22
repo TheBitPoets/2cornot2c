@@ -2911,6 +2911,8 @@ function renderOverview() {
           Consegna
         </button><br>
         <small class="overviewReportName" title="${escapeHtml(row.report_name || "-")}">${escapeHtml(row.report_name || "-")}</small>
+        ${row.report_backend ? `<br><small>backend ${escapeHtml(row.report_backend)}</small>` : ""}
+        ${row.attempt_id ? `<br><small>tentativo <code>${escapeHtml(row.attempt_id)}</code></small>` : ""}
       </td>
     `;
     els.overviewBody.append(tr);
