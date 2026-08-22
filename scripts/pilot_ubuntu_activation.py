@@ -31,6 +31,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts import validate_pilot_deployment as deployment  # noqa: E402
+from scripts.pilot_ubuntu_reviewed_executables import (  # noqa: E402
+    REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES,
+)
 from scripts.nginx_config_ast import (  # noqa: E402
     Directive,
     NginxConfigError,
@@ -315,6 +318,7 @@ NATIVE_PACKAGE_BINARY = "NATIVE_PACKAGE_BINARY"
 INTERPRETED_SCRIPT = "INTERPRETED_SCRIPT"
 REVIEWED_TRAMPOLINE = "REVIEWED_TRAMPOLINE"
 EXPECTED_ABSENT_EXECUTABLE = "EXPECTED_ABSENT_EXECUTABLE"
+PACKAGE_DATA = "PACKAGE_DATA"
 SYSTEMD_EXEC_SLOTS = (
     "ExecCondition",
     "ExecStartPre",
@@ -332,6 +336,7 @@ class PackageFileIdentityPolicy:
     expected_packages: frozenset[str]
     expected_presence: str = EXPECTED_PRESENT
     reviewed_sha256: str | None = None
+    execution_class: str = PACKAGE_DATA
 
 
 @dataclass(frozen=True)
@@ -772,6 +777,8 @@ REVIEWED_PACKAGE_IDENTITIES: Mapping[Path, frozenset[str]] = {
     Path('/etc/default/nginx'): frozenset({'nginx-common'}),
     Path('/etc/init.d/nginx'): frozenset({'nginx-common'}),
     Path('/etc/logrotate.d/nginx'): frozenset({'nginx-common'}),
+    Path('/etc/nginx/mime.types'): frozenset({'nginx-common'}),
+    Path('/etc/nginx/nginx.conf'): frozenset({'nginx-common'}),
     Path('/etc/update-motd.d/50-motd-news'): frozenset({'base-files'}),
     Path('/usr/bin/apt-config'): frozenset({'apt'}),
     Path('/usr/bin/apt-get'): frozenset({'apt'}),
@@ -914,6 +921,7 @@ REVIEWED_PACKAGE_IDENTITIES: Mapping[Path, frozenset[str]] = {
     Path('/usr/lib/systemd/systemd-user-sessions'): frozenset({'systemd'}),
     Path('/usr/libexec/dpkg/dpkg-db-backup'): frozenset({'dpkg'}),
     Path('/usr/sbin/agetty'): frozenset({'util-linux'}),
+    Path('/usr/sbin/dpkg-preconfigure'): frozenset({'debconf'}),
     Path('/usr/sbin/e2scrub'): frozenset({'e2fsprogs'}),
     Path('/usr/sbin/e2scrub_all'): frozenset({'e2fsprogs'}),
     Path('/usr/sbin/fstrim'): frozenset({'util-linux'}),
@@ -924,6 +932,34 @@ REVIEWED_PACKAGE_IDENTITIES: Mapping[Path, frozenset[str]] = {
     Path('/usr/sbin/nginx'): frozenset({'nginx'}),
     Path('/usr/sbin/start-stop-daemon'): frozenset({'dpkg'}),
     Path('/usr/share/dpkg/sh/dpkg-error.sh'): frozenset({'dpkg'}),
+    Path('/usr/bin/dpkg-query'): frozenset({'dpkg'}),
+    Path('/usr/bin/getfacl'): frozenset({'acl'}),
+    Path('/usr/bin/systemd-analyze'): frozenset({'systemd'}),
+    Path('/usr/bin/systemd-path'): frozenset({'systemd'}),
+    Path('/usr/lib/nginx/modules/ngx_http_geoip2_module.so'): frozenset({'libnginx-mod-http-geoip2'}),
+    Path('/usr/lib/nginx/modules/ngx_stream_module.so'): frozenset({'libnginx-mod-stream'}),
+    Path('/usr/lib/systemd/system-generators/systemd-cryptsetup-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-debug-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-fstab-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-getty-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-gpt-auto-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-hibernate-resume-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-integritysetup-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-rc-local-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-run-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-system-update-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-sysv-generator'): frozenset({'systemd'}),
+    Path('/usr/lib/systemd/system-generators/systemd-veritysetup-generator'): frozenset({'systemd'}),
+    Path('/usr/share/nginx/modules-available/mod-http-geoip2.conf'): frozenset({'libnginx-mod-http-geoip2'}),
+    Path('/usr/share/nginx/modules-available/mod-stream.conf'): frozenset({'libnginx-mod-stream'}),
+}
+
+REVIEWED_NGINX_PACKAGE_BEHAVIOR_SHA256: Mapping[Path, str] = {
+    Path('/etc/nginx/mime.types'): '36c77daa2d85803e87c91ba723dd2bc6aaa6543ae4bd4a569034a7bf8bce464d',
+    Path('/etc/nginx/nginx.conf'): '48c6a4ec1e1fd28ccf968490f07e34a1d7f755793b2108a3ed8670b1ee2a0aa2',
+    Path('/usr/lib/systemd/system/nginx.service'): '6c759c229d4dacf65c1f98c1733646f8b979d3e75e13a98bfbcfe26f8a2f793c',
+    Path('/usr/share/nginx/modules-available/mod-http-geoip2.conf'): 'fcf0f66b8668ce6969314b16c5be6437bb0954b809238617eeb3cb075e084d4b',
+    Path('/usr/share/nginx/modules-available/mod-stream.conf'): 'a1bf6e1e25eedbd7e6f816bd608f0a54adc1f2cdb238580890d03574296b81eb',
 }
 
 
@@ -932,16 +968,33 @@ def _reviewed_package_file(
     *,
     expected_presence: str = EXPECTED_PRESENT,
     reviewed_sha256: str | None = None,
+    execution_class: str = PACKAGE_DATA,
 ) -> PackageFileIdentityPolicy:
     canonical = Path(path)
     if expected_presence == EXPECTED_ABSENT:
         expected_packages = frozenset()
+        if execution_class != EXPECTED_ABSENT_EXECUTABLE:
+            raise ValueError(f"Execution class expected-absent non valida: {canonical}")
     else:
         expected_packages = REVIEWED_PACKAGE_IDENTITIES.get(canonical, frozenset())
         if not expected_packages:
             raise ValueError(f"Package identity policy assente: {canonical}")
+        if execution_class != PACKAGE_DATA:
+            reviewed_identity = REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES.get(canonical)
+            if reviewed_identity is None:
+                raise ValueError(f"Reviewed executable identity assente: {canonical}")
+            static_digest, static_class = reviewed_identity
+            if static_class != execution_class:
+                raise ValueError(f"Execution class revisionata divergente: {canonical}")
+            if reviewed_sha256 is not None and reviewed_sha256 != static_digest:
+                raise ValueError(f"Reviewed executable digest contraddittorio: {canonical}")
+            reviewed_sha256 = static_digest
     return PackageFileIdentityPolicy(
-        canonical, expected_packages, expected_presence, reviewed_sha256
+        canonical,
+        expected_packages,
+        expected_presence,
+        reviewed_sha256,
+        execution_class,
     )
 
 
@@ -958,7 +1011,11 @@ def _boot_exec(
         else EXPECTED_PRESENT
     )
     return BootExecCommandPolicy(
-        _reviewed_package_file(path, expected_presence=presence),
+        _reviewed_package_file(
+            path,
+            expected_presence=presence,
+            execution_class=execution_class,
+        ),
         arguments,
         ignore_errors,
         execution_class,
@@ -1395,7 +1452,10 @@ BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES: Mapping[
             "/usr/lib/systemd/system/systemd-pcrextend@.service",
             reviewed_sha256="3bf975fbb9737019c65718d9796cc17c031296b439a412e45f3a92495fb9fc2e",
         ),
-        _reviewed_package_file("/usr/lib/systemd/systemd-pcrextend"),
+        _reviewed_package_file(
+            "/usr/lib/systemd/systemd-pcrextend",
+            execution_class=NATIVE_PACKAGE_BINARY,
+        ),
         NATIVE_PACKAGE_BINARY,
         "systemd-pcrextend@thebitlab-policy.service",
         {
@@ -1414,7 +1474,10 @@ BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES: Mapping[
             "/usr/lib/systemd/system/systemd-sysext@.service",
             reviewed_sha256="d81e6de39167e27385ecfaafb04b2f96f06acb1586d47968ab4887d229b7cbec",
         ),
-        _reviewed_package_file("/usr/bin/systemd-sysext"),
+        _reviewed_package_file(
+            "/usr/bin/systemd-sysext",
+            execution_class=NATIVE_PACKAGE_BINARY,
+        ),
         NATIVE_PACKAGE_BINARY,
         "systemd-sysext@thebitlab-policy.service",
         {
@@ -2267,8 +2330,15 @@ def _verify_modules_enabled_entries() -> Mapping[str, tuple[str, ...]]:
         ):
             raise ActivationError("Bridge modules nginx Ubuntu non canonico")
         _assert_systemd_directory_ancestry(NGINX_MODULES_ROOT)
-        _attest_package_input_files(
-            (*package_configs, *module_binaries), label="nginx dynamic module"
+        _attest_expected_package_files(
+            (
+                *_reviewed_package_policies(
+                    package_configs,
+                    reviewed_sha256=REVIEWED_NGINX_PACKAGE_BEHAVIOR_SHA256,
+                ),
+                *_reviewed_package_executable_policies(module_binaries),
+            ),
+            label="nginx dynamic module",
         )
         # dpkg has no content digest for this symlink. Its trust is deliberately
         # exact target + root metadata + package attribution + final directory closure.
@@ -2278,16 +2348,19 @@ def _verify_modules_enabled_entries() -> Mapping[str, tuple[str, ...]]:
 
 
 def _attest_nginx_package_behavior_files() -> frozenset[Path]:
-    return _attest_package_input_files(
+    attested = _attest_expected_package_files(
         (
-            NGINX_CONFIG,
-            NGINX_MIME_TYPES,
-            NGINX_PACKAGE_UNIT,
-            NGINX_BINARY,
-            START_STOP_DAEMON_BINARY,
+            *_reviewed_package_policies(
+                (NGINX_CONFIG, NGINX_MIME_TYPES, NGINX_PACKAGE_UNIT),
+                reviewed_sha256=REVIEWED_NGINX_PACKAGE_BEHAVIOR_SHA256,
+            ),
+            *_reviewed_package_executable_policies(
+                (NGINX_BINARY, START_STOP_DAEMON_BINARY)
+            ),
         ),
         label="nginx package behavior",
     )
+    return frozenset(attested)
 
 
 def verify_host_configuration_trust(
@@ -3284,6 +3357,12 @@ def _attest_expected_package_files(
         previous = by_path.setdefault(policy.path, policy)
         if previous != policy:
             raise ActivationError(f"Policy identità package contraddittoria: {policy.path}")
+        if policy.expected_presence == EXPECTED_ABSENT and (
+            policy.expected_packages
+            or policy.reviewed_sha256 is not None
+            or policy.execution_class != EXPECTED_ABSENT_EXECUTABLE
+        ):
+            raise ActivationError(f"Expected-absent policy non valida: {policy.path}")
         try:
             policy.path.lstat()
         except FileNotFoundError:
@@ -3298,6 +3377,15 @@ def _attest_expected_package_files(
             raise ActivationError(f"Unexpected presence package path: {policy.path}")
         if policy.expected_presence != EXPECTED_PRESENT or not policy.expected_packages:
             raise ActivationError(f"Presence/package policy non valida: {policy.path}")
+        if policy.execution_class not in {
+            PACKAGE_DATA,
+            NATIVE_PACKAGE_BINARY,
+            INTERPRETED_SCRIPT,
+            REVIEWED_TRAMPOLINE,
+        }:
+            raise ActivationError(f"Unexpected execution class: {policy.path}")
+        if policy.execution_class != PACKAGE_DATA and policy.reviewed_sha256 is None:
+            raise ActivationError(f"Reviewed executable identity assente: {policy.path}")
         present.append(policy)
 
     paths = tuple(policy.path for policy in present)
@@ -3326,7 +3414,18 @@ def _attest_expected_package_files(
             and hashlib.sha256(contents[policy.path]).hexdigest()
             != policy.reviewed_sha256
         ):
-            raise ActivationError(f"Reviewed digest mismatch: {policy.path}")
+            raise ActivationError(
+                f"Reviewed artifact digest mismatch: {policy.path}"
+            )
+        has_shebang = contents[policy.path][:2] == b"#!"
+        if policy.execution_class == NATIVE_PACKAGE_BINARY and has_shebang:
+            raise ActivationError(
+                f"Reviewed native execution class mismatch: {policy.path}"
+            )
+        if policy.execution_class == INTERPRETED_SCRIPT and not has_shebang:
+            raise ActivationError(
+                f"Reviewed interpreted execution class mismatch: {policy.path}"
+            )
 
     owners_after = _dpkg_installed_path_owners(paths)
     for policy in present:
@@ -3349,6 +3448,21 @@ def _reviewed_package_policies(
         _reviewed_package_file(path, reviewed_sha256=digests.get(path))
         for path in dict.fromkeys(paths)
     )
+
+
+def _reviewed_package_executable_policies(
+    paths: Iterable[Path],
+) -> tuple[PackageFileIdentityPolicy, ...]:
+    policies: list[PackageFileIdentityPolicy] = []
+    for path in dict.fromkeys(paths):
+        identity = REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES.get(path)
+        if identity is None:
+            raise ActivationError(f"Reviewed executable identity assente: {path}")
+        _digest, execution_class = identity
+        policies.append(
+            _reviewed_package_file(path, execution_class=execution_class)
+        )
+    return tuple(policies)
 
 
 _USR_MERGE_DIRECTORY_TARGETS: Mapping[Path, str] = {
@@ -3560,7 +3674,7 @@ def _attest_runtime_executable_closure(policy_name: str) -> frozenset[Path]:
             resolved.append((command.name, final, observed))
     finals = tuple(dict.fromkeys(final for _name, final, _observed in resolved))
     _attest_expected_package_files(
-        _reviewed_package_policies(finals),
+        _reviewed_package_executable_policies(finals),
         label=f"runtime executable {policy.name}",
     )
     reviewed_canonical = {path.resolve(strict=True) for path in sources}
@@ -3581,8 +3695,9 @@ def _attest_activator_subprocess_toolchain() -> None:
     bootstrap = _read_stable_trusted_file(DPKG_QUERY_BINARY)
     if hashlib.sha256(bootstrap).hexdigest() != DPKG_QUERY_REVIEWED_SHA256:
         raise ActivationError("dpkg-query activator fuori dalla policy revisionata")
-    _attest_package_input_files(
-        ACTIVATOR_SUBPROCESS_EXECUTABLES, label="activator subprocess"
+    _attest_expected_package_files(
+        _reviewed_package_executable_policies(ACTIVATOR_SUBPROCESS_EXECUTABLES),
+        label="activator subprocess",
     )
 
 
@@ -3667,7 +3782,10 @@ def _attest_apt_executable_hook_policy(entries: Sequence[Path]) -> None:
     # The exact periodic-zero contract makes DPkg::Pre-Install-Pkgs unreachable
     # from apt.systemd.daily. Bind the hook script bytes, but do not pretend its
     # Perl/package-maintainer execution graph is an active timer closure.
-    _attest_package_input_files((preconfigure,), label="APT executable hook")
+    _attest_expected_package_files(
+        _reviewed_package_executable_policies((preconfigure,)),
+        label="APT executable hook",
+    )
     if hashlib.sha256(_read_stable_trusted_file(preconfigure)).hexdigest() != (
         "8f389d049e6b15029ca7311cd449861f47b7e3381f4083646b812380f07f28c9"
     ):
@@ -3999,7 +4117,17 @@ def _attest_systemd_generators() -> None:
             raise ActivationError(f"Generator systemd package non regolare: {path}")
         if os.name != "nt" and (metadata.st_uid != 0 or metadata.st_mode & 0o022):
             raise ActivationError(f"Generator systemd package con metadata unsafe: {path}")
-    _attest_package_input_files(regulars, label="systemd generator executable")
+    expected_regulars = {
+        path
+        for path in REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
+        if any(path == root or root in path.parents for root in roots)
+    }
+    if set(regulars) != expected_regulars:
+        raise ActivationError("Inventario executable generator systemd fuori policy")
+    _attest_expected_package_files(
+        _reviewed_package_executable_policies(regulars),
+        label="systemd generator executable",
+    )
 
 
 def _systemd_command_output(arguments: Sequence[str], *, label: str) -> str:
@@ -4402,8 +4530,18 @@ def _attest_boot_reachable_root_schedulers(
                 "execution_policy": policy.execution_policy,
             }
         )
+    executable_activation_files = activation_files & set(
+        REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
+    )
     _attest_expected_package_files(
-        _reviewed_package_policies(activation_files),
+        (
+            *_reviewed_package_policies(
+                activation_files - executable_activation_files
+            ),
+            *_reviewed_package_executable_policies(
+                executable_activation_files
+            ),
+        ),
         label="root scheduler activation",
     )
     for policy_name in sorted(execution_policies):
@@ -4491,6 +4629,9 @@ def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None
                 )
                 if (
                     template_policy.execution_class != NATIVE_PACKAGE_BINARY
+                    or template_policy.executable.execution_class
+                    != template_policy.execution_class
+                    or template_policy.executable.reviewed_sha256 is None
                     or accept_contents[template_policy.executable.path][:2] == b"#!"
                 ):
                     raise ActivationError(
@@ -4665,6 +4806,8 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
     """Fail closed on local artifacts and unknown root schedulers in the boot surface."""
 
     _attest_activator_subprocess_toolchain()
+    # Generator bytes must be attested before asking PID 1 to execute them.
+    _attest_systemd_generators()
     code, _ = _systemctl_result(["daemon-reload"])
     if code != 0:
         raise ActivationError("systemd daemon-reload fallita durante boot attestation")

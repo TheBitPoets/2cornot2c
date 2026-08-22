@@ -25,6 +25,7 @@ import sys
 import tempfile
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -1325,13 +1326,15 @@ def _build_fixture_deb(
     package: str,
     control_fields: tuple[str, ...] = (),
     authoritative_digests: bool = False,
+    version: str = "1.0",
+    architecture: str = "all",
 ) -> Path:
     control = root / "DEBIAN/control"
     control.parent.mkdir(parents=True, exist_ok=True)
     control.write_text(
         "Package: " + package + "\n"
-        "Version: 1.0\n"
-        "Architecture: all\n"
+        "Version: " + version + "\n"
+        "Architecture: " + architecture + "\n"
         "Maintainer: TheBitLab Integration <noreply@example.invalid>\n"
         "Description: isolated provenance fixture\n"
         + "".join(field + "\n" for field in control_fields),
@@ -1516,6 +1519,407 @@ def _restore_replaced_package_file(
     owners = activation._dpkg_installed_path_owners((path,))[path]
     if owners != frozenset({package}):
         raise RuntimeError(f"Ripristino owner package fallito: {path} => {owners}")
+
+
+@dataclass(frozen=True)
+class _PackageDatabaseSnapshot:
+    package: str
+    status_contents: bytes
+    status_mode: int
+    info_files: dict[Path, tuple[bytes, int]]
+
+
+def _snapshot_package_database(package: str) -> _PackageDatabaseSnapshot:
+    info_files: dict[Path, tuple[bytes, int]] = {}
+    for path in activation.DPKG_INFO_ROOT.glob(f"{package}.*"):
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode):
+            raise RuntimeError(f"Metadata package non regolare: {path}")
+        info_files[path] = (path.read_bytes(), stat.S_IMODE(metadata.st_mode))
+    if not info_files:
+        raise RuntimeError(f"Metadata package baseline assente: {package}")
+    status_metadata = activation.DPKG_STATUS_PATH.stat()
+    return _PackageDatabaseSnapshot(
+        package,
+        activation.DPKG_STATUS_PATH.read_bytes(),
+        stat.S_IMODE(status_metadata.st_mode),
+        info_files,
+    )
+
+
+def _restore_package_database(snapshot: _PackageDatabaseSnapshot) -> None:
+    for path in activation.DPKG_INFO_ROOT.glob(f"{snapshot.package}.*"):
+        path.unlink()
+    for path, (contents, mode) in snapshot.info_files.items():
+        path.write_bytes(contents)
+        path.chmod(mode)
+    activation.DPKG_STATUS_PATH.write_bytes(snapshot.status_contents)
+    activation.DPKG_STATUS_PATH.chmod(snapshot.status_mode)
+    _clear_dpkg_attestation_caches()
+
+
+def _copy_installed_package_tree(package: str, root: Path) -> None:
+    package_list = activation.DPKG_INFO_ROOT / f"{package}.list"
+    for raw_path in package_list.read_text(encoding="utf-8").splitlines():
+        source = Path(raw_path)
+        if source == Path("/"):
+            continue
+        try:
+            metadata = source.lstat()
+        except FileNotFoundError:
+            continue
+        destination = root / source.relative_to("/")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if stat.S_ISLNK(metadata.st_mode):
+            destination.symlink_to(os.readlink(source))
+        elif stat.S_ISDIR(metadata.st_mode):
+            destination.mkdir(exist_ok=True)
+            destination.chmod(stat.S_IMODE(metadata.st_mode))
+        elif stat.S_ISREG(metadata.st_mode):
+            shutil.copy2(source, destination, follow_symlinks=False)
+        else:
+            raise RuntimeError(f"Tipo file package non supportato nella fixture: {source}")
+
+
+def _build_same_identity_package_deb(
+    temporary: Path,
+    *,
+    package: str,
+    replacement: Path,
+    replacement_source: Path,
+    label: str,
+    higher_version: bool = False,
+) -> tuple[Path, str, str]:
+    fields = _run(
+        [
+            "dpkg-query",
+            "--show",
+            "--showformat=${Version}\\n${Architecture}\\n",
+            package,
+        ]
+    ).splitlines()
+    if len(fields) != 2:
+        raise RuntimeError(f"Identity package baseline ambigua: {package}")
+    installed_version, architecture = fields
+    fixture_version = (
+        installed_version + "+thebitlab-h05.1" if higher_version else installed_version
+    )
+    root = temporary / f"same-identity-{label}"
+    _copy_installed_package_tree(package, root)
+    packaged_replacement = root / replacement.relative_to("/")
+    shutil.copy2(replacement_source, packaged_replacement)
+    packaged_replacement.chmod(0o755)
+    conffiles = activation.DPKG_INFO_ROOT / f"{package}.conffiles"
+    if conffiles.exists():
+        control_conffiles = root / "DEBIAN/conffiles"
+        control_conffiles.parent.mkdir(parents=True, exist_ok=True)
+        control_conffiles.write_bytes(conffiles.read_bytes())
+    deb = _build_fixture_deb(
+        root,
+        temporary / f"{package}-{label}.deb",
+        package=package,
+        authoritative_digests=True,
+        version=fixture_version,
+        architecture=architecture,
+    )
+    return deb, installed_version, fixture_version
+
+
+def _exercise_same_identity_package_artifact_rejected(
+    temporary: Path,
+    *,
+    package: str,
+    executable: Path,
+    label: str,
+    gate: Callable[[], object],
+    higher_version: bool = False,
+    exact_unit: str | None = None,
+    prove_service_execution: bool = False,
+) -> None:
+    snapshot = _snapshot_package_database(package)
+    original = executable.read_bytes()
+    original_mode = stat.S_IMODE(executable.stat().st_mode)
+    marker = Path(f"/run/thebitlab-{label}-root-marker")
+    proof_script = Path("/start") if prove_service_execution else temporary / f"{label}.py"
+    if proof_script.exists() or proof_script.is_symlink():
+        raise RuntimeError(f"Proof script fixture già presente: {proof_script}")
+
+    def effective_contract(unit: str) -> tuple[object, ...]:
+        values = activation._systemd_show_properties(
+            (unit,),
+            ("FragmentPath", "DropInPaths", *activation.SYSTEMD_EXEC_SLOTS),
+        )[unit]
+        slots = tuple(
+            (
+                slot,
+                (
+                    activation._parse_systemd_exec(
+                        values[slot], name=f"H-05 {unit} {slot}", allow_missing=True
+                    )
+                    if values[slot]
+                    else ()
+                ),
+            )
+            for slot in activation.SYSTEMD_EXEC_SLOTS
+        )
+        return values["FragmentPath"], values["DropInPaths"], slots
+
+    effective_before = effective_contract(exact_unit) if exact_unit is not None else None
+    deb, installed_version, fixture_version = _build_same_identity_package_deb(
+        temporary,
+        package=package,
+        replacement=executable,
+        replacement_source=Path("/usr/bin/python3.12"),
+        label=label,
+        higher_version=higher_version,
+    )
+    installed = False
+    install_attempted = False
+    try:
+        marker.unlink(missing_ok=True)
+        proof_script.write_text(
+            "from pathlib import Path\n"
+            f"Path({str(marker)!r}).write_text('root')\n",
+            encoding="utf-8",
+        )
+        install_attempted = True
+        _run(["dpkg", "--install", str(deb)])
+        installed = True
+        _clear_dpkg_attestation_caches()
+        actual_version = _run(
+            ["dpkg-query", "--show", "--showformat=${Version}", package]
+        )
+        if actual_version != fixture_version:
+            raise RuntimeError(f"Versione fixture H-05 divergente: {actual_version}")
+        if higher_version:
+            _run(["dpkg", "--compare-versions", fixture_version, "gt", installed_version])
+        elif fixture_version != installed_version:
+            raise RuntimeError("Fixture H-05 non usa la stessa versione installata")
+        manifest_paths = {executable}
+        if effective_before is not None:
+            manifest_paths.add(Path(str(effective_before[0])))
+        owners = activation._dpkg_installed_path_owners(manifest_paths)
+        if any(owners[path] != frozenset({package}) for path in manifest_paths):
+            raise RuntimeError(f"Fixture H-05 owner inatteso: {owners}")
+        if manifest_paths - activation._dpkg_integrity_verified_paths(manifest_paths):
+            raise RuntimeError("Fixture H-05 non ha manifest package valido")
+        if exact_unit is not None:
+            _run(["systemctl", "daemon-reload"])
+            effective_after = effective_contract(exact_unit)
+            if effective_after != effective_before:
+                raise RuntimeError("Fixture H-05 ha alterato fragment/drop-in/effective Exec")
+        if prove_service_execution:
+            assert exact_unit is not None
+            _run(["systemctl", "stop", exact_unit])
+            _run(["systemctl", "start", exact_unit])
+            _run(["systemctl", "stop", exact_unit])
+        else:
+            _run([str(executable), str(proof_script)])
+        if marker.read_text(encoding="utf-8") != "root":
+            raise RuntimeError("Fixture H-05 non prova esecuzione root reale")
+        marker.unlink()
+        try:
+            gate()
+        except activation.ActivationError as exc:
+            if (
+                "Reviewed artifact digest mismatch" not in str(exc)
+                or str(executable) not in str(exc)
+            ):
+                raise RuntimeError(f"H-05 rifiutato per causa estranea: {exc}") from exc
+        else:
+            raise RuntimeError("H-05 same-identity package artifact accettato")
+        if marker.exists():
+            raise RuntimeError("Marker H-05 eseguito durante il gate")
+    finally:
+        if prove_service_execution and installed and exact_unit is not None:
+            subprocess.run(
+                ["systemctl", "stop", exact_unit],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        executable.write_bytes(original)
+        executable.chmod(original_mode)
+        proof_script.unlink(missing_ok=True)
+        marker.unlink(missing_ok=True)
+        if install_attempted:
+            _restore_package_database(snapshot)
+        _clear_dpkg_attestation_caches()
+        if exact_unit is not None:
+            _run(["systemctl", "daemon-reload"])
+    if _run(["dpkg", "--audit"]):
+        raise RuntimeError(f"Database package non pristine dopo fixture H-05 {label}")
+    print(
+        f"EVIDENCE: H-05 {label} package={package} version={fixture_version} "
+        "owner expected + manifest valid + malicious root-capable bytes => "
+        "reviewed artifact digest REJECT; gate marker absent"
+    )
+
+
+def _exercise_h05_same_name_package_regressions(temporary: Path) -> None:
+    baseline_identity = _run(
+        [
+            "dpkg-query",
+            "--show",
+            "--showformat=${Version}\\n${Architecture}\\n",
+            "systemd",
+        ]
+    ).splitlines()
+    if baseline_identity != ["255.4-1ubuntu8.17", "amd64"]:
+        raise RuntimeError(f"Baseline systemd H-05 inattesa: {baseline_identity}")
+    service = "systemd-user-sessions.service"
+    executable = Path("/usr/lib/systemd/systemd-user-sessions")
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
+        package="systemd",
+        executable=executable,
+        label="h05-same-version",
+        gate=activation._attest_systemd_boot_surface,
+        exact_unit=service,
+        prove_service_execution=True,
+    )
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
+        package="systemd",
+        executable=executable,
+        label="h05-higher-version",
+        gate=activation._attest_systemd_boot_surface,
+        higher_version=True,
+        exact_unit=service,
+        prove_service_execution=True,
+    )
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
+        package="systemd",
+        executable=Path("/usr/bin/systemd-sysext"),
+        label="h05-accept-executable",
+        gate=activation._attest_systemd_boot_surface,
+        exact_unit="systemd-sysext@thebitlab-policy.service",
+    )
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
+        package="util-linux",
+        executable=Path("/usr/sbin/fstrim"),
+        label="h05-timer-executable",
+        gate=activation._attest_systemd_boot_surface,
+        exact_unit="fstrim.service",
+    )
+    activation._attest_systemd_boot_surface()
+    print("EVIDENCE: H-05 pristine reviewed executable baseline PASS")
+
+
+def _reviewed_executable_coverage_inventory() -> dict[str, int]:
+    identities = activation.REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
+    direct_commands = tuple(
+        command
+        for policy in activation.BOOT_ROOT_SERVICE_EXECUTION_POLICIES.values()
+        for commands in policy.exec_slots.values()
+        for command in commands
+    )
+    present_commands = tuple(
+        command
+        for command in direct_commands
+        if command.file.expected_presence == activation.EXPECTED_PRESENT
+    )
+    for command in present_commands:
+        if (
+            not command.file.expected_packages
+            or not command.file.reviewed_sha256
+            or command.file.execution_class != command.execution_class
+            or command.file.path not in identities
+        ):
+            raise RuntimeError(f"Direct Exec senza reviewed identity: {command.file.path}")
+    accept_paths = {
+        policy.executable.path
+        for policy in activation.BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES.values()
+    }
+    timer_paths = {
+        Path(executable)
+        for policy in activation.BOOT_REACHABLE_ROOT_TIMER_POLICIES.values()
+        for _slot, executable, _arguments, _ignore in policy.commands
+    }
+    interpreter_paths: set[Path] = set()
+    runtime_paths: set[Path] = set()
+    for policy in activation.EXECUTABLE_CLOSURE_POLICIES.values():
+        for command in policy.interpreters:
+            result = activation._resolve_runtime_command(command, policy.path)
+            if result is not None:
+                interpreter_paths.add(result[0])
+        for command in policy.commands:
+            result = activation._resolve_runtime_command(command, policy.path)
+            if result is not None:
+                runtime_paths.add(result[0])
+        for source, digest in policy.reviewed_sources.items():
+            if not digest or source not in activation.REVIEWED_PACKAGE_IDENTITIES:
+                raise RuntimeError(f"Reviewed source identity incompleta: {source}")
+    required = (
+        {command.file.path for command in present_commands}
+        | accept_paths
+        | timer_paths
+        | interpreter_paths
+        | runtime_paths
+        | set(activation.ACTIVATOR_SUBPROCESS_EXECUTABLES)
+    )
+    missing = required - set(identities)
+    if missing:
+        raise RuntimeError(f"Behavior-bearing executable senza static digest: {min(missing)}")
+    for path, (digest, execution_class) in identities.items():
+        if (
+            len(digest) != 64
+            or execution_class not in {
+                activation.NATIVE_PACKAGE_BINARY,
+                activation.INTERPRETED_SCRIPT,
+            }
+            or path not in activation.REVIEWED_PACKAGE_IDENTITIES
+        ):
+            raise RuntimeError(f"Reviewed executable policy non valida: {path}")
+    return {
+        "services": len(activation.BOOT_ROOT_SERVICE_EXECUTION_POLICIES),
+        "exec_records": len(direct_commands),
+        "expected_present": len(present_commands),
+        "expected_absent": len(direct_commands) - len(present_commands),
+        "reviewed_executables": len(identities),
+        "interpreters": len(interpreter_paths),
+        "runtime_commands": len(runtime_paths),
+        "accept_executables": len(accept_paths),
+        "timer_executables": len(timer_paths),
+    }
+
+
+def _exercise_h05_transitive_execution_regressions(temporary: Path) -> None:
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
+        package="bash",
+        executable=Path("/usr/bin/bash"),
+        label="h05-interpreter",
+        gate=lambda: activation._attest_runtime_executable_closure("e2scrub-all"),
+    )
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
+        package="grep",
+        executable=Path("/usr/bin/grep"),
+        label="h05-runtime-command",
+        gate=lambda: activation._attest_runtime_executable_closure(
+            "apt-systemd-daily"
+        ),
+    )
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
+        package="nginx",
+        executable=Path("/usr/sbin/nginx"),
+        label="h05-nginx-binary",
+        gate=activation._attest_nginx_package_behavior_files,
+    )
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
+        package="systemd",
+        executable=Path(
+            "/usr/lib/systemd/system-generators/systemd-debug-generator"
+        ),
+        label="h05-systemd-generator",
+        gate=activation._attest_systemd_boot_surface,
+    )
 
 
 def _exercise_known_service_package_takeover_rejected(temporary: Path) -> None:
@@ -2613,6 +3017,10 @@ def run(*, ephemeral_host: bool = False) -> None:
                 f"UnitFileState={initial_unit_file_state}; preflight PASS"
             )
             activation._attest_systemd_boot_surface()
+            # H-05 same-name package regressions are first: same version, higher
+            # version, exact service semantics, Accept, timer, then pristine baseline.
+            _exercise_h05_same_name_package_regressions(temporary)
+
             boot_policies = activation.BOOT_ROOT_SERVICE_EXECUTION_POLICIES
             boot_commands = tuple(
                 command
@@ -2631,16 +3039,22 @@ def run(*, ephemeral_host: bool = False) -> None:
                 f"reviewed-dropins={sum(len(policy.dropins) for policy in boot_policies.values())} "
                 f"Exec*={len(boot_commands)} expected-present="
                 f"{len(boot_commands) - absent_commands} expected-absent={absent_commands}; "
-                "all present paths bind package identity and policy-driven execution class"
+                "all present paths bind package identity, static SHA, presence, and class"
             )
             generator_names = _inventory_supported_package_generators()
             print(
                 "EVIDENCE: package-owned enabled unit inventory PASS; Ubuntu generators="
                 + ",".join(generator_names)
             )
+            coverage = _reviewed_executable_coverage_inventory()
+            print(
+                "EVIDENCE: reviewed executable coverage ZERO unpinned "
+                + " ".join(f"{name}={value}" for name, value in coverage.items())
+            )
+            _exercise_h05_transitive_execution_regressions(temporary)
 
-            # Mandatory H-03/H-04 real-package regressions run first and restore a
-            # pristine passing baseline before the wider closed-surface matrix.
+            # Previous real-package regressions remain closed after the static
+            # artifact identity layer.
             _exercise_known_service_package_takeover_rejected(temporary)
             _exercise_missing_boot_executable_fill_rejected(temporary)
             _exercise_removed_boot_service_executable_rejected()

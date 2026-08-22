@@ -10,6 +10,7 @@ import inspect
 import io
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -929,6 +930,48 @@ def _install_nginx_module_provenance_fixture(
     monkeypatch.setattr(
         ubuntu_activation, "_assert_systemd_directory_ancestry", lambda _path: None
     )
+    config_digest = hashlib.sha256(config.read_bytes()).hexdigest()
+    binary_digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "REVIEWED_NGINX_PACKAGE_BEHAVIOR_SHA256",
+        {config: config_digest},
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES",
+        {
+            binary: (
+                binary_digest,
+                ubuntu_activation.NATIVE_PACKAGE_BINARY,
+            )
+        },
+    )
+    package_identities = dict(ubuntu_activation.REVIEWED_PACKAGE_IDENTITIES)
+    package_identities.update(
+        {
+            config: frozenset({"fixture-module"}),
+            binary: frozenset({"fixture-module"}),
+        }
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "REVIEWED_PACKAGE_IDENTITIES",
+        package_identities,
+    )
+    owned = {config, modules_link, binary}
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_installed_path_owners",
+        lambda candidates: {
+            path: (
+                frozenset({"fixture-module"})
+                if path in owned
+                else frozenset()
+            )
+            for path in candidates
+        },
+    )
     _install_synthetic_stable_reader(monkeypatch, {config, binary})
     paths = {
         "enabled": enabled,
@@ -939,7 +982,7 @@ def _install_nginx_module_provenance_fixture(
         "config": config,
         "entry": entry,
     }
-    return paths, {config, modules_link, binary}
+    return paths, owned
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Symlink/mode POSIX richiesti")
@@ -1627,9 +1670,32 @@ def _install_systemd_inventory_fixture(
     )
     for name in ("default.target", "multi-user.target", "normal.service"):
         (package_root / name).write_text("[Unit]\n", encoding="utf-8")
-    (generator_root / "systemd-test-generator").write_text(
-        "#!/bin/sh\nexit 0\n", encoding="utf-8"
+    generator = generator_root / "systemd-test-generator"
+    generator.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    generator_digest = hashlib.sha256(generator.read_bytes()).hexdigest()
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES",
+        {
+            generator: (
+                generator_digest,
+                ubuntu_activation.INTERPRETED_SCRIPT,
+            )
+        },
     )
+    package_identities = dict(ubuntu_activation.REVIEWED_PACKAGE_IDENTITIES)
+    package_identities[generator] = frozenset({"fixture-systemd"})
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "REVIEWED_PACKAGE_IDENTITIES",
+        package_identities,
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_installed_path_owners",
+        lambda paths: {path: frozenset({"fixture-systemd"}) for path in paths},
+    )
+    _install_synthetic_stable_reader(monkeypatch, {generator})
 
     def systemd_path(name: str) -> tuple[Path, ...]:
         if name == ubuntu_activation.SYSTEMD_UNIT_SEARCH_PATH_NAME:
@@ -1688,6 +1754,28 @@ def test_systemd_closed_inventory_accepts_package_owned_enabled_unit(
 ) -> None:
     _install_systemd_inventory_fixture(tmp_path, monkeypatch)
     ubuntu_activation._attest_systemd_boot_surface()
+
+
+def test_systemd_generators_are_attested_before_and_after_daemon_reload(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _install_systemd_inventory_fixture(tmp_path, monkeypatch)
+    original_systemctl = ubuntu_activation._systemctl_result
+    events: list[str] = []
+
+    def systemctl(arguments: list[str]) -> tuple[int, str]:
+        if arguments == ["daemon-reload"]:
+            events.append("reload")
+        return original_systemctl(arguments)
+
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_systemd_generators",
+        lambda: events.append("generator"),
+    )
+    monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
+    ubuntu_activation._attest_systemd_boot_surface()
+    assert events[:3] == ["generator", "reload", "generator"]
 
 
 def test_dpkg_path_attribution_requires_exact_installed_package_status(
@@ -2431,7 +2519,10 @@ def test_systemd_generator_search_path_rejects_unmanaged_local_generator(
     monkeypatch.setattr(
         ubuntu_activation, "_dpkg_integrity_verified_paths", lambda _paths: frozenset()
     )
-    with pytest.raises(ubuntu_activation.ActivationError, match="systemd generator executable"):
+    with pytest.raises(
+        ubuntu_activation.ActivationError,
+        match="Inventario executable generator systemd",
+    ):
         ubuntu_activation._attest_systemd_generators()
 
 
@@ -2536,6 +2627,7 @@ def test_ephemeral_systemd_surface_quarantines_and_exactly_restores_local_genera
     failure = str(captured.value)
     assert (
         "Generator systemd locale" in failure
+        or "Inventario executable generator systemd fuori policy" in failure
         or (
             "Input systemd generator executable non attribuito/integrity-verified" in failure
             and generator.as_posix() in failure
@@ -3712,6 +3804,16 @@ def _install_boot_service_registry(
         executable,
         frozenset() if expected_presence == ubuntu_activation.EXPECTED_ABSENT else frozenset({"fixture-executable"}),
         expected_presence,
+        (
+            None
+            if expected_presence == ubuntu_activation.EXPECTED_ABSENT
+            else hashlib.sha256(executable.read_bytes()).hexdigest()
+        ),
+        (
+            ubuntu_activation.EXPECTED_ABSENT_EXECUTABLE
+            if expected_presence == ubuntu_activation.EXPECTED_ABSENT
+            else execution_class
+        ),
     )
     policy = ubuntu_activation.BootServiceExecutionPolicy(
         service,
@@ -3776,6 +3878,12 @@ def test_accept_socket_template_requires_exact_reviewed_bytes(
     template.write_bytes(b"[Service]\nExecStart=/usr/lib/systemd/fixture\n")
     executable.write_bytes(b"ELF fixture\n")
     digest = hashlib.sha256(template.read_bytes()).hexdigest()
+    executable_policy = ubuntu_activation.PackageFileIdentityPolicy(
+        executable,
+        frozenset({"fixture-accept"}),
+        reviewed_sha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
+        execution_class=ubuntu_activation.NATIVE_PACKAGE_BINARY,
+    )
     monkeypatch.setattr(
         ubuntu_activation,
         "BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES",
@@ -3784,17 +3892,13 @@ def test_accept_socket_template_requires_exact_reviewed_bytes(
                 ubuntu_activation.PackageFileIdentityPolicy(
                     template, frozenset({"fixture-accept"}), reviewed_sha256=digest
                 ),
-                ubuntu_activation.PackageFileIdentityPolicy(
-                    executable, frozenset({"fixture-accept"})
-                ),
+                executable_policy,
                 ubuntu_activation.NATIVE_PACKAGE_BINARY,
                 "fixture@thebitlab-policy.service",
                 {
                     "ExecStart": (
                         ubuntu_activation.BootExecCommandPolicy(
-                            ubuntu_activation.PackageFileIdentityPolicy(
-                                executable, frozenset({"fixture-accept"})
-                            ),
+                            executable_policy,
                             (),
                             False,
                             ubuntu_activation.NATIVE_PACKAGE_BINARY,
@@ -3847,7 +3951,10 @@ def test_accept_socket_template_requires_exact_reviewed_bytes(
     _install_synthetic_stable_reader(monkeypatch, {template, executable})
     ubuntu_activation._attest_boot_reachable_service_execution(frozenset({socket_unit}))
     template.write_bytes(template.read_bytes() + b"# changed execution\n")
-    with pytest.raises(ubuntu_activation.ActivationError, match="Reviewed digest mismatch"):
+    with pytest.raises(
+        ubuntu_activation.ActivationError,
+        match="Reviewed artifact digest mismatch",
+    ):
         ubuntu_activation._attest_boot_reachable_service_execution(frozenset({socket_unit}))
 
 
@@ -3981,7 +4088,8 @@ def test_known_boot_service_rejects_unknown_interpreted_source(
     )
     _install_expected_package_fixture(monkeypatch, fragment, executable)
     with pytest.raises(
-        ubuntu_activation.ActivationError, match="Native execution identity ha acquisito shebang"
+        ubuntu_activation.ActivationError,
+        match="Reviewed native execution class mismatch",
     ):
         ubuntu_activation._attest_boot_reachable_service_execution(frozenset({service}))
 
@@ -4028,7 +4136,10 @@ def test_expected_package_file_presence_identity_and_digest_matrix(
     authoritative.add(path)
 
     path.write_bytes(b"ELF changed reviewed bytes\n")
-    with pytest.raises(ubuntu_activation.ActivationError, match="Reviewed digest mismatch"):
+    with pytest.raises(
+        ubuntu_activation.ActivationError,
+        match="Reviewed artifact digest mismatch",
+    ):
         ubuntu_activation._attest_expected_package_files((policy,), label="fixture")
     path.unlink()
     with pytest.raises(
@@ -4037,7 +4148,10 @@ def test_expected_package_file_presence_identity_and_digest_matrix(
         ubuntu_activation._attest_expected_package_files((policy,), label="fixture")
 
     absent = ubuntu_activation.PackageFileIdentityPolicy(
-        path, frozenset(), ubuntu_activation.EXPECTED_ABSENT
+        path,
+        frozenset(),
+        ubuntu_activation.EXPECTED_ABSENT,
+        execution_class=ubuntu_activation.EXPECTED_ABSENT_EXECUTABLE,
     )
     assert ubuntu_activation._attest_expected_package_files(
         (absent,), label="fixture"
@@ -4123,6 +4237,26 @@ def test_reviewed_execution_registries_have_no_implicit_package_or_presence_poli
     policies = ubuntu_activation.BOOT_ROOT_SERVICE_EXECUTION_POLICIES
     assert len(policies) == 44
     package_paths = ubuntu_activation.REVIEWED_PACKAGE_IDENTITIES
+    executable_identities = ubuntu_activation.REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
+    assert len(executable_identities) == 108
+    assert sum(
+        execution_class == ubuntu_activation.NATIVE_PACKAGE_BINARY
+        for _digest, execution_class in executable_identities.values()
+    ) == 98
+    assert sum(
+        execution_class == ubuntu_activation.INTERPRETED_SCRIPT
+        for _digest, execution_class in executable_identities.values()
+    ) == 10
+    assert set(executable_identities) <= set(package_paths)
+    assert all(
+        re.fullmatch(r"[0-9a-f]{64}", digest)
+        and execution_class
+        in {
+            ubuntu_activation.NATIVE_PACKAGE_BINARY,
+            ubuntu_activation.INTERPRETED_SCRIPT,
+        }
+        for digest, execution_class in executable_identities.values()
+    )
     for service, policy in policies.items():
         assert policy.unit_name == service
         if policy.managed_nonroot:
@@ -4146,6 +4280,8 @@ def test_reviewed_execution_registries_have_no_implicit_package_or_presence_poli
                 else:
                     assert command.file.expected_presence == ubuntu_activation.EXPECTED_PRESENT
                     assert command.file.expected_packages
+                    assert command.file.reviewed_sha256
+                    assert command.file.execution_class == command.execution_class
                     assert command.file.path in package_paths
                     assert command.execution_class in {
                         ubuntu_activation.NATIVE_PACKAGE_BINARY,
@@ -4157,6 +4293,8 @@ def test_reviewed_execution_registries_have_no_implicit_package_or_presence_poli
         assert policy.template.expected_packages
         assert policy.template.reviewed_sha256
         assert policy.executable.expected_packages
+        assert policy.executable.reviewed_sha256
+        assert policy.executable.execution_class == policy.execution_class
         assert policy.execution_class == ubuntu_activation.NATIVE_PACKAGE_BINARY
         assert policy.probe_instance.endswith("@thebitlab-policy.service")
         assert policy.exec_slots
@@ -4166,7 +4304,9 @@ def test_reviewed_execution_registries_have_no_implicit_package_or_presence_poli
         for path in (timer.timer_fragment, timer.service_fragment, *timer.support_files):
             assert path in package_paths
         for _slot, executable, _arguments, _ignore in timer.commands:
-            assert Path(executable) in package_paths
+            path = Path(executable)
+            assert path in package_paths
+            assert path in ubuntu_activation.REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
     for closure in ubuntu_activation.EXECUTABLE_CLOSURE_POLICIES.values():
         assert set(closure.reviewed_sources) <= set(package_paths)
         for command in (*closure.interpreters, *closure.commands):
@@ -4175,7 +4315,31 @@ def test_reviewed_execution_registries_have_no_implicit_package_or_presence_poli
                 aliases = set(ubuntu_activation._runtime_lexical_aliases(expected))
                 if expected.as_posix().startswith(("/bin/", "/sbin/")):
                     aliases.add(Path("/usr" + expected.as_posix()))
-                assert aliases & set(package_paths)
+                reviewed_aliases = aliases & set(package_paths)
+                assert reviewed_aliases
+                assert reviewed_aliases & set(
+                    ubuntu_activation.REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
+                )
+
+    for path in ubuntu_activation.ACTIVATOR_SUBPROCESS_EXECUTABLES:
+        assert path in package_paths
+        assert path in ubuntu_activation.REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
+    generator_root = Path("/usr/lib/systemd/system-generators")
+    reviewed_generators = {
+        path
+        for path in ubuntu_activation.REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
+        if generator_root in path.parents
+    }
+    assert len(reviewed_generators) == 12
+    assert reviewed_generators <= set(package_paths)
+    for path in (
+        ubuntu_activation.NGINX_BINARY,
+        ubuntu_activation.START_STOP_DAEMON_BINARY,
+        Path("/usr/lib/nginx/modules/ngx_http_geoip2_module.so"),
+        Path("/usr/lib/nginx/modules/ngx_stream_module.so"),
+    ):
+        assert path in package_paths
+        assert path in ubuntu_activation.REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
 
 
 def test_modified_sysv_and_generator_bytes_are_not_package_trust(
@@ -4233,14 +4397,49 @@ def test_modified_package_nginx_conf_fails_byte_integrity(
     )
     monkeypatch.setattr(
         ubuntu_activation,
+        "REVIEWED_NGINX_PACKAGE_BEHAVIOR_SHA256",
+        {
+            path: hashlib.sha256(canonical[path]).hexdigest()
+            for path in (paths["config"], paths["mime"], paths["unit"])
+        },
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES",
+        {
+            path: (
+                hashlib.sha256(canonical[path]).hexdigest(),
+                ubuntu_activation.NATIVE_PACKAGE_BINARY,
+            )
+            for path in (paths["binary"], paths["start_stop_daemon"])
+        },
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "REVIEWED_PACKAGE_IDENTITIES",
+        {path: frozenset({"fixture-nginx"}) for path in paths.values()},
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_dpkg_installed_path_owners",
+        lambda candidates: {
+            path: frozenset({"fixture-nginx"}) for path in candidates
+        },
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
         "_dpkg_integrity_verified_paths",
         lambda candidates: frozenset(
             path for path in candidates if path.read_bytes() == canonical[path]
         ),
     )
+    _install_synthetic_stable_reader(monkeypatch, set(paths.values()))
     assert ubuntu_activation._attest_nginx_package_behavior_files()
     paths["config"].write_bytes(canonical[paths["config"]] + b"load_module local.so;\n")
-    with pytest.raises(ubuntu_activation.ActivationError, match="nginx package behavior"):
+    with pytest.raises(
+        ubuntu_activation.ActivationError,
+        match="Package authoritative digest mismatch",
+    ):
         ubuntu_activation._attest_nginx_package_behavior_files()
 
 
@@ -4261,7 +4460,10 @@ def test_modified_systemd_generator_executable_fails_byte_integrity(
     )
     ubuntu_activation._attest_systemd_generators()
     generator.write_bytes(canonical + b"# modified\n")
-    with pytest.raises(ubuntu_activation.ActivationError, match="systemd generator executable"):
+    with pytest.raises(
+        ubuntu_activation.ActivationError,
+        match="Package authoritative digest mismatch",
+    ):
         ubuntu_activation._attest_systemd_generators()
 
 

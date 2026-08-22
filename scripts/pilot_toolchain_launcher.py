@@ -38,6 +38,7 @@ EXPECTED_FILES = frozenset(
         "scripts/nginx_config_ast.py",
         "scripts/pilot_environment.py",
         ACTIVATOR,
+        "scripts/pilot_ubuntu_reviewed_executables.py",
         "scripts/validate_pilot_deployment.py",
         "schemas/pilot-deployment.schema.json",
         "schemas/pilot-deployment-v1-legacy.schema.json",
