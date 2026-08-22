@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thebitlab.dev/schemas/pilot-deployment-v1-legacy.schema.json",
+  "title": "TheBitLab legacy v1 migration-only deployment manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "deployment_id", "release", "service", "data", "origin", "features"],
+  "properties": {
+    "$schema": {"type": "string", "minLength": 1},
+    "schema_version": {"const": "thebitlab.pilot-deployment.v1"},
+    "deployment_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,62}$"},
+    "release": {
+      "type": "object", "additionalProperties": false,
+      "required": ["commit", "repository_root", "python_executable"],
+      "properties": {
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "repository_root": {"$ref": "#/$defs/absolutePath"},
+        "python_executable": {"$ref": "#/$defs/absolutePath"}
+      }
+    },
+    "service": {
+      "type": "object", "additionalProperties": false,
+      "required": ["user", "group", "home_directory", "bind_host", "port", "environment_file", "lock_directory"],
+      "properties": {
+        "user": {"$ref": "#/$defs/account"}, "group": {"$ref": "#/$defs/account"},
+        "home_directory": {"$ref": "#/$defs/absolutePath"}, "bind_host": {"const": "127.0.0.1"},
+        "port": {"type": "integer", "minimum": 1024, "maximum": 65535},
+        "environment_file": {"$ref": "#/$defs/absolutePath"}, "lock_directory": {"const": "/run/thebitlab"}
+      }
+    },
+    "data": {
+      "type": "object", "additionalProperties": false, "required": ["root", "auth_db_path"],
+      "properties": {
+        "root": {"$ref": "#/$defs/absolutePath"},
+        "auth_db_path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)[.][.](?:/|$))[A-Za-z0-9._/-]+$"}
+      }
+    },
+    "origin": {
+      "type": "object", "additionalProperties": false,
+      "required": ["url", "exposure", "allowed_proxy_cidrs", "tls_certificate_file", "tls_private_key_file", "access_log", "error_log"],
+      "properties": {
+        "url": {"type": "string", "maxLength": 253}, "exposure": {"enum": ["edge_only", "public"]},
+        "allowed_proxy_cidrs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 3, "maxLength": 64}},
+        "tls_certificate_file": {"$ref": "#/$defs/absolutePath"}, "tls_private_key_file": {"$ref": "#/$defs/absolutePath"},
+        "access_log": {"const": "/var/log/nginx/thebitlab-access.log"},
+        "error_log": {"const": "/var/log/nginx/thebitlab-error.log"}
+      },
+      "allOf": [{"if": {"properties": {"exposure": {"const": "edge_only"}}}, "then": {"properties": {"allowed_proxy_cidrs": {"minItems": 1}}}, "else": {"properties": {"allowed_proxy_cidrs": {"maxItems": 0}}}}]
+    },
+    "features": {
+      "type": "object", "additionalProperties": false,
+      "required": ["google_auth", "github_oauth", "github_app_token_runtime"],
+      "properties": {"google_auth": {"const": true}, "github_oauth": {"type": "boolean"}, "github_app_token_runtime": {"type": "boolean"}}
+    }
+  },
+  "$defs": {
+    "absolutePath": {"type": "string", "pattern": "^/(?!.*(?:^|/)[.][.](?:/|$))[A-Za-z0-9._/@+:-]+(?:/[A-Za-z0-9._@+:-]+)*$"},
+    "account": {"type": "string", "pattern": "^[a-z_][a-z0-9_-]{0,30}$"}
+  }
+}

@@ -1,0 +1,3 @@
+# Main-context only: process/cycle diagnostics never receive pilot request context.
+# All pilot HTTP servers override this destination with a non-persistent sink.
+error_log @@ERROR_LOG@@ notice;

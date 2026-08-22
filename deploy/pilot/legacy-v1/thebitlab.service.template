@@ -12,7 +12,7 @@ Type=simple
 User=@@SERVICE_USER@@
 Group=@@SERVICE_GROUP@@
 WorkingDirectory=@@REPOSITORY_ROOT@@
-RuntimeDirectory=thebitlab/app
+RuntimeDirectory=thebitlab
 RuntimeDirectoryMode=0700
 UMask=0077
 

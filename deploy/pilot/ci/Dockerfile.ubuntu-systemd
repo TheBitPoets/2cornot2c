@@ -1,0 +1,36 @@
+# CI-only effective Ubuntu deployment integration environment.
+# Ubuntu 24.04 (Noble), pinned to the reviewed official multi-architecture digest.
+FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea
+
+ENV container=docker
+
+# The official OCI base adds Docker-only APT snippets; remove their exact
+# unmanaged paths so the supported pilot config inventory is package-owned and closed.
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        acl \
+        bash \
+        dbus \
+        libnginx-mod-http-geoip2 \
+        logrotate \
+        nginx \
+        openssl \
+        procps \
+        python3 \
+        python3-jsonschema \
+        systemd \
+        systemd-sysv \
+        wget \
+    && systemctl disable nginx.service \
+    && apt-get clean \
+    && rm -f \
+        /etc/apt/apt.conf.d/docker-autoremove-suggests \
+        /etc/apt/apt.conf.d/docker-clean \
+        /etc/apt/apt.conf.d/docker-disable-periodic-update \
+        /etc/apt/apt.conf.d/docker-gzip-indexes \
+        /etc/apt/apt.conf.d/docker-no-languages \
+        /usr/sbin/policy-rc.d \
+    && rm -rf /var/lib/apt/lists/*
+
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]
