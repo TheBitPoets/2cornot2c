@@ -33,6 +33,7 @@ class AssignmentPlan:
     source_name: str
     student_assets: list[dict[str, Any]]
     teacher_assets: list[dict[str, Any]]
+    copy_plan: list[dict[str, str]]
     targets: list[dict[str, Any]]
     blocked_targets: list[str]
     overwrite: bool
@@ -53,6 +54,7 @@ class AssignmentPlan:
             "source_name": self.source_name,
             "student_assets": self.student_assets,
             "teacher_assets": self.teacher_assets,
+            "copy_plan": self.copy_plan,
             "targets": self.targets,
             "blocked_targets": self.blocked_targets,
             "overwrite": self.overwrite,
@@ -160,7 +162,14 @@ def build_assignment_plan(
         )
     )
     create_submission_scaffold.validate_thebitlab_ref(thebitlab_ref)
-    create_submission_scaffold.student_asset_copy_plan(activity_path, activity)
+    asset_plan = create_submission_scaffold.student_asset_copy_plan(activity_path, activity)
+    copy_plan = [
+        {
+            "source": source_path.relative_to(activity_path.parent).as_posix(),
+            "target": target_path.as_posix(),
+        }
+        for source_path, target_path in asset_plan
+    ]
     blocked_targets = [
         str(target)
         for target in normalized_targets
@@ -175,6 +184,7 @@ def build_assignment_plan(
         source_name=selected_source_name,
         student_assets=student_assets,
         teacher_assets=teacher_assets,
+        copy_plan=copy_plan,
         targets=[
             {
                 "target": str(target),
