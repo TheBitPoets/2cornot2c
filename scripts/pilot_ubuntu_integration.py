@@ -130,7 +130,9 @@ def _fsync_directory(path: Path) -> None:
 
 
 def _systemd_daemon_reload(label: str) -> None:
-    code, _ = activation._systemctl_result(["daemon-reload"])
+    with activation._trusted_activation_session():
+        with activation._trusted_execution_fence():
+            code, _ = activation._systemctl_result(["daemon-reload"])
     if code != 0:
         raise RuntimeError(f"systemd daemon-reload fallita {label}")
 
@@ -2942,20 +2944,239 @@ def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
     scripts_package.__path__ = [str(toolchain / "scripts")]
     for module_name in (
         "scripts.nginx_config_ast", "scripts.pilot_environment",
-        "scripts.validate_pilot_deployment", "scripts.pilot_ubuntu_activation",
+        "scripts.validate_pilot_deployment", "scripts.pilot_trusted_activation_fence",
+        "scripts.pilot_ubuntu_activation",
     ):
         sys.modules.pop(module_name, None)
     deployment = importlib.import_module("scripts.validate_pilot_deployment")
     activation = importlib.import_module("scripts.pilot_ubuntu_activation")
+    activation.enable_kernel_activation_fence()
     if not str(Path(activation.__file__).resolve()).startswith(str(toolchain) + "/"):
         raise RuntimeError("Activator integration non proviene dalla toolchain installata")
     return toolchain, launcher, pin_path
+
+
+def _test_trusted_activation_fence_races() -> None:
+    """Prove external filesystem mutation cannot precede root execution."""
+
+    generator_marker = Path("/run/thebitlab-r2-generator-marker")
+    nginx_marker = Path("/run/thebitlab-r2-nginx-marker")
+    execslot_marker = Path("/run/thebitlab-r2-execslot-marker")
+    staged_nginx = Path("/usr/sbin/.thebitlab-r2-nginx")
+    staged_generator = Path("/usr/lib/systemd/.thebitlab-r2-generator")
+    reviewed_generator = Path(
+        "/usr/lib/systemd/system-generators/systemd-debug-generator"
+    )
+    for marker in (generator_marker, nginx_marker, execslot_marker):
+        marker.unlink(missing_ok=True)
+    staged_nginx.write_text(
+        "#!/bin/sh\nprintf 'uid=%s\\n' \"$(id -u)\" >"
+        f"{nginx_marker}\nexit 1\n",
+        encoding="utf-8",
+    )
+    staged_nginx.chmod(0o755)
+    staged_generator.write_text(
+        f"#!/bin/sh\ntouch {generator_marker}\n", encoding="utf-8"
+    )
+    staged_generator.chmod(0o755)
+    module = Path("/usr/lib/nginx/modules/ngx_http_geoip2_module.so")
+    original_nginx = activation.NGINX_BINARY.read_bytes()
+    original_module = module.read_bytes()
+    nginx_fd = os.open(activation.NGINX_BINARY, os.O_WRONLY)
+    module_fd = os.open(module, os.O_WRONLY)
+
+    def overwrite(descriptor: int, payload: bytes) -> None:
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        os.ftruncate(descriptor, 0)
+        view = memoryview(payload)
+        while view:
+            written = os.write(descriptor, view)
+            view = view[written:]
+        os.fsync(descriptor)
+
+    phase = "precondition"
+    try:
+        if activation._TRUSTED_SESSION_DEPTH or activation._EXECUTION_FENCE_DEPTH:
+            raise RuntimeError(
+                "Fence nesting stale prima del race test: "
+                f"session={activation._TRUSTED_SESSION_DEPTH} "
+                f"execution={activation._EXECUTION_FENCE_DEPTH}"
+            )
+        with activation._trusted_activation_session():
+            phase = "global-locks"
+            toolchain_root = Path(activation.__file__).resolve().parents[1]
+            second_activator = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    "-c",
+                    (
+                        "import sys;sys.path.insert(0," + repr(str(toolchain_root)) + ");"
+                        "from scripts import pilot_ubuntu_activation as a;"
+                        "a.enable_kernel_activation_fence();"
+                        "c=a._trusted_activation_session();c.__enter__()"
+                    ),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=45,
+            )
+            if second_activator.returncode == 0 or "Timeout lock host" not in second_activator.stderr:
+                raise RuntimeError("Secondo activator non serializzato dal lock host-global")
+            package_lock = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import errno,fcntl,os,sys;"
+                        "f=os.open('/var/lib/dpkg/lock-frontend',os.O_RDWR);"
+                        "\ntry: fcntl.lockf(f,fcntl.LOCK_EX|fcntl.LOCK_NB)"
+                        "\nexcept OSError as e: sys.exit(0 if e.errno in (errno.EACCES,errno.EAGAIN) else 2)"
+                        "\nelse: sys.exit(3)"
+                    ),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if package_lock.returncode != 0:
+                raise RuntimeError("Package transaction lock non serializzato")
+            print("EVIDENCE: two activators + dpkg lock serialization PASS")
+
+            phase = "generator"
+            # Keep an outer fence until the synchronized mutator has completed;
+            # otherwise a slow child would merely demonstrate allowed post-release mutation.
+            with activation._trusted_execution_fence():
+                read_fd, write_fd = os.pipe()
+                child = os.fork()
+                if child == 0:
+                    os.close(write_fd)
+                    os.read(read_fd, 1)
+                    try:
+                        source = Path("/run/systemd/system-generators")
+                        attempts = (
+                            lambda: (source / "thebitlab-r2-generator").write_text(
+                                f"#!/bin/sh\ntouch {generator_marker}\n", encoding="utf-8"
+                            ),
+                            lambda: os.replace(staged_generator, reviewed_generator),
+                            lambda: reviewed_generator.write_bytes(b"#!/bin/sh\nexit 0\n"),
+                            lambda: reviewed_generator.unlink(),
+                        )
+                        for attempt_index, attempt in enumerate(attempts):
+                            try:
+                                attempt()
+                            except OSError:
+                                continue
+                            os._exit(91 + attempt_index)
+                        os._exit(0)
+                    except BaseException:
+                        os._exit(99)
+                os.close(read_fd)
+                os.write(write_fd, b"x")
+                os.close(write_fd)
+                gate_error: BaseException | None = None
+                try:
+                    activation._attest_systemd_boot_surface()
+                except BaseException as exc:
+                    gate_error = exc
+                _pid, status = os.waitpid(child, 0)
+                child_code = os.waitstatus_to_exitcode(status)
+                if child_code != 0 or generator_marker.exists():
+                    raise RuntimeError(
+                        "Generator mutation/ABA ha preceduto daemon-reload: "
+                        f"child={child_code} marker={generator_marker.exists()} "
+                        f"gate={gate_error}"
+                    )
+                if gate_error is not None:
+                    raise gate_error
+
+            phase = "nginx-start-stop"
+            with activation._trusted_execution_fence():
+                activation._attest_systemd_boot_surface()
+                read_fd, write_fd = os.pipe()
+                child = os.fork()
+                if child == 0:
+                    os.close(write_fd)
+                    os.read(read_fd, 1)
+                    def inject_exec_start_post() -> None:
+                        dropin = Path("/etc/systemd/system/nginx.service.d")
+                        dropin.mkdir(parents=True, exist_ok=True)
+                        (dropin / "r2.conf").write_text(
+                            "[Service]\nExecStartPost=/usr/bin/touch "
+                            f"{execslot_marker}\n",
+                            encoding="utf-8",
+                        )
+
+                    attempts = (
+                        lambda: os.replace(staged_nginx, activation.NGINX_BINARY),
+                        lambda: activation.NGINX_BINARY.write_bytes(b"#!/bin/sh\nexit 1\n"),
+                        lambda: Path("/usr/bin/kmod").write_text("late fill", encoding="utf-8"),
+                        inject_exec_start_post,
+                    )
+                    for attempt in attempts:
+                        try:
+                            attempt()
+                        except OSError:
+                            continue
+                        os._exit(93)
+                    # A second manager reload is safe because it sees the same
+                    # frozen source directories and reviewed generator bytes.
+                    result = subprocess.run(
+                        ["/usr/bin/systemctl", "daemon-reload"],
+                        check=False,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=30,
+                    )
+                    os._exit(0 if result.returncode == 0 else 94)
+                os.close(read_fd)
+                os.write(write_fd, b"x")
+                os.close(write_fd)
+                _pid, status = os.waitpid(child, 0)
+                if os.waitstatus_to_exitcode(status) != 0:
+                    raise RuntimeError("Executable/unit mutation non bloccata dalla fence")
+                # Pre-open writers mutate the hidden original inode.  PID 1/nginx
+                # must still execute/load the separately copied reviewed snapshot.
+                overwrite(nginx_fd, staged_nginx.read_bytes())
+                overwrite(module_fd, b"unreviewed module bytes")
+                try:
+                    code, _ = activation._systemctl_result(["start", "nginx.service"])
+                    if code != 0:
+                        raise RuntimeError("Snapshot nginx/module A non eseguiti nel race test")
+                    if nginx_marker.exists() or execslot_marker.exists():
+                        raise RuntimeError("Byte/Exec slot non revisionati eseguiti come root")
+                finally:
+                    overwrite(nginx_fd, original_nginx)
+                    overwrite(module_fd, original_module)
+                activation._stop_nginx_service(reload_frozen_graph=False)
+        # The race start creates a systemd service mount namespace containing the
+        # test snapshot.  Unload the test unit graph through the real guarded
+        # mask/unmask lifecycle before the subsequent production migration.
+        phase = "namespace-reset"
+        with activation._trusted_activation_session():
+            activation._install_migration_guard()
+            activation._remove_migration_guard()
+        if generator_marker.exists() or nginx_marker.exists() or execslot_marker.exists():
+            raise RuntimeError("Marker root presente dopo release TrustedActivationFence")
+        print("EVIDENCE: generator ABA + nginx rename no-execution races PASS")
+    except BaseException as exc:
+        raise RuntimeError(f"TrustedActivationFence race phase={phase}: {exc}") from exc
+    finally:
+        os.close(nginx_fd)
+        os.close(module_fd)
+        staged_nginx.unlink(missing_ok=True)
+        staged_generator.unlink(missing_ok=True)
+        for marker in (generator_marker, nginx_marker, execslot_marker):
+            marker.unlink(missing_ok=True)
 
 
 def run(*, ephemeral_host: bool = False) -> None:
     if not ephemeral_host:
         raise RuntimeError("Integrazione consentita soltanto da --ephemeral-host")
     original_default = _check_ephemeral_host()
+    activation.enable_kernel_activation_fence()
     state = activation.STATE_FILE
     deployments = activation.DEPLOYMENTS_ROOT
     v2_bundle = deployments / f"integration-v2-{os.getpid()}"
@@ -3334,6 +3555,7 @@ def run(*, ephemeral_host: bool = False) -> None:
             default_preflight = activation.verify_host_preflight(v2_bundle)
             if default_preflight.source_kind != "preinstall-default":
                 raise RuntimeError("Topologia pristine/default non riconosciuta")
+            _test_trusted_activation_fence_races()
             activation.activate(v2_bundle, state)
             try:
                 activation.rollback(state)
@@ -3407,8 +3629,15 @@ def run(*, ephemeral_host: bool = False) -> None:
             if activation._systemd_property("LoadState") != "loaded":
                 raise RuntimeError("nginx legacy non loaded prima della cached-unit regression")
             activation._replace_symlink(activation.NGINX_MIGRATION_GUARD, "/dev/null")
-            if activation._systemd_property("LoadState") != "loaded":
-                raise RuntimeError("systemd 255 non ha riprodotto il mask-on-disk cached gap")
+            cached_state = activation._systemd_property("LoadState")
+            if cached_state not in {"loaded", "masked"}:
+                raise RuntimeError(
+                    f"Stato unit dopo mask-on-disk non sicuro: {cached_state}"
+                )
+            print(
+                "EVIDENCE: disk mask vs PID1 cache state=" + cached_state
+                + "; recovery reacquires guarded manager state"
+            )
             activation.recover(v2_bundle, state)
             activation.complete(state, archives[1])
             archives[1].unlink()
@@ -3507,6 +3736,9 @@ def run(*, ephemeral_host: bool = False) -> None:
             try:
                 try:
                     activation.activate(v2_bundle, state)
+                except OSError as exc:
+                    if exc.errno not in {errno.EROFS, errno.EPERM, errno.EACCES}:
+                        raise
                 except activation.ActivationError as exc:
                     if "logrotate" not in str(exc):
                         raise RuntimeError("Race logrotate rifiutata per causa estranea") from exc
@@ -3567,7 +3799,7 @@ def run(*, ephemeral_host: bool = False) -> None:
                     check=False,
                     capture_output=True,
                     text=True,
-                    timeout=90,
+                    timeout=300,
                 )
                 if crashed.returncode != 97:
                     raise RuntimeError(

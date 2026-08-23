@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import errno
+import functools
 import hashlib
 import ipaddress
 import json
@@ -33,6 +35,12 @@ if str(ROOT) not in sys.path:
 from scripts import validate_pilot_deployment as deployment  # noqa: E402
 from scripts.pilot_ubuntu_reviewed_executables import (  # noqa: E402
     REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES,
+)
+from scripts.pilot_trusted_activation_fence import (  # noqa: E402
+    SnapshotMountFence,
+    TrustedActivationFenceError,
+    host_lock_and_recovery,
+    source_path_had_multiple_links,
 )
 from scripts.nginx_config_ast import (  # noqa: E402
     Directive,
@@ -148,6 +156,50 @@ CANONICAL_NGINX_PORTS = frozenset({80, 443})
 ENABLED_NGINX_UNIT_FILE_STATES = frozenset({"enabled"})
 DISABLED_NGINX_UNIT_FILE_STATES = frozenset({"disabled"})
 PREFLIGHT_NGINX_UNIT_FILE_STATES = frozenset({"enabled", "disabled"})
+MASKED_NGINX_UNIT_FILE_STATES = frozenset({"masked"})
+EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH = (
+    Path("/run/systemd/system-generators"),
+    Path("/etc/systemd/system-generators"),
+    Path("/usr/local/lib/systemd/system-generators"),
+    Path("/usr/lib/systemd/system-generators"),
+)
+EXPECTED_SYSTEMD_UNIT_SEARCH_PATH = (
+    Path("/etc/systemd/system.control"),
+    Path("/run/systemd/system.control"),
+    Path("/run/systemd/transient"),
+    Path("/run/systemd/generator.early"),
+    Path("/etc/systemd/system"),
+    Path("/etc/systemd/system.attached"),
+    Path("/run/systemd/system"),
+    Path("/run/systemd/system.attached"),
+    Path("/run/systemd/generator"),
+    Path("/usr/local/lib/systemd/system"),
+    Path("/usr/lib/systemd/system"),
+    Path("/run/systemd/generator.late"),
+)
+SYSTEMCTL_EXECUTION_ACTIONS = frozenset(
+    {
+        "daemon-reload", "start", "stop", "restart", "reload",
+        "try-restart", "reload-or-restart", "reload-or-try-restart",
+    }
+)
+FROZEN_SYSTEMD_RUNTIME_SOURCE_DIRECTORIES = (
+    Path("/run/systemd/system-generators"),
+    Path("/run/systemd/system.control"),
+    Path("/run/systemd/transient"),
+    Path("/run/systemd/system"),
+    Path("/run/systemd/system.attached"),
+)
+BASE_FENCE_DIRECTORIES = (
+    Path("/usr/bin"),
+    Path("/usr/sbin"),
+    Path("/usr/local"),
+    Path("/usr/lib/systemd"),
+    Path("/usr/lib/nginx"),
+    Path("/usr/share/nginx"),
+    Path("/var/lib/dpkg/info"),
+)
+BASE_FENCE_FILES = (DPKG_STATUS_PATH,)
 INTEGRATION_LINKS = {
     PROCESS_LINK: "/etc/thebitlab/current/nginx/thebitlab-process-error-log.conf",
     FORMAT_LINK: "/etc/thebitlab/current/nginx/thebitlab-log-format.conf",
@@ -178,6 +230,133 @@ _ORIGIN_HOST_RE = re.compile(
 
 class ActivationError(RuntimeError):
     """The host cannot safely activate, migrate, or restore the candidate."""
+
+
+_KERNEL_FENCE_ENABLED = False
+_TRUSTED_SESSION_DEPTH = 0
+_EXECUTION_FENCE_DEPTH = 0
+_TRUSTED_BASE_FENCE: SnapshotMountFence | None = None
+_ACTIVE_EXECUTION_FENCE: SnapshotMountFence | None = None
+_TRUSTED_SESSION_OWNER_PID: int | None = None
+_EXECUTION_FENCE_OWNER_PID: int | None = None
+
+
+def enable_kernel_activation_fence() -> None:
+    """Enable production mount fencing after the trusted entry point is established."""
+
+    global _KERNEL_FENCE_ENABLED
+    _KERNEL_FENCE_ENABLED = True
+
+
+def _base_fence_files() -> tuple[Path, ...]:
+    return tuple(
+        path
+        for path in (*REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES, *BASE_FENCE_FILES)
+        if not any(
+            path == directory or directory in path.parents
+            for directory in BASE_FENCE_DIRECTORIES
+        )
+    )
+
+
+@contextlib.contextmanager
+def _trusted_activation_session() -> Iterable[None]:
+    global _TRUSTED_SESSION_DEPTH, _TRUSTED_BASE_FENCE, _TRUSTED_SESSION_OWNER_PID
+    if not _KERNEL_FENCE_ENABLED:
+        yield
+        return
+    if _TRUSTED_SESSION_DEPTH:
+        if (
+            _TRUSTED_SESSION_OWNER_PID != os.getpid()
+            or _TRUSTED_BASE_FENCE is None
+            or _TRUSTED_BASE_FENCE.transaction is None
+        ):
+            raise ActivationError("Nesting TrustedActivationFence senza owner kernel attivo")
+        _TRUSTED_SESSION_DEPTH += 1
+        try:
+            yield
+        finally:
+            _TRUSTED_SESSION_DEPTH -= 1
+        return
+    try:
+        with host_lock_and_recovery():
+            with SnapshotMountFence(
+                "trusted-activation-base",
+                directories=BASE_FENCE_DIRECTORIES,
+                files=_base_fence_files(),
+            ) as fence:
+                _TRUSTED_BASE_FENCE = fence
+                _TRUSTED_SESSION_OWNER_PID = os.getpid()
+                _TRUSTED_SESSION_DEPTH = 1
+                try:
+                    _attest_activator_subprocess_toolchain()
+                    yield
+                finally:
+                    _TRUSTED_SESSION_DEPTH = 0
+                    _TRUSTED_BASE_FENCE = None
+                    _TRUSTED_SESSION_OWNER_PID = None
+    except TrustedActivationFenceError as exc:
+        raise ActivationError(f"TrustedActivationFence: {exc}") from exc
+
+
+@contextlib.contextmanager
+def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
+    global _EXECUTION_FENCE_DEPTH, _ACTIVE_EXECUTION_FENCE, _EXECUTION_FENCE_OWNER_PID
+    if not _KERNEL_FENCE_ENABLED:
+        yield None
+        return
+    if not _TRUSTED_SESSION_DEPTH:
+        raise ActivationError("Boundary systemd privilegiato fuori dalla sessione trusted")
+    if _EXECUTION_FENCE_DEPTH:
+        if (
+            _EXECUTION_FENCE_OWNER_PID != os.getpid()
+            or _ACTIVE_EXECUTION_FENCE is None
+            or _ACTIVE_EXECUTION_FENCE.transaction is None
+        ):
+            raise ActivationError("Nesting execution fence senza owner kernel attivo")
+        _EXECUTION_FENCE_DEPTH += 1
+        try:
+            yield _ACTIVE_EXECUTION_FENCE
+        finally:
+            _EXECUTION_FENCE_DEPTH -= 1
+        return
+    try:
+        with SnapshotMountFence(
+            "trusted-systemd-execution",
+            directories=(Path("/etc"), *FROZEN_SYSTEMD_RUNTIME_SOURCE_DIRECTORIES),
+            files=(),
+        ) as fence:
+            _ACTIVE_EXECUTION_FENCE = fence
+            _EXECUTION_FENCE_OWNER_PID = os.getpid()
+            _EXECUTION_FENCE_DEPTH = 1
+            try:
+                if _systemd_path(SYSTEMD_GENERATOR_SEARCH_PATH_NAME) != EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH:
+                    raise ActivationError("Search path generator systemd 255 divergente")
+                if _systemd_path(SYSTEMD_UNIT_SEARCH_PATH_NAME) != EXPECTED_SYSTEMD_UNIT_SEARCH_PATH:
+                    raise ActivationError("Search path unit systemd 255 divergente")
+                yield fence
+            finally:
+                _EXECUTION_FENCE_DEPTH = 0
+                _ACTIVE_EXECUTION_FENCE = None
+                _EXECUTION_FENCE_OWNER_PID = None
+    except TrustedActivationFenceError as exc:
+        raise ActivationError(f"TrustedActivationFence execution: {exc}") from exc
+
+
+def _in_trusted_execution_fence(function: Any) -> Any:
+    @functools.wraps(function)
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        with _trusted_execution_fence():
+            return function(*args, **kwargs)
+    return wrapped
+
+
+def _in_trusted_activation_session(function: Any) -> Any:
+    @functools.wraps(function)
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        with _trusted_activation_session():
+            return function(*args, **kwargs)
+    return wrapped
 
 
 def _assert_os_runtime_path(path: Path, *, allow_missing_leaf: bool = False) -> None:
@@ -227,7 +406,12 @@ def _require_trusted_runtime() -> None:
         raise ActivationError("sys.path production contiene una search root non trusted")
     for entry in sys.path[1:]:
         _assert_os_runtime_path(Path(entry), allow_missing_leaf=True)
-    local_modules = (Path(__file__), Path(deployment.__file__), Path(sys.modules[Directive.__module__].__file__))
+    local_modules = (
+        Path(__file__),
+        Path(deployment.__file__),
+        Path(sys.modules[Directive.__module__].__file__),
+        Path(sys.modules[SnapshotMountFence.__module__].__file__),
+    )
     if any(ROOT not in module.resolve(strict=True).parents for module in local_modules):
         raise ActivationError("Modulo security-critical caricato fuori dalla trusted toolchain")
     jsonschema_path = Path(jsonschema.__file__).resolve(strict=True)
@@ -1044,10 +1228,13 @@ def _boot_service_policy(
 ) -> BootServiceExecutionPolicy:
     if not exec_slots or not set(exec_slots) <= set(SYSTEMD_EXEC_SLOTS):
         raise ValueError(f"Exec slot policy non valida: {unit_name}")
+    canonical_slots = {
+        slot: tuple(exec_slots.get(slot, ())) for slot in SYSTEMD_EXEC_SLOTS
+    }
     return BootServiceExecutionPolicy(
         unit_name,
         _reviewed_package_file(fragment, reviewed_sha256=fragment_sha256),
-        exec_slots,
+        canonical_slots,
         closure_policy,
         tuple(
             _reviewed_package_file(path, reviewed_sha256=digest)
@@ -1536,6 +1723,8 @@ def _run(command: list[str]) -> str:
     return output
 
 
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
 def _nginx_effective() -> str:
     command = [str(NGINX_BINARY), "-T", "-c", str(NGINX_CONFIG)]
     result = subprocess.run(
@@ -1909,7 +2098,10 @@ def _assert_trusted_metadata(path: Path, *, directory: bool, require_root_owner:
         raise ActivationError(f"Path trusted non root-owned: {path}")
     if os.name != "nt" and metadata.st_mode & 0o022:
         raise ActivationError(f"Path trusted scrivibile da group/other: {path}")
-    if not directory and getattr(metadata, "st_nlink", 1) != 1:
+    if not directory and (
+        getattr(metadata, "st_nlink", 1) != 1
+        or source_path_had_multiple_links(path)
+    ):
         raise ActivationError(f"Artifact trusted con hardlink inatteso: {path}")
 
 
@@ -2576,6 +2768,8 @@ def _classify_existing_topology(
     return "legacy-v1", None
 
 
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
 def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) -> Preflight:
     if os.geteuid() != 0:
         raise ActivationError("Il preflight host Ubuntu richiede root")
@@ -2808,13 +3002,22 @@ def _state_exists(path: Path) -> bool:
 
 
 def _systemctl_result(arguments: Sequence[str]) -> tuple[int, str]:
+    action = next((item for item in arguments if not item.startswith("-")), "")
+    execution_bearing = action in SYSTEMCTL_EXECUTION_ACTIONS or (
+        action in {"mask", "disable"} and "--now" in arguments
+    )
+    if _KERNEL_FENCE_ENABLED and execution_bearing and not _EXECUTION_FENCE_DEPTH:
+        raise ActivationError(
+            f"Operazione systemctl execution-bearing fuori dalla fence: {action}"
+        )
     try:
         result = subprocess.run(
             [str(SYSTEMCTL_BINARY), *arguments], check=False, capture_output=True, text=True, timeout=30
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ActivationError("systemctl non disponibile o non responsivo") from exc
-    return result.returncode, result.stdout.strip()
+    output = result.stdout if result.returncode == 0 else result.stdout + result.stderr
+    return result.returncode, output.strip()
 
 
 def _systemd_path(name: str) -> tuple[Path, ...]:
@@ -3086,6 +3289,8 @@ def _file_identity(metadata: os.stat_result) -> tuple[int, ...]:
 def _read_stable_trusted_file(path: Path) -> bytes:
     """Read one exact regular file while proving pre/open/post identity."""
 
+    if source_path_had_multiple_links(path):
+        raise ActivationError(f"Artifact trusted con hardlink source inatteso: {path}")
     if not path.is_absolute() or path != Path(os.path.abspath(path)):
         raise ActivationError(f"Path package non canonico: {path}")
     _verify_trusted_ancestry(path, Path(path.anchor))
@@ -4802,6 +5007,8 @@ def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None
             raise ActivationError(f"Execution closure non utilizzata: {service}")
 
 
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
 def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
     """Fail closed on local artifacts and unknown root schedulers in the boot surface."""
 
@@ -5009,10 +5216,35 @@ def _require_nginx_not_running() -> None:
         raise ActivationError(f"nginx.service attiva o in transizione: {state}")
 
 
-def _stop_nginx_service() -> None:
-    code, _ = _systemctl_result(["stop", "nginx.service"])
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
+def _stop_nginx_service(*, reload_frozen_graph: bool = True) -> None:
+    state, state_code = _nginx_service_state()
+    if state_code == 3 and state in {"inactive", "failed"}:
+        _attest_effective_nginx_unit(
+            expect_running=False,
+            allowed_unit_file_states=PREFLIGHT_NGINX_UNIT_FILE_STATES,
+        )
+        _assert_zero_nginx_processes()
+        _assert_no_canonical_listeners()
+        return
+    if (state, state_code) != ("active", 0):
+        raise ActivationError(f"nginx.service ambigua prima dello stop: {state}")
+    if reload_frozen_graph:
+        _attest_systemd_boot_surface()
+        state, state_code = _nginx_service_state()
+        if state_code == 3 and state in {"inactive", "failed"}:
+            _assert_zero_nginx_processes()
+            _assert_no_canonical_listeners()
+            return
+        _attest_effective_nginx_unit(
+            expect_running=True,
+            allowed_unit_file_states=PREFLIGHT_NGINX_UNIT_FILE_STATES,
+        )
+    code, detail = _systemctl_result(["stop", "nginx.service"])
     if code != 0:
-        raise ActivationError("Arresto nginx.service fallito")
+        summary = " | ".join(detail.splitlines()[-3:])
+        raise ActivationError(f"Arresto nginx.service fallito: {summary}")
     _require_nginx_not_running()
 
 
@@ -5097,9 +5329,12 @@ def _attest_effective_nginx_unit(
 ) -> EffectiveNginxUnit:
     """Attest the effective Ubuntu 24.04 package unit loaded by systemd."""
 
+    supported_unit_file_states = (
+        PREFLIGHT_NGINX_UNIT_FILE_STATES | MASKED_NGINX_UNIT_FILE_STATES
+    )
     if (
         not allowed_unit_file_states
-        or not allowed_unit_file_states <= PREFLIGHT_NGINX_UNIT_FILE_STATES
+        or not allowed_unit_file_states <= supported_unit_file_states
     ):
         raise ActivationError("Allowlist UnitFileState nginx attesa non supportata")
     scalar_contract = {
@@ -5129,7 +5364,11 @@ def _attest_effective_nginx_unit(
     names = set(_systemd_property("Names").split())
     if names != {"nginx.service"}:
         raise ActivationError(f"Alias systemd nginx inatteso: {sorted(names)}")
-    fragment = _canonical_path(_systemd_property("FragmentPath"), label="FragmentPath")
+    policy = BOOT_ROOT_SERVICE_EXECUTION_POLICIES.get("nginx.service")
+    if policy is None or policy.fragment is None or policy.closure_policy != "@nginx":
+        raise ActivationError("Policy execution nginx canonica assente")
+    fragment_value = _systemd_property("FragmentPath")
+    fragment = _canonical_path(fragment_value, label="FragmentPath")
     try:
         expected_fragment = NGINX_PACKAGE_UNIT.resolve(strict=True)
     except OSError as exc:
@@ -5139,32 +5378,28 @@ def _attest_effective_nginx_unit(
             f"FragmentPath nginx non package: {fragment} (atteso {expected_fragment})"
         )
 
-    expected_commands = {
-        "ExecStartPre": (
-            _expected_exec(
-                "/usr/sbin/nginx", "-t -q -g daemon 'on;' master_process 'on;'"
-            ),
-        ),
-        "ExecStart": (
-            _expected_exec("/usr/sbin/nginx", "-g daemon 'on;' master_process 'on;'"),
-        ),
-        "ExecReload": (
-            _expected_exec(
-                "/usr/sbin/nginx", "-g daemon 'on;' master_process 'on;' -s reload"
-            ),
-        ),
-        "ExecStop": (
-            _expected_exec(
-                "/sbin/start-stop-daemon",
-                "--quiet --stop --retry QUIT/5 --pidfile /run/nginx.pid",
-                ignore_errors=True,
-            ),
-        ),
-    }
-    for name, expected in expected_commands.items():
-        actual = _parse_systemd_exec(_systemd_property(name), name=name)
+    command_policies: list[BootExecCommandPolicy] = []
+    for name in SYSTEMD_EXEC_SLOTS:
+        raw = _systemd_property(name, allow_empty=True)
+        actual = _parse_systemd_exec(raw, name=name, allow_missing=True) if raw else ()
+        expected_policies = policy.exec_slots.get(name, ())
+        expected = tuple(
+            (command.file.path, command.arguments, command.ignore_errors)
+            for command in expected_policies
+        )
         if actual != expected:
             raise ActivationError(f"Contratto systemd nginx divergente: {name}")
+        command_policies.extend(expected_policies)
+    _attest_expected_package_files(
+        (
+            policy.fragment,
+            *policy.dropins,
+            *(command.file for command in command_policies),
+        ),
+        label="effective nginx seven-slot identity",
+    )
+    _attest_nginx_package_behavior_files()
+    _verify_modules_enabled_entries()
 
     raw_main_pid = _systemd_property("MainPID")
     control_group = _systemd_property("ControlGroup", allow_empty=True)
@@ -5173,7 +5408,10 @@ def _attest_effective_nginx_unit(
     main_pid = int(raw_main_pid)
     if expect_running is True:
         if main_pid <= 0 or control_group != NGINX_CONTROL_GROUP:
-            raise ActivationError("MainPID/ControlGroup nginx.service non attestati dopo start")
+            raise ActivationError(
+                "MainPID/ControlGroup nginx.service non attestati dopo start: "
+                f"MainPID={main_pid} ControlGroup={control_group!r}"
+            )
     elif expect_running is False:
         if main_pid != 0 or control_group:
             raise ActivationError("nginx.service conserva MainPID/ControlGroup inattesi")
@@ -5205,8 +5443,73 @@ def _process_in_control_group(process: NginxProcess, control_group: str) -> bool
     return any(group == control_group or group.startswith(prefix) for group in process.control_groups)
 
 
+def _is_reviewed_frozen_nginx_process(
+    pid: int, executable: os.stat_result, executable_name: str
+) -> bool:
+    """Freshly attest nginx retained in systemd's read-only snapshot namespace."""
+
+    if executable_name != "/nginx" or not stat.S_ISREG(executable.st_mode):
+        return False
+    try:
+        mount_lines = (PROC_ROOT / str(pid) / "mountinfo").read_text(
+            encoding="ascii"
+        ).splitlines()
+    except OSError:
+        return False
+    frozen_mount = False
+    for line in mount_lines:
+        left, separator, right = line.partition(" - ")
+        fields = left.split()
+        tail = right.split()
+        if (
+            separator
+            and len(fields) >= 6
+            and len(tail) >= 3
+            and fields[4] == "/usr/sbin"
+            and "ro" in fields[5].split(",")
+            and fields[3].startswith("/snapshot/")
+            and tail[0] == "tmpfs"
+        ):
+            frozen_mount = True
+            break
+    if not frozen_mount:
+        return False
+    expected = REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES.get(NGINX_BINARY)
+    if expected is None or expected[1] != NATIVE_PACKAGE_BINARY:
+        return False
+    descriptor = -1
+    try:
+        descriptor = os.open(
+            PROC_ROOT / str(pid) / "exe",
+            os.O_RDONLY | getattr(os, "O_CLOEXEC", 0),
+        )
+        before = os.fstat(descriptor)
+        if (before.st_dev, before.st_ino) != (executable.st_dev, executable.st_ino):
+            return False
+        digest = hashlib.sha256()
+        prefix = b""
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            if not prefix:
+                prefix = chunk[:2]
+            digest.update(chunk)
+        after = os.fstat(descriptor)
+        return (
+            _file_identity(before) == _file_identity(after)
+            and prefix != b"#!"
+            and digest.hexdigest() == expected[0]
+        )
+    except OSError:
+        return False
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
 def _nginx_processes() -> tuple[NginxProcess, ...]:
-    """Find package nginx processes by /proc executable inode, never PID file/name/argv."""
+    """Find reviewed nginx processes by live executable object, never PID/name/argv."""
 
     try:
         binary = NGINX_BINARY.stat()
@@ -5233,6 +5536,7 @@ def _nginx_processes() -> tuple[NginxProcess, ...]:
         if (
             (executable.st_dev, executable.st_ino) != identity
             and lexical_name not in canonical_spellings
+            and not _is_reviewed_frozen_nginx_process(pid, executable, lexical_name)
         ):
             continue
         groups = _read_process_control_groups(pid)
@@ -5327,6 +5631,7 @@ def _assert_no_canonical_listeners() -> None:
         raise ActivationError(f"Listener 80/443 estraneo presente: {occupied}")
 
 
+@_in_trusted_activation_session
 def _attest_nginx_service_runtime(
     unit: EffectiveNginxUnit | None = None,
 ) -> None:
@@ -5335,7 +5640,20 @@ def _attest_nginx_service_runtime(
     effective = unit or _attest_effective_nginx_unit(expect_running=True)
     processes = _nginx_processes()
     if not processes or effective.main_pid not in {process.pid for process in processes}:
-        raise ActivationError("MainPID nginx.service non identifica il master nginx package")
+        try:
+            expected = NGINX_BINARY.stat()
+            executable_link = PROC_ROOT / str(effective.main_pid) / "exe"
+            observed = executable_link.stat()
+            observed_name = os.readlink(executable_link)
+            detail = (
+                f" expected={expected.st_dev}:{expected.st_ino} "
+                f"observed={observed.st_dev}:{observed.st_ino} path={observed_name}"
+            )
+        except OSError:
+            detail = ""
+        raise ActivationError(
+            "MainPID nginx.service non identifica il master nginx package" + detail
+        )
     if any(
         not _process_in_control_group(process, effective.control_group)
         for process in processes
@@ -5487,6 +5805,7 @@ def _write_logrotate_snapshot(payload: Mapping[str, Any]) -> None:
         temporary.unlink(missing_ok=True)
 
 
+@_in_trusted_activation_session
 def logrotate_snapshot() -> None:
     """Persist only pre-rotation inode identity in a root-owned transient record."""
 
@@ -5584,6 +5903,7 @@ def _attest_logrotate_active_unit(
     return unit, processes
 
 
+@_in_trusted_activation_session
 def logrotate_reopen() -> None:
     """Signal canonical nginx and prove old-to-current FD/inode transition."""
 
@@ -5689,6 +6009,8 @@ def _disable_nginx_autostart_link() -> None:
         raise ActivationError("Enablement nginx.service non-symlink")
 
 
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
 def _verify_migration_guard() -> None:
     """Prove the effective manager mask, zero nginx, and negative starts."""
 
@@ -5706,43 +6028,69 @@ def _verify_migration_guard() -> None:
     for unit_name in ("nginx.service", "nginx"):
         code, _ = _systemctl_result(["start", unit_name])
         if code == 0:
-            _stop_nginx_service()
+            _stop_nginx_service(reload_frozen_graph=False)
             raise ActivationError(f"Migration guard bypassabile tramite start {unit_name}")
         _require_nginx_not_running()
     _assert_zero_nginx_processes()
     _assert_no_canonical_listeners()
 
 
+@_in_trusted_activation_session
 def _install_migration_guard() -> None:
-    """Acquire the guard through systemd; return only after its process-level proof."""
+    """Stop the reviewed loaded graph, then persist and load the offline guard."""
 
     existing = _symlink_state(NGINX_MIGRATION_GUARD)
     if existing["present"]:
         _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
-        # Recovery may see a durable mask that the rebooted/cached manager has not loaded.
-        code, _ = _systemctl_result(["daemon-reload"])
+        # A crash may leave the disk mask while the old package unit is still active.
+        code, _ = _systemctl_result(["unmask", "--no-reload", "nginx.service"])
         if code != 0:
-            raise ActivationError("systemd non ha ricaricato il guard persistente")
-    else:
-        # Disable before masking, while systemd can still read the package [Install] section.
-        code, _ = _systemctl_result(["disable", "nginx.service"])
-        if code != 0:
-            raise ActivationError("Disabilitazione preventiva nginx.service fallita")
-        code, unit_state = _systemctl_result(["is-enabled", "nginx.service"])
-        if code == 0 or unit_state != "disabled":
-            raise ActivationError("nginx.service non risulta disabled prima del guard")
-        if NGINX_WANTS_LINK.parent.is_dir() and not NGINX_WANTS_LINK.parent.is_symlink():
-            _fsync_directory(NGINX_WANTS_LINK.parent)
-        _fault("after_pre_guard_disable")
-    # Closed local-unit inventory immediately precedes the manager-mediated boundary.
-    _attest_systemd_boot_surface()
-    code, _ = _systemctl_result(["mask", "--now", "nginx.service"])
+            raise ActivationError("Unmask temporaneo recovery nginx.service fallito")
+    code, _ = _systemctl_result(["disable", "--no-reload", "nginx.service"])
     if code != 0:
-        raise ActivationError("Mask manager-mediated nginx.service fallita")
+        raise ActivationError("Disabilitazione preventiva nginx.service fallita")
+    code, unit_state = _systemctl_result(["is-enabled", "nginx.service"])
+    if code == 0 or unit_state != "disabled":
+        raise ActivationError("nginx.service non risulta disabled prima del guard")
+    if NGINX_WANTS_LINK.parent.is_dir() and not NGINX_WANTS_LINK.parent.is_symlink():
+        _fsync_directory(NGINX_WANTS_LINK.parent)
+    _fault("after_pre_guard_disable")
+
+    with _trusted_execution_fence():
+        _attest_systemd_boot_surface()
+        state, state_code = _nginx_service_state()
+        if (state, state_code) == ("active", 0):
+            _attest_effective_nginx_unit(
+                expect_running=True,
+                allowed_unit_file_states=PREFLIGHT_NGINX_UNIT_FILE_STATES,
+            )
+        elif state_code == 3 and state in {"inactive", "failed"}:
+            _attest_effective_nginx_unit(
+                expect_running=False,
+                allowed_unit_file_states=PREFLIGHT_NGINX_UNIT_FILE_STATES,
+            )
+        else:
+            raise ActivationError(f"nginx.service ambigua prima del mask: {state}")
+        _attest_nginx_package_behavior_files()
+
+    code, _ = _systemctl_result(["mask", "--no-reload", "nginx.service"])
+    if code != 0:
+        raise ActivationError("Mask persistente nginx.service fallita")
     _fsync_directory(NGINX_MIGRATION_GUARD.parent)
-    _verify_migration_guard()
+    with _trusted_execution_fence():
+        _attest_systemd_boot_surface()
+        state, state_code = _nginx_service_state()
+        if (state, state_code) == ("active", 0):
+            code, detail = _systemctl_result(["stop", "nginx.service"])
+            if code != 0:
+                summary = " | ".join(detail.splitlines()[-3:])
+                raise ActivationError(f"Final stop sotto mask fallito: {summary}")
+        elif state_code != 3 or state not in {"inactive", "failed"}:
+            raise ActivationError(f"nginx.service ambigua dopo mask: {state}")
+        _verify_migration_guard()
 
 
+@_in_trusted_activation_session
 def _remove_migration_guard() -> None:
     # Recovery of a legacy guard may still have the canonical wants link underneath the mask.
     _disable_nginx_autostart_link()
@@ -5752,49 +6100,60 @@ def _remove_migration_guard() -> None:
     _verify_migration_guard()
     _attest_systemd_boot_surface()
     _verify_migration_guard()
-    code, _ = _systemctl_result(["unmask", "nginx.service"])
+    code, _ = _systemctl_result(["unmask", "--no-reload", "nginx.service"])
     if code != 0:
         raise ActivationError("Unmask manager-mediated nginx.service fallita")
     _fsync_directory(NGINX_MIGRATION_GUARD.parent)
     _fault("after_guard_unmask")
-    code, _ = _systemctl_result(["daemon-reload"])
-    if code != 0:
-        raise ActivationError("systemd daemon-reload fallito durante rimozione guard")
-    _attest_effective_nginx_unit(
-        expect_running=False,
-        allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
-    )
-    _require_nginx_not_running()
-    _assert_zero_nginx_processes()
-    _assert_no_canonical_listeners()
-    _fault("after_unit_reload_attestation")
+    with _trusted_execution_fence():
+        _attest_systemd_boot_surface()
+        _attest_effective_nginx_unit(
+            expect_running=False,
+            allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
+        )
+        _require_nginx_not_running()
+        _assert_zero_nginx_processes()
+        _assert_no_canonical_listeners()
+        _fault("after_unit_reload_attestation")
 
 
+@_in_trusted_activation_session
 def _start_nginx_service() -> None:
-    # Start while disabled: no crash/reboot can autostart before runtime attestation.
-    _attest_effective_nginx_unit(
-        expect_running=False,
-        allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
-    )
-    _require_nginx_not_running()
-    _assert_zero_nginx_processes()
-    _assert_no_canonical_listeners()
-    code, _ = _systemctl_result(["start", "nginx.service"])
-    if code != 0:
-        raise ActivationError("Avvio nginx.service fallito")
-    disabled_unit = _attest_effective_nginx_unit(
-        expect_running=True,
-        allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
-    )
-    _attest_nginx_service_runtime(disabled_unit)
-    _fault("after_nginx_runtime_attestation")
+    # Freeze -> attest -> reload -> seven-slot late check -> start -> runtime proof.
+    # The service remains disabled throughout this execution-bearing boundary.
+    with _trusted_execution_fence():
+        _attest_systemd_boot_surface()
+        _attest_effective_nginx_unit(
+            expect_running=False,
+            allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
+        )
+        _require_nginx_not_running()
+        _assert_zero_nginx_processes()
+        _assert_no_canonical_listeners()
+        code, _ = _systemctl_result(["start", "nginx.service"])
+        if code != 0:
+            raise ActivationError("Avvio nginx.service fallito")
+        disabled_unit = _attest_effective_nginx_unit(
+            expect_running=True,
+            allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
+        )
+        _attest_nginx_service_runtime(disabled_unit)
+        _fault("after_nginx_runtime_attestation")
 
-    # Keep the last boot-surface check adjacent to final persistent enablement.
-    _attest_systemd_boot_surface()
-    _attest_nginx_service_runtime(disabled_unit)
-    code, _ = _systemctl_result(["enable", "nginx.service"])
-    if code != 0:
-        raise ActivationError("Riabilitazione persistente nginx.service fallita")
+    # Persist only the exact wants link through the hidden underlying anchor while
+    # /etc remains an immutable snapshot in PID 1's namespace.  A crash sees either
+    # the durable disabled state or this one reviewed link, never a writable window.
+    with _trusted_execution_fence() as persistence_fence:
+        _attest_systemd_boot_surface()
+        _attest_nginx_service_runtime(disabled_unit)
+        if persistence_fence is None:
+            code, _ = _systemctl_result(["enable", "--no-reload", "nginx.service"])
+            if code != 0:
+                raise ActivationError("Riabilitazione persistente nginx.service fallita")
+        else:
+            persistence_fence.create_underlying_symlink(
+                NGINX_WANTS_LINK, NGINX_PACKAGE_UNIT.as_posix()
+            )
     if NGINX_WANTS_LINK.parent.is_dir() and not NGINX_WANTS_LINK.parent.is_symlink():
         _fsync_directory(NGINX_WANTS_LINK.parent)
     _fault("after_nginx_enable")
@@ -5812,6 +6171,8 @@ def _apply_bundle_links(bundle: Path) -> None:
         _replace_symlink(path, target)
 
 
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
 def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> None:
     _attest_systemd_boot_surface()
     verified = verify_bundle(info.path)
@@ -5963,6 +6324,7 @@ def _idempotent_activation(bundle: Path, state_path: Path) -> bool:
     return True
 
 
+@_in_trusted_activation_session
 def activate(bundle: Path, state_path: Path = STATE_FILE) -> None:
     if _state_exists(state_path):
         if _idempotent_activation(bundle, state_path):
@@ -5982,6 +6344,7 @@ def activate(bundle: Path, state_path: Path = STATE_FILE) -> None:
     )
 
 
+@_in_trusted_activation_session
 def recover(bundle: Path | None = None, state_path: Path = STATE_FILE) -> None:
     """Resume solely from durable guard/state/filesystem evidence; never force through failure."""
 
@@ -6025,6 +6388,7 @@ def recover(bundle: Path | None = None, state_path: Path = STATE_FILE) -> None:
         _finish_transition(state_path, state, target, rollback_transition=False)
 
 
+@_in_trusted_activation_session
 def rollback(state_path: Path = STATE_FILE) -> None:
     if os.geteuid() != 0:
         raise ActivationError("Rollback Ubuntu richiede root")
@@ -6048,6 +6412,7 @@ def rollback(state_path: Path = STATE_FILE) -> None:
     _finish_transition(state_path, state, previous, rollback_transition=True)
 
 
+@_in_trusted_activation_session
 def complete(state_path: Path, archive_path: Path) -> None:
     if os.geteuid() != 0:
         raise ActivationError("Complete Ubuntu richiede root")
@@ -6091,7 +6456,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "runtime-info":
             print(json.dumps(_runtime_information(), indent=2, sort_keys=True))
             return 0
-        _attest_activator_subprocess_toolchain()
+        enable_kernel_activation_fence()
         if args.command == "preflight":
             verify_host_preflight(args.bundle)
         elif args.command == "activate":

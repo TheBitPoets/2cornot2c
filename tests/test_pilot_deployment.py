@@ -1580,6 +1580,7 @@ def _effective_unit_properties(fragment: Path) -> dict[str, str]:
         "KillMode": "mixed",
         "MainPID": "0",
         "ControlGroup": "",
+        "ExecCondition": "",
         "ExecStartPre": (
             "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -t -q -g "
             "daemon on; master_process on; ; ignore_errors=no ; start_time=[n/a] }"
@@ -1588,15 +1589,17 @@ def _effective_unit_properties(fragment: Path) -> dict[str, str]:
             "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; "
             "master_process on; ; ignore_errors=no ; start_time=[n/a] }"
         ),
+        "ExecStartPost": "",
         "ExecReload": (
             "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; "
             "master_process on; -s reload ; ignore_errors=no ; start_time=[n/a] }"
         ),
         "ExecStop": (
-            "{ path=/sbin/start-stop-daemon ; argv[]=/sbin/start-stop-daemon --quiet "
+            "{ path=/usr/sbin/start-stop-daemon ; argv[]=/usr/sbin/start-stop-daemon --quiet "
             "--stop --retry QUIT/5 --pidfile /run/nginx.pid ; ignore_errors=yes ; "
             "start_time=[n/a] }"
         ),
+        "ExecStopPost": "",
     }
 
 
@@ -1617,6 +1620,15 @@ def test_effective_systemd_unit_contract_accepts_only_pristine_package_definitio
         "_systemd_property",
         lambda name, **_kwargs: properties[name],
     )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_expected_package_files", lambda *_args, **_kwargs: {}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_nginx_package_behavior_files", lambda: frozenset()
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_verify_modules_enabled_entries", lambda: {}
+    )
     assert ubuntu_activation._attest_effective_nginx_unit(expect_running=False) == (
         ubuntu_activation.EffectiveNginxUnit(0, "")
     )
@@ -1630,6 +1642,21 @@ def test_effective_systemd_unit_contract_accepts_only_pristine_package_definitio
         (
             "ExecStart",
             "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -c /tmp/leaky.conf ; "
+            "ignore_errors=no ; start_time=[n/a] }",
+        ),
+        (
+            "ExecCondition",
+            "{ path=/usr/bin/touch ; argv[]=/usr/bin/touch /run/condition ; "
+            "ignore_errors=no ; start_time=[n/a] }",
+        ),
+        (
+            "ExecStartPost",
+            "{ path=/usr/bin/touch ; argv[]=/usr/bin/touch /run/start-post ; "
+            "ignore_errors=no ; start_time=[n/a] }",
+        ),
+        (
+            "ExecStopPost",
+            "{ path=/usr/bin/touch ; argv[]=/usr/bin/touch /run/stop-post ; "
             "ignore_errors=no ; start_time=[n/a] }",
         ),
         (
@@ -1647,6 +1674,92 @@ def test_effective_systemd_unit_contract_accepts_only_pristine_package_definitio
         )
         with pytest.raises(ubuntu_activation.ActivationError):
             ubuntu_activation._attest_effective_nginx_unit(expect_running=False)
+
+
+def test_nginx_execution_policy_is_one_canonical_seven_slot_contract() -> None:
+    policy = ubuntu_activation.BOOT_ROOT_SERVICE_EXECUTION_POLICIES["nginx.service"]
+    assert tuple(policy.exec_slots) == ubuntu_activation.SYSTEMD_EXEC_SLOTS
+    assert {slot: len(policy.exec_slots[slot]) for slot in ubuntu_activation.SYSTEMD_EXEC_SLOTS} == {
+        "ExecCondition": 0,
+        "ExecStartPre": 1,
+        "ExecStart": 1,
+        "ExecStartPost": 0,
+        "ExecReload": 1,
+        "ExecStop": 1,
+        "ExecStopPost": 0,
+    }
+
+
+def test_late_nginx_contract_rechecks_reviewed_fragment_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fragment = tmp_path / "nginx.service"
+    reviewed = b"reviewed nginx unit\n"
+    fragment.write_bytes(reviewed)
+    properties = _effective_unit_properties(fragment)
+    original = ubuntu_activation.BOOT_ROOT_SERVICE_EXECUTION_POLICIES["nginx.service"]
+    fragment_policy = ubuntu_activation.PackageFileIdentityPolicy(
+        fragment,
+        frozenset({"nginx"}),
+        reviewed_sha256=hashlib.sha256(reviewed).hexdigest(),
+    )
+    replacement = ubuntu_activation.BootServiceExecutionPolicy(
+        original.unit_name,
+        fragment_policy,
+        original.exec_slots,
+        original.closure_policy,
+        original.dropins,
+        original.managed_nonroot,
+    )
+    policies = dict(ubuntu_activation.BOOT_ROOT_SERVICE_EXECUTION_POLICIES)
+    policies["nginx.service"] = replacement
+    monkeypatch.setattr(ubuntu_activation, "BOOT_ROOT_SERVICE_EXECUTION_POLICIES", policies)
+    monkeypatch.setattr(ubuntu_activation, "NGINX_PACKAGE_UNIT", fragment)
+    monkeypatch.setattr(ubuntu_activation, "_canonical_path", lambda value, **_kwargs: Path(value))
+    monkeypatch.setattr(
+        ubuntu_activation, "_systemd_property", lambda name, **_kwargs: properties[name]
+    )
+
+    def attest(items, **_kwargs):
+        selected = tuple(items)
+        for item in selected:
+            if item.path == fragment:
+                if hashlib.sha256(fragment.read_bytes()).hexdigest() != item.reviewed_sha256:
+                    raise ubuntu_activation.ActivationError("Reviewed artifact digest mismatch")
+        return {}
+
+    monkeypatch.setattr(ubuntu_activation, "_attest_expected_package_files", attest)
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_nginx_package_behavior_files", lambda: frozenset()
+    )
+    monkeypatch.setattr(ubuntu_activation, "_verify_modules_enabled_entries", lambda: {})
+    ubuntu_activation._attest_effective_nginx_unit(expect_running=False)
+    fragment.write_bytes(b"malicious same FragmentPath\n")
+    with pytest.raises(ubuntu_activation.ActivationError, match="digest"):
+        ubuntu_activation._attest_effective_nginx_unit(expect_running=False)
+
+
+def test_execution_bearing_systemctl_actions_require_kernel_fence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(ubuntu_activation, "_KERNEL_FENCE_ENABLED", True)
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTION_FENCE_DEPTH", 0)
+    for arguments in (
+        ["daemon-reload"], ["start", "nginx.service"], ["stop", "nginx.service"],
+        ["reload", "nginx.service"], ["restart", "nginx.service"],
+        ["mask", "--now", "nginx.service"], ["disable", "--now", "nginx.service"],
+    ):
+        with pytest.raises(ubuntu_activation.ActivationError, match="fuori dalla fence"):
+            ubuntu_activation._systemctl_result(arguments)
+
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTION_FENCE_DEPTH", 1)
+    monkeypatch.setattr(
+        ubuntu_activation.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0, stdout="", stderr=""),
+    )
+    for action in ubuntu_activation.SYSTEMCTL_EXECUTION_ACTIONS:
+        assert ubuntu_activation._systemctl_result([action])[0] == 0
 
 
 def _install_systemd_inventory_fixture(
@@ -2891,6 +3004,13 @@ def test_preflight_accepts_only_canonical_enabled_or_disabled_package_unit(
         "_read_process_control_groups",
         lambda _pid: canonical.control_groups,
     )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_expected_package_files", lambda *_args, **_kwargs: {}
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_nginx_package_behavior_files", lambda: frozenset()
+    )
+    monkeypatch.setattr(ubuntu_activation, "_verify_modules_enabled_entries", lambda: {})
 
     ubuntu_activation._attest_preflight_nginx_runtime()
 
@@ -3115,13 +3235,22 @@ def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
     monkeypatch.setattr(ubuntu_activation, "_symlink_state", lambda _path: {"present": False})
     monkeypatch.setattr(ubuntu_activation, "_assert_root_symlink", lambda *_args: None)
     monkeypatch.setattr(ubuntu_activation, "_fsync_directory", lambda _path: None)
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_nginx_package_behavior_files", lambda: frozenset()
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_effective_nginx_unit",
+        lambda **kwargs: calls.append(("effective", kwargs["expect_running"])),
+    )
     ubuntu_activation._install_migration_guard()
-    assert ("mask", "--now", "nginx.service") in calls
-    disable_index = calls.index(("disable", "nginx.service"))
-    boot_index = calls.index(("boot-surface",))
-    mask_index = calls.index(("mask", "--now", "nginx.service"))
-    assert disable_index < boot_index < mask_index
-    assert all(calls.index(start) > mask_index for start in (("start", "nginx.service"), ("start", "nginx")))
+    assert ("mask", "--no-reload", "nginx.service") in calls
+    disable_index = calls.index(("disable", "--no-reload", "nginx.service"))
+    boot_indexes = [index for index, call in enumerate(calls) if call == ("boot-surface",)]
+    mask_index = calls.index(("mask", "--no-reload", "nginx.service"))
+    assert len(boot_indexes) == 2
+    assert disable_index < boot_indexes[0] < mask_index < boot_indexes[1]
+    assert all(calls.index(start) > boot_indexes[1] for start in (("start", "nginx.service"), ("start", "nginx")))
 
 
 def test_unmask_start_and_enable_preserve_crash_safe_order(
@@ -3175,9 +3304,9 @@ def test_unmask_start_and_enable_preserve_crash_safe_order(
     ubuntu_activation._start_nginx_service()
 
     disable = calls.index(("autostart-disabled",))
-    unmask = calls.index(("systemctl", "unmask", "nginx.service"))
+    unmask = calls.index(("systemctl", "unmask", "--no-reload", "nginx.service"))
     start = calls.index(("systemctl", "start", "nginx.service"))
-    enable = calls.index(("systemctl", "enable", "nginx.service"))
+    enable = calls.index(("systemctl", "enable", "--no-reload", "nginx.service"))
     disabled_runtime = calls.index(
         ("attest", True, ubuntu_activation.DISABLED_NGINX_UNIT_FILE_STATES)
     )
@@ -3185,9 +3314,9 @@ def test_unmask_start_and_enable_preserve_crash_safe_order(
         ("attest", True, ubuntu_activation.ENABLED_NGINX_UNIT_FILE_STATES)
     )
     boot_checks = [index for index, call in enumerate(calls) if call == ("boot-surface",)]
-    assert len(boot_checks) == 2
-    assert disable < boot_checks[0] < unmask
-    assert start < disabled_runtime < boot_checks[1] < enable < enabled_runtime
+    assert len(boot_checks) == 4
+    assert disable < boot_checks[0] < unmask < boot_checks[1]
+    assert boot_checks[2] < start < disabled_runtime < boot_checks[3] < enable < enabled_runtime
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Symlink POSIX richiesto")

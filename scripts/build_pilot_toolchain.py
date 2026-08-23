@@ -17,6 +17,7 @@ TOOLCHAIN_FILES = (
     "scripts/nginx_config_ast.py",
     "scripts/pilot_environment.py",
     "scripts/pilot_ubuntu_activation.py",
+    "scripts/pilot_trusted_activation_fence.py",
     "scripts/pilot_ubuntu_reviewed_executables.py",
     "scripts/validate_pilot_deployment.py",
     "schemas/pilot-deployment.schema.json",
