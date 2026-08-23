@@ -1,8 +1,8 @@
 name: Directory asset source snapshot
 
 on:
-  push:
-    branches: [agent/directory-assets-751]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
