@@ -1,0 +1,24 @@
+name: Directory asset source snapshot
+
+on:
+  push:
+    branches: [agent/directory-assets-751]
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: directory-assets-source-snapshot
+          path: |
+            scripts/create_submission_scaffold.py
+            scripts/assign_activity.py
+            tests/test_create_submission_scaffold.py
+            tests/test_assign_activity.py
+          if-no-files-found: error
+          retention-days: 1
