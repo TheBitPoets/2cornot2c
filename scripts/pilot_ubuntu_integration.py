@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import copy
+import contextlib
 import ctypes
 import errno
 import glob
@@ -1723,10 +1724,11 @@ def _exercise_same_identity_package_artifact_rejected(
         try:
             gate()
         except activation.ActivationError as exc:
-            if (
-                "Reviewed artifact digest mismatch" not in str(exc)
-                or str(executable) not in str(exc)
-            ):
+            digest_rejection = (
+                "Reviewed artifact digest mismatch" in str(exc)
+                or "Native code digest divergente" in str(exc)
+            )
+            if not digest_rejection or str(executable) not in str(exc):
                 raise RuntimeError(f"H-05 rifiutato per causa estranea: {exc}") from exc
         else:
             raise RuntimeError("H-05 same-identity package artifact accettato")
@@ -1983,10 +1985,12 @@ def _exercise_known_service_package_takeover_rejected(temporary: Path) -> None:
         try:
             activation._attest_systemd_boot_surface()
         except activation.ActivationError as exc:
-            if (
-                "Unexpected reviewed package identity" not in str(exc)
-                or str(fragment) not in str(exc)
-            ):
+            historical = (
+                "Unexpected reviewed package identity" in str(exc)
+                and str(fragment) in str(exc)
+            )
+            native = "Native code digest divergente" in str(exc) and str(executable) in str(exc)
+            if not (historical or native):
                 raise RuntimeError(f"H-03 rifiutato per causa estranea: {exc}") from exc
         else:
             raise RuntimeError("H-03 known-service foreign package takeover accettato")
@@ -2192,10 +2196,9 @@ def _exercise_timer_executable_package_takeover_rejected(temporary: Path) -> Non
         try:
             activation._attest_systemd_boot_surface()
         except activation.ActivationError as exc:
-            if (
-                "Unexpected reviewed package identity" not in str(exc)
-                or str(executable) not in str(exc)
-            ):
+            identity_reject = "Unexpected reviewed package identity" in str(exc)
+            native_reject = "Native code digest divergente" in str(exc)
+            if not (identity_reject or native_reject) or str(executable) not in str(exc):
                 raise RuntimeError(f"Timer takeover rifiutato per causa estranea: {exc}") from exc
         else:
             raise RuntimeError("Timer executable foreign package takeover accettato")
@@ -2224,7 +2227,12 @@ def _exercise_removed_boot_service_executable_rejected() -> None:
         try:
             activation._attest_systemd_boot_surface()
         except activation.ActivationError as exc:
-            if f"Expected-present package path assente: {executable}" not in str(exc):
+            historical = f"Expected-present package path assente: {executable}" in str(exc)
+            native = (
+                "Native identity non apribile" in str(exc)
+                or "Native identity non regolare nel base manifest" in str(exc)
+            ) and str(executable) in str(exc)
+            if not (historical or native):
                 raise RuntimeError(
                     f"Expected-present removal rifiutato per causa estranea: {exc}"
                 ) from exc
@@ -2247,7 +2255,9 @@ def _exercise_modified_boot_service_executable_rejected() -> None:
         try:
             activation._attest_systemd_boot_surface()
         except activation.ActivationError as exc:
-            if "Package authoritative digest mismatch" not in str(exc) or str(executable) not in str(exc):
+            package_reject = "Package authoritative digest mismatch" in str(exc)
+            native_reject = "Native code digest divergente" in str(exc)
+            if not (package_reject or native_reject) or str(executable) not in str(exc):
                 raise RuntimeError(
                     f"Modified package executable rifiutato per causa estranea: {exc}"
                 ) from exc
@@ -2945,6 +2955,8 @@ def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
     for module_name in (
         "scripts.nginx_config_ast", "scripts.pilot_environment",
         "scripts.validate_pilot_deployment", "scripts.pilot_trusted_activation_fence",
+        "scripts.pilot_native_execution_closure",
+        "scripts.pilot_ubuntu_reviewed_native_code",
         "scripts.pilot_ubuntu_activation",
     ):
         sys.modules.pop(module_name, None)
@@ -2956,12 +2968,334 @@ def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
     return toolchain, launcher, pin_path
 
 
+def _overwrite_descriptor(descriptor: int, payload: bytes) -> None:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    os.ftruncate(descriptor, 0)
+    view = memoryview(payload)
+    while view:
+        written = os.write(descriptor, view)
+        view = view[written:]
+    os.fsync(descriptor)
+
+
+def _test_r1_native_execution_closure() -> None:
+    """Exercise preload, PT_INTERP, library, plugin and usrmerge attacks."""
+
+    marker = Path("/run/review704-preload-marker")
+    preload = Path("/etc/ld.so.preload")
+    malicious = Path("/etc/review704-preload.so")
+    payload = Path("/root/review704-preload.so").read_bytes()
+    marker.unlink(missing_ok=True)
+    preload.unlink(missing_ok=True)
+    malicious.unlink(missing_ok=True)
+
+    def install_preload() -> None:
+        malicious.write_bytes(payload)
+        malicious.chmod(0o755)
+        preload.write_text(f"{malicious}\n", encoding="ascii")
+        preload.chmod(0o644)
+
+    # Presence before base and presence introduced after base both reject before
+    # the first native subprocess. The constructor marker must remain absent.
+    for timing in ("before-base", "after-base"):
+        rejected = False
+        try:
+            if timing == "before-base":
+                install_preload()
+            with activation._trusted_activation_session():
+                if timing == "after-base":
+                    child = os.fork()
+                    if child == 0:
+                        install_preload()
+                        os._exit(0)
+                    _pid, status = os.waitpid(child, 0)
+                    if os.waitstatus_to_exitcode(status) != 0:
+                        raise RuntimeError("Mutatore preload non sincronizzato")
+                try:
+                    with activation._trusted_execution_fence():
+                        pass
+                except activation.ActivationError as exc:
+                    rejected = "/etc/ld.so.preload deve essere assente" in str(exc)
+        finally:
+            preload.unlink(missing_ok=True)
+            malicious.unlink(missing_ok=True)
+        if not rejected or marker.exists():
+            raise RuntimeError(f"Preload {timing} non rifiutato prima dell'exec")
+
+    raced_paths = (
+        Path("/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2"),
+        Path("/usr/lib/x86_64-linux-gnu/libc.so.6"),
+        Path("/usr/lib/x86_64-linux-gnu/libssl.so.3"),
+        Path("/usr/lib/x86_64-linux-gnu/libcrypto.so.3"),
+        Path("/usr/lib/x86_64-linux-gnu/systemd/libsystemd-shared-255.so"),
+        Path("/usr/lib/x86_64-linux-gnu/ossl-modules/legacy.so"),
+        Path("/usr/lib/nginx/modules/ngx_http_geoip2_module.so"),
+    )
+    originals = {path: path.read_bytes() for path in raced_paths}
+    descriptors = {path: os.open(path, os.O_WRONLY) for path in raced_paths}
+    try:
+        with activation._trusted_activation_session():
+            with activation._trusted_execution_fence():
+                for descriptor in descriptors.values():
+                    _overwrite_descriptor(descriptor, payload)
+                try:
+                    if activation._systemd_path(
+                        activation.SYSTEMD_UNIT_SEARCH_PATH_NAME
+                    ) != activation.EXPECTED_SYSTEMD_UNIT_SEARCH_PATH:
+                        raise RuntimeError("systemd-path closure divergente nel race")
+                    for argument in ("-t", "-T"):
+                        result = subprocess.run(
+                            [str(activation.NGINX_BINARY), argument, "-c", str(activation.NGINX_CONFIG)],
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                        )
+                        if result.returncode != 0:
+                            raise RuntimeError(f"nginx {argument} non usa snapshot A")
+                    staged = Path("/review704-lib64-replacement")
+                    staged.mkdir(exist_ok=True)
+                    try:
+                        try:
+                            os.replace(staged, Path("/lib64"))
+                        except OSError:
+                            pass
+                        else:
+                            raise RuntimeError("Alias loader usrmerge sostituibile sotto fence")
+                    finally:
+                        staged.rmdir()
+                    if marker.exists():
+                        raise RuntimeError("Loader/library/provider/plugin B eseguito")
+                finally:
+                    for path, descriptor in descriptors.items():
+                        _overwrite_descriptor(descriptor, originals[path])
+    finally:
+        for descriptor in descriptors.values():
+            os.close(descriptor)
+        marker.unlink(missing_ok=True)
+    print(
+        "EVIDENCE: R1 native closure preload pre/post-base, PT_INTERP, libc, "
+        "libssl/libcrypto, systemd dependency, OpenSSL provider, nginx module, "
+        "nginx -t/-T and usrmerge alias races PASS"
+    )
+
+
+def _test_r1_forged_recovery_metadata() -> None:
+    """Mutable JSON must never authorize unmount/removal of a foreign tmpfs."""
+
+    fence = importlib.import_module("scripts.pilot_trusted_activation_fence")
+    foreign = Path("/run/lock")
+    sentinel = foreign / "review704-foreign-sentinel"
+    sentinel.write_text("foreign tmpfs untouched", encoding="ascii")
+    baseline = fence._top_mount(foreign)
+    if baseline is None or baseline.filesystem != "tmpfs":
+        raise RuntimeError("Foreign /run/lock tmpfs precondition assente")
+    boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
+    token = "99999-" + "a" * 32
+    canonical_root = str(fence.TRANSACTION_ROOT / token)
+    cases = (
+        ("reviewer-run-lock", "/run/lock", "planned", {}),
+        ("root-run", "/run", "planned", {}),
+        ("root-tmp", "/tmp", "planned", {}),
+        ("token-root-mismatch", str(fence.TRANSACTION_ROOT / ("88888-" + "b" * 32)), "planned", {}),
+        ("unknown-field", canonical_root, "planned", {"authority": "/run/lock"}),
+        ("bad-phase", canonical_root, "setup", {}),
+        ("foreign-source", canonical_root, "active", {"mount": {
+            "mount_id": baseline.mount_id, "parent_id": baseline.parent_id,
+            "major_minor": baseline.major_minor, "filesystem": "tmpfs",
+            "source": "tmpfs", "root": "/", "mount_point": canonical_root,
+            "options": sorted(baseline.options),
+        }}),
+    )
+    try:
+        for label, root, phase, extra in cases:
+            transaction = {
+                "name": "trusted-activation-base", "token": token,
+                "phase": phase, "root": root, "targets": [], "aliases": [],
+                **extra,
+            }
+            state = {
+                "schema": "thebitlab.activation-fence.v2", "boot_id": boot_id,
+                "poisoned": False, "transactions": [transaction],
+            }
+            fence.RUNTIME_ROOT.mkdir(parents=True, exist_ok=True)
+            fence.TRANSACTION_ROOT.mkdir(exist_ok=True)
+            fence.STATE_PATH.write_text(json.dumps(state) + "\n", encoding="utf-8")
+            os.chmod(fence.STATE_PATH, 0o600)
+            try:
+                fence.recover_stale_fences()
+            except fence.TrustedActivationFenceError:
+                pass
+            else:
+                raise RuntimeError(f"Forged recovery metadata accettata: {label}")
+            current = fence._top_mount(foreign)
+            if (
+                current is None
+                or current.mount_id != baseline.mount_id
+                or current.major_minor != baseline.major_minor
+                or sentinel.read_text(encoding="ascii") != "foreign tmpfs untouched"
+            ):
+                raise RuntimeError(f"Foreign tmpfs mutato da recovery: {label}")
+            fence.STATE_PATH.unlink(missing_ok=True)
+        symlink_root = fence.TRANSACTION_ROOT / token
+        symlink_root.unlink(missing_ok=True)
+        os.symlink("/run/lock", symlink_root)
+        state = {
+            "schema": "thebitlab.activation-fence.v2", "boot_id": boot_id,
+            "poisoned": False, "transactions": [{
+                "name": "trusted-activation-base", "token": token, "phase": "planned",
+                "root": canonical_root, "targets": [], "aliases": [],
+            }],
+        }
+        fence.STATE_PATH.write_text(json.dumps(state) + "\n", encoding="utf-8")
+        os.chmod(fence.STATE_PATH, 0o600)
+        try:
+            fence.recover_stale_fences()
+        except fence.TrustedActivationFenceError:
+            pass
+        else:
+            raise RuntimeError("Symlink transaction root accettata")
+        current = fence._top_mount(foreign)
+        if current is None or current.mount_id != baseline.mount_id or not sentinel.exists():
+            raise RuntimeError("Symlink transaction root ha mutato foreign tmpfs")
+    finally:
+        fence.STATE_PATH.unlink(missing_ok=True)
+        symlink = fence.TRANSACTION_ROOT / token
+        if symlink.is_symlink():
+            symlink.unlink()
+        sentinel.unlink(missing_ok=True)
+    print("EVIDENCE: R1 forged metadata matrix + foreign tmpfs preservation PASS")
+
+
+def _test_r1_wants_link_gid() -> None:
+    path = activation.NGINX_WANTS_LINK
+    if path.exists() or path.is_symlink():
+        raise RuntimeError("Wants-link GID fixture richiede baseline disabled")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    os.symlink(activation.NGINX_PACKAGE_UNIT.as_posix(), path)
+    try:
+        os.lchown(path, 0, 1)
+        try:
+            activation._assert_systemd_symlink_metadata(path)
+        except activation.ActivationError:
+            pass
+        else:
+            raise RuntimeError("Wants-link UID 0/GID nonzero accettato")
+        os.lchown(path, 0, 0)
+        if (
+            activation._assert_systemd_symlink_metadata(path)
+            != activation.NGINX_PACKAGE_UNIT.as_posix()
+        ):
+            raise RuntimeError("Wants-link root:root exact target non accettato")
+    finally:
+        path.unlink(missing_ok=True)
+    print("EVIDENCE: R1 wants-link UID=0 GID!=0 REJECT; root:root exact target PASS")
+
+
+def _test_r1_fence_crash_recovery() -> None:
+    """SIGKILL fence phases recover only kernel-identified transaction mounts."""
+
+    fence = importlib.import_module("scripts.pilot_trusted_activation_fence")
+    toolchain_root = Path(activation.__file__).resolve().parents[1]
+    cases = (
+        ("trusted-activation-base", "fence_after_transaction_root", "base", True),
+        ("trusted-activation-base", "fence_after_root_mount_before_witness", "base", False),
+        ("trusted-activation-base", "fence_during_target_setup", "base", False),
+        ("trusted-activation-base", "fence_during_snapshot_copy", "base", False),
+        ("trusted-activation-base", "fence_after_ro_remount", "base", False),
+        ("trusted-activation-base", "fence_after_active_state", "base", False),
+        ("trusted-activation-base", "fence_during_teardown", "base", False),
+        ("trusted-systemd-execution", "fence_after_active_state", "execution", False),
+        ("trusted-systemd-generated-output", "fence_after_active_state", "generated", False),
+    )
+    foreign = fence._top_mount(Path("/run/lock"))
+    if foreign is None:
+        raise RuntimeError("Foreign mount sentinel crash matrix assente")
+    for name, point, level, manual in cases:
+        code = (
+            "import sys;sys.path.insert(0," + repr(str(toolchain_root)) + ");"
+            "from scripts import pilot_ubuntu_activation as a;"
+            "a.enable_kernel_activation_fence();"
+            "c=a._trusted_activation_session();c.__enter__();"
+            + (
+                "e=a._trusted_execution_fence();e.__enter__();"
+                if level in {"execution", "generated"}
+                else ""
+            )
+            + ("a._attest_systemd_boot_surface();" if level == "generated" else "")
+            + (
+                "e.__exit__(None,None,None);"
+                if level in {"execution", "generated"}
+                else ""
+            )
+            + "c.__exit__(None,None,None)"
+        )
+        environment = {
+            **os.environ,
+            "THEBITLAB_EPHEMERAL_CRASH_TEST": "1",
+            "THEBITLAB_ACTIVATION_CRASH_POINT": point,
+            "THEBITLAB_ACTIVATION_CRASH_FENCE_NAME": name,
+            "PYTHONDONTWRITEBYTECODE": "1",
+        }
+        crashed = subprocess.run(
+            [sys.executable, "-B", "-c", code],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=environment,
+            timeout=180,
+        )
+        if crashed.returncode != 97:
+            raise RuntimeError(
+                f"Fence SIGKILL non riprodotto {name}/{point}: "
+                f"rc={crashed.returncode} stderr={crashed.stderr[-300:]}"
+            )
+        if manual:
+            try:
+                fence.recover_stale_fences()
+            except fence.TrustedActivationFenceError as exc:
+                if "senza kernel witness" not in str(exc):
+                    raise
+            else:
+                raise RuntimeError("Planned root senza witness recuperata da JSON")
+            state = fence._read_state()
+            if state and state["transactions"]:
+                root = Path(state["transactions"][0]["root"])
+            else:
+                roots = tuple(fence.TRANSACTION_ROOT.iterdir())
+                if len(roots) != 1:
+                    raise RuntimeError("Planned crash root non individuabile manualmente")
+                root = roots[0]
+            if root.is_symlink() or not root.is_dir() or any(root.iterdir()):
+                raise RuntimeError("Planned crash root non manualmente riconciliabile")
+            root.rmdir()
+            fence._write_transactions(())
+        else:
+            fence.recover_stale_fences()
+        remaining = [
+            record for record in fence._mount_records()
+            if record.source.startswith("thebitlab-pilot-fence:")
+        ]
+        current_foreign = fence._top_mount(Path("/run/lock"))
+        if (
+            remaining
+            or fence.STATE_PATH.exists()
+            or current_foreign is None
+            or current_foreign.mount_id != foreign.mount_id
+        ):
+            raise RuntimeError(f"Crash recovery incompleta/foreign mutation: {name}/{point}")
+        for path, target in fence.USR_MERGE_ALIASES.items():
+            if not path.is_symlink() or os.readlink(path) != target:
+                raise RuntimeError(f"Alias usrmerge non ripristinata dopo crash: {path}")
+    print("EVIDENCE: R1 base/native/execution/generated-output SIGKILL matrix PASS")
+
+
 def _test_trusted_activation_fence_races() -> None:
     """Prove external filesystem mutation cannot precede root execution."""
 
     generator_marker = Path("/run/thebitlab-r2-generator-marker")
     nginx_marker = Path("/run/thebitlab-r2-nginx-marker")
-    execslot_marker = Path("/run/thebitlab-r2-execslot-marker")
+    execslot_marker = Path("/run/review704-generated-output-marker")
     staged_nginx = Path("/usr/sbin/.thebitlab-r2-nginx")
     staged_generator = Path("/usr/lib/systemd/.thebitlab-r2-generator")
     reviewed_generator = Path(
@@ -3092,6 +3426,68 @@ def _test_trusted_activation_fence_races() -> None:
                 if gate_error is not None:
                     raise gate_error
 
+            phase = "generated-output-during-generation"
+            with activation._trusted_execution_fence():
+                ready_r, ready_w = os.pipe()
+                stop_r, stop_w = os.pipe()
+                child = os.fork()
+                if child == 0:
+                    os.close(ready_r)
+                    os.close(stop_w)
+                    os.set_blocking(stop_r, False)
+                    os.write(ready_w, b"x")
+                    os.close(ready_w)
+                    payload = (
+                        "[Service]\nExecStartPost=/usr/bin/touch "
+                        f"{execslot_marker}\n"
+                    )
+                    while True:
+                        try:
+                            if os.read(stop_r, 1):
+                                os._exit(0)
+                        except BlockingIOError:
+                            pass
+                        for root in activation.SYSTEMD_GENERATED_OUTPUT_DIRECTORIES:
+                            try:
+                                dropin = root / "nginx.service.d"
+                                dropin.mkdir(parents=True, exist_ok=True)
+                                staged = dropin / f".review704.{os.getpid()}"
+                                staged.write_text(payload, encoding="utf-8")
+                                os.replace(staged, dropin / "review704.conf")
+                            except OSError:
+                                continue
+                os.close(ready_w)
+                os.close(stop_r)
+                os.read(ready_r, 1)
+                os.close(ready_r)
+                gate_error: BaseException | None = None
+                try:
+                    activation._attest_systemd_boot_surface()
+                except BaseException as exc:
+                    gate_error = exc
+                os.write(stop_w, b"x")
+                os.close(stop_w)
+                _pid, status = os.waitpid(child, 0)
+                if os.waitstatus_to_exitcode(status) != 0 or execslot_marker.exists():
+                    raise RuntimeError("Mutatore generated-output generation non controllato")
+                if gate_error is None:
+                    activation._attest_effective_nginx_unit(
+                        expect_running=False,
+                        allowed_unit_file_states=activation.DISABLED_NGINX_UNIT_FILE_STATES,
+                    )
+            for root in activation.SYSTEMD_GENERATED_OUTPUT_DIRECTORIES:
+                injected = root / "nginx.service.d" / "review704.conf"
+                injected.unlink(missing_ok=True)
+                with contextlib.suppress(OSError):
+                    injected.parent.rmdir()
+            subprocess.run(
+                ["/usr/bin/systemctl", "daemon-reload"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=30,
+            )
+
             phase = "nginx-start-stop"
             with activation._trusted_execution_fence():
                 activation._attest_systemd_boot_surface()
@@ -3109,11 +3505,39 @@ def _test_trusted_activation_fence_races() -> None:
                             encoding="utf-8",
                         )
 
+                    def generated_write(root: Path) -> None:
+                        dropin = root / "nginx.service.d"
+                        dropin.mkdir(parents=True, exist_ok=True)
+                        (dropin / "review704.conf").write_text(
+                            "[Service]\nExecStartPost=/usr/bin/touch "
+                            f"{execslot_marker}\n",
+                            encoding="utf-8",
+                        )
+
+                    def generated_atomic_replace(root: Path) -> None:
+                        staged = Path(f"/run/review704-{root.name}-{os.getpid()}.conf")
+                        staged.write_text(
+                            "[Service]\nExecStartPost=/usr/bin/touch "
+                            f"{execslot_marker}\n",
+                            encoding="utf-8",
+                        )
+                        try:
+                            os.replace(staged, root / "nginx.service")
+                        finally:
+                            staged.unlink(missing_ok=True)
+
+                    generated_roots = activation.SYSTEMD_GENERATED_OUTPUT_DIRECTORIES
                     attempts = (
                         lambda: os.replace(staged_nginx, activation.NGINX_BINARY),
                         lambda: activation.NGINX_BINARY.write_bytes(b"#!/bin/sh\nexit 1\n"),
                         lambda: Path("/usr/bin/kmod").write_text("late fill", encoding="utf-8"),
                         inject_exec_start_post,
+                        *(lambda root=root: generated_write(root) for root in generated_roots),
+                        *(
+                            lambda root=root: generated_atomic_replace(root)
+                            for root in generated_roots
+                        ),
+                        *(lambda root=root: root.rmdir() for root in generated_roots),
                     )
                     for attempt in attempts:
                         try:
@@ -3137,6 +3561,12 @@ def _test_trusted_activation_fence_races() -> None:
                 _pid, status = os.waitpid(child, 0)
                 if os.waitstatus_to_exitcode(status) != 0:
                     raise RuntimeError("Executable/unit mutation non bloccata dalla fence")
+                # The real second reload may succeed only by consuming the exact
+                # sealed output. Re-attest all seven slots after it and before start.
+                activation._attest_effective_nginx_unit(
+                    expect_running=False,
+                    allowed_unit_file_states=activation.DISABLED_NGINX_UNIT_FILE_STATES,
+                )
                 # Pre-open writers mutate the hidden original inode.  PID 1/nginx
                 # must still execute/load the separately copied reviewed snapshot.
                 overwrite(nginx_fd, staged_nginx.read_bytes())
@@ -3160,7 +3590,11 @@ def _test_trusted_activation_fence_races() -> None:
             activation._remove_migration_guard()
         if generator_marker.exists() or nginx_marker.exists() or execslot_marker.exists():
             raise RuntimeError("Marker root presente dopo release TrustedActivationFence")
-        print("EVIDENCE: generator ABA + nginx rename no-execution races PASS")
+        print(
+            "EVIDENCE: generator source ABA + sealed generator.early/generator/"
+            "generator.late write/atomic/drop-in/remove + second daemon-reload + "
+            "nginx rename no-execution races PASS"
+        )
     except BaseException as exc:
         raise RuntimeError(f"TrustedActivationFence race phase={phase}: {exc}") from exc
     finally:
@@ -3176,7 +3610,9 @@ def run(*, ephemeral_host: bool = False) -> None:
     if not ephemeral_host:
         raise RuntimeError("Integrazione consentita soltanto da --ephemeral-host")
     original_default = _check_ephemeral_host()
-    activation.enable_kernel_activation_fence()
+    # Ephemeral-host quarantine is harness setup, before the installed production
+    # activator starts its hostile interval. _install_ephemeral_toolchain() reloads
+    # the installed modules and enables the kernel fence before any production gate.
     state = activation.STATE_FILE
     deployments = activation.DEPLOYMENTS_ROOT
     v2_bundle = deployments / f"integration-v2-{os.getpid()}"
@@ -3555,6 +3991,10 @@ def run(*, ephemeral_host: bool = False) -> None:
             default_preflight = activation.verify_host_preflight(v2_bundle)
             if default_preflight.source_kind != "preinstall-default":
                 raise RuntimeError("Topologia pristine/default non riconosciuta")
+            _test_r1_native_execution_closure()
+            _test_r1_forged_recovery_metadata()
+            _test_r1_wants_link_gid()
+            _test_r1_fence_crash_recovery()
             _test_trusted_activation_fence_races()
             activation.activate(v2_bundle, state)
             try:

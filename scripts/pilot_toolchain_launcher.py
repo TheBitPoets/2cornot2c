@@ -39,7 +39,9 @@ EXPECTED_FILES = frozenset(
         "scripts/pilot_environment.py",
         ACTIVATOR,
         "scripts/pilot_trusted_activation_fence.py",
+        "scripts/pilot_native_execution_closure.py",
         "scripts/pilot_ubuntu_reviewed_executables.py",
+        "scripts/pilot_ubuntu_reviewed_native_code.py",
         "scripts/validate_pilot_deployment.py",
         "schemas/pilot-deployment.schema.json",
         "schemas/pilot-deployment-v1-legacy.schema.json",
@@ -228,6 +230,9 @@ def sanitized_environment(toolchain: Path, pin: Mapping[str, Any]) -> dict[str, 
             environment["THEBITLAB_EPHEMERAL_CRASH_TEST"] = "1"
             environment["THEBITLAB_ACTIVATION_CRASH_POINT"] = os.environ.get(
                 "THEBITLAB_ACTIVATION_CRASH_POINT", ""
+            )
+            environment["THEBITLAB_ACTIVATION_CRASH_FENCE_NAME"] = os.environ.get(
+                "THEBITLAB_ACTIVATION_CRASH_FENCE_NAME", ""
             )
     return environment
 

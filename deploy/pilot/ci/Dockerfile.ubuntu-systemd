@@ -1,5 +1,22 @@
 # CI-only effective Ubuntu deployment integration environment.
 # Ubuntu 24.04 (Noble), pinned to the reviewed official multi-architecture digest.
+FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea AS reviewer-payload-builder
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gcc libc6-dev \
+    && printf '%s\n' \
+        '#include <fcntl.h>' \
+        '#include <stdio.h>' \
+        '#include <unistd.h>' \
+        '__attribute__((constructor)) static void review704(void) {' \
+        ' char comm[64]="unknown", line[160]; int c=open("/proc/self/comm",O_RDONLY|O_CLOEXEC);' \
+        ' if(c>=0){ssize_t n=read(c,comm,63);close(c);if(n>0){while(n&&(comm[n-1]==10||comm[n-1]==13))--n;comm[n]=0;}}' \
+        ' int n=snprintf(line,sizeof(line),"%s uid=%ld euid=%ld\\n",comm,(long)getuid(),(long)geteuid());' \
+        ' int f=open("/run/review704-preload-marker",O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC,0600);' \
+        ' if(f>=0){write(f,line,(size_t)n);close(f);}' \
+        '}' > /tmp/review704-preload.c \
+    && gcc -shared -fPIC -O2 -Wall -Wextra -o /tmp/review704-preload.so /tmp/review704-preload.c
+
 FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea
 
 ENV container=docker
@@ -31,6 +48,8 @@ RUN apt-get update \
         /etc/apt/apt.conf.d/docker-no-languages \
         /usr/sbin/policy-rc.d \
     && rm -rf /var/lib/apt/lists/*
+
+COPY --from=reviewer-payload-builder /tmp/review704-preload.so /root/review704-preload.so
 
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

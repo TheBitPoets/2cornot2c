@@ -26,6 +26,8 @@ from scripts import pilot_access_log_scanner as log_scanner
 from scripts import pilot_deployment_smoke as smoke
 from scripts import pilot_service_launcher as service_launcher
 from scripts import pilot_toolchain_launcher as toolchain_launcher
+from scripts import pilot_native_execution_closure as native_execution_closure
+from scripts import pilot_trusted_activation_fence as trusted_activation_fence
 from scripts import pilot_ubuntu_activation as ubuntu_activation
 from scripts import pilot_ubuntu_integration as ubuntu_integration
 from scripts import validate_pilot_deployment as deployment
@@ -3234,6 +3236,16 @@ def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
     monkeypatch.setattr(ubuntu_activation, "_assert_no_canonical_listeners", lambda: None)
     monkeypatch.setattr(ubuntu_activation, "_symlink_state", lambda _path: {"present": False})
     monkeypatch.setattr(ubuntu_activation, "_assert_root_symlink", lambda *_args: None)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_disable_nginx_autostart_link",
+        lambda: calls.append(("autostart-disabled",)),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_replace_symlink",
+        lambda path, target: calls.append(("replace-link", str(path), target)),
+    )
     monkeypatch.setattr(ubuntu_activation, "_fsync_directory", lambda _path: None)
     monkeypatch.setattr(
         ubuntu_activation, "_attest_nginx_package_behavior_files", lambda: frozenset()
@@ -3244,10 +3256,15 @@ def test_manager_mediated_guard_linearizes_after_mask_and_negative_start(
         lambda **kwargs: calls.append(("effective", kwargs["expect_running"])),
     )
     ubuntu_activation._install_migration_guard()
-    assert ("mask", "--no-reload", "nginx.service") in calls
-    disable_index = calls.index(("disable", "--no-reload", "nginx.service"))
+    disable_index = calls.index(("autostart-disabled",))
     boot_indexes = [index for index, call in enumerate(calls) if call == ("boot-surface",)]
-    mask_index = calls.index(("mask", "--no-reload", "nginx.service"))
+    mask_index = calls.index(
+        (
+            "replace-link",
+            str(ubuntu_activation.NGINX_MIGRATION_GUARD),
+            "/dev/null",
+        )
+    )
     assert len(boot_indexes) == 2
     assert disable_index < boot_indexes[0] < mask_index < boot_indexes[1]
     assert all(calls.index(start) > boot_indexes[1] for start in (("start", "nginx.service"), ("start", "nginx")))
@@ -3290,6 +3307,12 @@ def test_unmask_start_and_enable_preserve_crash_safe_order(
         lambda: calls.append(("autostart-disabled",)),
     )
     monkeypatch.setattr(ubuntu_activation, "_fsync_directory", lambda _path: None)
+    monkeypatch.setattr(ubuntu_activation, "_assert_root_symlink", lambda *_args: None)
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_remove_symlink",
+        lambda path: calls.append(("remove-link", str(path))),
+    )
     monkeypatch.setattr(ubuntu_activation, "_fault", lambda point: calls.append(("fault", point)))
     monkeypatch.setattr(ubuntu_activation, "_attest_effective_nginx_unit", attest)
     monkeypatch.setattr(ubuntu_activation, "_require_nginx_not_running", lambda: None)
@@ -3304,7 +3327,9 @@ def test_unmask_start_and_enable_preserve_crash_safe_order(
     ubuntu_activation._start_nginx_service()
 
     disable = calls.index(("autostart-disabled",))
-    unmask = calls.index(("systemctl", "unmask", "--no-reload", "nginx.service"))
+    unmask = calls.index(
+        ("remove-link", str(ubuntu_activation.NGINX_MIGRATION_GUARD))
+    )
     start = calls.index(("systemctl", "start", "nginx.service"))
     enable = calls.index(("systemctl", "enable", "--no-reload", "nginx.service"))
     disabled_runtime = calls.index(
@@ -4675,6 +4700,96 @@ def test_cli_validates_example_without_touching_external_references() -> None:
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "PASS: baseline deployment valida"
+
+
+def test_native_code_loading_policy_is_closed_and_separate_from_executable_policy() -> None:
+    counts = native_execution_closure.closure_counts()
+    assert counts == {
+        "native_elf_executables": 98,
+        "pt_interp_identities": 1,
+        "shared_library_identities": 49,
+        "plugin_provider_identities": 263,
+    }
+    reviewed = native_execution_closure.NATIVE_CODE_REVIEWED_SHA256
+    dependencies = native_execution_closure.NATIVE_CODE_DEPENDENCIES
+    assert set(reviewed) == set(dependencies)
+    assert all(
+        resolved in reviewed
+        for records in dependencies.values()
+        for _soname, resolved in records
+    )
+
+
+def test_first_native_subprocess_is_structurally_blocked_before_closure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executed: list[object] = []
+    monkeypatch.setattr(ubuntu_activation, "_KERNEL_FENCE_ENABLED", True)
+    monkeypatch.setattr(ubuntu_activation, "_TRUSTED_SESSION_DEPTH", 1)
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTION_FENCE_DEPTH", 0)
+    monkeypatch.setattr(ubuntu_activation, "_NATIVE_CLOSURE_READY", False)
+    monkeypatch.setattr(
+        ubuntu_activation._stdlib_subprocess,
+        "run",
+        lambda *args, **kwargs: executed.append((args, kwargs)),
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="prima/fuori"):
+        ubuntu_activation.subprocess.run(
+            [str(ubuntu_activation.SYSTEMD_PATH_BINARY), "systemd-search-system-unit"]
+        )
+    assert executed == []
+
+
+def test_recovery_metadata_cannot_authorize_foreign_root_or_unknown_fields() -> None:
+    token = "99999-" + "a" * 32
+    transaction = {
+        "name": "trusted-activation-base",
+        "token": token,
+        "phase": "planned",
+        "root": "/run/lock",
+        "targets": [],
+        "aliases": [],
+    }
+    state = {
+        "schema": "thebitlab.activation-fence.v2",
+        "boot_id": "synthetic",
+        "poisoned": False,
+        "transactions": [transaction],
+    }
+    with pytest.raises(
+        trusted_activation_fence.TrustedActivationFenceError,
+        match="Root",
+    ):
+        trusted_activation_fence._validate_state_document(state)
+    transaction["root"] = str(trusted_activation_fence.TRANSACTION_ROOT / token)
+    transaction["authority"] = "/run/lock"
+    with pytest.raises(
+        trusted_activation_fence.TrustedActivationFenceError,
+        match="non chiusa",
+    ):
+        trusted_activation_fence._validate_state_document(state)
+
+
+def test_systemd_wants_link_requires_root_uid_and_gid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = ubuntu_activation.NGINX_WANTS_LINK
+
+    class Metadata:
+        st_mode = stat.S_IFLNK | 0o777
+        st_uid = 0
+        st_gid = 1
+
+    monkeypatch.setattr(Path, "lstat", lambda self: Metadata())
+    monkeypatch.setattr(ubuntu_activation.os, "name", "posix")
+    monkeypatch.setattr(os, "readlink", lambda candidate: "/usr/lib/systemd/system/nginx.service")
+    with pytest.raises(ubuntu_activation.ActivationError, match="root-owned/canonico"):
+        ubuntu_activation._assert_systemd_symlink_metadata(path)
+    Metadata.st_gid = 0
+    assert (
+        ubuntu_activation._assert_systemd_symlink_metadata(path)
+        == "/usr/lib/systemd/system/nginx.service"
+    )
 
 
 @pytest.mark.skipif(

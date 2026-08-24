@@ -16,6 +16,7 @@ import errno
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import tempfile
@@ -50,6 +51,26 @@ MNT_DETACH = 2
 TMPFS_MAGIC = 0x01021994
 _LOCK_TIMEOUT_SECONDS = 30.0
 _ACTIVE_TRANSACTIONS: list[dict[str, Any]] = []
+_STATE_SCHEMA = "thebitlab.activation-fence.v2"
+_MANIFEST_SCHEMA = "thebitlab.activation-fence-manifest.v1"
+_MANIFEST_NAME = "transaction-manifest.json"
+_MOUNT_SOURCE_PREFIX = "thebitlab-pilot-fence:"
+_TOKEN_RE = re.compile(r"^[1-9][0-9]{0,19}-[0-9a-f]{32}$")
+_TRANSACTION_NAMES = frozenset(
+    {
+        "trusted-activation-base",
+        "trusted-systemd-execution",
+        "trusted-systemd-generated-output",
+    }
+)
+_TRANSACTION_PHASES = frozenset({"planned", "witnessed", "sealed", "active", "teardown"})
+USR_MERGE_ALIASES: Mapping[Path, str] = {
+    Path("/bin"): "usr/bin",
+    Path("/sbin"): "usr/sbin",
+    Path("/lib"): "usr/lib",
+    Path("/lib64"): "usr/lib64",
+}
+_USRMERGE_ALIASES = USR_MERGE_ALIASES
 
 if os.name == "posix":
     import fcntl
@@ -205,6 +226,135 @@ def _atomic_json(path: Path, value: Mapping[str, Any]) -> None:
         temporary_path.unlink(missing_ok=True)
 
 
+def _canonical_transaction_root(token: str) -> Path:
+    if not _TOKEN_RE.fullmatch(token):
+        raise TrustedActivationFenceError("Token transaction fence non canonico")
+    return TRANSACTION_ROOT / token
+
+
+def _canonical_absolute(value: object, *, label: str) -> Path:
+    if not isinstance(value, str):
+        raise TrustedActivationFenceError(f"{label} fence non stringa")
+    path = Path(value)
+    if not path.is_absolute() or path != Path(os.path.abspath(path)) or ".." in path.parts:
+        raise TrustedActivationFenceError(f"{label} fence non canonico")
+    return path
+
+
+def _validate_target_record(target: object, *, active: bool) -> None:
+    if not isinstance(target, dict):
+        raise TrustedActivationFenceError("Target metadata fence non oggetto")
+    allowed = {
+        "path", "kind", "lower", "snapshot", "created", "manifest",
+        "source_hardlinks", "underlying_manifest", "symlink_intent",
+    }
+    if set(target) - allowed:
+        raise TrustedActivationFenceError("Target metadata fence con campi sconosciuti")
+    required = {"path", "kind", "lower", "snapshot", "created"}
+    if active:
+        required |= {"manifest", "source_hardlinks"}
+    if not required <= set(target):
+        raise TrustedActivationFenceError("Target metadata fence incompleto")
+    path = _canonical_absolute(target["path"], label="Path target")
+    if path in {Path("/"), Path("/run"), Path("/run/lock"), RUNTIME_ROOT, TRANSACTION_ROOT}:
+        raise TrustedActivationFenceError("Target fence vietato")
+    if target["kind"] not in {"directory", "file"} or not isinstance(target["created"], bool):
+        raise TrustedActivationFenceError("Tipo target fence non valido")
+    for key, prefix in (("lower", "lower/"), ("snapshot", "snapshot/")):
+        value = target[key]
+        if (
+            not isinstance(value, str)
+            or not value.startswith(prefix)
+            or not value[len(prefix) :].isdigit()
+            or "/" in value[len(prefix) :]
+        ):
+            raise TrustedActivationFenceError(f"Riferimento {key} fence non canonico")
+    if "source_hardlinks" in target and not (
+        isinstance(target["source_hardlinks"], (list, tuple))
+        and all(isinstance(item, str) for item in target["source_hardlinks"])
+    ):
+        raise TrustedActivationFenceError("Hardlink metadata fence non canonici")
+    if "manifest" in target and not isinstance(target["manifest"], dict):
+        raise TrustedActivationFenceError("Manifest target fence non canonico")
+    if "underlying_manifest" in target and not isinstance(target["underlying_manifest"], dict):
+        raise TrustedActivationFenceError("Manifest underlying fence non canonico")
+    intent = target.get("symlink_intent")
+    if intent is not None and (
+        not isinstance(intent, dict)
+        or set(intent) != {"relative", "target"}
+        or not all(isinstance(intent[key], str) for key in intent)
+    ):
+        raise TrustedActivationFenceError("Intent symlink fence non canonico")
+
+
+def _validate_alias_record(alias: object) -> None:
+    if not isinstance(alias, dict) or set(alias) != {"path", "target", "snapshot"}:
+        raise TrustedActivationFenceError("Alias metadata fence non canonico")
+    path = _canonical_absolute(alias["path"], label="Path alias")
+    expected = _USRMERGE_ALIASES.get(path)
+    if expected is None or alias["target"] != expected:
+        raise TrustedActivationFenceError("Alias usrmerge fence fuori policy")
+    snapshot = alias["snapshot"]
+    if not isinstance(snapshot, str) or not snapshot.startswith("snapshot/"):
+        raise TrustedActivationFenceError("Snapshot alias fence non canonica")
+
+
+def _validate_mount_witness(value: object, *, token: str) -> None:
+    if not isinstance(value, dict) or set(value) != {
+        "mount_id", "parent_id", "major_minor", "filesystem", "source",
+        "root", "mount_point", "options",
+    }:
+        raise TrustedActivationFenceError("Kernel witness fence non canonico")
+    if not isinstance(value["mount_id"], int) or not isinstance(value["parent_id"], int):
+        raise TrustedActivationFenceError("Mount ID witness non canonico")
+    if value["filesystem"] != "tmpfs" or value["source"] != _MOUNT_SOURCE_PREFIX + token:
+        raise TrustedActivationFenceError("Source witness fence non canonica")
+    if value["root"] != "/" or value["mount_point"] != str(_canonical_transaction_root(token)):
+        raise TrustedActivationFenceError("Mount point witness fence non canonico")
+    if not isinstance(value["major_minor"], str) or not isinstance(value["options"], list):
+        raise TrustedActivationFenceError("Device/options witness fence non canonici")
+
+
+def _validate_transaction_shape(transaction: object) -> None:
+    if not isinstance(transaction, dict):
+        raise TrustedActivationFenceError("Transaction metadata fence non oggetto")
+    allowed = {"name", "token", "phase", "root", "targets", "aliases", "mount"}
+    if set(transaction) - allowed or not {"name", "token", "phase", "root", "targets", "aliases"} <= set(transaction):
+        raise TrustedActivationFenceError("Transaction metadata fence non chiusa")
+    name, token, phase = transaction["name"], transaction["token"], transaction["phase"]
+    if name not in _TRANSACTION_NAMES or not isinstance(token, str) or phase not in _TRANSACTION_PHASES:
+        raise TrustedActivationFenceError("Identity/fase transaction fence non valida")
+    if _canonical_absolute(transaction["root"], label="Root transaction") != _canonical_transaction_root(token):
+        raise TrustedActivationFenceError("Root/token transaction fence divergenti")
+    if not isinstance(transaction["targets"], list) or not isinstance(transaction["aliases"], list):
+        raise TrustedActivationFenceError("Inventario transaction fence non lista")
+    active = phase in {"sealed", "active", "teardown"}
+    for target in transaction["targets"]:
+        _validate_target_record(target, active=active)
+    for alias in transaction["aliases"]:
+        _validate_alias_record(alias)
+    if phase != "planned":
+        _validate_mount_witness(transaction.get("mount"), token=token)
+    elif "mount" in transaction:
+        raise TrustedActivationFenceError("Transaction planned con falsa kernel authority")
+
+
+def _validate_state_document(value: object) -> None:
+    if not isinstance(value, dict) or set(value) != {"schema", "boot_id", "poisoned", "transactions"}:
+        raise TrustedActivationFenceError("Schema metadata fence non chiuso")
+    if value["schema"] != _STATE_SCHEMA or not isinstance(value["boot_id"], str):
+        raise TrustedActivationFenceError("Schema/boot metadata fence inatteso")
+    if not isinstance(value["poisoned"], bool) or not isinstance(value["transactions"], list):
+        raise TrustedActivationFenceError("Metadata fence non canonici")
+    tokens: set[str] = set()
+    for transaction in value["transactions"]:
+        _validate_transaction_shape(transaction)
+        token = transaction["token"]
+        if token in tokens:
+            raise TrustedActivationFenceError("Token transaction fence duplicato")
+        tokens.add(token)
+
+
 def _read_state() -> dict[str, Any] | None:
     try:
         metadata = STATE_PATH.lstat()
@@ -218,8 +368,7 @@ def _read_state() -> dict[str, Any] | None:
         value = json.loads(STATE_PATH.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise TrustedActivationFenceError("Metadata fence non interpretabile") from exc
-    if not isinstance(value, dict) or value.get("schema") != "thebitlab.activation-fence.v1":
-        raise TrustedActivationFenceError("Schema metadata fence inatteso")
+    _validate_state_document(value)
     return value
 
 
@@ -230,7 +379,7 @@ def _write_transactions(transactions: Sequence[Mapping[str, Any]], *, poisoned: 
     _atomic_json(
         STATE_PATH,
         {
-            "schema": "thebitlab.activation-fence.v1",
+            "schema": _STATE_SCHEMA,
             "boot_id": Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip(),
             "poisoned": poisoned,
             "transactions": list(transactions),
@@ -460,20 +609,148 @@ def _same_mount_namespace_as_pid1() -> bool:
         raise TrustedActivationFenceError("Mount namespace PID 1 non verificabile") from exc
 
 
+def _fault(point: str, name: str = "") -> None:
+    expected_name = os.environ.get("THEBITLAB_ACTIVATION_CRASH_FENCE_NAME", "")
+    if (
+        os.environ.get("THEBITLAB_EPHEMERAL_CRASH_TEST") == "1"
+        and os.environ.get("THEBITLAB_ACTIVATION_CRASH_POINT") == point
+        and (not expected_name or expected_name == name)
+    ):
+        os._exit(97)
+
+
+def _mount_witness(record: MountRecord) -> dict[str, Any]:
+    return {
+        "mount_id": record.mount_id,
+        "parent_id": record.parent_id,
+        "major_minor": record.major_minor,
+        "filesystem": record.filesystem,
+        "source": record.source,
+        "root": record.root,
+        "mount_point": str(record.mount_point),
+        "options": sorted(record.options),
+    }
+
+
+def _kernel_root_mount(token: str, *, require_read_only: bool) -> MountRecord:
+    root = _canonical_transaction_root(token)
+    record = _top_mount(root)
+    if (
+        record is None
+        or record.filesystem != "tmpfs"
+        or record.source != _MOUNT_SOURCE_PREFIX + token
+        or record.root != "/"
+        or record.mount_point != root
+        or not {"nosuid", "nodev"} <= record.options
+        or (require_read_only and "ro" not in record.options)
+    ):
+        raise TrustedActivationFenceError("Kernel identity root fence non verificata")
+    return record
+
+
+def _assert_witness_current(transaction: Mapping[str, Any], record: MountRecord) -> None:
+    witness = transaction.get("mount")
+    _validate_mount_witness(witness, token=str(transaction["token"]))
+    if witness != _mount_witness(record):
+        raise TrustedActivationFenceError("Kernel witness fence stale/ABA")
+
+
+def _manifest_value(transaction: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": _MANIFEST_SCHEMA,
+        "transaction": {
+            "name": transaction["name"],
+            "token": transaction["token"],
+            "phase": "sealed",
+            "root": transaction["root"],
+            "targets": transaction["targets"],
+            "aliases": transaction["aliases"],
+            "mount": transaction["mount"],
+        },
+    }
+
+
+def _read_immutable_manifest(root: Path, token: str) -> dict[str, Any]:
+    path = root / _MANIFEST_NAME
+    try:
+        metadata = path.lstat()
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise TrustedActivationFenceError("Manifest immutabile fence non leggibile") from exc
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_uid != 0
+        or metadata.st_gid != 0
+        or metadata.st_mode & 0o077
+        or metadata.st_nlink != 1
+        or not isinstance(value, dict)
+        or set(value) != {"schema", "transaction"}
+        or value["schema"] != _MANIFEST_SCHEMA
+    ):
+        raise TrustedActivationFenceError("Manifest immutabile fence non canonico")
+    transaction = value["transaction"]
+    _validate_transaction_shape(transaction)
+    if transaction["token"] != token or transaction["phase"] != "sealed":
+        raise TrustedActivationFenceError("Manifest immutabile fence con identity divergente")
+    return transaction
+
+
+def _authoritative_manifest(transaction: Mapping[str, Any]) -> dict[str, Any]:
+    token = str(transaction["token"])
+    root = _canonical_transaction_root(token)
+    manifest = _read_immutable_manifest(root, token)
+    for key in ("name", "token", "root", "targets", "aliases", "mount"):
+        if transaction.get(key) != manifest[key]:
+            # Mutable state may add only reconciliation fields to targets. Compare the
+            # immutable authority-bearing core separately below.
+            if key != "targets":
+                raise TrustedActivationFenceError("Metadata mutable/manifest fence divergenti")
+    if len(transaction["targets"]) != len(manifest["targets"]):
+        raise TrustedActivationFenceError("Inventario target mutable divergente")
+    core = {"path", "kind", "lower", "snapshot", "created", "manifest", "source_hardlinks"}
+    for mutable, frozen in zip(transaction["targets"], manifest["targets"], strict=True):
+        if {key: mutable.get(key) for key in core} != {key: frozen.get(key) for key in core}:
+            raise TrustedActivationFenceError("Target mutable/manifest fence divergente")
+    return manifest
+
+
+def _accepted_underlying_manifest(
+    target: Mapping[str, Any], current: dict[str, list[Any]]
+) -> dict[str, list[Any]]:
+    expected = dict(target["manifest"])
+    path = Path(str(target["path"]))
+    if target["kind"] != "directory" or path != Path("/etc"):
+        return expected
+    relative = "systemd/system/multi-user.target.wants/nginx.service"
+    record = current.get(relative)
+    if (
+        record is not None
+        and record[0] == "l"
+        and record[2] == 0
+        and record[3] == 0
+        and record[4] == "/usr/lib/systemd/system/nginx.service"
+    ):
+        expected[relative] = record
+    return expected
+
+
 def _validate_transaction(transaction: Mapping[str, Any], *, require_underlying: bool) -> None:
-    root = Path(str(transaction["root"]))
-    root_mount = _top_mount(root)
-    if root_mount is None or root_mount.filesystem != "tmpfs":
-        raise TrustedActivationFenceError("tmpfs fence attesa assente")
-    tmpfs_device = root_mount.major_minor
-    if "ro" not in root_mount.options:
-        raise TrustedActivationFenceError("tmpfs fence non read-only")
-    for target in transaction["targets"]:
+    _validate_transaction_shape(transaction)
+    token = str(transaction["token"])
+    root = _canonical_transaction_root(token)
+    root_mount = _kernel_root_mount(token, require_read_only=True)
+    _assert_witness_current(transaction, root_mount)
+    manifest = _authoritative_manifest(transaction)
+    device = root_mount.major_minor
+    source = root_mount.source
+    for target in manifest["targets"]:
         target_path = Path(target["path"])
         mounted = _top_mount(target_path)
         if (
             mounted is None
-            or mounted.major_minor != tmpfs_device
+            or mounted.major_minor != device
+            or mounted.source != source
+            or mounted.root != "/" + str(target["snapshot"]).lstrip("/")
             or "ro" not in mounted.options
         ):
             raise TrustedActivationFenceError(f"Bind snapshot non verificata: {target_path}")
@@ -483,111 +760,197 @@ def _validate_transaction(transaction: Mapping[str, Any], *, require_underlying:
         if require_underlying:
             lower = root / str(target["lower"])
             current = _current_manifest(lower, str(target["kind"]))
-            expected_underlying = target.get("underlying_manifest", target["manifest"])
-            if current != expected_underlying:
-                intent = target.get("symlink_intent")
-                accepted = dict(expected_underlying)
-                if isinstance(intent, dict):
-                    relative = str(intent.get("relative", ""))
-                    record = current.get(relative)
-                    if (
-                        relative
-                        and record is not None
-                        and record[0] == "l"
-                        and record[2] == 0
-                        and record[4] == intent.get("target")
-                    ):
-                        accepted[relative] = record
-                if current != accepted:
-                    raise TrustedActivationFenceError(
-                        "Underlying mutato durante fence; protezione lasciata attiva: "
-                        f"{target_path}"
-                    )
+            accepted = _accepted_underlying_manifest(target, current)
+            if current != accepted:
+                raise TrustedActivationFenceError(
+                    "Underlying mutato durante fence; protezione lasciata attiva: "
+                    f"{target_path}"
+                )
+    for alias in manifest["aliases"]:
+        path = Path(alias["path"])
+        mounted = _top_mount(path)
+        if (
+            mounted is None
+            or mounted.major_minor != device
+            or mounted.source != source
+            or mounted.root != "/" + str(alias["snapshot"]).lstrip("/")
+            or "ro" not in mounted.options
+        ):
+            raise TrustedActivationFenceError(f"Alias usrmerge non frozen: {path}")
+
+
+def _transaction_source_records(token: str, root_mount: MountRecord) -> tuple[MountRecord, ...]:
+    source = _MOUNT_SOURCE_PREFIX + token
+    records = tuple(
+        record for record in _mount_records()
+        if record.source == source and record.major_minor == root_mount.major_minor
+    )
+    if root_mount not in records:
+        raise TrustedActivationFenceError("Root mount transaction non inventariata")
+    for record in records:
+        if record == root_mount:
+            continue
+        if not record.root.startswith(("/lower/", "/snapshot/")):
+            raise TrustedActivationFenceError("Mount transaction con root kernel inattesa")
+    return records
+
+
+def _restore_usrmerge_aliases(manifest: Mapping[str, Any]) -> None:
+    for alias in reversed(manifest["aliases"]):
+        path = Path(alias["path"])
+        target = str(alias["target"])
+        try:
+            metadata = path.lstat()
+        except FileNotFoundError:
+            metadata = None
+        if metadata is not None and stat.S_ISLNK(metadata.st_mode):
+            if os.readlink(path) == target and metadata.st_uid == 0 and metadata.st_gid == 0:
+                continue
+            raise TrustedActivationFenceError(f"Alias usrmerge esterna divergente: {path}")
+        if metadata is None or not stat.S_ISDIR(metadata.st_mode):
+            raise TrustedActivationFenceError(f"Mountpoint alias usrmerge non ripristinabile: {path}")
+        try:
+            path.rmdir()
+            os.symlink(target, path)
+        except OSError as exc:
+            raise TrustedActivationFenceError(f"Restore alias usrmerge fallito: {path}") from exc
+
+
+def _remove_kernel_transaction(token: str, manifest: Mapping[str, Any] | None) -> None:
+    root = _canonical_transaction_root(token)
+    root_mount = _kernel_root_mount(token, require_read_only=False)
+    records = _transaction_source_records(token, root_mount)
+    external = sorted(
+        (record for record in records if record.mount_point != root),
+        key=lambda record: (len(record.mount_point.parts), record.mount_id),
+        reverse=True,
+    )
+    for record in external:
+        current = _top_mount(record.mount_point)
+        if current is None or current.mount_id != record.mount_id:
+            raise TrustedActivationFenceError("Mount transaction cambiata durante cleanup")
+        _umount(record.mount_point)
+        _fault(
+            "fence_during_teardown",
+            str(manifest.get("name", "")) if manifest is not None else "",
+        )
+    _umount(root)
+    try:
+        root.rmdir()
+    except OSError as exc:
+        raise TrustedActivationFenceError("Root transaction non vuota/sicura dopo umount") from exc
+    if manifest is not None:
+        _restore_usrmerge_aliases(manifest)
 
 
 def _remove_transaction(transaction: Mapping[str, Any]) -> None:
-    root = Path(str(transaction["root"]))
+    _validate_transaction(transaction, require_underlying=True)
+    manifest = _authoritative_manifest(transaction)
+    _remove_kernel_transaction(str(transaction["token"]), manifest)
+
+
+def _remove_incomplete_transaction(
+    transaction: Mapping[str, Any], *, trusted_in_process: bool = False
+) -> None:
+    """Unwind only mounts carrying the exact transaction-unique kernel source."""
+
+    _validate_transaction_shape(transaction)
+    token = str(transaction["token"])
+    root = _canonical_transaction_root(token)
     root_mount = _top_mount(root)
-    if root_mount is None or root_mount.filesystem != "tmpfs":
-        raise TrustedActivationFenceError("Recovery rifiuta mount root non TheBitLab")
-    device = root_mount.major_minor
-    for target in reversed(transaction["targets"]):
-        path = Path(target["path"])
-        mounted = _top_mount(path)
-        if mounted is not None:
-            if mounted.major_minor != device:
-                raise TrustedActivationFenceError(f"Recovery rifiuta mount operator: {path}")
-            _umount(path)
-    for target in reversed(transaction["targets"]):
-        lower = root / str(target["lower"])
-        if _top_mount(lower) is not None:
-            _umount(lower)
-    _umount(root)
-    shutil.rmtree(root)
-    for target in reversed(transaction["targets"]):
-        if target.get("created"):
-            path = Path(target["path"])
-            try:
-                path.rmdir()
-            except OSError as exc:
-                raise TrustedActivationFenceError(
-                    f"Directory source temporanea non rimovibile: {path}"
-                ) from exc
+    if root_mount is None:
+        if not root.exists() and not root.is_symlink():
+            return
+        if not trusted_in_process:
+            raise TrustedActivationFenceError(
+                "Root planned senza kernel witness; recovery manuale senza rimozione"
+            )
+        try:
+            metadata = root.lstat()
+            if not stat.S_ISDIR(metadata.st_mode) or root.is_symlink():
+                raise OSError(errno.EINVAL, "root planned non directory")
+            root.rmdir()
+        except OSError as exc:
+            raise TrustedActivationFenceError("Root planned non vuota; recovery manuale") from exc
+        return
+    root_mount = _kernel_root_mount(token, require_read_only=False)
+    manifest: Mapping[str, Any] | None = None
+    if "ro" in root_mount.options:
+        manifest = _read_immutable_manifest(root, token)
+    _remove_kernel_transaction(token, manifest)
 
 
-def _remove_incomplete_transaction(transaction: Mapping[str, Any]) -> None:
-    """Unwind setup-only mounts by exact tmpfs device; no trust decision used them."""
-
-    root = Path(str(transaction["root"]))
-    root_mount = _top_mount(root)
-    if root_mount is not None:
-        if root_mount.filesystem != "tmpfs":
-            raise TrustedActivationFenceError("Setup recovery rifiuta root mount non tmpfs")
-        device = root_mount.major_minor
-        for target in reversed(transaction.get("targets", [])):
-            path = Path(target["path"])
-            mounted = _top_mount(path)
-            if mounted is not None and mounted.major_minor == device:
-                _umount(path)
-        for target in reversed(transaction.get("targets", [])):
-            lower = root / str(target["lower"])
-            if _top_mount(lower) is not None:
-                _umount(lower)
-        _umount(root)
-    if root.exists():
-        shutil.rmtree(root)
-    for target in reversed(transaction.get("targets", [])):
-        if target.get("created"):
-            path = Path(target["path"])
-            if path.exists() and not any(path.iterdir()):
-                path.rmdir()
+def _kernel_orphan_tokens() -> tuple[str, ...]:
+    tokens: set[str] = set()
+    for record in _mount_records():
+        if not record.source.startswith(_MOUNT_SOURCE_PREFIX) or record.root != "/":
+            continue
+        token = record.source.removeprefix(_MOUNT_SOURCE_PREFIX)
+        try:
+            expected = _canonical_transaction_root(token)
+        except TrustedActivationFenceError:
+            continue
+        if record.mount_point == expected:
+            tokens.add(token)
+    return tuple(sorted(tokens))
 
 
 def recover_stale_fences() -> None:
-    """Unwind exact setup/active mounts after validating their recorded phase."""
+    """Recover only transaction mounts proven by their exact kernel identity."""
 
     state = _read_state()
-    if state is None:
-        return
+    recorded_tokens = {
+        str(transaction["token"]) for transaction in state["transactions"]
+    } if state is not None else set()
+    kernel_tokens = set(_kernel_orphan_tokens())
+    try:
+        entries = tuple(TRANSACTION_ROOT.iterdir()) if TRANSACTION_ROOT.exists() else ()
+    except OSError as exc:
+        raise TrustedActivationFenceError("Transaction root non enumerabile") from exc
+    for entry in entries:
+        try:
+            metadata = entry.lstat()
+        except OSError as exc:
+            raise TrustedActivationFenceError("Transaction entry non verificabile") from exc
+        if (
+            not stat.S_ISDIR(metadata.st_mode)
+            or entry.is_symlink()
+            or not _TOKEN_RE.fullmatch(entry.name)
+        ):
+            raise TrustedActivationFenceError(
+                "Transaction entry senza kernel witness; recovery manuale senza rimozione"
+            )
+        if entry.name not in kernel_tokens:
+            raise TrustedActivationFenceError(
+                "Root planned senza kernel witness; recovery manuale senza rimozione"
+            )
     boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
-    if state.get("boot_id") != boot_id:
-        # /run should not survive reboot.  Metadata here would be non-canonical.
+    if state is not None and state["boot_id"] != boot_id:
         raise TrustedActivationFenceError("Metadata fence appartiene a un altro boot")
-    transactions = state.get("transactions")
-    if state.get("poisoned") or not isinstance(transactions, list) or not transactions:
+    if state is not None and state["poisoned"]:
         raise TrustedActivationFenceError(
             "Fence stale non recuperabile automaticamente; underlying da ispezionare"
         )
+    transactions = list(state["transactions"]) if state is not None else []
+    orphan_tokens = kernel_tokens - recorded_tokens
+
+    # Validate every active authority before mutating any mount. Planned/witnessed
+    # JSON is only a hint; cleanup derives the mounted set from mountinfo source.
     for transaction in transactions:
-        if transaction.get("phase") == "active":
+        if transaction["phase"] == "active":
             _validate_transaction(transaction, require_underlying=True)
-        elif transaction.get("phase") != "setup":
-            raise TrustedActivationFenceError("Fase transaction fence non valida")
+        elif transaction["phase"] in {"sealed", "teardown"}:
+            _authoritative_manifest(transaction)
     for transaction in reversed(transactions):
-        if transaction.get("phase") == "active":
+        if transaction["phase"] == "active":
             _remove_transaction(transaction)
         else:
             _remove_incomplete_transaction(transaction)
+    for token in sorted(orphan_tokens, reverse=True):
+        root = _canonical_transaction_root(token)
+        root_mount = _kernel_root_mount(token, require_read_only=False)
+        manifest = _read_immutable_manifest(root, token) if "ro" in root_mount.options else None
+        _remove_kernel_transaction(token, manifest)
     _write_transactions(())
 
 
@@ -600,7 +963,10 @@ class SnapshotMountFence:
         *,
         directories: Iterable[Path],
         files: Iterable[Path],
+        aliases: Mapping[Path, str] | None = None,
     ) -> None:
+        if name not in _TRANSACTION_NAMES:
+            raise TrustedActivationFenceError("Nome transaction fence fuori policy")
         self.name = name
         directory_set = tuple(sorted(set(directories), key=lambda path: (len(path.parts), str(path))))
         self.directories = directory_set
@@ -610,6 +976,10 @@ class SnapshotMountFence:
                 if not any(path == directory or directory in path.parents for directory in directory_set)
             )
         )
+        alias_value = dict(aliases or {})
+        if any(_USRMERGE_ALIASES.get(path) != target for path, target in alias_value.items()):
+            raise TrustedActivationFenceError("Alias richiesto fuori policy usrmerge")
+        self.aliases = tuple(sorted(alias_value.items(), key=lambda item: str(item[0])))
         self.transaction: dict[str, Any] | None = None
 
     def __enter__(self) -> Self:
@@ -621,40 +991,59 @@ class SnapshotMountFence:
         state = _read_state()
         transactions = list(state.get("transactions", [])) if state else []
         token = f"{os.getpid()}-{uuid.uuid4().hex}"
-        root = TRANSACTION_ROOT / token
+        root = _canonical_transaction_root(token)
         root.mkdir(mode=0o700)
+        _fault("fence_after_transaction_root", self.name)
+        requested = tuple((path, "directory") for path in self.directories) + tuple(
+            (path, "file") for path in self.files
+        )
+        targets: list[dict[str, Any]] = []
+        snapshot_by_source: dict[Path, str] = {}
+        for index, (path, kind) in enumerate(requested):
+            if not path.is_absolute() or path != Path(os.path.abspath(path)):
+                raise TrustedActivationFenceError(f"Target fence non canonico: {path}")
+            snapshot = f"snapshot/{index:04d}"
+            targets.append(
+                {
+                    "path": str(path),
+                    "kind": kind,
+                    "lower": f"lower/{index:04d}",
+                    "snapshot": snapshot,
+                    "created": kind == "directory" and not path.exists(),
+                }
+            )
+            if kind == "directory":
+                snapshot_by_source[path] = snapshot
+        aliases: list[dict[str, str]] = []
+        for path, target in self.aliases:
+            source = Path("/") / target
+            snapshot = snapshot_by_source.get(source)
+            if snapshot is None:
+                raise TrustedActivationFenceError(f"Source alias non inclusa nella fence: {source}")
+            aliases.append({"path": str(path), "target": target, "snapshot": snapshot})
         transaction: dict[str, Any] = {
             "name": self.name,
             "token": token,
-            "phase": "setup",
+            "phase": "planned",
             "root": str(root),
-            "targets": [],
+            "targets": targets,
+            "aliases": aliases,
         }
         transactions.append(transaction)
         _write_transactions(transactions)
         try:
-            _mount("tmpfs", root, "tmpfs", MS_NOSUID | MS_NODEV, "mode=0700,size=256m")
+            source = _MOUNT_SOURCE_PREFIX + token
+            _mount(source, root, "tmpfs", MS_NOSUID | MS_NODEV, "mode=0700,size=256m")
+            _fault("fence_after_root_mount_before_witness", self.name)
+            root_record = _kernel_root_mount(token, require_read_only=False)
+            transaction["mount"] = _mount_witness(root_record)
+            transaction["phase"] = "witnessed"
+            _write_transactions(transactions)
+            _fault("fence_after_root_mount_witness", self.name)
             lower_root = root / "lower"
             snapshot_root = root / "snapshot"
             lower_root.mkdir()
             snapshot_root.mkdir()
-            requested = tuple((path, "directory") for path in self.directories) + tuple(
-                (path, "file") for path in self.files
-            )
-            for index, (path, kind) in enumerate(requested):
-                if not path.is_absolute() or path != Path(os.path.abspath(path)):
-                    raise TrustedActivationFenceError(f"Target fence non canonico: {path}")
-                transaction["targets"].append(
-                    {
-                        "path": str(path),
-                        "kind": kind,
-                        "lower": f"lower/{index:04d}",
-                        "snapshot": f"snapshot/{index:04d}",
-                        "created": kind == "directory" and not path.exists(),
-                    }
-                )
-            # Persist the complete cleanup plan before the first source mount/create.
-            _write_transactions(transactions)
             for target in transaction["targets"]:
                 path = Path(target["path"])
                 kind = str(target["kind"])
@@ -668,16 +1057,25 @@ class SnapshotMountFence:
                 if kind == "directory":
                     lower.mkdir()
                     _mount(str(path), lower, None, MS_BIND)
+                    _fault("fence_during_target_setup", self.name)
                     manifest = _copy_tree(lower, snapshot)
                 else:
                     lower.touch(mode=0o600)
                     _mount(str(path), lower, None, MS_BIND)
                     manifest = _copy_file(lower, snapshot)
+                _fault("fence_during_snapshot_copy", self.name)
                 target["manifest"] = manifest
-                target["source_hardlinks"] = _source_hardlinks(lower, kind)
+                target["source_hardlinks"] = list(_source_hardlinks(lower, kind))
             _write_transactions(transactions)
-            # A superblock remount, unlike a read-only bind, rejects pre-open writers
-            # and makes every alias/bind of the copied inode immutable.
+
+            # Persist the authority manifest while writable, but record the exact
+            # options required after the imminent superblock remount.
+            final_witness = _mount_witness(root_record)
+            final_witness["options"] = sorted(
+                (set(final_witness["options"]) - {"rw"}) | {"ro", "nosuid", "nodev"}
+            )
+            transaction["mount"] = final_witness
+            _atomic_json(root / _MANIFEST_NAME, _manifest_value(transaction))
             _mount(
                 None,
                 root,
@@ -685,14 +1083,31 @@ class SnapshotMountFence:
                 MS_REMOUNT | MS_RDONLY | MS_NOSUID | MS_NODEV,
                 "mode=0700",
             )
-            root_record = _top_mount(root)
-            if root_record is None or root_record.filesystem != "tmpfs" or "ro" not in root_record.options:
-                raise TrustedActivationFenceError("Remount tmpfs read-only non verificato")
+            root_record = _kernel_root_mount(token, require_read_only=True)
+            _fault("fence_after_ro_remount", self.name)
+            transaction["mount"] = _mount_witness(root_record)
+            transaction["phase"] = "sealed"
+            _write_transactions(transactions)
+
             for target in transaction["targets"]:
                 _mount(str(root / target["snapshot"]), Path(target["path"]), None, MS_BIND)
-            _validate_transaction(transaction, require_underlying=False)
+            for alias in transaction["aliases"]:
+                path = Path(alias["path"])
+                metadata = path.lstat()
+                if (
+                    not stat.S_ISLNK(metadata.st_mode)
+                    or metadata.st_uid != 0
+                    or metadata.st_gid != 0
+                    or os.readlink(path) != alias["target"]
+                ):
+                    raise TrustedActivationFenceError(f"Alias usrmerge baseline divergente: {path}")
+                path.unlink()
+                path.mkdir(mode=0o755)
+                _mount(str(root / alias["snapshot"]), path, None, MS_BIND)
             transaction["phase"] = "active"
+            _validate_transaction(transaction, require_underlying=False)
             _write_transactions(transactions)
+            _fault("fence_after_active_state", self.name)
             self.transaction = transaction
             _ACTIVE_TRANSACTIONS.append(transaction)
             return self
@@ -700,7 +1115,7 @@ class SnapshotMountFence:
             current = _read_state()
             current_transactions = list(current.get("transactions", [])) if current else []
             try:
-                _remove_incomplete_transaction(transaction)
+                _remove_incomplete_transaction(transaction, trusted_in_process=True)
                 if current_transactions and current_transactions[-1].get("token") == token:
                     current_transactions.pop()
                 _write_transactions(current_transactions)
@@ -711,7 +1126,11 @@ class SnapshotMountFence:
     def create_underlying_symlink(self, path: Path, target_value: str) -> None:
         """Create one declared persistence link while its global namespace stays frozen."""
 
-        if self.transaction is None or not target_value.startswith("/"):
+        if (
+            self.transaction is None
+            or path != Path("/etc/systemd/system/multi-user.target.wants/nginx.service")
+            or target_value != "/usr/lib/systemd/system/nginx.service"
+        ):
             raise TrustedActivationFenceError("Mutazione persistence fence non valida")
         containing = [
             target for target in self.transaction["targets"]
@@ -758,6 +1177,7 @@ class SnapshotMountFence:
             symlink_record is None
             or symlink_record[0] != "l"
             or symlink_record[2] != 0
+            or symlink_record[3] != 0
             or symlink_record[4] != target_value
         ):
             raise TrustedActivationFenceError(f"Persistence symlink non canonico: {path}")
@@ -783,6 +1203,15 @@ class SnapshotMountFence:
         transactions = list(state.get("transactions", [])) if state else []
         try:
             _validate_transaction(self.transaction, require_underlying=True)
+            self.transaction["phase"] = "teardown"
+            for index, recorded in enumerate(transactions):
+                if recorded.get("token") == self.transaction["token"]:
+                    transactions[index] = self.transaction
+                    break
+            else:
+                raise TrustedActivationFenceError("Transaction teardown non registrata")
+            _write_transactions(transactions)
+            _fault("fence_before_teardown", self.name)
             _remove_transaction(self.transaction)
         except Exception:
             _write_transactions(transactions, poisoned=True)

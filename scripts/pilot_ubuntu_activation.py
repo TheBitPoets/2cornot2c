@@ -15,7 +15,7 @@ import re
 import shlex
 import shutil
 import stat
-import subprocess
+import subprocess as _stdlib_subprocess
 import sys
 import tempfile
 import time
@@ -33,10 +33,19 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts import validate_pilot_deployment as deployment  # noqa: E402
+from scripts.pilot_native_execution_closure import (  # noqa: E402
+    NativeExecutionClosureError,
+    attest_native_execution_closure,
+    closure_counts as native_closure_counts,
+)
 from scripts.pilot_ubuntu_reviewed_executables import (  # noqa: E402
     REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES,
 )
+from scripts.pilot_ubuntu_reviewed_native_code import (  # noqa: E402
+    NATIVE_CODE_REVIEWED_SHA256,
+)
 from scripts.pilot_trusted_activation_fence import (  # noqa: E402
+    USR_MERGE_ALIASES,
     SnapshotMountFence,
     TrustedActivationFenceError,
     host_lock_and_recovery,
@@ -194,8 +203,8 @@ BASE_FENCE_DIRECTORIES = (
     Path("/usr/bin"),
     Path("/usr/sbin"),
     Path("/usr/local"),
-    Path("/usr/lib/systemd"),
-    Path("/usr/lib/nginx"),
+    Path("/usr/lib"),
+    Path("/usr/lib64"),
     Path("/usr/share/nginx"),
     Path("/var/lib/dpkg/info"),
 )
@@ -239,6 +248,44 @@ _TRUSTED_BASE_FENCE: SnapshotMountFence | None = None
 _ACTIVE_EXECUTION_FENCE: SnapshotMountFence | None = None
 _TRUSTED_SESSION_OWNER_PID: int | None = None
 _EXECUTION_FENCE_OWNER_PID: int | None = None
+_GENERATED_OUTPUT_FENCE: SnapshotMountFence | None = None
+_NATIVE_CLOSURE_READY = False
+_NATIVE_CLOSURE_PATHS: frozenset[Path] = frozenset()
+NATIVE_EXECUTION_ROOTS = tuple(
+    path
+    for path, (_digest, execution_class) in REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES.items()
+    if execution_class == "NATIVE_PACKAGE_BINARY"
+)
+SYSTEMD_GENERATED_OUTPUT_DIRECTORIES = (
+    Path("/run/systemd/generator.early"),
+    Path("/run/systemd/generator"),
+    Path("/run/systemd/generator.late"),
+)
+
+
+class _NativeSubprocessProxy:
+    """Make the pre-first-native-exec invariant structural for this module."""
+
+    TimeoutExpired = _stdlib_subprocess.TimeoutExpired
+
+    @staticmethod
+    def run(command: Sequence[str], *args: Any, **kwargs: Any) -> Any:
+        if _KERNEL_FENCE_ENABLED and _TRUSTED_SESSION_DEPTH:
+            if (
+                not _NATIVE_CLOSURE_READY
+                or not _EXECUTION_FENCE_DEPTH
+                or not command
+                or not Path(command[0]).is_absolute()
+                or Path(command[0]) not in _NATIVE_CLOSURE_PATHS
+            ):
+                executable = command[0] if command else "<empty>"
+                raise ActivationError(
+                    f"Native subprocess prima/fuori dalla closure attestata: {executable}"
+                )
+        return _stdlib_subprocess.run(command, *args, **kwargs)
+
+
+subprocess = _NativeSubprocessProxy()
 
 
 def enable_kernel_activation_fence() -> None:
@@ -246,6 +293,30 @@ def enable_kernel_activation_fence() -> None:
 
     global _KERNEL_FENCE_ENABLED
     _KERNEL_FENCE_ENABLED = True
+
+
+def _base_frozen_native_digests() -> Mapping[Path, str]:
+    if _TRUSTED_BASE_FENCE is None or _TRUSTED_BASE_FENCE.transaction is None:
+        raise ActivationError("Base native manifest non disponibile")
+    targets = _TRUSTED_BASE_FENCE.transaction["targets"]
+    result: dict[Path, str] = {}
+    for lexical in NATIVE_CODE_REVIEWED_SHA256:
+        path = Path(lexical)
+        containing = [
+            target
+            for target in targets
+            if path == Path(target["path"]) or Path(target["path"]) in path.parents
+        ]
+        if len(containing) != 1:
+            raise ActivationError(f"Native identity fuori dal base manifest: {path}")
+        target = containing[0]
+        relative = path.relative_to(Path(target["path"]))
+        key = "." if target["kind"] == "file" else relative.as_posix()
+        record = target["manifest"].get(key)
+        if record is None or record[0] != "f" or len(record) != 6:
+            raise ActivationError(f"Native identity non regolare nel base manifest: {path}")
+        result[path] = str(record[5])
+    return result
 
 
 def _base_fence_files() -> tuple[Path, ...]:
@@ -284,12 +355,15 @@ def _trusted_activation_session() -> Iterable[None]:
                 "trusted-activation-base",
                 directories=BASE_FENCE_DIRECTORIES,
                 files=_base_fence_files(),
+                aliases=USR_MERGE_ALIASES,
             ) as fence:
                 _TRUSTED_BASE_FENCE = fence
                 _TRUSTED_SESSION_OWNER_PID = os.getpid()
                 _TRUSTED_SESSION_DEPTH = 1
                 try:
-                    _attest_activator_subprocess_toolchain()
+                    # No new native process is permitted in the base-only phase.
+                    # The execution fence freezes /etc and then performs the pure-
+                    # Python loader closure attestation before its first subprocess.
                     yield
                 finally:
                     _TRUSTED_SESSION_DEPTH = 0
@@ -302,6 +376,7 @@ def _trusted_activation_session() -> Iterable[None]:
 @contextlib.contextmanager
 def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
     global _EXECUTION_FENCE_DEPTH, _ACTIVE_EXECUTION_FENCE, _EXECUTION_FENCE_OWNER_PID
+    global _GENERATED_OUTPUT_FENCE, _NATIVE_CLOSURE_READY, _NATIVE_CLOSURE_PATHS
     if not _KERNEL_FENCE_ENABLED:
         yield None
         return
@@ -312,6 +387,7 @@ def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
             _EXECUTION_FENCE_OWNER_PID != os.getpid()
             or _ACTIVE_EXECUTION_FENCE is None
             or _ACTIVE_EXECUTION_FENCE.transaction is None
+            or not _NATIVE_CLOSURE_READY
         ):
             raise ActivationError("Nesting execution fence senza owner kernel attivo")
         _EXECUTION_FENCE_DEPTH += 1
@@ -328,18 +404,31 @@ def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
         ) as fence:
             _ACTIVE_EXECUTION_FENCE = fence
             _EXECUTION_FENCE_OWNER_PID = os.getpid()
-            _EXECUTION_FENCE_DEPTH = 1
             try:
+                # Structural invariant: this pure-Python attestation is complete
+                # before _EXECUTION_FENCE_DEPTH permits any native subprocess.
+                _NATIVE_CLOSURE_PATHS = attest_native_execution_closure(
+                    NATIVE_EXECUTION_ROOTS,
+                    frozen_digests=_base_frozen_native_digests(),
+                )
+                _NATIVE_CLOSURE_READY = True
+                _EXECUTION_FENCE_DEPTH = 1
                 if _systemd_path(SYSTEMD_GENERATOR_SEARCH_PATH_NAME) != EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH:
                     raise ActivationError("Search path generator systemd 255 divergente")
                 if _systemd_path(SYSTEMD_UNIT_SEARCH_PATH_NAME) != EXPECTED_SYSTEMD_UNIT_SEARCH_PATH:
                     raise ActivationError("Search path unit systemd 255 divergente")
                 yield fence
             finally:
+                if _GENERATED_OUTPUT_FENCE is not None:
+                    generated_fence = _GENERATED_OUTPUT_FENCE
+                    _GENERATED_OUTPUT_FENCE = None
+                    generated_fence.__exit__(None, None, None)
                 _EXECUTION_FENCE_DEPTH = 0
+                _NATIVE_CLOSURE_READY = False
+                _NATIVE_CLOSURE_PATHS = frozenset()
                 _ACTIVE_EXECUTION_FENCE = None
                 _EXECUTION_FENCE_OWNER_PID = None
-    except TrustedActivationFenceError as exc:
+    except (TrustedActivationFenceError, NativeExecutionClosureError) as exc:
         raise ActivationError(f"TrustedActivationFence execution: {exc}") from exc
 
 
@@ -411,6 +500,8 @@ def _require_trusted_runtime() -> None:
         Path(deployment.__file__),
         Path(sys.modules[Directive.__module__].__file__),
         Path(sys.modules[SnapshotMountFence.__module__].__file__),
+        Path(sys.modules[attest_native_execution_closure.__module__].__file__),
+        Path(sys.modules["scripts.pilot_ubuntu_reviewed_native_code"].__file__),
     )
     if any(ROOT not in module.resolve(strict=True).parents for module in local_modules):
         raise ActivationError("Modulo security-critical caricato fuori dalla trusted toolchain")
@@ -2555,6 +2646,8 @@ def _attest_nginx_package_behavior_files() -> frozenset[Path]:
     return frozenset(attested)
 
 
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
 def verify_host_configuration_trust(
     info: BundleInfo | None = None,
     *,
@@ -2831,6 +2924,8 @@ def _verify_no_extended_acl(path: Path) -> None:
             raise ActivationError(f"ACL nominativa o output getfacl inatteso: {path}")
 
 
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
 def prepare_log_directory(manifest: Mapping[str, Any]) -> None:
     import grp
     import pwd
@@ -3006,10 +3101,14 @@ def _systemctl_result(arguments: Sequence[str]) -> tuple[int, str]:
     execution_bearing = action in SYSTEMCTL_EXECUTION_ACTIONS or (
         action in {"mask", "disable"} and "--now" in arguments
     )
-    if _KERNEL_FENCE_ENABLED and execution_bearing and not _EXECUTION_FENCE_DEPTH:
-        raise ActivationError(
-            f"Operazione systemctl execution-bearing fuori dalla fence: {action}"
-        )
+    if _KERNEL_FENCE_ENABLED and not _EXECUTION_FENCE_DEPTH:
+        if execution_bearing:
+            raise ActivationError(
+                f"Operazione systemctl execution-bearing fuori dalla fence: {action}"
+            )
+        with _trusted_activation_session():
+            with _trusted_execution_fence():
+                return _systemctl_result(arguments)
     try:
         result = subprocess.run(
             [str(SYSTEMCTL_BINARY), *arguments], check=False, capture_output=True, text=True, timeout=30
@@ -3021,6 +3120,10 @@ def _systemctl_result(arguments: Sequence[str]) -> tuple[int, str]:
 
 
 def _systemd_path(name: str) -> tuple[Path, ...]:
+    if _KERNEL_FENCE_ENABLED and not _EXECUTION_FENCE_DEPTH:
+        with _trusted_activation_session():
+            with _trusted_execution_fence():
+                return _systemd_path(name)
     try:
         result = subprocess.run(
             [str(SYSTEMD_PATH_BINARY), name],
@@ -3678,6 +3781,12 @@ _USR_MERGE_DIRECTORY_TARGETS: Mapping[Path, str] = {
 }
 
 
+def _canonical_usrmerge_spelling(path: Path) -> Path:
+    if len(path.parts) >= 2 and path.parts[1] in {"bin", "sbin", "lib", "lib64"}:
+        return Path("/usr").joinpath(*path.parts[1:])
+    return path
+
+
 def _assert_runtime_directory(path: Path) -> None:
     """Attest each PATH directory, allowing only Noble's exact usrmerge links."""
 
@@ -3699,7 +3808,7 @@ def _assert_runtime_directory(path: Path) -> None:
             if (
                 expected_target is None
                 or target != expected_target
-                or (os.name != "nt" and metadata.st_uid != 0)
+                or (os.name != "nt" and (metadata.st_uid != 0 or metadata.st_gid != 0))
             ):
                 raise ActivationError(f"Symlink PATH fuori policy usrmerge: {current}")
             continue
@@ -3795,7 +3904,7 @@ def _resolve_runtime_command(
                 raise ActivationError(f"Symlink executable non leggibile: {current}") from exc
             if expected_links.get(current) != target:
                 raise ActivationError(f"Symlink/alternatives executable fuori policy: {current}")
-            if os.name != "nt" and metadata.st_uid != 0:
+            if os.name != "nt" and (metadata.st_uid != 0 or metadata.st_gid != 0):
                 raise ActivationError(f"Symlink executable non root-owned: {current}")
             observed.append((current, _file_identity(metadata), target))
             next_path = Path(target)
@@ -3819,8 +3928,10 @@ def _resolve_runtime_command(
     else:
         raise ActivationError(f"Chain symlink executable troppo profonda: {policy.name}")
 
-    final = current.resolve(strict=True)
-    expected_final = (policy.expected_final or policy.expected_path).resolve(strict=True)
+    final = _canonical_usrmerge_spelling(current.resolve(strict=True))
+    expected_final = _canonical_usrmerge_spelling(
+        (policy.expected_final or policy.expected_path).resolve(strict=True)
+    )
     if final != expected_final or set(expected_links) != {
         path for path, _identity, target in observed if target is not None
     }:
@@ -4275,7 +4386,7 @@ def _assert_systemd_symlink_metadata(path: Path) -> str:
         raise ActivationError(f"Symlink systemd non verificabile: {path}") from exc
     if (
         not stat.S_ISLNK(metadata.st_mode)
-        or (os.name != "nt" and metadata.st_uid != 0)
+        or (os.name != "nt" and (metadata.st_uid != 0 or metadata.st_gid != 0))
         or not target
     ):
         raise ActivationError(f"Symlink systemd non root-owned/canonico: {path}")
@@ -4284,6 +4395,28 @@ def _assert_systemd_symlink_metadata(path: Path) -> str:
 
 def _is_generated_systemd_root(path: Path) -> bool:
     return path.parent == Path("/run/systemd") and path.name in SYSTEMD_GENERATED_DIRECTORY_NAMES
+
+
+def _seal_generated_systemd_output() -> None:
+    """Freeze generator output after generation/load and before effective use."""
+
+    global _GENERATED_OUTPUT_FENCE
+    if _GENERATED_OUTPUT_FENCE is not None:
+        if _GENERATED_OUTPUT_FENCE.transaction is None:
+            raise ActivationError("Seal generated-output senza kernel transaction attiva")
+        return
+    if not _EXECUTION_FENCE_DEPTH or not _NATIVE_CLOSURE_READY:
+        raise ActivationError("Seal generated-output fuori dalla execution closure")
+    fence = SnapshotMountFence(
+        "trusted-systemd-generated-output",
+        directories=SYSTEMD_GENERATED_OUTPUT_DIRECTORIES,
+        files=(),
+    )
+    try:
+        fence.__enter__()
+    except TrustedActivationFenceError as exc:
+        raise ActivationError(f"Seal generated-output fallita: {exc}") from exc
+    _GENERATED_OUTPUT_FENCE = fence
 
 
 def _attest_systemd_generators() -> None:
@@ -5013,12 +5146,20 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
     """Fail closed on local artifacts and unknown root schedulers in the boot surface."""
 
     _attest_activator_subprocess_toolchain()
-    # Generator bytes must be attested before asking PID 1 to execute them.
+    if _KERNEL_FENCE_ENABLED:
+        _attest_supported_system_manager_environment()
+    # Generation phase: trusted source is frozen, while PID 1 still owns writable
+    # output directories. No service use is authorized in this phase. The first
+    # call reloads, then seals output; nested/repeated attestations reuse that exact
+    # sealed generation and never open another mutable reload interval.
     _attest_systemd_generators()
-    code, _ = _systemctl_result(["daemon-reload"])
-    if code != 0:
-        raise ActivationError("systemd daemon-reload fallita durante boot attestation")
-    _attest_systemd_generators()
+    if _GENERATED_OUTPUT_FENCE is None:
+        code, _ = _systemctl_result(["daemon-reload"])
+        if code != 0:
+            raise ActivationError("systemd daemon-reload fallita durante boot attestation")
+        _attest_systemd_generators()
+        if _KERNEL_FENCE_ENABLED:
+            _seal_generated_systemd_output()
     roots = _systemd_path(SYSTEMD_UNIT_SEARCH_PATH_NAME)
     directories: list[Path] = []
     artifacts: list[Path] = []
@@ -5267,7 +5408,8 @@ def _canonical_path(
             if mapped is None:
                 raise OSError("path non assoluto")
             path = mapped
-        return path.resolve(strict=not allow_missing)
+        resolved = path.resolve(strict=not allow_missing)
+        return _canonical_usrmerge_spelling(resolved)
     except OSError as exc:
         raise ActivationError(f"Path systemd {label} non canonico: {value}") from exc
 
@@ -5322,6 +5464,8 @@ def _expected_exec(
     )
 
 
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
 def _attest_effective_nginx_unit(
     *,
     expect_running: bool | None,
@@ -5418,6 +5562,83 @@ def _attest_effective_nginx_unit(
     elif (main_pid == 0) != (control_group == ""):
         raise ActivationError("MainPID/ControlGroup nginx.service incoerenti")
     return EffectiveNginxUnit(main_pid, control_group)
+
+
+def _attest_native_runtime_maps(pid: int) -> frozenset[Path]:
+    """Bind nginx executable mappings to the frozen reviewed native authority."""
+
+    try:
+        lines = (PROC_ROOT / str(pid) / "maps").read_text(encoding="ascii").splitlines()
+    except OSError as exc:
+        raise ActivationError(f"Native runtime maps non leggibili: {pid}") from exc
+    mapped: set[Path] = set()
+    for line in lines:
+        fields = line.split(maxsplit=5)
+        if len(fields) < 5 or len(fields[1]) != 4:
+            raise ActivationError(f"Native runtime maps non canoniche: {pid}")
+        if "x" not in fields[1] or len(fields) == 5:
+            continue
+        raw = fields[5]
+        if not raw.startswith("/"):
+            continue
+        if raw.endswith(" (deleted)"):
+            raise ActivationError(f"Native executable mapping deleted: {raw}")
+        lexical = _canonical_usrmerge_spelling(Path(raw)).as_posix()
+        expected = NATIVE_CODE_REVIEWED_SHA256.get(lexical)
+        if expected is None:
+            # Once systemd retains the detached snapshot namespace, procfs may
+            # render a mapped dentry relative to the detached mount root (for
+            # example /nginx or /nginx/modules/...). Resolve only when exactly
+            # one repository-reviewed frozen root yields a known identity.
+            candidates = [
+                prefix + raw
+                for prefix in ("/usr/bin", "/usr/sbin", "/usr/lib", "/usr/lib64")
+                if prefix + raw in NATIVE_CODE_REVIEWED_SHA256
+            ]
+            if len(candidates) != 1:
+                raise ActivationError(f"Native executable mapping fuori closure: {raw}")
+            lexical = candidates[0]
+            expected = NATIVE_CODE_REVIEWED_SHA256[lexical]
+        process_view = PROC_ROOT / str(pid) / "root" / lexical.lstrip("/")
+        try:
+            actual = hashlib.sha256(_read_stable_trusted_file(process_view)).hexdigest()
+        except ActivationError:
+            # /proc ancestry is kernel authority, not a host package path. Use a
+            # descriptor-stable direct read while retaining exact reviewed bytes.
+            digest = hashlib.sha256()
+            try:
+                descriptor = os.open(
+                    process_view, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW
+                )
+                before = os.fstat(descriptor)
+                while True:
+                    chunk = os.read(descriptor, 1024 * 1024)
+                    if not chunk:
+                        break
+                    digest.update(chunk)
+                after = os.fstat(descriptor)
+            except OSError as exc:
+                raise ActivationError(f"Native mapping non attestabile: {raw}") from exc
+            finally:
+                if "descriptor" in locals():
+                    os.close(descriptor)
+                    del descriptor
+            if _file_identity(before) != _file_identity(after):
+                raise ActivationError(f"Native mapping mutata in lettura: {raw}")
+            actual = digest.hexdigest()
+        if actual != expected:
+            raise ActivationError(f"Native runtime mapping digest divergente: {raw}")
+        mapped.add(Path(lexical))
+    required_names = {
+        "nginx", "ld-linux-x86-64.so.2", "libc.so.6", "libssl.so.3", "libcrypto.so.3",
+        "ngx_http_geoip2_module.so", "ngx_stream_module.so",
+    }
+    present_names = {path.name for path in mapped}
+    if not required_names <= present_names:
+        raise ActivationError(
+            f"Native runtime mapping proof incompleta: {sorted(required_names - present_names)}"
+        )
+    return frozenset(mapped)
 
 
 def _read_process_control_groups(pid: int) -> frozenset[str]:
@@ -5632,6 +5853,7 @@ def _assert_no_canonical_listeners() -> None:
 
 
 @_in_trusted_activation_session
+@_in_trusted_execution_fence
 def _attest_nginx_service_runtime(
     unit: EffectiveNginxUnit | None = None,
 ) -> None:
@@ -5654,6 +5876,8 @@ def _attest_nginx_service_runtime(
         raise ActivationError(
             "MainPID nginx.service non identifica il master nginx package" + detail
         )
+    if _KERNEL_FENCE_ENABLED:
+        _attest_native_runtime_maps(effective.main_pid)
     if any(
         not _process_in_control_group(process, effective.control_group)
         for process in processes
@@ -5806,6 +6030,7 @@ def _write_logrotate_snapshot(payload: Mapping[str, Any]) -> None:
 
 
 @_in_trusted_activation_session
+@_in_trusted_execution_fence
 def logrotate_snapshot() -> None:
     """Persist only pre-rotation inode identity in a root-owned transient record."""
 
@@ -5904,6 +6129,7 @@ def _attest_logrotate_active_unit(
 
 
 @_in_trusted_activation_session
+@_in_trusted_execution_fence
 def logrotate_reopen() -> None:
     """Signal canonical nginx and prove old-to-current FD/inode transition."""
 
@@ -5968,6 +6194,8 @@ def logrotate_reopen() -> None:
         time.sleep(LOGROTATE_REOPEN_POLL_SECONDS)
 
 
+@_in_trusted_activation_session
+@_in_trusted_execution_fence
 def _attest_preflight_nginx_runtime() -> None:
     state, code = _nginx_service_state()
     if (state, code) == ("active", 0):
@@ -6043,12 +6271,10 @@ def _install_migration_guard() -> None:
     if existing["present"]:
         _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
         # A crash may leave the disk mask while the old package unit is still active.
-        code, _ = _systemctl_result(["unmask", "--no-reload", "nginx.service"])
-        if code != 0:
-            raise ActivationError("Unmask temporaneo recovery nginx.service fallito")
-    code, _ = _systemctl_result(["disable", "--no-reload", "nginx.service"])
-    if code != 0:
-        raise ActivationError("Disabilitazione preventiva nginx.service fallita")
+        # Mutate the one exact link in Python; invoking systemctl here would require
+        # freezing /etc and would therefore make its own --no-reload write fail.
+        _remove_symlink(NGINX_MIGRATION_GUARD)
+    _disable_nginx_autostart_link()
     code, unit_state = _systemctl_result(["is-enabled", "nginx.service"])
     if code == 0 or unit_state != "disabled":
         raise ActivationError("nginx.service non risulta disabled prima del guard")
@@ -6073,10 +6299,9 @@ def _install_migration_guard() -> None:
             raise ActivationError(f"nginx.service ambigua prima del mask: {state}")
         _attest_nginx_package_behavior_files()
 
-    code, _ = _systemctl_result(["mask", "--no-reload", "nginx.service"])
-    if code != 0:
-        raise ActivationError("Mask persistente nginx.service fallita")
-    _fsync_directory(NGINX_MIGRATION_GUARD.parent)
+    if NGINX_MIGRATION_GUARD.exists() or NGINX_MIGRATION_GUARD.is_symlink():
+        raise ActivationError("Mask persistente nginx.service già presente")
+    _replace_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
     with _trusted_execution_fence():
         _attest_systemd_boot_surface()
         state, state_code = _nginx_service_state()
@@ -6100,10 +6325,8 @@ def _remove_migration_guard() -> None:
     _verify_migration_guard()
     _attest_systemd_boot_surface()
     _verify_migration_guard()
-    code, _ = _systemctl_result(["unmask", "--no-reload", "nginx.service"])
-    if code != 0:
-        raise ActivationError("Unmask manager-mediated nginx.service fallita")
-    _fsync_directory(NGINX_MIGRATION_GUARD.parent)
+    _assert_root_symlink(NGINX_MIGRATION_GUARD, "/dev/null")
+    _remove_symlink(NGINX_MIGRATION_GUARD)
     _fault("after_guard_unmask")
     with _trusted_execution_fence():
         _attest_systemd_boot_surface()
