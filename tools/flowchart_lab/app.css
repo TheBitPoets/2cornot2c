@@ -1,0 +1,37 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color-scheme: light dark;
+  --surface: Canvas;
+  --text: CanvasText;
+  --muted: color-mix(in srgb, CanvasText 65%, Canvas 35%);
+  --border: color-mix(in srgb, CanvasText 22%, Canvas 78%);
+  --accent: LinkText;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface); color: var(--text); }
+header, footer { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+header p, footer { color: var(--muted); margin-bottom: 0; }
+.badge { margin-left: .6rem; padding: .15rem .45rem; border: 1px solid var(--border); border-radius: 999px; font-size: .8rem; }
+main { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(380px, 1.25fr) minmax(260px, .8fr); gap: .75rem; padding: .75rem; min-height: calc(100vh - 150px); }
+.panel { min-width: 0; padding: 1rem; border: 1px solid var(--border); border-radius: .75rem; overflow: auto; }
+h1, h2, h3 { margin-top: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: .75rem; }
+button { padding: .5rem .75rem; border: 1px solid var(--border); border-radius: .45rem; background: var(--surface); color: var(--text); cursor: pointer; }
+button:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+textarea { width: 100%; min-height: 340px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .88rem; border: 1px solid var(--border); border-radius: .45rem; padding: .65rem; background: var(--surface); color: var(--text); }
+textarea.inputs { min-height: 90px; }
+label { display: block; font-weight: 600; margin: .75rem 0 .35rem; }
+.help, .status { color: var(--muted); font-size: .9rem; }
+.status.error { color: #b00020; }
+.status.ok { color: #087f23; }
+#graph { width: 100%; min-height: 620px; border: 1px solid var(--border); border-radius: .5rem; background: color-mix(in srgb, Canvas 96%, CanvasText 4%); }
+.node-shape { fill: Canvas; stroke: CanvasText; stroke-width: 2; }
+.node-current .node-shape { stroke: LinkText; stroke-width: 5; }
+.node-text { fill: CanvasText; font-size: 14px; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+.edge { stroke: color-mix(in srgb, CanvasText 60%, Canvas 40%); stroke-width: 2; fill: none; marker-end: url(#arrow); }
+.edge-label { fill: CanvasText; font-size: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: .4rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--border); border-radius: .45rem; padding: .6rem; min-height: 3rem; }
+.trace-meta { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: .8rem; }
+@media (max-width: 1050px) { main { grid-template-columns: 1fr; } #graph { min-height: 480px; } }
