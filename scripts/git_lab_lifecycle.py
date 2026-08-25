@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Composable assignment/run lifecycle for TheBitLab Git Lab G1.
 
-This wrapper uses the existing normal Activity scaffold plus the Git Lab adapters.
-It is intentionally thin so final Course Board / Student Lab routing can call the
-same functions without duplicating Git-specific semantics.
+Git Lab uses a repository-submission scaffold rather than pretending Git is a
+code language. Final Course Board / Student Lab routing can call these same
+functions without duplicating Git-specific semantics.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from scripts import assign_activity, git_lab_assignment, git_lab_student
+from scripts import git_lab_assignment, git_lab_student
 
 
 def assign_git_lab(
@@ -22,36 +22,12 @@ def assign_git_lab(
     target: Path,
     thebitlab_ref: str = "main",
 ) -> dict[str, Any]:
-    """Create the normal assignment scaffold and its nested Git repository."""
-    plan = assign_activity.build_assignment_plan(
+    """Create the safe Git Lab scaffold and its nested repository."""
+    del thebitlab_ref  # repository submissions do not expose code-runner workflow refs.
+    return git_lab_assignment.create_git_lab_assignment(
         activity_path=activity_path,
-        targets=[target],
-        thebitlab_ref=thebitlab_ref,
-        overwrite=False,
+        target_dir=target,
     )
-    if not plan.can_assign:
-        raise ValueError("Consegna Git Lab già esistente; reset/reprepare deve essere esplicito.")
-    results = assign_activity.assign_activity_to_targets(
-        activity_path=activity_path,
-        targets=[target],
-        thebitlab_ref=thebitlab_ref,
-        overwrite=False,
-        overwrite_source=False,
-    )
-    if len(results) != 1:
-        raise ValueError("Assegnazione Git Lab non deterministica.")
-    result = results[0]
-    fixture = git_lab_assignment.prepare_assignment_repository(activity_path, result.assignment_dir)
-    if fixture is None:
-        raise ValueError("L'Activity non dichiara Git Lab.")
-    return {
-        "schema_version": "thebitlab.git-assignment-result.v1",
-        "activity_id": plan.activity_id,
-        "target": str(result.target),
-        "assignment_dir": str(result.assignment_dir),
-        "repository": str(git_lab_assignment.repository_path(result.assignment_dir)),
-        "fixture": fixture,
-    }
 
 
 def run_git_lab(
