@@ -24,6 +24,7 @@ DEFAULT_MAX_PATHS = 512
 DEFAULT_TIMEOUT_SECONDS = 4
 MAX_GIT_OUTPUT_BYTES = 2 * 1024 * 1024
 MAX_FILE_BYTES = 512 * 1024
+MAX_SUBJECT_CHARS = 240
 
 
 class GitLabValidationError(ValueError):
@@ -55,6 +56,14 @@ def _git_environment() -> dict[str, str]:
             "GIT_CONFIG_NOSYSTEM": "1",
             "GIT_CONFIG_GLOBAL": os.devnull,
             "GIT_OPTIONAL_LOCKS": "0",
+            # Override repository-local fsmonitor configuration. A validator
+            # must not execute a student-controlled fsmonitor hook/program
+            # merely to inspect status.
+            "GIT_CONFIG_COUNT": "2",
+            "GIT_CONFIG_KEY_0": "core.fsmonitor",
+            "GIT_CONFIG_VALUE_0": "false",
+            "GIT_CONFIG_KEY_1": "core.untrackedCache",
+            "GIT_CONFIG_VALUE_1": "false",
             "LC_ALL": "C",
             "LANG": "C",
         }
@@ -210,6 +219,8 @@ def _history(repo: Path, *, max_commits: int, max_paths: int) -> list[dict[str, 
         if len(fields) != 3:
             raise GitLabInspectionError("git log ha prodotto un record inatteso")
         sha, parents_text, subject = fields
+        if len(subject) > MAX_SUBJECT_CHARS:
+            raise GitLabInspectionError("commit subject oltre il limite G1")
         parents = [value for value in parents_text.split() if value]
         commits.append(
             {
@@ -298,8 +309,14 @@ def validate_spec(spec: Any) -> None:
             _validate_string_list(expectations[field], field)
     if "clean" in expectations and not isinstance(expectations["clean"], bool):
         raise GitLabValidationError("clean deve essere boolean")
-    if "branch" in expectations and not isinstance(expectations["branch"], str):
-        raise GitLabValidationError("branch deve essere stringa")
+    if "branch" in expectations:
+        branch = expectations["branch"]
+        if not isinstance(branch, str) or not branch.strip() or len(branch) > 200:
+            raise GitLabValidationError("branch deve essere stringa non vuota")
+    if "commit_count" in expectations:
+        count = expectations["commit_count"]
+        if not isinstance(count, int) or not 0 <= count <= DEFAULT_MAX_COMMITS:
+            raise GitLabValidationError("commit_count deve essere intero nel range G1")
 
     commits = expectations.get("commits", [])
     if not isinstance(commits, list):
@@ -314,8 +331,12 @@ def validate_spec(spec: Any) -> None:
         if position in seen_positions:
             raise GitLabValidationError("commit position duplicata")
         seen_positions.add(position)
-        if "subject_contains" in item and not isinstance(item["subject_contains"], str):
-            raise GitLabValidationError(f"commits[{index}].subject_contains deve essere stringa")
+        if "subject_contains" in item:
+            subject = item["subject_contains"]
+            if not isinstance(subject, str) or not subject or len(subject) > MAX_SUBJECT_CHARS:
+                raise GitLabValidationError(
+                    f"commits[{index}].subject_contains deve essere stringa breve non vuota"
+                )
         if "changed_paths" in item:
             _validate_string_list(item["changed_paths"], f"commits[{index}].changed_paths")
         files = item.get("files", {})
@@ -333,7 +354,8 @@ def validate_spec(spec: Any) -> None:
 
 def evaluate_repository(repo_root: Path, spec: dict[str, Any]) -> dict[str, Any]:
     validate_spec(spec)
-    report = inspect_repository(repo_root)
+    repo = validate_repository_root(repo_root)
+    report = inspect_repository(repo)
     expectations = spec["expectations"]
     checks: list[dict[str, Any]] = []
 
@@ -359,8 +381,6 @@ def evaluate_repository(repo_root: Path, spec: dict[str, Any]) -> dict[str, Any]
     commits = report["commits"]
     if "commit_count" in expectations:
         expected_count = expectations["commit_count"]
-        if not isinstance(expected_count, int) or expected_count < 0:
-            raise GitLabValidationError("commit_count deve essere intero >= 0")
         check("history.commit_count", len(commits) == expected_count, expected_count, len(commits))
 
     for item in expectations.get("commits", []):
@@ -386,7 +406,7 @@ def evaluate_repository(repo_root: Path, spec: dict[str, Any]) -> dict[str, Any]
                 commit["changed_paths"],
             )
         for path, expected_hash in item.get("files", {}).items():
-            actual_hash = _blob_sha256(validate_repository_root(repo_root), commit["sha"], path)
+            actual_hash = _blob_sha256(repo, commit["sha"], path)
             check(f"commit[{position}].file:{path}", actual_hash == expected_hash, expected_hash, actual_hash)
 
     return {
