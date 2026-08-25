@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Loopback-only HTTP service for TheBitLab Flowchart Lab.
 
-All artifact semantics live in ``flowchart_lab_core``. Static UI serving is
-restricted to three fixed packaged assets; no arbitrary filesystem path is
-accepted from HTTP requests.
+Artifact semantics live in ``flowchart_lab_core``. Static UI serving is limited
+to fixed packaged assets. Optional persistence is limited to one fixed artifact
+inside a launcher-selected workspace root.
 """
 
 from __future__ import annotations
@@ -14,8 +14,9 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
-from scripts import flowchart_lab_core
+from scripts import flowchart_lab_core, flowchart_lab_workspace
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +47,22 @@ def validate_bind_host(host: str) -> None:
         raise ValueError("Flowchart Lab può essere esposto solo su loopback")
 
 
+def valid_host_header(value: str) -> bool:
+    """Accept only loopback Host headers, with an optional numeric port."""
+    text = str(value or "").strip()
+    if not text or any(character in text for character in ("/", "\\", "@", " ", "\t", "\r", "\n")):
+        return False
+    try:
+        parsed = urlsplit(f"//{text}")
+        hostname = parsed.hostname or ""
+        port = parsed.port
+    except ValueError:
+        return False
+    if port is not None and not 1 <= port <= 65535:
+        return False
+    return is_loopback_host(hostname)
+
+
 def _response(status: int, payload: dict[str, Any]) -> tuple[int, bytes]:
     return status, (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
 
@@ -65,7 +82,27 @@ def static_asset(path: str) -> tuple[int, str, bytes] | None:
     return 200, content_type, data
 
 
-def handle_api_request(method: str, path: str, body: bytes) -> tuple[int, bytes]:
+def load_workspace_artifact(
+    store: flowchart_lab_workspace.FlowchartWorkspaceStore | None,
+) -> tuple[int, bytes]:
+    if store is None:
+        return _response(503, {"error": "workspace-unavailable"})
+    try:
+        artifact = store.load()
+    except flowchart_lab_workspace.FlowchartWorkspaceError as error:
+        return _response(422, {"error": "workspace-error", "detail": str(error)})
+    if artifact is None:
+        return _response(404, {"error": "artifact-not-found"})
+    return _response(200, {"artifact": artifact})
+
+
+def handle_api_request(
+    method: str,
+    path: str,
+    body: bytes,
+    *,
+    store: flowchart_lab_workspace.FlowchartWorkspaceStore | None = None,
+) -> tuple[int, bytes]:
     """Handle one API request without HTTP/server state, for deterministic tests."""
     if method != "POST":
         return _response(405, {"error": "method-not-allowed"})
@@ -106,6 +143,17 @@ def handle_api_request(method: str, path: str, body: bytes) -> tuple[int, bytes]
             return _response(400, {"error": "invalid-limits", "detail": str(error)})
         return _response(200, result)
 
+    if path == "/api/artifact":
+        if store is None:
+            return _response(503, {"error": "workspace-unavailable"})
+        try:
+            store.save(artifact)
+        except flowchart_lab_core.FlowchartValidationError as error:
+            return _response(422, {"error": "invalid-artifact", "detail": str(error)})
+        except flowchart_lab_workspace.FlowchartWorkspaceError as error:
+            return _response(422, {"error": "workspace-error", "detail": str(error)})
+        return _response(200, {"saved": True, "artifact_name": flowchart_lab_workspace.ARTIFACT_NAME})
+
     return _response(404, {"error": "not-found"})
 
 
@@ -118,7 +166,12 @@ class FlowchartLabHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self'; connect-src 'self'; img-src 'self' data:; "
+            "style-src 'self'; script-src 'self'; object-src 'none'; "
+            "base-uri 'none'; frame-ancestors 'none'",
+        )
         self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         self.wfile.write(body)
@@ -126,7 +179,21 @@ class FlowchartLabHandler(BaseHTTPRequestHandler):
     def _send_json(self, status: int, body: bytes) -> None:
         self._send(status, "application/json; charset=utf-8", body)
 
+    def _host_allowed(self) -> bool:
+        if valid_host_header(self.headers.get("Host", "")):
+            return True
+        self._send_json(*_response(421, {"error": "invalid-host"}))
+        return False
+
+    def _store(self) -> flowchart_lab_workspace.FlowchartWorkspaceStore | None:
+        return getattr(self.server, "workspace_store", None)
+
     def do_GET(self) -> None:  # noqa: N802
+        if not self._host_allowed():
+            return
+        if self.path == "/api/artifact":
+            self._send_json(*load_workspace_artifact(self._store()))
+            return
         asset = static_asset(self.path)
         if asset is None:
             self._send_json(*_response(404, {"error": "not-found"}))
@@ -134,6 +201,8 @@ class FlowchartLabHandler(BaseHTTPRequestHandler):
         self._send(*asset)
 
     def do_POST(self) -> None:  # noqa: N802
+        if not self._host_allowed():
+            return
         raw_length = self.headers.get("Content-Length", "")
         try:
             length = int(raw_length)
@@ -144,7 +213,7 @@ class FlowchartLabHandler(BaseHTTPRequestHandler):
             self._send_json(*_response(413, {"error": "request-too-large"}))
             return
         body = self.rfile.read(length)
-        self._send_json(*handle_api_request("POST", self.path, body))
+        self._send_json(*handle_api_request("POST", self.path, body, store=self._store()))
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -154,12 +223,25 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Serve TheBitLab Flowchart Lab on loopback")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument(
+        "--workspace",
+        type=Path,
+        default=None,
+        help="Managed assignment workspace. Enables load/save of algorithm.flow.json.",
+    )
     args = parser.parse_args()
     validate_bind_host(args.host)
     if not 1 <= args.port <= 65535:
         raise SystemExit("porta non valida")
+    workspace_store = (
+        flowchart_lab_workspace.FlowchartWorkspaceStore(args.workspace)
+        if args.workspace is not None
+        else None
+    )
     server = ThreadingHTTPServer((args.host, args.port), FlowchartLabHandler)
-    print(f"Flowchart Lab: http://{args.host}:{args.port}")
+    server.workspace_store = workspace_store  # type: ignore[attr-defined]
+    mode = f" workspace={workspace_store.root}" if workspace_store else " workspace=disabled"
+    print(f"Flowchart Lab: http://{args.host}:{args.port} ({mode.strip()})")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
