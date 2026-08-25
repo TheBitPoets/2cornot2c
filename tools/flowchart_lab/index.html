@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TheBitLab Flowchart Lab</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <div>
+      <strong>TheBitLab Flowchart Lab</strong>
+      <span class="badge">MVP locale</span>
+    </div>
+    <p>Artifact → validate → run/step → trace. Editor grafico completo ancora in sviluppo.</p>
+  </header>
+
+  <main>
+    <section class="panel source-panel">
+      <h1>Algoritmo</h1>
+      <div class="toolbar">
+        <button id="exampleBtn" type="button">Esempio</button>
+        <button id="validateBtn" type="button">Valida</button>
+        <button id="runBtn" type="button">Run</button>
+        <button id="stepBtn" type="button">Step</button>
+        <button id="resetBtn" type="button">Reset</button>
+      </div>
+      <label for="artifact">Artifact JSON</label>
+      <textarea id="artifact" spellcheck="false" aria-describedby="artifactHelp"></textarea>
+      <p id="artifactHelp" class="help">Questa textarea è una shell di sviluppo, non l'UX finale per gli studenti.</p>
+      <label for="inputs">Input, uno per riga</label>
+      <textarea id="inputs" class="inputs" spellcheck="false"></textarea>
+      <div id="status" role="status" aria-live="polite" class="status">Pronto.</div>
+    </section>
+
+    <section class="panel graph-panel">
+      <h2>Diagramma</h2>
+      <svg id="graph" viewBox="0 0 900 700" role="img" aria-label="Anteprima del flow chart"></svg>
+    </section>
+
+    <section class="panel trace-panel">
+      <h2>Trace</h2>
+      <div class="trace-meta">
+        <span>Step: <strong id="stepCounter">0/0</strong></span>
+        <span>Node: <strong id="currentNode">—</strong></span>
+      </div>
+      <h3>Variabili</h3>
+      <table>
+        <thead><tr><th>Nome</th><th>Valore</th></tr></thead>
+        <tbody id="variables"></tbody>
+      </table>
+      <h3>Output</h3>
+      <pre id="outputs"></pre>
+      <h3>Evento corrente</h3>
+      <pre id="event"></pre>
+    </section>
+  </main>
+
+  <footer>
+    Esecuzione locale deterministica. Nessun CDN, nessun codice Python arbitrario dal diagramma.
+  </footer>
+  <script src="/app.js"></script>
+</body>
+</html>
