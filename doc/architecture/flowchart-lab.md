@@ -1,401 +1,357 @@
-# TheBitLab Flowchart Lab — architecture DRAFT
+# TheBitLab Flowchart Lab — implementation DRAFT
 
 Issue: #753
 
-## Why
+## Stato corrente
 
-Beginner Python requires a cross-platform tool for:
+Il progetto non è più soltanto architetturale. Il **core headless deterministico** è implementato in:
 
-- algorithm design before code;
-- flow charts;
-- step-by-step execution;
-- trace/variable observation;
-- deterministic evidence inside an Activity.
+- `scripts/flowchart_lab_core.py`;
+- test: `tests/test_flowchart_lab_core.py`.
 
-Flowgorithm is a useful reference but cannot be canonical because its official distribution is Windows-only. TheBitLab supports home/school workflows across more than one host/profile, so flow-chart authoring must live behind a portable managed capability.
-
-## Decision direction
-
-Implement Flowchart Lab as an **external TheBitLab interactive runtime/tool plugin**, not as hard-coded course logic and not as a Windows desktop dependency.
-
-Candidate runtime id:
+Implementato ora:
 
 ```text
-flowchart-lab
+thebitlab.flowchart.v1 artifact
+→ validation
+→ restricted expression parsing
+→ deterministic graph execution
+→ thebitlab.flowtrace.v1 trace
+→ variable snapshots / outputs / branch path
+→ step limit
 ```
 
-It reuses the existing runtime plugin boundary where practical:
+Non implementato ancora:
+
+- browser editor;
+- local managed service/API;
+- runtime plugin packaging/broker integration;
+- SVG/PNG export;
+- workspace autosave;
+- Activity runtime extension;
+- installer/profile certification;
+- Python correspondence view.
+
+## Perché
+
+Il corso Python beginner richiede uno strumento cross-platform per progettazione algoritmica prima del codice, flow chart, esecuzione step-by-step, trace/variabili ed evidence deterministica.
+
+Flowgorithm resta un riferimento utile ma non può essere dipendenza canonica perché la distribuzione ufficiale è Windows-only.
+
+## Boundary
+
+Target finale:
 
 ```text
 Activity
-→ TheBitLab runtime broker
-→ flowchart-lab plugin
-→ local browser endpoint / headless executor
+→ TheBitLab runtime/tool broker
+→ Flowchart Lab local service
+→ browser managed endpoint
+→ algorithm.flow.json nel workspace
+→ core headless validator/executor
+→ trace/evidence
 ```
 
-The current plugin protocol already has `describe`, `probe`, `launch`, `run`, sandbox preparation/finalization and session close operations. Flowchart Lab should exploit that boundary instead of inventing a second plugin system unless implementation proves a real mismatch.
+Il core implementato oggi è indipendente dalla UI e dal layout.
 
-## Student experience
+## Artifact v1
 
-From a Flowchart Activity:
-
-```text
-Open Activity
-→ Launch Flowchart Lab
-→ browser opens local managed endpoint
-→ student edits diagram
-→ step/run with deterministic input
-→ saves artifact in assignment workspace
-→ TheBitLab validates/runs evidence
-→ teacher sees diagram + trace/results
-```
-
-No separate manual installation of Flowgorithm or browser extensions.
-
-## Artifact
-
-Candidate file:
+File consigliato:
 
 ```text
 algorithm.flow.json
 ```
 
-Schema identity candidate:
+Schema identity:
 
 ```text
 thebitlab.flowchart.v1
 ```
 
-Example conceptual payload:
+### Struttura
 
 ```json
 {
   "schema_version": "thebitlab.flowchart.v1",
-  "entry": "n-start",
+  "entry": "start",
   "nodes": [
-    {"id": "n-start", "type": "start"},
-    {"id": "n-input", "type": "input", "target": "n", "prompt": "Numero"},
-    {"id": "n-decision", "type": "decision", "expression": "n > 0"},
-    {"id": "n-output-pos", "type": "output", "expression": "\"positivo\""},
-    {"id": "n-output-other", "type": "output", "expression": "\"non positivo\""},
-    {"id": "n-end", "type": "end"}
+    {"id": "start", "type": "start"},
+    {"id": "read", "type": "input", "target": "n", "data_type": "int"},
+    {"id": "positive", "type": "decision", "expression": "n > 0"},
+    {"id": "yes", "type": "output", "expression": "\"positivo\""},
+    {"id": "no", "type": "output", "expression": "\"non positivo\""},
+    {"id": "end", "type": "end"}
   ],
-  "edges": []
+  "edges": [
+    {"from": "start", "to": "read", "label": "next"},
+    {"from": "read", "to": "positive", "label": "next"},
+    {"from": "positive", "to": "yes", "label": "true"},
+    {"from": "positive", "to": "no", "label": "false"},
+    {"from": "yes", "to": "end", "label": "next"},
+    {"from": "no", "to": "end", "label": "next"}
+  ],
+  "layout": {}
 }
 ```
 
-Exact schema is implementation work; requirements below are normative for the design.
+## Node types implementati
 
-## Required constructs v1
+V1 core:
 
-Core beginner set:
+- `start`;
+- `end`;
+- `input`;
+- `assign`;
+- `output`;
+- `decision`;
+- `loop`;
+- `comment`.
 
-- start/end;
-- assignment;
-- input;
-- output;
-- decision;
-- loop;
-- function/subroutine call only if needed for the second-year function block;
-- comments/annotations.
+Funzioni/subroutine **non sono ancora implementate nel core**. Possono essere aggiunte in una revisione compatibile/estesa quando il percorso PY2-05 richiede flow chart modulari; non bloccano PY2-01.
 
-The schema must support nesting semantically without encoding layout as program meaning.
+## Semantica degli archi
 
-## Expression language
+### Sequenziali
 
-Do **not** execute arbitrary Python from diagram expressions.
-
-Use a deliberately small expression language covering second-year needs:
-
-- literals: integer, real, bool, string;
-- variable references;
-- arithmetic operators;
-- comparisons;
-- boolean `and/or/not` semantics;
-- indexing only when arrays/sequences become supported;
-- explicitly whitelisted pure functions if needed.
-
-The interpreter owns semantics and resource limits.
-
-A later Python correspondence view translates concepts for learning; Python is not the engine of the diagram format.
-
-## Execution engine
-
-Must be deterministic and headless-capable.
-
-Inputs:
-
-- flow artifact;
-- deterministic input fixture;
-- optional execution limits.
-
-Outputs:
+`start`, `input`, `assign`, `output`, `comment` richiedono esattamente:
 
 ```text
-status
-stdout/output events
-step trace
-variable snapshots
-executed node ids
-termination reason
-duration/step count
+1 arco label=next
 ```
 
-Candidate trace schema:
+### Branch
+
+`decision` e `loop` richiedono esattamente:
+
+```text
+1 arco true
+1 arco false
+```
+
+### End
+
+Nessun arco uscente.
+
+I cicli sono veri cicli del grafo. Un node `loop` valuta una condizione, entra sul ramo `true` e un arco successivo può tornare al node loop. Il layout non ha significato esecutivo.
+
+## Expression language implementato
+
+Il core usa il parser AST Python **solo come parser sintattico**, con whitelist stretta. Non chiama `eval`/`exec` e non esegue codice Python arbitrario.
+
+Consentito:
+
+- literal `int`, `float`, `bool`, `str`;
+- riferimenti a variabili;
+- `+`, `-`, `*`, `/`, `//`, `%`;
+- unari `+`, `-`, `not`;
+- confronti `==`, `!=`, `<`, `<=`, `>`, `>=`;
+- `and`, `or` con short-circuit;
+- confronti concatenati semplici.
+
+Rifiutato dai test:
+
+- chiamate (`open(...)`, `__import__(...)`);
+- attribute access;
+- lambda;
+- comprehension;
+- dict/list literal nel core corrente;
+- qualsiasi AST non whitelisted.
+
+Quindi il flow chart non è una backdoor per eseguire Python dello studente.
+
+## Input
+
+Tipi supportati:
+
+```text
+int
+float
+str
+bool
+```
+
+Per `bool`, forme beginner documentate includono `true/vero/1` e `false/falso/0`.
+
+## Limiti di sicurezza
+
+Core v1:
+
+- max 256 nodes;
+- max 512 edges;
+- espressione max 512 caratteri;
+- stringhe max 4096 caratteri;
+- max 128 variabili;
+- max 512 eventi output;
+- default 4096 step;
+- hard max 100000 step;
+- numeri non finiti rifiutati;
+- valori numerici didatticamente bounded;
+- nessun filesystem;
+- nessuna rete;
+- nessun subprocess;
+- nessun import;
+- nessuna reflection.
+
+## Validation
+
+`validate_flowchart_artifact()` controlla:
+
+- schema;
+- numero nodes/edges;
+- ID node validi/unici;
+- node type;
+- target variabile;
+- sintassi espressione whitelistata;
+- entry valido e coincidente con unico `start`;
+- presenza di almeno un `end`;
+- edge source/target validi;
+- label validi;
+- forma outgoing per tipo node;
+- nodi irraggiungibili;
+- layout separato e opzionale.
+
+## Execution / trace
+
+`execute_flowchart()` produce:
 
 ```text
 thebitlab.flowtrace.v1
 ```
 
-## Safety
+con:
 
-V1 interpreter has:
+- `status`;
+- `termination_reason`;
+- step count;
+- input consumati;
+- outputs;
+- variabili finali;
+- node eseguiti;
+- trace completo.
 
-- no filesystem access;
-- no network;
-- no subprocess;
-- no dynamic import;
-- no reflection;
-- bounded steps;
-- bounded variables/strings/collections;
-- bounded input/output;
-- deterministic numeric semantics documented for teaching.
-
-This makes Flowchart Lab suitable for browser preview and headless grading without running student Python.
-
-## Validation layers
-
-### Schema validation
-
-Deterministic:
-
-- unique node ids;
-- valid node types;
-- edge references valid;
-- exactly one entry;
-- valid expression syntax;
-- no unreachable invalid structure when prohibited;
-- bounded artifact size.
-
-### Structural checks
-
-Activity-dependent deterministic checks can include:
-
-- contains decision;
-- contains loop;
-- uses at most/exactly N inputs;
-- no forbidden construct;
-- expected variables exist;
-- graph terminates for supplied fixtures within limits.
-
-### Behavioral checks
-
-For fixture inputs:
+Ogni step contiene almeno:
 
 ```text
-input → expected output/final variables/trace properties
+node id/type
+variables_before
+variables_after
+branch
+next_node (se applicabile)
 ```
 
-### Manual/rubric checks
+Input/assignment/output/condition aggiungono il proprio evento specifico.
 
-Must remain manual when they assess:
+Questo è direttamente utilizzabile in futuro per:
 
-- clarity of algorithm;
-- unnecessary nesting;
-- quality of decomposition;
-- appropriateness of chosen construct;
-- correspondence to a natural-language specification;
-- explanation by the student.
+- Step/Run;
+- variable watch;
+- path highlight;
+- evidence docente;
+- behavioral checks deterministici.
 
-Do not create a fake “diagram quality score”.
+## Test implementati
 
-## Browser UI
+Oracoli positivi:
 
-V1 UI goals:
+1. somma di due input;
+2. decisione positivo/non positivo;
+3. ciclo contatore `0,1,2`;
+4. layout diverso con stesso comportamento;
+5. input booleano;
+6. snapshot variabili.
 
-- add/move/delete standard shapes;
-- connect branches/loops safely;
-- edit expressions with beginner-friendly validation;
+Fail-closed:
+
+- node irraggiungibile;
+- branch senza true/false completo;
+- AST unsafe/non supportato;
+- variabile non definita;
+- input esaurito;
+- ciclo non terminante → `limit-exceeded`.
+
+## Structural/behavioral grading boundary
+
+Quando integrato con Activity, l'automazione può verificare deterministicamente:
+
+- schema valido;
+- presenza di `decision`/`loop`;
+- limiti di input/output;
+- comportamento con fixture;
+- variabili finali;
+- path/trace property;
+- terminazione entro limite.
+
+Restano manual/rubric:
+
+- qualità dell'algoritmo;
+- chiarezza;
+- scelta appropriata del costrutto;
+- annidamento non necessario;
+- decomposizione;
+- spiegazione dello studente.
+
+Nessun “diagram quality score” artificiale.
+
+## Browser UI — prossimo layer
+
+UI v1 target:
+
+- palette forme standard;
+- add/move/delete;
+- connessioni branch/loop sicure;
+- edit expression con validation;
 - Run / Step / Reset;
 - variable watch;
-- input console;
-- output console;
-- highlight current node;
-- show execution path;
+- input/output panel;
+- highlight node corrente/percorso;
 - zoom/pan;
-- save automatically to workspace;
-- explicit save/export;
-- SVG/PNG export for teacher evidence.
+- save nel workspace;
+- SVG export;
+- italiano minimo, stringhe externalized;
+- high contrast/labels non color-only.
 
-Accessibility:
-
-- keyboard navigation where practical;
-- shape labels not color-only;
-- readable high-contrast mode;
-- Italian UI at minimum, with strings externalized for future localization.
+La UI deve chiamare il core e non reimplementare una seconda semantica nel browser.
 
 ## Layout vs semantics
 
-Separate program graph from visual coordinates.
+`layout` è opzionale. L'executor lo ignora completamente; un test verifica che coordinate differenti producano identico output.
 
-Artifact can contain an optional `layout` section. The executor ignores layout.
+## Python correspondence
 
-This allows:
-
-- deterministic execution;
-- re-layout without semantic diff noise where possible;
-- future alternate renderers;
-- stable teacher evidence.
-
-## Python correspondence view
-
-Useful but pedagogically gated.
-
-After the relevant Python construct has been introduced, the UI may show a generated correspondence:
+Non implementata. Se aggiunta successivamente:
 
 ```text
-flow node ↔ pseudocode ↔ Python fragment
+flow node ↔ pseudocodice ↔ Python esplicito beginner
 ```
 
-Rules:
-
-- never make generated Python the student's automatic submission for an implement Activity;
-- clearly label it as generated/explanatory;
-- mapping should favor simple, explicit beginner Python;
-- avoid clever comprehensions/one-liners.
-
-## Flowgorithm interoperability
-
-Not required for v1.
-
-Future optional importer/exporter may target Flowgorithm XML if licensing/format stability and semantic mapping are acceptable.
-
-It must remain an adapter, not the canonical artifact.
-
-## Activity integration
-
-Flowchart Activity example:
-
-```text
-student assets:
-  algorithm.flow.json starter
-runtime:
-  flowchart-lab
-visible evidence:
-  diagram
-  trace
-  fixture results
-manual checks:
-  design clarity
-  construct choice
-```
-
-Activity schema 1.0 remains authoritative; runtime-specific configuration goes through its extension/runtime contract.
+Solo dopo che il costrutto Python è stato insegnato; mai come soluzione automatica di una Activity implementativa.
 
 ## Profile support
 
 ### Docker-light
 
-Flowchart Lab should not require X11/desktop packages inside the 512 MB student-dev container.
+Niente X11/desktop nel container. Target:
 
-Preferred path:
-
-- managed local service/plugin;
-- host default browser;
-- artifact in mounted course workspace.
+```text
+local service/plugin + browser host + workspace montato
+```
 
 ### VM-gui
 
-Can use the same browser/service interaction. Avoid implementing a second desktop-only editor unless needed.
+Stesso browser/service interaction, evitando un secondo editor desktop proprietario.
 
-This keeps student behavior consistent across profiles.
+## Offline
 
-## Offline behavior
+Dopo installazione, core/UI devono funzionare senza Internet pubblico. Nessun CDN necessario per il percorso core; servizio bind loopback by default.
 
-Core classroom use should work without public Internet after installation.
+## Prossimi gate
 
-Static frontend/runtime assets should be installed/pinned with the environment/plugin. Local browser endpoint should bind to loopback only by default.
-
-No CDN dependency for core UI.
-
-## Persistence
-
-The authoritative artifact is stored in the assignment workspace.
-
-Autosave requirements:
-
-- atomic write/replace;
-- no corruption on browser refresh;
-- explicit version/schema;
-- recoverable last-known-good or temporary draft if feasible.
-
-Teacher/grading data remains outside student-visible assets according to Activity separation rules.
-
-## Git
-
-Because the diagram artifact is text/JSON, later second-year Git exercises can version it together with Python source.
-
-Avoid encoding volatile timestamps/UUID regeneration that create meaningless diffs.
-
-## Romeo relationship
-
-Flowchart Lab and Romeo are independent plugins/tools.
-
-A lesson may use:
-
-```text
-flow chart for mission algorithm
-→ Python implementation
-→ Romeo simulated execution
-```
-
-Do not make Flowchart Lab directly control Romeo in v1; keep boundaries teachable and composable.
-
-## Testing strategy
-
-### Interpreter
-
-- unit tests for every construct;
-- nested decision/loop fixtures;
-- invalid graph rejection;
-- step limit/infinite-loop containment;
-- cross-platform deterministic traces.
-
-### UI
-
-- component tests;
-- save/reload;
-- Run/Step behavior;
-- viewport/layout persistence;
-- browser smoke.
-
-### Cross-course consumer
-
-Before acceptance, exercise at least:
-
-1. sequence + I/O Activity;
-2. selection Activity;
-3. nested loop Activity;
-4. flowchart → Python lesson handoff in `python-docente`;
-5. Docker-light and VM-gui student paths.
-
-## Non-goals v1
-
-- full general-purpose visual programming language;
-- arbitrary Python execution in nodes;
-- automatic assessment of algorithm elegance;
-- collaborative live editing;
-- complex UML/BPMN;
-- networked flow programs;
-- replacing normal Python coding after the beginner transition.
-
-## Open implementation choices
-
-- frontend graph/editor library vs minimal custom SVG/Canvas;
-- exact plugin package/repository location;
-- whether `launch` service lives in plugin process or a small managed sidecar;
-- exact expression grammar;
-- artifact migration policy;
-- optional import from Flowgorithm.
-
-These can be decided after this architecture is reviewed without changing the curricular requirement.
+1. CI verde del core/validator;
+2. local HTTP service/API loopback;
+3. browser UI minimale che usa lo stesso core;
+4. save/load workspace;
+5. SVG evidence;
+6. runtime/tool broker integration;
+7. Activity consumer Python PY2-01;
+8. docker-light + vm-gui certification;
+9. solo allora `flowchart.lab.v1` può passare da fallback/preferred a capability certified.
