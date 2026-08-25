@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Loopback-only HTTP service for TheBitLab Flowchart Lab.
 
-The service is intentionally thin: all artifact semantics live in
-``flowchart_lab_core``. V1 API accepts artifacts in request bodies and does not
-read arbitrary filesystem paths.
+All artifact semantics live in ``flowchart_lab_core``. Static UI serving is
+restricted to three fixed packaged assets; no arbitrary filesystem path is
+accepted from HTTP requests.
 """
 
 from __future__ import annotations
@@ -12,14 +12,23 @@ import argparse
 import ipaddress
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 
 from scripts import flowchart_lab_core
 
 
+ROOT = Path(__file__).resolve().parents[1]
+STATIC_ROOT = ROOT / "tools" / "flowchart_lab"
+STATIC_ROUTES = {
+    "/": (STATIC_ROOT / "index.html", "text/html; charset=utf-8"),
+    "/app.css": (STATIC_ROOT / "app.css", "text/css; charset=utf-8"),
+    "/app.js": (STATIC_ROOT / "app.js", "text/javascript; charset=utf-8"),
+}
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8776
 MAX_REQUEST_BYTES = 1024 * 1024
+MAX_STATIC_BYTES = 512 * 1024
 
 
 def is_loopback_host(host: str) -> bool:
@@ -39,6 +48,21 @@ def validate_bind_host(host: str) -> None:
 
 def _response(status: int, payload: dict[str, Any]) -> tuple[int, bytes]:
     return status, (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+
+
+def static_asset(path: str) -> tuple[int, str, bytes] | None:
+    """Return one fixed packaged asset; never resolve request-controlled paths."""
+    descriptor = STATIC_ROUTES.get(path)
+    if descriptor is None:
+        return None
+    file_path, content_type = descriptor
+    try:
+        data = file_path.read_bytes()
+    except OSError:
+        return 500, "application/json; charset=utf-8", _response(500, {"error": "static-asset-unavailable"})[1]
+    if len(data) > MAX_STATIC_BYTES:
+        return 500, "application/json; charset=utf-8", _response(500, {"error": "static-asset-too-large"})[1]
+    return 200, content_type, data
 
 
 def handle_api_request(method: str, path: str, body: bytes) -> tuple[int, bytes]:
@@ -88,17 +112,26 @@ def handle_api_request(method: str, path: str, body: bytes) -> tuple[int, bytes]
 class FlowchartLabHandler(BaseHTTPRequestHandler):
     server_version = "TheBitLabFlowchartLab/0.1"
 
-    def _send_json(self, status: int, body: bytes) -> None:
+    def _send(self, status: int, content_type: str, body: bytes) -> None:
         self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_json(self, status: int, body: bytes) -> None:
+        self._send(status, "application/json; charset=utf-8", body)
+
     def do_GET(self) -> None:  # noqa: N802
-        self._send_json(*_response(404, {"error": "not-found"}))
+        asset = static_asset(self.path)
+        if asset is None:
+            self._send_json(*_response(404, {"error": "not-found"}))
+            return
+        self._send(*asset)
 
     def do_POST(self) -> None:  # noqa: N802
         raw_length = self.headers.get("Content-Length", "")
@@ -114,13 +147,11 @@ class FlowchartLabHandler(BaseHTTPRequestHandler):
         self._send_json(*handle_api_request("POST", self.path, body))
 
     def log_message(self, format: str, *args: Any) -> None:
-        # Avoid noisy/default request logging in classroom terminals. The future
-        # managed launcher can add bounded structured logs when needed.
         return
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Serve TheBitLab Flowchart Lab core on loopback")
+    parser = argparse.ArgumentParser(description="Serve TheBitLab Flowchart Lab on loopback")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = parser.parse_args()
@@ -128,7 +159,7 @@ def main() -> int:
     if not 1 <= args.port <= 65535:
         raise SystemExit("porta non valida")
     server = ThreadingHTTPServer((args.host, args.port), FlowchartLabHandler)
-    print(f"Flowchart Lab core API: http://{args.host}:{args.port}")
+    print(f"Flowchart Lab: http://{args.host}:{args.port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
