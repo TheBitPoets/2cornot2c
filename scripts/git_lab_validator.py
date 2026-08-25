@@ -56,9 +56,6 @@ def _git_environment() -> dict[str, str]:
             "GIT_CONFIG_NOSYSTEM": "1",
             "GIT_CONFIG_GLOBAL": os.devnull,
             "GIT_OPTIONAL_LOCKS": "0",
-            # Override repository-local fsmonitor configuration. A validator
-            # must not execute a student-controlled fsmonitor hook/program
-            # merely to inspect status.
             "GIT_CONFIG_COUNT": "2",
             "GIT_CONFIG_KEY_0": "core.fsmonitor",
             "GIT_CONFIG_VALUE_0": "false",
@@ -146,7 +143,6 @@ def _parse_status(repo: Path, *, max_paths: int) -> dict[str, list[str]]:
         xy = record[:2]
         path = record[3:]
         if xy[0] in {"R", "C"}:
-            # porcelain v1 -z emits the source path as the next NUL field.
             index += 1
             if index >= len(parts):
                 raise GitLabInspectionError("rename/copy status incompleto")
@@ -234,9 +230,7 @@ def _history(repo: Path, *, max_commits: int, max_paths: int) -> list[dict[str, 
     return commits
 
 
-def _blob_sha256(repo: Path, commit_sha: str, path: str) -> str | None:
-    safe_path = _safe_relative_path(path)
-    object_name = f"{commit_sha}:{safe_path}"
+def _hash_blob_object(repo: Path, object_name: str, label: str) -> str | None:
     blob_sha = _run_git(repo, "rev-parse", "--verify", object_name, check=False)
     assert isinstance(blob_sha, str)
     blob_sha = blob_sha.strip()
@@ -253,12 +247,42 @@ def _blob_sha256(repo: Path, commit_sha: str, path: str) -> str | None:
     except ValueError as error:
         raise GitLabInspectionError("dimensione blob non valida") from error
     if size > MAX_FILE_BYTES:
-        raise GitLabInspectionError(f"file troppo grande per evidence G1: {safe_path}")
+        raise GitLabInspectionError(f"file troppo grande per evidence G1: {label}")
     content = _run_git(repo, "cat-file", "-p", blob_sha, binary=True)
     assert isinstance(content, bytes)
     if len(content) != size:
         raise GitLabInspectionError("dimensione blob incoerente")
     return hashlib.sha256(content).hexdigest()
+
+
+def _blob_sha256(repo: Path, commit_sha: str, path: str) -> str | None:
+    safe_path = _safe_relative_path(path)
+    return _hash_blob_object(repo, f"{commit_sha}:{safe_path}", safe_path)
+
+
+def _index_sha256(repo: Path, path: str) -> str | None:
+    safe_path = _safe_relative_path(path)
+    return _hash_blob_object(repo, f":{safe_path}", safe_path)
+
+
+def _working_tree_sha256(repo: Path, path: str) -> str | None:
+    safe_path = _safe_relative_path(path)
+    target = repo.joinpath(*PurePosixPath(safe_path).parts)
+    if not target.exists():
+        return None
+    if target.is_symlink():
+        raise GitLabInspectionError(f"working-tree evidence non segue symlink: {safe_path}")
+    try:
+        resolved = target.resolve(strict=True)
+        resolved.relative_to(repo)
+    except (OSError, ValueError) as error:
+        raise GitLabInspectionError(f"working-tree path esce dal repository: {safe_path}") from error
+    if not resolved.is_file():
+        return None
+    size = resolved.stat().st_size
+    if size > MAX_FILE_BYTES:
+        raise GitLabInspectionError(f"file troppo grande per evidence G1: {safe_path}")
+    return hashlib.sha256(resolved.read_bytes()).hexdigest()
 
 
 def inspect_repository(
@@ -278,10 +302,7 @@ def inspect_repository(
     return {
         "schema_version": REPORT_SCHEMA,
         "repository": {"branch": branch, "head": head, "detached": detached},
-        "working_tree": {
-            **status,
-            "clean": not any(status.values()),
-        },
+        "working_tree": {**status, "clean": not any(status.values())},
         "commits": commits,
     }
 
@@ -293,6 +314,20 @@ def _validate_string_list(value: Any, field: str) -> list[str]:
     if len(result) != len(set(result)):
         raise GitLabValidationError(f"{field} contiene duplicati")
     return sorted(result)
+
+
+def _validate_hash_map(value: Any, field: str) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise GitLabValidationError(f"{field} deve essere un oggetto")
+    result: dict[str, str] = {}
+    for path, expected_hash in value.items():
+        safe_path = _safe_relative_path(path)
+        if not isinstance(expected_hash, str) or len(expected_hash) != 64 or any(
+            char not in "0123456789abcdef" for char in expected_hash
+        ):
+            raise GitLabValidationError(f"{field}[{path!r}] deve essere sha256 lowercase")
+        result[safe_path] = expected_hash
+    return result
 
 
 def validate_spec(spec: Any) -> None:
@@ -307,6 +342,9 @@ def validate_spec(spec: Any) -> None:
     for field in ("staged_paths", "unstaged_paths", "untracked_paths"):
         if field in expectations:
             _validate_string_list(expectations[field], field)
+    for field in ("working_files", "index_files"):
+        if field in expectations:
+            _validate_hash_map(expectations[field], field)
     if "clean" in expectations and not isinstance(expectations["clean"], bool):
         raise GitLabValidationError("clean deve essere boolean")
     if "branch" in expectations:
@@ -339,17 +377,8 @@ def validate_spec(spec: Any) -> None:
                 )
         if "changed_paths" in item:
             _validate_string_list(item["changed_paths"], f"commits[{index}].changed_paths")
-        files = item.get("files", {})
-        if not isinstance(files, dict):
-            raise GitLabValidationError(f"commits[{index}].files deve essere un oggetto")
-        for path, expected_hash in files.items():
-            _safe_relative_path(path)
-            if not isinstance(expected_hash, str) or len(expected_hash) != 64 or any(
-                char not in "0123456789abcdef" for char in expected_hash
-            ):
-                raise GitLabValidationError(
-                    f"commits[{index}].files[{path!r}] deve essere sha256 lowercase"
-                )
+        if "files" in item:
+            _validate_hash_map(item["files"], f"commits[{index}].files")
 
 
 def evaluate_repository(repo_root: Path, spec: dict[str, Any]) -> dict[str, Any]:
@@ -377,6 +406,13 @@ def evaluate_repository(repo_root: Path, spec: dict[str, Any]) -> dict[str, Any]
             expected = sorted(expectations[spec_field])
             actual = working[report_field]
             check(f"working_tree.{report_field}", actual == expected, expected, actual)
+
+    for path, expected_hash in expectations.get("working_files", {}).items():
+        actual_hash = _working_tree_sha256(repo, path)
+        check(f"working_tree.file:{path}", actual_hash == expected_hash, expected_hash, actual_hash)
+    for path, expected_hash in expectations.get("index_files", {}).items():
+        actual_hash = _index_sha256(repo, path)
+        check(f"index.file:{path}", actual_hash == expected_hash, expected_hash, actual_hash)
 
     commits = report["commits"]
     if "commit_count" in expectations:
