@@ -4,68 +4,95 @@ Issue: #753
 
 ## Status
 
-Architecture proposal. No course should treat this document as an implemented capability until the contract, installer and validators are merged and exercised by real consumers.
+**Implementation draft.** Il contratto non è più soltanto architetturale: il validator macchina-verificabile è implementato in `scripts/course_environment_contract.py` con test in `tests/test_course_environment_contract.py`.
 
-## Problem
+CI sul primo SHA implementativo `5ea35d7ee736d1642dc258e712a2444a1be91c1f`:
 
-TheBitPoets courses currently share TheBitLab concepts but can still accidentally assume tools installed directly on the student host.
+- `Quality` — PASS;
+- `Build assignment runner Docker image` — PASS;
+- `uTUI consumer evidence` — PASS.
 
-Target invariant:
+Restano non implementati/certificati: resolver/installer del manifest, capability report runtime, managed VS Code, Flowchart Lab, certificazione `romeo-sim`, riferimento del manifest dal Content Pack e consumer cross-profile reali.
 
-> A student installs/repairs the **TheBitLab Classroom Environment once** and every supported course runs inside that managed boundary, at school and at home.
+> Una capability può essere **registrata** senza essere **certificata** su un profilo. La presenza dell'ID nel registry non equivale a readiness.
 
-The course may use a host-side application only when TheBitLab owns its installation/configuration/lifecycle and exposes it as a declared capability.
+## Obiettivo
 
-## Existing profiles
+Un alunno installa/ripara il **Classroom Environment TheBitLab una volta** e ogni corso supportato usa quel boundary gestito a scuola e a casa.
+
+Il materiale del corso non deve contenere branching del tipo:
+
+```text
+se Docker fai X
+se VirtualBox fai Y
+```
+
+Il corso dichiara capability; TheBitLab risolve come fornirle sul profilo selezionato.
+
+## Profili classroom v1
 
 ### `docker-light`
 
-Current student-dev characteristics:
+Caratteristiche attuali:
 
-- Ubuntu 24.04 immutable multiarch image;
-- default memory 512 MB / 1 CPU;
-- interactive shell;
-- writable course workspace only;
+- Ubuntu 24.04 immutable multiarch;
+- 512 MB / 1 CPU default;
+- shell interattiva headless;
+- workspace del corso scrivibile;
 - Python 3.12.3, Git, Node.js, SQLite, GCC/GDB/Make, Vim;
-- no graphical desktop;
-- separate from the grading sandbox.
+- grading sandbox separato.
+
+Capability certificate nel registry iniziale:
+
+```text
+workspace.v1
+shell.v1
+python.v1
+git.basic.v1
+node.v1
+sqlite.v1
+compiler.c.v1
+```
 
 ### `vm-gui`
 
-Current classroom VM characteristics:
+Caratteristiche attuali:
 
 - Ubuntu 24.04;
-- graphical XFCE/LightDM session;
+- XFCE/LightDM;
 - Windows amd64 via VirtualBox;
 - macOS arm64 via VMware Fusion;
-- target 2048 MB / 2 CPU, 1536 MB experimental;
-- shared `lab`/`lab2` workspaces;
-- Git/GCC/GDB/Make/Vim;
-- clipboard/drag-and-drop through the provider.
+- 2048 MB / 2 CPU target;
+- workspace condivisi;
+- Git/GCC/GDB/Make/Vim.
 
-## Design principle: capability contract, not provider branching in courses
-
-Course content must not contain logic such as:
+Capability certificate iniziali:
 
 ```text
-if Docker do X
-if VirtualBox do Y
+workspace.v1
+shell.v1
+python.v1
+git.basic.v1
+compiler.c.v1
+browser.local.v1
 ```
 
-Instead, courses declare capabilities. The installer/resolver maps each capability to an implementation for the selected classroom profile.
+L'assenza di una capability dal set certificato non significa che sia impossibile implementarla: significa che **non può ancora essere dichiarata `required`** per quel profilo.
 
-Proposed schema identity:
+## Schema
+
+Identità:
 
 ```text
 thebitlab.course-environment.v1
 ```
 
-Example authoring manifest:
+Consumer reale `python-docente`:
 
 ```json
 {
   "schema_version": "thebitlab.course-environment.v1",
-  "course_id": "python-secondo-2026",
+  "course_id": "python-secondo-2026-2027",
   "supported_profiles": ["docker-light", "vm-gui"],
   "baseline": {
     "os_family": "linux",
@@ -80,205 +107,192 @@ Example authoring manifest:
     ],
     "optional": [
       "editor.vscode.v1",
-      "flowchart.lab.v1",
       "runtime.romeo-sim.v1"
+    ],
+    "fallback": [
+      {
+        "capability": "flowchart.lab.v1",
+        "fallback_id": "flowchart.manual-evidence.v1",
+        "preserves_outcomes": [
+          "algorithm-design",
+          "flowchart-reading-writing",
+          "manual-trace",
+          "test-case-design"
+        ],
+        "student_path": "paper/manual flowchart evidence + teacher rubric"
+      }
     ]
+  },
+  "workspace": {
+    "course_root": ".",
+    "student_writable": true,
+    "teacher_assets_exposed": false
+  },
+  "network": {
+    "interactive_required": false,
+    "grading_required": false
   }
 }
 ```
 
-Exact syntax is still subject to implementation review.
+## Capability registry
 
-## Capability classes
+Il validator distingue due concetti:
 
-### Baseline execution
+1. **known capability** — ID riconosciuto dal contratto;
+2. **profile capability** — capability già certificata come disponibile su quel profilo.
 
-Candidate capabilities:
+Registry iniziale:
 
 - `workspace.v1`
 - `shell.v1`
 - `python.v1`
+- `git.basic.v1`
 - `node.v1`
 - `sqlite.v1`
-- `git.basic.v1`
 - `compiler.c.v1`
-
-### Interactive authoring tools
-
+- `browser.local.v1`
 - `editor.vscode.v1`
 - `flowchart.lab.v1`
-- `browser.local.v1`
-
-These may be implemented as host companions or local services, but they remain managed by TheBitLab.
-
-### Runtime plugins
-
 - `runtime.romeo-sim.v1`
-- future course-specific runtimes
 
-The current `thebitlab.runtimes` plugin API remains the boundary. A course requests a runtime capability; it does not import the plugin package directly.
+Gli ultimi tre possono essere noti ma ancora non disponibili/certificati.
 
-### Services
-
-Potential future examples:
-
-- local database service;
-- course HTTP service;
-- browser preview;
-- notebook kernel.
-
-Services require explicit lifecycle and network policy.
-
-## Required vs optional vs fallback
-
-Every course/Activity capability must have one of three meanings:
+## Semantica required / optional / fallback
 
 ### `required`
 
-The Activity cannot be completed without it. Publication fails if any supported classroom profile lacks the capability.
+La completion core dipende dalla capability. Il validator fallisce se uno dei `supported_profiles` non la fornisce nel registry certificato.
 
 ### `optional`
 
-Enrichment only. Core outcomes do not depend on it.
+Convenience/enrichment. Il core non ne dipende.
 
 ### `fallback`
 
-The Activity has an explicit equivalent path with the same learning outcome.
+La capability preferita non è necessaria per completare gli outcome perché esiste un percorso equivalente dichiarato esplicitamente.
 
-Example:
+Il fallback deve dichiarare:
+
+- capability preferita;
+- `fallback_id` noto;
+- outcome preservati;
+- percorso studente equivalente.
+
+Esempio Python seconda:
 
 ```text
 flowchart.lab.v1
-fallback: paper/manual flowchart evidence
+→ flowchart.manual-evidence.v1
+→ carta/lavagna + trace + rubric docente
 ```
 
-A silent manual workaround is not a fallback contract.
+Questo consente di non bloccare il curriculum congelato mentre il Flowchart Lab viene implementato, senza fingere che il tool esista già.
 
-## Profile equivalence rule
+## Validator implementato
 
-A core Activity that claims both `docker-light` and `vm-gui` support must satisfy one of:
+`scripts/course_environment_contract.py` controlla fail-closed:
 
-1. all required capabilities exist on both profiles; or
-2. the Activity declares a tested fallback preserving the learning outcome.
+- schema version;
+- `course_id` portabile;
+- profili noti/unici;
+- formato baseline Python `>=X.Y,<A.B`;
+- capability note/uniche;
+- overlap fra `required`, `optional`, `fallback`;
+- disponibilità di ogni `required` su tutti i profili dichiarati;
+- fallback ID noto e outcome preservati non vuoti;
+- `student_path` fallback esplicito;
+- workspace path relativo sicuro;
+- `teacher_assets_exposed = false`;
+- campi network booleani.
 
-This is especially important for GUI tools.
-
-## Host companion applications
-
-Host applications are allowed only when all of the following are true:
-
-- installed/probed/repaired by TheBitLab;
-- exact supported version/range is declared;
-- course workspace boundary is explicit;
-- the student does not need separate course-specific setup instructions;
-- uninstall/repair behavior is defined;
-- no secrets are copied into the course workspace;
-- platform differences are hidden behind the capability contract.
-
-VS Code is the first expected consumer of this model.
-
-## VS Code candidate integration
-
-Preferred direction:
+CLI:
 
 ```text
-TheBitLab installer
-→ installs/probes VS Code on host where supported
-→ installs/probes a pinned extension profile
-→ opens the managed workspace
-→ connects execution/debugging to the selected classroom profile
+python scripts/course_environment_contract.py path/to/course-environment.json
 ```
 
-The course should not ask the student to manually select a random host Python interpreter.
-
-For `docker-light`, candidate implementation options include:
-
-- host VS Code + managed container/remote boundary;
-- TheBitLab command wrappers using the mounted workspace.
-
-For `vm-gui`, candidate options include:
-
-- VS Code inside the prebuilt box;
-- host VS Code + remote VM connection.
-
-The implementation must choose one supported path per host/profile and test it end-to-end.
-
-## Python profile
-
-Initial `python-docente` baseline:
+Exit:
 
 ```text
-Python 3.12
+0 = valid
+1 = contract violation
+2 = unreadable/invalid JSON
 ```
 
-The current student-dev image is pinned to Python 3.12.3. The course must not rely on 3.13/3.14-only syntax.
+Test dedicati coprono anche:
 
-The environment owns the concrete patch release.
+- capability sconosciuta;
+- VS Code erroneamente `required` prima della certificazione;
+- Flowchart Lab con fallback esplicito;
+- capability presente in due categorie;
+- required disponibile su Docker ma non VM;
+- Python range invalido;
+- path workspace unsafe;
+- exposure asset docente;
+- profili duplicati;
+- assenza di mutation dell'input.
 
-Candidate Python teaching capability includes:
+## Host companion
 
-- standard `python` REPL;
-- `.py` execution;
-- importable student modules;
-- deterministic test runner boundary;
-- later: venv/pip/pyproject/pytest/tooling profiles as the curriculum advances.
+Un'app host è ammessa soltanto se TheBitLab ne possiede:
 
-IPython is optional until explicitly added to a managed profile.
+- install/probe/repair;
+- version range;
+- workspace boundary;
+- configurazione;
+- lifecycle;
+- protezione dei segreti/asset docente.
 
-## Runtime plugin policy
+`editor.vscode.v1` è registrato ma **non certificato**. Il corso non deve chiedere di selezionare manualmente un Python host casuale.
 
-External domain runtimes remain plugins.
+## Python teaching profile
 
-For Romeo:
+Baseline consumer:
 
 ```text
-course Activity
-→ runtime capability `romeo-sim`
-→ TheBitLab runtime broker
-→ external Romeo plugin
-→ shared sandbox boundary/evidence
+Python >=3.12,<3.13
 ```
 
-Physical hardware is a different optional capability and never replaces simulator support for core student work.
+Il concrete runtime resta proprietà del profilo (oggi student-dev 3.12.3). REPL standard e `.py` execution sono core; IPython non è richiesto.
 
-## Security boundary
+## Romeo
 
-The environment contract must preserve current principles:
-
-- grading runtime separate from interactive student environment;
-- immutable images/boxes where practical;
-- explicit workspace mounts;
-- secrets never part of course bundles/workspaces;
-- runner network off by default;
-- least privilege/capability drop for containers;
-- external runtime plugins validated through the public protocol;
-- host companion tools do not gain implicit access to teacher-only assets.
-
-## Installer responsibilities
-
-The one student-facing operation remains conceptually:
+Boundary target:
 
 ```text
-Install / complete / repair Classroom Environment
+Activity
+→ runtime.romeo-sim.v1
+→ runtime broker TheBitLab
+→ plugin Romeo
+→ evidence
 ```
 
-The installer must:
+Finché la capability non è certificata cross-profile, Python la dichiara opzionale e il core resta hardware-independent.
 
-1. detect host/capability;
-2. choose supported profile;
-3. install/probe provider dependencies;
-4. install/probe course-independent companion tools;
-5. install/probe runtime plugins requested by installed course bundles;
-6. verify workspace access;
-7. expose a capability report;
-8. repair drift;
-9. provide actionable student-safe error messages.
+## Security invariant
 
-Courses must not duplicate these steps.
+- interactive environment ≠ grading sandbox;
+- teacher-only assets non esposti;
+- secret fuori dai course workspace/bundle;
+- explicit workspace mount;
+- grading network off by default;
+- least privilege;
+- plugin dietro protocollo pubblico.
 
-## Course capability report
+## Prossimo layer: resolver + report
 
-TheBitLab should expose a sanitized report such as:
+Il validator controlla il manifest statico. Il prossimo layer dovrà confrontarlo con lo stato reale della macchina:
+
+```text
+manifest corso
++ profilo scelto
++ probe runtime
+→ environment-report.v1
+→ ready / fallback / unavailable
+```
+
+Target report sanitizzato:
 
 ```json
 {
@@ -287,53 +301,56 @@ TheBitLab should expose a sanitized report such as:
   "capabilities": {
     "python.v1": {"status": "ready", "version": "3.12.3"},
     "git.basic.v1": {"status": "ready"},
-    "editor.vscode.v1": {"status": "ready"},
-    "flowchart.lab.v1": {"status": "ready"},
-    "runtime.romeo-sim.v1": {"status": "ready"}
+    "editor.vscode.v1": {"status": "unavailable"},
+    "flowchart.lab.v1": {"status": "unavailable"},
+    "runtime.romeo-sim.v1": {"status": "unverified"}
   }
 }
 ```
 
-No secrets, absolute sensitive paths or account tokens.
+Nessun secret/path sensibile.
 
-## Authoring / CI validation
+## Flowchart Lab
 
-Add a validator capable of reading a course environment manifest and failing when:
+`flowchart.lab.v1` resta **non implementato** al checkpoint corrente. Architettura: `doc/architecture/flowchart-lab.md`.
 
-- unknown capability id;
-- required capability unavailable on a supported profile;
-- profile-specific workaround exists only in prose;
-- runtime plugin requirement is undeclared;
-- course instructions require unmanaged host tools;
-- Python/version contract disagrees with Activity runner requirements.
+Ordine implementativo raccomandato:
 
-Longer term, Content Pack v1 can reference this manifest via a compatible extension without changing Content Pack semantics.
+```text
+artifact schema
+→ validator
+→ deterministic interpreter/trace
+→ tests
+→ local service/API
+→ browser UI
+→ export/evidence
+→ installer/profile certification
+```
 
-## Relationship to TPSI5
+## Content Pack integration
 
-TPSI5 curriculum stays frozen.
+Il consumer Python possiede già `config/course-environment.json`, ma il Content Pack non lo referenzia ancora. Aggiungere un'estensione/riferimento soltanto dopo aver definito il contratto di integrazione, senza cambiare implicitamente Content Pack v1.
 
-At its deferred physical rehearsal:
+## TPSI5
 
-- execute the course through this environment contract;
-- detect unmanaged tooling assumptions;
-- fix them as delivery/setup changes where curriculum outcomes are unchanged.
+Curriculum congelato. Durante il rehearsal fisico differito deve consumare questo environment contract; eventuali fix di setup restano delivery changes se gli outcome non cambiano.
 
-## Acceptance for v1
+## Acceptance v1
 
-The contract is not accepted until exercised by at least:
+Non chiudere #753 finché il contratto non è esercitato da almeno:
 
-1. `python-docente` beginner Python Activity;
-2. one TPSI5 Activity;
-3. one Romeo `romeo-sim` Activity;
-4. both Windows `docker-light` and Windows `vm-gui` where applicable;
-5. macOS supported classroom profile for portable capabilities;
-6. CI validation of the course manifests.
+1. `python-docente` beginner Activity;
+2. una Activity TPSI5;
+3. una Activity `romeo-sim`;
+4. Windows `docker-light`;
+5. Windows `vm-gui` dove pertinente;
+6. profilo macOS supportato per capability portabili;
+7. validation CI dei manifest consumer.
 
-## Non-goals
+## Non-goal
 
-- merge all course tools into TheBitLab core;
-- make every GUI application run inside Docker;
-- force all profiles to have identical implementation internals;
-- make the interactive student environment the grading sandbox;
-- introduce per-course installer scripts.
+- fondere tutti i tool nel core TheBitLab;
+- far girare ogni GUI dentro Docker;
+- rendere identici gli internals dei profili;
+- usare l'ambiente interattivo come grading sandbox;
+- per-course installer scripts.
