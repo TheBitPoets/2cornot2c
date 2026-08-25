@@ -49,27 +49,67 @@ def assignment_repository_path(root: Path, assignment: dict[str, Any]) -> Path:
 
 
 def _check_feedback(name: str, passed: bool) -> str:
-    if name == "clean":
-        return "Il working tree ha lo stato finale richiesto." if passed else "Controlla se il working tree deve essere pulito o avere modifiche residue."
-    if name == "branch":
-        return "Sei sul branch richiesto." if passed else "Controlla il branch corrente prima di consegnare."
-    if name == "commit_count":
-        return "La storia contiene il numero di commit richiesto." if passed else "La storia non ha ancora la decomposizione in commit richiesta."
-    if name == "staged_paths":
-        return "Nell'index ci sono i path richiesti." if passed else "Controlla con status e diff --staged quali path sono nell'index."
-    if name == "unstaged_paths":
-        return "Le modifiche non staged corrispondono alla consegna." if passed else "Controlla quali modifiche devono restare nel working tree senza essere staged."
-    if name == "untracked_paths":
-        return "I file untracked corrispondono alla consegna." if passed else "Controlla i file untracked prima di consegnare."
-    if name.startswith("working_files."):
-        path = name.split(".", 1)[1]
-        return f"Il contenuto corrente di {path} è quello richiesto." if passed else f"Il contenuto corrente di {path} non corrisponde allo stato richiesto."
-    if name.startswith("index_files."):
-        path = name.split(".", 1)[1]
-        return f"Lo snapshot staged di {path} è corretto." if passed else f"Controlla con diff --staged quale versione di {path} hai preparato nell'index."
-    if name.startswith("commits["):
-        return "Il commit controllato rispetta il requisito." if passed else "Controlla la storia e il contenuto del commit indicato dalla consegna."
-    return "Requisito Git verificato." if passed else "Un requisito Git della consegna non è ancora soddisfatto."
+    if name == "working_tree.clean":
+        return (
+            "Il working tree ha lo stato finale richiesto."
+            if passed
+            else "Controlla con git status se il working tree deve essere pulito o avere modifiche residue."
+        )
+    if name == "repository.branch":
+        return (
+            "Sei sul branch richiesto."
+            if passed
+            else "Controlla il branch corrente prima di consegnare."
+        )
+    if name == "history.commit_count":
+        return (
+            "La storia contiene il numero di commit richiesto."
+            if passed
+            else "La storia non ha ancora la decomposizione in commit richiesta: controlla git log."
+        )
+    if name == "working_tree.staged":
+        return (
+            "Nell'index ci sono i path richiesti."
+            if passed
+            else "Controlla con git status e git diff --staged quali path sono nell'index."
+        )
+    if name == "working_tree.unstaged":
+        return (
+            "Le modifiche non staged corrispondono alla consegna."
+            if passed
+            else "Controlla con git status e git diff quali modifiche devono restare nel working tree senza essere staged."
+        )
+    if name == "working_tree.untracked":
+        return (
+            "I file untracked corrispondono alla consegna."
+            if passed
+            else "Controlla i file untracked mostrati da git status prima di consegnare."
+        )
+    if name.startswith("working_tree.file:"):
+        path = name.split(":", 1)[1]
+        return (
+            f"Il contenuto corrente di {path} è quello richiesto."
+            if passed
+            else f"Il contenuto corrente di {path} non corrisponde allo stato richiesto."
+        )
+    if name.startswith("index.file:"):
+        path = name.split(":", 1)[1]
+        return (
+            f"Lo snapshot staged di {path} è corretto."
+            if passed
+            else f"Controlla con git diff --staged quale versione di {path} hai preparato nell'index."
+        )
+    if name.startswith("commit["):
+        return (
+            "Il commit controllato rispetta il requisito."
+            if passed
+            else "Controlla git log/git show e la struttura dei commit richiesta dalla consegna."
+        )
+    return (
+        "Requisito Git verificato."
+        if passed
+        else "Un requisito Git della consegna non è ancora soddisfatto."
+    )
 
 
 def student_safe_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
@@ -81,21 +121,27 @@ def student_safe_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
             continue
         name = clean_text(item.get("name")) or f"check-{index}"
         passed = item.get("passed") is True
-        public_checks.append({
-            "name": name,
-            "passed": passed,
-            "status": "passed" if passed else "failed",
-            "message": _check_feedback(name, passed),
-            "visibility": "student",
-        })
-    state = evidence.get("state") if isinstance(evidence.get("state"), dict) else {}
+        public_checks.append(
+            {
+                "name": name,
+                "passed": passed,
+                "status": "passed" if passed else "failed",
+                "message": _check_feedback(name, passed),
+                "visibility": "student",
+            }
+        )
+
+    state = evidence.get("evidence") if isinstance(evidence.get("evidence"), dict) else {}
+    repository = state.get("repository") if isinstance(state.get("repository"), dict) else {}
+    working_tree = state.get("working_tree") if isinstance(state.get("working_tree"), dict) else {}
+    commits = state.get("commits") if isinstance(state.get("commits"), list) else []
     return {
         "passed": evidence.get("passed") is True,
         "checks": public_checks,
         "state_summary": {
-            "branch": state.get("repository", {}).get("branch") if isinstance(state.get("repository"), dict) else state.get("branch"),
-            "clean": state.get("working_tree", {}).get("clean") if isinstance(state.get("working_tree"), dict) else state.get("clean"),
-            "commit_count": len(state.get("commits", [])) if isinstance(state.get("commits"), list) else state.get("commit_count"),
+            "branch": repository.get("branch"),
+            "clean": working_tree.get("clean"),
+            "commit_count": len(commits),
         },
     }
 
