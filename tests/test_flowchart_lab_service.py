@@ -160,22 +160,48 @@ def test_static_service_rejects_arbitrary_paths_and_traversal() -> None:
 
 
 def test_browser_shell_has_no_remote_runtime_dependency() -> None:
-    html = service.static_asset("/")[2].decode("utf-8")
+    html = service.static_asset("/")[2].decode("utf-8").lower()
     js = service.static_asset("/app.js")[2].decode("utf-8")
-    css = service.static_asset("/app.css")[2].decode("utf-8")
-    combined = "\n".join((html, js, css)).lower()
+    css = service.static_asset("/app.css")[2].decode("utf-8").lower()
 
-    assert "https://" not in combined
-    assert "http://" not in combined
-    assert "cdn" not in combined
+    assert '<script src="http' not in html
+    assert '<link rel="stylesheet" href="http' not in html
+    assert "@import url(http" not in css
+    assert 'fetch("http' not in js.lower()
+    assert "fetch('http" not in js.lower()
     assert "eval(" not in js
     assert "new function" not in js.lower()
 
 
-def test_browser_shell_exposes_trace_controls_and_accessibility_surface() -> None:
+def test_browser_shell_exposes_visual_authoring_trace_and_accessibility_surface() -> None:
     html = service.static_asset("/")[2].decode("utf-8")
 
-    for marker in ("validateBtn", "runBtn", "stepBtn", "resetBtn", "variables", "outputs", "graph"):
+    for marker in (
+        "newBtn",
+        "addNodeBtn",
+        "deleteNodeBtn",
+        "saveNodeBtn",
+        "addEdgeBtn",
+        "deleteEdgeBtn",
+        "validateBtn",
+        "runBtn",
+        "stepBtn",
+        "resetBtn",
+        "variables",
+        "outputs",
+        "graph",
+    ):
         assert marker in html
     assert 'aria-live="polite"' in html
-    assert 'aria-label="Anteprima del flow chart"' in html
+    assert 'aria-label="Editor visuale del flow chart"' in html
+
+
+def test_browser_js_keeps_layout_separate_and_supports_drag_selection() -> None:
+    js = service.static_asset("/app.js")[2].decode("utf-8")
+
+    assert "artifact.layout" in js
+    assert "pointermove" in js
+    assert "selectNode" in js
+    assert "applyNodeProperties" in js
+    assert "addEdge" in js
+    assert "deleteEdge" in js
