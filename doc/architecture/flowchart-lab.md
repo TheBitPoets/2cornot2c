@@ -4,43 +4,66 @@ Issue: #753
 
 ## Stato corrente
 
-Il Flowchart Lab ha ora due layer implementati e separati:
+Il Flowchart Lab ha ora tre layer implementati e separati:
 
 ```text
 thebitlab.flowchart.v1 artifact
 → core headless validator/executor
 → thebitlab.flowtrace.v1 trace
 → loopback service/API
-→ Run / session / Step / Reset
+→ browser editor same-origin
 ```
 
-Implementazione:
+Implementazione principale:
 
 - `scripts/flowchart_lab_core.py`;
-- `tests/test_flowchart_lab_core.py`;
 - `scripts/flowchart_lab_server.py`;
+- `tools/flowchart_lab/index.html`;
+- `tools/flowchart_lab/app.js`;
+- `tools/flowchart_lab/app.css`.
+
+Test:
+
+- `tests/test_flowchart_lab_core.py`;
 - `tests/test_flowchart_lab_server.py`;
-- `tests/test_flowchart_lab_server_hardening.py`.
+- `tests/test_flowchart_lab_server_hardening.py`;
+- `tests/test_flowchart_lab_ui.py`.
 
-Non sono ancora implementati/certificati:
+Implementato oggi:
 
-- browser editor visuale;
-- save/load del file `algorithm.flow.json` nel Course Workspace;
+```text
+artifact schema
+validation
+restricted expression language
+deterministic execution
+bounded trace
+Run
+server-side session
+Step
+Reset
+variable watch
+visual graph editing
+node/edge editing
+layout drag
+browser JSON import/export
+same-origin offline UI serving
+```
+
+Non ancora implementato/certificato:
+
+- **managed save/load nel Course Workspace**;
 - SVG evidence/export;
 - runtime/tool broker packaging;
 - Activity runtime extension;
-- managed installer/profile certification;
+- docker-light + vm-gui certification;
+- installer/profile certification;
 - Python correspondence view.
 
-Quindi `flowchart.lab.v1` **non è ancora capability certified**. Il fallback manuale rimane necessario per `python-docente`.
+Quindi `flowchart.lab.v1` **non è ancora capability certified** e `python-docente` deve mantenere il fallback manuale.
 
-## Perché
+---
 
-Il corso Python beginner richiede uno strumento cross-platform per progettazione algoritmica prima del codice, flow chart, esecuzione step-by-step, trace/variabili ed evidence deterministica.
-
-Flowgorithm resta un riferimento utile ma non può essere dipendenza canonica perché la distribuzione ufficiale è Windows-only.
-
-## Boundary complessivo
+# Boundary architetturale
 
 Target:
 
@@ -49,7 +72,7 @@ Activity
 → TheBitLab runtime/tool broker
 → Flowchart Lab loopback service
 → browser managed endpoint
-→ algorithm.flow.json nel workspace
+→ algorithm.flow.json nel Course Workspace
 → core headless validator/executor
 → trace/evidence
 ```
@@ -58,55 +81,29 @@ Regola fondamentale:
 
 ```text
 core headless = unica semantica esecutiva
-service/API   = trasporto + session/cursor
-browser UI    = editing/rendering + chiamate API
+service/API   = transport + bounded session/cursor
+browser UI    = editing/rendering + API calls
 ```
 
-Né il server né il browser devono reimplementare la semantica dei nodi.
+Né server né browser devono reimplementare la semantica dei nodi.
 
 ---
 
 # Artifact v1
 
-File consigliato:
+File canonico previsto:
 
 ```text
 algorithm.flow.json
 ```
 
-Schema identity:
+Schema:
 
 ```text
 thebitlab.flowchart.v1
 ```
 
-Esempio:
-
-```json
-{
-  "schema_version": "thebitlab.flowchart.v1",
-  "entry": "start",
-  "nodes": [
-    {"id": "start", "type": "start"},
-    {"id": "read", "type": "input", "target": "n", "data_type": "int"},
-    {"id": "positive", "type": "decision", "expression": "n > 0"},
-    {"id": "yes", "type": "output", "expression": "\"positivo\""},
-    {"id": "no", "type": "output", "expression": "\"non positivo\""},
-    {"id": "end", "type": "end"}
-  ],
-  "edges": [
-    {"from": "start", "to": "read", "label": "next"},
-    {"from": "read", "to": "positive", "label": "next"},
-    {"from": "positive", "to": "yes", "label": "true"},
-    {"from": "positive", "to": "no", "label": "false"},
-    {"from": "yes", "to": "end", "label": "next"},
-    {"from": "no", "to": "end", "label": "next"}
-  ],
-  "layout": {}
-}
-```
-
-## Node types core v1
+Node types core v1:
 
 - `start`;
 - `end`;
@@ -117,7 +114,7 @@ Esempio:
 - `loop`;
 - `comment`.
 
-Funzioni/subroutine non fanno ancora parte del core. Non bloccano PY2-01.
+Funzioni/subroutine non fanno ancora parte del core e non bloccano PY2-01.
 
 ## Semantica archi
 
@@ -136,13 +133,13 @@ Sequenziali `start/input/assign/output/comment`:
 
 `end` non ha archi uscenti.
 
-I cicli sono veri cicli del grafo. Il layout non ha significato esecutivo.
+I cicli sono cicli reali del grafo. `layout` è separato e non modifica l'esecuzione.
 
 ---
 
 # Expression language
 
-Il core usa AST Python esclusivamente come parser sintattico con whitelist stretta. Non usa `eval` o `exec`.
+Il core usa l'AST Python soltanto come parser sintattico con whitelist stretta e **non usa `eval`/`exec`**.
 
 Consentito:
 
@@ -150,19 +147,19 @@ Consentito:
 - variabili;
 - `+`, `-`, `*`, `/`, `//`, `%`;
 - unari `+`, `-`, `not`;
-- `==`, `!=`, `<`, `<=`, `>`, `>=`;
+- confronti `==`, `!=`, `<`, `<=`, `>`, `>=`;
 - `and`, `or`;
 - confronti concatenati semplici.
 
-Rifiutato dai test:
+Rifiutato:
 
-- call come `open(...)` / `__import__(...)`;
+- call/import-like constructs;
 - attribute access;
 - lambda;
 - comprehension;
 - AST non whitelisted.
 
-Il flow chart quindi non costituisce un canale per eseguire Python arbitrario dello studente.
+Il flow chart non è quindi un canale per eseguire Python arbitrario dello studente.
 
 ---
 
@@ -177,23 +174,15 @@ Core v1:
 - max 128 variabili;
 - max 512 eventi output;
 - default 4096 step;
-- hard max 100000 step per usi headless espliciti;
+- hard max 100000 solo per usi headless espliciti;
 - numeri non finiti rifiutati;
-- valori numerici didatticamente bounded;
-- nessun filesystem;
-- nessuna rete;
-- nessun subprocess;
-- nessun import/reflection.
+- nessun filesystem/rete/subprocess/import/reflection.
 
-Il servizio interattivo applica un boundary più stretto: non permette al client di elevare `max_steps` sopra i 4096 di default.
+Il servizio browser applica un limite più stretto e non permette al client di aumentare `max_steps` oltre 4096.
 
 ---
 
-# Validation
-
-`validate_flowchart_artifact()` controlla schema, quantità/identità dei nodi, tipi, target variabili, espressioni, unico start/entry, end, edge/label, outgoing contract, reachability e separazione del layout.
-
-## Execution / trace
+# Execution / trace
 
 `execute_flowchart()` produce:
 
@@ -203,7 +192,7 @@ thebitlab.flowtrace.v1
 
 con:
 
-- `status` / `termination_reason`;
+- status e termination reason;
 - step count;
 - input consumati;
 - outputs;
@@ -221,8 +210,6 @@ variables_after
 branch
 next_node (quando applicabile)
 ```
-
-Input, assignment, output e condition aggiungono il proprio dato specifico.
 
 ---
 
@@ -246,156 +233,153 @@ Session schema:
 thebitlab.flowchart-session.v1
 ```
 
-Default endpoint:
+Default:
 
 ```text
-127.0.0.1:8771
+http://127.0.0.1:8771/
 ```
 
-Il server v1 rifiuta binding wildcard/non-loopback. Verifica anche client IP, `Host` e `Origin` locale per ridurre il rischio di DNS rebinding/browser abuse.
-
-## API v1
-
-### `GET /api/health`
-
-Restituisce identità service/core/trace e conteggio sessioni attive.
-
-### `POST /api/validate`
-
-Request:
-
-```json
-{"artifact": {}}
-```
-
-Response:
-
-```json
-{
-  "schema_version": "thebitlab.flowchart-lab-service.v1",
-  "valid": false,
-  "errors": []
-}
-```
-
-La validazione non esegue il flow chart.
-
-### `POST /api/run`
-
-Request:
-
-```json
-{
-  "artifact": {},
-  "inputs": [2, 3],
-  "limits": {"max_steps": 4096}
-}
-```
-
-Restituisce direttamente il `thebitlab.flowtrace.v1` prodotto dal core canonico.
-
-### `POST /api/session`
-
-Esegue una volta il core, conserva in memoria il trace bounded e crea un session id opaco.
-
-Importante:
+API:
 
 ```text
-Create session
-→ execute_flowchart() una volta
-→ trace immutabile
+GET  /api/health
+POST /api/validate
+POST /api/run
+POST /api/session
+POST /api/step
+POST /api/reset
+POST /api/session/delete
+```
+
+## Run vs Step
+
+`/api/run` chiama direttamente il core canonico.
+
+`/api/session` esegue una volta il core e conserva il trace bounded in memoria:
+
+```text
+execute_flowchart()
+→ immutable trace
 → cursor = 0
 ```
 
-### `POST /api/step`
+`/api/step` **non riesegue un nodo** e non contiene un secondo interprete. Rivela il prossimo evento del trace e avanza il cursore.
 
-Request:
-
-```json
-{"session_id": "..."}
-```
-
-`Step` **non riesegue il nodo e non interpreta il flow chart**. Avanza il cursore di una posizione nel trace già prodotto e restituisce:
-
-- evento corrente;
-- cursor / total_steps / done;
-- outputs osservati fino a quel punto;
-- variable watch coerente con `variables_after`.
-
-Questa scelta garantisce:
+Quindi:
 
 ```text
 Run trace == concatenazione degli eventi Step
 ```
 
-ed elimina una seconda semantica stateful nel server.
-
-### `POST /api/reset`
-
-Riporta il cursore a zero sul medesimo trace. Non ricalcola il programma.
-
-### `POST /api/session/delete`
-
-Elimina esplicitamente la sessione in memoria.
+`/api/reset` riporta il cursore a zero sul medesimo trace.
 
 ---
 
-# Boundary sicurezza HTTP
+# HTTP/security boundary
 
-Il servizio v1:
+Il servizio:
 
-- usa soltanto Python stdlib;
-- bind esclusivamente `127.0.0.1`;
-- rifiuta richieste con client/Host/Origin non loopback;
-- accetta solo `application/json` sulle POST;
-- richiede `Content-Length`;
-- payload max 1 MiB;
-- socket request timeout;
-- JSON strict: duplicate key e costanti non standard (`NaN`, `Infinity`) rifiutate;
-- campi API unknown rifiutati fail-closed;
+- usa solo Python stdlib;
+- bind solo `127.0.0.1`;
+- controlla client IP, `Host` e `Origin` loopback;
+- POST solo `application/json`;
+- Content-Length obbligatorio;
+- body max 1 MiB;
+- socket timeout;
+- strict JSON: duplicate key e NaN/Infinity rifiutati;
+- unknown fields rifiutati;
 - max 512 input values;
-- interactive `max_steps` <= 4096;
-- sessioni bounded (default 64), LRU eviction e TTL 30 minuti;
-- nessuna API file/static/path;
-- nessuna API URL/network;
-- nessun arbitrary subprocess;
-- errori attesi strutturati; exception inattese diventano `internal_error` senza traceback nel browser;
-- response `Cache-Control: no-store`, `nosniff`, CSP restrittiva.
+- `max_steps <= 4096` nel profilo interattivo;
+- max 64 sessioni, LRU + TTL 30 minuti;
+- nessuna API URL/network/subprocess;
+- errori inattesi sanitizzati senza traceback.
 
-Save/load workspace sarà un layer separato con confinement esplicito al Course Workspace; non viene anticipato come generico file server.
+## Static UI serving
 
----
+Il server **non è un file server generico**.
 
-# Test API implementati
+Espone esclusivamente una whitelist fissa:
 
-`tests/test_flowchart_lab_server.py` copre:
+```text
+/                         → index.html
+/flowchart-lab            → index.html
+/flowchart-lab/           → index.html
+/flowchart-lab/app.js     → app.js
+/flowchart-lab/style.css  → app.css
+```
 
-- bind non-loopback rifiutato;
-- health;
-- validate senza execution;
-- run somma deterministico;
-- equivalenza Run ↔ Step;
-- Reset;
-- session delete / unknown id;
-- LRU eviction;
-- TTL;
-- invalid JSON / media type / payload size;
-- Host/Origin non locali;
-- assenza superficie filesystem/static;
-- validation/execution error sanitizzati;
-- limiti/unknown fields.
+Tutti gli altri path restano 404.
 
-`tests/test_flowchart_lab_server_hardening.py` aggiunge:
+Asset UI:
 
-- duplicate JSON keys rifiutate;
-- `NaN` JSON rifiutato;
-- impossibilità di elevare il limite interattivo oltre 4096 step.
+- same-origin;
+- nessun CDN;
+- nessuna dipendenza remota;
+- `Cache-Control: no-store`;
+- `nosniff`;
+- `Cross-Origin-Resource-Policy: same-origin`;
+- CSP con script/style/connect solo `'self'`, `object-src 'none'`, `frame-ancestors 'none'`.
 
 ---
 
-# Structural/behavioral grading boundary
+# Browser editor MVP
 
-Quando integrato con Activity, l'automazione può verificare deterministicamente schema, costrutti richiesti, comportamento con fixture, variabili finali, proprietà del path/trace e terminazione.
+Implementation:
+
+```text
+tools/flowchart_lab/index.html
+tools/flowchart_lab/app.js
+tools/flowchart_lab/app.css
+```
+
+Superfici presenti:
+
+- palette Start/End/Input/Assign/Output/Decision/Loop/Comment;
+- add/delete/rename nodo;
+- proprietà tipo-specifiche;
+- connessioni `next` / `true` / `false`;
+- drag del layout SVG;
+- validazione live tramite `/api/validate`;
+- Run tramite `/api/run`;
+- Step tramite `/api/session` + `/api/step`;
+- Reset tramite `/api/reset`;
+- invalidazione/eliminazione sessione quando l'artifact cambia;
+- input panel;
+- output panel;
+- variable watch;
+- current-node highlight;
+- current trace event;
+- esempio somma;
+- nuovo diagramma;
+- import locale JSON max 1 MiB;
+- export browser `algorithm.flow.json`.
+
+La UI costruisce testo e SVG via DOM/textContent. Non usa `eval`, `new Function`, CDN o URL remote.
+
+## Import/export locale ≠ managed workspace persistence
+
+L'import/export browser attuale serve per MVP e debug.
+
+Non equivale a:
+
+```text
+Course Workspace save/load
+```
+
+Il layer successivo deve usare il contratto workspace esistente, confinare la destinazione all'assignment/course workspace e scrivere/leggere soltanto il file Flowchart previsto. Non verrà aggiunta una generica API filesystem.
+
+---
+
+# Evidence / grading boundary
+
+Automazione possibile:
+
+- schema valido;
+- presenza di decision/loop;
+- comportamento con fixture;
+- outputs/variabili finali;
+- proprietà del path/trace;
+- terminazione entro limite.
 
 Restano manual/rubric:
 
@@ -404,51 +388,30 @@ Restano manual/rubric:
 - scelta appropriata del costrutto;
 - annidamento non necessario;
 - decomposizione;
-- spiegazione dello studente.
+- spiegazione studente.
 
 Nessun “diagram quality score” artificiale.
 
 ---
 
-# Browser UI — prossimo layer
+# CI evidence
 
-UI v1 target:
+Sul precedente head API `62c1ef5610be7ba87423afe147d73c7f0d7c328c`:
 
-- palette forme standard;
-- add/move/delete;
-- connessioni branch/loop sicure;
-- edit expression con validation;
-- Run / Step / Reset attraverso la loopback API;
-- variable watch;
-- input/output panel;
-- highlight node corrente/percorso;
-- zoom/pan;
-- save nel workspace;
-- SVG export;
-- italiano minimo/stringhe externalized;
-- high contrast e label non color-only.
+- main Python Quality job: **PASS**;
+- minimum-Python full suite: **PASS**;
+- assignment-runner Docker build/smoke: **PASS**;
+- uTUI consumer: **PASS** su Ubuntu/Windows e Python 3.11/3.12/3.13.
 
-La UI deve consumare il service contract e non importare/reimplementare l'executor.
+La workflow Quality risultava complessivamente rossa soltanto per un test JavaScript preesistente del job Windows portable Node/SQL, estraneo al Flowchart Lab; le suite Python contenenti i nuovi test Flowchart erano verdi.
 
-## Layout vs semantics
-
-`layout` è opzionale e ignorato dall'executor. Coordinate diverse devono mantenere comportamento identico.
-
-## Python correspondence
-
-Non implementata. Se aggiunta successivamente:
-
-```text
-flow node ↔ pseudocodice ↔ Python esplicito beginner
-```
-
-solo dopo che il costrutto Python è stato insegnato.
+Il browser MVP e il serving statico devono ottenere nuova evidence sul loro head corrente prima di qualsiasi claim di certificazione.
 
 ---
 
 # Profile support
 
-### Docker-light
+### docker-light
 
 Target:
 
@@ -456,25 +419,24 @@ Target:
 local service/plugin + browser host + workspace montato
 ```
 
-Nessun X11/desktop richiesto nel container.
+Niente X11/desktop richiesto nel container.
 
-### VM-gui
+### vm-gui
 
 Stessa browser/service interaction, evitando un secondo editor desktop proprietario.
 
 ## Offline
 
-Dopo installazione, core/service/UI devono funzionare senza Internet pubblico e senza CDN nel percorso core.
+Core/service/UI non richiedono Internet pubblico o CDN dopo l'installazione.
 
 ---
 
 # Prossimi gate
 
-1. CI verde core + loopback API;
-2. browser UI minimale sul medesimo service contract;
-3. save/load workspace confinato;
-4. SVG evidence/export;
-5. runtime/tool broker integration;
-6. Activity consumer Python PY2-01;
-7. docker-light + vm-gui certification;
-8. solo allora `flowchart.lab.v1` può passare da fallback/preferred a capability certified.
+1. CI verde del browser UI + static serving sul current head;
+2. managed save/load `algorithm.flow.json` nel Course Workspace;
+3. SVG evidence/export;
+4. runtime/tool broker integration;
+5. Activity consumer Python PY2-01;
+6. docker-light + vm-gui certification;
+7. solo allora `flowchart.lab.v1` può passare da fallback/preferred a capability certified.
