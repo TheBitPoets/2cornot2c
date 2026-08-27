@@ -44,9 +44,11 @@ def test_trusted_grading_workflow_separates_student_and_workflow_commits() -> No
 
     pull_block = source.split("      - name: Pull and verify pinned runner image", maxsplit=1)[1]
     pull_block = pull_block.split("      - name: Run deterministic grading", maxsplit=1)[0]
-    assert "docker image inspect" in pull_block
+    # The verification is intentionally a structured subprocess invocation, not
+    # a shell string. Guard the actual command tokens and RepoDigests contract.
+    assert '["docker", "image", "inspect", "--format", "{{json .RepoDigests}}", reference]' in pull_block
     assert ".RepoDigests" in pull_block
-    assert "--format '{{.Id}}'" not in pull_block
+    assert "{{.Id}}" not in pull_block
 
 
 def test_runner_workflows_use_the_validated_toolchain_builder() -> None:
