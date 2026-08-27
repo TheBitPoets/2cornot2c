@@ -1,0 +1,80 @@
+name: Certify python-docente P1 2026-08-27
+
+on:
+  push:
+    branches:
+      - agent/course-environment-contract
+    paths:
+      - ".github/workflows/certify-python-docente-p1-2026-08-27.yml"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  authoritative-p1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHON_DOCENTE_SHA: "18b0d26fa9b449f6bd613430d0c917e80567d4bc"
+      THEBITLAB_SHA: "cdcdf4a6c9a3b1e28cc0a9702ca4f69a521849b0"
+      RUNNER_IMAGE: "ghcr.io/thebitpoets/2cornot2c-assignment-runner@sha256:62f0f7b7bc1d48d01b7f8e5fa765e0b43be3622e70a614033b1bb4a4e522e159"
+
+    steps:
+      - name: Checkout exact pinned TheBitLab baseline
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: cdcdf4a6c9a3b1e28cc0a9702ca4f69a521849b0
+          path: platform
+          persist-credentials: false
+
+      - name: Checkout exact python-docente candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: TheBitPoets/python-docente
+          ref: 18b0d26fa9b449f6bd613430d0c917e80567d4bc
+          path: course
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify exact revisions
+        shell: bash
+        run: |
+          test "$(git -C platform rev-parse HEAD)" = "$THEBITLAB_SHA"
+          test "$(git -C course rev-parse HEAD)" = "$PYTHON_DOCENTE_SHA"
+          python --version
+
+      - name: Authenticate to producer GHCR package
+        shell: bash
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull and verify exact immutable runner
+        shell: bash
+        run: |
+          docker pull "$RUNNER_IMAGE"
+          REFERENCE="$RUNNER_IMAGE" python - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          reference = os.environ["REFERENCE"]
+          repo_digests = json.loads(
+              subprocess.run(
+                  ["docker", "image", "inspect", "--format", "{{json .RepoDigests}}", reference],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              ).stdout.strip()
+          )
+          if reference not in repo_digests:
+              raise SystemExit(f"Pinned runner digest mismatch: {repo_digests}")
+          print(f"Pinned runner verified: {reference}")
+          PY
+
+      - name: Run authoritative python-docente P1 consumer smoke
+        shell: bash
+        run: python course/tests/thebitlab_python_smoke.py --platform platform --authoritative-docker
