@@ -159,7 +159,12 @@ def handle_api_request(
             except flowchart_lab_core.FlowchartValidationError as exc:
                 return _response(422, {"error": "invalid-artifact", "detail": str(exc)})
             except flowchart_lab_server.FlowchartLabAPIError as exc:
-                legacy_error = "workspace-error" if exc.code == "workspace_error" else exc.code
+                if exc.code == "flowchart_validation_error":
+                    legacy_error = "invalid-artifact"
+                elif exc.code == "workspace_error":
+                    legacy_error = "workspace-error"
+                else:
+                    legacy_error = exc.code
                 return _response(exc.status, {"error": legacy_error, "detail": exc.message})
             return _response(200, {"saved": result["saved"], "artifact_name": result["artifact_name"]})
     except flowchart_lab_server.FlowchartLabAPIError as exc:
