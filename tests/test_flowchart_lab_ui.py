@@ -113,12 +113,13 @@ def test_html_is_offline_same_origin_and_has_no_inline_active_content() -> None:
     assert not re.search(r"\son\w+\s*=", html, flags=re.IGNORECASE)
 
 
-def test_javascript_uses_session_and_managed_workspace_contracts_without_dynamic_code() -> None:
+def test_javascript_uses_session_workspace_and_svg_contracts_without_dynamic_code() -> None:
     javascript = (UI_ROOT / "app.js").read_text(encoding="utf-8")
 
     for endpoint in (
         '"/api/validate"',
         '"/api/run"',
+        '"/api/svg"',
         '"/api/session"',
         '"/api/step"',
         '"/api/reset"',
@@ -132,6 +133,7 @@ def test_javascript_uses_session_and_managed_workspace_contracts_without_dynamic
     assert "state.sessionId" in javascript
     assert "state.workspaceAvailable" in javascript
     assert "algorithm.flow.json" in javascript
+    assert "algorithm.flow.svg" in javascript
     assert '"path"' not in javascript
     assert "eval(" not in javascript
     assert "new Function" not in javascript
@@ -141,7 +143,7 @@ def test_javascript_uses_session_and_managed_workspace_contracts_without_dynamic
     assert "https://" not in javascript
 
 
-def test_ui_contains_beginner_editor_trace_and_workspace_surfaces() -> None:
+def test_ui_contains_beginner_editor_trace_workspace_and_svg_surfaces() -> None:
     html = (UI_ROOT / "index.html").read_text(encoding="utf-8")
 
     for node_type in (
@@ -170,6 +172,7 @@ def test_ui_contains_beginner_editor_trace_and_workspace_surfaces() -> None:
         "resetBtn",
         "workspaceLoadBtn",
         "workspaceSaveBtn",
+        "exportSvgBtn",
     ):
         assert f'id="{element_id}"' in html
 
@@ -177,6 +180,7 @@ def test_ui_contains_beginner_editor_trace_and_workspace_surfaces() -> None:
     assert "Salva workspace" in html
     assert "Apri JSON locale" in html
     assert "Esporta JSON locale" in html
+    assert "Esporta SVG evidence" in html
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js non disponibile per syntax check UI")
