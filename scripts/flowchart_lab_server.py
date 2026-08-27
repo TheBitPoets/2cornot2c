@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Loopback-only HTTP service for TheBitLab Flowchart Lab v1.
 
-The service is intentionally thin: flowchart semantics live exclusively in
-``scripts.flowchart_lab_core``. Run executes the canonical core once; Step and
-Reset only navigate the resulting deterministic trace. The browser UI is
-served from an exact static whitelist; this is not a general-purpose file
-server.
+Flowchart semantics live exclusively in ``scripts.flowchart_lab_core``. Run
+executes the canonical core once; Step and Reset only navigate that trace. The
+browser UI is served from an exact whitelist. Optional workspace persistence is
+confined to one launcher-selected root and one fixed artifact filename.
 """
 
 from __future__ import annotations
@@ -24,6 +23,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from scripts import flowchart_lab_core as flow
+from scripts import flowchart_lab_workspace as flow_workspace
 
 
 SERVICE_SCHEMA_VERSION = "thebitlab.flowchart-lab-service.v1"
@@ -132,6 +132,7 @@ class FlowchartLabService:
         max_sessions: int = MAX_SESSIONS,
         session_ttl_seconds: int = SESSION_TTL_SECONDS,
         clock: Callable[[], float] = time.monotonic,
+        workspace_store: flow_workspace.FlowchartWorkspaceStore | None = None,
     ) -> None:
         if max_sessions < 1:
             raise ValueError("max_sessions deve essere positivo")
@@ -142,6 +143,7 @@ class FlowchartLabService:
         self._clock = clock
         self._lock = threading.RLock()
         self._sessions: OrderedDict[str, TraceSession] = OrderedDict()
+        self._workspace_store = workspace_store
 
     def health(self) -> dict[str, Any]:
         with self._lock:
@@ -154,6 +156,7 @@ class FlowchartLabService:
             "trace_schema_version": flow.TRACE_SCHEMA_VERSION,
             "active_sessions": active_sessions,
             "max_sessions": self.max_sessions,
+            "workspace_configured": self._workspace_store is not None,
         }
 
     def validate(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -224,6 +227,42 @@ class FlowchartLabService:
             "session_id": session_id,
             "deleted": True,
         }
+
+    def workspace_status(self, payload: dict[str, Any]) -> dict[str, Any]:
+        _reject_unknown_fields(payload, set())
+        store = self._require_workspace()
+        try:
+            return store.status()
+        except flow_workspace.FlowchartWorkspaceError as error:
+            raise FlowchartLabAPIError(409, "workspace_error", str(error)) from error
+
+    def workspace_load(self, payload: dict[str, Any]) -> dict[str, Any]:
+        _reject_unknown_fields(payload, set())
+        store = self._require_workspace()
+        try:
+            return store.load_response()
+        except flow_workspace.FlowchartWorkspaceError as error:
+            raise FlowchartLabAPIError(409, "workspace_error", str(error)) from error
+
+    def workspace_save(self, payload: dict[str, Any]) -> dict[str, Any]:
+        _reject_unknown_fields(payload, {"artifact"})
+        artifact = _require_object(payload.get("artifact"), "artifact")
+        store = self._require_workspace()
+        try:
+            return store.save_response(artifact)
+        except flow.FlowchartValidationError as error:
+            raise FlowchartLabAPIError(422, "flowchart_validation_error", str(error)) from error
+        except flow_workspace.FlowchartWorkspaceError as error:
+            raise FlowchartLabAPIError(409, "workspace_error", str(error)) from error
+
+    def _require_workspace(self) -> flow_workspace.FlowchartWorkspaceStore:
+        if self._workspace_store is None:
+            raise FlowchartLabAPIError(
+                409,
+                "workspace_unavailable",
+                "Flowchart Lab non è stato avviato con una workspace gestita",
+            )
+        return self._workspace_store
 
     def _session_id(self, value: Any) -> str:
         if not isinstance(value, str) or not value or len(value) > 128:
@@ -378,6 +417,9 @@ def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
                 "/api/step": service.step,
                 "/api/reset": service.reset,
                 "/api/session/delete": service.delete_session,
+                "/api/workspace/status": service.workspace_status,
+                "/api/workspace/load": service.workspace_load,
+                "/api/workspace/save": service.workspace_save,
             }
             action = routes.get(parsed.path)
             if action is None:
@@ -506,6 +548,7 @@ def create_http_server(
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
     service: FlowchartLabService | None = None,
+    workspace_root: Path | None = None,
 ) -> ThreadingHTTPServer:
     if not _is_loopback_host(host):
         raise ValueError("Flowchart Lab deve usare un indirizzo IP loopback")
@@ -513,11 +556,18 @@ def create_http_server(
         raise ValueError(f"host supportato in v1: {DEFAULT_HOST}")
     if not 0 <= port <= 65535:
         raise ValueError("porta non valida")
-    # Validate the exact UI whitelist at startup rather than exposing a generic
-    # directory traversal/static-file boundary.
+    if service is not None and workspace_root is not None:
+        raise ValueError("workspace_root non può essere combinata con un service già costruito")
     for route in UI_STATIC_ROUTES:
         _ui_asset(route)
-    server = ThreadingHTTPServer((host, port), make_handler(service or FlowchartLabService()))
+    if service is None:
+        store = (
+            flow_workspace.FlowchartWorkspaceStore(workspace_root)
+            if workspace_root is not None
+            else None
+        )
+        service = FlowchartLabService(workspace_store=store)
+    server = ThreadingHTTPServer((host, port), make_handler(service))
     server.daemon_threads = True
     return server
 
@@ -526,19 +576,30 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Avvia il Flowchart Lab gestito su loopback locale.")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument(
+        "--workspace-root",
+        type=Path,
+        help="Workspace studente già risolta dal runtime; abilita save/load del solo algorithm.flow.json.",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     try:
-        server = create_http_server(host=args.host, port=args.port)
-    except (OSError, ValueError, RuntimeError) as error:
+        server = create_http_server(
+            host=args.host,
+            port=args.port,
+            workspace_root=args.workspace_root,
+        )
+    except (OSError, ValueError, RuntimeError, FileNotFoundError) as error:
         print(f"Flowchart Lab non avviato: {error}")
         return 1
     host, port = server.server_address[:2]
     print(f"Flowchart Lab: http://{host}:{port}/")
     print(f"Health: http://{host}:{port}/api/health")
+    if args.workspace_root is not None:
+        print(f"Workspace artifact: {flow_workspace.ARTIFACT_NAME}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
