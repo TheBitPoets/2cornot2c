@@ -4,131 +4,156 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>TheBitLab Flowchart Lab</title>
-  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/flowchart-lab/style.css">
 </head>
 <body>
-  <header>
+  <header class="app-header">
     <div>
-      <strong>TheBitLab Flowchart Lab</strong>
-      <span class="badge">MVP locale</span>
+      <p class="eyebrow">TheBitLab · strumento didattico gestito</p>
+      <h1>Flowchart Lab</h1>
+      <p class="subtitle">Costruisci l'algoritmo, eseguilo, osserva il trace. Il diagramma non esegue Python arbitrario.</p>
     </div>
-    <p>Disegna → valida → Run/Step → osserva variabili e percorso.</p>
+    <div class="header-actions">
+      <button id="newBtn" type="button">Nuovo</button>
+      <button id="exampleBtn" type="button">Esempio somma</button>
+      <label class="file-button" for="loadFile">Apri JSON</label>
+      <input id="loadFile" type="file" accept="application/json,.json">
+      <button id="exportBtn" type="button">Esporta JSON</button>
+    </div>
   </header>
 
-  <main>
-    <section class="panel source-panel">
-      <h1>Editor</h1>
-      <div class="toolbar">
-        <button id="newBtn" type="button">Nuovo</button>
-        <button id="exampleBtn" type="button">Esempio</button>
-        <button id="addNodeBtn" type="button">+ Nodo</button>
-        <button id="deleteNodeBtn" type="button">− Nodo</button>
+  <main class="app-grid">
+    <aside class="panel palette" aria-label="Palette nodi">
+      <h2>Nodi</h2>
+      <p class="panel-help">Aggiungi una forma, poi selezionala per modificarla.</p>
+      <div class="palette-grid">
+        <button type="button" data-node-type="start">Inizio</button>
+        <button type="button" data-node-type="end">Fine</button>
+        <button type="button" data-node-type="input">Input</button>
+        <button type="button" data-node-type="assign">Assegna</button>
+        <button type="button" data-node-type="output">Output</button>
+        <button type="button" data-node-type="decision">Decisione</button>
+        <button type="button" data-node-type="loop">Ciclo</button>
+        <button type="button" data-node-type="comment">Commento</button>
       </div>
 
-      <fieldset>
-        <legend>Nodo selezionato</legend>
-        <label for="nodeId">ID</label>
-        <input id="nodeId" type="text" autocomplete="off">
-        <label for="nodeType">Tipo</label>
-        <select id="nodeType">
-          <option value="start">Start</option>
-          <option value="end">End</option>
-          <option value="input">Input</option>
-          <option value="assign">Assegnamento</option>
-          <option value="output">Output</option>
-          <option value="decision">Decisione</option>
-          <option value="loop">Ciclo</option>
-          <option value="comment">Commento</option>
-        </select>
-        <div id="targetFields">
-          <label for="nodeTarget">Variabile target</label>
-          <input id="nodeTarget" type="text" autocomplete="off">
-        </div>
-        <div id="dataTypeFields">
-          <label for="nodeDataType">Tipo input</label>
+      <section class="validation-box" aria-labelledby="validationTitle">
+        <h2 id="validationTitle">Validazione</h2>
+        <div id="validationStatus" class="status neutral">Non ancora validato</div>
+        <ul id="validationErrors" class="errors"></ul>
+      </section>
+    </aside>
+
+    <section class="canvas-panel" aria-label="Area diagramma">
+      <div class="canvas-toolbar">
+        <strong>Diagramma</strong>
+        <span id="selectionLabel">Nessun nodo selezionato</span>
+      </div>
+      <svg id="diagram" viewBox="0 0 1200 720" role="img" aria-label="Editor visuale del flow chart">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z"></path>
+          </marker>
+        </defs>
+        <g id="edgesLayer"></g>
+        <g id="nodesLayer"></g>
+      </svg>
+      <p class="canvas-hint">Trascina i nodi per disporli. Le coordinate appartengono al layout, non cambiano il risultato dell'algoritmo.</p>
+    </section>
+
+    <aside class="panel inspector" aria-label="Proprietà nodo">
+      <h2>Proprietà</h2>
+      <div id="emptyInspector" class="empty-state">Seleziona un nodo.</div>
+      <form id="nodeForm" hidden>
+        <label>
+          ID nodo
+          <input id="nodeId" name="nodeId" autocomplete="off">
+        </label>
+        <p><strong>Tipo:</strong> <span id="nodeTypeLabel"></span></p>
+
+        <label id="targetField" hidden>
+          Variabile
+          <input id="nodeTarget" autocomplete="off">
+        </label>
+        <label id="dataTypeField" hidden>
+          Tipo input
           <select id="nodeDataType">
-            <option value="int">Intero</option>
-            <option value="float">Reale</option>
-            <option value="str">Testo</option>
-            <option value="bool">Booleano</option>
+            <option value="str">testo</option>
+            <option value="int">intero</option>
+            <option value="float">decimale</option>
+            <option value="bool">booleano</option>
           </select>
-        </div>
-        <div id="expressionFields">
-          <label for="nodeExpression">Espressione</label>
-          <input id="nodeExpression" type="text" autocomplete="off">
-        </div>
-        <div id="commentFields">
-          <label for="nodeText">Commento</label>
-          <input id="nodeText" type="text" autocomplete="off">
-        </div>
-        <button id="saveNodeBtn" type="button">Applica proprietà</button>
-      </fieldset>
+        </label>
+        <label id="expressionField" hidden>
+          Espressione
+          <input id="nodeExpression" autocomplete="off">
+        </label>
+        <label id="textField" hidden>
+          Commento
+          <textarea id="nodeText" rows="3"></textarea>
+        </label>
 
-      <fieldset>
-        <legend>Connessioni</legend>
-        <label for="edgeFrom">Da</label>
-        <select id="edgeFrom"></select>
-        <label for="edgeLabel">Ramo</label>
-        <select id="edgeLabel">
-          <option value="next">next</option>
-          <option value="true">true</option>
-          <option value="false">false</option>
-        </select>
-        <label for="edgeTo">A</label>
-        <select id="edgeTo"></select>
-        <button id="addEdgeBtn" type="button">+ Connessione</button>
-        <label for="edgeList">Connessioni esistenti</label>
-        <select id="edgeList" size="5"></select>
-        <button id="deleteEdgeBtn" type="button">− Connessione selezionata</button>
-      </fieldset>
+        <button id="deleteNodeBtn" class="danger" type="button">Elimina nodo</button>
+      </form>
 
-      <details>
-        <summary>Artifact JSON — modalità avanzata</summary>
-        <p class="help">Utile per debug/versionamento. L'editor visuale resta il percorso normale.</p>
-        <textarea id="artifact" spellcheck="false"></textarea>
-        <button id="applyJsonBtn" type="button">Applica JSON</button>
-      </details>
-
-      <label for="inputs">Input, uno per riga</label>
-      <textarea id="inputs" class="inputs" spellcheck="false"></textarea>
-      <div id="status" role="status" aria-live="polite" class="status">Pronto.</div>
-    </section>
-
-    <section class="panel graph-panel">
-      <div class="graph-head">
-        <h2>Diagramma</h2>
-        <div class="toolbar">
-          <button id="validateBtn" type="button">Valida</button>
-          <button id="runBtn" type="button">Run</button>
-          <button id="stepBtn" type="button">Step</button>
-          <button id="resetBtn" type="button">Reset</button>
-        </div>
-      </div>
-      <p class="help">Clicca un nodo per selezionarlo. Trascinalo per cambiare il layout; l'esecuzione non cambia.</p>
-      <svg id="graph" viewBox="0 0 900 700" role="img" aria-label="Editor visuale del flow chart"></svg>
-    </section>
-
-    <section class="panel trace-panel">
-      <h2>Trace</h2>
-      <div class="trace-meta">
-        <span>Step: <strong id="stepCounter">0/0</strong></span>
-        <span>Node: <strong id="currentNode">—</strong></span>
-      </div>
-      <h3>Variabili</h3>
-      <table>
-        <thead><tr><th>Nome</th><th>Valore</th></tr></thead>
-        <tbody id="variables"></tbody>
-      </table>
-      <h3>Output</h3>
-      <pre id="outputs"></pre>
-      <h3>Evento corrente</h3>
-      <pre id="event"></pre>
-    </section>
+      <section class="edge-editor" aria-labelledby="edgeTitle">
+        <h2 id="edgeTitle">Collegamenti</h2>
+        <p class="panel-help">Seleziona il nodo sorgente nel diagramma.</p>
+        <label>
+          Destinazione
+          <select id="edgeTarget"></select>
+        </label>
+        <label>
+          Ramo
+          <select id="edgeLabel">
+            <option value="next">next</option>
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        </label>
+        <button id="addEdgeBtn" type="button">Aggiungi collegamento</button>
+        <ul id="edgeList" class="edge-list"></ul>
+      </section>
+    </aside>
   </main>
 
-  <footer>
-    Esecuzione locale deterministica. Nessuna dipendenza remota e nessun codice Python arbitrario dal diagramma.
-  </footer>
-  <script src="/app.js"></script>
+  <section class="execution" aria-labelledby="executionTitle">
+    <div class="execution-head">
+      <div>
+        <p class="eyebrow">Trace deterministico</p>
+        <h2 id="executionTitle">Esecuzione</h2>
+      </div>
+      <div class="run-actions">
+        <button id="runBtn" class="primary" type="button">Run</button>
+        <button id="stepBtn" type="button">Step</button>
+        <button id="resetBtn" type="button">Reset</button>
+      </div>
+    </div>
+
+    <div class="execution-grid">
+      <label>
+        Input, uno per riga
+        <textarea id="inputs" rows="5" placeholder="2&#10;3"></textarea>
+      </label>
+      <div>
+        <h3>Output</h3>
+        <pre id="outputs">—</pre>
+      </div>
+      <div>
+        <h3>Variabili</h3>
+        <table>
+          <thead><tr><th>Nome</th><th>Valore</th></tr></thead>
+          <tbody id="variablesBody"></tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Step corrente</h3>
+        <pre id="stepInfo">—</pre>
+      </div>
+    </div>
+    <div id="appStatus" class="app-status" role="status" aria-live="polite">Flowchart Lab pronto.</div>
+  </section>
+
+  <script src="/flowchart-lab/app.js" defer></script>
 </body>
 </html>
