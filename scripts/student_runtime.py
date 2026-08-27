@@ -8,12 +8,15 @@ from typing import Any
 
 from scripts import (
     student_lab_service,
+    thebitlab_builtin_runtimes,
     thebitlab_runtime_contracts,
     thebitlab_runtime_plugins,
     thebitlab_runtime_sandbox,
 )
 
-DEFAULT_REGISTRY = thebitlab_runtime_plugins.RuntimePluginRegistry()
+DEFAULT_REGISTRY = thebitlab_runtime_plugins.RuntimePluginRegistry(
+    entry_points_provider=thebitlab_builtin_runtimes.combined_entry_points
+)
 
 
 def clean_text(value: Any) -> str:
@@ -144,15 +147,6 @@ def _student_runtime_backend(
     requested_backend: str,
     loaded: thebitlab_runtime_plugins.LoadedRuntimePlugin,
 ) -> str:
-    """Prefer the authoritative sandbox for student-facing sandbox-capable runtimes.
-
-    Historical student callers default to ``local``. Once an administrator-installed
-    runtime advertises ``sandbox-plan.v1``, treating that implicit local value as
-    process-only grading would silently downgrade the security boundary. Promote it
-    to Docker instead. Legacy v1 runtimes that do not offer the sandbox capability
-    keep their existing local behavior.
-    """
-
     if (
         requested_backend == "local"
         and thebitlab_runtime_plugins.RUNTIME_SANDBOX_CAPABILITY
@@ -193,10 +187,7 @@ def run_runtime_assignment(
             execution = thebitlab_runtime_plugins.run_runtime(loaded, request)
         elif effective_backend == "docker":
             plan = thebitlab_runtime_plugins.prepare_sandbox_runtime(loaded, request)
-            service = (
-                sandbox_service
-                or thebitlab_runtime_sandbox.DockerRuntimeSandboxExecutionService()
-            )
+            service = sandbox_service or thebitlab_runtime_sandbox.DockerRuntimeSandboxExecutionService()
             try:
                 sandbox_result = service.run(plan, request)
             except subprocess.TimeoutExpired as error:
@@ -212,10 +203,7 @@ def run_runtime_assignment(
                     assignment,
                     runtime_id=runtime_id,
                     source=source,
-                    error=(
-                        "Docker non trovato; il grading runtime autorevole "
-                        "non e disponibile."
-                    ),
+                    error="Docker non trovato; il grading runtime autorevole non e disponibile.",
                 )
             if sandbox_result.get("worker_schema") != plan.profile.worker_schema:
                 raise thebitlab_runtime_plugins.RuntimePluginIncompatibleError(
