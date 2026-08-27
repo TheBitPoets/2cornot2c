@@ -113,7 +113,7 @@ def test_html_is_offline_same_origin_and_has_no_inline_active_content() -> None:
     assert not re.search(r"\son\w+\s*=", html, flags=re.IGNORECASE)
 
 
-def test_javascript_uses_server_session_contract_and_no_dynamic_code_or_remote_urls() -> None:
+def test_javascript_uses_session_and_managed_workspace_contracts_without_dynamic_code() -> None:
     javascript = (UI_ROOT / "app.js").read_text(encoding="utf-8")
 
     for endpoint in (
@@ -123,10 +123,16 @@ def test_javascript_uses_server_session_contract_and_no_dynamic_code_or_remote_u
         '"/api/step"',
         '"/api/reset"',
         '"/api/session/delete"',
+        '"/api/workspace/status"',
+        '"/api/workspace/load"',
+        '"/api/workspace/save"',
     ):
         assert endpoint in javascript
 
     assert "state.sessionId" in javascript
+    assert "state.workspaceAvailable" in javascript
+    assert "algorithm.flow.json" in javascript
+    assert '"path"' not in javascript
     assert "eval(" not in javascript
     assert "new Function" not in javascript
     assert "document.write" not in javascript
@@ -135,7 +141,7 @@ def test_javascript_uses_server_session_contract_and_no_dynamic_code_or_remote_u
     assert "https://" not in javascript
 
 
-def test_ui_contains_beginner_editor_and_trace_surfaces() -> None:
+def test_ui_contains_beginner_editor_trace_and_workspace_surfaces() -> None:
     html = (UI_ROOT / "index.html").read_text(encoding="utf-8")
 
     for node_type in (
@@ -162,8 +168,15 @@ def test_ui_contains_beginner_editor_and_trace_surfaces() -> None:
         "runBtn",
         "stepBtn",
         "resetBtn",
+        "workspaceLoadBtn",
+        "workspaceSaveBtn",
     ):
         assert f'id="{element_id}"' in html
+
+    assert "Apri workspace" in html
+    assert "Salva workspace" in html
+    assert "Apri JSON locale" in html
+    assert "Esporta JSON locale" in html
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js non disponibile per syntax check UI")
