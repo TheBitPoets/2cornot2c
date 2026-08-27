@@ -23,6 +23,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from scripts import flowchart_lab_core as flow
+from scripts import flowchart_lab_svg as flow_svg
 from scripts import flowchart_lab_workspace as flow_workspace
 
 
@@ -154,6 +155,7 @@ class FlowchartLabService:
             "status": "ok",
             "flowchart_schema_version": flow.SCHEMA_VERSION,
             "trace_schema_version": flow.TRACE_SCHEMA_VERSION,
+            "svg_schema_version": flow_svg.SVG_SCHEMA_VERSION,
             "active_sessions": active_sessions,
             "max_sessions": self.max_sessions,
             "workspace_configured": self._workspace_store is not None,
@@ -173,6 +175,17 @@ class FlowchartLabService:
         _reject_unknown_fields(payload, {"artifact", "inputs", "limits"})
         artifact = _require_object(payload.get("artifact"), "artifact")
         return flow.execute_flowchart(artifact, _inputs(payload), limits=_limits(payload))
+
+    def render_svg(self, payload: dict[str, Any]) -> dict[str, Any]:
+        _reject_unknown_fields(payload, {"artifact"})
+        artifact = _require_object(payload.get("artifact"), "artifact")
+        rendered = flow_svg.render_flowchart_svg(artifact)
+        return {
+            "schema_version": flow_svg.SVG_SCHEMA_VERSION,
+            "media_type": "image/svg+xml",
+            "filename": "algorithm.flow.svg",
+            "svg": rendered,
+        }
 
     def create_session(self, payload: dict[str, Any]) -> dict[str, Any]:
         _reject_unknown_fields(payload, {"artifact", "inputs", "limits"})
@@ -413,6 +426,7 @@ def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
             routes = {
                 "/api/validate": service.validate,
                 "/api/run": service.run,
+                "/api/svg": service.render_svg,
                 "/api/session": service.create_session,
                 "/api/step": service.step,
                 "/api/reset": service.reset,
