@@ -173,35 +173,51 @@ def test_browser_shell_has_no_remote_runtime_dependency() -> None:
     assert "new function" not in js.lower()
 
 
-def test_browser_shell_exposes_visual_authoring_trace_and_accessibility_surface() -> None:
+def test_browser_shell_exposes_current_visual_authoring_trace_and_accessibility_surface() -> None:
     html = service.static_asset("/")[2].decode("utf-8")
 
     for marker in (
         "newBtn",
-        "addNodeBtn",
+        "exampleBtn",
         "deleteNodeBtn",
-        "saveNodeBtn",
         "addEdgeBtn",
-        "deleteEdgeBtn",
-        "validateBtn",
         "runBtn",
         "stepBtn",
         "resetBtn",
-        "variables",
+        "workspaceLoadBtn",
+        "workspaceSaveBtn",
+        "exportSvgBtn",
+        "variablesBody",
         "outputs",
-        "graph",
+        "diagram",
+        "validationStatus",
     ):
         assert marker in html
+
+    for node_type in (
+        "start",
+        "end",
+        "input",
+        "assign",
+        "output",
+        "decision",
+        "loop",
+        "comment",
+    ):
+        assert f'data-node-type="{node_type}"' in html
+
     assert 'aria-live="polite"' in html
     assert 'aria-label="Editor visuale del flow chart"' in html
 
 
-def test_browser_js_keeps_layout_separate_and_supports_drag_selection() -> None:
+def test_browser_js_keeps_layout_separate_and_supports_live_editing_drag_selection() -> None:
     js = service.static_asset("/app.js")[2].decode("utf-8")
 
     assert "artifact.layout" in js
     assert "pointermove" in js
     assert "selectNode" in js
-    assert "applyNodeProperties" in js
+    assert "renameSelected" in js
+    assert "artifactChanged" in js
+    assert "renderInspector" in js
     assert "addEdge" in js
-    assert "deleteEdge" in js
+    assert "state.artifact.edges.splice" in js
