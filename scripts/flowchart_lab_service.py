@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Loopback-only HTTP service for TheBitLab Flowchart Lab.
+"""Compatibility facade for the original Flowchart Lab service API.
 
-Artifact semantics live in ``flowchart_lab_core``. Static UI serving is limited
-to fixed packaged assets. Optional persistence is limited to one fixed artifact
-inside a launcher-selected workspace root.
+The production HTTP implementation is ``scripts.flowchart_lab_server``.
+This module keeps the earlier pure-function test/API surface available while
+routing execution semantics and actual server startup through the canonical
+implementation. It must not grow a second HTTP/runtime implementation.
 """
 
 from __future__ import annotations
@@ -11,24 +12,28 @@ from __future__ import annotations
 import argparse
 import ipaddress
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from scripts import flowchart_lab_core, flowchart_lab_workspace
+from scripts import (
+    flowchart_lab_core,
+    flowchart_lab_server,
+    flowchart_lab_workspace,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC_ROOT = ROOT / "tools" / "flowchart_lab"
+# Legacy aliases retained only for deterministic compatibility tests/callers.
 STATIC_ROUTES = {
     "/": (STATIC_ROOT / "index.html", "text/html; charset=utf-8"),
     "/app.css": (STATIC_ROOT / "app.css", "text/css; charset=utf-8"),
     "/app.js": (STATIC_ROOT / "app.js", "text/javascript; charset=utf-8"),
 }
-DEFAULT_HOST = "127.0.0.1"
+DEFAULT_HOST = flowchart_lab_server.DEFAULT_HOST
 DEFAULT_PORT = 8776
-MAX_REQUEST_BYTES = 1024 * 1024
+MAX_REQUEST_BYTES = flowchart_lab_server.MAX_REQUEST_BYTES
 MAX_STATIC_BYTES = 512 * 1024
 
 
@@ -74,7 +79,11 @@ def static_asset(path: str) -> tuple[int, str, bytes] | None:
         return None
     file_path, content_type = descriptor
     try:
-        data = file_path.read_bytes()
+        resolved_root = STATIC_ROOT.resolve(strict=True)
+        resolved = file_path.resolve(strict=True)
+        if resolved.parent != resolved_root or resolved.is_symlink():
+            return 500, "application/json; charset=utf-8", _response(500, {"error": "static-asset-unavailable"})[1]
+        data = resolved.read_bytes()
     except OSError:
         return 500, "application/json; charset=utf-8", _response(500, {"error": "static-asset-unavailable"})[1]
     if len(data) > MAX_STATIC_BYTES:
@@ -96,6 +105,18 @@ def load_workspace_artifact(
     return _response(200, {"artifact": artifact})
 
 
+def _parse_legacy_payload(body: bytes) -> tuple[dict[str, Any] | None, tuple[int, bytes] | None]:
+    if len(body) > MAX_REQUEST_BYTES:
+        return None, _response(413, {"error": "request-too-large"})
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None, _response(400, {"error": "invalid-json"})
+    if not isinstance(payload, dict):
+        return None, _response(400, {"error": "body-must-be-object"})
+    return payload, None
+
+
 def handle_api_request(
     method: str,
     path: str,
@@ -103,123 +124,51 @@ def handle_api_request(
     *,
     store: flowchart_lab_workspace.FlowchartWorkspaceStore | None = None,
 ) -> tuple[int, bytes]:
-    """Handle one API request without HTTP/server state, for deterministic tests."""
+    """Keep the original deterministic helper while using the canonical service."""
     if method != "POST":
         return _response(405, {"error": "method-not-allowed"})
-    if len(body) > MAX_REQUEST_BYTES:
-        return _response(413, {"error": "request-too-large"})
+    payload, error = _parse_legacy_payload(body)
+    if error is not None:
+        return error
+    assert payload is not None
+
+    canonical = flowchart_lab_server.FlowchartLabService(workspace_store=store)
     try:
-        payload = json.loads(body.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return _response(400, {"error": "invalid-json"})
-    if not isinstance(payload, dict):
-        return _response(400, {"error": "body-must-be-object"})
-
-    artifact = payload.get("artifact")
-    if path == "/api/validate":
-        errors = flowchart_lab_core.validate_flowchart_artifact(artifact)
-        return _response(200, {"valid": not errors, "errors": errors})
-
-    if path == "/api/run":
-        inputs = payload.get("inputs", [])
-        if not isinstance(inputs, list):
-            return _response(400, {"error": "inputs-must-be-list"})
-        limits_payload = payload.get("limits", {})
-        if not isinstance(limits_payload, dict):
-            return _response(400, {"error": "limits-must-be-object"})
-        try:
-            limits = flowchart_lab_core.ExecutionLimits(
-                max_steps=int(limits_payload.get("max_steps", flowchart_lab_core.DEFAULT_MAX_STEPS)),
-                max_output_events=int(
-                    limits_payload.get("max_output_events", flowchart_lab_core.MAX_OUTPUT_EVENTS)
-                ),
-            )
-            result = flowchart_lab_core.execute_flowchart(artifact, inputs, limits=limits)
-        except flowchart_lab_core.FlowchartValidationError as error:
-            return _response(422, {"error": "invalid-artifact", "detail": str(error)})
-        except flowchart_lab_core.FlowchartExecutionError as error:
-            return _response(422, {"error": "execution-error", "detail": str(error)})
-        except (TypeError, ValueError) as error:
-            return _response(400, {"error": "invalid-limits", "detail": str(error)})
-        return _response(200, result)
-
-    if path == "/api/artifact":
-        if store is None:
-            return _response(503, {"error": "workspace-unavailable"})
-        try:
-            store.save(artifact)
-        except flowchart_lab_core.FlowchartValidationError as error:
-            return _response(422, {"error": "invalid-artifact", "detail": str(error)})
-        except flowchart_lab_workspace.FlowchartWorkspaceError as error:
-            return _response(422, {"error": "workspace-error", "detail": str(error)})
-        return _response(200, {"saved": True, "artifact_name": flowchart_lab_workspace.ARTIFACT_NAME})
-
+        if path == "/api/validate":
+            result = canonical.validate(payload)
+            return _response(200, {"valid": result["valid"], "errors": result["errors"]})
+        if path == "/api/run":
+            if not isinstance(payload.get("inputs", []), list):
+                return _response(400, {"error": "inputs-must-be-list"})
+            if not isinstance(payload.get("limits", {}), dict):
+                return _response(400, {"error": "limits-must-be-object"})
+            try:
+                result = canonical.run(payload)
+            except flowchart_lab_core.FlowchartValidationError as exc:
+                return _response(422, {"error": "invalid-artifact", "detail": str(exc)})
+            except flowchart_lab_core.FlowchartExecutionError as exc:
+                return _response(422, {"error": "execution-error", "detail": str(exc)})
+            except flowchart_lab_server.FlowchartLabAPIError as exc:
+                return _response(400, {"error": "invalid-limits", "detail": exc.message})
+            return _response(200, result)
+        if path == "/api/artifact":
+            if store is None:
+                return _response(503, {"error": "workspace-unavailable"})
+            try:
+                result = canonical.workspace_save(payload)
+            except flowchart_lab_core.FlowchartValidationError as exc:
+                return _response(422, {"error": "invalid-artifact", "detail": str(exc)})
+            except flowchart_lab_server.FlowchartLabAPIError as exc:
+                legacy_error = "workspace-error" if exc.code == "workspace_error" else exc.code
+                return _response(exc.status, {"error": legacy_error, "detail": exc.message})
+            return _response(200, {"saved": result["saved"], "artifact_name": result["artifact_name"]})
+    except flowchart_lab_server.FlowchartLabAPIError as exc:
+        return _response(exc.status, {"error": exc.code, "detail": exc.message})
     return _response(404, {"error": "not-found"})
 
 
-class FlowchartLabHandler(BaseHTTPRequestHandler):
-    server_version = "TheBitLabFlowchartLab/0.1"
-
-    def _send(self, status: int, content_type: str, body: bytes) -> None:
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header(
-            "Content-Security-Policy",
-            "default-src 'self'; connect-src 'self'; img-src 'self' data:; "
-            "style-src 'self'; script-src 'self'; object-src 'none'; "
-            "base-uri 'none'; frame-ancestors 'none'",
-        )
-        self.send_header("Referrer-Policy", "no-referrer")
-        self.end_headers()
-        self.wfile.write(body)
-
-    def _send_json(self, status: int, body: bytes) -> None:
-        self._send(status, "application/json; charset=utf-8", body)
-
-    def _host_allowed(self) -> bool:
-        if valid_host_header(self.headers.get("Host", "")):
-            return True
-        self._send_json(*_response(421, {"error": "invalid-host"}))
-        return False
-
-    def _store(self) -> flowchart_lab_workspace.FlowchartWorkspaceStore | None:
-        return getattr(self.server, "workspace_store", None)
-
-    def do_GET(self) -> None:  # noqa: N802
-        if not self._host_allowed():
-            return
-        if self.path == "/api/artifact":
-            self._send_json(*load_workspace_artifact(self._store()))
-            return
-        asset = static_asset(self.path)
-        if asset is None:
-            self._send_json(*_response(404, {"error": "not-found"}))
-            return
-        self._send(*asset)
-
-    def do_POST(self) -> None:  # noqa: N802
-        if not self._host_allowed():
-            return
-        raw_length = self.headers.get("Content-Length", "")
-        try:
-            length = int(raw_length)
-        except ValueError:
-            self._send_json(*_response(400, {"error": "invalid-content-length"}))
-            return
-        if length < 0 or length > MAX_REQUEST_BYTES:
-            self._send_json(*_response(413, {"error": "request-too-large"}))
-            return
-        body = self.rfile.read(length)
-        self._send_json(*handle_api_request("POST", self.path, body, store=self._store()))
-
-    def log_message(self, format: str, *args: Any) -> None:
-        return
-
-
 def main() -> int:
+    """Legacy CLI that delegates all networking to flowchart_lab_server."""
     parser = argparse.ArgumentParser(description="Serve TheBitLab Flowchart Lab on loopback")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
@@ -227,21 +176,21 @@ def main() -> int:
         "--workspace",
         type=Path,
         default=None,
-        help="Managed assignment workspace. Enables load/save of algorithm.flow.json.",
+        help="Managed assignment workspace. Enables algorithm.flow.json save/load.",
     )
     args = parser.parse_args()
     validate_bind_host(args.host)
-    if not 1 <= args.port <= 65535:
-        raise SystemExit("porta non valida")
-    workspace_store = (
-        flowchart_lab_workspace.FlowchartWorkspaceStore(args.workspace)
-        if args.workspace is not None
-        else None
-    )
-    server = ThreadingHTTPServer((args.host, args.port), FlowchartLabHandler)
-    server.workspace_store = workspace_store  # type: ignore[attr-defined]
-    mode = f" workspace={workspace_store.root}" if workspace_store else " workspace=disabled"
-    print(f"Flowchart Lab: http://{args.host}:{args.port} ({mode.strip()})")
+    try:
+        server = flowchart_lab_server.create_http_server(
+            host=args.host,
+            port=args.port,
+            workspace_root=args.workspace,
+        )
+    except (OSError, ValueError, RuntimeError, FileNotFoundError) as error:
+        print(f"Flowchart Lab non avviato: {error}")
+        return 1
+    host, port = server.server_address[:2]
+    print(f"Flowchart Lab: http://{host}:{port}/ (canonical server)")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
