@@ -24,7 +24,8 @@ def test_trusted_grading_workflow_separates_student_and_workflow_commits() -> No
     assert "{{json .RepoDigests}}" in source
     assert "Runner immutabile verificato" in source
     assert "steps.toolchain.outputs.reference" in source
-    assert "steps.toolchain.outputs.digest" in source
+    assert 'output.write(f"digest={lock[\'digest\']}\\n")' in source
+    assert 'expected != lock["digest"]' in source
     assert "toolchain_digest" in source
     assert "--docker-image" in source
     assert "--toolchain-version" in source
