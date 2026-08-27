@@ -18,7 +18,11 @@ def test_trusted_grading_workflow_separates_student_and_workflow_commits() -> No
     assert "scripts/build_assignment_runner.py" not in source
     assert "docker build" not in source
     assert "from scripts import toolchain_lock" in source
+    assert "packages: read" in source
+    assert "docker login ghcr.io" in source
     assert "docker pull" in source
+    assert "{{json .RepoDigests}}" in source
+    assert "Runner immutabile verificato" in source
     assert "steps.toolchain.outputs.reference" in source
     assert "steps.toolchain.outputs.digest" in source
     assert "toolchain_digest" in source
@@ -36,6 +40,12 @@ def test_trusted_grading_workflow_separates_student_and_workflow_commits() -> No
     assert '--assignment-id "$ASSIGNMENT_ID"' in source
     assert '--student-id "$STUDENT_ID"' in source
     assert "Upload authoritative grading report" in source
+
+    pull_block = source.split("      - name: Pull and verify pinned runner image", maxsplit=1)[1]
+    pull_block = pull_block.split("      - name: Run deterministic grading", maxsplit=1)[0]
+    assert "docker image inspect" in pull_block
+    assert ".RepoDigests" in pull_block
+    assert "--format '{{.Id}}'" not in pull_block
 
 
 def test_runner_workflows_use_the_validated_toolchain_builder() -> None:
