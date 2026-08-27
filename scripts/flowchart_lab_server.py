@@ -3,7 +3,9 @@
 
 The service is intentionally thin: flowchart semantics live exclusively in
 ``scripts.flowchart_lab_core``. Run executes the canonical core once; Step and
-Reset only navigate the resulting deterministic trace.
+Reset only navigate the resulting deterministic trace. The browser UI is
+served from an exact static whitelist; this is not a general-purpose file
+server.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ipaddress
 import json
+from pathlib import Path
 import secrets
 import threading
 import time
@@ -33,6 +36,20 @@ MAX_API_STEPS = flow.DEFAULT_MAX_STEPS
 MAX_SESSIONS = 64
 SESSION_TTL_SECONDS = 30 * 60
 REQUEST_SOCKET_TIMEOUT_SECONDS = 5
+APP_ROOT = Path(__file__).resolve().parents[1]
+UI_ROOT = APP_ROOT / "tools" / "flowchart_lab"
+UI_STATIC_ROUTES = {
+    "/": ("index.html", "text/html; charset=utf-8"),
+    "/flowchart-lab": ("index.html", "text/html; charset=utf-8"),
+    "/flowchart-lab/": ("index.html", "text/html; charset=utf-8"),
+    "/flowchart-lab/app.js": ("app.js", "text/javascript; charset=utf-8"),
+    "/flowchart-lab/style.css": ("app.css", "text/css; charset=utf-8"),
+}
+UI_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; script-src 'self'; style-src 'self'; "
+    "connect-src 'self'; img-src 'self' data:; object-src 'none'; "
+    "base-uri 'none'; frame-ancestors 'none'"
+)
 
 
 class FlowchartLabAPIError(ValueError):
@@ -302,6 +319,18 @@ def _reject_json_constant(value: str) -> None:
     raise _StrictJSONError(f"costante JSON non valida: {value}")
 
 
+def _ui_asset(route: str) -> tuple[Path, str] | None:
+    configured = UI_STATIC_ROUTES.get(route)
+    if configured is None:
+        return None
+    filename, content_type = configured
+    root = UI_ROOT.resolve(strict=True)
+    path = (UI_ROOT / filename).resolve(strict=True)
+    if path.parent != root or path.is_symlink() or not path.is_file():
+        raise RuntimeError(f"asset UI Flowchart Lab non sicuro: {filename}")
+    return path, content_type
+
+
 def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
     class FlowchartLabHandler(BaseHTTPRequestHandler):
         server_version = "TheBitLab-FlowchartLab/1"
@@ -317,13 +346,30 @@ def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
         def do_GET(self) -> None:
             if not self._authorized_request():
                 return
-            if self.path == "/api/health":
+            parsed = urlparse(self.path)
+            if parsed.query or parsed.fragment:
+                self._send_error(404, "not_found", "endpoint non trovato")
+                return
+            if parsed.path == "/api/health":
                 self._send_json(200, service.health())
+                return
+            try:
+                asset = _ui_asset(parsed.path)
+            except (OSError, RuntimeError):
+                self._send_error(500, "internal_error", "asset Flowchart Lab non disponibile")
+                return
+            if asset is not None:
+                path, content_type = asset
+                self._send_static(path, content_type)
                 return
             self._send_error(404, "not_found", "endpoint non trovato")
 
         def do_POST(self) -> None:
             if not self._authorized_request():
+                return
+            parsed = urlparse(self.path)
+            if parsed.query or parsed.fragment:
+                self._send_error(404, "not_found", "endpoint non trovato")
                 return
             routes = {
                 "/api/validate": service.validate,
@@ -333,7 +379,7 @@ def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
                 "/api/reset": service.reset,
                 "/api/session/delete": service.delete_session,
             }
-            action = routes.get(self.path)
+            action = routes.get(parsed.path)
             if action is None:
                 self._send_error(404, "not_found", "endpoint non trovato")
                 return
@@ -358,6 +404,8 @@ def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
             if not self._authorized_request():
                 return
             self.send_response(204)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Content-Length", "0")
             self.end_headers()
 
@@ -437,6 +485,19 @@ def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
             self.end_headers()
             self.wfile.write(data)
 
+        def _send_static(self, path: Path, content_type: str) -> None:
+            data = path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Content-Security-Policy", UI_CONTENT_SECURITY_POLICY)
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
     return FlowchartLabHandler
 
 
@@ -448,19 +509,21 @@ def create_http_server(
 ) -> ThreadingHTTPServer:
     if not _is_loopback_host(host):
         raise ValueError("Flowchart Lab deve usare un indirizzo IP loopback")
-    # Keep the first delivery profile deliberately IPv4-only. This avoids an
-    # accidental wildcard/dual-stack bind while cross-profile certification is pending.
     if host != DEFAULT_HOST:
         raise ValueError(f"host supportato in v1: {DEFAULT_HOST}")
     if not 0 <= port <= 65535:
         raise ValueError("porta non valida")
+    # Validate the exact UI whitelist at startup rather than exposing a generic
+    # directory traversal/static-file boundary.
+    for route in UI_STATIC_ROUTES:
+        _ui_asset(route)
     server = ThreadingHTTPServer((host, port), make_handler(service or FlowchartLabService()))
     server.daemon_threads = True
     return server
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Avvia il Flowchart Lab API su loopback locale.")
+    parser = argparse.ArgumentParser(description="Avvia il Flowchart Lab gestito su loopback locale.")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     return parser.parse_args()
@@ -470,11 +533,12 @@ def main() -> int:
     args = parse_args()
     try:
         server = create_http_server(host=args.host, port=args.port)
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, RuntimeError) as error:
         print(f"Flowchart Lab non avviato: {error}")
         return 1
     host, port = server.server_address[:2]
-    print(f"Flowchart Lab API: http://{host}:{port}/api/health")
+    print(f"Flowchart Lab: http://{host}:{port}/")
+    print(f"Health: http://{host}:{port}/api/health")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
