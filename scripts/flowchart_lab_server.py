@@ -29,8 +29,10 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8771
 MAX_REQUEST_BYTES = 1024 * 1024
 MAX_INPUT_VALUES = 512
+MAX_API_STEPS = flow.DEFAULT_MAX_STEPS
 MAX_SESSIONS = 64
 SESSION_TTL_SECONDS = 30 * 60
+REQUEST_SOCKET_TIMEOUT_SECONDS = 5
 
 
 class FlowchartLabAPIError(ValueError):
@@ -92,6 +94,12 @@ def _limits(payload: dict[str, Any]) -> flow.ExecutionLimits:
         if isinstance(value, bool) or not isinstance(value, int):
             raise FlowchartLabAPIError(400, "invalid_request", f"limits.{name} deve essere intero")
         kwargs[name] = value
+    if kwargs.get("max_steps", MAX_API_STEPS) > MAX_API_STEPS:
+        raise FlowchartLabAPIError(
+            400,
+            "invalid_request",
+            f"limits.max_steps non può superare {MAX_API_STEPS} nel servizio interattivo",
+        )
     try:
         return flow.ExecutionLimits(**kwargs)
     except ValueError as error:
@@ -277,10 +285,31 @@ def _origin_is_local(origin: str | None) -> bool:
     return parsed.scheme in {"http", "https"} and _is_loopback_host(parsed.hostname)
 
 
+class _StrictJSONError(ValueError):
+    pass
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise _StrictJSONError(f"chiave JSON duplicata: {key}")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise _StrictJSONError(f"costante JSON non valida: {value}")
+
+
 def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
     class FlowchartLabHandler(BaseHTTPRequestHandler):
         server_version = "TheBitLab-FlowchartLab/1"
         sys_version = ""
+
+        def setup(self) -> None:
+            super().setup()
+            self.connection.settimeout(REQUEST_SOCKET_TIMEOUT_SECONDS)
 
         def log_message(self, format: str, *args: Any) -> None:
             return
@@ -368,10 +397,17 @@ def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
                 raise FlowchartLabAPIError(400, "invalid_request", "Content-Length non valido")
             if length > MAX_REQUEST_BYTES:
                 raise FlowchartLabAPIError(413, "payload_too_large", "payload troppo grande")
-            body = self.rfile.read(length)
             try:
-                value = json.loads(body.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                body = self.rfile.read(length)
+            except TimeoutError as error:
+                raise FlowchartLabAPIError(408, "request_timeout", "lettura richiesta scaduta") from error
+            try:
+                value = json.loads(
+                    body.decode("utf-8"),
+                    object_pairs_hook=_unique_json_object,
+                    parse_constant=_reject_json_constant,
+                )
+            except (UnicodeDecodeError, json.JSONDecodeError, _StrictJSONError) as error:
                 raise FlowchartLabAPIError(400, "invalid_json", "JSON non valido") from error
             return _require_object(value)
 
