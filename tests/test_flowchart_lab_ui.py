@@ -150,8 +150,15 @@ def test_javascript_uses_session_workspace_and_svg_contracts_without_dynamic_cod
     assert "new Function" not in javascript
     assert "document.write" not in javascript
     assert "innerHTML" not in javascript
-    assert "http://" not in javascript
-    assert "https://" not in javascript
+
+    # The only absolute HTTP URL allowed in the UI source is the standard SVG
+    # namespace required by document.createElementNS. Network calls remain
+    # same-origin relative paths and the HTML/CSP forbid remote dependencies.
+    svg_namespace = "http://www.w3.org/2000/svg"
+    assert javascript.count(svg_namespace) == 1
+    network_surface = javascript.replace(svg_namespace, "")
+    assert not re.search(r"https?://", network_surface, flags=re.IGNORECASE)
+    assert not re.search(r"fetch\(\s*['\"]https?://", javascript, flags=re.IGNORECASE)
 
 
 def test_ui_contains_beginner_editor_trace_workspace_and_svg_surfaces() -> None:
