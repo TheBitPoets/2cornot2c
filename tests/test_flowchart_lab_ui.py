@@ -134,7 +134,18 @@ def test_javascript_uses_session_workspace_and_svg_contracts_without_dynamic_cod
     assert "state.workspaceAvailable" in javascript
     assert "algorithm.flow.json" in javascript
     assert "algorithm.flow.svg" in javascript
-    assert '"path"' not in javascript
+
+    # Browser-controlled filesystem paths are forbidden. The string "path"
+    # itself is legitimate because SVG edges are <path> elements, so protect
+    # the actual workspace API payload contract rather than banning the word.
+    assert 'apiPost("/api/workspace/save", { artifact: state.artifact })' in javascript
+    assert 'apiPost("/api/workspace/load", {})' in javascript
+    assert 'apiPost("/api/workspace/status", {})' in javascript
+    assert not re.search(
+        r'apiPost\("/api/workspace/(?:save|load|status)"\s*,\s*\{[^}]*\bpath\s*:',
+        javascript,
+    )
+
     assert "eval(" not in javascript
     assert "new Function" not in javascript
     assert "document.write" not in javascript
