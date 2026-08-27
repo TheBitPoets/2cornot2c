@@ -39,6 +39,8 @@ const els = {
   resetBtn: document.querySelector("#resetBtn"),
   newBtn: document.querySelector("#newBtn"),
   exampleBtn: document.querySelector("#exampleBtn"),
+  workspaceLoadBtn: document.querySelector("#workspaceLoadBtn"),
+  workspaceSaveBtn: document.querySelector("#workspaceSaveBtn"),
   exportBtn: document.querySelector("#exportBtn"),
   loadFile: document.querySelector("#loadFile"),
 };
@@ -50,6 +52,7 @@ const state = {
   sessionId: null,
   validationTimer: null,
   dragging: null,
+  workspaceAvailable: false,
 };
 
 function exampleArtifact() {
@@ -619,6 +622,55 @@ async function resetTrace() {
   }
 }
 
+async function probeWorkspace() {
+  try {
+    const result = await apiPost("/api/workspace/status", {});
+    state.workspaceAvailable = true;
+    els.workspaceLoadBtn.disabled = false;
+    els.workspaceSaveBtn.disabled = false;
+    const suffix = result.exists ? "artifact presente" : "nessun artifact salvato";
+    els.workspaceLoadBtn.title = `Workspace gestita: ${suffix}`;
+    els.workspaceSaveBtn.title = "Salva algorithm.flow.json nella workspace gestita";
+  } catch (_error) {
+    state.workspaceAvailable = false;
+    els.workspaceLoadBtn.disabled = true;
+    els.workspaceSaveBtn.disabled = true;
+    els.workspaceLoadBtn.title = "Workspace gestita non collegata dal runtime";
+    els.workspaceSaveBtn.title = "Workspace gestita non collegata dal runtime";
+  }
+}
+
+async function saveWorkspace() {
+  if (!state.workspaceAvailable) return;
+  setBusy(true);
+  try {
+    const result = await apiPost("/api/workspace/save", { artifact: state.artifact });
+    setStatus(`Salvato ${result.artifact_name} nella workspace gestita.`);
+    await probeWorkspace();
+  } catch (error) {
+    setStatus(`Salvataggio workspace fallito: ${error.message}`);
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function loadWorkspace() {
+  if (!state.workspaceAvailable) return;
+  setBusy(true);
+  try {
+    const result = await apiPost("/api/workspace/load", {});
+    if (!result.exists || !result.artifact) {
+      setStatus("La workspace gestita non contiene ancora algorithm.flow.json.");
+      return;
+    }
+    replaceArtifact(result.artifact, `Aperto ${result.artifact_name} dalla workspace gestita.`);
+  } catch (error) {
+    setStatus(`Apertura workspace fallita: ${error.message}`);
+  } finally {
+    setBusy(false);
+  }
+}
+
 function displayRunResult(result) {
   els.outputs.textContent = result.outputs.length ? result.outputs.map(formatValue).join("\n") : "—";
   renderVariables(result.final_variables);
@@ -683,6 +735,8 @@ function setBusy(busy) {
   els.runBtn.disabled = busy;
   els.stepBtn.disabled = busy;
   els.resetBtn.disabled = busy;
+  els.workspaceLoadBtn.disabled = busy || !state.workspaceAvailable;
+  els.workspaceSaveBtn.disabled = busy || !state.workspaceAvailable;
 }
 
 function setStatus(message) {
@@ -714,7 +768,7 @@ function exportArtifact() {
   link.download = "algorithm.flow.json";
   link.click();
   URL.revokeObjectURL(url);
-  setStatus("Artifact esportato come algorithm.flow.json.");
+  setStatus("Artifact esportato localmente come algorithm.flow.json.");
 }
 
 async function loadArtifact(file) {
@@ -733,7 +787,7 @@ async function loadArtifact(file) {
     state.selectedId = null;
     invalidateSession();
     render();
-    setStatus(`Caricato ${file.name}.`);
+    setStatus(`Caricato localmente ${file.name}.`);
   } catch (error) {
     setStatus(`File non caricato: ${error.message}`);
   } finally {
@@ -785,8 +839,11 @@ els.stepBtn.addEventListener("click", stepArtifact);
 els.resetBtn.addEventListener("click", resetTrace);
 els.newBtn.addEventListener("click", () => replaceArtifact(blankArtifact(), "Nuovo flow chart."));
 els.exampleBtn.addEventListener("click", () => replaceArtifact(exampleArtifact(), "Esempio somma caricato."));
+els.workspaceLoadBtn.addEventListener("click", loadWorkspace);
+els.workspaceSaveBtn.addEventListener("click", saveWorkspace);
 els.exportBtn.addEventListener("click", exportArtifact);
 els.loadFile.addEventListener("change", () => loadArtifact(els.loadFile.files?.[0]));
 
 render();
 clearExecution();
+probeWorkspace();
