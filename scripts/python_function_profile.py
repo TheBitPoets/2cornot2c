@@ -88,8 +88,6 @@ def validate_value(value: Any, *, depth: int = 0) -> Any:
         for key, item in value.items():
             if not isinstance(key, str) or not key or len(key) > 128:
                 raise FunctionProfileError("chiave dict non supportata")
-            if key in normalized:
-                raise FunctionProfileError("chiave dict duplicata")
             normalized[key] = validate_value(item, depth=depth + 1)
         return normalized
     raise FunctionProfileError(f"tipo valore non supportato: {type(value).__name__}")
@@ -220,8 +218,17 @@ def validate_worker_request(value: Any) -> dict[str, Any]:
 
 
 def _exception_message(error: BaseException) -> str:
-    message = str(error)
-    return message[:512]
+    return str(error)[:512]
+
+
+def _worker_result(status: str, stdout: _BoundedTextCapture, stderr: _BoundedTextCapture, **extra: Any) -> dict[str, Any]:
+    return {
+        "schema_version": WORKER_SCHEMA,
+        "status": status,
+        "stdout": stdout.getvalue(),
+        "stderr": stderr.getvalue(),
+        **extra,
+    }
 
 
 def execute_worker_request(value: Any, source: Path) -> dict[str, Any]:
@@ -233,85 +240,52 @@ def execute_worker_request(value: Any, source: Path) -> dict[str, Any]:
     sys.modules.pop(module_name, None)
     try:
         with redirect_stdout(stdout), redirect_stderr(stderr):
+            spec = importlib.util.spec_from_file_location(module_name, source)
+            if spec is None or spec.loader is None:
+                return _worker_result("import-error", stdout, stderr)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
             try:
-                spec = importlib.util.spec_from_file_location(module_name, source)
-                if spec is None or spec.loader is None:
-                    return {
-                        "schema_version": WORKER_SCHEMA,
-                        "status": "import-error",
-                        "stdout": stdout.getvalue(),
-                        "stderr": stderr.getvalue(),
-                    }
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[module_name] = module
-                try:
-                    spec.loader.exec_module(module)
-                except FunctionOutputLimitError:
-                    return {
-                        "schema_version": WORKER_SCHEMA,
-                        "status": "output-limit",
-                        "stdout": stdout.getvalue(),
-                        "stderr": stderr.getvalue(),
-                    }
-                except BaseException as error:
-                    return {
-                        "schema_version": WORKER_SCHEMA,
-                        "status": "import-error",
-                        "stdout": stdout.getvalue(),
-                        "stderr": (stderr.getvalue() + f"{type(error).__name__}: {_exception_message(error)}")[:MAX_STRING_CHARS],
-                    }
+                spec.loader.exec_module(module)
+            except FunctionOutputLimitError:
+                return _worker_result("output-limit", stdout, stderr)
+            except BaseException as error:
+                stderr.write(
+                    f"{type(error).__name__}: {_exception_message(error)}"[
+                        : max(0, MAX_STRING_CHARS - len(stderr.getvalue()))
+                    ]
+                )
+                return _worker_result("import-error", stdout, stderr)
 
-                if not hasattr(module, request["function"]):
-                    return {
-                        "schema_version": WORKER_SCHEMA,
-                        "status": "missing-function",
-                        "stdout": stdout.getvalue(),
-                        "stderr": stderr.getvalue(),
-                    }
-                function = getattr(module, request["function"])
-                if not callable(function):
-                    return {
-                        "schema_version": WORKER_SCHEMA,
-                        "status": "not-callable",
-                        "stdout": stdout.getvalue(),
-                        "stderr": stderr.getvalue(),
-                    }
-                try:
-                    returned = function(*request["args"], **request["kwargs"])
-                except FunctionOutputLimitError:
-                    return {
-                        "schema_version": WORKER_SCHEMA,
-                        "status": "output-limit",
-                        "stdout": stdout.getvalue(),
-                        "stderr": stderr.getvalue(),
-                    }
-                except BaseException as error:
-                    return {
-                        "schema_version": WORKER_SCHEMA,
-                        "status": "raised",
-                        "exception": {
-                            "type": type(error).__name__,
-                            "message": _exception_message(error),
-                        },
-                        "stdout": stdout.getvalue(),
-                        "stderr": stderr.getvalue(),
-                    }
-                try:
-                    normalized_return = validate_value(returned)
-                except FunctionProfileError:
-                    return {
-                        "schema_version": WORKER_SCHEMA,
-                        "status": "unsupported-return",
-                        "stdout": stdout.getvalue(),
-                        "stderr": stderr.getvalue(),
-                    }
-                return {
-                    "schema_version": WORKER_SCHEMA,
-                    "status": "returned",
-                    "return_value": normalized_return,
-                    "stdout": stdout.getvalue(),
-                    "stderr": stderr.getvalue(),
-                }
+            if not hasattr(module, request["function"]):
+                return _worker_result("missing-function", stdout, stderr)
+            function = getattr(module, request["function"])
+            if not callable(function):
+                return _worker_result("not-callable", stdout, stderr)
+            try:
+                returned = function(*request["args"], **request["kwargs"])
+            except FunctionOutputLimitError:
+                return _worker_result("output-limit", stdout, stderr)
+            except BaseException as error:
+                return _worker_result(
+                    "raised",
+                    stdout,
+                    stderr,
+                    exception={
+                        "type": type(error).__name__,
+                        "message": _exception_message(error),
+                    },
+                )
+            try:
+                normalized_return = validate_value(returned)
+            except FunctionProfileError:
+                return _worker_result("unsupported-return", stdout, stderr)
+            return _worker_result(
+                "returned",
+                stdout,
+                stderr,
+                return_value=normalized_return,
+            )
     finally:
         sys.modules.pop(module_name, None)
 
