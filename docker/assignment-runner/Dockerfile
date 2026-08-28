@@ -37,6 +37,8 @@ RUN useradd --create-home --shell /usr/sbin/nologin runner
 
 COPY scripts/grade_activity.py /opt/thebitlab/grade_activity.py
 COPY scripts/thebitlab_sandbox_boundary.py /opt/thebitlab/thebitlab_sandbox_boundary.py
+COPY scripts/python_function_profile.py /opt/thebitlab/python_function_profile.py
+COPY scripts/python_function_worker.py /opt/thebitlab/python_function_worker.py
 
 WORKDIR /submission
 
