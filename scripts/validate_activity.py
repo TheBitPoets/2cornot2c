@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from scripts import python_function_profile
 from scripts.thebitlab_contracts import ALLOWED_ACTIVITY_KINDS
 from scripts.thebitlab_runtime_contracts import validate_runtime_extension
 
@@ -72,6 +73,18 @@ def load_json(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
     return data, []
 
 
+def validate_function_tests(value: Any, source: str) -> list[str]:
+    """Validate optional teacher-only Python function-behavior tests."""
+    try:
+        python_function_profile.validate_function_tests(
+            value,
+            source=f"{source}: function_tests",
+        )
+    except python_function_profile.FunctionProfileError as error:
+        return [str(error)]
+    return []
+
+
 def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[str]:
     """Validate the minimal TheBitLab activity schema."""
     errors: list[str] = []
@@ -116,6 +129,9 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
     assets = data.get("assets")
     if assets is not None:
         errors.extend(validate_assets(assets, source))
+
+    if "function_tests" in data:
+        errors.extend(validate_function_tests(data.get("function_tests"), source))
 
     errors.extend(validate_runtime_extension(data, source))
     return errors
