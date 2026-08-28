@@ -8,3 +8,5 @@ docker/assignment-runner/*
 scripts/*
 !scripts/grade_activity.py
 !scripts/thebitlab_sandbox_boundary.py
+!scripts/python_function_profile.py
+!scripts/python_function_worker.py
