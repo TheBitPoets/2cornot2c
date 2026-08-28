@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import stat
 import sys
 from pathlib import Path
 from typing import Mapping
@@ -91,6 +92,71 @@ def _authoritative_environment(args: argparse.Namespace) -> dict[str, str]:
     return values
 
 
+def validate_runtime_directory(lock_directory: str) -> None:
+    """Attest systemd's private app leaf without following parent/leaf links."""
+
+    expected = Path("/run/thebitlab/app")
+    if Path(lock_directory) != expected:
+        raise DeploymentValidationError("Runtime directory applicativa non canonica.")
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    descriptors: list[int] = []
+    try:
+        run_descriptor = os.open("/run", flags)
+        descriptors.append(run_descriptor)
+        parent_descriptor = os.open("thebitlab", flags, dir_fd=run_descriptor)
+        descriptors.append(parent_descriptor)
+        app_descriptor = os.open("app", flags, dir_fd=parent_descriptor)
+        descriptors.append(app_descriptor)
+        run_metadata = os.fstat(run_descriptor)
+        parent_metadata = os.fstat(parent_descriptor)
+        app_metadata = os.fstat(app_descriptor)
+        parent_entry = os.stat(
+            "thebitlab", dir_fd=run_descriptor, follow_symlinks=False
+        )
+        app_entry = os.stat("app", dir_fd=parent_descriptor, follow_symlinks=False)
+    except OSError as exc:
+        raise DeploymentValidationError(
+            "Runtime directory applicativa non verificabile."
+        ) from exc
+    finally:
+        for descriptor in reversed(descriptors):
+            os.close(descriptor)
+
+    def identity(metadata: os.stat_result) -> tuple[int, ...]:
+        return (
+            metadata.st_dev,
+            metadata.st_ino,
+            metadata.st_mode,
+            metadata.st_uid,
+            metadata.st_gid,
+        )
+
+    if (
+        not stat.S_ISDIR(run_metadata.st_mode)
+        or run_metadata.st_uid != 0
+        or run_metadata.st_gid != 0
+        or stat.S_IMODE(run_metadata.st_mode) != 0o755
+        or not stat.S_ISDIR(parent_metadata.st_mode)
+        or parent_metadata.st_uid != 0
+        or parent_metadata.st_gid != 0
+        or stat.S_IMODE(parent_metadata.st_mode) != 0o755
+        or identity(parent_metadata) != identity(parent_entry)
+        or not stat.S_ISDIR(app_metadata.st_mode)
+        or app_metadata.st_uid != os.geteuid()
+        or app_metadata.st_gid != os.getegid()
+        or stat.S_IMODE(app_metadata.st_mode) != 0o700
+        or identity(app_metadata) != identity(app_entry)
+    ):
+        raise DeploymentValidationError(
+            "Runtime directory applicativa con identity/metadata non canonici."
+        )
+
+
 def _server_command(args: argparse.Namespace) -> list[str]:
     command = [
         sys.executable,
@@ -120,6 +186,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             run_demo_check=False,
         )
+        validate_runtime_directory(args.lock_directory)
         check_environment_file(args.environment_file)
         external = parse_environment_file(args.environment_file)
         environment = build_effective_environment(

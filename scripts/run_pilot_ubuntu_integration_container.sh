@@ -5,8 +5,32 @@ set -Eeuo pipefail
 script_directory="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 repository_root="$(cd -- "$script_directory/.." && pwd -P)"
 dockerfile="$repository_root/deploy/pilot/ci/Dockerfile.ubuntu-systemd"
-build_context="$(dirname -- "$dockerfile")"
+build_context="$repository_root"
 mount_source="$repository_root"
+integration_arguments=(--ephemeral-host)
+private_runtime_poc=false
+if (( $# == 1 )) && [[ "$1" == "--bootstrap-adversarial-only" ]]; then
+    integration_arguments+=(--bootstrap-adversarial-only)
+elif (( $# == 1 )) && [[ "$1" == "--executor-lease-gate-only" ]]; then
+    integration_arguments+=(--executor-lease-gate-only)
+elif (( $# == 1 )) && [[ "$1" == "--private-runtime-gate-only" ]]; then
+    integration_arguments+=(--private-runtime-gate-only)
+elif (( $# == 1 )) && [[ "$1" == "--private-runtime-start-diagnostic-only" ]]; then
+    integration_arguments+=(--private-runtime-start-diagnostic-only)
+elif (( $# == 1 )) && [[ "$1" == "--executor-lease-timing-diagnostic-only" ]]; then
+    integration_arguments+=(--executor-lease-timing-diagnostic-only)
+elif (( $# == 1 )) && [[ "$1" == "--fence-race-only" ]]; then
+    integration_arguments+=(--fence-race-only)
+elif (( $# == 1 )) && [[ "$1" == "--runtime-directory-authority-only" ]]; then
+    integration_arguments+=(--runtime-directory-authority-only)
+elif (( $# == 1 )) && [[ "$1" == "--shard-f-only" ]]; then
+    integration_arguments+=(--shard-f-only)
+elif (( $# == 1 )) && [[ "$1" == "--private-runtime-poc" ]]; then
+    private_runtime_poc=true
+elif (( $# != 0 )); then
+    echo "ERRORE: argomento integrazione inatteso" >&2
+    exit 2
+fi
 
 # Git Bash otherwise rewrites Linux container paths before invoking the Windows Docker CLI.
 if [[ -n "${MSYSTEM:-}" ]] && command -v cygpath >/dev/null 2>&1; then
@@ -179,9 +203,33 @@ if candidates:
 print("EVIDENCE: pre-integration dedicated systemd surface baseline PASS (0 ambient artifacts)")
 PY
 
-docker exec \
-    --workdir /workspace \
-    --env "GITHUB_SHA=${GITHUB_SHA:-cccccccccccccccccccccccccccccccccccccccc}" \
-    --env PYTHONUNBUFFERED=1 \
-    "$container" \
-    python3 scripts/pilot_ubuntu_integration.py --ephemeral-host
+if [[ "$private_runtime_poc" == "true" ]]; then
+    docker exec \
+        --workdir /workspace \
+        --env PYTHONUNBUFFERED=1 \
+        "$container" \
+        python3 scripts/pilot_private_runtime_poc.py
+else
+    docker exec \
+        --workdir /workspace \
+        --env "GITHUB_SHA=${GITHUB_SHA:-cccccccccccccccccccccccccccccccccccccccc}" \
+        --env "GITHUB_RUN_ID=${GITHUB_RUN_ID:-local}" \
+        --env PYTHONUNBUFFERED=1 \
+        "$container" \
+        python3 scripts/pilot_ubuntu_integration.py "${integration_arguments[@]}"
+fi
+
+docker rm --force "$container" >/dev/null
+container_may_exist=false
+docker image rm "$image" >/dev/null
+image_built=false
+if docker inspect "$container" >/dev/null 2>&1 || docker image inspect "$image" >/dev/null 2>&1; then
+    echo "ERRORE: cleanup witness container/image non terminale" >&2
+    exit 2
+fi
+if [[ "$private_runtime_poc" == "false" ]]; then
+    printf 'PRIVATE_RUNTIME_CLEANUP_EVIDENCE {"candidate_sha":"%s","container_absent":true,"created_unix_ns":%s,"image_absent":true,"run_id":"%s","schema_version":"thebitlab.private-runtime-cleanup-evidence.v1"}\n' \
+        "${GITHUB_SHA:-cccccccccccccccccccccccccccccccccccccccc}" \
+        "$(python -c 'import time; print(time.time_ns())')" \
+        "${GITHUB_RUN_ID:-local}"
+fi

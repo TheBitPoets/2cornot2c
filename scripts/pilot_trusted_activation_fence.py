@@ -18,6 +18,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import stat
 import tempfile
 import time
@@ -32,10 +33,14 @@ class TrustedActivationFenceError(RuntimeError):
     """The host surface cannot be frozen or recovered safely."""
 
 
-RUNTIME_ROOT = Path("/run/thebitlab/pilot-activation-fence")
+RUNTIME_AUTHORITY_ROOT = Path("/run/thebitlab")
+RUNTIME_ROOT = RUNTIME_AUTHORITY_ROOT / "pilot-activation-fence"
 STATE_PATH = RUNTIME_ROOT / "state.json"
 TRANSACTION_ROOT = RUNTIME_ROOT / "transactions"
 ACTIVATION_LOCK = RUNTIME_ROOT / "activation.lock"
+_RUNTIME_AUTHORITY_CHILDREN = frozenset(
+    {"app", "logrotate", "pilot-activation-fence", "pilot-private-runtime"}
+)
 PACKAGE_LOCK_PATHS = (
     Path("/var/lib/dpkg/lock-frontend"),
     Path("/var/lib/dpkg/lock"),
@@ -51,13 +56,27 @@ MNT_DETACH = 2
 TMPFS_MAGIC = 0x01021994
 _LOCK_TIMEOUT_SECONDS = 30.0
 _ACTIVE_TRANSACTIONS: list[dict[str, Any]] = []
+_ADOPTED_STATIC_BOOTSTRAP: dict[str, Any] | None = None
+_ADOPTED_STATIC_LOCK_FD: int | None = None
 _STATE_SCHEMA = "thebitlab.activation-fence.v2"
 _MANIFEST_SCHEMA = "thebitlab.activation-fence-manifest.v1"
 _MANIFEST_NAME = "transaction-manifest.json"
 _MOUNT_SOURCE_PREFIX = "thebitlab-pilot-fence:"
 _TOKEN_RE = re.compile(r"^[1-9][0-9]{0,19}-[0-9a-f]{32}$")
+SYSTEMD_EXECUTOR_PATH = Path("/usr/lib/systemd/systemd-executor")
+SYSTEMD_EXECUTOR_RELATIONSHIP = "/usr/lib/systemd/systemd-executor"
+SYSTEMD_EXECUTOR_REVIEWED_SHA256 = (
+    "b8424efa6f861031c04310fd7bfe485330bb74f53edae341803ffe3f487fd044"
+)
+EXECUTOR_PROTECTION_DEADLINE_SECONDS = 10.0
+_EXECUTOR_BREAK_SIGNAL = (
+    signal.SIGRTMIN + 4
+    if hasattr(signal, "SIGRTMIN")
+    else getattr(signal, "SIGIO", signal.SIGTERM)
+)
 _TRANSACTION_NAMES = frozenset(
     {
+        "trusted-static-bootstrap",
         "trusted-activation-base",
         "trusted-systemd-execution",
         "trusted-systemd-generated-output",
@@ -113,6 +132,370 @@ class _HeldLocks:
             with contextlib.suppress(OSError):
                 os.close(descriptor)
         self.descriptors.clear()
+
+
+@dataclass(frozen=True)
+class ExecutorInodeIdentity:
+    """Durable observation only; it never represents an extant file lease."""
+
+    device: int
+    inode: int
+    size: int
+    sha256: str
+    pid1_fd_locators: tuple[int, ...]
+
+    def durable_record(self) -> dict[str, Any]:
+        return {
+            "path": SYSTEMD_EXECUTOR_RELATIONSHIP,
+            "device": self.device,
+            "inode": self.inode,
+            "size": self.size,
+            "sha256": self.sha256,
+            "pid1_fd_locators": list(self.pid1_fd_locators),
+        }
+
+
+@dataclass
+class _OpenExecutorObject:
+    descriptor: int
+    identity: ExecutorInodeIdentity
+
+
+class _ExecutorObservationChanged(RuntimeError):
+    pass
+
+
+def _hash_regular_descriptor(descriptor: int, size: int) -> str:
+    digest = hashlib.sha256()
+    offset = 0
+    while offset < size:
+        chunk = os.pread(descriptor, min(1024 * 1024, size - offset), offset)
+        if not chunk:
+            raise TrustedActivationFenceError("Executor PID 1 troncato durante hash FD")
+        digest.update(chunk)
+        offset += len(chunk)
+    if os.pread(descriptor, 1, size):
+        raise TrustedActivationFenceError("Executor PID 1 cresciuto durante hash FD")
+    return digest.hexdigest()
+
+
+def _pid1_executor_locator_observations() -> dict[int, os.stat_result]:
+    observations: dict[int, os.stat_result] = {}
+    try:
+        entries = sorted(
+            (entry for entry in Path("/proc/1/fd").iterdir() if entry.name.isdecimal()),
+            key=lambda entry: int(entry.name),
+        )
+    except OSError as exc:
+        raise TrustedActivationFenceError("FD PID 1 non enumerabili") from exc
+    for entry in entries:
+        try:
+            relationship = os.readlink(entry)
+        except FileNotFoundError:
+            # Unrelated transient PID1 descriptors may disappear between readdir
+            # and readlink. A disappearing executor candidate is still detected
+            # because the completed candidate set no longer matches the leased
+            # identity during confirmation/re-attestation.
+            continue
+        except OSError as exc:
+            raise TrustedActivationFenceError("Relazione FD PID 1 non leggibile") from exc
+        if relationship not in {
+            SYSTEMD_EXECUTOR_RELATIONSHIP,
+            SYSTEMD_EXECUTOR_RELATIONSHIP + " (deleted)",
+        }:
+            continue
+        try:
+            metadata = os.stat(entry)
+        except FileNotFoundError as exc:
+            raise _ExecutorObservationChanged from exc
+        except OSError as exc:
+            raise TrustedActivationFenceError("Candidate executor PID 1 non stattabile") from exc
+        if not stat.S_ISREG(metadata.st_mode):
+            raise TrustedActivationFenceError("Candidate executor PID 1 non regolare")
+        observations[int(entry.name)] = metadata
+    return observations
+
+
+def _discover_pid1_executor_once() -> _OpenExecutorObject:
+    observations = _pid1_executor_locator_observations()
+    if not observations:
+        raise TrustedActivationFenceError("Zero candidate executor autorevoli in PID 1")
+    _fault("executor_after_discovery", "trusted-systemd-execution")
+    opened: list[tuple[int, int, os.stat_result, str]] = []
+    try:
+        for locator, observed in observations.items():
+            path = Path(f"/proc/1/fd/{locator}")
+            try:
+                descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC)
+            except FileNotFoundError as exc:
+                raise _ExecutorObservationChanged from exc
+            metadata = os.fstat(descriptor)
+            if (
+                not stat.S_ISREG(metadata.st_mode)
+                or metadata.st_dev != observed.st_dev
+                or metadata.st_ino != observed.st_ino
+                or metadata.st_size != observed.st_size
+            ):
+                os.close(descriptor)
+                raise _ExecutorObservationChanged
+            before = (metadata.st_size, metadata.st_mtime_ns, metadata.st_ctime_ns)
+            digest = _hash_regular_descriptor(descriptor, metadata.st_size)
+            after_metadata = os.fstat(descriptor)
+            after = (
+                after_metadata.st_size,
+                after_metadata.st_mtime_ns,
+                after_metadata.st_ctime_ns,
+            )
+            if before != after:
+                os.close(descriptor)
+                raise _ExecutorObservationChanged
+            opened.append((locator, descriptor, after_metadata, digest))
+
+        confirmed = _pid1_executor_locator_observations()
+        if set(confirmed) != set(observations):
+            raise _ExecutorObservationChanged
+        for locator, metadata in confirmed.items():
+            observed = observations[locator]
+            if (
+                metadata.st_dev != observed.st_dev
+                or metadata.st_ino != observed.st_ino
+                or metadata.st_size != observed.st_size
+            ):
+                raise _ExecutorObservationChanged
+
+        objects: dict[tuple[int, int], list[tuple[int, int, os.stat_result, str]]] = {}
+        for item in opened:
+            objects.setdefault((item[2].st_dev, item[2].st_ino), []).append(item)
+        if len(objects) != 1:
+            raise TrustedActivationFenceError(
+                "Candidate executor PID 1 multipli/incompatibili"
+            )
+        aliases = next(iter(objects.values()))
+        if any(
+            item[2].st_size != aliases[0][2].st_size or item[3] != aliases[0][3]
+            for item in aliases
+        ):
+            raise TrustedActivationFenceError("Alias FD executor PID 1 incompatibili")
+        if aliases[0][3] != SYSTEMD_EXECUTOR_REVIEWED_SHA256:
+            raise TrustedActivationFenceError("SHA executor PID 1 fuori revisione")
+        selected = min(aliases, key=lambda item: item[0])
+        identity = ExecutorInodeIdentity(
+            selected[2].st_dev,
+            selected[2].st_ino,
+            selected[2].st_size,
+            selected[3],
+            tuple(sorted(item[0] for item in aliases)),
+        )
+        for _locator, descriptor, _metadata, _digest in opened:
+            if descriptor != selected[1]:
+                os.close(descriptor)
+        opened = []
+        _fault("executor_after_open", "trusted-systemd-execution")
+        return _OpenExecutorObject(selected[1], identity)
+    finally:
+        for _locator, descriptor, _metadata, _digest in opened:
+            with contextlib.suppress(OSError):
+                os.close(descriptor)
+
+
+def _discover_pid1_executor() -> _OpenExecutorObject:
+    for attempt in range(2):
+        try:
+            return _discover_pid1_executor_once()
+        except _ExecutorObservationChanged as exc:
+            if attempt:
+                raise TrustedActivationFenceError(
+                    "FD executor PID 1 instabile durante osservazione bounded"
+                ) from exc
+    raise AssertionError("unreachable")
+
+
+class ExecutorInodeReadLease:
+    """Ephemeral exact-inode authority owned by the current activation process."""
+
+    def __init__(self) -> None:
+        self.descriptor = -1
+        self.identity: ExecutorInodeIdentity | None = None
+        self.break_requested = False
+        self.break_signal: int | None = None
+        self.break_monotonic: float | None = None
+        self.started_monotonic = 0.0
+        self.deadline_monotonic = 0.0
+        self._previous_handler: Any = None
+        self._previous_owner = 0
+        self._previous_signal = 0
+        self._acquired = False
+        self._protected_use_started = False
+        self._protected_action = ""
+        self._safe_boundary_reached = False
+
+    @property
+    def deadline_remaining(self) -> float:
+        return max(0.0, self.deadline_monotonic - time.monotonic())
+
+    @property
+    def protected_use_pending(self) -> bool:
+        return self._protected_use_started and not self._safe_boundary_reached
+
+    def _handle_break(self, signum: int, _frame: object) -> None:
+        self.break_requested = True
+        self.break_signal = signum
+        self.break_monotonic = time.monotonic()
+
+    def _get_lease(self) -> int:
+        if fcntl is None or self.descriptor < 0:
+            raise TrustedActivationFenceError("Lease executor disponibile soltanto su Linux")
+        return int(fcntl.fcntl(self.descriptor, fcntl.F_GETLEASE))
+
+    def _reattest_pid1_identity(self) -> None:
+        if self.identity is None:
+            raise TrustedActivationFenceError("Identity lease executor assente")
+        observations = _pid1_executor_locator_observations()
+        objects = {(item.st_dev, item.st_ino) for item in observations.values()}
+        expected = {(self.identity.device, self.identity.inode)}
+        if not observations or objects != expected:
+            raise TrustedActivationFenceError(
+                "FD executor PID 1 ruotato dopo acquisizione lease"
+            )
+        if any(item.st_size != self.identity.size for item in observations.values()):
+            raise TrustedActivationFenceError("Size executor PID 1 cambiata sotto lease")
+
+    @property
+    def protected_action(self) -> str:
+        return self._protected_action
+
+    def assert_authorized_new_use(self, action: str = "systemd-use") -> None:
+        if not self._acquired or self.identity is None:
+            raise TrustedActivationFenceError("Lease executor non acquisita")
+        if self._protected_use_started and not self._safe_boundary_reached:
+            raise TrustedActivationFenceError("Nuovo uso executor con handoff precedente pendente")
+        if self.break_requested or self._get_lease() != fcntl.F_RDLCK:
+            raise TrustedActivationFenceError("Break lease executor invalida un nuovo uso")
+        if self.deadline_remaining <= 0:
+            raise TrustedActivationFenceError("Deadline lease executor scaduta")
+        self._reattest_pid1_identity()
+        if self.break_requested or self._get_lease() != fcntl.F_RDLCK:
+            raise TrustedActivationFenceError("Lease executor cambiata durante re-attestation")
+        self._protected_use_started = True
+        self._protected_action = action
+        self._safe_boundary_reached = False
+
+    def assert_inflight_protected(self) -> None:
+        if not self._acquired or not self._protected_use_started:
+            raise TrustedActivationFenceError("Uso executor in-flight non registrato")
+        if self.deadline_remaining <= 0:
+            raise TrustedActivationFenceError("Deadline lease executor scaduta in-flight")
+        # A pending break is authorization-invalid for new use, but the kernel
+        # still blocks the writer until explicit release/forced expiry.  Keep the
+        # FD and lease continuously while the caller reaches a safe boundary.
+        state = self._get_lease()
+        if state != fcntl.F_RDLCK:
+            # Linux reports F_UNLCK as soon as a break is pending, while the
+            # conflicting open remains blocked until release/forced expiry.
+            self.break_requested = True
+            if self.break_monotonic is None:
+                self.break_monotonic = time.monotonic()
+
+    def mark_safe_boundary(self) -> None:
+        self.assert_inflight_protected()
+        self._safe_boundary_reached = True
+
+    def mark_safe_abort_boundary(self) -> None:
+        """Record caller-proven kernel/cgroup terminal cleanup after a failed use."""
+
+        if not self._acquired or not self._protected_use_started:
+            raise TrustedActivationFenceError("Safe abort executor senza uso in-flight")
+        self._safe_boundary_reached = True
+
+    def durable_record(self) -> dict[str, Any]:
+        if self.identity is None:
+            raise TrustedActivationFenceError("Identity executor non disponibile")
+        return self.identity.durable_record()
+
+    def __enter__(self) -> Self:
+        if fcntl is None or os.name != "posix":
+            raise TrustedActivationFenceError("Lease executor disponibile soltanto su Linux")
+        self.started_monotonic = time.monotonic()
+        self.deadline_monotonic = (
+            self.started_monotonic + EXECUTOR_PROTECTION_DEADLINE_SECONDS
+        )
+        opened = _discover_pid1_executor()
+        self.descriptor = opened.descriptor
+        self.identity = opened.identity
+        try:
+            self._previous_handler = signal.getsignal(_EXECUTOR_BREAK_SIGNAL)
+            self._previous_owner = int(fcntl.fcntl(self.descriptor, fcntl.F_GETOWN))
+            self._previous_signal = int(fcntl.fcntl(self.descriptor, fcntl.F_GETSIG))
+            signal.signal(_EXECUTOR_BREAK_SIGNAL, self._handle_break)
+            fcntl.fcntl(self.descriptor, fcntl.F_SETOWN, os.getpid())
+            fcntl.fcntl(self.descriptor, fcntl.F_SETSIG, _EXECUTOR_BREAK_SIGNAL)
+            try:
+                fcntl.fcntl(self.descriptor, fcntl.F_SETLEASE, fcntl.F_RDLCK)
+            except OSError as exc:
+                if exc.errno == errno.EAGAIN:
+                    raise TrustedActivationFenceError(
+                        "Lease executor rifiutata: writer/mmap preesistente"
+                    ) from exc
+                raise TrustedActivationFenceError("F_SETLEASE executor fallita") from exc
+            self._acquired = True
+            _fault("executor_after_setlease", "trusted-systemd-execution")
+            if self._get_lease() != fcntl.F_RDLCK:
+                raise TrustedActivationFenceError("F_GETLEASE executor non RDLCK")
+            metadata = os.fstat(self.descriptor)
+            digest = _hash_regular_descriptor(self.descriptor, metadata.st_size)
+            _fault("executor_after_hash", "trusted-systemd-execution")
+            if (
+                self.identity.device != metadata.st_dev
+                or self.identity.inode != metadata.st_ino
+                or self.identity.size != metadata.st_size
+                or digest != SYSTEMD_EXECUTOR_REVIEWED_SHA256
+            ):
+                raise TrustedActivationFenceError(
+                    "FD leased executor divergente da discovery/review"
+                )
+            self._reattest_pid1_identity()
+            if self._get_lease() != fcntl.F_RDLCK or self.break_requested:
+                raise TrustedActivationFenceError("Lease executor invalidata durante acquire")
+            if self.deadline_remaining <= 0:
+                raise TrustedActivationFenceError("Deadline lease executor scaduta in acquire")
+            return self
+        except Exception:
+            self.close()
+            raise
+
+    def close(self) -> None:
+        descriptor = self.descriptor
+        release_error: OSError | None = None
+        if descriptor >= 0:
+            if self._acquired and fcntl is not None:
+                try:
+                    fcntl.fcntl(descriptor, fcntl.F_SETLEASE, fcntl.F_UNLCK)
+                except OSError as exc:
+                    release_error = exc
+            self._acquired = False
+            with contextlib.suppress(OSError):
+                if fcntl is not None:
+                    fcntl.fcntl(descriptor, fcntl.F_SETSIG, self._previous_signal)
+                    fcntl.fcntl(descriptor, fcntl.F_SETOWN, self._previous_owner)
+            with contextlib.suppress(OSError):
+                os.close(descriptor)
+            self.descriptor = -1
+        if self._previous_handler is not None:
+            signal.signal(_EXECUTOR_BREAK_SIGNAL, self._previous_handler)
+            self._previous_handler = None
+        if release_error is not None:
+            raise TrustedActivationFenceError("Release lease executor fallita") from release_error
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> bool:
+        unresolved = self._protected_use_started and not self._safe_boundary_reached
+        try:
+            self.close()
+        finally:
+            if unresolved and exc is None:
+                raise TrustedActivationFenceError(
+                    "Lease executor rilasciata senza safe terminal boundary"
+                )
+        return False
 
 
 def _decode_mount_field(value: str) -> str:
@@ -196,12 +579,171 @@ def _umount(path: Path) -> None:
     )
 
 
+def _runtime_directory_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    return (
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_mode,
+        metadata.st_uid,
+        metadata.st_gid,
+    )
+
+
+def _assert_runtime_directory(
+    metadata: os.stat_result, *, mode: int, label: str
+) -> None:
+    if (
+        not stat.S_ISDIR(metadata.st_mode)
+        or metadata.st_uid != 0
+        or metadata.st_gid != 0
+        or stat.S_IMODE(metadata.st_mode) != mode
+    ):
+        raise TrustedActivationFenceError(
+            f"Directory runtime authority non canonica: {label}"
+        )
+
+
+def _open_runtime_authority_parent() -> tuple[int, int]:
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    run_descriptor = -1
+    parent_descriptor = -1
+    try:
+        run_descriptor = os.open("/run", flags)
+        run_before = os.fstat(run_descriptor)
+        _assert_runtime_directory(run_before, mode=0o755, label="/run")
+        created = False
+        try:
+            os.mkdir("thebitlab", mode=0o755, dir_fd=run_descriptor)
+            created = True
+        except FileExistsError:
+            pass
+        parent_descriptor = os.open(
+            "thebitlab", flags, dir_fd=run_descriptor
+        )
+        if created:
+            os.fchmod(parent_descriptor, 0o755)
+            os.fsync(run_descriptor)
+        parent_open = os.fstat(parent_descriptor)
+        parent_entry = os.stat(
+            "thebitlab", dir_fd=run_descriptor, follow_symlinks=False
+        )
+        parent_path = RUNTIME_AUTHORITY_ROOT.lstat()
+        _assert_runtime_directory(
+            parent_open, mode=0o755, label=str(RUNTIME_AUTHORITY_ROOT)
+        )
+        unexpected = set(os.listdir(parent_descriptor)) - _RUNTIME_AUTHORITY_CHILDREN
+        if unexpected:
+            raise TrustedActivationFenceError(
+                f"Entry runtime authority inattese: {sorted(unexpected)}"
+            )
+        if not (
+            _runtime_directory_identity(parent_open)
+            == _runtime_directory_identity(parent_entry)
+            == _runtime_directory_identity(parent_path)
+            and _runtime_directory_identity(os.fstat(run_descriptor))
+            == _runtime_directory_identity(run_before)
+        ):
+            raise TrustedActivationFenceError(
+                "Identità parent runtime authority instabile"
+            )
+        return run_descriptor, parent_descriptor
+    except (OSError, TrustedActivationFenceError):
+        if parent_descriptor >= 0:
+            os.close(parent_descriptor)
+        if run_descriptor >= 0:
+            os.close(run_descriptor)
+        raise
+
+
+def ensure_runtime_authority_parent() -> None:
+    """Create/attest the shared root-owned 0755 runtime parent by descriptor."""
+
+    try:
+        run_descriptor, parent_descriptor = _open_runtime_authority_parent()
+    except OSError as exc:
+        raise TrustedActivationFenceError(
+            "Parent runtime authority non verificabile"
+        ) from exc
+    os.close(parent_descriptor)
+    os.close(run_descriptor)
+
+
+def ensure_runtime_authority_directory(name: str, *, mode: int = 0o700) -> None:
+    """Create/attest one canonical private direct child without following links."""
+
+    if name not in _RUNTIME_AUTHORITY_CHILDREN or mode != 0o700:
+        raise TrustedActivationFenceError("Child runtime authority fuori policy")
+    run_descriptor = -1
+    parent_descriptor = -1
+    child_descriptor = -1
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    try:
+        run_descriptor, parent_descriptor = _open_runtime_authority_parent()
+        parent_before = os.fstat(parent_descriptor)
+        created = False
+        try:
+            os.mkdir(name, mode=mode, dir_fd=parent_descriptor)
+            created = True
+        except FileExistsError:
+            pass
+        child_descriptor = os.open(name, flags, dir_fd=parent_descriptor)
+        if created:
+            os.fchmod(child_descriptor, mode)
+            os.fsync(parent_descriptor)
+        child_open = os.fstat(child_descriptor)
+        child_entry = os.stat(name, dir_fd=parent_descriptor, follow_symlinks=False)
+        child_path = (RUNTIME_AUTHORITY_ROOT / name).lstat()
+        _assert_runtime_directory(
+            child_open, mode=mode, label=str(RUNTIME_AUTHORITY_ROOT / name)
+        )
+        if not (
+            _runtime_directory_identity(child_open)
+            == _runtime_directory_identity(child_entry)
+            == _runtime_directory_identity(child_path)
+            and _runtime_directory_identity(os.fstat(parent_descriptor))
+            == _runtime_directory_identity(parent_before)
+            and not (
+                set(os.listdir(parent_descriptor)) - _RUNTIME_AUTHORITY_CHILDREN
+            )
+        ):
+            raise TrustedActivationFenceError(
+                "Identità child runtime authority instabile"
+            )
+    except OSError as exc:
+        raise TrustedActivationFenceError(
+            f"Child runtime authority non verificabile: {name}"
+        ) from exc
+    finally:
+        if child_descriptor >= 0:
+            os.close(child_descriptor)
+        if parent_descriptor >= 0:
+            os.close(parent_descriptor)
+        if run_descriptor >= 0:
+            os.close(run_descriptor)
+
+
 def _safe_runtime_root() -> None:
-    RUNTIME_ROOT.mkdir(parents=True, mode=0o700, exist_ok=True)
+    ensure_runtime_authority_directory("pilot-activation-fence")
     TRANSACTION_ROOT.mkdir(mode=0o700, exist_ok=True)
     for path in (RUNTIME_ROOT, TRANSACTION_ROOT):
-        metadata = path.stat()
-        if metadata.st_uid != 0 or metadata.st_mode & 0o077 or path.is_symlink():
+        metadata = path.lstat()
+        if (
+            not stat.S_ISDIR(metadata.st_mode)
+            or metadata.st_uid != 0
+            or metadata.st_gid != 0
+            or stat.S_IMODE(metadata.st_mode) != 0o700
+            or path.is_symlink()
+        ):
             raise TrustedActivationFenceError(f"Runtime fence non root-only: {path}")
 
 
@@ -315,10 +857,31 @@ def _validate_mount_witness(value: object, *, token: str) -> None:
         raise TrustedActivationFenceError("Device/options witness fence non canonici")
 
 
+def _validate_executor_identity(value: object) -> None:
+    if not isinstance(value, dict) or set(value) != {
+        "path", "device", "inode", "size", "sha256", "pid1_fd_locators",
+    }:
+        raise TrustedActivationFenceError("Identity executor transaction non canonica")
+    if value["path"] != SYSTEMD_EXECUTOR_RELATIONSHIP:
+        raise TrustedActivationFenceError("Path executor transaction inatteso")
+    if not all(isinstance(value[key], int) and value[key] >= 0 for key in ("device", "inode", "size")):
+        raise TrustedActivationFenceError("Dev/inode/size executor non canonici")
+    if value["inode"] == 0 or value["sha256"] != SYSTEMD_EXECUTOR_REVIEWED_SHA256:
+        raise TrustedActivationFenceError("Identity/SHA executor fuori revisione")
+    locators = value["pid1_fd_locators"]
+    if (
+        not isinstance(locators, list)
+        or not locators
+        or any(not isinstance(item, int) or item < 0 for item in locators)
+        or locators != sorted(set(locators))
+    ):
+        raise TrustedActivationFenceError("Locator FD executor non canonici")
+
+
 def _validate_transaction_shape(transaction: object) -> None:
     if not isinstance(transaction, dict):
         raise TrustedActivationFenceError("Transaction metadata fence non oggetto")
-    allowed = {"name", "token", "phase", "root", "targets", "aliases", "mount"}
+    allowed = {"name", "token", "phase", "root", "targets", "aliases", "mount", "executor"}
     if set(transaction) - allowed or not {"name", "token", "phase", "root", "targets", "aliases"} <= set(transaction):
         raise TrustedActivationFenceError("Transaction metadata fence non chiusa")
     name, token, phase = transaction["name"], transaction["token"], transaction["phase"]
@@ -333,6 +896,10 @@ def _validate_transaction_shape(transaction: object) -> None:
         _validate_target_record(target, active=active)
     for alias in transaction["aliases"]:
         _validate_alias_record(alias)
+    if "executor" in transaction:
+        if name != "trusted-systemd-execution":
+            raise TrustedActivationFenceError("Identity executor fuori da Stage-M")
+        _validate_executor_identity(transaction["executor"])
     if phase != "planned":
         _validate_mount_witness(transaction.get("mount"), token=token)
     elif "mount" in transaction:
@@ -390,7 +957,10 @@ def _write_transactions(transactions: Sequence[Mapping[str, Any]], *, poisoned: 
 def _lock_descriptor(path: Path, *, timeout: float) -> int:
     if fcntl is None:
         raise TrustedActivationFenceError("Host lock disponibile soltanto su Linux")
-    path.parent.mkdir(parents=True, mode=0o755, exist_ok=True)
+    if path == ACTIVATION_LOCK:
+        _safe_runtime_root()
+    else:
+        path.parent.mkdir(parents=True, mode=0o755, exist_ok=True)
     descriptor = os.open(path, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
     deadline = time.monotonic() + timeout
     while True:
@@ -407,13 +977,14 @@ def _lock_descriptor(path: Path, *, timeout: float) -> int:
             time.sleep(0.1)
 
 
-def acquire_host_locks() -> _HeldLocks:
+def acquire_host_locks(*, activation: bool = True) -> _HeldLocks:
     """Serialize trusted activators and compliant package transactions."""
 
     _safe_runtime_root()
     descriptors: list[int] = []
     try:
-        descriptors.append(_lock_descriptor(ACTIVATION_LOCK, timeout=_LOCK_TIMEOUT_SECONDS))
+        if activation:
+            descriptors.append(_lock_descriptor(ACTIVATION_LOCK, timeout=_LOCK_TIMEOUT_SECONDS))
         for path in PACKAGE_LOCK_PATHS:
             descriptors.append(_lock_descriptor(path, timeout=_LOCK_TIMEOUT_SECONDS))
         return _HeldLocks(descriptors)
@@ -609,14 +1180,50 @@ def _same_mount_namespace_as_pid1() -> bool:
         raise TrustedActivationFenceError("Mount namespace PID 1 non verificabile") from exc
 
 
+def _test_interlock_valid() -> bool:
+    path = Path("/run/thebitlab-ephemeral-activation-test")
+    try:
+        metadata = path.lstat()
+        return (
+            stat.S_ISREG(metadata.st_mode)
+            and not path.is_symlink()
+            and metadata.st_uid == 0
+            and metadata.st_gid == 0
+            and stat.S_IMODE(metadata.st_mode) == 0o600
+            and path.read_text(encoding="ascii") == "ephemeral-only\n"
+        )
+    except OSError:
+        return False
+
+
 def _fault(point: str, name: str = "") -> None:
     expected_name = os.environ.get("THEBITLAB_ACTIVATION_CRASH_FENCE_NAME", "")
-    if (
+    test_enabled = (
         os.environ.get("THEBITLAB_EPHEMERAL_CRASH_TEST") == "1"
+        and _test_interlock_valid()
+    )
+    if (
+        test_enabled
         and os.environ.get("THEBITLAB_ACTIVATION_CRASH_POINT") == point
         and (not expected_name or expected_name == name)
     ):
         os._exit(97)
+    pause_points = os.environ.get("THEBITLAB_BOOTSTRAP_PAUSE_POINT", "").split(",")
+    if test_enabled and point in pause_points:
+        phase = Path("/run/thebitlab-bootstrap-phase")
+        continuation = Path("/run/thebitlab-bootstrap-continue")
+        phase.write_text(point + "\n", encoding="ascii")
+        phase.chmod(0o600)
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            try:
+                if continuation.read_text(encoding="ascii") == point + "\n":
+                    continuation.unlink(missing_ok=True)
+                    return
+            except FileNotFoundError:
+                pass
+            time.sleep(0.005)
+        raise TrustedActivationFenceError("Timeout test-only bootstrap pause")
 
 
 def _mount_witness(record: MountRecord) -> dict[str, Any]:
@@ -666,6 +1273,7 @@ def _manifest_value(transaction: Mapping[str, Any]) -> dict[str, Any]:
             "targets": transaction["targets"],
             "aliases": transaction["aliases"],
             "mount": transaction["mount"],
+            **({"executor": transaction["executor"]} if "executor" in transaction else {}),
         },
     }
 
@@ -699,8 +1307,8 @@ def _authoritative_manifest(transaction: Mapping[str, Any]) -> dict[str, Any]:
     token = str(transaction["token"])
     root = _canonical_transaction_root(token)
     manifest = _read_immutable_manifest(root, token)
-    for key in ("name", "token", "root", "targets", "aliases", "mount"):
-        if transaction.get(key) != manifest[key]:
+    for key in ("name", "token", "root", "targets", "aliases", "mount", "executor"):
+        if transaction.get(key) != manifest.get(key):
             # Mutable state may add only reconciliation fields to targets. Compare the
             # immutable authority-bearing core separately below.
             if key != "targets":
@@ -719,17 +1327,52 @@ def _accepted_underlying_manifest(
 ) -> dict[str, list[Any]]:
     expected = dict(target["manifest"])
     path = Path(str(target["path"]))
-    if target["kind"] != "directory" or path != Path("/etc"):
+    if target["kind"] != "directory":
         return expected
-    relative = "systemd/system/multi-user.target.wants/nginx.service"
-    record = current.get(relative)
-    if (
-        record is not None
-        and record[0] == "l"
-        and record[2] == 0
-        and record[3] == 0
-        and record[4] == "/usr/lib/systemd/system/nginx.service"
-    ):
+    if path == Path("/etc"):
+        relative = "systemd/system/multi-user.target.wants/nginx.service"
+        record = current.get(relative)
+        if (
+            record is not None
+            and record[0] == "l"
+            and record[2] == 0
+            and record[3] == 0
+            and record[4] == "/usr/lib/systemd/system/nginx.service"
+        ):
+            expected[relative] = record
+        return expected
+    if path != Path("/etc/nginx"):
+        return expected
+
+    # The base snapshot remains immutable and manager-visible while activation
+    # persists only this exact candidate topology underneath it. Partial states
+    # are accepted for crash recovery, but every changed entry is closed here.
+    allowed_links = {
+        "modules-enabled/90-thebitlab-process-error-log.conf":
+            "/etc/thebitlab/current/nginx/thebitlab-process-error-log.conf",
+        "conf.d/thebitlab-log-format.conf":
+            "/etc/thebitlab/current/nginx/thebitlab-log-format.conf",
+        "sites-enabled/thebitlab.conf":
+            "/etc/thebitlab/current/nginx/thebitlab.conf",
+    }
+    default = "sites-enabled/default"
+    baseline_default = expected.get(default)
+    current_default = current.get(default)
+    if current_default not in (baseline_default, None):
+        return expected
+    if current_default is None:
+        expected.pop(default, None)
+    for relative, link_target in allowed_links.items():
+        record = current.get(relative)
+        if record is None:
+            continue
+        if not (
+            record[0] == "l"
+            and record[2] == 0
+            and record[3] == 0
+            and record[4] == link_target
+        ):
+            return expected
         expected[relative] = record
     return expected
 
@@ -954,6 +1597,123 @@ def recover_stale_fences() -> None:
     _write_transactions(())
 
 
+def _validate_inherited_static_lock(descriptor: int) -> None:
+    if descriptor < 3:
+        raise TrustedActivationFenceError("Descriptor lock bootstrap non canonico")
+    try:
+        inherited = os.fstat(descriptor)
+        path = ACTIVATION_LOCK.lstat()
+    except OSError as exc:
+        raise TrustedActivationFenceError("Lock bootstrap ereditato non verificabile") from exc
+    if (
+        not stat.S_ISREG(inherited.st_mode)
+        or inherited.st_dev != path.st_dev
+        or inherited.st_ino != path.st_ino
+        or inherited.st_uid != 0
+        or inherited.st_gid != 0
+        or stat.S_IMODE(inherited.st_mode) != 0o600
+    ):
+        raise TrustedActivationFenceError("Lock bootstrap ereditato con identity divergente")
+
+
+@contextlib.contextmanager
+def static_bootstrap_handoff() -> Iterator[None]:
+    """Adopt the static stage-0 transaction until stage 1 is sealed.
+
+    Absence of the private environment handshake keeps direct unit/integration
+    invocations on the ordinary recovery path.  Presence requires exact kernel,
+    immutable-manifest, token and inherited-lock authority.
+    """
+
+    global _ADOPTED_STATIC_BOOTSTRAP, _ADOPTED_STATIC_LOCK_FD
+    token = os.environ.get("THEBITLAB_STATIC_BOOTSTRAP_TOKEN")
+    descriptor_raw = os.environ.get("THEBITLAB_STATIC_BOOTSTRAP_LOCK_FD")
+    if token is None and descriptor_raw is None:
+        yield
+        return
+    if token is None or descriptor_raw is None or not _TOKEN_RE.fullmatch(token):
+        raise TrustedActivationFenceError("Handshake static bootstrap incompleto")
+    if _ADOPTED_STATIC_BOOTSTRAP is not None:
+        raise TrustedActivationFenceError("Static bootstrap già adottato")
+    try:
+        descriptor = int(descriptor_raw, 10)
+    except ValueError as exc:
+        raise TrustedActivationFenceError("Descriptor static bootstrap non numerico") from exc
+    _validate_inherited_static_lock(descriptor)
+    _fault("bootstrap_python_started", "trusted-static-bootstrap")
+    state = _read_state()
+    if state is None or state["poisoned"] or len(state["transactions"]) != 1:
+        raise TrustedActivationFenceError("State static bootstrap non singolo/canonico")
+    transaction = state["transactions"][0]
+    if (
+        transaction["name"] != "trusted-static-bootstrap"
+        or transaction["token"] != token
+        or transaction["phase"] != "active"
+    ):
+        raise TrustedActivationFenceError("Identity static bootstrap divergente")
+    _validate_transaction(transaction, require_underlying=False)
+    _ADOPTED_STATIC_BOOTSTRAP = transaction
+    _ADOPTED_STATIC_LOCK_FD = descriptor
+    try:
+        yield
+    finally:
+        if _ADOPTED_STATIC_BOOTSTRAP is not None:
+            try:
+                _remove_transaction(_ADOPTED_STATIC_BOOTSTRAP)
+                _write_transactions(())
+                _ADOPTED_STATIC_BOOTSTRAP = None
+            except Exception:
+                current = _read_state()
+                _write_transactions(
+                    list(current.get("transactions", [])) if current else [],
+                    poisoned=True,
+                )
+                raise
+        if _ADOPTED_STATIC_LOCK_FD is not None:
+            with contextlib.suppress(OSError):
+                os.close(_ADOPTED_STATIC_LOCK_FD)
+            _ADOPTED_STATIC_LOCK_FD = None
+
+
+def _replace_static_bootstrap_for_stage1(
+    stage1: Mapping[str, Any], transactions: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Replace stage 0 only after the stage-1 tmpfs is sealed.
+
+    Stage-1 lower bind mounts are temporarily removed so cleanup authority for
+    the stage-0 source cannot consume another transaction's witness.  The static
+    snapshot still covers every pathname until its final unmount; then the true
+    underlying paths are rebound and compared before stage-1 snapshots become
+    externally visible.  No native exec is permitted in this interval.
+    """
+
+    global _ADOPTED_STATIC_BOOTSTRAP
+    static_transaction = _ADOPTED_STATIC_BOOTSTRAP
+    if static_transaction is None:
+        return transactions
+    root = Path(str(stage1["root"]))
+    for target in reversed(stage1["targets"]):
+        _umount(root / str(target["lower"]))
+    _remove_transaction(static_transaction)
+    remaining = [
+        transaction
+        for transaction in transactions
+        if transaction.get("token") != static_transaction["token"]
+    ]
+    _write_transactions(remaining)
+    _ADOPTED_STATIC_BOOTSTRAP = None
+    for target in stage1["targets"]:
+        path = Path(str(target["path"]))
+        lower = root / str(target["lower"])
+        _mount(str(path), lower, None, MS_BIND)
+        current = _current_manifest(lower, str(target["kind"]))
+        if current != target["manifest"]:
+            raise TrustedActivationFenceError(
+                f"Underlying mutato durante handoff statico: {path}"
+            )
+    return remaining
+
+
 class SnapshotMountFence:
     """Freeze exact host directories/files as independent read-only snapshots."""
 
@@ -964,6 +1724,8 @@ class SnapshotMountFence:
         directories: Iterable[Path],
         files: Iterable[Path],
         aliases: Mapping[Path, str] | None = None,
+        replace_static_bootstrap: bool = False,
+        executor: Mapping[str, Any] | None = None,
     ) -> None:
         if name not in _TRANSACTION_NAMES:
             raise TrustedActivationFenceError("Nome transaction fence fuori policy")
@@ -980,6 +1742,12 @@ class SnapshotMountFence:
         if any(_USRMERGE_ALIASES.get(path) != target for path, target in alias_value.items()):
             raise TrustedActivationFenceError("Alias richiesto fuori policy usrmerge")
         self.aliases = tuple(sorted(alias_value.items(), key=lambda item: str(item[0])))
+        self.replace_static_bootstrap = replace_static_bootstrap
+        self.executor = dict(executor) if executor is not None else None
+        if self.executor is not None:
+            if name != "trusted-systemd-execution":
+                raise TrustedActivationFenceError("Executor authority fuori da Stage-M")
+            _validate_executor_identity(self.executor)
         self.transaction: dict[str, Any] | None = None
 
     def __enter__(self) -> Self:
@@ -1029,6 +1797,8 @@ class SnapshotMountFence:
             "targets": targets,
             "aliases": aliases,
         }
+        if self.executor is not None:
+            transaction["executor"] = self.executor
         transactions.append(transaction)
         _write_transactions(transactions)
         try:
@@ -1088,6 +1858,10 @@ class SnapshotMountFence:
             transaction["mount"] = _mount_witness(root_record)
             transaction["phase"] = "sealed"
             _write_transactions(transactions)
+            if self.replace_static_bootstrap:
+                transactions = _replace_static_bootstrap_for_stage1(
+                    transaction, transactions
+                )
 
             for target in transaction["targets"]:
                 _mount(str(root / target["snapshot"]), Path(target["path"]), None, MS_BIND)
@@ -1196,6 +1970,80 @@ class SnapshotMountFence:
                 break
         _write_transactions(transactions)
 
+    def set_underlying_candidate_symlink(
+        self, path: Path, target_value: str | None
+    ) -> None:
+        """Persist one exact nginx candidate link below the immutable base view."""
+
+        allowed: Mapping[Path, str | None] = {
+            Path("/etc/nginx/sites-enabled/default"): None,
+            Path("/etc/nginx/modules-enabled/90-thebitlab-process-error-log.conf"):
+                "/etc/thebitlab/current/nginx/thebitlab-process-error-log.conf",
+            Path("/etc/nginx/conf.d/thebitlab-log-format.conf"):
+                "/etc/thebitlab/current/nginx/thebitlab-log-format.conf",
+            Path("/etc/nginx/sites-enabled/thebitlab.conf"):
+                "/etc/thebitlab/current/nginx/thebitlab.conf",
+        }
+        if (
+            self.transaction is None
+            or self.name != "trusted-activation-base"
+            or path not in allowed
+            or allowed[path] != target_value
+        ):
+            raise TrustedActivationFenceError("Mutazione candidate nginx fuori policy")
+        containing = [
+            target for target in self.transaction["targets"]
+            if target["kind"] == "directory"
+            and Path(target["path"]) == Path("/etc/nginx")
+            and Path(target["path"]) in path.parents
+        ]
+        if len(containing) != 1:
+            raise TrustedActivationFenceError("Candidate nginx fuori dal base snapshot")
+        record = containing[0]
+        root = Path(str(self.transaction["root"]))
+        relative_path = path.relative_to(Path(record["path"]))
+        lower_path = root / str(record["lower"]) / relative_path
+        _validate_transaction(self.transaction, require_underlying=True)
+        if target_value is None:
+            if lower_path.is_symlink():
+                lower_path.unlink()
+            elif lower_path.exists():
+                raise TrustedActivationFenceError("Default nginx candidate non-symlink")
+        else:
+            if lower_path.is_symlink() and os.readlink(lower_path) == target_value:
+                return
+            if lower_path.exists() or lower_path.is_symlink():
+                if not lower_path.is_symlink():
+                    raise TrustedActivationFenceError("Link nginx candidate non-symlink")
+            temporary = lower_path.with_name(f".{lower_path.name}.{os.getpid()}")
+            try:
+                temporary.unlink(missing_ok=True)
+                os.symlink(target_value, temporary)
+                os.replace(temporary, lower_path)
+            finally:
+                temporary.unlink(missing_ok=True)
+        descriptor = os.open(lower_path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        current = _current_manifest(root / str(record["lower"]), "directory")
+        accepted = _accepted_underlying_manifest(record, current)
+        if current != accepted:
+            raise TrustedActivationFenceError(
+                "Mutazione concorrente durante materializzazione candidate nginx"
+            )
+        record["underlying_manifest"] = current
+        state = _read_state()
+        transactions = list(state.get("transactions", [])) if state else []
+        for index, transaction in enumerate(transactions):
+            if transaction.get("token") == self.transaction["token"]:
+                transactions[index] = self.transaction
+                break
+        else:
+            raise TrustedActivationFenceError("Transaction candidate non registrata")
+        _write_transactions(transactions)
+
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> bool:
         if self.transaction is None:
             return False
@@ -1230,9 +2078,15 @@ class SnapshotMountFence:
 
 @contextlib.contextmanager
 def host_lock_and_recovery() -> Iterator[None]:
-    locks = acquire_host_locks()
+    # The static entrypoint already owns ACTIVATION_LOCK across exec. Reopening
+    # and locking it in the same process would weaken the explicit handoff and
+    # can alter process-associated fcntl lock semantics, so acquire only package
+    # locks while the adopted stage-0 transaction remains authoritative.
+    inherited = _ADOPTED_STATIC_BOOTSTRAP is not None
+    locks = acquire_host_locks(activation=not inherited)
     try:
-        recover_stale_fences()
+        if not inherited:
+            recover_stale_fences()
         yield
     finally:
         locks.close()

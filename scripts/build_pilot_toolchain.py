@@ -21,6 +21,7 @@ TOOLCHAIN_FILES = (
     "scripts/pilot_native_execution_closure.py",
     "scripts/pilot_ubuntu_reviewed_executables.py",
     "scripts/pilot_ubuntu_reviewed_native_code.py",
+    "scripts/pilot_ubuntu_loader_lookup_policy.py",
     "scripts/validate_pilot_deployment.py",
     "schemas/pilot-deployment.schema.json",
     "schemas/pilot-deployment-v1-legacy.schema.json",

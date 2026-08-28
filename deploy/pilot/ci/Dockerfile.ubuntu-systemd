@@ -1,9 +1,42 @@
 # CI-only effective Ubuntu deployment integration environment.
 # Ubuntu 24.04 (Noble), pinned to the reviewed official multi-architecture digest.
+FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea AS static-bootstrap-builder
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        binutils file golang-go \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/pilot_static_bootstrap.go scripts/pilot_private_runtime.go scripts/pilot_private_runtime_poc.go /src/
+RUN cd /src \
+    && gofmt -w pilot_static_bootstrap.go pilot_private_runtime.go pilot_private_runtime_poc.go \
+    && test -z "$(gofmt -d pilot_static_bootstrap.go pilot_private_runtime.go pilot_private_runtime_poc.go)" \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+        go build -trimpath -buildvcs=false -ldflags='-s -w -buildid=' \
+        -o /tmp/thebitlab-pilot-activate pilot_static_bootstrap.go \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+        go build -trimpath -buildvcs=false -ldflags='-s -w -buildid=' \
+        -o /tmp/thebitlab-private-runtime pilot_private_runtime.go \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+        go build -trimpath -buildvcs=false -ldflags='-s -w -buildid=' \
+        -o /tmp/thebitlab-private-runtime-poc pilot_private_runtime_poc.go \
+    && file /tmp/thebitlab-pilot-activate /tmp/thebitlab-private-runtime /tmp/thebitlab-private-runtime-poc \
+        | grep -c 'statically linked' | grep -Fx 3 \
+    && ! readelf -l /tmp/thebitlab-pilot-activate | grep -q INTERP \
+    && ! readelf -l /tmp/thebitlab-private-runtime | grep -q INTERP \
+    && ! readelf -l /tmp/thebitlab-private-runtime-poc | grep -q INTERP \
+    && readelf -d /tmp/thebitlab-pilot-activate 2>&1 \
+        | grep -F 'There is no dynamic section in this file.' \
+    && readelf -d /tmp/thebitlab-private-runtime 2>&1 \
+        | grep -F 'There is no dynamic section in this file.' \
+    && readelf -d /tmp/thebitlab-private-runtime-poc 2>&1 \
+        | grep -F 'There is no dynamic section in this file.'
+
 FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea AS reviewer-payload-builder
 
 RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gcc libc6-dev \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        gcc libc6-dev patchelf systemd \
     && printf '%s\n' \
         '#include <fcntl.h>' \
         '#include <stdio.h>' \
@@ -15,7 +48,27 @@ RUN apt-get update \
         ' int f=open("/run/review704-preload-marker",O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC,0600);' \
         ' if(f>=0){write(f,line,(size_t)n);close(f);}' \
         '}' > /tmp/review704-preload.c \
-    && gcc -shared -fPIC -O2 -Wall -Wextra -o /tmp/review704-preload.so /tmp/review704-preload.c
+    && gcc -shared -fPIC -O2 -Wall -Wextra -o /tmp/review704-preload.so /tmp/review704-preload.c \
+    && cp /usr/lib/x86_64-linux-gnu/systemd/libsystemd-shared-255.so \
+        /tmp/review704-libsystemd-shared-real.so \
+    && patchelf --set-soname libsystemd-shared-real.so \
+        /tmp/review704-libsystemd-shared-real.so \
+    && printf '%s\n' \
+        '#include <fcntl.h>' \
+        '#include <stdio.h>' \
+        '#include <unistd.h>' \
+        '__attribute__((constructor)) static void review704_hwcaps(void) {' \
+        ' char comm[64]="unknown", line[160]; int c=open("/proc/self/comm",O_RDONLY|O_CLOEXEC);' \
+        ' if(c>=0){ssize_t n=read(c,comm,63);close(c);if(n>0){while(n&&(comm[n-1]==10||comm[n-1]==13))--n;comm[n]=0;}}' \
+        ' int n=snprintf(line,sizeof(line),"%s uid=%ld euid=%ld\\n",comm,(long)getuid(),(long)geteuid());' \
+        ' int f=open("/run/review704-hwcaps-marker",O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC,0600);' \
+        ' if(f>=0){write(f,line,(size_t)n);close(f);}' \
+        '}' > /tmp/review704-hwcaps.c \
+    && gcc -shared -fPIC -O2 -Wall -Wextra \
+        -Wl,-soname,libsystemd-shared-255.so -Wl,--no-as-needed \
+        -Wl,-rpath,'$ORIGIN' \
+        -o /tmp/review704-libsystemd-shared-255.so \
+        /tmp/review704-hwcaps.c /tmp/review704-libsystemd-shared-real.so
 
 FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea
 
@@ -50,6 +103,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=reviewer-payload-builder /tmp/review704-preload.so /root/review704-preload.so
+COPY --from=reviewer-payload-builder /tmp/review704-libsystemd-shared-255.so /root/review704-libsystemd-shared-255.so
+COPY --from=reviewer-payload-builder /tmp/review704-libsystemd-shared-real.so /root/review704-libsystemd-shared-real.so
+COPY --from=static-bootstrap-builder /tmp/thebitlab-pilot-activate /root/thebitlab-pilot-activate
+COPY --from=static-bootstrap-builder /tmp/thebitlab-private-runtime /root/thebitlab-private-runtime
+COPY --from=static-bootstrap-builder /tmp/thebitlab-private-runtime-poc /root/thebitlab-private-runtime-poc
 
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

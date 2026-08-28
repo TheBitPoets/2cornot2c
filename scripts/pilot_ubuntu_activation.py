@@ -38,6 +38,10 @@ from scripts.pilot_native_execution_closure import (  # noqa: E402
     attest_native_execution_closure,
     closure_counts as native_closure_counts,
 )
+from scripts.pilot_ubuntu_loader_lookup_policy import (  # noqa: E402
+    REVIEWED_BOOTSTRAP_LOOKUP_TREES,
+    ReviewedTreeIdentity,
+)
 from scripts.pilot_ubuntu_reviewed_executables import (  # noqa: E402
     REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES,
 )
@@ -46,10 +50,14 @@ from scripts.pilot_ubuntu_reviewed_native_code import (  # noqa: E402
 )
 from scripts.pilot_trusted_activation_fence import (  # noqa: E402
     USR_MERGE_ALIASES,
+    ExecutorInodeReadLease,
     SnapshotMountFence,
     TrustedActivationFenceError,
+    ensure_runtime_authority_directory,
+    ensure_runtime_authority_parent,
     host_lock_and_recovery,
     source_path_had_multiple_links,
+    static_bootstrap_handoff,
 )
 from scripts.nginx_config_ast import (  # noqa: E402
     Directive,
@@ -113,6 +121,18 @@ SYSTEMD_ANALYZE_BINARY = Path("/usr/bin/systemd-analyze")
 PROC_ROOT = Path("/proc")
 NGINX_CONTROL_GROUP = "/system.slice/nginx.service"
 NGINX_WANTS_LINK = Path("/etc/systemd/system/multi-user.target.wants/nginx.service")
+PRIVATE_RUNTIME_BINARY = Path("/usr/sbin/thebitlab-private-runtime")
+PRIVATE_RUNTIME_PIN = Path("/etc/thebitlab/trust/pilot-private-runtime.json")
+PRIVATE_RUNTIME_ROOT = Path("/run/thebitlab/pilot-private-runtime")
+PRIVATE_RUNTIME_STATE = PRIVATE_RUNTIME_ROOT / "state.json"
+PRIVATE_RUNTIME_S0 = PRIVATE_RUNTIME_ROOT / "s0"
+PRIVATE_RUNTIME_S1 = PRIVATE_RUNTIME_ROOT / "s1"
+PRIVATE_RUNTIME_MERGED = PRIVATE_RUNTIME_ROOT / "merged"
+PRIVATE_RUNTIME_DROPIN = Path(
+    "/run/systemd/system/nginx.service.d/70-thebitlab-private-runtime.conf"
+)
+_PRIVATE_RUNTIME_STATE_SCHEMA = "thebitlab.private-runtime-state.v1"
+_PRIVATE_RUNTIME_MANIFEST_SCHEMA = "thebitlab.private-runtime-manifest.v1"
 THEBITLAB_WANTS_LINK = Path(
     "/etc/systemd/system/multi-user.target.wants/thebitlab.service"
 )
@@ -207,8 +227,17 @@ BASE_FENCE_DIRECTORIES = (
     Path("/usr/lib64"),
     Path("/usr/share/nginx"),
     Path("/var/lib/dpkg/info"),
+    Path("/etc/ld.so.conf.d"),
+    Path("/etc/ssl"),
+    Path("/etc/nginx"),
 )
-BASE_FENCE_FILES = (DPKG_STATUS_PATH,)
+BASE_FENCE_FILES = (
+    DPKG_STATUS_PATH,
+    Path("/etc/ld.so.cache"),
+    Path("/etc/ld.so.conf"),
+    Path("/etc/nsswitch.conf"),
+    PRIVATE_RUNTIME_PIN,
+)
 INTEGRATION_LINKS = {
     PROCESS_LINK: "/etc/thebitlab/current/nginx/thebitlab-process-error-log.conf",
     FORMAT_LINK: "/etc/thebitlab/current/nginx/thebitlab-log-format.conf",
@@ -249,6 +278,7 @@ _ACTIVE_EXECUTION_FENCE: SnapshotMountFence | None = None
 _TRUSTED_SESSION_OWNER_PID: int | None = None
 _EXECUTION_FENCE_OWNER_PID: int | None = None
 _GENERATED_OUTPUT_FENCE: SnapshotMountFence | None = None
+_EXECUTOR_INODE_LEASE: ExecutorInodeReadLease | None = None
 _NATIVE_CLOSURE_READY = False
 _NATIVE_CLOSURE_PATHS: frozenset[Path] = frozenset()
 NATIVE_EXECUTION_ROOTS = tuple(
@@ -319,6 +349,55 @@ def _base_frozen_native_digests() -> Mapping[Path, str]:
     return result
 
 
+def _base_frozen_tree_identities() -> Mapping[Path, ReviewedTreeIdentity]:
+    if _TRUSTED_BASE_FENCE is None or _TRUSTED_BASE_FENCE.transaction is None:
+        raise ActivationError("Base lookup manifest non disponibile")
+    targets = _TRUSTED_BASE_FENCE.transaction["targets"]
+    result: dict[Path, ReviewedTreeIdentity] = {}
+    for root in REVIEWED_BOOTSTRAP_LOOKUP_TREES:
+        containing = [
+            target
+            for target in targets
+            if root == Path(target["path"]) or Path(target["path"]) in root.parents
+        ]
+        if len(containing) != 1:
+            raise ActivationError(f"Lookup tree fuori dal base manifest: {root}")
+        target = containing[0]
+        target_path = Path(target["path"])
+        manifest = target["manifest"]
+        relative_root = root.relative_to(target_path)
+        prefix = "" if relative_root == Path(".") else relative_root.as_posix()
+        if not prefix:
+            metadata = root.lstat()
+            root_record: list[Any] = [
+                "d", metadata.st_mode, metadata.st_uid, metadata.st_gid
+            ]
+        else:
+            root_record = manifest.get(prefix)
+            if root_record is None or root_record[0] != "d":
+                raise ActivationError(f"Lookup tree root non directory: {root}")
+        records: list[tuple[str, list[Any]]] = [(".", root_record)]
+        child_prefix = prefix + "/" if prefix else ""
+        for key, record in manifest.items():
+            if not key.startswith(child_prefix) or key == prefix:
+                continue
+            relative = key[len(child_prefix):]
+            records.append((relative, record))
+        digest = hashlib.sha256()
+        counts = {"d": 0, "f": 0, "l": 0}
+        for relative, record in sorted(records):
+            kind = str(record[0])
+            if kind not in counts:
+                raise ActivationError(f"Lookup tree con tipo inatteso: {root}/{relative}")
+            counts[kind] += 1
+            fields = [relative, *(str(value) for value in record)]
+            digest.update("\0".join(fields).encode("utf-8") + b"\n")
+        result[root] = ReviewedTreeIdentity(
+            digest.hexdigest(), counts["d"], counts["f"], counts["l"]
+        )
+    return result
+
+
 def _base_fence_files() -> tuple[Path, ...]:
     return tuple(
         path
@@ -356,6 +435,7 @@ def _trusted_activation_session() -> Iterable[None]:
                 directories=BASE_FENCE_DIRECTORIES,
                 files=_base_fence_files(),
                 aliases=USR_MERGE_ALIASES,
+                replace_static_bootstrap=True,
             ) as fence:
                 _TRUSTED_BASE_FENCE = fence
                 _TRUSTED_SESSION_OWNER_PID = os.getpid()
@@ -376,7 +456,8 @@ def _trusted_activation_session() -> Iterable[None]:
 @contextlib.contextmanager
 def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
     global _EXECUTION_FENCE_DEPTH, _ACTIVE_EXECUTION_FENCE, _EXECUTION_FENCE_OWNER_PID
-    global _GENERATED_OUTPUT_FENCE, _NATIVE_CLOSURE_READY, _NATIVE_CLOSURE_PATHS
+    global _GENERATED_OUTPUT_FENCE, _EXECUTOR_INODE_LEASE
+    global _NATIVE_CLOSURE_READY, _NATIVE_CLOSURE_PATHS
     if not _KERNEL_FENCE_ENABLED:
         yield None
         return
@@ -387,6 +468,7 @@ def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
             _EXECUTION_FENCE_OWNER_PID != os.getpid()
             or _ACTIVE_EXECUTION_FENCE is None
             or _ACTIVE_EXECUTION_FENCE.transaction is None
+            or _EXECUTOR_INODE_LEASE is None
             or not _NATIVE_CLOSURE_READY
         ):
             raise ActivationError("Nesting execution fence senza owner kernel attivo")
@@ -397,39 +479,57 @@ def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
             _EXECUTION_FENCE_DEPTH -= 1
         return
     try:
-        with SnapshotMountFence(
-            "trusted-systemd-execution",
-            directories=(Path("/etc"), *FROZEN_SYSTEMD_RUNTIME_SOURCE_DIRECTORIES),
-            files=(),
-        ) as fence:
-            _ACTIVE_EXECUTION_FENCE = fence
-            _EXECUTION_FENCE_OWNER_PID = os.getpid()
-            try:
-                # Structural invariant: this pure-Python attestation is complete
-                # before _EXECUTION_FENCE_DEPTH permits any native subprocess.
-                _NATIVE_CLOSURE_PATHS = attest_native_execution_closure(
-                    NATIVE_EXECUTION_ROOTS,
-                    frozen_digests=_base_frozen_native_digests(),
-                )
-                _NATIVE_CLOSURE_READY = True
-                _EXECUTION_FENCE_DEPTH = 1
-                if _systemd_path(SYSTEMD_GENERATOR_SEARCH_PATH_NAME) != EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH:
-                    raise ActivationError("Search path generator systemd 255 divergente")
-                if _systemd_path(SYSTEMD_UNIT_SEARCH_PATH_NAME) != EXPECTED_SYSTEMD_UNIT_SEARCH_PATH:
-                    raise ActivationError("Search path unit systemd 255 divergente")
-                yield fence
-            finally:
-                if _GENERATED_OUTPUT_FENCE is not None:
-                    generated_fence = _GENERATED_OUTPUT_FENCE
-                    _GENERATED_OUTPUT_FENCE = None
-                    generated_fence.__exit__(None, None, None)
-                _EXECUTION_FENCE_DEPTH = 0
-                _NATIVE_CLOSURE_READY = False
-                _NATIVE_CLOSURE_PATHS = frozenset()
-                _ACTIVE_EXECUTION_FENCE = None
-                _EXECUTION_FENCE_OWNER_PID = None
+        # The holder is the already-trusted activation process.  The exact
+        # /proc/1/fd object is leased before Stage-M construction and remains
+        # continuously protected through the target safe-boundary proof.
+        with ExecutorInodeReadLease() as executor_lease:
+            _EXECUTOR_INODE_LEASE = executor_lease
+            with SnapshotMountFence(
+                "trusted-systemd-execution",
+                directories=(Path("/etc"), *FROZEN_SYSTEMD_RUNTIME_SOURCE_DIRECTORIES),
+                files=(),
+                executor=executor_lease.durable_record(),
+            ) as fence:
+                _ACTIVE_EXECUTION_FENCE = fence
+                _EXECUTION_FENCE_OWNER_PID = os.getpid()
+                try:
+                    # Structural invariant: this pure-Python attestation is complete
+                    # before _EXECUTION_FENCE_DEPTH permits any native subprocess.
+                    _NATIVE_CLOSURE_PATHS = attest_native_execution_closure(
+                        NATIVE_EXECUTION_ROOTS,
+                        frozen_digests=_base_frozen_native_digests(),
+                        frozen_tree_identities=_base_frozen_tree_identities(),
+                    )
+                    _NATIVE_CLOSURE_READY = True
+                    _EXECUTION_FENCE_DEPTH = 1
+                    if _systemd_path(SYSTEMD_GENERATOR_SEARCH_PATH_NAME) != EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH:
+                        raise ActivationError("Search path generator systemd 255 divergente")
+                    if _systemd_path(SYSTEMD_UNIT_SEARCH_PATH_NAME) != EXPECTED_SYSTEMD_UNIT_SEARCH_PATH:
+                        raise ActivationError("Search path unit systemd 255 divergente")
+                    try:
+                        yield fence
+                    except BaseException:
+                        _force_safe_executor_abort_if_pending()
+                        raise
+                finally:
+                    if _GENERATED_OUTPUT_FENCE is not None:
+                        generated_fence = _GENERATED_OUTPUT_FENCE
+                        _GENERATED_OUTPUT_FENCE = None
+                        generated_fence.__exit__(None, None, None)
+                    _EXECUTION_FENCE_DEPTH = 0
+                    _NATIVE_CLOSURE_READY = False
+                    _NATIVE_CLOSURE_PATHS = frozenset()
+                    _ACTIVE_EXECUTION_FENCE = None
+                    _EXECUTION_FENCE_OWNER_PID = None
+                    if (
+                        _EXECUTOR_INODE_LEASE is not None
+                        and _EXECUTOR_INODE_LEASE is not executor_lease
+                    ):
+                        _EXECUTOR_INODE_LEASE.__exit__(None, None, None)
     except (TrustedActivationFenceError, NativeExecutionClosureError) as exc:
         raise ActivationError(f"TrustedActivationFence execution: {exc}") from exc
+    finally:
+        _EXECUTOR_INODE_LEASE = None
 
 
 def _in_trusted_execution_fence(function: Any) -> Any:
@@ -502,6 +602,7 @@ def _require_trusted_runtime() -> None:
         Path(sys.modules[SnapshotMountFence.__module__].__file__),
         Path(sys.modules[attest_native_execution_closure.__module__].__file__),
         Path(sys.modules["scripts.pilot_ubuntu_reviewed_native_code"].__file__),
+        Path(sys.modules["scripts.pilot_ubuntu_loader_lookup_policy"].__file__),
     )
     if any(ROOT not in module.resolve(strict=True).parents for module in local_modules):
         raise ActivationError("Modulo security-critical caricato fuori dalla trusted toolchain")
@@ -562,6 +663,15 @@ class NginxProcess:
 
 
 @dataclass(frozen=True)
+class PrivateRuntimeAuthority:
+    token: str
+    state: Mapping[str, Any]
+    s0: Mapping[str, Any]
+    s1: Mapping[str, Any]
+    objects: Mapping[str, Mapping[str, Any]]
+
+
+@dataclass(frozen=True)
 class LogInode:
     path: Path
     device: int
@@ -585,6 +695,376 @@ class ExecutableClosurePolicy:
     interpreters: tuple[RuntimeCommandPolicy, ...] = ()
     absent_paths: tuple[Path, ...] = ()
     closed_directories: Mapping[Path, tuple[str, ...]] | None = None
+
+
+def _private_runtime_json(path: Path, *, mode: int) -> tuple[Mapping[str, Any], bytes]:
+    descriptor = -1
+    try:
+        descriptor = os.open(
+            path,
+            os.O_RDONLY
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+        )
+        before = os.fstat(descriptor)
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        after = os.fstat(descriptor)
+    except OSError as exc:
+        raise ActivationError(f"Autorità private-runtime non leggibile: {path}") from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    if (
+        _file_identity(before) != _file_identity(after)
+        or not stat.S_ISREG(before.st_mode)
+        or before.st_uid != 0
+        or before.st_gid != 0
+        or stat.S_IMODE(before.st_mode) != mode
+        or before.st_nlink != 1
+    ):
+        raise ActivationError(f"Metadata autorità private-runtime divergenti: {path}")
+    raw = b"".join(chunks)
+    try:
+        value = json.loads(raw)
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise ActivationError(f"JSON autorità private-runtime invalido: {path}") from exc
+    if not isinstance(value, dict):
+        raise ActivationError(f"JSON autorità private-runtime non oggetto: {path}")
+    return value, raw
+
+
+def _private_runtime_mounts() -> Mapping[str, Mapping[str, Any]]:
+    records: dict[str, Mapping[str, Any]] = {}
+    try:
+        lines = Path("/proc/self/mountinfo").read_text(encoding="ascii").splitlines()
+    except OSError as exc:
+        raise ActivationError("Mountinfo private-runtime non leggibile") from exc
+    for line in lines:
+        left, separator, right = line.partition(" - ")
+        fields, tail = left.split(), right.split()
+        if not separator or len(fields) < 6 or len(tail) < 3:
+            raise ActivationError("Mountinfo private-runtime non canonico")
+        point = fields[4].replace("\\040", " ").replace("\\134", "\\")
+        records[point] = {
+            "mount_id": int(fields[0]),
+            "parent_id": int(fields[1]),
+            "major_minor": fields[2],
+            "root": fields[3],
+            "mount_point": point,
+            "options": fields[5].split(","),
+            "filesystem": tail[0],
+            "source": tail[1],
+            "super_options": tail[2].split(","),
+        }
+    return records
+
+
+def _private_runtime_authority(*, required: bool = True) -> PrivateRuntimeAuthority | None:
+    try:
+        ensure_runtime_authority_parent()
+    except TrustedActivationFenceError as exc:
+        raise ActivationError("Parent private-runtime non canonico") from exc
+    if not PRIVATE_RUNTIME_STATE.exists():
+        if required:
+            raise ActivationError("Autorità private-runtime assente")
+        return None
+    state, _ = _private_runtime_json(PRIVATE_RUNTIME_STATE, mode=0o600)
+    required_state = {
+        "schema", "token", "phase", "s0_manifest_sha256", "s1_manifest_sha256",
+        "toolchain_id", "toolchain_manifest_sha256", "broker_sha256",
+        "dropin_sha256", "candidate_bundle", "candidate_lock_sha256",
+        "runtime_device", "runtime_inode", "mounts",
+    }
+    token = state.get("token")
+    if (
+        set(state) != required_state
+        or state.get("schema") != _PRIVATE_RUNTIME_STATE_SCHEMA
+        or state.get("phase") != "sealed"
+        or not isinstance(token, str)
+        or re.fullmatch(r"[1-9][0-9]{0,19}-[0-9a-f]{32}", token) is None
+        or not all(
+            isinstance(state.get(name), str)
+            and re.fullmatch(r"[0-9a-f]{64}", str(state[name])) is not None
+            for name in (
+                "s0_manifest_sha256", "s1_manifest_sha256",
+                "toolchain_manifest_sha256", "broker_sha256", "dropin_sha256",
+            )
+        )
+        or not isinstance(state.get("candidate_bundle"), str)
+        or not str(state["candidate_bundle"]).startswith(str(DEPLOYMENTS_ROOT) + "/")
+        or not isinstance(state.get("candidate_lock_sha256"), str)
+        or re.fullmatch(r"[0-9a-f]{64}", str(state["candidate_lock_sha256"])) is None
+        or not isinstance(state.get("runtime_device"), int)
+        or not isinstance(state.get("runtime_inode"), int)
+        or not isinstance(state.get("mounts"), dict)
+        or set(state["mounts"]) != {"s0", "s1", "merged"}
+    ):
+        raise ActivationError("Schema/identity private-runtime non canonici")
+    root = PRIVATE_RUNTIME_ROOT.lstat()
+    if (
+        not stat.S_ISDIR(root.st_mode)
+        or root.st_uid != 0
+        or root.st_gid != 0
+        or stat.S_IMODE(root.st_mode) != 0o700
+        or root.st_dev != state["runtime_device"]
+        or root.st_ino != state["runtime_inode"]
+    ):
+        raise ActivationError("Root identity private-runtime divergente")
+    current_mounts = _private_runtime_mounts()
+    paths = {
+        "s0": PRIVATE_RUNTIME_S0,
+        "s1": PRIVATE_RUNTIME_S1,
+        "merged": PRIVATE_RUNTIME_MERGED,
+    }
+    for name, path in paths.items():
+        witness = state["mounts"][name]
+        if (
+            not isinstance(witness, dict)
+            or set(witness) != {
+                "mount_id", "parent_id", "major_minor", "root", "mount_point",
+                "options", "filesystem", "source", "super_options",
+            }
+            or current_mounts.get(str(path)) != witness
+            or "ro" not in witness["options"]
+        ):
+            raise ActivationError(f"Kernel witness private-runtime divergente: {name}")
+    if (
+        state["mounts"]["s0"]["filesystem"] != "tmpfs"
+        or state["mounts"]["s0"]["source"] != f"thebitlab-private-s0:{token}"
+        or state["mounts"]["s1"]["filesystem"] != "tmpfs"
+        or state["mounts"]["s1"]["source"] != f"thebitlab-private-s1:{token}"
+        or state["mounts"]["merged"]["filesystem"] != "overlay"
+    ):
+        raise ActivationError("Composizione kernel private-runtime fuori policy")
+    s0, s0_raw = _private_runtime_json(
+        PRIVATE_RUNTIME_S0 / ".thebitlab-s0-manifest.json", mode=0o600
+    )
+    s1, s1_raw = _private_runtime_json(
+        PRIVATE_RUNTIME_S1 / ".thebitlab-s1-manifest.json", mode=0o600
+    )
+    if (
+        hashlib.sha256(s0_raw).hexdigest() != state["s0_manifest_sha256"]
+        or hashlib.sha256(s1_raw).hexdigest() != state["s1_manifest_sha256"]
+        or s0.get("schema") != _PRIVATE_RUNTIME_MANIFEST_SCHEMA
+        or s1.get("schema") != _PRIVATE_RUNTIME_MANIFEST_SCHEMA
+        or s0.get("token") != token
+        or s1.get("token") != token
+        or s0.get("mount_source") != f"thebitlab-private-s0:{token}"
+        or s1.get("mount_source") != f"thebitlab-private-s1:{token}"
+        or s0.get("root") != str(PRIVATE_RUNTIME_S0)
+        or s1.get("root") != str(PRIVATE_RUNTIME_S1)
+        or s0.get("self_sha256") != state["broker_sha256"]
+        or s1.get("self_sha256") != state["broker_sha256"]
+        or s0.get("toolchain_id") != state["toolchain_id"]
+        or s0.get("toolchain_manifest_sha256")
+        != state["toolchain_manifest_sha256"]
+        or s1.get("candidate_bundle") != state["candidate_bundle"]
+        or s1.get("candidate_lock_sha256") != state["candidate_lock_sha256"]
+        or not isinstance(s1.get("links"), dict)
+        or not isinstance(s0.get("objects"), dict)
+        or not isinstance(s1.get("objects"), dict)
+    ):
+        raise ActivationError("Manifest sealed private-runtime divergente")
+    overlap = set(s0["objects"]) & set(s1["objects"])
+    if overlap or s1.get("metrics", {}).get("duplicate_copies") != 0:
+        raise ActivationError(f"S1 ricopia identità S0: {sorted(overlap)}")
+    expected_links = {
+        str(CURRENT_LINK): state["candidate_bundle"],
+        **{str(path): target for path, target in INTEGRATION_LINKS.items()},
+    }
+    if s1["links"] != expected_links:
+        raise ActivationError("Closure symlink candidate S1 divergente")
+    if (PRIVATE_RUNTIME_S1 / DISTRO_DEFAULT.relative_to("/")).exists() or (
+        PRIVATE_RUNTIME_S1 / DISTRO_DEFAULT.relative_to("/")
+    ).is_symlink():
+        raise ActivationError("Default distro presente nella candidate S1")
+    objects: dict[str, Mapping[str, Any]] = {}
+    for stage, manifest in (("S0", s0), ("S1", s1)):
+        for lexical, identity in manifest["objects"].items():
+            if (
+                not isinstance(lexical, str)
+                or not lexical.startswith("/")
+                or not isinstance(identity, dict)
+                or set(identity) != {"sha256", "size", "stage"}
+                or identity.get("stage") != stage
+                or not isinstance(identity.get("size"), int)
+                or re.fullmatch(r"[0-9a-f]{64}", str(identity.get("sha256"))) is None
+            ):
+                raise ActivationError("Object identity private-runtime non canonica")
+            objects[lexical] = identity
+    broker = PRIVATE_RUNTIME_S0 / "usr/lib/thebitlab/private-runtime-broker"
+    if (
+        hashlib.sha256(_read_stable_trusted_file(broker)).hexdigest()
+        != state["broker_sha256"]
+        or hashlib.sha256(_read_stable_trusted_file(PRIVATE_RUNTIME_DROPIN)).hexdigest()
+        != state["dropin_sha256"]
+    ):
+        raise ActivationError("Broker/drop-in private-runtime divergente")
+    pin, _ = _private_runtime_json(PRIVATE_RUNTIME_PIN, mode=0o644)
+    if (
+        set(pin) != {
+            "schema_version", "toolchain_id", "toolchain_manifest_sha256",
+            "launcher_sha256", "release_commit",
+        }
+        or pin.get("schema_version") != "thebitlab.private-runtime-pin.v1"
+        or pin.get("toolchain_id") != state["toolchain_id"]
+        or pin.get("toolchain_manifest_sha256")
+        != state["toolchain_manifest_sha256"]
+        or pin.get("launcher_sha256") != state["broker_sha256"]
+        or hashlib.sha256(_read_stable_trusted_file(PRIVATE_RUNTIME_BINARY)).hexdigest()
+        != state["broker_sha256"]
+    ):
+        raise ActivationError("Pin esterno private-runtime divergente")
+    return PrivateRuntimeAuthority(token, state, s0, s1, objects)
+
+
+def _private_runtime_environment() -> Mapping[str, str]:
+    if (
+        os.environ.get("THEBITLAB_EPHEMERAL_CRASH_TEST") == "1"
+        and Path("/run/thebitlab-ephemeral-activation-test").is_file()
+    ):
+        return {
+            name: os.environ[name]
+            for name in (
+                "THEBITLAB_EPHEMERAL_CRASH_TEST",
+                "THEBITLAB_PRIVATE_RUNTIME_CRASH_POINT",
+            )
+            if name in os.environ
+        }
+    return {}
+
+
+def _run_private_runtime(command: str, *arguments: str) -> Mapping[str, Any] | None:
+    pin, _ = _private_runtime_json(PRIVATE_RUNTIME_PIN, mode=0o644)
+    if (
+        pin.get("schema_version") != "thebitlab.private-runtime-pin.v1"
+        or hashlib.sha256(_read_stable_trusted_file(PRIVATE_RUNTIME_BINARY)).hexdigest()
+        != pin.get("launcher_sha256")
+    ):
+        raise ActivationError("Binary private-runtime non coincide col pin esterno")
+    command_line = [str(PRIVATE_RUNTIME_BINARY), command, *arguments]
+    try:
+        result = _stdlib_subprocess.run(
+            command_line, check=False, capture_output=True, text=True, timeout=9,
+            cwd="/", env=_private_runtime_environment(),
+        )
+    except (OSError, _stdlib_subprocess.TimeoutExpired) as exc:
+        raise ActivationError(f"Autorità statica private-runtime fallita: {command}") from exc
+    if result.returncode != 0:
+        raise ActivationError(
+            f"Autorità statica private-runtime {command} rc={result.returncode}: "
+            f"{result.stderr[-500:]}"
+        )
+    if not result.stdout.strip():
+        return None
+    try:
+        report = json.loads(result.stdout)
+    except ValueError as exc:
+        raise ActivationError("Report private-runtime non interpretabile") from exc
+    if not isinstance(report, dict):
+        raise ActivationError("Report private-runtime non oggetto")
+    return report
+
+
+def _ensure_private_runtime(info: BundleInfo | None = None) -> PrivateRuntimeAuthority:
+    authority = _private_runtime_authority(required=False)
+    if authority is not None:
+        matches = info is None or (
+            authority.state["candidate_bundle"] == str(info.path)
+            and authority.state["candidate_lock_sha256"] == info.lock_digest
+        )
+        if matches:
+            return authority
+        if _nginx_processes():
+            raise ActivationError("Runtime nginx appartiene a una candidate diversa")
+        _run_private_runtime("production-cleanup", authority.token)
+    if info is None:
+        raise ActivationError("Candidate richiesta per costruire S1")
+    report = _run_private_runtime(
+        "production-prepare", str(info.path), info.lock_digest
+    )
+    authority = _private_runtime_authority()
+    assert authority is not None
+    if (
+        report is None
+        or report.get("token") != authority.token
+        or report.get("candidate_bundle") != str(info.path)
+        or report.get("candidate_lock_sha256") != info.lock_digest
+    ):
+        raise ActivationError("Prepare report/private-runtime authority divergenti")
+    return authority
+
+
+def _verify_private_candidate_authority(
+    authority: PrivateRuntimeAuthority, info: BundleInfo
+) -> BundleInfo:
+    if (
+        authority.state["candidate_bundle"] != str(info.path)
+        or authority.state["candidate_lock_sha256"] != info.lock_digest
+    ):
+        raise ActivationError("S1 appartiene a una candidate diversa")
+    private_root = PRIVATE_RUNTIME_S1
+    private_bundle = private_root / info.path.relative_to("/")
+    private_deployments = private_root / DEPLOYMENTS_ROOT.relative_to("/")
+    verified = verify_bundle(
+        private_bundle,
+        deployments_root=private_deployments,
+        require_root_owner=True,
+    )
+    if (
+        verified.lock_digest != info.lock_digest
+        or verified.manifest != info.manifest
+        or verified.sources != info.sources
+    ):
+        raise ActivationError("Bundle candidate S1 non coincide con il preflight")
+    for raw_path in (
+        info.manifest["origin"]["tls_certificate_file"],
+        info.manifest["origin"]["tls_private_key_file"],
+    ):
+        lexical = Path(raw_path)
+        identity = authority.objects.get(lexical.as_posix())
+        private_path = private_root / lexical.relative_to("/")
+        if identity is None or not private_path.is_file() or private_path.is_symlink():
+            raise ActivationError(f"Riferimento TLS candidate fuori S1: {lexical}")
+        if hashlib.sha256(_read_stable_trusted_file(private_path)).hexdigest() != identity["sha256"]:
+            raise ActivationError(f"Riferimento TLS candidate mutato in S1: {lexical}")
+    return verified
+
+
+def _run_private_nginx(
+    authority: PrivateRuntimeAuthority, arguments: Sequence[str]
+) -> str:
+    command = [
+        str(PRIVATE_RUNTIME_BINARY), "production-private-exec", authority.token,
+        str(NGINX_BINARY), *arguments,
+    ]
+    try:
+        result = _stdlib_subprocess.run(
+            command, check=False, capture_output=True, text=True, timeout=30,
+            cwd="/", env=_private_runtime_environment(),
+        )
+    except (OSError, _stdlib_subprocess.TimeoutExpired) as exc:
+        raise ActivationError("Validazione nginx candidate privata fallita") from exc
+    if result.returncode != 0:
+        detail = "\n".join((result.stdout + result.stderr).splitlines()[-20:])
+        raise ActivationError(f"nginx private {' '.join(arguments)} fallito:\n{detail}")
+    return result.stdout
+
+
+def _teardown_private_runtime() -> None:
+    authority = _private_runtime_authority(required=False)
+    if authority is None:
+        return
+    if _nginx_processes():
+        raise ActivationError("Teardown private-runtime con nginx ancora attivo")
+    _run_private_runtime("production-cleanup", authority.token)
+    if PRIVATE_RUNTIME_STATE.exists():
+        raise ActivationError("State private-runtime sopravvive al teardown")
 
 
 EXPECTED_PRESENT = "EXPECTED_PRESENT"
@@ -1888,6 +2368,29 @@ def _remove_symlink(path: Path) -> None:
         _fsync_directory(path.parent)
 
 
+def _set_candidate_nginx_symlink(path: Path, target: str | None) -> None:
+    """Persist the exact candidate delta below the immutable nginx base fence."""
+
+    if path not in {DISTRO_DEFAULT, PROCESS_LINK, FORMAT_LINK, SITE_LINK}:
+        raise ActivationError(f"Path fuori dalla closure candidate nginx: {path}")
+    if not _KERNEL_FENCE_ENABLED:
+        if target is None:
+            _remove_symlink(path)
+        else:
+            _replace_symlink(path, target)
+        return
+    if (
+        _TRUSTED_BASE_FENCE is None
+        or _TRUSTED_SESSION_OWNER_PID != os.getpid()
+        or _TRUSTED_BASE_FENCE.transaction is None
+    ):
+        raise ActivationError("Base fence assente durante materializzazione candidate")
+    try:
+        _TRUSTED_BASE_FENCE.set_underlying_candidate_symlink(path, target)
+    except TrustedActivationFenceError as exc:
+        raise ActivationError(f"Candidate nginx delta non materializzabile: {path}") from exc
+
+
 def _directory_entries(path: Path) -> set[str]:
     try:
         return {entry.name for entry in path.iterdir()}
@@ -2866,6 +3369,13 @@ def _classify_existing_topology(
 def verify_host_preflight(bundle: Path, *, guard_required: bool | None = False) -> Preflight:
     if os.geteuid() != 0:
         raise ActivationError("Il preflight host Ubuntu richiede root")
+    # Reject closed scheduler inputs before spending the executor lease on a
+    # manager reload. These attestors are pure/read-only inside the already
+    # sealed execution fence and are repeated by the boot-surface proof below.
+    _attest_apt_inputs()
+    _attest_e2scrub_inputs()
+    _attest_motd_news_inputs()
+    _attest_logrotate_inputs()
     _attest_systemd_boot_surface()
     layout_module_sources = verify_ubuntu_layout()
     candidate = verify_bundle(bundle)
@@ -3096,6 +3606,79 @@ def _state_exists(path: Path) -> bool:
     return path.exists() or path.is_symlink()
 
 
+def _mark_executor_safe_boundary_if_pending() -> None:
+    if _KERNEL_FENCE_ENABLED:
+        if _EXECUTOR_INODE_LEASE is None:
+            raise ActivationError("Safe boundary executor senza lease transaction")
+        if _EXECUTOR_INODE_LEASE.protected_use_pending:
+            try:
+                _EXECUTOR_INODE_LEASE.mark_safe_boundary()
+            except TrustedActivationFenceError as exc:
+                raise ActivationError(f"Safe boundary executor non raggiunta: {exc}") from exc
+
+
+def _force_safe_executor_abort_if_pending() -> None:
+    """Use only cgroup-v2 kernel control; never launch another executor slot."""
+
+    lease = _EXECUTOR_INODE_LEASE
+    if lease is None or not lease.protected_use_pending:
+        return
+    if lease.protected_action == "daemon-reload":
+        raise ActivationError(
+            "daemon-reload in-flight senza safe terminal proof; lease non riutilizzabile"
+        )
+    cgroup = Path("/sys/fs/cgroup/system.slice/nginx.service")
+    kill_control = cgroup / "cgroup.kill"
+    try:
+        if _nginx_processes():
+            metadata = kill_control.stat()
+            if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != 0:
+                raise ActivationError("cgroup.kill nginx non canonico")
+            kill_control.write_text("1\n", encoding="ascii")
+        deadline = time.monotonic() + 2.0
+        while True:
+            if not _nginx_processes() and not any(_canonical_listener_owners().values()):
+                lease.mark_safe_abort_boundary()
+                return
+            if time.monotonic() >= deadline:
+                raise ActivationError(
+                    "Safe abort executor non ha raggiunto cgroup/process/listener terminale"
+                )
+            time.sleep(0.01)
+    except OSError as exc:
+        raise ActivationError("Safe abort executor tramite cgroup kernel fallita") from exc
+
+
+def _renew_executor_inode_lease_for_fresh_slot() -> None:
+    global _EXECUTOR_INODE_LEASE
+    current = _EXECUTOR_INODE_LEASE
+    if (
+        not _KERNEL_FENCE_ENABLED
+        or not _EXECUTION_FENCE_DEPTH
+        or _ACTIVE_EXECUTION_FENCE is None
+        or current is None
+        or current.protected_use_pending
+        or current.break_requested
+    ):
+        raise ActivationError("Executor lease non rinnovabile per fresh slot")
+    expected_identity = current.durable_record()
+    renewed: ExecutorInodeReadLease | None = None
+    try:
+        current.close()
+        _EXECUTOR_INODE_LEASE = None
+        renewed = ExecutorInodeReadLease()
+        renewed.__enter__()
+        if renewed.durable_record() != expected_identity:
+            raise TrustedActivationFenceError(
+                "Fresh executor inode lease divergente dalla Stage-M sealed"
+            )
+    except TrustedActivationFenceError as exc:
+        if renewed is not None:
+            renewed.close()
+        raise ActivationError("Fresh executor inode lease non acquisibile") from exc
+    _EXECUTOR_INODE_LEASE = renewed
+
+
 def _systemctl_result(arguments: Sequence[str]) -> tuple[int, str]:
     action = next((item for item in arguments if not item.startswith("-")), "")
     execution_bearing = action in SYSTEMCTL_EXECUTION_ACTIONS or (
@@ -3109,12 +3692,41 @@ def _systemctl_result(arguments: Sequence[str]) -> tuple[int, str]:
         with _trusted_activation_session():
             with _trusted_execution_fence():
                 return _systemctl_result(arguments)
+    if _KERNEL_FENCE_ENABLED and execution_bearing:
+        if _EXECUTOR_INODE_LEASE is None:
+            raise ActivationError("Operazione systemd senza executor inode lease")
+        # Stage-M construction and static pre-use attestations are protected by
+        # the initial lease.  Once its immutable projections are sealed, bind
+        # every execution-bearing manager slot to a fresh full-budget lease on
+        # the same exact PID1 executor identity.  Reacquisition fails closed if
+        # a writer appears in the handoff or the manager FD identity changes.
+        _renew_executor_inode_lease_for_fresh_slot()
+        try:
+            assert _EXECUTOR_INODE_LEASE is not None
+            _EXECUTOR_INODE_LEASE.assert_authorized_new_use(action)
+        except TrustedActivationFenceError as exc:
+            raise ActivationError(f"Executor inode non autorizza {action}: {exc}") from exc
+    command_timeout = 30.0
+    if _KERNEL_FENCE_ENABLED and execution_bearing:
+        assert _EXECUTOR_INODE_LEASE is not None
+        # Keep two seconds inside the same ten-second authority for target proof
+        # or direct cgroup abort. The deadline is never reset by a later phase.
+        command_timeout = max(
+            0.05, min(command_timeout, _EXECUTOR_INODE_LEASE.deadline_remaining - 2.0)
+        )
     try:
         result = subprocess.run(
-            [str(SYSTEMCTL_BINARY), *arguments], check=False, capture_output=True, text=True, timeout=30
+            [str(SYSTEMCTL_BINARY), *arguments], check=False, capture_output=True,
+            text=True, timeout=command_timeout
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ActivationError("systemctl non disponibile o non responsivo") from exc
+    if _KERNEL_FENCE_ENABLED and execution_bearing:
+        try:
+            assert _EXECUTOR_INODE_LEASE is not None
+            _EXECUTOR_INODE_LEASE.assert_inflight_protected()
+        except TrustedActivationFenceError as exc:
+            raise ActivationError(f"Protezione executor persa durante {action}: {exc}") from exc
     output = result.stdout if result.returncode == 0 else result.stdout + result.stderr
     return result.returncode, output.strip()
 
@@ -4751,6 +5363,7 @@ def _attest_boot_reachable_package_unit_files(
         relevant_units, ("LoadState", "FragmentPath", "DropInPaths")
     )
     package_inputs: set[Path] = set()
+    private_runtime = _private_runtime_authority(required=False)
     for unit in relevant_units:
         load_state = properties[unit]["LoadState"]
         if load_state in {"not-found", "masked"}:
@@ -4776,6 +5389,12 @@ def _attest_boot_reachable_package_unit_files(
                 continue
             if DEPLOYMENTS_ROOT in path.parents:
                 _verify_trusted_ancestry(path, DEPLOYMENTS_ROOT)
+                continue
+            if private_runtime is not None and path == PRIVATE_RUNTIME_DROPIN:
+                if hashlib.sha256(_read_stable_trusted_file(path)).hexdigest() != (
+                    private_runtime.state["dropin_sha256"]
+                ):
+                    raise ActivationError("Drop-in private boot graph mutato")
                 continue
             package_inputs.add(path)
     return _attest_package_input_files(
@@ -5025,6 +5644,14 @@ def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None
             raise ActivationError(f"UNKNOWN EXECUTION POLICY boot service: {service}")
         if policy.unit_name != service:
             raise ActivationError(f"Service identity policy divergente: {service}")
+        if service == "nginx.service" and _private_runtime_authority(required=False) is not None:
+            _attest_effective_nginx_unit(
+                expect_running=None,
+                allowed_unit_file_states=(
+                    PREFLIGHT_NGINX_UNIT_FILE_STATES | MASKED_NGINX_UNIT_FILE_STATES
+                ),
+            )
+            continue
         try:
             actual_dropins = (
                 tuple(Path(item) for item in shlex.split(values["DropInPaths"], posix=True))
@@ -5155,6 +5782,9 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
     _attest_systemd_generators()
     if _GENERATED_OUTPUT_FENCE is None:
         code, _ = _systemctl_result(["daemon-reload"])
+        # daemon-reload is synchronous: all manager executor children are
+        # terminal at return.  No service target has been authorized yet.
+        _mark_executor_safe_boundary_if_pending()
         if code != 0:
             raise ActivationError("systemd daemon-reload fallita durante boot attestation")
         _attest_systemd_generators()
@@ -5213,6 +5843,7 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
             raise ActivationError(f"Unit file duplicata nell'inventario: {unit_name}")
         unit_file_states[unit_name] = unit_state
     trusted_units: set[str] = set(trusted_generated_units)
+    private_runtime = _private_runtime_authority(required=False)
 
     for directory in directories:
         if any(directory == root or root in directory.parents for root in generated_roots):
@@ -5220,6 +5851,11 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
         if directory in package_owned:
             continue
         if directory.name.endswith(SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES):
+            continue
+        if private_runtime is not None and directory == PRIVATE_RUNTIME_DROPIN.parent:
+            _assert_trusted_metadata(
+                directory, directory=True, require_root_owner=True
+            )
             continue
         raise ActivationError(f"Directory systemd locale/unmanaged: {directory}")
 
@@ -5256,6 +5892,14 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
         if path == NGINX_MIGRATION_GUARD:
             if _assert_systemd_symlink_metadata(path) != "/dev/null":
                 raise ActivationError("Migration guard systemd inatteso")
+            trusted_units.add("nginx.service")
+            continue
+        if private_runtime is not None and path == PRIVATE_RUNTIME_DROPIN:
+            _assert_trusted_metadata(path, directory=False, require_root_owner=True)
+            if hashlib.sha256(_read_stable_trusted_file(path)).hexdigest() != (
+                private_runtime.state["dropin_sha256"]
+            ):
+                raise ActivationError("Drop-in private-runtime fuori authority")
             trusted_units.add("nginx.service")
             continue
         if path not in resolved_targets:
@@ -5359,7 +6003,7 @@ def _require_nginx_not_running() -> None:
 
 @_in_trusted_activation_session
 @_in_trusted_execution_fence
-def _stop_nginx_service(*, reload_frozen_graph: bool = True) -> None:
+def _stop_nginx_service_protected(*, reload_frozen_graph: bool = True) -> None:
     state, state_code = _nginx_service_state()
     if state_code == 3 and state in {"inactive", "failed"}:
         _attest_effective_nginx_unit(
@@ -5387,6 +6031,27 @@ def _stop_nginx_service(*, reload_frozen_graph: bool = True) -> None:
         summary = " | ".join(detail.splitlines()[-3:])
         raise ActivationError(f"Arresto nginx.service fallito: {summary}")
     _require_nginx_not_running()
+    _assert_zero_nginx_processes()
+    _assert_no_canonical_listeners()
+    _mark_executor_safe_boundary_if_pending()
+
+
+def _stop_nginx_service(*, reload_frozen_graph: bool = True) -> None:
+    nested_execution = bool(_EXECUTION_FENCE_DEPTH)
+    _stop_nginx_service_protected(reload_frozen_graph=reload_frozen_graph)
+    if nested_execution or _private_runtime_authority(required=False) is None:
+        return
+    _teardown_private_runtime()
+    # The loaded graph still names the sealed broker until a fresh manager
+    # transaction adopts the now package-only unit. This is a distinct lease.
+    with _trusted_activation_session():
+        with _trusted_execution_fence():
+            code, detail = _systemctl_result(["daemon-reload"])
+            if code != 0:
+                raise ActivationError(
+                    f"Reload manager dopo teardown private-runtime fallita: {detail[-300:]}"
+                )
+            _mark_executor_safe_boundary_if_pending()
 
 
 def _systemd_property(
@@ -5481,15 +6146,22 @@ def _attest_effective_nginx_unit(
         or not allowed_unit_file_states <= supported_unit_file_states
     ):
         raise ActivationError("Allowlist UnitFileState nginx attesa non supportata")
+    private_runtime = _private_runtime_authority(required=False)
     scalar_contract = {
         "Id": "nginx.service",
         "LoadState": "loaded",
         "Type": "forking",
-        "PIDFile": "/run/nginx.pid",
+        "PIDFile": (
+            str(PRIVATE_RUNTIME_ROOT / "runtime/run/nginx.pid")
+            if private_runtime is not None
+            else "/run/nginx.pid"
+        ),
         "User": "",
         "Group": "",
         "SourcePath": "",
-        "DropInPaths": "",
+        "DropInPaths": (
+            str(PRIVATE_RUNTIME_DROPIN) if private_runtime is not None else ""
+        ),
         "KillMode": "mixed",
     }
     for name, expected in scalar_contract.items():
@@ -5523,27 +6195,84 @@ def _attest_effective_nginx_unit(
         )
 
     command_policies: list[BootExecCommandPolicy] = []
+    private_contract: Mapping[
+        str, tuple[tuple[Path, tuple[str, ...], bool], ...]
+    ] = {}
+    if private_runtime is not None:
+        broker = PRIVATE_RUNTIME_S0 / "usr/lib/thebitlab/private-runtime-broker"
+        prefix = ("production-private-exec", private_runtime.token)
+        private_contract = {
+            "ExecCondition": (),
+            "ExecStartPre": ((
+                broker,
+                (*prefix, "/usr/sbin/nginx", "-t", "-q", "-g", "daemon", "on;", "master_process", "on;"),
+                False,
+            ),),
+            "ExecStart": ((
+                broker,
+                (*prefix, "/usr/sbin/nginx", "-g", "daemon", "on;", "master_process", "on;"),
+                False,
+            ),),
+            "ExecStartPost": (),
+            "ExecReload": ((
+                broker,
+                (*prefix, "/usr/sbin/nginx", "-g", "daemon", "on;", "master_process", "on;", "-s", "reload"),
+                False,
+            ),),
+            "ExecStop": ((
+                broker,
+                (*prefix, "/usr/sbin/start-stop-daemon", "--quiet", "--stop", "--retry", "QUIT/5", "--pidfile", "/run/nginx.pid"),
+                True,
+            ),),
+            "ExecStopPost": (),
+        }
     for name in SYSTEMD_EXEC_SLOTS:
         raw = _systemd_property(name, allow_empty=True)
         actual = _parse_systemd_exec(raw, name=name, allow_missing=True) if raw else ()
         expected_policies = policy.exec_slots.get(name, ())
-        expected = tuple(
-            (command.file.path, command.arguments, command.ignore_errors)
-            for command in expected_policies
+        expected = private_contract.get(
+            name,
+            tuple(
+                (command.file.path, command.arguments, command.ignore_errors)
+                for command in expected_policies
+            ),
         )
         if actual != expected:
-            raise ActivationError(f"Contratto systemd nginx divergente: {name}")
-        command_policies.extend(expected_policies)
+            detail = f" actual={actual!r} expected={expected!r}" if private_runtime else ""
+            raise ActivationError(f"Contratto systemd nginx divergente: {name}{detail}")
+        if private_runtime is None:
+            command_policies.extend(expected_policies)
     _attest_expected_package_files(
         (
             policy.fragment,
-            *policy.dropins,
+            *(() if private_runtime is not None else policy.dropins),
             *(command.file for command in command_policies),
         ),
         label="effective nginx seven-slot identity",
     )
-    _attest_nginx_package_behavior_files()
-    _verify_modules_enabled_entries()
+    if private_runtime is None:
+        _attest_nginx_package_behavior_files()
+        _verify_modules_enabled_entries()
+    else:
+        required = {
+            "/usr/sbin/nginx", "/usr/sbin/start-stop-daemon",
+            "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+            "/usr/lib/x86_64-linux-gnu/libc.so.6",
+            "/usr/lib/x86_64-linux-gnu/libssl.so.3",
+            "/usr/lib/x86_64-linux-gnu/libcrypto.so.3",
+            "/usr/lib/nginx/modules/ngx_http_geoip2_module.so",
+            "/usr/lib/nginx/modules/ngx_stream_module.so",
+        }
+        if not required <= set(private_runtime.objects):
+            raise ActivationError(
+                f"Closure target private-runtime incompleta: {sorted(required - set(private_runtime.objects))}"
+            )
+        for lexical in required:
+            expected_digest = NATIVE_CODE_REVIEWED_SHA256.get(lexical)
+            if expected_digest is not None and (
+                private_runtime.objects[lexical]["sha256"] != expected_digest
+            ):
+                raise ActivationError(f"Identity S0/S1 fuori review: {lexical}")
 
     raw_main_pid = _systemd_property("MainPID")
     control_group = _systemd_property("ControlGroup", allow_empty=True)
@@ -5564,13 +6293,18 @@ def _attest_effective_nginx_unit(
     return EffectiveNginxUnit(main_pid, control_group)
 
 
-def _attest_native_runtime_maps(pid: int) -> frozenset[Path]:
-    """Bind nginx executable mappings to the frozen reviewed native authority."""
+def _attest_native_runtime_maps(
+    pid: int,
+    *,
+    required_names: frozenset[str] | None = None,
+) -> frozenset[Path]:
+    """Bind executable VMAs to the frozen reviewed native authority."""
 
     try:
         lines = (PROC_ROOT / str(pid) / "maps").read_text(encoding="ascii").splitlines()
     except OSError as exc:
         raise ActivationError(f"Native runtime maps non leggibili: {pid}") from exc
+    private_runtime = _private_runtime_authority(required=False)
     mapped: set[Path] = set()
     for line in lines:
         fields = line.split(maxsplit=5)
@@ -5584,55 +6318,95 @@ def _attest_native_runtime_maps(pid: int) -> frozenset[Path]:
         if raw.endswith(" (deleted)"):
             raise ActivationError(f"Native executable mapping deleted: {raw}")
         lexical = _canonical_usrmerge_spelling(Path(raw)).as_posix()
-        expected = NATIVE_CODE_REVIEWED_SHA256.get(lexical)
+        reviewed = (
+            {path: str(identity["sha256"]) for path, identity in private_runtime.objects.items()}
+            if private_runtime is not None
+            else NATIVE_CODE_REVIEWED_SHA256
+        )
+        expected = reviewed.get(lexical)
         if expected is None:
-            # Once systemd retains the detached snapshot namespace, procfs may
-            # render a mapped dentry relative to the detached mount root (for
-            # example /nginx or /nginx/modules/...). Resolve only when exactly
-            # one repository-reviewed frozen root yields a known identity.
+            # A detached mount may render a dentry relative to its mount root.
+            # Resolve only when exactly one sealed/reviewed root is possible.
             candidates = [
                 prefix + raw
                 for prefix in ("/usr/bin", "/usr/sbin", "/usr/lib", "/usr/lib64")
-                if prefix + raw in NATIVE_CODE_REVIEWED_SHA256
+                if prefix + raw in reviewed
             ]
             if len(candidates) != 1:
                 raise ActivationError(f"Native executable mapping fuori closure: {raw}")
             lexical = candidates[0]
-            expected = NATIVE_CODE_REVIEWED_SHA256[lexical]
-        process_view = PROC_ROOT / str(pid) / "root" / lexical.lstrip("/")
+            expected = reviewed[lexical]
+        mapping_range = fields[0]
+        if re.fullmatch(r"[0-9a-f]+-[0-9a-f]+", mapping_range) is None:
+            raise ActivationError(f"Native mapping range non canonico: {mapping_range}")
+        map_file = PROC_ROOT / str(pid) / "map_files" / mapping_range
+        descriptor = -1
+        digest = hashlib.sha256()
+        map_files_direct = True
         try:
-            actual = hashlib.sha256(_read_stable_trusted_file(process_view)).hexdigest()
-        except ActivationError:
-            # /proc ancestry is kernel authority, not a host package path. Use a
-            # descriptor-stable direct read while retaining exact reviewed bytes.
-            digest = hashlib.sha256()
+            # map_files opens the object actually mapped, not a same-path object
+            # re-resolved through overlayfs after the mapping was established.
+            descriptor = os.open(map_file, os.O_RDONLY | os.O_CLOEXEC)
+        except OSError as map_files_error:
+            if private_runtime is None:
+                raise ActivationError(
+                    f"Native map_files non attestabile: {raw}: {map_files_error}"
+                ) from map_files_error
+            # Some detached overlay VMAs cannot be reopened through map_files.
+            # The private root itself is immutable and namespace/root-attested,
+            # so its exact lexical object is a safe fallback, still read through
+            # one identity-stable descriptor and bound to the reviewed digest.
+            map_files_direct = False
+            process_view = PROC_ROOT / str(pid) / "root" / lexical.lstrip("/")
             try:
                 descriptor = os.open(
                     process_view, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW
                 )
-                before = os.fstat(descriptor)
-                while True:
-                    chunk = os.read(descriptor, 1024 * 1024)
-                    if not chunk:
-                        break
-                    digest.update(chunk)
-                after = os.fstat(descriptor)
             except OSError as exc:
-                raise ActivationError(f"Native mapping non attestabile: {raw}") from exc
-            finally:
-                if "descriptor" in locals():
-                    os.close(descriptor)
-                    del descriptor
-            if _file_identity(before) != _file_identity(after):
-                raise ActivationError(f"Native mapping mutata in lettura: {raw}")
-            actual = digest.hexdigest()
-        if actual != expected:
+                raise ActivationError(
+                    f"Native private-root mapping non attestabile: {raw}: {exc}"
+                ) from exc
+        try:
+            before = os.fstat(descriptor)
+            while True:
+                chunk = os.read(descriptor, 1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+            after = os.fstat(descriptor)
+            device_major, device_minor = (
+                int(component, 16) for component in fields[3].split(":", 1)
+            )
+            mapped_inode = int(fields[4])
+        except (OSError, ValueError) as exc:
+            raise ActivationError(f"Native mapping non attestabile: {raw}: {exc}") from exc
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+        if _file_identity(before) != _file_identity(after):
+            authority = "map_files" if map_files_direct else "private root"
+            raise ActivationError(f"Native {authority} mutata in lettura: {raw}")
+        if private_runtime is not None:
+            # overlayfs may expose distinct map-line, map_files and lower-layer
+            # inode presentations. The map_files FD is selected by the exact VMA,
+            # remains identity-stable above, and is content-bound below to the
+            # reviewed S0/S1 manifest. Do not weaken that proof to pathname stat.
+            if private_runtime.objects[lexical].get("stage") not in {"S0", "S1"}:
+                raise ActivationError(f"Native mapping senza stage authority: {raw}")
+        elif (
+            os.major(after.st_dev), os.minor(after.st_dev), after.st_ino
+        ) != (device_major, device_minor, mapped_inode):
+            raise ActivationError(
+                f"Native mapped object non coincide con maps dev/inode: {raw}"
+            )
+        if digest.hexdigest() != expected:
             raise ActivationError(f"Native runtime mapping digest divergente: {raw}")
         mapped.add(Path(lexical))
-    required_names = {
-        "nginx", "ld-linux-x86-64.so.2", "libc.so.6", "libssl.so.3", "libcrypto.so.3",
-        "ngx_http_geoip2_module.so", "ngx_stream_module.so",
-    }
+    if required_names is None:
+        required_names = frozenset({
+            "nginx", "ld-linux-x86-64.so.2", "libc.so.6", "libssl.so.3",
+            "libcrypto.so.3", "ngx_http_geoip2_module.so", "ngx_stream_module.so",
+        })
     present_names = {path.name for path in mapped}
     if not required_names <= present_names:
         raise ActivationError(
@@ -5729,8 +6503,37 @@ def _is_reviewed_frozen_nginx_process(
             os.close(descriptor)
 
 
+def _is_reviewed_private_nginx_process(
+    pid: int,
+    groups: frozenset[str],
+    private_runtime: PrivateRuntimeAuthority | None,
+) -> bool:
+    """Recognize loader-explicit nginx only through sealed private authority."""
+
+    if private_runtime is None or NGINX_CONTROL_GROUP not in groups:
+        return False
+    try:
+        process_root = (PROC_ROOT / str(pid) / "root").stat()
+        merged_root = PRIVATE_RUNTIME_MERGED.stat()
+        process_namespace = os.readlink(PROC_ROOT / str(pid) / "ns/mnt")
+        manager_namespace = os.readlink(PROC_ROOT / "1/ns/mnt")
+    except OSError:
+        return False
+    if (
+        (process_root.st_dev, process_root.st_ino)
+        != (merged_root.st_dev, merged_root.st_ino)
+        or process_namespace == manager_namespace
+    ):
+        return False
+    try:
+        mappings = _attest_native_runtime_maps(pid)
+    except ActivationError:
+        return False
+    return Path("/usr/sbin/nginx") in mappings
+
+
 def _nginx_processes() -> tuple[NginxProcess, ...]:
-    """Find reviewed nginx processes by live executable object, never PID/name/argv."""
+    """Find reviewed nginx by host executable or sealed private root+mappings."""
 
     try:
         binary = NGINX_BINARY.stat()
@@ -5740,6 +6543,7 @@ def _nginx_processes() -> tuple[NginxProcess, ...]:
         raise ActivationError("Enumerazione processi nginx non disponibile") from exc
     identity = (binary.st_dev, binary.st_ino)
     canonical_spellings = {str(NGINX_BINARY), str(canonical_binary)}
+    private_runtime = _private_runtime_authority(required=False)
     found: list[NginxProcess] = []
     for entry in entries:
         if not entry.name.isdecimal():
@@ -5753,14 +6557,15 @@ def _nginx_processes() -> tuple[NginxProcess, ...]:
             if exc.errno in {errno.ENOENT, errno.ESRCH}:
                 continue
             raise ActivationError(f"Executable processo {pid} non verificabile") from exc
+        groups = _read_process_control_groups(pid)
         lexical_name = executable_name.removesuffix(" (deleted)")
         if (
             (executable.st_dev, executable.st_ino) != identity
             and lexical_name not in canonical_spellings
             and not _is_reviewed_frozen_nginx_process(pid, executable, lexical_name)
+            and not _is_reviewed_private_nginx_process(pid, groups, private_runtime)
         ):
             continue
-        groups = _read_process_control_groups(pid)
         if groups:
             found.append(NginxProcess(pid, groups))
     return tuple(sorted(found, key=lambda process: process.pid))
@@ -5961,23 +6766,22 @@ def _boot_id() -> str:
 
 
 def _ensure_logrotate_runtime_directory() -> None:
-    if not LOGROTATE_RUNTIME_ROOT.exists():
-        LOGROTATE_RUNTIME_ROOT.mkdir(mode=0o755, parents=False)
-        _fsync_directory(LOGROTATE_RUNTIME_ROOT.parent)
+    try:
+        ensure_runtime_authority_directory("logrotate")
+    except TrustedActivationFenceError as exc:
+        raise ActivationError("Runtime logrotate authority non canonica") from exc
     _assert_trusted_metadata(
         LOGROTATE_RUNTIME_ROOT, directory=True, require_root_owner=True
     )
-    root_metadata = LOGROTATE_RUNTIME_ROOT.stat()
-    if stat.S_IMODE(root_metadata.st_mode) != 0o755:
-        raise ActivationError("Runtime root logrotate deve avere mode 0755")
-    if not LOGROTATE_RUNTIME_DIRECTORY.exists():
-        LOGROTATE_RUNTIME_DIRECTORY.mkdir(mode=0o700, parents=False)
-        _fsync_directory(LOGROTATE_RUNTIME_ROOT)
+    root_metadata = LOGROTATE_RUNTIME_ROOT.lstat()
+    if root_metadata.st_gid != 0 or stat.S_IMODE(root_metadata.st_mode) != 0o755:
+        raise ActivationError("Runtime root logrotate deve essere root:root 0755")
     _assert_trusted_metadata(
         LOGROTATE_RUNTIME_DIRECTORY, directory=True, require_root_owner=True
     )
-    if stat.S_IMODE(LOGROTATE_RUNTIME_DIRECTORY.stat().st_mode) != 0o700:
-        raise ActivationError("Directory snapshot logrotate deve avere mode 0700")
+    child_metadata = LOGROTATE_RUNTIME_DIRECTORY.lstat()
+    if child_metadata.st_gid != 0 or stat.S_IMODE(child_metadata.st_mode) != 0o700:
+        raise ActivationError("Directory snapshot logrotate deve essere root:root 0700")
 
 
 def _logrotate_snapshot_security(path: Path = LOGROTATE_SNAPSHOT) -> os.stat_result:
@@ -6190,7 +6994,15 @@ def logrotate_reopen() -> None:
             _fsync_directory(LOGROTATE_RUNTIME_DIRECTORY)
             return
         if time.monotonic() >= deadline:
-            raise ActivationError("Timeout reopen nginx: transizione FD/inode non provata")
+            detail = ",".join(
+                f"{device}:{inode}={counts[(device, inode)]}/"
+                f"{confirmed_counts[(device, inode)]}"
+                for device, inode in sorted(watched)
+            )
+            raise ActivationError(
+                "Timeout reopen nginx: transizione FD/inode non provata "
+                f"pids={[process.pid for process in final_processes]} counts={detail}"
+            )
         time.sleep(LOGROTATE_REOPEN_POLL_SECONDS)
 
 
@@ -6259,6 +7071,9 @@ def _verify_migration_guard() -> None:
             _stop_nginx_service(reload_frozen_graph=False)
             raise ActivationError(f"Migration guard bypassabile tramite start {unit_name}")
         _require_nginx_not_running()
+        _assert_zero_nginx_processes()
+        _assert_no_canonical_listeners()
+        _mark_executor_safe_boundary_if_pending()
     _assert_zero_nginx_processes()
     _assert_no_canonical_listeners()
 
@@ -6310,6 +7125,10 @@ def _install_migration_guard() -> None:
             if code != 0:
                 summary = " | ".join(detail.splitlines()[-3:])
                 raise ActivationError(f"Final stop sotto mask fallito: {summary}")
+            _require_nginx_not_running()
+            _assert_zero_nginx_processes()
+            _assert_no_canonical_listeners()
+            _mark_executor_safe_boundary_if_pending()
         elif state_code != 3 or state not in {"inactive", "failed"}:
             raise ActivationError(f"nginx.service ambigua dopo mask: {state}")
         _verify_migration_guard()
@@ -6341,7 +7160,11 @@ def _remove_migration_guard() -> None:
 
 
 @_in_trusted_activation_session
-def _start_nginx_service() -> None:
+def _start_nginx_service(info: BundleInfo | None = None) -> None:
+    # S0/S1 and their immutable S1:S0 composition live for the whole service
+    # lifetime. They are sealed before Stage-M snapshots the manager drop-in.
+    if _KERNEL_FENCE_ENABLED:
+        _ensure_private_runtime(info)
     # Freeze -> attest -> reload -> seven-slot late check -> start -> runtime proof.
     # The service remains disabled throughout this execution-bearing boundary.
     with _trusted_execution_fence():
@@ -6361,6 +7184,7 @@ def _start_nginx_service() -> None:
             allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
         )
         _attest_nginx_service_runtime(disabled_unit)
+        _mark_executor_safe_boundary_if_pending()
         _fault("after_nginx_runtime_attestation")
 
     # Persist only the exact wants link through the hidden underlying anchor while
@@ -6388,27 +7212,51 @@ def _start_nginx_service() -> None:
 
 
 def _apply_bundle_links(bundle: Path) -> None:
-    _remove_symlink(DISTRO_DEFAULT)
+    _set_candidate_nginx_symlink(DISTRO_DEFAULT, None)
     _replace_symlink(CURRENT_LINK, str(bundle))
     for path, target in INTEGRATION_LINKS.items():
-        _replace_symlink(path, target)
+        if path in {PROCESS_LINK, FORMAT_LINK, SITE_LINK}:
+            _set_candidate_nginx_symlink(path, target)
+        else:
+            _replace_symlink(path, target)
 
 
 @_in_trusted_activation_session
 @_in_trusted_execution_fence
 def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> None:
-    _attest_systemd_boot_surface()
     verified = verify_bundle(info.path)
-    trusted_module_loads = verify_host_configuration_trust(
-        verified, guard_required=guard_required, require_complete_links=True
-    )
     if verified.lock_digest != info.lock_digest:
         raise ActivationError("Bundle mutato durante activation")
-    _fault("before_nginx_test")
-    _run([str(NGINX_BINARY), "-t", "-c", str(NGINX_CONFIG)])
-    _fault("after_nginx_test")
+    authority = _private_runtime_authority(required=False)
+    if authority is None:
+        _attest_systemd_boot_surface()
+        trusted_module_loads = verify_host_configuration_trust(
+            verified, guard_required=guard_required, require_complete_links=True
+        )
+        _fault("before_nginx_test")
+        _run([str(NGINX_BINARY), "-t", "-c", str(NGINX_CONFIG)])
+        _fault("after_nginx_test")
+        effective = _nginx_effective()
+    else:
+        private_verified = _verify_private_candidate_authority(authority, verified)
+        _attest_nginx_package_behavior_files()
+        trusted_module_loads = _verify_modules_enabled_entries()
+        _attest_logrotate_inputs()
+        for path in (LOGROTATE_LINK, SYSTEMD_LINK):
+            _assert_root_symlink(path, INTEGRATION_LINKS[path])
+        if guard_required:
+            _verify_migration_guard()
+        _fault("before_nginx_test")
+        _run_private_nginx(authority, ("-t", "-c", str(NGINX_CONFIG)))
+        _fault("after_nginx_test")
+        effective = _run_private_nginx(
+            authority, ("-T", "-c", str(NGINX_CONFIG))
+        )
+        if not effective.strip():
+            raise ActivationError("nginx -T private non ha prodotto configurazione")
+        verified = private_verified
     validate_effective_nginx(
-        _nginx_effective(),
+        effective,
         verified.manifest,
         topology="v2",
         expected_sources=verified.sources,
@@ -6419,11 +7267,16 @@ def _validate_activated(info: BundleInfo, *, guard_required: bool = True) -> Non
     _fault("after_logrotate_validation")
     _run([str(SYSTEMD_ANALYZE_BINARY), "verify", str(SYSTEMD_LINK)])
     _fault("after_systemd_validation")
-    final_module_sources = verify_host_configuration_trust(
-        verified, guard_required=guard_required, require_complete_links=True
-    )
-    if final_module_sources != trusted_module_loads:
-        raise ActivationError("Inventario moduli nginx mutato durante la validazione")
+    if authority is None:
+        final_module_sources = verify_host_configuration_trust(
+            verified, guard_required=guard_required, require_complete_links=True
+        )
+        if final_module_sources != trusted_module_loads:
+            raise ActivationError("Inventario moduli nginx mutato durante la validazione")
+    else:
+        final_authority = _private_runtime_authority()
+        assert final_authority is not None
+        _verify_private_candidate_authority(final_authority, info)
 
 
 def _state_for(preflight: Preflight) -> dict[str, Any]:
@@ -6476,15 +7329,10 @@ def _finish_transition(
         verify_host_configuration_trust(target, guard_required=True)
         prepare_log_directory(target.manifest)
         verify_host_configuration_trust(target, guard_required=True)
-        _remove_symlink(DISTRO_DEFAULT)
+        _apply_bundle_links(target.path)
         _fault("after_distro_default_disable")
-        _replace_symlink(CURRENT_LINK, str(target.path))
         _fault("after_current_switch")
-        for path, link_target in INTEGRATION_LINKS.items():
-            _replace_symlink(path, link_target)
-        verify_host_configuration_trust(
-            target, guard_required=True, require_complete_links=True
-        )
+        verify_host_configuration_trust(target, guard_required=True)
         _write_status(state_path, state, switched)
         _fault("after_switched_state")
         status = switched
@@ -6492,9 +7340,9 @@ def _finish_transition(
     if status == switched:
         # Reapply idempotently: a crash may have persisted only a prefix of the symlink set.
         _apply_bundle_links(target.path)
-        verify_host_configuration_trust(
-            target, guard_required=True, require_complete_links=True
-        )
+        verify_host_configuration_trust(target, guard_required=True)
+        if _KERNEL_FENCE_ENABLED:
+            _ensure_private_runtime(target)
         _fault("before_validation")
         _validate_activated(target, guard_required=True)
         _write_status(state_path, state, validated)
@@ -6650,7 +7498,7 @@ def complete(state_path: Path, archive_path: Path) -> None:
     _fsync_directory(archive_path.parent)
 
 
-def main(argv: list[str] | None = None) -> int:
+def _main(argv: list[str] | None = None) -> int:
     try:
         _require_trusted_runtime()
     except ActivationError as exc:
@@ -6699,6 +7547,15 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(f"PASS: pilot Ubuntu {args.command}")
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    try:
+        with static_bootstrap_handoff():
+            return _main(argv)
+    except TrustedActivationFenceError as exc:
+        print(f"ERRORE: static bootstrap handoff: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

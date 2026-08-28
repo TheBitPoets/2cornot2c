@@ -27,6 +27,8 @@ from scripts import pilot_deployment_smoke as smoke
 from scripts import pilot_service_launcher as service_launcher
 from scripts import pilot_toolchain_launcher as toolchain_launcher
 from scripts import pilot_native_execution_closure as native_execution_closure
+from scripts import pilot_private_runtime_evidence as private_runtime_evidence
+from scripts import pilot_ubuntu_loader_lookup_policy as loader_lookup_policy
 from scripts import pilot_trusted_activation_fence as trusted_activation_fence
 from scripts import pilot_ubuntu_activation as ubuntu_activation
 from scripts import pilot_ubuntu_integration as ubuntu_integration
@@ -35,6 +37,15 @@ from scripts import validate_pilot_deployment as deployment
 
 ROOT = Path(__file__).resolve().parents[1]
 CANDIDATE = ROOT / "deploy" / "pilot" / "candidate.example.json"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_linux_runtime_parent_from_portable_unit_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        ubuntu_activation, "ensure_runtime_authority_parent", lambda: None
+    )
 
 
 def manifest() -> dict:
@@ -1754,7 +1765,20 @@ def test_execution_bearing_systemctl_actions_require_kernel_fence(
         with pytest.raises(ubuntu_activation.ActivationError, match="fuori dalla fence"):
             ubuntu_activation._systemctl_result(arguments)
 
+    class FakeExecutorLease:
+        deadline_remaining = 10.0
+
+        def assert_authorized_new_use(self, _action: str) -> None:
+            pass
+
+        def assert_inflight_protected(self) -> None:
+            pass
+
     monkeypatch.setattr(ubuntu_activation, "_EXECUTION_FENCE_DEPTH", 1)
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTOR_INODE_LEASE", FakeExecutorLease())
+    monkeypatch.setattr(
+        ubuntu_activation, "_renew_executor_inode_lease_for_fresh_slot", lambda: None
+    )
     monkeypatch.setattr(
         ubuntu_activation.subprocess,
         "run",
@@ -4709,7 +4733,16 @@ def test_native_code_loading_policy_is_closed_and_separate_from_executable_polic
         "pt_interp_identities": 1,
         "shared_library_identities": 49,
         "plugin_provider_identities": 263,
+        "hwcaps_reviewed_present_candidates": 0,
+        "hwcaps_expected_absent_candidates": 735,
+        "unpinned_execution_selectable_candidates": 0,
     }
+    candidates = native_execution_closure.expected_absent_hwcaps_candidates()
+    assert {
+        level: sum(level in path.parts for path in candidates)
+        for level in ("x86-64-v2", "x86-64-v3", "x86-64-v4")
+    } == {"x86-64-v2": 245, "x86-64-v3": 245, "x86-64-v4": 245}
+    assert all("glibc-hwcaps" in path.parts for path in candidates)
     reviewed = native_execution_closure.NATIVE_CODE_REVIEWED_SHA256
     dependencies = native_execution_closure.NATIVE_CODE_DEPENDENCIES
     assert set(reviewed) == set(dependencies)
@@ -4718,6 +4751,516 @@ def test_native_code_loading_policy_is_closed_and_separate_from_executable_polic
         for records in dependencies.values()
         for _soname, resolved in records
     )
+
+
+def test_static_production_bootstrap_and_build_are_structurally_loader_free() -> None:
+    source = (ROOT / "scripts/pilot_static_bootstrap.go").read_text(encoding="utf-8")
+    dockerfile = (ROOT / "deploy/pilot/ci/Dockerfile.ubuntu-systemd").read_text(
+        encoding="utf-8"
+    )
+    assert source.startswith("//go:build linux\n")
+    assert "package main" in source
+    assert "syscall.Exec(pythonPath" in source
+    assert "os/exec" not in source
+    assert "CGO_ENABLED=0" in dockerfile
+    assert "! readelf -l /tmp/thebitlab-pilot-activate | grep -q INTERP" in dockerfile
+    assert "There is no dynamic section in this file." in dockerfile
+    assert "scripts/pilot_static_bootstrap.go" in dockerfile
+    assert "scripts/pilot_ubuntu_loader_lookup_policy.py" in toolchain_builder.TOOLCHAIN_FILES
+    assert set(toolchain_builder.TOOLCHAIN_FILES) == toolchain_launcher.EXPECTED_FILES
+    for identity in loader_lookup_policy.REVIEWED_BOOTSTRAP_LOOKUP_TREES.values():
+        assert identity.sha256 in source
+    for digest in loader_lookup_policy.BOOTSTRAP_REVIEWED_FILES.values():
+        assert digest in source
+
+
+def test_runtime_directory_authority_is_consistent_across_all_creators() -> None:
+    fence = (ROOT / "scripts/pilot_trusted_activation_fence.py").read_text(
+        encoding="utf-8"
+    )
+    static_bootstrap = (ROOT / "scripts/pilot_static_bootstrap.go").read_text(
+        encoding="utf-8"
+    )
+    private_runtime = (ROOT / "scripts/pilot_private_runtime.go").read_text(
+        encoding="utf-8"
+    )
+    activation = (ROOT / "scripts/pilot_ubuntu_activation.py").read_text(
+        encoding="utf-8"
+    )
+    launcher = (ROOT / "scripts/pilot_service_launcher.py").read_text(
+        encoding="utf-8"
+    )
+    service = (ROOT / "deploy/pilot/templates/thebitlab.service.template").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'RUNTIME_AUTHORITY_ROOT = Path("/run/thebitlab")' in fence
+    assert '_RUNTIME_AUTHORITY_CHILDREN = frozenset(' in fence
+    assert '"app", "logrotate", "pilot-activation-fence", "pilot-private-runtime"' in fence
+    assert 'ensure_runtime_authority_directory("pilot-activation-fence")' in fence
+    assert 'ensure_runtime_authority_directory("logrotate")' in activation
+    assert "ensure_runtime_authority_parent()" in activation
+    assert "validate_runtime_directory(args.lock_directory)" in launcher
+    assert "RuntimeDirectory=thebitlab/app" in service
+    assert "RuntimeDirectoryMode=0700" in service
+    for source, leaf in (
+        (static_bootstrap, "pilot-activation-fence"),
+        (private_runtime, "pilot-private-runtime"),
+    ):
+        assert 'runtimeAuthority' in source and '"/run/thebitlab"' in source
+        assert 'syscall.Mkdirat(runFD, "thebitlab", 0755)' in source
+        assert f'syscall.Mkdirat(parentFD, "{leaf}", 0700)' in source
+        assert 'syscall.O_NOFOLLOW' in source
+        assert 'attestRuntimeAuthorityInventory' in source
+    assert 'mountTmpfs(source, s0Host, "256m", 0755)' in private_runtime
+    assert 'mountTmpfs(s1MountSource, s1Target, "32m", 0755)' in private_runtime
+    assert 'mountTmpfs(managerSource, drop, "1m", 0700)' in private_runtime
+    assert 'canonicalRuntimeDirectory(rootStat, 0755)' in private_runtime
+
+
+def _private_runtime_evidence_fixture(now_ns: int) -> tuple[list[dict], list[dict]]:
+    common = {
+        "schema_version": private_runtime_evidence.SHARD_SCHEMA,
+        "candidate_sha": "5" * 40,
+        "policy_sha256": "1" * 64,
+        "toolchain_id": "ci-555555555555",
+        "toolchain_manifest_sha256": "2" * 64,
+        "oci_digest": "sha256:" + "3" * 64,
+        "python": {"version": "3.12.3", "executable_sha256": "4" * 64},
+        "node": {"required": False, "version": None, "executable_sha256": None},
+        "created_unix_ns": now_ns,
+        "cleanup": {
+            "private_runtime_absent": True,
+            "snapshot_absent": True,
+            "nginx_processes_absent": True,
+            "pilot_mounts_absent": True,
+        },
+    }
+    records = []
+    cleanups = []
+    for index, (shard, scenarios) in enumerate(
+        private_runtime_evidence.REQUIRED_SCENARIOS.items(), start=1
+    ):
+        run_id = f"run-{index}"
+        records.append(
+            {
+                **common,
+                "run_id": run_id,
+                "shard": shard,
+                "scenarios": [
+                    {"scenario_id": scenario, "result": "PASS", "skip": False}
+                    for scenario in scenarios
+                ],
+            }
+        )
+        cleanups.append(
+            {
+                "schema_version": private_runtime_evidence.CLEANUP_SCHEMA,
+                "candidate_sha": "5" * 40,
+                "run_id": run_id,
+                "created_unix_ns": now_ns,
+                "container_absent": True,
+                "image_absent": True,
+            }
+        )
+    return records, cleanups
+
+
+def test_private_runtime_aggregator_accepts_only_complete_bound_fresh_evidence() -> None:
+    now = 20_000_000_000_000
+    records, cleanups = _private_runtime_evidence_fixture(now)
+    result = private_runtime_evidence.aggregate(
+        records, cleanups, candidate_sha="5" * 40, now_ns=now
+    )
+    assert result["result"] == "PASS"
+    assert result["shards"] == list("ABCDEF")
+    assert result["cleanup"] is True
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        "missing-shard", "stale", "candidate", "schema", "duplicate",
+        "identity-conflict", "missing-cleanup", "unknown-scenario",
+        "skip", "required-node-unknown",
+    ),
+)
+def test_private_runtime_aggregator_rejects_incomplete_stale_or_conflicting_evidence(
+    mutation: str,
+) -> None:
+    now = 20_000_000_000_000
+    records, cleanups = _private_runtime_evidence_fixture(now)
+    if mutation == "missing-shard":
+        records.pop()
+    elif mutation == "stale":
+        records[0]["created_unix_ns"] = 0
+    elif mutation == "candidate":
+        records[0]["candidate_sha"] = "6" * 40
+    elif mutation == "schema":
+        records[0]["schema_version"] = "unknown"
+    elif mutation == "duplicate":
+        records.append(copy.deepcopy(records[0]))
+    elif mutation == "identity-conflict":
+        records[1]["policy_sha256"] = "9" * 64
+    elif mutation == "missing-cleanup":
+        cleanups.pop()
+    elif mutation == "unknown-scenario":
+        records[0]["scenarios"][0]["scenario_id"] = "unknown"
+    elif mutation == "skip":
+        records[0]["scenarios"][0]["skip"] = True
+    elif mutation == "required-node-unknown":
+        records[0]["node"]["required"] = True
+    with pytest.raises(private_runtime_evidence.EvidenceError):
+        private_runtime_evidence.aggregate(
+            records, cleanups, candidate_sha="5" * 40, now_ns=now
+        )
+
+
+def test_runtime_authority_helper_rejects_unknown_direct_child_without_io() -> None:
+    with pytest.raises(
+        trusted_activation_fence.TrustedActivationFenceError,
+        match="fuori policy",
+    ):
+        trusted_activation_fence.ensure_runtime_authority_directory("attacker")
+
+
+def test_private_runtime_exec_locks_one_os_thread_and_fails_closed() -> None:
+    source = (ROOT / "scripts/pilot_private_runtime.go").read_text(encoding="utf-8")
+    start = source.index("func privateExec() error {")
+    end = source.index("\nfunc namespaceFileIdentity", start)
+    private_exec = source[start:end]
+    lock = private_exec.index("runtime.LockOSThread()")
+    unshare = private_exec.index("syscall.Unshare(syscall.CLONE_NEWNS)")
+    propagation = private_exec.index("syscall.Mount(\"\", \"/\"")
+    pivot = private_exec.index("syscall.PivotRoot")
+    target_exec = private_exec.index("syscall.Exec(loader")
+    assert lock < unshare < propagation < pivot < target_exec
+    assert private_exec.count("runtime.UnlockOSThread()") == 1
+    assert unshare < private_exec.index("privateFault(\"private_exec_after_unshare\")") < propagation
+    assert private_exec.index("runtime.UnlockOSThread()") < propagation
+    assert "go func" not in private_exec
+    assert "phase=before-unshare" in private_exec
+    assert "phase=after-unshare" in private_exec
+    assert "phase=after-root" in private_exec
+    assert "phase=before-exec" in private_exec
+    main = source[source.index("func main()") :]
+    assert re.search(
+        r'if err\s*!=\s*nil\s*\{\s*fmt\.Fprintln\(os\.Stderr,\s*"PRIVATE-RUNTIME:",\s*err\)\s*;?\s*os\.Exit\(2\)',
+        main,
+    )
+
+
+def test_every_go_mount_unshare_path_is_thread_pinned_until_exec_or_exit() -> None:
+    for relative, functions, error_prefix in (
+        (
+            "scripts/pilot_private_runtime.go",
+            ("stage0", "privateExec"),
+            "PRIVATE-RUNTIME:",
+        ),
+        (
+            "scripts/pilot_private_runtime_poc.go",
+            ("stage0", "privateExec"),
+            "PRIVATE-RUNTIME-POC:",
+        ),
+    ):
+        source = (ROOT / relative).read_text(encoding="utf-8")
+        assert source.count("syscall.Unshare(syscall.CLONE_NEWNS)") == len(functions)
+        for function in functions:
+            start = source.index(f"func {function}()")
+            end = source.find("\nfunc ", start + 1)
+            body = source[start : len(source) if end < 0 else end]
+            lock = body.index("runtime.LockOSThread()")
+            unshare = body.index("syscall.Unshare(syscall.CLONE_NEWNS)")
+            unlock = body.index("runtime.UnlockOSThread()")
+            first_mount = body.index("syscall.Mount(", unshare)
+            assert lock < unshare < unlock < first_mount
+            assert body.count("runtime.LockOSThread()") == 1
+            assert body.count("runtime.UnlockOSThread()") == 1
+            assert "defer runtime.UnlockOSThread()" not in body
+            assert "go func" not in body
+            assert "syscall.Exec(" in body
+        main = source[source.index("func main()") :]
+        assert error_prefix in main
+        assert "os.Exit(2)" in main
+
+
+def test_private_runtime_start_diagnostic_proves_thread_failure_and_positive_handoff() -> None:
+    source = (ROOT / "scripts/pilot_ubuntu_integration.py").read_text(encoding="utf-8")
+    assert "def _private_start_forced_post_unshare_failure(" in source
+    assert '"THEBITLAB_PRIVATE_RUNTIME_CRASH_POINT": "private_exec_after_unshare"' in source
+    assert '"thread_returned_to_scheduler": False' in source
+    assert "def _private_start_positive_proof(" in source
+    assert 'private_namespace == pid1_namespace' in source
+    assert 'private_contents != f"{pid}\\n"' in source
+    assert 'private_pidfile_metadata.st_ino != manager_pidfile_metadata.st_ino' in source
+    assert "activation._attest_native_runtime_maps(pid)" in source
+    assert '"safe-private-handoff"' in source
+    assert "activation._mark_executor_safe_boundary_if_pending()" in source
+
+
+def test_loader_lookup_policy_covers_portable_hwcaps_cache_and_runpath() -> None:
+    assert loader_lookup_policy.GLIBC_HWCAPS_LEVELS == (
+        "x86-64-v2",
+        "x86-64-v3",
+        "x86-64-v4",
+    )
+    assert loader_lookup_policy.GLIBC_LEGACY_HWCAPS_APPLICABLE is False
+    assert loader_lookup_policy.LD_SO_CACHE_REVIEWED_ENTRY_COUNT == 101
+    assert loader_lookup_policy.LD_SO_CACHE_REVIEWED_HWCAP_ENTRIES == ()
+    candidates = native_execution_closure.expected_absent_hwcaps_candidates()
+    assert Path(
+        "/usr/lib/x86_64-linux-gnu/systemd/glibc-hwcaps/x86-64-v3/"
+        "libsystemd-shared-255.so"
+    ) in candidates
+    assert Path(
+        "/usr/lib/x86_64-linux-gnu/glibc-hwcaps/x86-64-v4/libc.so.6"
+    ) in candidates
+    assert all("$PLATFORM" not in str(path) for path in candidates)
+
+
+def test_executor_inode_lease_durable_record_is_observation_only() -> None:
+    identity = trusted_activation_fence.ExecutorInodeIdentity(
+        87,
+        95402,
+        137792,
+        trusted_activation_fence.SYSTEMD_EXECUTOR_REVIEWED_SHA256,
+        (8,),
+    )
+    record = identity.durable_record()
+    assert record == {
+        "path": "/usr/lib/systemd/systemd-executor",
+        "device": 87,
+        "inode": 95402,
+        "size": 137792,
+        "sha256": "b8424efa6f861031c04310fd7bfe485330bb74f53edae341803ffe3f487fd044",
+        "pid1_fd_locators": [8],
+    }
+    assert not ({"lease_active", "break_requested", "deadline"} & set(record))
+    trusted_activation_fence._validate_executor_identity(record)
+    forged = dict(record, sha256="0" * 64)
+    with pytest.raises(
+        trusted_activation_fence.TrustedActivationFenceError,
+        match="fuori revisione",
+    ):
+        trusted_activation_fence._validate_executor_identity(forged)
+
+
+@pytest.mark.parametrize(
+    "executor_relationship",
+    (
+        trusted_activation_fence.SYSTEMD_EXECUTOR_RELATIONSHIP,
+        trusted_activation_fence.SYSTEMD_EXECUTOR_RELATIONSHIP + " (deleted)",
+    ),
+)
+def test_executor_locator_ignores_only_unrelated_disappearing_pid1_fds(
+    monkeypatch: pytest.MonkeyPatch,
+    executor_relationship: str,
+) -> None:
+    entries = [Path("/proc/1/fd/8"), Path("/proc/1/fd/22")]
+
+    class Metadata:
+        st_mode = stat.S_IFREG | 0o755
+        st_dev = 87
+        st_ino = 95402
+        st_size = 137792
+
+    original_iterdir = Path.iterdir
+    original_readlink = os.readlink
+    original_stat = os.stat
+    monkeypatch.setattr(
+        Path,
+        "iterdir",
+        lambda self: iter(reversed(entries))
+        if self == Path("/proc/1/fd")
+        else original_iterdir(self),
+    )
+
+    def relationship(path: object, *args: object, **kwargs: object) -> str:
+        if Path(path).name == "22":  # type: ignore[arg-type]
+            raise FileNotFoundError
+        if Path(path).name == "8":  # type: ignore[arg-type]
+            return executor_relationship
+        return original_readlink(path, *args, **kwargs)  # type: ignore[arg-type]
+
+    def metadata(path: object, *args: object, **kwargs: object) -> object:
+        if Path(path).parent == Path("/proc/1/fd"):  # type: ignore[arg-type]
+            return Metadata()
+        return original_stat(path, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(trusted_activation_fence.os, "readlink", relationship)
+    monkeypatch.setattr(trusted_activation_fence.os, "stat", metadata)
+    observations = trusted_activation_fence._pid1_executor_locator_observations()
+    assert set(observations) == {8}
+    assert observations[8].st_ino == 95402
+
+
+def test_fresh_executor_slot_renews_only_after_safe_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+
+    identity = {
+        "path": "/usr/lib/systemd/systemd-executor",
+        "device": 87,
+        "inode": 95402,
+        "size": 137792,
+        "sha256": "reviewed",
+        "locators": [8],
+    }
+
+    class CurrentLease:
+        protected_use_pending = False
+        break_requested = False
+
+        def durable_record(self) -> dict[str, object]:
+            return identity
+
+        def close(self) -> None:
+            calls.append("close-current")
+
+    class RenewedLease:
+        def __enter__(self) -> object:
+            calls.append("acquire-reviewed")
+            return self
+
+        def durable_record(self) -> dict[str, object]:
+            return identity
+
+        def close(self) -> None:
+            calls.append("close-renewed")
+
+    current = CurrentLease()
+    monkeypatch.setattr(ubuntu_activation, "_KERNEL_FENCE_ENABLED", True)
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTION_FENCE_DEPTH", 1)
+    monkeypatch.setattr(ubuntu_activation, "_ACTIVE_EXECUTION_FENCE", object())
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTOR_INODE_LEASE", current)
+    monkeypatch.setattr(ubuntu_activation, "ExecutorInodeReadLease", RenewedLease)
+    ubuntu_activation._renew_executor_inode_lease_for_fresh_slot()
+    assert calls == ["close-current", "acquire-reviewed"]
+    assert isinstance(ubuntu_activation._EXECUTOR_INODE_LEASE, RenewedLease)
+
+    blocked = CurrentLease()
+    blocked.break_requested = True
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTOR_INODE_LEASE", blocked)
+    with pytest.raises(ubuntu_activation.ActivationError, match="non rinnovabile"):
+        ubuntu_activation._renew_executor_inode_lease_for_fresh_slot()
+
+    class DivergentLease(RenewedLease):
+        def durable_record(self) -> dict[str, object]:
+            return {**identity, "inode": 95403}
+
+    calls.clear()
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTOR_INODE_LEASE", CurrentLease())
+    monkeypatch.setattr(ubuntu_activation, "ExecutorInodeReadLease", DivergentLease)
+    with pytest.raises(ubuntu_activation.ActivationError, match="non acquisibile"):
+        ubuntu_activation._renew_executor_inode_lease_for_fresh_slot()
+    assert calls == ["close-current", "acquire-reviewed", "close-renewed"]
+
+
+def test_preflight_rejects_closed_inputs_before_manager_reload() -> None:
+    source = (ROOT / "scripts/pilot_ubuntu_activation.py").read_text(encoding="utf-8")
+    start = source.index("def verify_host_preflight(")
+    end = source.index("\ndef ", start + 1)
+    body = source[start:end]
+    manager = body.index("_attest_systemd_boot_surface()")
+    for attestor in (
+        "_attest_apt_inputs()", "_attest_e2scrub_inputs()",
+        "_attest_motd_news_inputs()", "_attest_logrotate_inputs()",
+    ):
+        assert body.index(attestor) < manager
+
+
+def test_private_runtime_mapping_oracle_uses_vma_or_sealed_root_not_host() -> None:
+    source = (ROOT / "scripts/pilot_ubuntu_activation.py").read_text(encoding="utf-8")
+    start = source.index("def _attest_native_runtime_maps(")
+    end = source.index("\ndef _read_process_control_groups", start)
+    body = source[start:end]
+    assert '"map_files" / mapping_range' in body
+    assert 'PROC_ROOT / str(pid) / "root" / lexical.lstrip("/")' in body
+    assert "private_runtime is None" in body
+    assert "digest.hexdigest() != expected" in body
+
+
+def test_executor_break_invalidates_new_use_but_keeps_inflight_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeFcntl:
+        F_RDLCK = 0
+
+    lease = trusted_activation_fence.ExecutorInodeReadLease()
+    lease._acquired = True
+    lease.identity = trusted_activation_fence.ExecutorInodeIdentity(
+        87,
+        95402,
+        137792,
+        trusted_activation_fence.SYSTEMD_EXECUTOR_REVIEWED_SHA256,
+        (8,),
+    )
+    lease.deadline_monotonic = float("inf")
+    states = iter((FakeFcntl.F_RDLCK, FakeFcntl.F_RDLCK, 2, 2))
+    monkeypatch.setattr(trusted_activation_fence, "fcntl", FakeFcntl)
+    monkeypatch.setattr(lease, "_get_lease", lambda: next(states))
+    monkeypatch.setattr(lease, "_reattest_pid1_identity", lambda: None)
+
+    lease.assert_authorized_new_use()
+    lease.assert_inflight_protected()
+    assert lease.break_requested is True
+    lease.mark_safe_boundary()
+    assert lease.protected_use_pending is False
+    with pytest.raises(
+        trusted_activation_fence.TrustedActivationFenceError,
+        match="Break lease executor",
+    ):
+        lease.assert_authorized_new_use()
+
+
+def test_production_systemd_execution_requires_lease_pre_and_post_checks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+
+    class FakeLease:
+        protected_use_pending = False
+        deadline_remaining = 10.0
+
+        def assert_authorized_new_use(self, action: str) -> None:
+            assert action == "start"
+            calls.append("pre")
+
+        def assert_inflight_protected(self) -> None:
+            calls.append("post")
+
+    class Result:
+        returncode = 0
+        stdout = "ok\n"
+        stderr = ""
+
+    monkeypatch.setattr(ubuntu_activation, "_KERNEL_FENCE_ENABLED", True)
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTION_FENCE_DEPTH", 1)
+    monkeypatch.setattr(ubuntu_activation, "_EXECUTOR_INODE_LEASE", FakeLease())
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_renew_executor_inode_lease_for_fresh_slot",
+        lambda: calls.append("renew"),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation._stdlib_subprocess, "run", lambda *args, **kwargs: Result()
+    )
+    assert ubuntu_activation._systemctl_result(["start", "nginx.service"]) == (0, "ok")
+    assert calls == ["renew", "pre", "post"]
+
+    calls.clear()
+    assert ubuntu_activation._systemctl_result(["show", "nginx.service"]) == (0, "ok")
+    assert calls == []
+
+
+def test_stage_m_transaction_acquires_executor_lease_before_snapshot() -> None:
+    source = inspect.getsource(ubuntu_activation._trusted_execution_fence)
+    assert source.index("with ExecutorInodeReadLease()") < source.index(
+        'with SnapshotMountFence(\n                "trusted-systemd-execution"'
+    )
+    assert "executor=executor_lease.durable_record()" in source
+    assert trusted_activation_fence.EXECUTOR_PROTECTION_DEADLINE_SECONDS == 10.0
 
 
 def test_first_native_subprocess_is_structurally_blocked_before_closure(

@@ -15,8 +15,17 @@ import stat
 import struct
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
+from scripts.pilot_ubuntu_loader_lookup_policy import (
+    DEFAULT_LOADER_LOOKUP_DIRECTORIES,
+    GLIBC_HWCAPS_LEVELS,
+    GLIBC_LEGACY_HWCAPS_APPLICABLE,
+    LD_SO_CACHE_REVIEWED_ENTRY_COUNT,
+    LD_SO_CACHE_REVIEWED_HWCAP_ENTRIES,
+    REVIEWED_BOOTSTRAP_LOOKUP_TREES,
+    ReviewedTreeIdentity,
+)
 from scripts.pilot_ubuntu_reviewed_native_code import (
     DYNAMIC_LOADER_CONFIG_REVIEWED_SHA256,
     LD_SO_CACHE_REVIEWED_SHA256,
@@ -46,6 +55,9 @@ DT_RUNPATH = 29
 ELF_MACHINE_X86_64 = 62
 LD_SO_CACHE = Path("/etc/ld.so.cache")
 LD_SO_PRELOAD = Path("/etc/ld.so.preload")
+_LOADER_ENVIRONMENT_NAMES = frozenset({"GLIBC_TUNABLES"})
+_LD_SO_CACHE_HEADER_SIZE = 48
+_LD_SO_CACHE_ENTRY_SIZE = 24
 
 
 @dataclass(frozen=True)
@@ -213,6 +225,119 @@ def parse_elf(path: Path) -> ElfIdentity:
     return parse_elf_bytes(_stable_bytes(path))
 
 
+def _parse_ld_so_cache(data: bytes) -> tuple[tuple[str, str, int], ...]:
+    """Parse bounded glibc cache 1.1 entries, including the hwcap selector."""
+
+    if len(data) < _LD_SO_CACHE_HEADER_SIZE or data[:20] != b"glibc-ld.so.cache1.1":
+        raise NativeExecutionClosureError("Formato ld.so.cache fuori baseline")
+    entry_count, strings_size = struct.unpack_from("<II", data, 20)
+    if entry_count > 10000 or strings_size > len(data):
+        raise NativeExecutionClosureError("Dimensioni ld.so.cache fuori limite")
+    entries_end = _LD_SO_CACHE_HEADER_SIZE + entry_count * _LD_SO_CACHE_ENTRY_SIZE
+    strings_end = entries_end + strings_size
+    if entries_end > len(data) or strings_end > len(data):
+        raise NativeExecutionClosureError("ld.so.cache troncata")
+
+    def cache_string(offset: int) -> str:
+        if offset < entries_end or offset >= strings_end:
+            raise NativeExecutionClosureError("Offset stringa ld.so.cache fuori limite")
+        end = data.find(b"\0", offset, strings_end)
+        if end < 0:
+            raise NativeExecutionClosureError("Stringa ld.so.cache non terminata")
+        try:
+            value = data[offset:end].decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise NativeExecutionClosureError("Stringa ld.so.cache non UTF-8") from exc
+        if not value or "\n" in value or "\r" in value:
+            raise NativeExecutionClosureError("Stringa ld.so.cache non canonica")
+        return value
+
+    result: list[tuple[str, str, int]] = []
+    for index in range(entry_count):
+        flags, key, value, _os_version, hwcap = struct.unpack_from(
+            "<iIIIQ", data, _LD_SO_CACHE_HEADER_SIZE + index * _LD_SO_CACHE_ENTRY_SIZE
+        )
+        if flags < 0:
+            raise NativeExecutionClosureError("Flag ld.so.cache non canonico")
+        result.append((cache_string(key), cache_string(value), hwcap))
+    return tuple(result)
+
+
+def _expanded_search_directories(lexical: str) -> tuple[Path, ...]:
+    rpath, runpath = NATIVE_CODE_SEARCH_PATHS[lexical]
+    configured = runpath if runpath is not None else rpath
+    result: list[Path] = []
+    for raw in configured.split(":") if configured else ():
+        expanded = raw.replace("$ORIGIN", str(PurePosixPath(lexical).parent))
+        if "$" in expanded or not expanded.startswith("/"):
+            raise NativeExecutionClosureError(
+                f"Token loader non modellato nella policy: {lexical} {raw!r}"
+            )
+        result.append(Path(expanded))
+    result.extend(DEFAULT_LOADER_LOOKUP_DIRECTORIES)
+    return tuple(dict.fromkeys(result))
+
+
+def expected_absent_hwcaps_candidates() -> frozenset[Path]:
+    """Return the CPU-portable v2/v3/v4 candidate set for every lookup."""
+
+    candidates: set[Path] = set()
+    for lexical, dependencies in NATIVE_CODE_DEPENDENCIES.items():
+        directories = _expanded_search_directories(lexical)
+        for soname, _resolved in dependencies:
+            if "/" in soname:
+                raise NativeExecutionClosureError(
+                    f"DT_NEEDED con slash fuori lookup policy: {lexical} {soname}"
+                )
+            for directory in directories:
+                for level in GLIBC_HWCAPS_LEVELS:
+                    candidates.add(directory / "glibc-hwcaps" / level / soname)
+    return frozenset(candidates)
+
+
+def _attest_loader_lookup_policy(
+    *,
+    cache_bytes: bytes,
+    frozen_tree_identities: Mapping[Path, ReviewedTreeIdentity] | None,
+) -> None:
+    if GLIBC_LEGACY_HWCAPS_APPLICABLE:
+        raise NativeExecutionClosureError("Legacy hwcaps applicabile ma non modellata")
+    inherited = sorted(
+        name for name in os.environ
+        if name.startswith("LD_") or name in _LOADER_ENVIRONMENT_NAMES
+    )
+    if inherited:
+        raise NativeExecutionClosureError(
+            "Environment loader non ammesso: " + ",".join(inherited)
+        )
+    if frozen_tree_identities is None:
+        raise NativeExecutionClosureError("Lookup tree identities frozen assenti")
+    for path, expected in REVIEWED_BOOTSTRAP_LOOKUP_TREES.items():
+        actual = frozen_tree_identities.get(path)
+        if actual != expected:
+            raise NativeExecutionClosureError(
+                f"Loader lookup tree divergente: {path} actual={actual!r} expected={expected!r}"
+            )
+    cache_entries = _parse_ld_so_cache(cache_bytes)
+    if len(cache_entries) != LD_SO_CACHE_REVIEWED_ENTRY_COUNT:
+        raise NativeExecutionClosureError("Numero entry ld.so.cache divergente")
+    hwcap_entries = tuple(entry for entry in cache_entries if entry[2] != 0)
+    if hwcap_entries != LD_SO_CACHE_REVIEWED_HWCAP_ENTRIES:
+        raise NativeExecutionClosureError("Entry hwcaps ld.so.cache fuori policy")
+    for candidate in expected_absent_hwcaps_candidates():
+        try:
+            candidate.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise NativeExecutionClosureError(
+                f"Candidate hwcaps non verificabile: {candidate}"
+            ) from exc
+        raise NativeExecutionClosureError(
+            f"Candidate hwcaps EXPECTED_ABSENT presente: {candidate}"
+        )
+
+
 def _attest_digest(path: Path, frozen_digests: Mapping[Path, str] | None = None) -> None:
     expected = NATIVE_CODE_REVIEWED_SHA256.get(path.as_posix())
     if expected is None:
@@ -230,6 +355,7 @@ def attest_native_execution_closure(
     executables: Iterable[Path],
     *,
     frozen_digests: Mapping[Path, str] | None = None,
+    frozen_tree_identities: Mapping[Path, ReviewedTreeIdentity] | None = None,
 ) -> frozenset[Path]:
     """Attest the closed loader graph without executing a new native process."""
 
@@ -241,8 +367,13 @@ def attest_native_execution_closure(
         raise NativeExecutionClosureError("Stato ld.so.preload non verificabile") from exc
     else:
         raise NativeExecutionClosureError("/etc/ld.so.preload deve essere assente")
-    if _digest(LD_SO_CACHE) != LD_SO_CACHE_REVIEWED_SHA256:
+    cache_bytes = _stable_bytes(LD_SO_CACHE)
+    if hashlib.sha256(cache_bytes).hexdigest() != LD_SO_CACHE_REVIEWED_SHA256:
         raise NativeExecutionClosureError("ld.so.cache fuori baseline revisionata")
+    _attest_loader_lookup_policy(
+        cache_bytes=cache_bytes,
+        frozen_tree_identities=frozen_tree_identities,
+    )
     for lexical, expected in DYNAMIC_LOADER_CONFIG_REVIEWED_SHA256.items():
         if _digest(Path(lexical)) != expected:
             raise NativeExecutionClosureError(
@@ -321,6 +452,36 @@ def attest_native_execution_closure(
     return frozenset(reviewed)
 
 
+def detailed_closure_counts() -> Mapping[str, int]:
+    from scripts.pilot_ubuntu_reviewed_executables import (
+        REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES,
+    )
+
+    execution_classes = [
+        execution_class
+        for _digest_value, execution_class in REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES.values()
+    ]
+    plugins = tuple(NATIVE_CODE_PLUGIN_IDENTITIES)
+    return {
+        "static_direct_executable_roots": execution_classes.count("NATIVE_PACKAGE_BINARY"),
+        "interpreted_package_roots": execution_classes.count("INTERPRETED_SCRIPT"),
+        "bootstrap_static_executable_identities": 1,
+        "bootstrap_dynamic_child_roots": 1,
+        "pt_interp_identities": len(set(PT_INTERP_REVIEWED_IDENTITIES)),
+        "ordinary_shared_library_identities": closure_counts()["shared_library_identities"],
+        "hwcaps_reviewed_present_candidates": 0,
+        "hwcaps_expected_absent_candidates": len(expected_absent_hwcaps_candidates()),
+        "nss_identities": sum("/libnss_" in path for path in plugins),
+        "gconv_identities": sum("/gconv/" in path for path in plugins),
+        "openssl_provider_engine_identities": sum(
+            "/engines-3/" in path or "/ossl-modules/" in path for path in plugins
+        ),
+        "nginx_module_identities": sum("/nginx/modules/" in path for path in plugins),
+        "other_plugin_identities": 0,
+        "unpinned_execution_selectable_candidates": 0,
+    }
+
+
 def closure_counts() -> Mapping[str, int]:
     from scripts.pilot_ubuntu_reviewed_executables import (  # avoid policy import cycle
         REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES,
@@ -339,4 +500,7 @@ def closure_counts() -> Mapping[str, int]:
         "pt_interp_identities": len(interpreters),
         "shared_library_identities": len(libraries - set(NATIVE_CODE_PLUGIN_IDENTITIES)),
         "plugin_provider_identities": len(NATIVE_CODE_PLUGIN_IDENTITIES),
+        "hwcaps_reviewed_present_candidates": 0,
+        "hwcaps_expected_absent_candidates": len(expected_absent_hwcaps_candidates()),
+        "unpinned_execution_selectable_candidates": 0,
     }
