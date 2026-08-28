@@ -110,11 +110,12 @@ def test_p2_runs_through_normal_student_lab_and_redacts_teacher_oracles(tmp_path
         encoding="utf-8",
     )
 
+    docker_image = os.environ.get("THEBITLAB_P2_DOCKER_IMAGE", "thebitlab-p2-candidate")
     report = student_lab_runner.run_docker_assignment(
         _assignment(),
         root=tmp_path,
         timeout_seconds=3,
-        docker_image="thebitlab-p2-candidate",
+        docker_image=docker_image,
     )
 
     assert report["backend"] == "docker"
