@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from contextlib import redirect_stderr, redirect_stdout
+import importlib.util
 import math
+from pathlib import Path
 import re
+import sys
 from typing import Any
 
 
@@ -17,6 +21,36 @@ MAX_CONTAINER_ITEMS = 64
 
 class FunctionProfileError(ValueError):
     """Invalid teacher-side or worker-side function grading payload."""
+
+
+class FunctionOutputLimitError(RuntimeError):
+    """Student stdout/stderr exceeded the bounded diagnostic surface."""
+
+
+class _BoundedTextCapture:
+    def __init__(self, limit: int = MAX_STRING_CHARS) -> None:
+        self.limit = limit
+        self._parts: list[str] = []
+        self._size = 0
+
+    def write(self, value: str) -> int:
+        text = str(value)
+        next_size = self._size + len(text)
+        if next_size > self.limit:
+            remaining = max(0, self.limit - self._size)
+            if remaining:
+                self._parts.append(text[:remaining])
+                self._size += remaining
+            raise FunctionOutputLimitError("stdout/stderr supera il limite P2")
+        self._parts.append(text)
+        self._size = next_size
+        return len(text)
+
+    def flush(self) -> None:
+        return
+
+    def getvalue(self) -> str:
+        return "".join(self._parts)
 
 
 def _bounded_scalar(value: Any) -> Any:
@@ -172,12 +206,114 @@ def validate_worker_request(value: Any) -> dict[str, Any]:
         raise FunctionProfileError("worker args non validi")
     if not isinstance(kwargs, dict) or len(kwargs) > MAX_KWARGS:
         raise FunctionProfileError("worker kwargs non validi")
+    normalized_kwargs: dict[str, Any] = {}
+    for key, item in kwargs.items():
+        if not isinstance(key, str) or not FUNCTION_RE.fullmatch(key):
+            raise FunctionProfileError("worker kwargs contiene nome parametro non valido")
+        normalized_kwargs[key] = validate_value(item)
     return {
         "schema_version": WORKER_SCHEMA,
         "function": function,
         "args": [validate_value(item) for item in args],
-        "kwargs": {key: validate_value(item) for key, item in kwargs.items()},
+        "kwargs": normalized_kwargs,
     }
+
+
+def _exception_message(error: BaseException) -> str:
+    message = str(error)
+    return message[:512]
+
+
+def execute_worker_request(value: Any, source: Path) -> dict[str, Any]:
+    """Load one student module and invoke one declared function inside the untrusted worker."""
+    request = validate_worker_request(value)
+    stdout = _BoundedTextCapture()
+    stderr = _BoundedTextCapture()
+    module_name = "_thebitlab_student_function_submission"
+    sys.modules.pop(module_name, None)
+    try:
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            try:
+                spec = importlib.util.spec_from_file_location(module_name, source)
+                if spec is None or spec.loader is None:
+                    return {
+                        "schema_version": WORKER_SCHEMA,
+                        "status": "import-error",
+                        "stdout": stdout.getvalue(),
+                        "stderr": stderr.getvalue(),
+                    }
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module
+                try:
+                    spec.loader.exec_module(module)
+                except FunctionOutputLimitError:
+                    return {
+                        "schema_version": WORKER_SCHEMA,
+                        "status": "output-limit",
+                        "stdout": stdout.getvalue(),
+                        "stderr": stderr.getvalue(),
+                    }
+                except BaseException as error:
+                    return {
+                        "schema_version": WORKER_SCHEMA,
+                        "status": "import-error",
+                        "stdout": stdout.getvalue(),
+                        "stderr": (stderr.getvalue() + f"{type(error).__name__}: {_exception_message(error)}")[:MAX_STRING_CHARS],
+                    }
+
+                if not hasattr(module, request["function"]):
+                    return {
+                        "schema_version": WORKER_SCHEMA,
+                        "status": "missing-function",
+                        "stdout": stdout.getvalue(),
+                        "stderr": stderr.getvalue(),
+                    }
+                function = getattr(module, request["function"])
+                if not callable(function):
+                    return {
+                        "schema_version": WORKER_SCHEMA,
+                        "status": "not-callable",
+                        "stdout": stdout.getvalue(),
+                        "stderr": stderr.getvalue(),
+                    }
+                try:
+                    returned = function(*request["args"], **request["kwargs"])
+                except FunctionOutputLimitError:
+                    return {
+                        "schema_version": WORKER_SCHEMA,
+                        "status": "output-limit",
+                        "stdout": stdout.getvalue(),
+                        "stderr": stderr.getvalue(),
+                    }
+                except BaseException as error:
+                    return {
+                        "schema_version": WORKER_SCHEMA,
+                        "status": "raised",
+                        "exception": {
+                            "type": type(error).__name__,
+                            "message": _exception_message(error),
+                        },
+                        "stdout": stdout.getvalue(),
+                        "stderr": stderr.getvalue(),
+                    }
+                try:
+                    normalized_return = validate_value(returned)
+                except FunctionProfileError:
+                    return {
+                        "schema_version": WORKER_SCHEMA,
+                        "status": "unsupported-return",
+                        "stdout": stdout.getvalue(),
+                        "stderr": stderr.getvalue(),
+                    }
+                return {
+                    "schema_version": WORKER_SCHEMA,
+                    "status": "returned",
+                    "return_value": normalized_return,
+                    "stdout": stdout.getvalue(),
+                    "stderr": stderr.getvalue(),
+                }
+    finally:
+        sys.modules.pop(module_name, None)
 
 
 def validate_worker_result(value: Any) -> dict[str, Any]:
@@ -189,7 +325,16 @@ def validate_worker_result(value: Any) -> dict[str, Any]:
     if value.get("schema_version") != WORKER_SCHEMA:
         raise FunctionProfileError("worker result schema non supportato")
     status = value.get("status")
-    if status not in {"returned", "raised", "missing-function", "not-callable", "import-error", "timeout"}:
+    if status not in {
+        "returned",
+        "raised",
+        "missing-function",
+        "not-callable",
+        "import-error",
+        "timeout",
+        "output-limit",
+        "unsupported-return",
+    }:
         raise FunctionProfileError("worker result status non supportato")
     stdout = value.get("stdout", "")
     stderr = value.get("stderr", "")
@@ -245,6 +390,7 @@ def compare_worker_result(test: dict[str, Any], worker_result: dict[str, Any]) -
         "name": expected.get("name", expected["function"]),
         "profile": PROFILE_ID,
         "function": expected["function"],
+        "visibility": expected.get("visibility", "teacher"),
         "passed": passed,
         "status": "passed" if passed else "failed",
         "worker_status": actual["status"],
