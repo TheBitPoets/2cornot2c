@@ -23,7 +23,6 @@ from scripts.thebitlab_technical_services import (
     ExecutionService,
 )
 
-
 DEFAULT_TIMEOUT_SECONDS = 5
 DEFAULT_DOCKER_IMAGE = grade_activity.DEFAULT_DOCKER_IMAGE
 RUNNER_BACKENDS = {"local", "docker"}
@@ -516,6 +515,7 @@ def run_assignment(
             assignment,
             root=root,
             timeout_seconds=timeout_seconds,
+            backend=backend,
         )
     if backend == "local":
         return run_local_assignment(assignment, root=root, timeout_seconds=timeout_seconds)

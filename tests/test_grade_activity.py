@@ -703,7 +703,7 @@ def test_prepare_docker_workspace_rejects_symlink_escaping_source_root(tmp_path)
     except OSError:
         pytest.skip("Creazione symlink non consentita su questa piattaforma.")
 
-    with pytest.raises(ValueError, match="source deve trovarsi dentro"):
+    with pytest.raises(ValueError, match="source non puo essere un collegamento simbolico"):
         grade_activity.prepare_docker_workspace(
             activity_path,
             linked_source,

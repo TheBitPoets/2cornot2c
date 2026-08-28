@@ -171,6 +171,41 @@ Quando non lo supporta, l'Activity non deve richiedere `deterministic-grade`; Th
 
 ## Strategie per runtime diversi
 
+## Grading sandbox di codice non affidabile
+
+`run()` e sufficiente per esecuzioni locali formative. Un adapter che vuole supportare grading
+autorevole di codice non affidabile dichiara `sandbox-plan.v1` e aggiunge due metodi senza
+importare moduli interni TheBitLab:
+
+```python
+def prepare_sandbox(self, request):
+    return {
+        "schema_version": "runtime_sandbox_plan.v1",
+        "profile": {
+            "image": "ghcr.io/example/runtime@sha256:<64 cifre esadecimali>",
+            "platform": "linux/amd64",
+            "worker_schema": "example.trace.v1",
+        },
+        "inputs": [
+            {"source": "submission", "artifact_id": "primary", "target": "main.py"},
+            {"source": "activity", "path": "hidden_tests.py", "target": "hidden_tests.py"},
+        ],
+        "worker_request": {"schema_version": "example.worker.v1"},
+    }
+
+def finalize_sandbox(self, request, sandbox_result):
+    # sandbox_result e untrusted: validare la trace e ricostruire test/voto lato host.
+    return {
+        "schema_version": "runtime_execution.v1",
+        "status": "passed",
+        "tests": [{"name": "comportamento", "passed": True}],
+    }
+```
+
+Il worker non deve ricevere scenario, rubriche o expected outcome se questi possono restare
+nel grader host. Un hidden test eseguito nel container puo osservare il comportamento del
+codice, ma il risultato valutativo finale resta responsabilita del finalize trusted.
+
 ### Runtime standalone con propria UI
 
 Esempio concettuale: Efesto.

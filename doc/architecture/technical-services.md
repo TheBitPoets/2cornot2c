@@ -115,6 +115,13 @@ I report prodotti da `scripts/grade_activity.py` vengono convertiti nel contratt
 
 `DockerGradeActivityExecutionService` implementa la stessa porta sopra il runner Docker autorevole. Normalizza runner assente, timeout e errori di protocollo, mentre `student_lab_runner.py` si limita a costruire la richiesta tecnica e serializzare il risultato nel contratto pubblico `student_lab_run.v1`. Durante la transizione, `ExecutionResult.metadata.runner_report` conserva una copia difensiva del report del runner per non perdere campi di toolchain o dettagli gia consumati dalle dashboard.
 
+Le Activity runtime usano il port specializzato `RuntimeSandboxExecutionService`, definito in
+`scripts/thebitlab_runtime_sandbox.py`. Il plugin trusted prepara un piano dichiarativo, il
+servizio applica lo stesso boundary Docker di `grade_activity.py`, quindi il plugin trusted
+ricostruisce `ExecutionResult`. Questa specializzazione e necessaria per lasciare semantica,
+simulatore e grader nel package runtime senza permettere al plugin di modificare i controlli
+host del container. Non introduce un secondo profilo sandbox.
+
 `DeterministicAiFeedbackService` fornisce una prima implementazione mockabile di `AiFeedbackService`: genera bozze di feedback a partire dal `GradingResult` senza chiamare provider esterni. Serve per stabilizzare flussi, test e dashboard prima di collegare un adapter AI reale.
 
 ## Provider AI e workflow ChatGPT

@@ -68,6 +68,26 @@ class FakePlugin:
             "detail": "completed",
         }
 
+    def prepare_sandbox(self, request):
+        self.last_request = request
+        return {
+            "schema_version": plugins.RUNTIME_SANDBOX_PLAN_SCHEMA_VERSION,
+            "profile": {
+                "image": "ghcr.io/thebitpoets/example@sha256:" + "a" * 64,
+                "platform": "linux/amd64",
+                "worker_schema": "example.trace.v1",
+            },
+            "inputs": [
+                {"source": "submission", "artifact_id": "primary", "target": "main.py"},
+                {"source": "activity", "path": "hidden_tests.py", "target": "hidden_tests.py"},
+            ],
+            "worker_request": {"schema_version": "example.worker.v1"},
+        }
+
+    def finalize_sandbox(self, request, sandbox_result):
+        self.last_request = (request, sandbox_result)
+        return self.run(request)
+
     def close(self, session_id: str) -> None:
         self.closed.append(session_id)
 
@@ -181,6 +201,86 @@ def test_registry_rejects_invalid_plugin_capability() -> None:
 
     with pytest.raises(plugins.RuntimePluginIncompatibleError, match="capabilities"):
         runtime_registry.get("bad-runtime")
+
+
+def test_sandbox_plan_accepts_explicit_submission_and_activity_inputs() -> None:
+    plan = plugins.sandbox_plan_from_payload(
+        FakePlugin(capabilities=("headless-run", "sandbox-plan.v1")).prepare_sandbox({})
+    )
+
+    assert plan.profile.image.endswith("a" * 64)
+    assert plan.inputs[0].source == "submission"
+    assert plan.inputs[0].artifact_id == "primary"
+    assert plan.inputs[1].source == "activity"
+    assert plan.inputs[1].path == "hidden_tests.py"
+
+
+@pytest.mark.parametrize(
+    "update, message",
+    [
+        ({"profile": {"image": "ghcr.io/example:latest"}}, "digest sha256"),
+        ({"command": ["sh", "-c", "evil"]}, "campi non autorizzati"),
+        ({"environment": {"SECRET": "value"}}, "campi non autorizzati"),
+        ({"mounts": ["/"]}, "campi non autorizzati"),
+        ({"network": "host"}, "campi non autorizzati"),
+    ],
+)
+def test_sandbox_plan_rejects_mutable_image_and_host_controls(update, message) -> None:
+    payload = FakePlugin(capabilities=("sandbox-plan.v1",)).prepare_sandbox({})
+    if "profile" in update:
+        payload["profile"].update(update["profile"])
+    else:
+        payload.update(update)
+
+    with pytest.raises(plugins.RuntimePluginIncompatibleError, match=message):
+        plugins.sandbox_plan_from_payload(payload)
+
+
+def test_sandbox_plan_rejects_non_json_worker_request() -> None:
+    payload = FakePlugin(capabilities=("sandbox-plan.v1",)).prepare_sandbox({})
+    payload["worker_request"] = {"limit": float("nan")}
+
+    with pytest.raises(plugins.RuntimePluginIncompatibleError, match="JSON serializzabile"):
+        plugins.sandbox_plan_from_payload(payload)
+
+
+def test_sandbox_plan_rejects_case_insensitive_target_collision() -> None:
+    payload = FakePlugin(capabilities=("sandbox-plan.v1",)).prepare_sandbox({})
+    payload["inputs"][1]["target"] = "MAIN.py"
+
+    with pytest.raises(plugins.RuntimePluginIncompatibleError, match="target duplicato"):
+        plugins.sandbox_plan_from_payload(payload)
+
+
+def test_sandbox_plan_bounds_worker_request() -> None:
+    payload = FakePlugin(capabilities=("sandbox-plan.v1",)).prepare_sandbox({})
+    payload["worker_request"] = {"padding": "x" * (64 * 1024)}
+
+    with pytest.raises(plugins.RuntimePluginIncompatibleError, match="64 KiB"):
+        plugins.sandbox_plan_from_payload(payload)
+
+
+def test_prepare_sandbox_fails_closed_when_capability_is_missing(tmp_path: Path) -> None:
+    fake_plugin = FakePlugin()
+    loaded = plugins.LoadedRuntimePlugin(
+        descriptor=plugins.descriptor_from_payload("example-runtime", fake_plugin.describe()),
+        plugin=fake_plugin,
+    )
+
+    with pytest.raises(plugins.RuntimePluginIncompatibleError, match="sandbox-plan.v1"):
+        plugins.prepare_sandbox_runtime(loaded, request(tmp_path))
+
+
+def test_sandbox_capability_requires_both_extension_methods(tmp_path: Path) -> None:
+    fake_plugin = FakePlugin(capabilities=("headless-run", "sandbox-plan.v1"))
+    fake_plugin.finalize_sandbox = None  # type: ignore[method-assign]
+    loaded = plugins.LoadedRuntimePlugin(
+        descriptor=plugins.descriptor_from_payload("example-runtime", fake_plugin.describe()),
+        plugin=fake_plugin,
+    )
+
+    with pytest.raises(plugins.RuntimePluginIncompatibleError, match="non implementa"):
+        plugins.prepare_sandbox_runtime(loaded, request(tmp_path))
 
 
 def test_capability_matching_is_activity_driven() -> None:

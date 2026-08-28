@@ -10,3 +10,4 @@ scripts/*
 !scripts/pilot_static_bootstrap.go
 !scripts/pilot_private_runtime.go
 !scripts/pilot_private_runtime_poc.go
+!scripts/thebitlab_sandbox_boundary.py
