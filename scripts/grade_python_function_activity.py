@@ -8,10 +8,16 @@ import tempfile
 import uuid
 from typing import Any
 
-from scripts import grade_activity
-from scripts import python_function_profile as p2
-from scripts import validate_activity
-from scripts.thebitlab_sandbox_boundary import docker_boundary_command
+try:
+    from scripts import grade_activity
+    from scripts import python_function_profile as p2
+    from scripts import validate_activity
+    from scripts.thebitlab_sandbox_boundary import docker_boundary_command
+except ModuleNotFoundError:  # direct ``python scripts/...`` execution
+    import grade_activity
+    import python_function_profile as p2
+    import validate_activity
+    from thebitlab_sandbox_boundary import docker_boundary_command
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
@@ -97,10 +103,7 @@ def run_function_test_in_docker(
             raise ValueError("P2 worker non ha prodotto JSON valido") from error
         return p2.validate_worker_result(result)
     finally:
-        try:
-            grade_activity.remove_docker_container(cidfile, container_name)
-        except grade_activity.DockerCleanupError:
-            raise
+        grade_activity.remove_docker_container(cidfile, container_name)
 
 
 def grade_in_docker(
@@ -169,7 +172,10 @@ def grade_in_docker(
 
 
 def positive_int(value: str) -> int:
-    number = int(value)
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("deve essere un intero") from error
     if number <= 0:
         raise argparse.ArgumentTypeError("deve essere positivo")
     return number
