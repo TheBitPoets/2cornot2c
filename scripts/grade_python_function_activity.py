@@ -4,20 +4,20 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import uuid
 from typing import Any
 
-try:
-    from scripts import grade_activity
-    from scripts import python_function_profile as p2
-    from scripts import validate_activity
-    from scripts.thebitlab_sandbox_boundary import docker_boundary_command
-except ModuleNotFoundError:  # direct ``python scripts/...`` execution
-    import grade_activity
-    import python_function_profile as p2
-    import validate_activity
-    from thebitlab_sandbox_boundary import docker_boundary_command
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts import grade_activity
+from scripts import python_function_profile as p2
+from scripts import validate_activity
+from scripts.thebitlab_sandbox_boundary import docker_boundary_command
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
