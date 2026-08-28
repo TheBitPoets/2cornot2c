@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import runpy
 import sys
 from typing import Any
 
@@ -55,9 +54,12 @@ def _resolved(value: str | os.PathLike[str], *, cwd: Path) -> Path:
 def install_filesystem_audit_policy(*, workdir: Path, source: Path) -> None:
     """Deny Python-level filesystem access outside the P4 workdir/source surface.
 
-    This complements, but does not replace, the outer Docker sandbox. P4 stable
-    promotion still requires the Docker boundary because Python audit hooks are
-    an application policy layer rather than a host security boundary.
+    The student source is compiled before this hook is installed. This is
+    deliberate: importlib/runpy may read Python runtime files outside the
+    submission surface even when student code itself does not. The audit hook
+    therefore governs student execution rather than Python's own source loader.
+
+    This complements, but does not replace, the outer Docker sandbox.
     """
 
     workdir = workdir.resolve(strict=True)
@@ -171,10 +173,32 @@ def execute(request_value: Any, *, source: Path, workdir: Path) -> dict[str, Any
                 "stderr": "fixture dichiarata assente o non regolare",
             }
 
-    # pathlib/os/json are already loaded before the audit hook. This is enough
-    # for the deliberately small M26/P4 v1 surface without allowing arbitrary
-    # dynamic filesystem-oriented imports after confinement begins.
-    previous_cwd = Path.cwd()
+    # Read and compile before installing the audit hook. The source itself is
+    # trusted only as bytes to compile; execution remains fully untrusted and
+    # happens after confinement. This avoids classifying Python's own loader
+    # reads as student filesystem access.
+    try:
+        source_text = source.read_text(encoding="utf-8", errors="strict")
+        code = compile(source_text, str(source), "exec")
+    except UnicodeDecodeError as error:
+        return {
+            "schema_version": p4.WORKER_SCHEMA,
+            "status": "runtime-error",
+            "artifacts": [],
+            "stdout": "",
+            "stderr": "",
+            "exception": {"type": type(error).__name__, "message": "source Python non UTF-8"},
+        }
+    except SyntaxError as error:
+        return {
+            "schema_version": p4.WORKER_SCHEMA,
+            "status": "runtime-error",
+            "artifacts": [],
+            "stdout": "",
+            "stderr": "",
+            "exception": {"type": "SyntaxError", "message": str(error)[:512]},
+        }
+
     os.chdir(workdir)
     stdout = _BoundedTextCapture()
     stderr = _BoundedTextCapture()
@@ -182,9 +206,14 @@ def execute(request_value: Any, *, source: Path, workdir: Path) -> dict[str, Any
     exception: dict[str, str] | None = None
     try:
         install_filesystem_audit_policy(workdir=workdir, source=source)
+        namespace = {
+            "__name__": "__main__",
+            "__file__": str(source),
+            "__builtins__": __builtins__,
+        }
         try:
             with redirect_stdout(stdout), redirect_stderr(stderr):
-                runpy.run_path(str(source), run_name="__main__")
+                exec(code, namespace, namespace)
         except FilesystemOutputLimitError:
             execution_status = "output-limit"
         except BaseException as error:
@@ -207,10 +236,9 @@ def execute(request_value: Any, *, source: Path, workdir: Path) -> dict[str, Any
             result["exception"] = exception
         return result
     finally:
-        # The worker process exits immediately after this call. chdir is kept
-        # best-effort because the installed audit hook intentionally rejects
-        # leaving the workdir; restoring cwd is not required for isolation.
-        _ = previous_cwd
+        # Process exits after one test; audit confinement deliberately prevents
+        # restoring a cwd outside the workdir.
+        pass
 
 
 def parse_args() -> argparse.Namespace:
