@@ -70,10 +70,13 @@ def test_activity_validator_rejects_teacher_contract_errors() -> None:
     assert any("expected_artifacts" in error for error in errors)
 
 
-def test_student_activity_payload_redacts_filesystem_tests_and_fixture_source() -> None:
+def test_student_activity_payload_redacts_filesystem_teacher_contract() -> None:
     public = create_submission_scaffold.student_activity_payload(p4_activity())
     assert "filesystem_tests" not in public
     serialized = repr(public).casefold()
     assert "fixtures/misure.txt" not in serialized
-    assert "risultato.txt" not in serialized
-    assert "36" not in serialized
+    assert "expected_artifacts" not in serialized
+    assert "36\\n" not in serialized
+    # The requested output filename is intentionally public because it is part
+    # of the student-facing assignment text, not a grading oracle.
+    assert "risultato.txt" in serialized
