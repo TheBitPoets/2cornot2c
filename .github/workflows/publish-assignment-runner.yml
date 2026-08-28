@@ -5,6 +5,27 @@ permissions:
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - ".dockerignore"
+      - ".github/workflows/publish-assignment-runner.yml"
+      - "docker/assignment-runner/**"
+      - "scripts/build_assignment_runner.py"
+      - "scripts/publish_assignment_runner.py"
+      - "scripts/grade_activity.py"
+      - "scripts/python_function_profile.py"
+      - "scripts/python_function_worker.py"
+      - "scripts/grade_python_function_activity.py"
+      - "scripts/thebitlab_technical_services.py"
+      - "scripts/validate_activity.py"
+      - "scripts/create_submission_scaffold.py"
+      - "scripts/student_lab_runner.py"
+      - "tests/test_python_function_profile.py"
+      - "tests/test_python_function_worker.py"
+      - "tests/test_python_function_profile_dispatch.py"
+      - "tests/test_python_function_student_lab_docker.py"
+      - "tests/test_validate_activity_function_profile.py"
+      - "tests/test_p2_release_candidate.py"
   push:
     branches:
       - main
