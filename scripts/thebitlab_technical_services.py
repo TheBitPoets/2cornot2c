@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import copy
 import json
@@ -237,7 +237,7 @@ class DockerGradeActivityExecutionService:
     """ExecutionService adapter backed by the authoritative Docker runner."""
 
     def run(self, request: ExecutionRequest) -> ExecutionResult:
-        """Run grade_activity in Docker and normalize infrastructure failures."""
+        """Run the appropriate authoritative Docker grader and normalize failures."""
 
         from scripts import grade_activity
 
@@ -250,14 +250,43 @@ class DockerGradeActivityExecutionService:
                 detail="ExecutionRequest.metadata deve includere activity_path e source_path.",
             )
 
+        activity_file = Path(str(activity_path))
+        source_file = Path(str(source_path))
         try:
-            report, worker_stderr = grade_activity.grade_activity_in_docker(
-                Path(str(activity_path)),
-                Path(str(source_path)),
-                timeout_seconds=request.timeout_seconds,
-                language=request.language,
-                image=docker_image,
+            activity = grade_activity.load_activity(activity_file)
+        except (OSError, json.JSONDecodeError):
+            # Preserve the historical adapter contract: the legacy Docker grader
+            # remains authoritative for its own loading/setup errors.
+            activity = None
+        uses_function_profile = isinstance(activity, dict) and "function_tests" in activity
+        requested_language = str(request.language or "").strip().lower()
+        if uses_function_profile and requested_language != "python":
+            return ExecutionResult(
+                status="invalid_payload",
+                detail="function_tests richiede una ExecutionRequest Python.",
             )
+
+        try:
+            if uses_function_profile:
+                from scripts import grade_python_function_activity
+
+                report = grade_python_function_activity.grade_in_docker(
+                    activity_path=activity_file,
+                    source_path=source_file,
+                    image=docker_image,
+                    timeout_seconds=request.timeout_seconds,
+                )
+                worker_stderr = ""
+                grading_profile = str(report.get("profile") or "python-function-v1")
+            else:
+                report, worker_stderr = grade_activity.grade_activity_in_docker(
+                    activity_file,
+                    source_file,
+                    timeout_seconds=request.timeout_seconds,
+                    language=request.language,
+                    image=docker_image,
+                )
+                grading_profile = "legacy"
         except subprocess.TimeoutExpired as error:
             return ExecutionResult(
                 status="timeout",
@@ -285,6 +314,7 @@ class DockerGradeActivityExecutionService:
             metadata={
                 "backend": "docker",
                 "docker_image": docker_image,
+                "grading_profile": grading_profile,
                 "runner_report": copy.deepcopy(report),
                 "worker_stderr": str(worker_stderr or ""),
             },
