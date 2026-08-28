@@ -11,10 +11,12 @@ on:
       - "scripts/python_function_profile.py"
       - "scripts/python_function_worker.py"
       - "scripts/grade_python_function_activity.py"
+      - "scripts/thebitlab_technical_services.py"
       - "scripts/validate_activity.py"
       - "docker/assignment-runner/**"
       - "tests/test_python_function_profile.py"
       - "tests/test_python_function_worker.py"
+      - "tests/test_python_function_profile_dispatch.py"
       - "tests/test_validate_activity_function_profile.py"
       - ".github/workflows/python-function-profile.yml"
 
@@ -35,11 +37,12 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install -r requirements-dev.txt
 
-      - name: Run P2 contract and worker tests
+      - name: Run P2 contract, worker and dispatch tests
         run: >-
           python -m pytest -q
           tests/test_python_function_profile.py
           tests/test_python_function_worker.py
+          tests/test_python_function_profile_dispatch.py
           tests/test_validate_activity_function_profile.py
 
       - name: Build assignment-runner candidate
