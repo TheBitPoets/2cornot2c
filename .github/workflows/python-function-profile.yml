@@ -1,0 +1,182 @@
+name: Python function profile P2 candidate
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/python_function_profile.py"
+      - "scripts/python_function_worker.py"
+      - "scripts/grade_python_function_activity.py"
+      - "scripts/validate_activity.py"
+      - "docker/assignment-runner/**"
+      - "tests/test_python_function_profile.py"
+      - "tests/test_python_function_worker.py"
+      - "tests/test_validate_activity_function_profile.py"
+      - ".github/workflows/python-function-profile.yml"
+
+jobs:
+  p2-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run P2 contract and worker tests
+        run: >-
+          python -m pytest -q
+          tests/test_python_function_profile.py
+          tests/test_python_function_worker.py
+          tests/test_validate_activity_function_profile.py
+
+      - name: Build assignment-runner candidate
+        run: >-
+          python scripts/build_assignment_runner.py
+          --source-revision "$GITHUB_SHA"
+          --tag thebitlab-p2-candidate
+          --metadata "$RUNNER_TEMP/p2-toolchain-build.json"
+
+      - name: Exercise P2 authoritative Docker behavior
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/p2"
+          cat > "$RUNNER_TEMP/p2/activity.json" <<'JSON'
+          {
+            "schema_version": "1.0",
+            "id": "python-p2-smoke-001",
+            "titolo": "Funzioni P2 smoke",
+            "tipo": "laboratorio",
+            "difficolta": "B",
+            "argomenti": ["funzioni", "return"],
+            "consegna": "Implementa le funzioni richieste.",
+            "linguaggio": "python",
+            "correzione": {
+              "compila": true,
+              "test": true,
+              "sandbox": true,
+              "ai_feedback": false
+            },
+            "metriche": {
+              "tempo_stimato_minuti": 15,
+              "traccia_tempo_dichiarato": true,
+              "traccia_sessioni_thebitlab": true,
+              "traccia_eventi_didattici": true,
+              "traccia_errori_compilazione": true
+            },
+            "function_tests": [
+              {
+                "profile": "python-function-v1",
+                "name": "area 3x4",
+                "function": "area",
+                "args": [3, 4],
+                "expected_return": 12
+              },
+              {
+                "profile": "python-function-v1",
+                "name": "pari",
+                "function": "pari",
+                "args": [8],
+                "expected_return": true
+              },
+              {
+                "profile": "python-function-v1",
+                "name": "zero division",
+                "function": "reciproco",
+                "args": [0],
+                "expected_exception": "ZeroDivisionError"
+              }
+            ]
+          }
+          JSON
+          cat > "$RUNNER_TEMP/p2/main.py" <<'PY'
+          def area(base, altezza):
+              return base * altezza
+
+          def pari(n):
+              return n % 2 == 0
+
+          def reciproco(x):
+              return 1 / x
+          PY
+          python scripts/grade_python_function_activity.py \
+            --activity "$RUNNER_TEMP/p2/activity.json" \
+            --source "$RUNNER_TEMP/p2/main.py" \
+            --activity-root "$RUNNER_TEMP/p2" \
+            --source-root "$RUNNER_TEMP/p2" \
+            --docker-image thebitlab-p2-candidate \
+            --report "$RUNNER_TEMP/p2/report.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "p2" / "report.json").read_text(encoding="utf-8"))
+          assert report["passed"] is True
+          assert report["profile"] == "python-function-v1"
+          assert report["summary"] == {"passed": 3, "total": 3}
+          assert all("expected_return" not in json.dumps(test) for test in report["tests"])
+          PY
+
+      - name: Exercise P2 timeout fail-closed
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/p2-timeout"
+          cat > "$RUNNER_TEMP/p2-timeout/activity.json" <<'JSON'
+          {
+            "schema_version": "1.0",
+            "id": "python-p2-timeout-001",
+            "titolo": "Timeout P2",
+            "tipo": "laboratorio",
+            "difficolta": "B",
+            "argomenti": ["funzioni"],
+            "consegna": "Implementa f.",
+            "linguaggio": "python",
+            "correzione": {"compila": true, "test": true, "sandbox": true, "ai_feedback": false},
+            "metriche": {
+              "tempo_stimato_minuti": 5,
+              "traccia_tempo_dichiarato": true,
+              "traccia_sessioni_thebitlab": true,
+              "traccia_eventi_didattici": true,
+              "traccia_errori_compilazione": true
+            },
+            "function_tests": [
+              {"profile": "python-function-v1", "function": "f", "expected_return": 1}
+            ]
+          }
+          JSON
+          cat > "$RUNNER_TEMP/p2-timeout/main.py" <<'PY'
+          def f():
+              while True:
+                  pass
+          PY
+          set +e
+          python scripts/grade_python_function_activity.py \
+            --activity "$RUNNER_TEMP/p2-timeout/activity.json" \
+            --source "$RUNNER_TEMP/p2-timeout/main.py" \
+            --activity-root "$RUNNER_TEMP/p2-timeout" \
+            --source-root "$RUNNER_TEMP/p2-timeout" \
+            --docker-image thebitlab-p2-candidate \
+            --timeout 1 \
+            --report "$RUNNER_TEMP/p2-timeout/report.json"
+          status=$?
+          set -e
+          test "$status" = "1"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "p2-timeout" / "report.json").read_text(encoding="utf-8"))
+          assert report["passed"] is False
+          assert report["tests"][0]["worker_status"] == "timeout"
+          PY
