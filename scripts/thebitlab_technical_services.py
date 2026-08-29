@@ -237,7 +237,7 @@ class DockerGradeActivityExecutionService:
     """ExecutionService adapter backed by the authoritative Docker runner."""
 
     def run(self, request: ExecutionRequest) -> ExecutionResult:
-        """Run the appropriate authoritative Docker grader and normalize failures."""
+        """Dispatch P2/P4 explicitly, otherwise preserve the legacy Docker path."""
 
         from scripts import grade_activity
 
@@ -258,16 +258,38 @@ class DockerGradeActivityExecutionService:
             # Preserve the historical adapter contract: the legacy Docker grader
             # remains authoritative for its own loading/setup errors.
             activity = None
+
         uses_function_profile = isinstance(activity, dict) and "function_tests" in activity
-        requested_language = str(request.language or "").strip().lower()
-        if uses_function_profile and requested_language != "python":
+        uses_filesystem_profile = isinstance(activity, dict) and "filesystem_tests" in activity
+        if uses_function_profile and uses_filesystem_profile:
             return ExecutionResult(
                 status="invalid_payload",
-                detail="function_tests richiede una ExecutionRequest Python.",
+                detail="Activity ambigua: function_tests e filesystem_tests non possono coesistere.",
+            )
+
+        requested_language = str(request.language or "").strip().lower()
+        if (uses_function_profile or uses_filesystem_profile) and requested_language not in {"python", "py"}:
+            field = "function_tests" if uses_function_profile else "filesystem_tests"
+            return ExecutionResult(
+                status="invalid_payload",
+                detail=f"{field} richiede una ExecutionRequest Python.",
             )
 
         try:
-            if uses_function_profile:
+            if uses_filesystem_profile:
+                from scripts import grade_python_filesystem_activity
+
+                report = grade_python_filesystem_activity.grade_in_docker(
+                    activity_path=activity_file,
+                    source_path=source_file,
+                    image=docker_image,
+                    timeout_seconds=request.timeout_seconds,
+                    activity_root=activity_file.parent,
+                    source_root=source_file.parent,
+                )
+                worker_stderr = ""
+                grading_profile = str(report.get("profile") or "python-filesystem-v1")
+            elif uses_function_profile:
                 from scripts import grade_python_function_activity
 
                 report = grade_python_function_activity.grade_in_docker(
