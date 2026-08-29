@@ -140,7 +140,15 @@ def grade_in_docker(
     language = str(activity.get("language") or activity.get("linguaggio") or "python").lower()
     if language not in {"python", "py"}:
         raise ValueError("P3 supporta solo Activity Python")
-    teacher_tests = p3.validate_object_tests(activity.get("object_tests"))
+
+    # Keep the teacher contract in its canonical raw Activity form. The worker
+    # request builder and host-side comparator each validate/normalize that raw
+    # scenario at their own trust boundary. Replacing it here with the normalized
+    # representation would make those boundaries parse an internal shape twice.
+    teacher_tests = activity.get("object_tests")
+    p3.validate_object_tests(teacher_tests)
+    if not isinstance(teacher_tests, list):
+        raise ValueError("Activity P3 senza object_tests validi")
 
     with tempfile.TemporaryDirectory(prefix="thebitlab-p3-") as raw_temp:
         temp_root = Path(raw_temp)
