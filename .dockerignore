@@ -12,3 +12,5 @@ scripts/*
 !scripts/python_function_worker.py
 !scripts/python_filesystem_profile.py
 !scripts/python_filesystem_worker.py
+!scripts/python_object_profile.py
+!scripts/python_object_worker.py
