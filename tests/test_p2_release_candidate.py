@@ -7,6 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "docker" / "assignment-runner" / "toolchain.json"
 LOCK = ROOT / "docker" / "assignment-runner" / "toolchain.lock.json"
+DOCKERFILE = ROOT / "docker" / "assignment-runner" / "Dockerfile"
+DOCKERIGNORE = ROOT / ".dockerignore"
 
 
 def load(path: Path) -> dict:
@@ -15,15 +17,15 @@ def load(path: Path) -> dict:
     return value
 
 
-def test_p2_build_candidate_has_new_version_without_faking_published_lock() -> None:
+def test_combined_build_candidate_has_new_version_without_faking_published_lock() -> None:
     manifest = load(MANIFEST)
     lock = load(LOCK)
 
-    assert manifest["version"] == "2026.08.1"
+    assert manifest["version"] == "2026.08.2"
     assert manifest["platform"] == "linux/amd64"
     assert manifest["image_repository"] == lock["image_repository"]
 
-    # Until the release is actually published and its remote digest is known,
+    # Until the combined release is actually published and its remote digest is known,
     # the checked-in immutable lock must remain the previously published release.
     assert lock["version"] == "2026.07.1"
     assert lock["source_revision"] == "bd102146a684a9b06835204ec1b7f668f7655a03"
@@ -37,3 +39,19 @@ def test_candidate_and_stable_lock_are_deliberately_different_release_identities
     lock = load(LOCK)
 
     assert manifest["version"] != lock["version"]
+
+
+def test_combined_runner_packages_both_python_profile_workers() -> None:
+    dockerfile = DOCKERFILE.read_text(encoding="utf-8")
+    dockerignore = DOCKERIGNORE.read_text(encoding="utf-8")
+
+    for path in (
+        "scripts/python_function_profile.py",
+        "scripts/python_function_worker.py",
+        "scripts/python_filesystem_profile.py",
+        "scripts/python_filesystem_worker.py",
+    ):
+        assert f"COPY {path} /opt/thebitlab/{Path(path).name}" in dockerfile
+        assert f"!{path}" in dockerignore
+
+    assert 'ENTRYPOINT ["python3", "/opt/thebitlab/grade_activity.py"]' in dockerfile
