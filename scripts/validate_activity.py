@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from scripts import python_filesystem_profile
 from scripts.thebitlab_contracts import ALLOWED_ACTIVITY_KINDS
 from scripts.thebitlab_runtime_contracts import validate_runtime_extension
 
@@ -116,6 +117,19 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
     assets = data.get("assets")
     if assets is not None:
         errors.extend(validate_assets(assets, source))
+
+    filesystem_tests = data.get("filesystem_tests")
+    if filesystem_tests is not None:
+        language = str(data.get("language") or data.get("linguaggio") or "").strip().lower()
+        if language and language not in {"python", "py"}:
+            errors.append(f"{source}: filesystem_tests e supportato solo per Activity Python")
+        try:
+            python_filesystem_profile.validate_filesystem_tests(
+                filesystem_tests,
+                source="filesystem_tests",
+            )
+        except python_filesystem_profile.FilesystemProfileError as error:
+            errors.append(f"{source}: {error}")
 
     errors.extend(validate_runtime_extension(data, source))
     return errors
