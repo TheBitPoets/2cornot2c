@@ -177,10 +177,15 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
         if field in data
     ]
     if len(profile_fields) > 1:
-        errors.append(
-            f"{source}: profili Python incompatibili nella stessa Activity: "
-            + ", ".join(profile_fields)
-        )
+        if set(profile_fields) == {"function_tests", "filesystem_tests"}:
+            errors.append(
+                f"{source}: function_tests e filesystem_tests non possono coesistere nella stessa Activity"
+            )
+        else:
+            errors.append(
+                f"{source}: profili Python incompatibili nella stessa Activity: "
+                + ", ".join(profile_fields)
+            )
 
     if "function_tests" in data:
         errors.extend(_python_profile_language_errors(data, source, "function_tests"))
