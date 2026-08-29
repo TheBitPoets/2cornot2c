@@ -16,15 +16,24 @@ on:
       - "scripts/python_function_profile.py"
       - "scripts/python_function_worker.py"
       - "scripts/grade_python_function_activity.py"
+      - "scripts/python_filesystem_profile.py"
+      - "scripts/python_filesystem_worker.py"
+      - "scripts/grade_python_filesystem_activity.py"
       - "scripts/thebitlab_technical_services.py"
       - "scripts/validate_activity.py"
       - "scripts/create_submission_scaffold.py"
       - "scripts/student_lab_runner.py"
+      - "tests/test_python_grading_profiles_integration.py"
       - "tests/test_python_function_profile.py"
       - "tests/test_python_function_worker.py"
       - "tests/test_python_function_profile_dispatch.py"
       - "tests/test_python_function_student_lab_docker.py"
       - "tests/test_validate_activity_function_profile.py"
+      - "tests/test_python_filesystem_profile.py"
+      - "tests/test_python_filesystem_worker.py"
+      - "tests/test_python_filesystem_profile_dispatch.py"
+      - "tests/test_python_filesystem_student_lab_docker.py"
+      - "tests/test_validate_activity_filesystem_profile.py"
       - "tests/test_p2_release_candidate.py"
   push:
     branches:
@@ -39,15 +48,24 @@ on:
       - "scripts/python_function_profile.py"
       - "scripts/python_function_worker.py"
       - "scripts/grade_python_function_activity.py"
+      - "scripts/python_filesystem_profile.py"
+      - "scripts/python_filesystem_worker.py"
+      - "scripts/grade_python_filesystem_activity.py"
       - "scripts/thebitlab_technical_services.py"
       - "scripts/validate_activity.py"
       - "scripts/create_submission_scaffold.py"
       - "scripts/student_lab_runner.py"
+      - "tests/test_python_grading_profiles_integration.py"
       - "tests/test_python_function_profile.py"
       - "tests/test_python_function_worker.py"
       - "tests/test_python_function_profile_dispatch.py"
       - "tests/test_python_function_student_lab_docker.py"
       - "tests/test_validate_activity_function_profile.py"
+      - "tests/test_python_filesystem_profile.py"
+      - "tests/test_python_filesystem_worker.py"
+      - "tests/test_python_filesystem_profile_dispatch.py"
+      - "tests/test_python_filesystem_student_lab_docker.py"
+      - "tests/test_validate_activity_filesystem_profile.py"
       - "tests/test_p2_release_candidate.py"
 
 concurrency:
@@ -57,7 +75,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     outputs:
       image_id: ${{ steps.image-digest.outputs.image_id }}
     steps:
@@ -69,17 +87,22 @@ jobs:
       - name: Install validation dependencies
         run: python -m pip install -r requirements-dev.txt
 
-      - name: Validate P2 contracts, dispatch and release identity
+      - name: Validate combined P2 P4 contracts dispatch and release identity
         run: >-
           python -m pytest -q
           tests/test_build_assignment_runner.py
           tests/test_p2_release_candidate.py
+          tests/test_python_grading_profiles_integration.py
           tests/test_python_function_profile.py
           tests/test_python_function_worker.py
           tests/test_python_function_profile_dispatch.py
           tests/test_validate_activity_function_profile.py
+          tests/test_python_filesystem_profile.py
+          tests/test_python_filesystem_worker.py
+          tests/test_python_filesystem_profile_dispatch.py
+          tests/test_validate_activity_filesystem_profile.py
 
-      - name: Build pinned runner
+      - name: Build pinned combined runner
         run: >-
           python scripts/build_assignment_runner.py
           --source-revision "$GITHUB_SHA"
@@ -96,10 +119,12 @@ jobs:
           metadata = json.loads(
               Path(os.environ["RUNNER_TEMP"], "toolchain-build.json").read_text(encoding="utf-8")
           )
+          assert metadata["version"] == "2026.08.2"
+          assert metadata["source_revision"] == os.environ["GITHUB_SHA"]
           print(f"image_id={metadata['local_image_id']}")
           PY
 
-      - name: Stage validated runner toolchain
+      - name: Stage validated combined runner toolchain
         run: |
           mkdir -p "$RUNNER_TEMP/runner-toolchain"
           docker save thebitlab-assignment-runner \
@@ -124,6 +149,12 @@ jobs:
           THEBITLAB_RUN_DOCKER_TESTS: "1"
           THEBITLAB_P2_DOCKER_IMAGE: "thebitlab-assignment-runner"
         run: python -m pytest -q tests/test_python_function_student_lab_docker.py
+
+      - name: Exercise P4 through normal Student Lab Docker dispatch
+        env:
+          THEBITLAB_RUN_DOCKER_TESTS: "1"
+          THEBITLAB_P4_DOCKER_IMAGE: "thebitlab-assignment-runner"
+        run: python -m pytest -q tests/test_python_filesystem_student_lab_docker.py
 
   publish:
     needs: validate
