@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from scripts import python_function_profile
+from scripts import python_filesystem_profile, python_function_profile
 from scripts.thebitlab_contracts import ALLOWED_ACTIVITY_KINDS
 from scripts.thebitlab_runtime_contracts import validate_runtime_extension
 
@@ -85,6 +85,25 @@ def validate_function_tests(value: Any, source: str) -> list[str]:
     return []
 
 
+def validate_filesystem_tests(value: Any, source: str) -> list[str]:
+    """Validate optional teacher-only Python filesystem-behavior tests."""
+    try:
+        python_filesystem_profile.validate_filesystem_tests(
+            value,
+            source=f"{source}: filesystem_tests",
+        )
+    except python_filesystem_profile.FilesystemProfileError as error:
+        return [str(error)]
+    return []
+
+
+def _python_profile_language_errors(data: dict[str, Any], source: str, field: str) -> list[str]:
+    language = str(data.get("language") or data.get("linguaggio") or "").strip().lower()
+    if language and language not in {"python", "py"}:
+        return [f"{source}: {field} e supportato solo per Activity Python"]
+    return []
+
+
 def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[str]:
     """Validate the minimal TheBitLab activity schema."""
     errors: list[str] = []
@@ -130,8 +149,20 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
     if assets is not None:
         errors.extend(validate_assets(assets, source))
 
-    if "function_tests" in data:
+    has_function_tests = "function_tests" in data
+    has_filesystem_tests = "filesystem_tests" in data
+    if has_function_tests and has_filesystem_tests:
+        errors.append(
+            f"{source}: function_tests e filesystem_tests non possono coesistere nella stessa Activity"
+        )
+
+    if has_function_tests:
+        errors.extend(_python_profile_language_errors(data, source, "function_tests"))
         errors.extend(validate_function_tests(data.get("function_tests"), source))
+
+    if has_filesystem_tests:
+        errors.extend(_python_profile_language_errors(data, source, "filesystem_tests"))
+        errors.extend(validate_filesystem_tests(data.get("filesystem_tests"), source))
 
     errors.extend(validate_runtime_extension(data, source))
     return errors
