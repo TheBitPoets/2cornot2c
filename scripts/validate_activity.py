@@ -5,7 +5,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from scripts import python_filesystem_profile, python_function_profile
+from scripts import (
+    python_filesystem_profile,
+    python_function_profile,
+    python_object_profile,
+)
 from scripts.thebitlab_contracts import ALLOWED_ACTIVITY_KINDS
 from scripts.thebitlab_runtime_contracts import validate_runtime_extension
 
@@ -97,7 +101,21 @@ def validate_filesystem_tests(value: Any, source: str) -> list[str]:
     return []
 
 
-def _python_profile_language_errors(data: dict[str, Any], source: str, field: str) -> list[str]:
+def validate_object_tests(value: Any, source: str) -> list[str]:
+    """Validate optional teacher-only Python object-behavior scenarios."""
+    try:
+        python_object_profile.validate_object_tests(
+            value,
+            source=f"{source}: object_tests",
+        )
+    except python_object_profile.ObjectProfileError as error:
+        return [str(error)]
+    return []
+
+
+def _python_profile_language_errors(
+    data: dict[str, Any], source: str, field: str
+) -> list[str]:
     language = str(data.get("language") or data.get("linguaggio") or "").strip().lower()
     if language and language not in {"python", "py"}:
         return [f"{source}: {field} e supportato solo per Activity Python"]
@@ -130,8 +148,12 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
 
     topics = data.get("argomenti")
     if topics is not None:
-        if not isinstance(topics, list) or not topics or not all(isinstance(topic, str) and topic for topic in topics):
-            errors.append(f"{source}: argomenti deve essere una lista non vuota di stringhe")
+        if not isinstance(topics, list) or not topics or not all(
+            isinstance(topic, str) and topic for topic in topics
+        ):
+            errors.append(
+                f"{source}: argomenti deve essere una lista non vuota di stringhe"
+            )
 
     correction = data.get("correzione")
     if correction is not None:
@@ -149,20 +171,28 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
     if assets is not None:
         errors.extend(validate_assets(assets, source))
 
-    has_function_tests = "function_tests" in data
-    has_filesystem_tests = "filesystem_tests" in data
-    if has_function_tests and has_filesystem_tests:
+    profile_fields = [
+        field
+        for field in ("function_tests", "filesystem_tests", "object_tests")
+        if field in data
+    ]
+    if len(profile_fields) > 1:
         errors.append(
-            f"{source}: function_tests e filesystem_tests non possono coesistere nella stessa Activity"
+            f"{source}: profili Python incompatibili nella stessa Activity: "
+            + ", ".join(profile_fields)
         )
 
-    if has_function_tests:
+    if "function_tests" in data:
         errors.extend(_python_profile_language_errors(data, source, "function_tests"))
         errors.extend(validate_function_tests(data.get("function_tests"), source))
 
-    if has_filesystem_tests:
+    if "filesystem_tests" in data:
         errors.extend(_python_profile_language_errors(data, source, "filesystem_tests"))
         errors.extend(validate_filesystem_tests(data.get("filesystem_tests"), source))
+
+    if "object_tests" in data:
+        errors.extend(_python_profile_language_errors(data, source, "object_tests"))
+        errors.extend(validate_object_tests(data.get("object_tests"), source))
 
     errors.extend(validate_runtime_extension(data, source))
     return errors
@@ -201,7 +231,9 @@ def validate_assets(assets: Any, source: str) -> list[str]:
         if not is_safe_relative_path(asset.get("path")):
             errors.append(f"{prefix}.path deve essere un path relativo sicuro")
 
-        if "target_path" in asset and not is_safe_relative_path(asset.get("target_path")):
+        if "target_path" in asset and not is_safe_relative_path(
+            asset.get("target_path")
+        ):
             errors.append(f"{prefix}.target_path deve essere un path relativo sicuro")
 
         visibility = asset.get("visibility")
@@ -246,7 +278,11 @@ def validate_rubric(rubric: Any, source: str) -> list[str]:
         if not isinstance(item.get("criterio"), str) or not item.get("criterio"):
             errors.append(f"{prefix}.criterio deve essere una stringa non vuota")
         points = item.get("punti")
-        if isinstance(points, bool) or not isinstance(points, (int, float)) or points < 0:
+        if (
+            isinstance(points, bool)
+            or not isinstance(points, (int, float))
+            or points < 0
+        ):
             errors.append(f"{prefix}.punti deve essere un numero non negativo")
     return errors
 
@@ -263,8 +299,14 @@ def validate_metrics(metrics: Any, source: str) -> list[str]:
 
     estimated_time = metrics.get("tempo_stimato_minuti")
     if estimated_time is not None:
-        if isinstance(estimated_time, bool) or not isinstance(estimated_time, (int, float)) or estimated_time < 0:
-            errors.append(f"{source}: metriche.tempo_stimato_minuti deve essere un numero non negativo")
+        if (
+            isinstance(estimated_time, bool)
+            or not isinstance(estimated_time, (int, float))
+            or estimated_time < 0
+        ):
+            errors.append(
+                f"{source}: metriche.tempo_stimato_minuti deve essere un numero non negativo"
+            )
 
     for field in BOOLEAN_METRIC_FIELDS & metrics.keys():
         if not isinstance(metrics[field], bool):
