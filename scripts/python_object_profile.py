@@ -4,7 +4,10 @@ import math
 import re
 from typing import Any
 
-from scripts import python_function_profile as p2
+try:
+    import python_function_profile as p2
+except ModuleNotFoundError:
+    from scripts import python_function_profile as p2
 
 
 PROFILE_ID = "python-object-v1"
