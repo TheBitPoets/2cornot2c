@@ -237,7 +237,7 @@ class DockerGradeActivityExecutionService:
     """ExecutionService adapter backed by the authoritative Docker runner."""
 
     def run(self, request: ExecutionRequest) -> ExecutionResult:
-        """Dispatch P2/P4 explicitly, otherwise preserve the legacy Docker path."""
+        """Dispatch P2/P3/P4 explicitly, otherwise preserve the legacy Docker path."""
 
         from scripts import grade_activity
 
@@ -261,18 +261,32 @@ class DockerGradeActivityExecutionService:
 
         uses_function_profile = isinstance(activity, dict) and "function_tests" in activity
         uses_filesystem_profile = isinstance(activity, dict) and "filesystem_tests" in activity
-        if uses_function_profile and uses_filesystem_profile:
-            return ExecutionResult(
-                status="invalid_payload",
-                detail="Activity ambigua: function_tests e filesystem_tests non possono coesistere.",
+        uses_object_profile = isinstance(activity, dict) and "object_tests" in activity
+        profile_fields = [
+            field
+            for field, enabled in (
+                ("function_tests", uses_function_profile),
+                ("filesystem_tests", uses_filesystem_profile),
+                ("object_tests", uses_object_profile),
             )
+            if enabled
+        ]
+        if len(profile_fields) > 1:
+            if set(profile_fields) == {"function_tests", "filesystem_tests"}:
+                detail = "Activity ambigua: function_tests e filesystem_tests non possono coesistere."
+            else:
+                detail = (
+                    "Activity ambigua: profili Python incompatibili: "
+                    + ", ".join(profile_fields)
+                    + "."
+                )
+            return ExecutionResult(status="invalid_payload", detail=detail)
 
         requested_language = str(request.language or "").strip().lower()
-        if (uses_function_profile or uses_filesystem_profile) and requested_language not in {"python", "py"}:
-            field = "function_tests" if uses_function_profile else "filesystem_tests"
+        if profile_fields and requested_language not in {"python", "py"}:
             return ExecutionResult(
                 status="invalid_payload",
-                detail=f"{field} richiede una ExecutionRequest Python.",
+                detail=f"{profile_fields[0]} richiede una ExecutionRequest Python.",
             )
 
         try:
@@ -289,6 +303,19 @@ class DockerGradeActivityExecutionService:
                 )
                 worker_stderr = ""
                 grading_profile = str(report.get("profile") or "python-filesystem-v1")
+            elif uses_object_profile:
+                from scripts import grade_python_object_activity
+
+                report = grade_python_object_activity.grade_in_docker(
+                    activity_path=activity_file,
+                    source_path=source_file,
+                    image=docker_image,
+                    timeout_seconds=request.timeout_seconds,
+                    activity_root=activity_file.parent,
+                    source_root=source_file.parent,
+                )
+                worker_stderr = ""
+                grading_profile = str(report.get("profile") or "python-object-v1")
             elif uses_function_profile:
                 from scripts import grade_python_function_activity
 
