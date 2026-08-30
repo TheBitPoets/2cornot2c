@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from argparse import Namespace
+from argparse import ArgumentTypeError, Namespace
 from pathlib import Path
 
 import pytest
@@ -33,9 +33,9 @@ def test_keep_interactive_runtime_alive_waits_until_operator_interrupt(monkeypat
 
 def test_positive_int_is_local_and_strict() -> None:
     assert student_runtime_cli.positive_int("7") == 7
-    with pytest.raises(Exception):
+    with pytest.raises(ArgumentTypeError):
         student_runtime_cli.positive_int("0")
-    with pytest.raises(Exception):
+    with pytest.raises(ArgumentTypeError):
         student_runtime_cli.positive_int("x")
 
 
