@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import queue
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from typing import Any
 from urllib.error import URLError
@@ -111,28 +113,65 @@ def write_fixture(root: Path) -> Path:
     return workspace
 
 
+def terminate_process(process: subprocess.Popen[str]) -> tuple[str, str]:
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+    remaining_stdout = process.stdout.read() if process.stdout else ""
+    stderr = process.stderr.read() if process.stderr else ""
+    return remaining_stdout, stderr
+
+
 def read_launch_json(process: subprocess.Popen[str], timeout_seconds: float = 15.0) -> dict[str, Any]:
     if process.stdout is None:
         fail("launcher stdout non disponibile")
-    deadline = time.monotonic() + timeout_seconds
-    lines: list[str] = []
-    while time.monotonic() < deadline:
-        if process.poll() is not None and not lines:
-            stderr = process.stderr.read() if process.stderr else ""
-            fail(f"launcher terminato prima dell'endpoint: rc={process.returncode}, stderr={stderr}")
-        line = process.stdout.readline()
-        if not line:
-            time.sleep(0.05)
-            continue
-        lines.append(line)
+
+    lines: queue.Queue[str | None] = queue.Queue()
+
+    def read_stdout() -> None:
+        assert process.stdout is not None
         try:
-            payload = json.loads("".join(lines))
+            for line in process.stdout:
+                lines.put(line)
+        finally:
+            lines.put(None)
+
+    reader = threading.Thread(target=read_stdout, daemon=True)
+    reader.start()
+
+    deadline = time.monotonic() + timeout_seconds
+    buffered: list[str] = []
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            extra_stdout, stderr = terminate_process(process)
+            buffered_text = "".join(buffered) + extra_stdout
+            fail(
+                "timeout leggendo il JSON di launch; "
+                f"rc={process.returncode}, stdout={buffered_text!r}, stderr={stderr!r}"
+            )
+        try:
+            line = lines.get(timeout=remaining)
+        except queue.Empty:
+            continue
+        if line is None:
+            stderr = process.stderr.read() if process.stderr else ""
+            fail(
+                "launcher ha chiuso stdout prima del JSON; "
+                f"rc={process.poll()}, stdout={''.join(buffered)!r}, stderr={stderr!r}"
+            )
+        buffered.append(line)
+        try:
+            payload = json.loads("".join(buffered))
         except json.JSONDecodeError:
             continue
         if not isinstance(payload, dict):
             fail(f"launcher JSON non-oggetto: {payload!r}")
         return payload
-    fail("timeout leggendo il JSON di launch")
 
 
 def request_json(endpoint: str, path: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -157,12 +196,7 @@ def get_ui(endpoint: str) -> bytes:
 
 
 def assert_endpoint_dies_after_launcher(process: subprocess.Popen[str], endpoint: str) -> None:
-    process.terminate()
-    try:
-        process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=5)
+    terminate_process(process)
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
         try:
@@ -251,15 +285,13 @@ def main() -> int:
             if "<script" in raw_svg.casefold() or "javascript:" in raw_svg.casefold():
                 fail("SVG managed contiene contenuto eseguibile")
 
-            # This is the regression that the old in-process tests could not catch.
             if process.poll() is not None:
                 fail("managed CLI non è rimasto owner del servizio per l'intera sessione")
         finally:
             if process.poll() is None and endpoint:
                 assert_endpoint_dies_after_launcher(process, endpoint)
             elif process.poll() is None:
-                process.terminate()
-                process.wait(timeout=5)
+                terminate_process(process)
 
         run = subprocess.run(
             [
