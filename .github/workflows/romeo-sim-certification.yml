@@ -9,6 +9,7 @@ on:
     paths:
       - "scripts/thebitlab_builtin_runtimes.py"
       - "scripts/thebitlab_runtime_plugins.py"
+      - "scripts/student_runtime.py"
       - ".github/workflows/romeo-sim-certification.yml"
 
 jobs:
@@ -24,7 +25,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Checkout exact Romeo runtime source
+      - name: Checkout curriculum Romeo plugin source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: TheBitPoets/romeo
@@ -37,7 +38,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install exact Romeo plugin
+      - name: Install curriculum Romeo plugin
         run: python -m pip install ./_romeo
 
       - name: Certify installed romeo-sim entry point and fail-closed boundary
@@ -85,4 +86,95 @@ jobs:
               "PASS: romeo-sim 0.2.0 discovered through real TheBitLab entry points; "
               "portable plugin contract is green and unsafe/missing sandbox identity fails closed"
           )
+          PY
+
+  romeo-sim-authoritative-docker:
+    runs-on: ubuntu-latest
+    env:
+      ROMEO_RELEASE_SOURCE: 584ba489000a559f9e4cd3326a83f925d6c73a45
+      ROMEO_SANDBOX_IMAGE: ghcr.io/thebitpoets/romeo-runtime@sha256:db7373cc6d24337427d0071dd633f902e266ffae1c440cd2bd605564bb3c7581
+      ROMEO_RUNTIME_WORKFLOW_RUN: "32518993805"
+    steps:
+      - name: Checkout TheBitLab course-environment candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout exact published Romeo runtime source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: TheBitPoets/romeo
+          ref: ${{ env.ROMEO_RELEASE_SOURCE }}
+          path: _romeo-release
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify Romeo release evidence matches immutable image
+        shell: bash
+        run: |
+          test "$(git -C _romeo-release rev-parse HEAD)" = "$ROMEO_RELEASE_SOURCE"
+          python - <<'PY'
+          import pathlib
+          import re
+          import os
+
+          pyproject = pathlib.Path("_romeo-release/pyproject.toml").read_text(encoding="utf-8")
+          assert 'version = "0.2.0"' in pyproject
+          assert 'romeo-sim = "romeo.integrations.thebitlab:create_plugin"' in pyproject
+          image = os.environ["ROMEO_SANDBOX_IMAGE"]
+          assert re.fullmatch(r"ghcr\.io/thebitpoets/romeo-runtime@sha256:[0-9a-f]{64}", image)
+          assert os.environ["ROMEO_RUNTIME_WORKFLOW_RUN"] == "32518993805"
+          print("PASS: Romeo 0.2.0 release source and immutable sandbox identity are explicit")
+          PY
+
+      - name: Pull exact immutable Romeo sandbox
+        run: docker pull "$ROMEO_SANDBOX_IMAGE"
+
+      - name: Install exact published Romeo plugin
+        run: python -m pip install ./_romeo-release
+
+      - name: Verify authoritative broker probe
+        shell: bash
+        run: |
+          python - <<'PY'
+          from scripts.thebitlab_builtin_runtimes import combined_entry_points
+          from scripts.thebitlab_runtime_plugins import RuntimePluginRegistry, probe_runtime
+
+          loaded = RuntimePluginRegistry(combined_entry_points).get(
+              "romeo-sim", allowlist={"romeo-sim"}
+          )
+          probe = probe_runtime(loaded)
+          assert probe.available is True
+          assert probe.version == "0.2.0"
+          assert probe.metadata.get("sandbox_broker_available") is True
+          assert probe.metadata.get("authoritative_untrusted_execution") is True
+          assert probe.metadata.get("execution_isolation") == "docker"
+          print("PASS: romeo-sim authoritative Docker broker is available for the pinned digest")
+          PY
+
+      - name: Exercise published runtime through current TheBitLab broker
+        run: >-
+          python _romeo-release/scripts/smoke_thebitlab_published_runtime.py
+          --thebitlab-root .
+          --romeo-root _romeo-release
+          --image "$ROMEO_SANDBOX_IMAGE"
+
+      - name: Prove mutable image still fails closed
+        shell: bash
+        run: |
+          ROMEO_SANDBOX_IMAGE=ghcr.io/thebitpoets/romeo-runtime:latest python - <<'PY'
+          from scripts.thebitlab_builtin_runtimes import combined_entry_points
+          from scripts.thebitlab_runtime_plugins import RuntimePluginRegistry, probe_runtime
+
+          loaded = RuntimePluginRegistry(combined_entry_points).get(
+              "romeo-sim", allowlist={"romeo-sim"}
+          )
+          probe = probe_runtime(loaded)
+          assert probe.metadata.get("sandbox_broker_available") is False
+          assert probe.metadata.get("authoritative_untrusted_execution") is not True
+          print("PASS: mutable Romeo runtime identity cannot become authoritative")
           PY
