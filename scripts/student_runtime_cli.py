@@ -2,15 +2,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 import time
 import webbrowser
 from pathlib import Path
 from urllib.parse import urlparse
 
-from scripts import student_lab_service, student_runtime
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _trace(stage: str) -> None:
+    """Emit CI-only startup milestones without changing the normal CLI payload."""
+
+    if os.environ.get("CI", "").casefold() == "true":
+        print(f"thebitlab-runtime-cli:{stage}", file=sys.stderr, flush=True)
 
 
 def positive_int(value: str) -> int:
@@ -109,20 +116,21 @@ def select_assignment(
 
 
 def load_assignment(args: argparse.Namespace) -> dict:
-    """Load an interactive assignment through the lightweight Student Lab service path.
+    """Load an interactive assignment through the Student Lab service path."""
 
-    Launch does not need graders, Docker grading services or report writers. Keeping
-    those imports out of the interactive cold-start materially reduces startup cost,
-    especially on macOS ARM classroom profiles.
-    """
+    _trace("before-student-lab-service-import")
+    from scripts import student_lab_service
 
+    _trace("after-student-lab-service-import")
     root = args.root.resolve(strict=False)
+    _trace("before-student-lab-payload")
     payload = student_lab_service.student_lab_payload(
         root=root,
         student_id=args.student_id,
         now=args.now,
         expose_external_paths=True,
     )
+    _trace("after-student-lab-payload")
     assignments = payload.get("assignments") if isinstance(payload.get("assignments"), list) else []
     return select_assignment(
         assignments,
@@ -132,16 +140,24 @@ def load_assignment(args: argparse.Namespace) -> dict:
 
 
 def main() -> int:
+    _trace("main-start")
     args = parse_args()
+    _trace(f"args-{args.command}")
     root = args.root.resolve(strict=False)
     try:
         assignment = load_assignment(args)
+        _trace("assignment-loaded")
         if args.command == "launch":
+            _trace("before-student-runtime-import")
+            from scripts import student_runtime
+
+            _trace("after-student-runtime-import")
             result = student_runtime.launch_runtime_assignment(
                 assignment,
                 root=root,
                 timeout_seconds=args.timeout,
             )
+            _trace(f"launch-{result.status}")
             payload = {
                 "status": result.status,
                 "session_id": result.session_id,
@@ -149,8 +165,6 @@ def main() -> int:
                 "detail": result.detail,
                 "metadata": result.metadata,
             }
-            # Flush is required because the managed launcher stays alive after
-            # emitting its endpoint and may be consumed by a parent launcher.
             print(json.dumps(payload, ensure_ascii=False, indent=2), flush=True)
             if result.endpoint and not args.no_open_browser:
                 if not safe_browser_endpoint(result.endpoint):
@@ -163,10 +177,10 @@ def main() -> int:
                 keep_interactive_runtime_alive()
             return 0 if result.status in {"started", "already_running"} else 1
 
-        # Grading/report machinery is deliberately lazy: an interactive launch
-        # must not pay the cold-start cost of Docker/Python grading services.
+        _trace("before-student-lab-runner-import")
         from scripts import student_lab_runner
 
+        _trace("after-student-lab-runner-import")
         if args.final and not args.write_report:
             raise ValueError("--final richiede --write-report")
         report = student_lab_runner.run_assignment(
