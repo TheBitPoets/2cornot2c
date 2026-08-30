@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
@@ -117,10 +118,7 @@ def test_flowchart_fallback_activates_without_blocking_required_course() -> None
 
 
 def test_docker_profile_is_not_machine_ready_without_immutable_student_dev_image() -> None:
-    snapshot = docker_snapshot()
-    snapshot = report.MachineSnapshot(
-        **{**snapshot.__dict__, "student_dev_image": probe(False)}
-    )
+    snapshot = replace(docker_snapshot(), student_dev_image=probe(False))
 
     result = report.resolve_environment(manifest(), profile="docker-light", snapshot=snapshot)
 
@@ -140,18 +138,14 @@ def test_vm_gui_requires_selected_installed_active_release_box() -> None:
     assert result["profile"]["machine_ready"] is True
     assert result["summary"]["fallbacks_active"] == ["flowchart.lab.v1"]
 
-    broken = vm_snapshot()
-    broken = report.MachineSnapshot(**{**broken.__dict__, "classroom_box": probe(False)})
+    broken = replace(vm_snapshot(), classroom_box=probe(False))
     result = report.resolve_environment(manifest(), profile="vm-gui", snapshot=broken)
     assert result["ready"] is False
     assert result["profile"]["machine_ready"] is False
 
 
 def test_installer_python_is_diagnostic_not_course_runtime_evidence() -> None:
-    snapshot = docker_snapshot()
-    snapshot = report.MachineSnapshot(
-        **{**snapshot.__dict__, "host_python": probe(True, "3.13.2")}
-    )
+    snapshot = replace(docker_snapshot(), host_python=probe(True, "3.13.2"))
 
     result = report.resolve_environment(manifest(), profile="docker-light", snapshot=snapshot)
 
