@@ -1911,8 +1911,8 @@ def test_systemd_generators_are_attested_before_and_after_daemon_reload(
 
     monkeypatch.setattr(
         ubuntu_activation,
-        "_attest_systemd_generators",
-        lambda: events.append("generator"),
+        "_attest_systemd_generator_authority",
+        lambda **_kwargs: events.append("generator"),
     )
     monkeypatch.setattr(ubuntu_activation, "_systemctl_result", systemctl)
     ubuntu_activation._attest_systemd_boot_surface()
@@ -2664,7 +2664,7 @@ def test_systemd_generator_search_path_rejects_unmanaged_local_generator(
         ubuntu_activation.ActivationError,
         match="Inventario executable generator systemd",
     ):
-        ubuntu_activation._attest_systemd_generators()
+        ubuntu_activation._attest_systemd_generator_authority()
 
 
 def _install_ephemeral_systemd_surface_fixture(
@@ -4638,13 +4638,13 @@ def test_modified_systemd_generator_executable_fails_byte_integrity(
             path for path in paths if path == generator and path.read_bytes() == canonical
         ),
     )
-    ubuntu_activation._attest_systemd_generators()
+    ubuntu_activation._attest_systemd_generator_authority()
     generator.write_bytes(canonical + b"# modified\n")
     with pytest.raises(
         ubuntu_activation.ActivationError,
         match="Package authoritative digest mismatch",
     ):
-        ubuntu_activation._attest_systemd_generators()
+        ubuntu_activation._attest_systemd_generator_authority()
 
 
 def test_modified_boot_reachable_package_unit_bytes_fail_closed(
@@ -4710,7 +4710,7 @@ def test_remaining_dpkg_ownership_calls_are_metadata_or_symlink_only() -> None:
     Visitor().visit(tree)
     assert callers == {
         "_verify_modules_enabled_entries",  # exact-target bridge symlink only
-        "_attest_systemd_generators",  # directories and exact generator symlink only
+        "_attest_systemd_generator_authority",  # directories and exact generator symlink only
         "_attest_systemd_boot_surface",  # inventory classification; reachable bytes re-attested
     }
 
@@ -4778,6 +4778,160 @@ def test_static_production_bootstrap_and_build_are_structurally_loader_free() ->
         assert identity.sha256 in source
     for digest in loader_lookup_policy.BOOTSTRAP_REVIEWED_FILES.values():
         assert digest in source
+
+
+def test_reviewed_package_inventory_is_independent_of_orchestrated_overlay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    children = tuple(
+        Path(str(item["path"]))
+        for item in systemd_generator_orchestrator.SELECTED_GENERATORS
+    )
+    package_artifacts = (*children, ubuntu_activation.SYSTEMD_GPT_AUTO_GENERATOR)
+    masks = tuple(
+        systemd_generator_orchestrator.ORCHESTRATOR_ENTRY.parent / basename
+        for basename in systemd_generator_orchestrator.MASKED_GENERATORS
+    )
+    artifacts = (*package_artifacts, *masks, systemd_generator_orchestrator.ORCHESTRATOR_ENTRY)
+    targets = {
+        **{path: Path("/dev/null") for path in masks},
+        systemd_generator_orchestrator.ORCHESTRATOR_ENTRY:
+            systemd_generator_orchestrator.ORCHESTRATOR_BINARY,
+    }
+    # This is the exact old failure shape: the visible artifact basename set has
+    # the 12 package names plus the first-class reviewed orchestrator.
+    assert {path.name for path in artifacts} == {
+        *(path.name for path in package_artifacts),
+        systemd_generator_orchestrator.ORCHESTRATOR_ENTRY.name,
+    }
+    monkeypatch.setattr(
+        ubuntu_integration,
+        "_systemd_surface_inventory",
+        lambda _roots: ((), artifacts, targets, frozenset(package_artifacts)),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_systemd_path",
+        lambda _name: ubuntu_activation.EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH,
+    )
+    observed: list[tuple[Path, ...]] = []
+
+    def attest(paths) -> tuple[str, ...]:
+        observed.append(tuple(paths))
+        return tuple(path.name for path in children)
+
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_attest_reviewed_package_generator_authority",
+        attest,
+    )
+    assert ubuntu_integration._inventory_reviewed_package_generators() == tuple(
+        path.name for path in children
+    )
+    assert observed == [package_artifacts]
+
+
+def test_orchestrator_inner_set_matches_stock_selection_and_excludes_gpt() -> None:
+    children = ubuntu_activation._attest_orchestrator_inner_generator_set()
+    assert len(children) == 11
+    assert {path.name for path in children} == {
+        str(item["basename"])
+        for item in systemd_generator_orchestrator.SELECTED_GENERATORS
+    }
+    assert ubuntu_activation.SYSTEMD_GPT_AUTO_GENERATOR not in children
+    assert set(systemd_generator_orchestrator.MASKED_GENERATORS) == {
+        *(path.name for path in children),
+        ubuntu_activation.SYSTEMD_GPT_AUTO_GENERATOR.name,
+    }
+
+
+def test_reviewed_package_generator_inventory_rejects_extra_or_missing() -> None:
+    children = ubuntu_activation._attest_orchestrator_inner_generator_set()
+    exact = (*children, ubuntu_activation.SYSTEMD_GPT_AUTO_GENERATOR)
+    with pytest.raises(ubuntu_activation.ActivationError, match="Inventario executable"):
+        ubuntu_activation._attest_reviewed_package_generator_authority(
+            (*exact, ubuntu_activation.SYSTEMD_PACKAGE_GENERATOR_ROOT / "unexpected-generator")
+        )
+    with pytest.raises(ubuntu_activation.ActivationError, match="Inventario executable"):
+        ubuntu_activation._attest_reviewed_package_generator_authority(exact[:-1])
+
+
+@pytest.mark.parametrize(
+    "identity",
+    (
+        "systemd=255.4-1ubuntu8.18:amd64\n",
+        "foreign-systemd=255.4-1ubuntu8.17:amd64\n",
+    ),
+)
+def test_generator_package_version_is_exact(
+    identity: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        ubuntu_activation.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess(
+            [], 0, identity, ""
+        ),
+    )
+    with pytest.raises(ubuntu_activation.ActivationError, match="Versione package"):
+        ubuntu_activation._attest_exact_systemd_generator_package_version()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="systemd generator symlink semantics are POSIX-only")
+def test_generator_first_match_selection_models_stock_and_overlay(
+    tmp_path: Path,
+) -> None:
+    run_root = tmp_path / "run/systemd/system-generators"
+    etc_root = tmp_path / "etc/systemd/system-generators"
+    local_root = tmp_path / "usr/local/lib/systemd/system-generators"
+    package_root = tmp_path / "usr/lib/systemd/system-generators"
+    for root in (run_root, etc_root, local_root, package_root):
+        root.mkdir(parents=True)
+    children = tuple(
+        str(item["basename"])
+        for item in systemd_generator_orchestrator.SELECTED_GENERATORS
+    )
+    for name in (*children, ubuntu_activation.SYSTEMD_GPT_AUTO_GENERATOR.name):
+        executable = package_root / name
+        executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        executable.chmod(0o755)
+    (etc_root / ubuntu_activation.SYSTEMD_GPT_AUTO_GENERATOR.name).symlink_to(
+        "/dev/null"
+    )
+    roots = (run_root, etc_root, local_root, package_root)
+    artifacts = tuple(path for root in roots for path in root.iterdir())
+    stock = ubuntu_activation._effective_systemd_generator_selection(roots, artifacts)
+    assert {name for name, path in stock.items() if path is not None} == set(children)
+    assert {
+        name for name, path in stock.items() if path is None
+    } == {ubuntu_activation.SYSTEMD_GPT_AUTO_GENERATOR.name}
+
+    for name in systemd_generator_orchestrator.MASKED_GENERATORS:
+        mask = etc_root / name
+        if not mask.exists() and not mask.is_symlink():
+            mask.symlink_to("/dev/null")
+    orchestrator_binary = tmp_path / "thebitlab-systemd-generator-orchestrator"
+    orchestrator_binary.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    orchestrator_binary.chmod(0o755)
+    orchestrator_entry = etc_root / systemd_generator_orchestrator.ORCHESTRATOR_ENTRY.name
+    orchestrator_entry.symlink_to(orchestrator_binary)
+    artifacts = tuple(path for root in roots for path in root.iterdir())
+    overlay = ubuntu_activation._effective_systemd_generator_selection(roots, artifacts)
+    assert {
+        name: path.name if path is not None else None
+        for name, path in overlay.items()
+    } == {
+        **{name: None for name in systemd_generator_orchestrator.MASKED_GENERATORS},
+        systemd_generator_orchestrator.ORCHESTRATOR_ENTRY.name:
+            systemd_generator_orchestrator.ORCHESTRATOR_ENTRY.name,
+    }
+    hostile = run_root / "hostile-generator"
+    hostile.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    hostile.chmod(0o755)
+    attacked = ubuntu_activation._effective_systemd_generator_selection(
+        roots, (*artifacts, hostile)
+    )
+    assert attacked[hostile.name] == hostile
 
 
 def _generator_manifest(

@@ -156,6 +156,15 @@ GENERATED_PACKAGE_UNIT_LINKS = {
 SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS: Mapping[Path, str] = {
     Path("/etc/systemd/system-generators/systemd-gpt-auto-generator"): "/dev/null",
 }
+GENERATOR_SELECTION_STOCK = "stock"
+GENERATOR_SELECTION_ORCHESTRATED = "orchestrated"
+GENERATOR_SELECTION_MODES = frozenset(
+    {GENERATOR_SELECTION_STOCK, GENERATOR_SELECTION_ORCHESTRATED}
+)
+SYSTEMD_PACKAGE_GENERATOR_ROOT = Path("/usr/lib/systemd/system-generators")
+SYSTEMD_GPT_AUTO_GENERATOR = (
+    SYSTEMD_PACKAGE_GENERATOR_ROOT / "systemd-gpt-auto-generator"
+)
 SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES = (".wants", ".requires", ".upholds")
 SYSTEMD_ENABLED_STATES = frozenset(
     {"enabled", "enabled-runtime", "linked", "linked-runtime"}
@@ -5008,8 +5017,210 @@ def _is_generated_systemd_root(path: Path) -> bool:
     return path.parent == Path("/run/systemd") and path.name in SYSTEMD_GENERATED_DIRECTORY_NAMES
 
 
-def _attest_systemd_generators() -> None:
-    """Attest the closed stock inventory and its exact first-match selection."""
+def _attest_orchestrator_inner_generator_set() -> tuple[Path, ...]:
+    """Bind the orchestrator child list to the reviewed stock Noble policy."""
+
+    required_keys = {
+        "basename", "path", "package", "package_identity", "sha256",
+        "execution_class", "expected_presence",
+    }
+    children: list[Path] = []
+    for item in generator_orchestrator.SELECTED_GENERATORS:
+        if set(item) != required_keys:
+            raise ActivationError("Schema inventory child orchestrator divergente")
+        path = Path(str(item["path"]))
+        identity = REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES.get(path)
+        if (
+            path.parent != SYSTEMD_PACKAGE_GENERATOR_ROOT
+            or path.name != item["basename"]
+            or item["package"] != "systemd"
+            or item["package_identity"] != "systemd=255.4-1ubuntu8.17:amd64"
+            or item["execution_class"] != "parallel-ignore-child-exit"
+            or item["expected_presence"] is not True
+            or REVIEWED_PACKAGE_IDENTITIES.get(path) != frozenset({"systemd"})
+            or identity != (item["sha256"], NATIVE_PACKAGE_BINARY)
+        ):
+            raise ActivationError(f"Policy child orchestrator divergente: {path}")
+        children.append(path)
+    if len(children) != 11 or len(set(children)) != 11:
+        raise ActivationError("Inventario child orchestrator non chiuso")
+    expected_masks = {path.name for path in children} | {
+        SYSTEMD_GPT_AUTO_GENERATOR.name
+    }
+    if set(generator_orchestrator.MASKED_GENERATORS) != expected_masks:
+        raise ActivationError("Inventario mask orchestrator non corrisponde ai child")
+    gpt_identity = REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES.get(
+        SYSTEMD_GPT_AUTO_GENERATOR
+    )
+    if (
+        REVIEWED_PACKAGE_IDENTITIES.get(SYSTEMD_GPT_AUTO_GENERATOR)
+        != frozenset({"systemd"})
+        or gpt_identity is None
+        or gpt_identity[1] != NATIVE_PACKAGE_BINARY
+        or SYSTEMD_GPT_AUTO_GENERATOR in children
+    ):
+        raise ActivationError("Policy systemd-gpt-auto-generator ambigua")
+    return tuple(sorted(children))
+
+
+def _attest_exact_systemd_generator_package_version() -> None:
+    try:
+        result = subprocess.run(
+            [
+                str(DPKG_QUERY_BINARY), "--show",
+                "--showformat=${binary:Package}=${Version}:${Architecture}\\n",
+                "systemd",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ActivationError("Versione package generator non disponibile") from exc
+    if result.returncode != 0 or result.stderr or result.stdout != (
+        "systemd=255.4-1ubuntu8.17:amd64\n"
+    ):
+        raise ActivationError("Versione package generator fuori policy")
+
+
+def _attest_reviewed_package_generator_authority(
+    regulars: Iterable[Path],
+) -> tuple[str, ...]:
+    """Attest package artifacts independently from systemd search precedence."""
+
+    children = _attest_orchestrator_inner_generator_set()
+    expected = set(children) | {SYSTEMD_GPT_AUTO_GENERATOR}
+    observed = set(regulars)
+    if observed != expected:
+        raise ActivationError("Inventario executable generator package fuori policy")
+    _attest_exact_systemd_generator_package_version()
+    for path in sorted(observed):
+        metadata = path.lstat()
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or (os.name != "nt" and (metadata.st_uid != 0 or metadata.st_gid != 0))
+            or metadata.st_mode & 0o022
+            or getattr(metadata, "st_nlink", 1) != 1
+            or not metadata.st_mode & stat.S_IXUSR
+        ):
+            raise ActivationError(f"Generator systemd package con metadata unsafe: {path}")
+    _attest_expected_package_files(
+        _reviewed_package_executable_policies(sorted(observed)),
+        label="systemd reviewed package generator executable",
+    )
+    return tuple(path.name for path in children)
+
+
+def _effective_systemd_generator_selection(
+    roots: tuple[Path, ...], artifacts: Iterable[Path]
+) -> Mapping[str, Path | None]:
+    selected: dict[str, Path | None] = {}
+    by_path = set(artifacts)
+    for root in roots:
+        candidates = sorted(
+            (path for path in by_path if path.parent == root),
+            key=lambda value: value.name,
+        )
+        for path in candidates:
+            if path.name in selected:
+                continue
+            if path.is_symlink() and path.resolve(strict=True) == Path("/dev/null"):
+                selected[path.name] = None
+            elif path.is_file() and os.access(path, os.X_OK):
+                selected[path.name] = path
+            else:
+                raise ActivationError(f"Entry generator first-match non canonica: {path}")
+    return selected
+
+
+def _attest_effective_systemd_generator_selection(
+    *,
+    expected_mode: str,
+    roots: tuple[Path, ...],
+    artifacts: tuple[Path, ...],
+    symlinks: tuple[Path, ...],
+    children: tuple[str, ...],
+) -> None:
+    """Attest exactly what systemd 255 will select at daemon-reload."""
+
+    if expected_mode not in GENERATOR_SELECTION_MODES:
+        raise ActivationError("Modalità inventory generator non canonica")
+    if expected_mode == GENERATOR_SELECTION_STOCK:
+        expected_symlinks = set(SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS)
+        if set(symlinks) != expected_symlinks:
+            raise ActivationError("Inventario generator stock di provisioning divergente")
+        for path, target in SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS.items():
+            if (
+                _assert_systemd_symlink_metadata(path) != target
+                or path.resolve(strict=True) != Path("/dev/null")
+            ):
+                raise ActivationError("Mask stock di provisioning divergente")
+        expected_executed = {
+            name: SYSTEMD_PACKAGE_GENERATOR_ROOT / name for name in children
+        }
+        expected_masked = {SYSTEMD_GPT_AUTO_GENERATOR.name}
+    else:
+        expected_masks = {
+            generator_orchestrator.ORCHESTRATOR_ENTRY.parent / basename
+            for basename in generator_orchestrator.MASKED_GENERATORS
+        }
+        expected_symlinks = expected_masks | {
+            generator_orchestrator.ORCHESTRATOR_ENTRY
+        }
+        if set(symlinks) != expected_symlinks:
+            missing = sorted(str(path) for path in expected_symlinks - set(symlinks))
+            extra = sorted(str(path) for path in set(symlinks) - expected_symlinks)
+            raise ActivationError(
+                "Inventario orchestrator/mask generator systemd fuori policy: "
+                f"missing={missing} extra={extra}"
+            )
+        for path in symlinks:
+            target = _assert_systemd_symlink_metadata(path)
+            expected_target = (
+                generator_orchestrator.ORCHESTRATOR_BINARY.as_posix()
+                if path == generator_orchestrator.ORCHESTRATOR_ENTRY
+                else "/dev/null"
+            )
+            if target != expected_target:
+                raise ActivationError(f"Symlink orchestrator/mask divergente: {path}")
+            try:
+                resolved = path.resolve(strict=True)
+            except OSError as exc:
+                raise ActivationError(f"Symlink orchestrator/mask broken: {path}") from exc
+            if resolved != Path(expected_target):
+                raise ActivationError(f"Target orchestrator/mask non canonico: {path}")
+        orchestrator = generator_orchestrator.ORCHESTRATOR_BINARY
+        metadata = orchestrator.lstat()
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or (os.name != "nt" and (metadata.st_uid != 0 or metadata.st_gid != 0))
+            or stat.S_IMODE(metadata.st_mode) != 0o755
+            or getattr(metadata, "st_nlink", 1) != 1
+        ):
+            raise ActivationError("Orchestrator statico con metadata unsafe")
+        if hashlib.sha256(_read_stable_trusted_file(orchestrator)).hexdigest() != (
+            generator_orchestrator.ORCHESTRATOR_REVIEWED_SHA256
+        ):
+            raise ActivationError("Orchestrator statico digest divergente")
+        expected_executed = {
+            generator_orchestrator.ORCHESTRATOR_ENTRY.name:
+                generator_orchestrator.ORCHESTRATOR_ENTRY
+        }
+        expected_masked = set(generator_orchestrator.MASKED_GENERATORS)
+    selected = _effective_systemd_generator_selection(roots, artifacts)
+    executed = {name: path for name, path in selected.items() if path is not None}
+    masked = {name for name, path in selected.items() if path is None}
+    if executed != expected_executed:
+        raise ActivationError(f"Selected generator closure divergente: {executed}")
+    if masked != expected_masked:
+        raise ActivationError("Mask generator selected closure divergente")
+
+
+def _attest_systemd_generator_authority(
+    *, expected_mode: str | None = None
+) -> tuple[str, ...]:
+    """Attest package, inner-child and effective-selection generator authority."""
 
     roots = _systemd_path(SYSTEMD_GENERATOR_SEARCH_PATH_NAME)
     if _KERNEL_FENCE_ENABLED and roots != EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH:
@@ -5023,8 +5234,7 @@ def _attest_systemd_generators() -> None:
     symlinks = tuple(path for path in artifacts if path.is_symlink())
     regulars = tuple(path for path in artifacts if not path.is_symlink())
     if roots != EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH:
-        # Portable policy tests use synthetic roots with the kernel fence off;
-        # production reached above only with the exact Noble search path.
+        # Portable policy tests use synthetic roots with the kernel fence off.
         metadata_owned = _dpkg_owned_paths((*directories, *symlinks))
         unmanaged = [
             path for path in (*directories, *symlinks) if path not in metadata_owned
@@ -5047,92 +5257,18 @@ def _attest_systemd_generators() -> None:
             _reviewed_package_executable_policies(regulars),
             label="synthetic systemd generator executable",
         )
-        return
-    package_regulars = {
-        Path(str(item["path"])) for item in generator_orchestrator.SELECTED_GENERATORS
-    } | {Path("/usr/lib/systemd/system-generators/systemd-gpt-auto-generator")}
-    if generator_orchestrator.ORCHESTRATOR_ENTRY not in symlinks:
-        # CI provisioning performs one read-only pristine stock attestation
-        # before installing the production source authority and enabling fences.
-        if _KERNEL_FENCE_ENABLED:
-            raise ActivationError("Orchestrator production assente con fence attiva")
-        if set(symlinks) != set(SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS) or set(regulars) != package_regulars:
-            raise ActivationError("Inventario generator stock di provisioning divergente")
-        for path, target in SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS.items():
-            if _assert_systemd_symlink_metadata(path) != target or path.resolve(strict=True) != Path("/dev/null"):
-                raise ActivationError("Mask stock di provisioning divergente")
-        _attest_expected_package_files(
-            _reviewed_package_executable_policies(regulars),
-            label="stock provisioning systemd generator executable",
-        )
-        return
-    expected_masks = {
-        Path("/etc/systemd/system-generators") / basename
-        for basename in generator_orchestrator.MASKED_GENERATORS
-    }
-    expected_symlinks = expected_masks | {generator_orchestrator.ORCHESTRATOR_ENTRY}
-    if set(symlinks) != expected_symlinks:
-        missing = sorted(str(path) for path in expected_symlinks - set(symlinks))
-        extra = sorted(str(path) for path in set(symlinks) - expected_symlinks)
-        raise ActivationError(
-            f"Inventario orchestrator/mask generator systemd fuori policy: missing={missing} extra={extra}"
-        )
-    for path in symlinks:
-        target = _assert_systemd_symlink_metadata(path)
-        expected_target = (
-            generator_orchestrator.ORCHESTRATOR_BINARY.as_posix()
-            if path == generator_orchestrator.ORCHESTRATOR_ENTRY
-            else "/dev/null"
-        )
-        if target != expected_target:
-            raise ActivationError(f"Symlink orchestrator/mask divergente: {path}")
-        try:
-            resolved = path.resolve(strict=True)
-        except OSError as exc:
-            raise ActivationError(f"Symlink orchestrator/mask broken: {path}") from exc
-        if resolved != Path(expected_target):
-            raise ActivationError(f"Target orchestrator/mask non canonico: {path}")
-    orchestrator = generator_orchestrator.ORCHESTRATOR_BINARY
-    metadata = orchestrator.lstat()
-    if (
-        not stat.S_ISREG(metadata.st_mode)
-        or (os.name != "nt" and (metadata.st_uid != 0 or metadata.st_gid != 0))
-        or metadata.st_mode & 0o022
-        or getattr(metadata, "st_nlink", 1) != 1
-        or not metadata.st_mode & stat.S_IXUSR
-    ):
-        raise ActivationError("Orchestrator statico con metadata unsafe")
-    if hashlib.sha256(_read_stable_trusted_file(orchestrator)).hexdigest() != generator_orchestrator.ORCHESTRATOR_REVIEWED_SHA256:
-        raise ActivationError("Orchestrator statico digest divergente")
-    for path in regulars:
-        metadata = path.lstat()
-        if not stat.S_ISREG(metadata.st_mode):
-            raise ActivationError(f"Generator systemd package non regolare: {path}")
-        if os.name != "nt" and (metadata.st_uid != 0 or metadata.st_gid != 0 or metadata.st_mode & 0o022):
-            raise ActivationError(f"Generator systemd package con metadata unsafe: {path}")
-    if set(regulars) != package_regulars:
-        raise ActivationError("Inventario executable generator systemd fuori policy")
-    _attest_expected_package_files(
-        _reviewed_package_executable_policies(regulars),
-        label="systemd generator executable",
+        return tuple(sorted(path.name for path in regulars))
+    if expected_mode is None:
+        raise ActivationError("Modalità inventory generator production non dichiarata")
+    children = _attest_reviewed_package_generator_authority(regulars)
+    _attest_effective_systemd_generator_selection(
+        expected_mode=expected_mode,
+        roots=roots,
+        artifacts=tuple(artifacts),
+        symlinks=symlinks,
+        children=children,
     )
-    selected: dict[str, Path | None] = {}
-    by_path = {path for path in artifacts}
-    for root in roots:
-        for path in sorted((candidate for candidate in by_path if candidate.parent == root), key=lambda value: value.name):
-            if path.name in selected:
-                continue
-            if path.is_symlink() and path.resolve(strict=True) == Path("/dev/null"):
-                selected[path.name] = None
-            elif path.is_file() and os.access(path, os.X_OK):
-                selected[path.name] = path
-            else:
-                raise ActivationError(f"Entry generator first-match non canonica: {path}")
-    executed = {name: path for name, path in selected.items() if path is not None}
-    if executed != {generator_orchestrator.ORCHESTRATOR_ENTRY.name: generator_orchestrator.ORCHESTRATOR_ENTRY}:
-        raise ActivationError(f"Selected generator closure divergente: {executed}")
-    if {name for name, path in selected.items() if path is None} != set(generator_orchestrator.MASKED_GENERATORS):
-        raise ActivationError("Mask generator selected closure divergente")
+    return children
 
 
 def _systemd_command_output(arguments: Sequence[str], *, label: str) -> str:
@@ -5834,7 +5970,12 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
     # transaction staging; PID1 output remains the previous validated/SAFE bundle
     # until seal, closed attestation and prefix-combination validation all pass.
     global _GENERATOR_BUNDLE_ID
-    _attest_systemd_generators()
+    generator_mode = (
+        GENERATOR_SELECTION_ORCHESTRATED
+        if _KERNEL_FENCE_ENABLED
+        else GENERATOR_SELECTION_STOCK
+    )
+    _attest_systemd_generator_authority(expected_mode=generator_mode)
     if _KERNEL_FENCE_ENABLED and _GENERATOR_BUNDLE_ID is None:
         try:
             evidence = generator_orchestrator.orchestrated_reload(
@@ -5851,13 +5992,13 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
             raise ActivationError("Generator bundle identity non canonica")
         _GENERATOR_BUNDLE_ID = bundle_id
         _mark_executor_safe_boundary_if_pending()
-        _attest_systemd_generators()
+        _attest_systemd_generator_authority(expected_mode=generator_mode)
     elif not _KERNEL_FENCE_ENABLED:
         code, _ = _systemctl_result(["daemon-reload"])
         _mark_executor_safe_boundary_if_pending()
         if code != 0:
             raise ActivationError("systemd daemon-reload fallita durante boot attestation")
-        _attest_systemd_generators()
+        _attest_systemd_generator_authority(expected_mode=generator_mode)
     roots = _systemd_path(SYSTEMD_UNIT_SEARCH_PATH_NAME)
     directories: list[Path] = []
     artifacts: list[Path] = []

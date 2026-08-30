@@ -2819,29 +2819,25 @@ def _exercise_logrotate_input_provenance(bundle: Path, temporary: Path) -> None:
     )
 
 
-def _inventory_supported_package_generators() -> tuple[str, ...]:
-    expected = {
-        "systemd-cryptsetup-generator",
-        "systemd-debug-generator",
-        "systemd-fstab-generator",
-        "systemd-getty-generator",
-        "systemd-gpt-auto-generator",
-        "systemd-hibernate-resume-generator",
-        "systemd-integritysetup-generator",
-        "systemd-rc-local-generator",
-        "systemd-run-generator",
-        "systemd-system-update-generator",
-        "systemd-sysv-generator",
-        "systemd-veritysetup-generator",
-    }
+def _inventory_reviewed_package_generators() -> tuple[str, ...]:
+    """Return reviewed orchestrator children, not precedence-selected sources."""
+
     roots = activation._systemd_path(activation.SYSTEMD_GENERATOR_SEARCH_PATH_NAME)
-    _directories, artifacts, targets, package_owned = _systemd_surface_inventory(roots)
-    names = {path.name for path in artifacts}
-    if names != expected or any(path not in package_owned for path in artifacts):
-        raise RuntimeError("Inventario generator package Ubuntu 24.04 divergente")
-    if any(target not in package_owned and target != Path("/dev/null") for target in targets.values()):
-        raise RuntimeError("Target generator package Ubuntu non attribuito")
-    return tuple(sorted(names))
+    _directories, artifacts, _targets, _package_owned = _systemd_surface_inventory(roots)
+    package_regulars = tuple(
+        path
+        for path in artifacts
+        if path.parent == activation.SYSTEMD_PACKAGE_GENERATOR_ROOT
+        and not path.is_symlink()
+    )
+    try:
+        return activation._attest_reviewed_package_generator_authority(
+            package_regulars
+        )
+    except activation.ActivationError as exc:
+        raise RuntimeError(
+            "Inventario generator package Ubuntu 24.04 divergente"
+        ) from exc
 
 
 def _expect_generated_sysv_rejected(config: Path) -> None:
@@ -3078,7 +3074,9 @@ def _exercise_behavior_bearing_package_byte_integrity() -> None:
 
         generator.write_bytes(originals[generator][0] + b"modified-generator")
         try:
-            activation._attest_systemd_generators()
+            activation._attest_systemd_generator_authority(
+                expected_mode=activation.GENERATOR_SELECTION_ORCHESTRATED
+            )
         except activation.ActivationError:
             pass
         else:
@@ -5386,7 +5384,7 @@ def _test_executor_lease_timing_diagnostic(bundle: Path) -> None:
         ("_attest_e2scrub_inputs", "e2scrub input attestation", "NO"),
         ("_attest_motd_news_inputs", "motd input attestation", "NO"),
         ("_attest_logrotate_inputs", "logrotate input attestation", "NO"),
-        ("_attest_systemd_generators", "generator source attestation", "YES"),
+        ("_attest_systemd_generator_authority", "generator source attestation", "YES"),
         ("_systemctl_result", "service-manager interaction", "YES"),
         ("_seal_generated_systemd_output", "generated output seal", "YES"),
         ("verify_ubuntu_layout", "Ubuntu layout validation", "NO"),
@@ -6811,7 +6809,7 @@ def run(
                 f"{len(boot_commands) - absent_commands} expected-absent={absent_commands}; "
                 "all present paths bind package identity, static SHA, presence, and class"
             )
-            generator_names = _inventory_supported_package_generators()
+            generator_names = _inventory_reviewed_package_generators()
             print(
                 "EVIDENCE: package-owned enabled unit inventory PASS; Ubuntu generators="
                 + ",".join(generator_names)
