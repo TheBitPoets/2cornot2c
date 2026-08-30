@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 import webbrowser
 from pathlib import Path
 from urllib.parse import urlparse
@@ -32,6 +33,22 @@ def safe_browser_endpoint(endpoint: str) -> bool:
 
     parsed = urlparse(str(endpoint or "").strip())
     return parsed.scheme in {"http", "https"} and bool(parsed.hostname)
+
+
+def keep_interactive_runtime_alive(*, poll_seconds: float = 0.25) -> None:
+    """Keep the CLI process alive while an in-process interactive runtime is serving.
+
+    Built-in interactive runtimes such as Flowchart Lab host their loopback HTTP
+    service in daemon threads owned by this process. Returning from the CLI would
+    immediately destroy that service and leave the printed endpoint unusable.
+    The launcher therefore remains attached until the operator interrupts it.
+    """
+
+    try:
+        while True:
+            time.sleep(poll_seconds)
+    except KeyboardInterrupt:
+        return
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,7 +96,9 @@ def main() -> int:
                 "detail": result.detail,
                 "metadata": result.metadata,
             }
-            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            # Flush is required because the managed launcher stays alive after
+            # emitting its endpoint and may be consumed by a parent launcher.
+            print(json.dumps(payload, ensure_ascii=False, indent=2), flush=True)
             if result.endpoint and not args.no_open_browser:
                 if not safe_browser_endpoint(result.endpoint):
                     raise ValueError(
@@ -87,6 +106,8 @@ def main() -> int:
                         "l'apertura automatica e stata bloccata."
                     )
                 webbrowser.open(result.endpoint)
+            if result.status in {"started", "already_running"} and result.endpoint:
+                keep_interactive_runtime_alive()
             return 0 if result.status in {"started", "already_running"} else 1
 
         if args.final and not args.write_report:
