@@ -10,6 +10,11 @@ LOCK = ROOT / "docker" / "assignment-runner" / "toolchain.lock.json"
 DOCKERFILE = ROOT / "docker" / "assignment-runner" / "Dockerfile"
 DOCKERIGNORE = ROOT / ".dockerignore"
 
+PUBLISHED_VERSION = "2026.08.3"
+PUBLISHED_SOURCE = "23bc1d36c7eb8c1b10a11cbde5f226ce7554f85e"
+PUBLISHED_DIGEST = "sha256:c0594df833925044831463a9ee631aba2688929951a7dbcb53612b86d221ed51"
+IMAGE_REPOSITORY = "ghcr.io/thebitpoets/2cornot2c-assignment-runner"
+
 
 def load(path: Path) -> dict:
     value = json.loads(path.read_text(encoding="utf-8"))
@@ -17,28 +22,25 @@ def load(path: Path) -> dict:
     return value
 
 
-def test_combined_p2_p3_p4_candidate_has_distinct_version_without_faking_published_lock() -> None:
+def test_combined_p2_p3_p4_release_is_locked_to_published_2026_08_3() -> None:
     manifest = load(MANIFEST)
     lock = load(LOCK)
 
-    assert manifest["version"] == "2026.08.3"
-    assert manifest["platform"] == "linux/amd64"
+    assert manifest["version"] == PUBLISHED_VERSION
+    assert lock["version"] == PUBLISHED_VERSION
+    assert manifest["platform"] == lock["platform"] == "linux/amd64"
+    assert manifest["image_repository"] == lock["image_repository"] == IMAGE_REPOSITORY
+    assert lock["source_revision"] == PUBLISHED_SOURCE
+    assert lock["immutable_reference"] == f"{IMAGE_REPOSITORY}@{PUBLISHED_DIGEST}"
+
+
+def test_manifest_and_stable_lock_share_the_reviewed_release_identity() -> None:
+    manifest = load(MANIFEST)
+    lock = load(LOCK)
+
+    assert manifest["version"] == lock["version"] == PUBLISHED_VERSION
     assert manifest["image_repository"] == lock["image_repository"]
-
-    # Until the combined P2/P3/P4 release is actually reviewed, merged and
-    # published, the checked-in immutable lock remains the previous stable release.
-    assert lock["version"] == "2026.07.1"
-    assert lock["source_revision"] == "bd102146a684a9b06835204ec1b7f668f7655a03"
-    assert lock["immutable_reference"].endswith(
-        "@sha256:62f0f7b7bc1d48d01b7f8e5fa765e0b43be3622e70a614033b1bb4a4e522e159"
-    )
-
-
-def test_candidate_and_stable_lock_are_deliberately_different_release_identities() -> None:
-    manifest = load(MANIFEST)
-    lock = load(LOCK)
-
-    assert manifest["version"] != lock["version"]
+    assert "@sha256:" in lock["immutable_reference"]
 
 
 def test_combined_runner_packages_all_three_python_profile_workers() -> None:
