@@ -98,6 +98,7 @@ htmlcov/
 *.secret
 *.secrets
 *.pem
+!deploy/pilot/ci/isrg-root-x1.pem
 *.key
 *.p12
 *.pfx

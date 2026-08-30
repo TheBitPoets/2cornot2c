@@ -5,6 +5,8 @@ set -Eeuo pipefail
 script_directory="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 repository_root="$(cd -- "$script_directory/.." && pwd -P)"
 dockerfile="$repository_root/deploy/pilot/ci/Dockerfile.ubuntu-systemd"
+package_baseline="$repository_root/deploy/pilot/ci/ubuntu-systemd-package-baseline.json"
+package_baseline_host="$package_baseline"
 build_context="$repository_root"
 mount_source="$repository_root"
 integration_arguments=(--ephemeral-host)
@@ -21,6 +23,8 @@ elif (( $# == 1 )) && [[ "$1" == "--executor-lease-timing-diagnostic-only" ]]; t
     integration_arguments+=(--executor-lease-timing-diagnostic-only)
 elif (( $# == 1 )) && [[ "$1" == "--fence-race-only" ]]; then
     integration_arguments+=(--fence-race-only)
+elif (( $# == 1 )) && [[ "$1" == "--generator-orchestrator-gate-only" ]]; then
+    integration_arguments+=(--generator-orchestrator-gate-only)
 elif (( $# == 1 )) && [[ "$1" == "--runtime-directory-authority-only" ]]; then
     integration_arguments+=(--runtime-directory-authority-only)
 elif (( $# == 1 )) && [[ "$1" == "--shard-f-only" ]]; then
@@ -37,6 +41,7 @@ if [[ -n "${MSYSTEM:-}" ]] && command -v cygpath >/dev/null 2>&1; then
     mount_source="$(cygpath -w "$repository_root")"
     build_context="$(cygpath -w "$build_context")"
     dockerfile="$(cygpath -w "$dockerfile")"
+    package_baseline_host="$(cygpath -w "$package_baseline")"
     export MSYS_NO_PATHCONV=1
 fi
 
@@ -78,9 +83,23 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-docker build --pull --tag "$image" --file "$dockerfile" "$build_context"
+baseline_snapshot="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["ubuntu_snapshot"])' "$package_baseline_host")"
+baseline_sha256="$(python -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$package_baseline_host")"
+baseline_inventory_sha256="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["stages"]["runtime"]["installed_package_inventory_sha256"])' "$package_baseline_host")"
+
+docker build --pull --no-cache --tag "$image" --file "$dockerfile" "$build_context"
 image_built=true
 container_may_exist=true
+image_snapshot="$(docker image inspect --format '{{index .Config.Labels "org.thebitlab.pilot.ubuntu-snapshot"}}' "$image")"
+image_baseline_sha256="$(docker image inspect --format '{{index .Config.Labels "org.thebitlab.pilot.package-baseline-sha256"}}' "$image")"
+image_inventory_sha256="$(docker image inspect --format '{{index .Config.Labels "org.thebitlab.pilot.package-inventory-sha256"}}' "$image")"
+[[ "$image_snapshot" == "$baseline_snapshot" \
+    && "$image_baseline_sha256" == "$baseline_sha256" \
+    && "$image_inventory_sha256" == "$baseline_inventory_sha256" ]] || {
+    echo "ERRORE: identity package baseline image divergente" >&2
+    exit 2
+}
+echo "EVIDENCE: package baseline snapshot=$baseline_snapshot manifest=$baseline_sha256 inventory=$baseline_inventory_sha256"
 
 docker run --detach \
     --name "$container" \

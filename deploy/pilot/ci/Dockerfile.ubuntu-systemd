@@ -1,16 +1,45 @@
 # CI-only effective Ubuntu deployment integration environment.
 # Ubuntu 24.04 (Noble), pinned to the reviewed official multi-architecture digest.
-FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea AS static-bootstrap-builder
+FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea AS ubuntu-snapshot
 
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        binutils file golang-go \
+ARG UBUNTU_SNAPSHOT=20260822T000000Z
+ENV THEBITLAB_UBUNTU_SNAPSHOT=${UBUNTU_SNAPSHOT}
+
+# The minimal OCI base has no CA bundle. Trust only the repository-reviewed ISRG
+# root for snapshot.ubuntu.com TLS; signed Ubuntu InRelease metadata remains the
+# independent package authority. The timestamped snapshot is immutable.
+COPY deploy/pilot/ci/isrg-root-x1.pem /usr/local/share/thebitlab/isrg-root-x1.pem
+COPY deploy/pilot/ci/ubuntu-systemd-package-baseline.json /usr/local/share/thebitlab/ubuntu-systemd-package-baseline.json
+RUN printf '%s\n' \
+        '22b557a27055b33606b6559f37703928d3e4ad79f110b407d04986e1843543d1  /usr/local/share/thebitlab/isrg-root-x1.pem' \
+        '35dba57876cd9e9daee5a8f251fffa4e5e820c6edee95637533c4aadb45b05fb  /usr/local/share/thebitlab/ubuntu-systemd-package-baseline.json' \
+        | sha256sum --check --strict \
+    && printf '%s\n' \
+        'Types: deb' \
+        "URIs: https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}" \
+        'Suites: noble noble-updates noble-backports noble-security' \
+        'Components: main universe restricted multiverse' \
+        'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' \
+        > /etc/apt/sources.list.d/ubuntu.sources \
+    && apt-get -o Acquire::https::CaInfo=/usr/local/share/thebitlab/isrg-root-x1.pem update
+
+FROM ubuntu-snapshot AS static-bootstrap-builder
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get \
+        -o Acquire::https::CaInfo=/usr/local/share/thebitlab/isrg-root-x1.pem \
+        install -y --no-install-recommends \
+        binutils=2.42-4ubuntu2.10 \
+        file=1:5.45-3build1 \
+        golang-go=2:1.22~2build1 \
+    && test "$(dpkg-query -W -f='${binary:Package}=${Version}\n' | LC_ALL=C sort | sha256sum | cut -d' ' -f1)" \
+        = a2449a48f1191162ada39e4c9ba10ba666a3de06f1650980ee9d82e155288406 \
+    && test "$(dpkg-query -W -f='${binary:Package}\n' | wc -l)" -eq 108 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY scripts/pilot_static_bootstrap.go scripts/pilot_private_runtime.go scripts/pilot_private_runtime_poc.go /src/
+COPY scripts/pilot_static_bootstrap.go scripts/pilot_private_runtime.go scripts/pilot_private_runtime_poc.go scripts/pilot_systemd_generator_orchestrator.go /src/
 RUN cd /src \
-    && gofmt -w pilot_static_bootstrap.go pilot_private_runtime.go pilot_private_runtime_poc.go \
-    && test -z "$(gofmt -d pilot_static_bootstrap.go pilot_private_runtime.go pilot_private_runtime_poc.go)" \
+    && gofmt -w pilot_static_bootstrap.go pilot_private_runtime.go pilot_private_runtime_poc.go pilot_systemd_generator_orchestrator.go \
+    && test -z "$(gofmt -d pilot_static_bootstrap.go pilot_private_runtime.go pilot_private_runtime_poc.go pilot_systemd_generator_orchestrator.go)" \
     && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
         go build -trimpath -buildvcs=false -ldflags='-s -w -buildid=' \
         -o /tmp/thebitlab-pilot-activate pilot_static_bootstrap.go \
@@ -20,23 +49,36 @@ RUN cd /src \
     && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
         go build -trimpath -buildvcs=false -ldflags='-s -w -buildid=' \
         -o /tmp/thebitlab-private-runtime-poc pilot_private_runtime_poc.go \
-    && file /tmp/thebitlab-pilot-activate /tmp/thebitlab-private-runtime /tmp/thebitlab-private-runtime-poc \
-        | grep -c 'statically linked' | grep -Fx 3 \
+    && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+        go build -trimpath -buildvcs=false -ldflags='-s -w -buildid=' \
+        -o /tmp/thebitlab-systemd-generator-orchestrator pilot_systemd_generator_orchestrator.go \
+    && file /tmp/thebitlab-pilot-activate /tmp/thebitlab-private-runtime /tmp/thebitlab-private-runtime-poc /tmp/thebitlab-systemd-generator-orchestrator \
+        | grep -c 'statically linked' | grep -Fx 4 \
     && ! readelf -l /tmp/thebitlab-pilot-activate | grep -q INTERP \
     && ! readelf -l /tmp/thebitlab-private-runtime | grep -q INTERP \
     && ! readelf -l /tmp/thebitlab-private-runtime-poc | grep -q INTERP \
+    && ! readelf -l /tmp/thebitlab-systemd-generator-orchestrator | grep -q INTERP \
     && readelf -d /tmp/thebitlab-pilot-activate 2>&1 \
         | grep -F 'There is no dynamic section in this file.' \
     && readelf -d /tmp/thebitlab-private-runtime 2>&1 \
         | grep -F 'There is no dynamic section in this file.' \
     && readelf -d /tmp/thebitlab-private-runtime-poc 2>&1 \
+        | grep -F 'There is no dynamic section in this file.' \
+    && readelf -d /tmp/thebitlab-systemd-generator-orchestrator 2>&1 \
         | grep -F 'There is no dynamic section in this file.'
 
-FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea AS reviewer-payload-builder
+FROM ubuntu-snapshot AS reviewer-payload-builder
 
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        gcc libc6-dev patchelf systemd \
+RUN DEBIAN_FRONTEND=noninteractive apt-get \
+        -o Acquire::https::CaInfo=/usr/local/share/thebitlab/isrg-root-x1.pem \
+        install -y --no-install-recommends \
+        gcc=4:13.2.0-7ubuntu1 \
+        libc6-dev=2.39-0ubuntu8.8 \
+        patchelf=0.18.0-1.1build1 \
+        systemd=255.4-1ubuntu8.17 \
+    && test "$(dpkg-query -W -f='${binary:Package}=${Version}\n' | LC_ALL=C sort | sha256sum | cut -d' ' -f1)" \
+        = 8f2ba985391ce0e90c62782aa93df32a8043b6a3f429c7e153f55b511b0223ff \
+    && test "$(dpkg-query -W -f='${binary:Package}\n' | wc -l)" -eq 140 \
     && printf '%s\n' \
         '#include <fcntl.h>' \
         '#include <stdio.h>' \
@@ -70,27 +112,34 @@ RUN apt-get update \
         -o /tmp/review704-libsystemd-shared-255.so \
         /tmp/review704-hwcaps.c /tmp/review704-libsystemd-shared-real.so
 
-FROM ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea
+FROM ubuntu-snapshot
 
+LABEL org.thebitlab.pilot.ubuntu-snapshot="${THEBITLAB_UBUNTU_SNAPSHOT}" \
+      org.thebitlab.pilot.package-baseline-sha256="35dba57876cd9e9daee5a8f251fffa4e5e820c6edee95637533c4aadb45b05fb" \
+      org.thebitlab.pilot.package-inventory-sha256="fb412411b0c438b04a3633b0135ef1300c77ec0e3fcebf1bf006ddd6737c2c26"
 ENV container=docker
 
 # The official OCI base adds Docker-only APT snippets; remove their exact
 # unmanaged paths so the supported pilot config inventory is package-owned and closed.
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        acl \
-        bash \
-        dbus \
-        libnginx-mod-http-geoip2 \
-        logrotate \
-        nginx \
-        openssl \
-        procps \
-        python3 \
-        python3-jsonschema \
-        systemd \
-        systemd-sysv \
-        wget \
+RUN DEBIAN_FRONTEND=noninteractive apt-get \
+        -o Acquire::https::CaInfo=/usr/local/share/thebitlab/isrg-root-x1.pem \
+        install -y --no-install-recommends \
+        acl=2.3.2-1build1.1 \
+        bash=5.2.21-2ubuntu4 \
+        dbus=1.14.10-4ubuntu4.1 \
+        libnginx-mod-http-geoip2=1:3.4-5build2 \
+        logrotate=3.21.0-2build1 \
+        nginx=1.24.0-2ubuntu7.17 \
+        openssl=3.0.13-0ubuntu3.12 \
+        procps=2:4.0.4-4ubuntu3.2 \
+        python3=3.12.3-0ubuntu2.1 \
+        python3-jsonschema=4.10.3-2ubuntu1 \
+        systemd=255.4-1ubuntu8.17 \
+        systemd-sysv=255.4-1ubuntu8.17 \
+        wget=1.21.4-1ubuntu4.5 \
+    && test "$(dpkg-query -W -f='${binary:Package}=${Version}\n' | LC_ALL=C sort | sha256sum | cut -d' ' -f1)" \
+        = fb412411b0c438b04a3633b0135ef1300c77ec0e3fcebf1bf006ddd6737c2c26 \
+    && test "$(dpkg-query -W -f='${binary:Package}\n' | wc -l)" -eq 144 \
     && systemctl disable nginx.service \
     && apt-get clean \
     && rm -f \
@@ -108,6 +157,7 @@ COPY --from=reviewer-payload-builder /tmp/review704-libsystemd-shared-real.so /r
 COPY --from=static-bootstrap-builder /tmp/thebitlab-pilot-activate /root/thebitlab-pilot-activate
 COPY --from=static-bootstrap-builder /tmp/thebitlab-private-runtime /root/thebitlab-private-runtime
 COPY --from=static-bootstrap-builder /tmp/thebitlab-private-runtime-poc /root/thebitlab-private-runtime-poc
+COPY --from=static-bootstrap-builder /tmp/thebitlab-systemd-generator-orchestrator /root/thebitlab-systemd-generator-orchestrator
 
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

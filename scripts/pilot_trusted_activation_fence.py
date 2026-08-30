@@ -39,7 +39,10 @@ STATE_PATH = RUNTIME_ROOT / "state.json"
 TRANSACTION_ROOT = RUNTIME_ROOT / "transactions"
 ACTIVATION_LOCK = RUNTIME_ROOT / "activation.lock"
 _RUNTIME_AUTHORITY_CHILDREN = frozenset(
-    {"app", "logrotate", "pilot-activation-fence", "pilot-private-runtime"}
+    {
+        "app", "logrotate", "pilot-activation-fence",
+        "pilot-generator-orchestrator", "pilot-private-runtime",
+    }
 )
 PACKAGE_LOCK_PATHS = (
     Path("/var/lib/dpkg/lock-frontend"),
@@ -2049,6 +2052,13 @@ class SnapshotMountFence:
             return False
         state = _read_state()
         transactions = list(state.get("transactions", [])) if state else []
+        if not transactions or transactions[-1].get("token") != self.transaction["token"]:
+            # Never tear down a parent below a poisoned child. If a primary
+            # child exception is already propagating, preserve it verbatim.
+            _write_transactions(transactions, poisoned=True)
+            if exc is not None:
+                return False
+            raise TrustedActivationFenceError("Nesting fence divergente")
         try:
             _validate_transaction(self.transaction, require_underlying=True)
             self.transaction["phase"] = "teardown"
@@ -2064,9 +2074,6 @@ class SnapshotMountFence:
         except Exception:
             _write_transactions(transactions, poisoned=True)
             raise
-        if not transactions or transactions[-1].get("token") != self.transaction["token"]:
-            _write_transactions(transactions, poisoned=True)
-            raise TrustedActivationFenceError("Nesting fence divergente")
         transactions.pop()
         _write_transactions(transactions)
         if not _ACTIVE_TRANSACTIONS or _ACTIVE_TRANSACTIONS[-1] is not self.transaction:

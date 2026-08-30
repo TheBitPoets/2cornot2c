@@ -13,13 +13,14 @@ from typing import Any, Mapping, Sequence
 
 SHARD_PREFIX = "PRIVATE_RUNTIME_SHARD_EVIDENCE "
 CLEANUP_PREFIX = "PRIVATE_RUNTIME_CLEANUP_EVIDENCE "
-SHARD_SCHEMA = "thebitlab.private-runtime-shard-evidence.v1"
+SHARD_SCHEMA = "thebitlab.private-runtime-shard-evidence.v2"
 CLEANUP_SCHEMA = "thebitlab.private-runtime-cleanup-evidence.v1"
 AGGREGATE_SCHEMA = "thebitlab.private-runtime-aggregate.v1"
 SHA40 = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 OCI_DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 RUN_ID = re.compile(r"[A-Za-z0-9_.-]{1,128}")
+UBUNTU_SNAPSHOT = re.compile(r"[0-9]{8}T[0-9]{6}Z")
 REQUIRED_SCENARIOS: Mapping[str, tuple[str, ...]] = {
     "A": (
         "preload-six-timings", "hwcaps-v2-v3-v4", "bootstrap-crash-recovery",
@@ -51,8 +52,9 @@ REQUIRED_SCENARIOS: Mapping[str, tuple[str, ...]] = {
 SHARD_KEYS = frozenset(
     {
         "schema_version", "candidate_sha", "policy_sha256", "toolchain_id",
-        "toolchain_manifest_sha256", "oci_digest", "python", "node", "run_id",
-        "created_unix_ns", "cleanup", "shard", "scenarios",
+        "toolchain_manifest_sha256", "oci_digest", "ubuntu_snapshot",
+        "package_baseline_sha256", "package_inventory_sha256", "python", "node",
+        "run_id", "created_unix_ns", "cleanup", "shard", "scenarios",
     }
 )
 CLEANUP_KEYS = frozenset(
@@ -111,6 +113,8 @@ def _identity(record: Mapping[str, Any]) -> tuple[object, ...]:
     return (
         record["candidate_sha"], record["policy_sha256"], record["toolchain_id"],
         record["toolchain_manifest_sha256"], record["oci_digest"],
+        record["ubuntu_snapshot"], record["package_baseline_sha256"],
+        record["package_inventory_sha256"],
         json.dumps(record["python"], sort_keys=True, separators=(",", ":")),
         json.dumps(record["node"], sort_keys=True, separators=(",", ":")),
     )
@@ -142,6 +146,9 @@ def aggregate(
             SHA256.fullmatch(str(record.get("policy_sha256"))) is None
             or SHA256.fullmatch(str(record.get("toolchain_manifest_sha256"))) is None
             or OCI_DIGEST.fullmatch(str(record.get("oci_digest"))) is None
+            or UBUNTU_SNAPSHOT.fullmatch(str(record.get("ubuntu_snapshot"))) is None
+            or SHA256.fullmatch(str(record.get("package_baseline_sha256"))) is None
+            or SHA256.fullmatch(str(record.get("package_inventory_sha256"))) is None
             or not isinstance(record.get("toolchain_id"), str)
             or RUN_ID.fullmatch(str(record.get("run_id"))) is None
             or not _fresh(
@@ -240,6 +247,9 @@ def aggregate(
         "toolchain_id": expected_identity[2],
         "toolchain_manifest_sha256": expected_identity[3],
         "oci_digest": expected_identity[4],
+        "ubuntu_snapshot": expected_identity[5],
+        "package_baseline_sha256": expected_identity[6],
+        "package_inventory_sha256": expected_identity[7],
         "shards": sorted(by_shard),
         "run_ids": sorted(run_ids),
         "cleanup": True,

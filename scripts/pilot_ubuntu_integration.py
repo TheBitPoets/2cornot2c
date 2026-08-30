@@ -43,6 +43,7 @@ from scripts import pilot_service_launcher as service_launcher  # noqa: E402
 from scripts import pilot_toolchain_launcher as toolchain_launcher  # noqa: E402
 from scripts import pilot_trusted_activation_fence as trusted_fence  # noqa: E402
 from scripts import pilot_ubuntu_activation as activation  # noqa: E402
+from scripts import pilot_ubuntu_package_baseline as package_baseline  # noqa: E402
 from scripts import validate_pilot_deployment as deployment  # noqa: E402
 
 
@@ -2133,6 +2134,21 @@ def _reviewed_executable_coverage_inventory() -> dict[str, int]:
 def _exercise_h05_transitive_execution_regressions(temporary: Path) -> None:
     _exercise_same_identity_package_artifact_rejected(
         temporary,
+        package="procps",
+        executable=Path("/usr/bin/ps"),
+        label="h05-procps-same-version",
+        gate=lambda: activation._attest_runtime_executable_closure("logrotate"),
+    )
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
+        package="procps",
+        executable=Path("/usr/bin/ps"),
+        label="h05-procps-higher-version",
+        gate=lambda: activation._attest_runtime_executable_closure("logrotate"),
+        higher_version=True,
+    )
+    _exercise_same_identity_package_artifact_rejected(
+        temporary,
         package="bash",
         executable=Path("/usr/bin/bash"),
         label="h05-interpreter",
@@ -3341,6 +3357,9 @@ def _check_ephemeral_host() -> str:
         activation.PRIVATE_RUNTIME_BINARY,
         activation.PRIVATE_RUNTIME_PIN,
         activation.PRIVATE_RUNTIME_ROOT,
+        activation.generator_orchestrator.ORCHESTRATOR_BINARY,
+        activation.generator_orchestrator.ORCHESTRATOR_ENTRY,
+        activation.generator_orchestrator.RUNTIME_ROOT,
         *activation.INTEGRATION_LINKS,
     )
     if any(path.exists() or path.is_symlink() for path in protected):
@@ -3365,9 +3384,13 @@ def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
     pin_path = toolchain_launcher.TRUST_PIN
     private_runtime = activation.PRIVATE_RUNTIME_BINARY
     private_pin_path = activation.PRIVATE_RUNTIME_PIN
+    generator_orchestrator = activation.generator_orchestrator.ORCHESTRATOR_BINARY
     if any(
         path.exists()
-        for path in (toolchain, launcher, pin_path, private_runtime, private_pin_path)
+        for path in (
+            toolchain, launcher, pin_path, private_runtime, private_pin_path,
+            generator_orchestrator,
+        )
     ):
         raise RuntimeError("Host effimero contiene già una trusted activation toolchain")
     toolchain_builder.build_toolchain(ROOT, toolchain, toolchain_id, commit)
@@ -3381,6 +3404,23 @@ def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
     launcher.chmod(0o755)
     shutil.copyfile("/root/thebitlab-private-runtime", private_runtime)
     private_runtime.chmod(0o755)
+    shutil.copyfile(
+        "/root/thebitlab-systemd-generator-orchestrator", generator_orchestrator
+    )
+    generator_orchestrator.chmod(0o755)
+    generator_root = activation.generator_orchestrator.ORCHESTRATOR_ENTRY.parent
+    generator_root.mkdir(mode=0o755, parents=True, exist_ok=True)
+    for basename in activation.generator_orchestrator.MASKED_GENERATORS:
+        mask = generator_root / basename
+        if mask.is_symlink() and os.readlink(mask) == "/dev/null":
+            continue
+        if mask.exists() or mask.is_symlink():
+            raise RuntimeError(f"Generator mask fixture divergente: {mask}")
+        os.symlink("/dev/null", mask)
+    os.symlink(
+        activation.generator_orchestrator.ORCHESTRATOR_BINARY,
+        activation.generator_orchestrator.ORCHESTRATOR_ENTRY,
+    )
     pin_path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
     pin = {
         "schema_version": "thebitlab.pilot-toolchain-pin.v1",
@@ -4293,7 +4333,6 @@ def _test_r1_fence_crash_recovery() -> None:
         ("trusted-activation-base", "fence_after_active_state", "base", False),
         ("trusted-activation-base", "fence_during_teardown", "base", False),
         ("trusted-systemd-execution", "fence_after_active_state", "execution", False),
-        ("trusted-systemd-generated-output", "fence_after_active_state", "generated", False),
     )
     foreign = fence._top_mount(Path("/run/lock"))
     if foreign is None:
@@ -4374,7 +4413,255 @@ def _test_r1_fence_crash_recovery() -> None:
         for path, target in fence.USR_MERGE_ALIASES.items():
             if not path.is_symlink() or os.readlink(path) != target:
                 raise RuntimeError(f"Alias usrmerge non ripristinata dopo crash: {path}")
-    print("EVIDENCE: R1 base/native/execution/generated-output SIGKILL matrix PASS")
+    print("EVIDENCE: R1 base/native/execution SIGKILL matrix PASS; generated-output covered by production orchestrator 12-seam matrix")
+
+
+def _test_production_generator_orchestrator() -> None:
+    """Exercise the production seal/adopt authority independently of full gate."""
+
+    orchestrator = activation.generator_orchestrator
+    hostile_marker = Path("/run/review704-generated-output-marker")
+    hostile_marker.unlink(missing_ok=True)
+
+    def raw_reload() -> tuple[int, str]:
+        result = subprocess.run(
+            ["/usr/bin/systemctl", "daemon-reload"],
+            check=False, capture_output=True, text=True, timeout=40,
+        )
+        return result.returncode, result.stdout + result.stderr
+
+    def identities() -> tuple[dict[str, str], str]:
+        descriptors, manifests = orchestrator._current_ro_authority()
+        try:
+            graph = orchestrator.validate_production_graph(manifests)
+            generations = {}
+            for key in sorted(manifests):
+                row = orchestrator._row_for_fd(descriptors[key])
+                generations[key] = (
+                    f"mnt={row.mount_id};dev={row.major_minor};root={row.root};"
+                    f"manifest={manifests[key].sha256}"
+                )
+            return generations, graph.identity
+        finally:
+            for descriptor in descriptors.values():
+                os.close(descriptor)
+
+    def manager_oracle() -> dict[str, str]:
+        result: dict[str, str] = {}
+        for unit in (
+            "review704-hostile.service", "review704-hostile.timer",
+            "review704-hostile.socket", "review704-hostile.path",
+            "run-review704-hostile.mount", "run-review704-auto.automount",
+        ):
+            shown = subprocess.run(
+                ["/usr/bin/systemctl", "show", unit, "--property=LoadState", "--value", "--no-pager"],
+                check=False, capture_output=True, text=True, timeout=15,
+            )
+            result[unit] = shown.stdout.strip()
+        if any(value != "not-found" for value in result.values()):
+            raise RuntimeError(f"Graph hostile manager-visible: {result}")
+        if hostile_marker.exists():
+            raise RuntimeError("Marker hostile presente nel generator gate")
+        return result
+
+    # One legitimate production transaction establishes the reviewed stock tree.
+    evidence = orchestrator.orchestrated_reload(raw_reload)
+    if not re.fullmatch(r"[0-9a-f]{64}", str(evidence.get("bundle_id", ""))):
+        raise RuntimeError("Bundle production iniziale privo di identity")
+    baseline_roots, baseline_graph = identities()
+    manager_oracle()
+
+    exact_environment = {
+        "HOME": "/root",
+        "HOSTNAME": socket.gethostname(),
+        "LANG": "C.UTF-8",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin",
+        "SYSTEMD_ARCHITECTURE": "x86-64",
+        "SYSTEMD_EXEC_PID": str(os.getpid()),
+        "SYSTEMD_FIRST_BOOT": "0",
+        "SYSTEMD_IN_INITRD": "0",
+        "SYSTEMD_SCOPE": "system",
+        "SYSTEMD_VIRTUALIZATION": "container:wsl",
+        "THEBITLAB_UBUNTU_SNAPSHOT": "20260822T000000Z",
+        "container": "docker",
+    }
+    wrong = subprocess.run(
+        [str(orchestrator.ORCHESTRATOR_BINARY), "wrong"],
+        check=False, env=exact_environment, timeout=10,
+    )
+    outside = subprocess.run(
+        [
+            str(orchestrator.ORCHESTRATOR_BINARY),
+            "/run/systemd/generator", "/run/systemd/generator.early",
+            "/run/systemd/generator.late",
+        ],
+        check=False, env=exact_environment, timeout=10,
+    )
+    if wrong.returncode != 2 or outside.returncode != 1:
+        raise RuntimeError(
+            f"Invocazione diretta orchestrator non fail-closed: wrong={wrong.returncode} outside={outside.returncode}"
+        )
+
+    # A daemon-reload not honoring the activator lock has no PREPARED helper.
+    before_roots, before_graph = identities()
+    code, detail = raw_reload()
+    after_roots, after_graph = identities()
+    if code != 0 or (before_roots, before_graph) != (after_roots, after_graph):
+        raise RuntimeError(
+            f"Reload non cooperante ha cambiato authority: rc={code} detail={detail[-200:]}"
+        )
+    manager_oracle()
+
+    # A held writable file descriptor must make the superblock-wide seal fail
+    # with EBUSY; weakening the seal or adopting the contaminated tree is forbidden.
+    held: list[int] = []
+
+    def hold_writer(seam: str) -> None:
+        if seam == "before-seal":
+            stage = next(orchestrator.TRANSACTION_ROOT.glob("*/stage"))
+            probe = stage / "normal" / "review704-held-writer"
+            descriptor = os.open(probe, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
+            os.write(descriptor, b"held")
+            held.append(descriptor)
+
+    try:
+        orchestrator.orchestrated_reload(raw_reload, seam_callback=hold_writer)
+    except orchestrator.GeneratorOrchestratorError as exc:
+        if "Errno 16" not in str(exc) and "busy" not in str(exc).lower():
+            raise RuntimeError(f"Seal held-writer fallito per causa inattesa: {exc}") from exc
+    else:
+        raise RuntimeError("Seal con O_RDWR preaperto accettato")
+    finally:
+        for descriptor in held:
+            with contextlib.suppress(OSError):
+                os.close(descriptor)
+    if identities() != (before_roots, before_graph):
+        raise RuntimeError("Seal EBUSY ha cambiato output validated")
+
+    # Pause immediately after seal and attack the exact staging mount through
+    # path and a pre-open directory FD. Every operation must fail EROFS.
+    attack_result = Path("/run/review704-post-seal-result.json")
+    attack_result.unlink(missing_ok=True)
+    preopened: dict[str, int] = {}
+
+    def post_seal_attack(seam: str) -> None:
+        stage = next(orchestrator.TRANSACTION_ROOT.glob("*/stage"))
+        normal = stage / "normal"
+        if seam == "before-seal":
+            probe = normal / "review704-post-seal-probe"
+            probe.write_bytes(b"sealed-probe")
+            (normal / "review704-post-seal-replacement").write_bytes(b"replacement")
+            preopened["dir"] = os.open(normal, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+            preopened["file"] = os.open(probe, os.O_RDONLY | os.O_CLOEXEC)
+        if seam != "after-seal":
+            return
+        failures: dict[str, int] = {}
+
+        def denied(label: str, operation: Callable[[], object]) -> None:
+            try:
+                operation()
+            except OSError as exc:
+                failures[label] = exc.errno or 0
+                return
+            raise RuntimeError(f"Mutazione post-seal riuscita: {label}")
+
+        probe = normal / "review704-post-seal-probe"
+        denied("create", lambda: (normal / "post-seal").write_text("x", encoding="ascii"))
+        denied("write", lambda: probe.write_bytes(b"changed"))
+        denied("truncate", lambda: os.close(os.open(probe, os.O_WRONLY | os.O_TRUNC)))
+        denied(
+            "atomic-replace",
+            lambda: os.replace(normal / "review704-post-seal-replacement", probe),
+        )
+        denied("unlink", probe.unlink)
+        denied("rename", lambda: probe.rename(normal / "renamed"))
+        denied("mkdir", lambda: (normal / "post-seal-dir").mkdir())
+        denied("symlink", lambda: (normal / "post-seal-link").symlink_to("target"))
+        denied("hardlink", lambda: os.link(probe, normal / "post-seal-hardlink"))
+        denied("chmod", lambda: normal.chmod(0o700))
+        denied("chown", lambda: os.chown(normal, 1, 1))
+        denied("fchmod", lambda: os.fchmod(preopened["file"], 0o600))
+        denied("fchown", lambda: os.fchown(preopened["file"], 1, 1))
+        denied("preopen-file-write", lambda: os.write(preopened["file"], b"x"))
+        denied(
+            "openat",
+            lambda: os.close(os.open("post-seal-openat", os.O_WRONLY | os.O_CREAT, 0o600, dir_fd=preopened["dir"])),
+        )
+        attack_result.write_text(json.dumps(failures, sort_keys=True), encoding="utf-8")
+
+    try:
+        orchestrator.orchestrated_reload(raw_reload, seam_callback=post_seal_attack)
+    except orchestrator.GeneratorOrchestratorError as exc:
+        if "Manifest generated fuori policy" not in str(exc):
+            raise RuntimeError(f"Post-seal fixture rifiutata per causa inattesa: {exc}") from exc
+    else:
+        raise RuntimeError("Fixture regular post-seal fuori policy adottata")
+    for descriptor in preopened.values():
+        os.close(descriptor)
+    post_seal = json.loads(attack_result.read_text(encoding="utf-8"))
+    attack_result.unlink(missing_ok=True)
+    if not post_seal or any(value not in {errno.EROFS, errno.EBADF} for value in post_seal.values()):
+        raise RuntimeError(f"Errori post-seal inattesi: {post_seal}")
+    if any(post_seal[label] != errno.EROFS for label in set(post_seal) - {"preopen-file-write"}):
+        raise RuntimeError(f"Mutazione VFS post-seal non EROFS: {post_seal}")
+
+    seams = (
+        "before-staging", "during-inner-generation", "after-generators-exit",
+        "before-seal", "during-seal", "after-seal", "during-attestation",
+        "after-attestation", "before-first-adoption", "after-1-adoption",
+        "after-2-adoption", "after-3-adoption",
+    )
+    matrix: list[dict[str, object]] = []
+    for index, selected_seam in enumerate(seams):
+        rendezvous = Path(f"/run/review704-kill-seam-{index}")
+        rendezvous.unlink(missing_ok=True)
+        killer = os.fork()
+        if killer == 0:
+            deadline = time.monotonic() + 45
+            while time.monotonic() < deadline:
+                try:
+                    helper = int(rendezvous.read_text(encoding="ascii"))
+                except (FileNotFoundError, ValueError):
+                    time.sleep(0.002)
+                    continue
+                os.kill(helper, signal.SIGKILL)
+                os._exit(0)
+            os._exit(2)
+
+        def kill_callback(seam: str, selected: str = selected_seam) -> None:
+            if seam != selected:
+                return
+            rendezvous.write_text(str(os.getpid()), encoding="ascii")
+            while True:
+                time.sleep(1)
+
+        try:
+            orchestrator.orchestrated_reload(raw_reload, seam_callback=kill_callback)
+        except orchestrator.GeneratorOrchestratorError:
+            pass
+        _pid, status = os.waitpid(killer, 0)
+        rendezvous.unlink(missing_ok=True)
+        if os.waitstatus_to_exitcode(status) != 0:
+            raise RuntimeError(f"Killer seam non eseguito: {selected_seam}")
+        root_ids, graph_id = identities()
+        manager = manager_oracle()
+        matrix.append(
+            {
+                "seam": selected_seam,
+                "normal": root_ids["normal"],
+                "early": root_ids["early"],
+                "late": root_ids["late"],
+                "effective_graph": graph_id,
+                "manager": manager,
+                "marker": False,
+                "result": "PASS",
+            }
+        )
+    print("EVIDENCE: production generator SIGKILL matrix " + json.dumps(matrix, sort_keys=True))
+    print(
+        "EVIDENCE: production generator direct invocation + non-cooperating reload + "
+        "seal EBUSY + post-seal mutation + 12-seam effective-prefix matrix PASS"
+    )
 
 
 def _test_trusted_activation_fence_races() -> None:
@@ -4477,9 +4764,25 @@ def _test_trusted_activation_fence_races() -> None:
                     os.read(read_fd, 1)
                     try:
                         source = Path("/run/systemd/system-generators")
+                        entry = activation.generator_orchestrator.ORCHESTRATOR_ENTRY
+                        masks = tuple(
+                            entry.parent / name
+                            for name in activation.generator_orchestrator.MASKED_GENERATORS
+                        )
+                        lower = Path("/usr/local/lib/systemd/system-generators")
                         attempts = (
                             lambda: (source / "thebitlab-r2-generator").write_text(
                                 f"#!/bin/sh\ntouch {generator_marker}\n", encoding="utf-8"
+                            ),
+                            lambda: entry.unlink(),
+                            lambda: os.replace(staged_generator, entry),
+                            lambda: masks[0].unlink(),
+                            lambda: os.replace(staged_generator, masks[1]),
+                            lambda: (lower / "unexpected-generator").write_text(
+                                "#!/bin/sh\nexit 0\n", encoding="utf-8"
+                            ),
+                            lambda: (lower / "systemd-gpt-auto-generator").write_text(
+                                "#!/bin/sh\nexit 0\n", encoding="utf-8"
                             ),
                             lambda: os.replace(staged_generator, reviewed_generator),
                             lambda: reviewed_generator.write_bytes(b"#!/bin/sh\nexit 0\n"),
@@ -4514,6 +4817,8 @@ def _test_trusted_activation_fence_races() -> None:
                     raise gate_error
 
             phase = "generated-output-during-generation"
+            staging_writes = Path("/run/review704-staging-write-count")
+            staging_writes.unlink(missing_ok=True)
             with activation._trusted_execution_fence():
                 ready_r, ready_w = os.pipe()
                 stop_r, stop_w = os.pipe()
@@ -4524,25 +4829,52 @@ def _test_trusted_activation_fence_races() -> None:
                     os.set_blocking(stop_r, False)
                     os.write(ready_w, b"x")
                     os.close(ready_w)
-                    payload = (
-                        "[Service]\nExecStartPost=/usr/bin/touch "
-                        f"{execslot_marker}\n"
+                    seven_slots = "".join(
+                        f"{slot}=/usr/bin/touch {execslot_marker}\n"
+                        for slot in activation.SYSTEMD_EXEC_SLOTS
                     )
+                    payload = "[Service]\n" + seven_slots
+                    hostile_units = {
+                        "review704-hostile.service": payload,
+                        "review704-hostile.timer": "[Timer]\nOnActiveSec=1\nUnit=review704-hostile.service\n",
+                        "review704-hostile.socket": "[Socket]\nListenStream=45678\nService=review704-hostile.service\n",
+                        "review704-hostile.path": "[Path]\nPathExists=/run/review704-trigger\nUnit=review704-hostile.service\n",
+                        "run-review704-hostile.mount": "[Mount]\nWhat=tmpfs\nWhere=/run/review704-hostile\nType=tmpfs\n",
+                        "run-review704-auto.automount": "[Automount]\nWhere=/run/review704-auto\n",
+                        "review704-hostile.target": "[Unit]\nWants=review704-hostile.service\n",
+                    }
+                    count = 0
                     while True:
                         try:
                             if os.read(stop_r, 1):
+                                staging_writes.write_text(str(count), encoding="ascii")
                                 os._exit(0)
                         except BlockingIOError:
                             pass
-                        for root in activation.SYSTEMD_GENERATED_OUTPUT_DIRECTORIES:
-                            try:
-                                dropin = root / "nginx.service.d"
-                                dropin.mkdir(parents=True, exist_ok=True)
-                                staged = dropin / f".review704.{os.getpid()}"
-                                staged.write_text(payload, encoding="utf-8")
-                                os.replace(staged, dropin / "review704.conf")
-                            except OSError:
-                                continue
+                        stages = tuple(
+                            activation.generator_orchestrator.TRANSACTION_ROOT.glob(
+                                "*/stage"
+                            )
+                        )
+                        for stage in stages:
+                            for root_name in ("normal", "early", "late"):
+                                root = stage / root_name
+                                try:
+                                    dropin = root / "nginx.service.d"
+                                    dropin.mkdir(parents=True, exist_ok=True)
+                                    staged = dropin / f".review704.{os.getpid()}"
+                                    staged.write_text(payload, encoding="utf-8")
+                                    os.replace(staged, dropin / "review704.conf")
+                                    for name, contents in hostile_units.items():
+                                        (root / name).write_text(contents, encoding="utf-8")
+                                    wants = root / "multi-user.target.wants"
+                                    wants.mkdir(exist_ok=True)
+                                    link = wants / "review704-hostile.service"
+                                    link.unlink(missing_ok=True)
+                                    link.symlink_to("../review704-hostile.service")
+                                    count += 1
+                                except OSError:
+                                    continue
                 os.close(ready_w)
                 os.close(stop_r)
                 os.read(ready_r, 1)
@@ -4555,13 +4887,50 @@ def _test_trusted_activation_fence_races() -> None:
                 os.write(stop_w, b"x")
                 os.close(stop_w)
                 _pid, status = os.waitpid(child, 0)
-                if os.waitstatus_to_exitcode(status) != 0 or execslot_marker.exists():
+                successful_writes = int(staging_writes.read_text(encoding="ascii"))
+                staging_writes.unlink(missing_ok=True)
+                if (
+                    os.waitstatus_to_exitcode(status) != 0
+                    or successful_writes <= 0
+                    or execslot_marker.exists()
+                ):
                     raise RuntimeError("Mutatore generated-output generation non controllato")
                 if gate_error is None:
-                    activation._attest_effective_nginx_unit(
-                        expect_running=False,
-                        allowed_unit_file_states=activation.DISABLED_NGINX_UNIT_FILE_STATES,
+                    raise RuntimeError("Staging hostile adottato invece di essere rifiutato")
+                hostile_states = {}
+                for hostile in (
+                    "review704-hostile.service", "review704-hostile.timer",
+                    "review704-hostile.socket", "review704-hostile.path",
+                    "run-review704-hostile.mount", "run-review704-auto.automount",
+                    "review704-hostile.target",
+                ):
+                    load_state = activation._systemd_property(
+                        "LoadState", hostile, allow_empty=True
                     )
+                    hostile_states[hostile] = load_state
+                    if load_state != "not-found":
+                        raise RuntimeError(
+                            f"Graph hostile manager-visible dopo reject: {hostile}={load_state}"
+                        )
+                nginx_dropins = activation._systemd_property(
+                    "DropInPaths", "nginx.service", allow_empty=True
+                )
+                nginx_post = activation._systemd_property(
+                    "ExecStartPost", "nginx.service", allow_empty=True
+                )
+                if nginx_dropins or nginx_post:
+                    raise RuntimeError(
+                        f"Nginx hostile manager graph dopo reject: dropins={nginx_dropins!r} post={nginx_post!r}"
+                    )
+                print(
+                    "EVIDENCE: hostile staging writes="
+                    f"{successful_writes} attest=REJECT manager={hostile_states} "
+                    "nginx.DropInPaths='' nginx.ExecStartPost='' marker=ABSENT"
+                )
+                # This test deliberately consumes the expected exception rather
+                # than letting the execution-fence context propagate it. The
+                # reload is terminal and the old manager graph was just proved.
+                activation._mark_executor_safe_boundary_if_pending()
             for root in activation.SYSTEMD_GENERATED_OUTPUT_DIRECTORIES:
                 injected = root / "nginx.service.d" / "review704.conf"
                 injected.unlink(missing_ok=True)
@@ -4707,8 +5076,8 @@ def _test_trusted_activation_fence_races() -> None:
         if generator_marker.exists() or nginx_marker.exists() or execslot_marker.exists():
             raise RuntimeError("Marker root presente dopo release TrustedActivationFence")
         print(
-            "EVIDENCE: generator source ABA + sealed generator.early/generator/"
-            "generator.late write/atomic/drop-in/remove + second daemon-reload + "
+            "EVIDENCE: generator source/orchestrator/mask/lower/expected-absent ABA + "
+            "sealed generator.early/generator/generator.late write/atomic/drop-in/remove + second daemon-reload + "
             "nginx rename no-execution races PASS"
         )
     except BaseException as exc:
@@ -6280,6 +6649,7 @@ def run(
     private_runtime_start_diagnostic_only: bool = False,
     executor_lease_timing_diagnostic_only: bool = False,
     fence_race_only: bool = False,
+    generator_orchestrator_gate_only: bool = False,
     runtime_directory_authority_only: bool = False,
     shard_f_only: bool = False,
 ) -> None:
@@ -6331,6 +6701,7 @@ def run(
             _exercise_runtime_directory_authority()
             if runtime_directory_authority_only:
                 return
+            activation.generator_orchestrator.provision_safe_output()
             Path("/run/thebitlab-ephemeral-activation-test").write_text(
                 "ephemeral-only\n", encoding="ascii"
             )
@@ -6338,7 +6709,19 @@ def run(
             if private_runtime_start_diagnostic_only:
                 _test_private_runtime_start_diagnostic(temporary)
                 return
+            if generator_orchestrator_gate_only:
+                _test_production_generator_orchestrator()
+                _test_trusted_activation_fence_races()
+                _exercise_h05_same_name_package_regressions(temporary)
+                _exercise_h05_transitive_execution_regressions(temporary)
+                _exercise_known_service_package_takeover_rejected(temporary)
+                _exercise_missing_boot_executable_fill_rejected(temporary)
+                _exercise_removed_boot_service_executable_rejected()
+                activation._attest_systemd_boot_surface()
+                print("EVIDENCE: targeted H-03/H-04/H-05 exact package regressions PASS")
+                return
             if fence_race_only:
+                _test_production_generator_orchestrator()
                 _test_trusted_activation_fence_races()
                 return
             deployments.mkdir(mode=0o750, parents=True, exist_ok=True)
@@ -7473,13 +7856,15 @@ def _emit_private_runtime_evidence(args: argparse.Namespace) -> None:
     if re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", run_id) is None:
         raise RuntimeError("Run ID evidence non canonico")
     python_path = Path(sys.executable)
+    package_identity = package_baseline.attest_runtime_baseline()
     common = {
-        "schema_version": "thebitlab.private-runtime-shard-evidence.v1",
+        "schema_version": "thebitlab.private-runtime-shard-evidence.v2",
         "candidate_sha": candidate,
         "policy_sha256": policy_digest,
         "toolchain_id": toolchain_id,
         "toolchain_manifest_sha256": toolchain_digest,
         "oci_digest": next(iter(oci_matches)),
+        **package_identity,
         "python": {
             "version": sys.version.split()[0],
             "executable_sha256": hashlib.sha256(python_path.read_bytes()).hexdigest(),
@@ -7536,6 +7921,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Esegue soltanto lo shard race fence/generated-output.",
     )
     parser.add_argument(
+        "--generator-orchestrator-gate-only",
+        action="store_true",
+        help="Esegue il gate production generator orchestrator senza evidence A-F.",
+    )
+    parser.add_argument(
         "--private-runtime-start-diagnostic-only",
         action="store_true",
         help="Osserva il vero start production private S0/S1 senza eseguire il gate.",
@@ -7560,6 +7950,11 @@ def main(argv: list[str] | None = None) -> int:
         print("ERRORE: usare soltanto --ephemeral-host su una macchina effimera", file=sys.stderr)
         return 2
     try:
+        package_identity = package_baseline.attest_runtime_baseline()
+        print(
+            "EVIDENCE: deterministic Ubuntu package baseline "
+            + json.dumps(package_identity, sort_keys=True, separators=(",", ":"))
+        )
         run(
             ephemeral_host=args.ephemeral_host,
             bootstrap_adversarial_only=args.bootstrap_adversarial_only,
@@ -7568,10 +7963,12 @@ def main(argv: list[str] | None = None) -> int:
             private_runtime_start_diagnostic_only=args.private_runtime_start_diagnostic_only,
             executor_lease_timing_diagnostic_only=args.executor_lease_timing_diagnostic_only,
             fence_race_only=args.fence_race_only,
+            generator_orchestrator_gate_only=args.generator_orchestrator_gate_only,
             runtime_directory_authority_only=args.runtime_directory_authority_only,
             shard_f_only=args.shard_f_only,
         )
-        _emit_private_runtime_evidence(args)
+        if not args.generator_orchestrator_gate_only:
+            _emit_private_runtime_evidence(args)
     except (OSError, RuntimeError, activation.ActivationError, deployment.DeploymentValidationError) as exc:
         traceback.print_exc()
         print(f"ERRORE: {exc}", file=sys.stderr)
@@ -7580,6 +7977,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "PASS: matrice privilegiata static bootstrap/hwcaps Ubuntu 24.04 completa"
         )
+    elif args.generator_orchestrator_gate_only:
+        print("PASS: production generator orchestrator targeted security gate")
     elif args.executor_lease_gate_only:
         print("PASS: gate mirato production executor inode lease + Stage-M")
     elif args.private_runtime_gate_only:

@@ -28,10 +28,12 @@ from scripts import pilot_service_launcher as service_launcher
 from scripts import pilot_toolchain_launcher as toolchain_launcher
 from scripts import pilot_native_execution_closure as native_execution_closure
 from scripts import pilot_private_runtime_evidence as private_runtime_evidence
+from scripts import pilot_systemd_generator_orchestrator as systemd_generator_orchestrator
 from scripts import pilot_ubuntu_loader_lookup_policy as loader_lookup_policy
 from scripts import pilot_trusted_activation_fence as trusted_activation_fence
 from scripts import pilot_ubuntu_activation as ubuntu_activation
 from scripts import pilot_ubuntu_integration as ubuntu_integration
+from scripts import pilot_ubuntu_package_baseline as ubuntu_package_baseline
 from scripts import validate_pilot_deployment as deployment
 
 
@@ -4767,11 +4769,177 @@ def test_static_production_bootstrap_and_build_are_structurally_loader_free() ->
     assert "There is no dynamic section in this file." in dockerfile
     assert "scripts/pilot_static_bootstrap.go" in dockerfile
     assert "scripts/pilot_ubuntu_loader_lookup_policy.py" in toolchain_builder.TOOLCHAIN_FILES
+    assert "scripts/pilot_systemd_generator_orchestrator.py" in toolchain_builder.TOOLCHAIN_FILES
+    assert "pilot_systemd_generator_orchestrator.go" in dockerfile
+    assert "thebitlab-systemd-generator-orchestrator" in dockerfile
+    assert "! readelf -l /tmp/thebitlab-systemd-generator-orchestrator" in dockerfile
     assert set(toolchain_builder.TOOLCHAIN_FILES) == toolchain_launcher.EXPECTED_FILES
     for identity in loader_lookup_policy.REVIEWED_BOOTSTRAP_LOOKUP_TREES.values():
         assert identity.sha256 in source
     for digest in loader_lookup_policy.BOOTSTRAP_REVIEWED_FILES.values():
         assert digest in source
+
+
+def _generator_manifest(
+    root_class: str, records: tuple[tuple[object, ...], ...]
+) -> systemd_generator_orchestrator.RootManifest:
+    digest = hashlib.sha256(
+        systemd_generator_orchestrator._canonical_json([root_class, records])
+    ).hexdigest()
+    return systemd_generator_orchestrator.RootManifest(root_class, records, digest)
+
+
+def test_generator_orchestrator_inventory_and_safe_prefixes_are_closed() -> None:
+    inventory = systemd_generator_orchestrator.SELECTED_GENERATORS
+    go_source = (ROOT / "scripts/pilot_systemd_generator_orchestrator.go").read_bytes()
+    canonical_go_source = go_source.replace(b"\r\n", b"\n")
+    assert hashlib.sha256(canonical_go_source).hexdigest() == systemd_generator_orchestrator.ORCHESTRATOR_SOURCE_SHA256
+    go_text = canonical_go_source.decode("utf-8")
+    assert len(inventory) == 11
+    assert len({entry["basename"] for entry in inventory}) == 11
+    assert all(entry["package_identity"] == "systemd=255.4-1ubuntu8.17:amd64" for entry in inventory)
+    assert all(entry["execution_class"] == "parallel-ignore-child-exit" for entry in inventory)
+    assert all(entry["expected_presence"] is True for entry in inventory)
+    assert all(str(entry["path"]) in go_text and str(entry["sha256"]) in go_text for entry in inventory)
+    assert len(systemd_generator_orchestrator.MASKED_GENERATORS) == 12
+    assert systemd_generator_orchestrator.ADOPTION_ORDER == ("late", "normal", "early")
+    empty = {
+        key: _generator_manifest(key, ((".", "d", 0o755, 0, 0, ""),))
+        for key in systemd_generator_orchestrator.TARGETS
+    }
+    stock = {
+        key: _generator_manifest(
+            key, systemd_generator_orchestrator._expected_stock_records(key)
+        )
+        for key in systemd_generator_orchestrator.TARGETS
+    }
+    prefixes = systemd_generator_orchestrator.validate_reachable_prefixes(empty, stock)
+    assert len(prefixes) == 4
+    assert all(re.fullmatch(r"[0-9a-f]{64}", graph.identity) for graph in prefixes)
+
+
+def test_cross_root_synthetic_fixture_rejects_unreviewed_mixed_epoch_before_adoption() -> None:
+    root = ((".", "d", 0o755, 0, 0, ""),)
+    old_guard = hashlib.sha256(b"[Service]\nExecStart=/bin/true\n").hexdigest()
+    old_underlying = hashlib.sha256(
+        b"[Service]\nExecStartPost=/usr/bin/touch /run/hostile\n"
+    ).hexdigest()
+    new_guard = hashlib.sha256(b"[Service]\nExecStart=/bin/false\n").hexdigest()
+    old = {
+        "early": _generator_manifest("early", root + (("guard.service", "f", 0o644, 0, 0, old_guard),)),
+        "normal": _generator_manifest("normal", root + (("guard.service", "f", 0o644, 0, 0, old_underlying),)),
+        "late": _generator_manifest("late", root),
+    }
+    new = {
+        "early": _generator_manifest("early", root),
+        "normal": _generator_manifest("normal", root + (("guard.service", "f", 0o644, 0, 0, new_guard),)),
+        "late": _generator_manifest(
+            "late",
+            root + (
+                ("security.target.wants", "d", 0o755, 0, 0, ""),
+                ("security.target.wants/guard.service", "l", 0o777, 0, 0, "/run/systemd/generator/guard.service"),
+            ),
+        ),
+    }
+    reviewed = {
+        systemd_generator_orchestrator.effective_graph(old).records,
+        systemd_generator_orchestrator.effective_graph(new).records,
+    }
+
+    def exact_combined_policy(
+        manifests: Mapping[str, systemd_generator_orchestrator.RootManifest],
+    ) -> systemd_generator_orchestrator.EffectiveGraph:
+        graph = systemd_generator_orchestrator.effective_graph(manifests)
+        if graph.records not in reviewed:
+            raise systemd_generator_orchestrator.GeneratorOrchestratorError(
+                "synthetic mixed effective graph fuori policy"
+            )
+        return graph
+
+    # late is adopted first. OLD-early + OLD-normal + NEW-late is physically
+    # reachable, but not reviewed; validation aborts before the first move_mount.
+    with pytest.raises(
+        systemd_generator_orchestrator.GeneratorOrchestratorError,
+        match="mixed effective graph",
+    ):
+        systemd_generator_orchestrator.validate_reachable_prefixes(
+            old, new, exact_combined_policy
+        )
+
+
+def test_nested_poison_preserves_primary_error_and_parent_lifo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    parent = {
+        "name": "trusted-systemd-execution", "token": "1-" + "a" * 32,
+        "phase": "active", "root": "/run/parent", "targets": [], "aliases": [],
+    }
+    child = {
+        "name": "trusted-systemd-generated-output", "token": "1-" + "b" * 32,
+        "phase": "active", "root": "/run/child", "targets": [], "aliases": [],
+    }
+    fence = trusted_activation_fence.SnapshotMountFence.__new__(
+        trusted_activation_fence.SnapshotMountFence
+    )
+    fence.transaction = parent
+    writes: list[tuple[list[Mapping[str, object]], bool]] = []
+    monkeypatch.setattr(
+        trusted_activation_fence,
+        "_read_state",
+        lambda: {"transactions": [parent, child], "poisoned": True},
+    )
+    monkeypatch.setattr(
+        trusted_activation_fence,
+        "_write_transactions",
+        lambda transactions, poisoned=False: writes.append((list(transactions), poisoned)),
+    )
+    monkeypatch.setattr(
+        trusted_activation_fence,
+        "_remove_transaction",
+        lambda transaction: pytest.fail("parent teardown proceeded below poisoned child"),
+    )
+    primary = trusted_activation_fence.TrustedActivationFenceError(
+        "Underlying mutato durante fence; protezione lasciata attiva: child"
+    )
+    assert fence.__exit__(type(primary), primary, None) is False
+    assert writes == [([parent, child], True)]
+    assert fence.transaction is parent
+
+
+def test_ubuntu_fixture_package_baseline_is_snapshot_and_artifact_bound() -> None:
+    baseline, baseline_digest = ubuntu_package_baseline.load_baseline()
+    dockerfile = (ROOT / "deploy/pilot/ci/Dockerfile.ubuntu-systemd").read_text(
+        encoding="utf-8"
+    )
+    runner = (ROOT / "scripts/run_pilot_ubuntu_integration_container.sh").read_text(
+        encoding="utf-8"
+    )
+    assert baseline["ubuntu_snapshot"] == "20260822T000000Z"
+    assert baseline["base_oci"] in dockerfile
+    assert baseline_digest in dockerfile
+    assert systemd_generator_orchestrator.PACKAGE_BASELINE_SHA256 == baseline_digest
+    assert "THEBITLAB_PACKAGE_BASELINE_SHA256" not in (
+        ROOT / "scripts/pilot_systemd_generator_orchestrator.py"
+    ).read_text(encoding="utf-8")
+    assert "snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}" in dockerfile
+    assert "Acquire::https::Verify-Peer=false" not in dockerfile
+    assert "Acquire::https::Verify-Host=false" not in dockerfile
+    assert "--no-cache" in runner
+    for stage in baseline["stages"].values():
+        assert stage["installed_package_inventory_sha256"] in dockerfile
+        for package, version in stage["requested_packages"].items():
+            assert f"{package}={version}" in dockerfile
+    artifacts = baseline["reviewed_artifacts"]
+    assert artifacts["/usr/bin/ps"]["sha256"] == (
+        ubuntu_activation.REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES[
+            Path("/usr/bin/ps")
+        ][0]
+    )
+    assert artifacts["/usr/lib/x86_64-linux-gnu/libproc2.so.0.0.2"]["sha256"] == (
+        native_execution_closure.NATIVE_CODE_REVIEWED_SHA256[
+            "/usr/lib/x86_64-linux-gnu/libproc2.so.0.0.2"
+        ]
+    )
 
 
 def test_runtime_directory_authority_is_consistent_across_all_creators() -> None:
@@ -4796,7 +4964,7 @@ def test_runtime_directory_authority_is_consistent_across_all_creators() -> None
 
     assert 'RUNTIME_AUTHORITY_ROOT = Path("/run/thebitlab")' in fence
     assert '_RUNTIME_AUTHORITY_CHILDREN = frozenset(' in fence
-    assert '"app", "logrotate", "pilot-activation-fence", "pilot-private-runtime"' in fence
+    assert "pilot-generator-orchestrator" in trusted_activation_fence._RUNTIME_AUTHORITY_CHILDREN
     assert 'ensure_runtime_authority_directory("pilot-activation-fence")' in fence
     assert 'ensure_runtime_authority_directory("logrotate")' in activation
     assert "ensure_runtime_authority_parent()" in activation
@@ -4826,6 +4994,9 @@ def _private_runtime_evidence_fixture(now_ns: int) -> tuple[list[dict], list[dic
         "toolchain_id": "ci-555555555555",
         "toolchain_manifest_sha256": "2" * 64,
         "oci_digest": "sha256:" + "3" * 64,
+        "ubuntu_snapshot": "20260822T000000Z",
+        "package_baseline_sha256": "6" * 64,
+        "package_inventory_sha256": "7" * 64,
         "python": {"version": "3.12.3", "executable_sha256": "4" * 64},
         "node": {"required": False, "version": None, "executable_sha256": None},
         "created_unix_ns": now_ns,
@@ -4881,8 +5052,10 @@ def test_private_runtime_aggregator_accepts_only_complete_bound_fresh_evidence()
     "mutation",
     (
         "missing-shard", "stale", "candidate", "schema", "duplicate",
-        "identity-conflict", "missing-cleanup", "unknown-scenario",
-        "skip", "required-node-unknown",
+        "policy-conflict", "toolchain-id-conflict", "toolchain-conflict",
+        "oci-conflict", "package-baseline-conflict", "package-inventory-conflict",
+        "snapshot-conflict", "missing-cleanup", "cleanup-false",
+        "unknown-scenario", "skip", "required-node-unknown",
     ),
 )
 def test_private_runtime_aggregator_rejects_incomplete_stale_or_conflicting_evidence(
@@ -4900,10 +5073,24 @@ def test_private_runtime_aggregator_rejects_incomplete_stale_or_conflicting_evid
         records[0]["schema_version"] = "unknown"
     elif mutation == "duplicate":
         records.append(copy.deepcopy(records[0]))
-    elif mutation == "identity-conflict":
+    elif mutation == "policy-conflict":
         records[1]["policy_sha256"] = "9" * 64
+    elif mutation == "toolchain-id-conflict":
+        records[1]["toolchain_id"] = "ci-999999999999"
+    elif mutation == "toolchain-conflict":
+        records[1]["toolchain_manifest_sha256"] = "9" * 64
+    elif mutation == "oci-conflict":
+        records[1]["oci_digest"] = "sha256:" + "9" * 64
+    elif mutation == "package-baseline-conflict":
+        records[1]["package_baseline_sha256"] = "9" * 64
+    elif mutation == "package-inventory-conflict":
+        records[1]["package_inventory_sha256"] = "9" * 64
+    elif mutation == "snapshot-conflict":
+        records[1]["ubuntu_snapshot"] = "20260823T000000Z"
     elif mutation == "missing-cleanup":
         cleanups.pop()
+    elif mutation == "cleanup-false":
+        cleanups[0]["image_absent"] = False
     elif mutation == "unknown-scenario":
         records[0]["scenarios"][0]["scenario_id"] = "unknown"
     elif mutation == "skip":

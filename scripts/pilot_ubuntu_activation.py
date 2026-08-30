@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts import pilot_systemd_generator_orchestrator as generator_orchestrator  # noqa: E402
 from scripts import validate_pilot_deployment as deployment  # noqa: E402
 from scripts.pilot_native_execution_closure import (  # noqa: E402
     NativeExecutionClosureError,
@@ -277,7 +278,7 @@ _TRUSTED_BASE_FENCE: SnapshotMountFence | None = None
 _ACTIVE_EXECUTION_FENCE: SnapshotMountFence | None = None
 _TRUSTED_SESSION_OWNER_PID: int | None = None
 _EXECUTION_FENCE_OWNER_PID: int | None = None
-_GENERATED_OUTPUT_FENCE: SnapshotMountFence | None = None
+_GENERATOR_BUNDLE_ID: str | None = None
 _EXECUTOR_INODE_LEASE: ExecutorInodeReadLease | None = None
 _NATIVE_CLOSURE_READY = False
 _NATIVE_CLOSURE_PATHS: frozenset[Path] = frozenset()
@@ -456,7 +457,7 @@ def _trusted_activation_session() -> Iterable[None]:
 @contextlib.contextmanager
 def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
     global _EXECUTION_FENCE_DEPTH, _ACTIVE_EXECUTION_FENCE, _EXECUTION_FENCE_OWNER_PID
-    global _GENERATED_OUTPUT_FENCE, _EXECUTOR_INODE_LEASE
+    global _EXECUTOR_INODE_LEASE, _GENERATOR_BUNDLE_ID
     global _NATIVE_CLOSURE_READY, _NATIVE_CLOSURE_PATHS
     if not _KERNEL_FENCE_ENABLED:
         yield None
@@ -478,6 +479,7 @@ def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
         finally:
             _EXECUTION_FENCE_DEPTH -= 1
         return
+    _GENERATOR_BUNDLE_ID = None
     try:
         # The holder is the already-trusted activation process.  The exact
         # /proc/1/fd object is leased before Stage-M construction and remains
@@ -512,10 +514,6 @@ def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
                         _force_safe_executor_abort_if_pending()
                         raise
                 finally:
-                    if _GENERATED_OUTPUT_FENCE is not None:
-                        generated_fence = _GENERATED_OUTPUT_FENCE
-                        _GENERATED_OUTPUT_FENCE = None
-                        generated_fence.__exit__(None, None, None)
                     _EXECUTION_FENCE_DEPTH = 0
                     _NATIVE_CLOSURE_READY = False
                     _NATIVE_CLOSURE_PATHS = frozenset()
@@ -530,6 +528,7 @@ def _trusted_execution_fence() -> Iterable[SnapshotMountFence | None]:
         raise ActivationError(f"TrustedActivationFence execution: {exc}") from exc
     finally:
         _EXECUTOR_INODE_LEASE = None
+        _GENERATOR_BUNDLE_ID = None
 
 
 def _in_trusted_execution_fence(function: Any) -> Any:
@@ -5009,30 +5008,12 @@ def _is_generated_systemd_root(path: Path) -> bool:
     return path.parent == Path("/run/systemd") and path.name in SYSTEMD_GENERATED_DIRECTORY_NAMES
 
 
-def _seal_generated_systemd_output() -> None:
-    """Freeze generator output after generation/load and before effective use."""
-
-    global _GENERATED_OUTPUT_FENCE
-    if _GENERATED_OUTPUT_FENCE is not None:
-        if _GENERATED_OUTPUT_FENCE.transaction is None:
-            raise ActivationError("Seal generated-output senza kernel transaction attiva")
-        return
-    if not _EXECUTION_FENCE_DEPTH or not _NATIVE_CLOSURE_READY:
-        raise ActivationError("Seal generated-output fuori dalla execution closure")
-    fence = SnapshotMountFence(
-        "trusted-systemd-generated-output",
-        directories=SYSTEMD_GENERATED_OUTPUT_DIRECTORIES,
-        files=(),
-    )
-    try:
-        fence.__enter__()
-    except TrustedActivationFenceError as exc:
-        raise ActivationError(f"Seal generated-output fallita: {exc}") from exc
-    _GENERATED_OUTPUT_FENCE = fence
-
-
 def _attest_systemd_generators() -> None:
+    """Attest the closed stock inventory and its exact first-match selection."""
+
     roots = _systemd_path(SYSTEMD_GENERATOR_SEARCH_PATH_NAME)
+    if _KERNEL_FENCE_ENABLED and roots != EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH:
+        raise ActivationError("Search path generator systemd 255 divergente")
     directories: list[Path] = []
     artifacts: list[Path] = []
     for root in roots:
@@ -5041,43 +5022,117 @@ def _attest_systemd_generators() -> None:
         artifacts.extend(tree_artifacts)
     symlinks = tuple(path for path in artifacts if path.is_symlink())
     regulars = tuple(path for path in artifacts if not path.is_symlink())
-    metadata_owned = _dpkg_owned_paths((*directories, *symlinks))
-    unmanaged = [path for path in (*directories, *symlinks) if path not in metadata_owned]
-    if unmanaged:
-        raise ActivationError(f"Generator systemd locale/unmanaged: {unmanaged[0]}")
-    expected_symlinks = {
-        path
-        for path in SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS
-        if any(path == root or root in path.parents for root in roots)
+    if roots != EXPECTED_SYSTEMD_GENERATOR_SEARCH_PATH:
+        # Portable policy tests use synthetic roots with the kernel fence off;
+        # production reached above only with the exact Noble search path.
+        metadata_owned = _dpkg_owned_paths((*directories, *symlinks))
+        unmanaged = [
+            path for path in (*directories, *symlinks) if path not in metadata_owned
+        ]
+        if unmanaged:
+            raise ActivationError(f"Generator systemd locale/unmanaged: {unmanaged[0]}")
+        expected_symlinks = {
+            path for path in SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS
+            if any(path == root or root in path.parents for root in roots)
+        }
+        if set(symlinks) != expected_symlinks:
+            raise ActivationError("Inventario symlink generator systemd fuori policy")
+        expected_regulars = {
+            path for path in REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
+            if any(path == root or root in path.parents for root in roots)
+        }
+        if set(regulars) != expected_regulars:
+            raise ActivationError("Inventario executable generator systemd fuori policy")
+        _attest_expected_package_files(
+            _reviewed_package_executable_policies(regulars),
+            label="synthetic systemd generator executable",
+        )
+        return
+    package_regulars = {
+        Path(str(item["path"])) for item in generator_orchestrator.SELECTED_GENERATORS
+    } | {Path("/usr/lib/systemd/system-generators/systemd-gpt-auto-generator")}
+    if generator_orchestrator.ORCHESTRATOR_ENTRY not in symlinks:
+        # CI provisioning performs one read-only pristine stock attestation
+        # before installing the production source authority and enabling fences.
+        if _KERNEL_FENCE_ENABLED:
+            raise ActivationError("Orchestrator production assente con fence attiva")
+        if set(symlinks) != set(SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS) or set(regulars) != package_regulars:
+            raise ActivationError("Inventario generator stock di provisioning divergente")
+        for path, target in SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS.items():
+            if _assert_systemd_symlink_metadata(path) != target or path.resolve(strict=True) != Path("/dev/null"):
+                raise ActivationError("Mask stock di provisioning divergente")
+        _attest_expected_package_files(
+            _reviewed_package_executable_policies(regulars),
+            label="stock provisioning systemd generator executable",
+        )
+        return
+    expected_masks = {
+        Path("/etc/systemd/system-generators") / basename
+        for basename in generator_orchestrator.MASKED_GENERATORS
     }
+    expected_symlinks = expected_masks | {generator_orchestrator.ORCHESTRATOR_ENTRY}
     if set(symlinks) != expected_symlinks:
-        raise ActivationError("Inventario symlink generator systemd fuori policy")
+        missing = sorted(str(path) for path in expected_symlinks - set(symlinks))
+        extra = sorted(str(path) for path in set(symlinks) - expected_symlinks)
+        raise ActivationError(
+            f"Inventario orchestrator/mask generator systemd fuori policy: missing={missing} extra={extra}"
+        )
     for path in symlinks:
         target = _assert_systemd_symlink_metadata(path)
-        if target != SUPPORTED_SYSTEMD_GENERATOR_SYMLINKS[path]:
-            raise ActivationError(f"Symlink generator systemd target divergente: {path}")
+        expected_target = (
+            generator_orchestrator.ORCHESTRATOR_BINARY.as_posix()
+            if path == generator_orchestrator.ORCHESTRATOR_ENTRY
+            else "/dev/null"
+        )
+        if target != expected_target:
+            raise ActivationError(f"Symlink orchestrator/mask divergente: {path}")
         try:
-            if path.resolve(strict=True) != Path("/dev/null"):
-                raise ActivationError(f"Symlink generator systemd non canonico: {path}")
+            resolved = path.resolve(strict=True)
         except OSError as exc:
-            raise ActivationError(f"Symlink generator systemd broken: {path}") from exc
+            raise ActivationError(f"Symlink orchestrator/mask broken: {path}") from exc
+        if resolved != Path(expected_target):
+            raise ActivationError(f"Target orchestrator/mask non canonico: {path}")
+    orchestrator = generator_orchestrator.ORCHESTRATOR_BINARY
+    metadata = orchestrator.lstat()
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or (os.name != "nt" and (metadata.st_uid != 0 or metadata.st_gid != 0))
+        or metadata.st_mode & 0o022
+        or getattr(metadata, "st_nlink", 1) != 1
+        or not metadata.st_mode & stat.S_IXUSR
+    ):
+        raise ActivationError("Orchestrator statico con metadata unsafe")
+    if hashlib.sha256(_read_stable_trusted_file(orchestrator)).hexdigest() != generator_orchestrator.ORCHESTRATOR_REVIEWED_SHA256:
+        raise ActivationError("Orchestrator statico digest divergente")
     for path in regulars:
         metadata = path.lstat()
         if not stat.S_ISREG(metadata.st_mode):
             raise ActivationError(f"Generator systemd package non regolare: {path}")
-        if os.name != "nt" and (metadata.st_uid != 0 or metadata.st_mode & 0o022):
+        if os.name != "nt" and (metadata.st_uid != 0 or metadata.st_gid != 0 or metadata.st_mode & 0o022):
             raise ActivationError(f"Generator systemd package con metadata unsafe: {path}")
-    expected_regulars = {
-        path
-        for path in REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
-        if any(path == root or root in path.parents for root in roots)
-    }
-    if set(regulars) != expected_regulars:
+    if set(regulars) != package_regulars:
         raise ActivationError("Inventario executable generator systemd fuori policy")
     _attest_expected_package_files(
         _reviewed_package_executable_policies(regulars),
         label="systemd generator executable",
     )
+    selected: dict[str, Path | None] = {}
+    by_path = {path for path in artifacts}
+    for root in roots:
+        for path in sorted((candidate for candidate in by_path if candidate.parent == root), key=lambda value: value.name):
+            if path.name in selected:
+                continue
+            if path.is_symlink() and path.resolve(strict=True) == Path("/dev/null"):
+                selected[path.name] = None
+            elif path.is_file() and os.access(path, os.X_OK):
+                selected[path.name] = path
+            else:
+                raise ActivationError(f"Entry generator first-match non canonica: {path}")
+    executed = {name: path for name, path in selected.items() if path is not None}
+    if executed != {generator_orchestrator.ORCHESTRATOR_ENTRY.name: generator_orchestrator.ORCHESTRATOR_ENTRY}:
+        raise ActivationError(f"Selected generator closure divergente: {executed}")
+    if {name for name, path in selected.items() if path is None} != set(generator_orchestrator.MASKED_GENERATORS):
+        raise ActivationError("Mask generator selected closure divergente")
 
 
 def _systemd_command_output(arguments: Sequence[str], *, label: str) -> str:
@@ -5775,21 +5830,34 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
     _attest_activator_subprocess_toolchain()
     if _KERNEL_FENCE_ENABLED:
         _attest_supported_system_manager_environment()
-    # Generation phase: trusted source is frozen, while PID 1 still owns writable
-    # output directories. No service use is authorized in this phase. The first
-    # call reloads, then seals output; nested/repeated attestations reuse that exact
-    # sealed generation and never open another mutable reload interval.
+    # PID1 selects one reviewed static orchestrator. Stock generators write only
+    # transaction staging; PID1 output remains the previous validated/SAFE bundle
+    # until seal, closed attestation and prefix-combination validation all pass.
+    global _GENERATOR_BUNDLE_ID
     _attest_systemd_generators()
-    if _GENERATED_OUTPUT_FENCE is None:
+    if _KERNEL_FENCE_ENABLED and _GENERATOR_BUNDLE_ID is None:
+        try:
+            evidence = generator_orchestrator.orchestrated_reload(
+                lambda: _systemctl_result(["daemon-reload"])
+            )
+        except generator_orchestrator.GeneratorOrchestratorError as exc:
+            # orchestrated_reload does not return until daemon-reload is terminal;
+            # rejection retains the previous validated roots and is therefore a
+            # safe executor boundary, not a reusable in-flight manager action.
+            _mark_executor_safe_boundary_if_pending()
+            raise ActivationError(f"Generator orchestrator: {exc}") from exc
+        bundle_id = str(evidence.get("bundle_id", ""))
+        if generator_orchestrator.SHA256_RE.fullmatch(bundle_id) is None:
+            raise ActivationError("Generator bundle identity non canonica")
+        _GENERATOR_BUNDLE_ID = bundle_id
+        _mark_executor_safe_boundary_if_pending()
+        _attest_systemd_generators()
+    elif not _KERNEL_FENCE_ENABLED:
         code, _ = _systemctl_result(["daemon-reload"])
-        # daemon-reload is synchronous: all manager executor children are
-        # terminal at return.  No service target has been authorized yet.
         _mark_executor_safe_boundary_if_pending()
         if code != 0:
             raise ActivationError("systemd daemon-reload fallita durante boot attestation")
         _attest_systemd_generators()
-        if _KERNEL_FENCE_ENABLED:
-            _seal_generated_systemd_output()
     roots = _systemd_path(SYSTEMD_UNIT_SEARCH_PATH_NAME)
     directories: list[Path] = []
     artifacts: list[Path] = []
