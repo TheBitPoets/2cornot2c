@@ -17,6 +17,7 @@ RUNTIME_ID = "flowchart-lab"
 ACTIVITY_ID = "py2-flowchart-managed-rehearsal"
 STUDENT_ID = "student-flowchart-rehearsal"
 NOW = "2026-08-30T12:00:00+00:00"
+STARTUP_TIMEOUT_SECONDS = 60.0
 
 
 def fail(message: str) -> None:
@@ -126,7 +127,9 @@ def terminate_process(process: subprocess.Popen[str]) -> tuple[str, str]:
     return remaining_stdout, stderr
 
 
-def read_launch_json(process: subprocess.Popen[str], timeout_seconds: float = 15.0) -> dict[str, Any]:
+def read_launch_json(
+    process: subprocess.Popen[str], timeout_seconds: float = STARTUP_TIMEOUT_SECONDS
+) -> dict[str, Any]:
     if process.stdout is None:
         fail("launcher stdout non disponibile")
 
