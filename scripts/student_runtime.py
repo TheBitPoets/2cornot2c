@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -17,6 +19,11 @@ from scripts import (
 DEFAULT_REGISTRY = thebitlab_runtime_plugins.RuntimePluginRegistry(
     entry_points_provider=thebitlab_builtin_runtimes.combined_entry_points
 )
+
+
+def _trace(stage: str) -> None:
+    if os.environ.get("CI", "").casefold() == "true":
+        print(f"thebitlab-student-runtime:{stage}", file=sys.stderr, flush=True)
 
 
 def clean_text(value: Any) -> str:
@@ -70,17 +77,23 @@ def _runtime_context(
     thebitlab_runtime_plugins.LoadedRuntimePlugin,
     thebitlab_runtime_plugins.RuntimeRequest,
 ]:
+    _trace("context-before-paths")
     activity_path = _activity_path(root, assignment)
     workspace_path = _workspace_path(root, assignment)
+    _trace("context-after-paths")
     activity = _load_activity(activity_path)
     extension = thebitlab_runtime_contracts.normalize_runtime_extension(activity)
     if extension is None:
         raise ValueError("Activity senza extensions.thebitlab.runtime")
     runtime_id = clean_text(extension.get("runtime_id"))
     try:
+        _trace(f"context-before-registry-get:{runtime_id}")
         loaded = registry.get(runtime_id)
+        _trace(f"context-after-registry-get:{runtime_id}")
         thebitlab_runtime_plugins.assert_runtime_supports_activity(activity, loaded.descriptor)
+        _trace(f"context-after-support-check:{runtime_id}")
         probe = thebitlab_runtime_plugins.probe_runtime(loaded)
+        _trace(f"context-after-probe:{runtime_id}")
     except thebitlab_runtime_plugins.RuntimePluginError as error:
         raise ValueError(str(error)) from error
     if not probe.available:
@@ -95,6 +108,7 @@ def _runtime_context(
         timeout_seconds=timeout_seconds,
         metadata={"source": "student_lab_runner"},
     )
+    _trace(f"context-after-request:{runtime_id}")
     return activity, loaded, request
 
 
@@ -275,12 +289,16 @@ def launch_runtime_assignment(
     registry: thebitlab_runtime_plugins.RuntimePluginRegistry = DEFAULT_REGISTRY,
 ) -> thebitlab_runtime_plugins.RuntimeLaunchResult:
     try:
+        _trace("launch-before-context")
         _, loaded, request = _runtime_context(
             assignment,
             root=root,
             timeout_seconds=timeout_seconds,
             registry=registry,
         )
-        return thebitlab_runtime_plugins.launch_runtime(loaded, request)
+        _trace(f"launch-before-plugin:{loaded.descriptor.runtime_id}")
+        result = thebitlab_runtime_plugins.launch_runtime(loaded, request)
+        _trace(f"launch-after-plugin:{loaded.descriptor.runtime_id}:{result.status}")
+        return result
     except thebitlab_runtime_plugins.RuntimePluginError as error:
         raise ValueError(str(error)) from error
