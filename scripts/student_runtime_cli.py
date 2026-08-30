@@ -7,10 +7,22 @@ import webbrowser
 from pathlib import Path
 from urllib.parse import urlparse
 
-from scripts import student_lab_runner, student_runtime
+from scripts import student_lab_service, student_runtime
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def positive_int(value: str) -> int:
+    """Parse one strictly positive integer without importing the grading runner."""
+
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("deve essere un intero positivo") from error
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("deve essere un intero positivo")
+    return parsed
 
 
 def add_assignment_selection(parser: argparse.ArgumentParser) -> None:
@@ -22,7 +34,7 @@ def add_assignment_selection(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--now")
     parser.add_argument(
         "--timeout",
-        type=student_lab_runner.positive_int,
+        type=positive_int,
         default=30,
         help="Timeout operativo passato al runtime, in secondi.",
     )
@@ -68,13 +80,54 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def select_assignment(
+    assignments: list[dict],
+    *,
+    assignment_id: str | None = None,
+    activity_id: str | None = None,
+) -> dict:
+    """Select one assignment without importing the grading-oriented runner module."""
+
+    if assignment_id:
+        for assignment in assignments:
+            if assignment.get("assignment_id") == assignment_id:
+                return assignment
+        raise ValueError(f"Consegna non trovata: {assignment_id}")
+    if activity_id:
+        matches = [assignment for assignment in assignments if assignment.get("activity_id") == activity_id]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(
+                f"Activity {activity_id} presente in piu consegne. "
+                "Usa --assignment-id per scegliere quella corretta."
+            )
+        raise ValueError(f"Activity non trovata: {activity_id}")
+    if len(assignments) == 1:
+        return assignments[0]
+    raise ValueError("Nessuna consegna selezionata. Usa --assignment-id o --activity-id.")
+
+
 def load_assignment(args: argparse.Namespace) -> dict:
-    return student_lab_runner.load_student_assignment(
-        root=args.root.resolve(strict=False),
+    """Load an interactive assignment through the lightweight Student Lab service path.
+
+    Launch does not need graders, Docker grading services or report writers. Keeping
+    those imports out of the interactive cold-start materially reduces startup cost,
+    especially on macOS ARM classroom profiles.
+    """
+
+    root = args.root.resolve(strict=False)
+    payload = student_lab_service.student_lab_payload(
+        root=root,
         student_id=args.student_id,
+        now=args.now,
+        expose_external_paths=True,
+    )
+    assignments = payload.get("assignments") if isinstance(payload.get("assignments"), list) else []
+    return select_assignment(
+        assignments,
         assignment_id=args.assignment_id,
         activity_id=args.activity_id,
-        now=args.now,
     )
 
 
@@ -109,6 +162,10 @@ def main() -> int:
             if result.status in {"started", "already_running"} and result.endpoint:
                 keep_interactive_runtime_alive()
             return 0 if result.status in {"started", "already_running"} else 1
+
+        # Grading/report machinery is deliberately lazy: an interactive launch
+        # must not pay the cold-start cost of Docker/Python grading services.
+        from scripts import student_lab_runner
 
         if args.final and not args.write_report:
             raise ValueError("--final richiede --write-report")
