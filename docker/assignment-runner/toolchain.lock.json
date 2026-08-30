@@ -1,8 +1,8 @@
 {
   "schema_version": "thebitlab.grading-toolchain-lock.v1",
-  "version": "2026.07.1",
+  "version": "2026.08.3",
   "platform": "linux/amd64",
   "image_repository": "ghcr.io/thebitpoets/2cornot2c-assignment-runner",
-  "source_revision": "bd102146a684a9b06835204ec1b7f668f7655a03",
-  "immutable_reference": "ghcr.io/thebitpoets/2cornot2c-assignment-runner@sha256:62f0f7b7bc1d48d01b7f8e5fa765e0b43be3622e70a614033b1bb4a4e522e159"
+  "source_revision": "23bc1d36c7eb8c1b10a11cbde5f226ce7554f85e",
+  "immutable_reference": "ghcr.io/thebitpoets/2cornot2c-assignment-runner@sha256:c0594df833925044831463a9ee631aba2688929951a7dbcb53612b86d221ed51"
 }

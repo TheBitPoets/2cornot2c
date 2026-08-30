@@ -11,3 +11,9 @@ scripts/*
 !scripts/pilot_private_runtime.go
 !scripts/pilot_private_runtime_poc.go
 !scripts/thebitlab_sandbox_boundary.py
+!scripts/python_function_profile.py
+!scripts/python_function_worker.py
+!scripts/python_filesystem_profile.py
+!scripts/python_filesystem_worker.py
+!scripts/python_object_profile.py
+!scripts/python_object_worker.py
