@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import student_runtime_cli
+from scripts import student_lab_service, student_runtime_cli
 
 
 def test_browser_endpoint_accepts_only_http_or_https() -> None:
@@ -61,7 +61,7 @@ def test_load_assignment_uses_student_lab_service_payload(monkeypatch, tmp_path:
         calls.append(kwargs)
         return {"assignments": [expected]}
 
-    monkeypatch.setattr(student_runtime_cli.student_lab_service, "student_lab_payload", fake_payload)
+    monkeypatch.setattr(student_lab_service, "student_lab_payload", fake_payload)
     args = Namespace(
         root=tmp_path,
         student_id="student-1",
