@@ -1,0 +1,243 @@
+name: Python filesystem profile P4 candidate
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".dockerignore"
+      - "docker/assignment-runner/**"
+      - "scripts/python_filesystem_profile.py"
+      - "scripts/python_filesystem_worker.py"
+      - "scripts/grade_python_filesystem_activity.py"
+      - "scripts/validate_activity.py"
+      - "tests/test_python_filesystem_profile.py"
+      - "tests/test_python_filesystem_worker.py"
+      - "tests/test_validate_activity_filesystem_profile.py"
+      - ".github/workflows/python-filesystem-profile.yml"
+
+jobs:
+  p4-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run P4 contract worker and Activity tests
+        run: >-
+          python -m pytest -q
+          tests/test_python_filesystem_profile.py
+          tests/test_python_filesystem_worker.py
+          tests/test_validate_activity_filesystem_profile.py
+
+      - name: Build assignment-runner candidate
+        run: >-
+          python scripts/build_assignment_runner.py
+          --source-revision "$GITHUB_SHA"
+          --tag thebitlab-p4-candidate
+          --metadata "$RUNNER_TEMP/p4-toolchain-build.json"
+
+      - name: Exercise P4 read-only fixture and output artifact
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/p4/fixtures"
+          printf '12\n15\n9\n' > "$RUNNER_TEMP/p4/fixtures/misure.txt"
+          cat > "$RUNNER_TEMP/p4/activity.json" <<'JSON'
+          {
+            "schema_version": "1.0",
+            "id": "python-p4-smoke-001",
+            "titolo": "Somma misure",
+            "tipo": "laboratorio",
+            "difficolta": "B",
+            "argomenti": ["file", "pathlib"],
+            "consegna": "Leggi misure.txt e crea risultato.txt.",
+            "linguaggio": "python",
+            "correzione": {"compila": true, "test": true, "sandbox": true, "ai_feedback": false},
+            "metriche": {
+              "tempo_stimato_minuti": 15,
+              "traccia_tempo_dichiarato": true,
+              "traccia_sessioni_thebitlab": true,
+              "traccia_eventi_didattici": true,
+              "traccia_errori_compilazione": true
+            },
+            "filesystem_tests": [
+              {
+                "profile": "python-filesystem-v1",
+                "name": "somma base",
+                "fixtures": [
+                  {"id": "input", "source": "fixtures/misure.txt", "target": "misure.txt", "mode": "read-only"}
+                ],
+                "expected_artifacts": [
+                  {"path": "risultato.txt", "text": "36\n", "encoding": "utf-8"}
+                ]
+              }
+            ]
+          }
+          JSON
+          cat > "$RUNNER_TEMP/p4/main.py" <<'PY'
+          from pathlib import Path
+
+          values = [int(line) for line in Path("misure.txt").read_text(encoding="utf-8").splitlines()]
+          Path("risultato.txt").write_text(f"{sum(values)}\n", encoding="utf-8")
+          PY
+          python scripts/grade_python_filesystem_activity.py \
+            --activity "$RUNNER_TEMP/p4/activity.json" \
+            --activity-root "$RUNNER_TEMP/p4" \
+            --source "$RUNNER_TEMP/p4/main.py" \
+            --source-root "$RUNNER_TEMP/p4" \
+            --docker-image thebitlab-p4-candidate \
+            --report "$RUNNER_TEMP/p4/report.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "p4" / "report.json").read_text(encoding="utf-8"))
+          assert report["passed"] is True
+          assert report["profile"] == "python-filesystem-v1"
+          assert report["summary"] == {"passed": 1, "total": 1}
+          assert report["tests"][0]["worker_status"] == "completed"
+          assert all("36" not in key for key in report["tests"][0] if key.startswith("expected"))
+          PY
+
+      - name: Exercise P4 fixture mutation protection
+        shell: bash
+        run: |
+          cp "$RUNNER_TEMP/p4/activity.json" "$RUNNER_TEMP/p4/activity-mutation.json"
+          cat > "$RUNNER_TEMP/p4/mutate.py" <<'PY'
+          from pathlib import Path
+          Path("misure.txt").write_text("99\n", encoding="utf-8")
+          Path("risultato.txt").write_text("99\n", encoding="utf-8")
+          PY
+          set +e
+          python scripts/grade_python_filesystem_activity.py \
+            --activity "$RUNNER_TEMP/p4/activity-mutation.json" \
+            --activity-root "$RUNNER_TEMP/p4" \
+            --source "$RUNNER_TEMP/p4/mutate.py" \
+            --source-root "$RUNNER_TEMP/p4" \
+            --docker-image thebitlab-p4-candidate \
+            --report "$RUNNER_TEMP/p4/mutation-report.json"
+          status=$?
+          set -e
+          test "$status" = "1"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "p4" / "mutation-report.json").read_text(encoding="utf-8"))
+          test = report["tests"][0]
+          assert report["passed"] is False
+          assert test["worker_status"] == "runtime-error"
+          assert test["exception"]["type"] in {"PermissionError", "OSError"}
+          PY
+
+      - name: Exercise P4 missing fixture and external path policy
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/p4-errors"
+          cat > "$RUNNER_TEMP/p4-errors/activity.json" <<'JSON'
+          {
+            "schema_version": "1.0",
+            "id": "python-p4-errors-001",
+            "titolo": "Errori filesystem",
+            "tipo": "laboratorio",
+            "difficolta": "B",
+            "argomenti": ["file"],
+            "consegna": "Prova filesystem.",
+            "linguaggio": "python",
+            "correzione": {"compila": true, "test": true, "sandbox": true, "ai_feedback": false},
+            "metriche": {
+              "tempo_stimato_minuti": 5,
+              "traccia_tempo_dichiarato": true,
+              "traccia_sessioni_thebitlab": true,
+              "traccia_eventi_didattici": true,
+              "traccia_errori_compilazione": true
+            },
+            "filesystem_tests": [
+              {
+                "profile": "python-filesystem-v1",
+                "expected_artifacts": [{"path": "out.txt", "text": "ok\n", "encoding": "utf-8"}]
+              }
+            ]
+          }
+          JSON
+          cat > "$RUNNER_TEMP/p4-errors/missing.py" <<'PY'
+          from pathlib import Path
+          Path("missing.txt").read_text(encoding="utf-8")
+          PY
+          cat > "$RUNNER_TEMP/p4-errors/escape.py" <<'PY'
+          from pathlib import Path
+          Path("/etc/passwd").read_text(encoding="utf-8")
+          PY
+          for source in missing escape; do
+            set +e
+            python scripts/grade_python_filesystem_activity.py \
+              --activity "$RUNNER_TEMP/p4-errors/activity.json" \
+              --activity-root "$RUNNER_TEMP/p4-errors" \
+              --source "$RUNNER_TEMP/p4-errors/$source.py" \
+              --source-root "$RUNNER_TEMP/p4-errors" \
+              --docker-image thebitlab-p4-candidate \
+              --report "$RUNNER_TEMP/p4-errors/$source-report.json"
+            status=$?
+            set -e
+            test "$status" = "1"
+          done
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "p4-errors"
+          missing = json.loads((root / "missing-report.json").read_text(encoding="utf-8"))["tests"][0]
+          escape = json.loads((root / "escape-report.json").read_text(encoding="utf-8"))["tests"][0]
+          assert missing["worker_status"] == "runtime-error"
+          assert missing["exception"]["type"] == "FileNotFoundError"
+          assert escape["worker_status"] == "runtime-error"
+          assert escape["exception"]["type"] == "PermissionError"
+          PY
+
+      - name: Exercise P4 output limit and timeout cleanup
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/p4-limits"
+          cp "$RUNNER_TEMP/p4-errors/activity.json" "$RUNNER_TEMP/p4-limits/activity.json"
+          cat > "$RUNNER_TEMP/p4-limits/big.py" <<'PY'
+          from pathlib import Path
+          Path("big.txt").write_text("x" * 70000, encoding="utf-8")
+          PY
+          cat > "$RUNNER_TEMP/p4-limits/loop.py" <<'PY'
+          while True:
+              pass
+          PY
+          for source in big loop; do
+            extra=""
+            if [ "$source" = loop ]; then extra="--timeout 1"; fi
+            set +e
+            python scripts/grade_python_filesystem_activity.py \
+              --activity "$RUNNER_TEMP/p4-limits/activity.json" \
+              --activity-root "$RUNNER_TEMP/p4-limits" \
+              --source "$RUNNER_TEMP/p4-limits/$source.py" \
+              --source-root "$RUNNER_TEMP/p4-limits" \
+              --docker-image thebitlab-p4-candidate \
+              $extra \
+              --report "$RUNNER_TEMP/p4-limits/$source-report.json"
+            status=$?
+            set -e
+            test "$status" = "1"
+          done
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "p4-limits"
+          big = json.loads((root / "big-report.json").read_text(encoding="utf-8"))["tests"][0]
+          loop = json.loads((root / "loop-report.json").read_text(encoding="utf-8"))["tests"][0]
+          assert big["worker_status"] == "output-limit"
+          assert loop["worker_status"] == "timeout"
+          PY

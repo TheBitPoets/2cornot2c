@@ -64,22 +64,27 @@ def test_publish_workflow_only_publishes_reviewed_main_toolchains() -> None:
         ".github/workflows/publish-assignment-runner.yml"
     ).read_text(encoding="utf-8")
 
-    assert "packages: write" in source
-    assert "pull_request:" not in source
+    validate_block, publish_block = source.split("  publish:\n", maxsplit=1)
+    assert "pull_request:" in source
     assert "branches:\n      - main" in source
-    assert "if: github.ref == 'refs/heads/main'" in source
+    assert "if: github.ref == 'refs/heads/main'" in publish_block
+    assert "packages: write" not in validate_block
+    assert "packages: write" in publish_block
+    assert "docker login ghcr.io" not in validate_block
+    assert "docker login ghcr.io" in publish_block
     assert "scripts/build_assignment_runner.py" in source
     assert "scripts/publish_assignment_runner.py" in source
-    assert "THEBITLAB_RUN_DOCKER_TESTS" in source
-    assert "tests/test_student_lab_runner_docker.py" in source
-    assert "docker login ghcr.io" in source
-    assert "image_id: ${{ steps.image-digest.outputs.image_id }}" in source
-    assert "VALIDATED_IMAGE_ID: ${{ needs.validate.outputs.image_id }}" in source
-    assert "actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16" in source
+    assert "THEBITLAB_RUN_DOCKER_TESTS" in validate_block
+    assert "tests/test_student_lab_runner_docker.py" in validate_block
+    assert "tests/test_python_function_student_lab_docker.py" in validate_block
+    assert "tests/test_p2_release_candidate.py" in validate_block
+    assert "image_id: ${{ steps.image-digest.outputs.image_id }}" in validate_block
+    assert "VALIDATED_IMAGE_ID: ${{ needs.validate.outputs.image_id }}" in publish_block
+    assert "actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16" in publish_block
     assert "runner-toolchain" in source
-    assert "docker save" in source
-    assert "docker load" in source
-    assert "gunzip" in source
+    assert "docker save" in validate_block
+    assert "docker load" in publish_block
+    assert "gunzip" in publish_block
     assert ":latest" not in source
     assert source.count("tests/test_student_lab_runner_docker.py") == 1
     assert '".github/workflows/publish-assignment-runner.yml"' in source

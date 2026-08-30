@@ -19,7 +19,7 @@ def manifest() -> dict:
 def test_checked_in_toolchain_manifest_is_strict_and_immutable() -> None:
     payload = manifest()
 
-    assert payload["version"] == "2026.07.1"
+    assert payload["version"] == "2026.08.3"
     assert payload["platform"] == "linux/amd64"
     assert payload["image_repository"] == builder.IMAGE_REPOSITORY
     assert payload["base_image"].startswith("debian:bookworm-slim@sha256:")

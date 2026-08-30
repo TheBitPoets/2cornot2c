@@ -1,0 +1,266 @@
+name: Python object profile P3 candidate
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".dockerignore"
+      - "scripts/python_object_profile.py"
+      - "scripts/python_object_worker.py"
+      - "scripts/grade_python_object_activity.py"
+      - "scripts/thebitlab_technical_services.py"
+      - "scripts/validate_activity.py"
+      - "scripts/student_lab_runner.py"
+      - "docker/assignment-runner/**"
+      - "tests/test_python_object_profile.py"
+      - "tests/test_python_object_worker.py"
+      - "tests/test_python_object_profile_dispatch.py"
+      - "tests/test_python_object_student_lab_docker.py"
+      - "tests/test_validate_activity_object_profile.py"
+      - ".github/workflows/python-object-profile.yml"
+
+jobs:
+  p3-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run P3 contract worker validation and dispatch tests
+        run: >-
+          python -m pytest -q
+          tests/test_python_object_profile.py
+          tests/test_python_object_worker.py
+          tests/test_python_object_profile_dispatch.py
+          tests/test_validate_activity_object_profile.py
+
+      - name: Build assignment-runner candidate
+        run: >-
+          python scripts/build_assignment_runner.py
+          --source-revision "$GITHUB_SHA"
+          --tag thebitlab-p3-candidate
+          --metadata "$RUNNER_TEMP/p3-toolchain-build.json"
+
+      - name: Exercise P3 authoritative Docker behavior and discrimination
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/p3"
+          cat > "$RUNNER_TEMP/p3/activity.json" <<'JSON'
+          {
+            "schema_version": "1.0",
+            "id": "python-p3-smoke-001",
+            "titolo": "Oggetti P3 smoke",
+            "tipo": "laboratorio",
+            "difficolta": "B",
+            "argomenti": ["classi", "stato", "invarianti"],
+            "consegna": "Implementa Conto con stato e invarianti.",
+            "linguaggio": "python",
+            "correzione": {
+              "compila": true,
+              "test": true,
+              "sandbox": true,
+              "ai_feedback": false
+            },
+            "metriche": {
+              "tempo_stimato_minuti": 20,
+              "traccia_tempo_dichiarato": true,
+              "traccia_sessioni_thebitlab": true,
+              "traccia_eventi_didattici": true,
+              "traccia_errori_compilazione": true
+            },
+            "object_tests": [
+              {
+                "profile": "python-object-v1",
+                "name": "deposito modifica stato e query",
+                "class": "Conto",
+                "construct": {"args": ["Anna", 100]},
+                "steps": [
+                  {"call": "deposita", "args": [20], "expected_return": null},
+                  {"observe": "saldo", "expected": 120},
+                  {"call": "saldo_corrente", "expected_return": 120}
+                ]
+              },
+              {
+                "profile": "python-object-v1",
+                "name": "deposito invalido",
+                "class": "Conto",
+                "construct": {"args": ["Anna", 100]},
+                "steps": [
+                  {"call": "deposita", "args": [-5], "expected_exception": "ValueError"},
+                  {"observe": "saldo", "expected": 100}
+                ]
+              },
+              {
+                "profile": "python-object-v1",
+                "name": "istanze indipendenti",
+                "class": "Conto",
+                "construct": {"args": ["Anna", 100]},
+                "additional_instances": [
+                  {"id": "other", "construct": {"args": ["Luca", 50]}}
+                ],
+                "steps": [
+                  {"call": "deposita", "args": [20], "expected_return": null},
+                  {"observe": "saldo", "expected": 120},
+                  {"instance": "other", "observe": "saldo", "expected": 50}
+                ]
+              },
+              {
+                "profile": "python-object-v1",
+                "name": "costruttore protegge invariante",
+                "class": "Conto",
+                "construct": {"args": ["Anna", -1]},
+                "expected_constructor_exception": "ValueError"
+              }
+            ]
+          }
+          JSON
+          cat > "$RUNNER_TEMP/p3/solution.py" <<'PY'
+          class Conto:
+              def __init__(self, titolare, saldo):
+                  if saldo < 0:
+                      raise ValueError("saldo iniziale negativo")
+                  self.titolare = titolare
+                  self.saldo = saldo
+
+              def deposita(self, importo):
+                  if importo <= 0:
+                      raise ValueError("importo non valido")
+                  self.saldo += importo
+
+              def saldo_corrente(self):
+                  return self.saldo
+          PY
+          cat > "$RUNNER_TEMP/p3/starter.py" <<'PY'
+          class Conto:
+              def __init__(self, titolare, saldo):
+                  self.titolare = titolare
+                  self.saldo = saldo
+
+              def deposita(self, importo):
+                  self.saldo += importo
+
+              def saldo_corrente(self):
+                  print(self.saldo)
+          PY
+
+          python scripts/grade_python_object_activity.py \
+            --activity "$RUNNER_TEMP/p3/activity.json" \
+            --source "$RUNNER_TEMP/p3/solution.py" \
+            --activity-root "$RUNNER_TEMP/p3" \
+            --source-root "$RUNNER_TEMP/p3" \
+            --docker-image thebitlab-p3-candidate \
+            --report "$RUNNER_TEMP/p3/solution-report.json"
+
+          set +e
+          python scripts/grade_python_object_activity.py \
+            --activity "$RUNNER_TEMP/p3/activity.json" \
+            --source "$RUNNER_TEMP/p3/starter.py" \
+            --activity-root "$RUNNER_TEMP/p3" \
+            --source-root "$RUNNER_TEMP/p3" \
+            --docker-image thebitlab-p3-candidate \
+            --report "$RUNNER_TEMP/p3/starter-report.json"
+          starter_status=$?
+          set -e
+          test "$starter_status" = "1"
+
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "p3"
+          solution = json.loads((root / "solution-report.json").read_text(encoding="utf-8"))
+          starter = json.loads((root / "starter-report.json").read_text(encoding="utf-8"))
+
+          assert solution["passed"] is True
+          assert solution["profile"] == "python-object-v1"
+          assert solution["summary"] == {"passed": 4, "total": 4}
+          assert all(test["passed"] is True for test in solution["tests"])
+
+          assert starter["passed"] is False
+          assert starter["profile"] == "python-object-v1"
+          assert starter["summary"]["total"] == 4
+          assert starter["summary"]["passed"] < 4
+          assert any(test["passed"] is False for test in starter["tests"])
+          PY
+
+      - name: Exercise P3 timeout fail-closed
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/p3-timeout"
+          cat > "$RUNNER_TEMP/p3-timeout/activity.json" <<'JSON'
+          {
+            "schema_version": "1.0",
+            "id": "python-p3-timeout-001",
+            "titolo": "Timeout P3",
+            "tipo": "laboratorio",
+            "difficolta": "B",
+            "argomenti": ["classi"],
+            "consegna": "Implementa Blocco.",
+            "linguaggio": "python",
+            "correzione": {"compila": true, "test": true, "sandbox": true, "ai_feedback": false},
+            "metriche": {
+              "tempo_stimato_minuti": 5,
+              "traccia_tempo_dichiarato": true,
+              "traccia_sessioni_thebitlab": true,
+              "traccia_eventi_didattici": true,
+              "traccia_errori_compilazione": true
+            },
+            "object_tests": [
+              {
+                "profile": "python-object-v1",
+                "class": "Blocco",
+                "construct": {},
+                "steps": [
+                  {"call": "esegui", "expected_return": 1}
+                ]
+              }
+            ]
+          }
+          JSON
+          cat > "$RUNNER_TEMP/p3-timeout/main.py" <<'PY'
+          class Blocco:
+              def esegui(self):
+                  while True:
+                      pass
+          PY
+          set +e
+          python scripts/grade_python_object_activity.py \
+            --activity "$RUNNER_TEMP/p3-timeout/activity.json" \
+            --source "$RUNNER_TEMP/p3-timeout/main.py" \
+            --activity-root "$RUNNER_TEMP/p3-timeout" \
+            --source-root "$RUNNER_TEMP/p3-timeout" \
+            --docker-image thebitlab-p3-candidate \
+            --timeout 1 \
+            --report "$RUNNER_TEMP/p3-timeout/report.json"
+          status=$?
+          set -e
+          test "$status" = "1"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "p3-timeout" / "report.json").read_text(encoding="utf-8"))
+          assert report["passed"] is False
+          assert report["summary"] == {"passed": 0, "total": 1}
+          assert report["tests"][0]["worker_status"] == "timeout"
+          PY
+
+      - name: Exercise P3 through normal Student Lab Docker dispatch
+        env:
+          THEBITLAB_RUN_DOCKER_TESTS: "1"
+          THEBITLAB_P3_DOCKER_IMAGE: "thebitlab-p3-candidate"
+        run: python -m pytest -q tests/test_python_object_student_lab_docker.py
