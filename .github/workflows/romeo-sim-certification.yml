@@ -137,7 +137,7 @@ jobs:
       - name: Install exact published Romeo plugin
         run: python -m pip install ./_romeo-release
 
-      - name: Verify authoritative broker probe
+      - name: Verify pinned sandbox is broker-eligible
         shell: bash
         run: |
           python - <<'PY'
@@ -150,10 +150,13 @@ jobs:
           probe = probe_runtime(loaded)
           assert probe.available is True
           assert probe.version == "0.2.0"
+          # The runtime ABI probe reports plugin-local isolation as process-only.
+          # Authority is established by TheBitLab when it consumes sandbox-plan.v1
+          # through its Docker broker, which is exercised in the next step.
+          assert probe.metadata.get("execution_isolation") == "process-only"
+          assert probe.metadata.get("untrusted_submissions_supported") is False
           assert probe.metadata.get("sandbox_broker_available") is True
-          assert probe.metadata.get("authoritative_untrusted_execution") is True
-          assert probe.metadata.get("execution_isolation") == "docker"
-          print("PASS: romeo-sim authoritative Docker broker is available for the pinned digest")
+          print("PASS: pinned Romeo digest is eligible for TheBitLab sandbox brokering")
           PY
 
       - name: Exercise published runtime through current TheBitLab broker
@@ -175,6 +178,5 @@ jobs:
           )
           probe = probe_runtime(loaded)
           assert probe.metadata.get("sandbox_broker_available") is False
-          assert probe.metadata.get("authoritative_untrusted_execution") is not True
-          print("PASS: mutable Romeo runtime identity cannot become authoritative")
+          print("PASS: mutable Romeo runtime identity cannot enter the authoritative broker path")
           PY
