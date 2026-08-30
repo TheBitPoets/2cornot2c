@@ -1,0 +1,88 @@
+name: Romeo sim cross-profile certification
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/thebitlab_builtin_runtimes.py"
+      - "scripts/thebitlab_runtime_plugins.py"
+      - ".github/workflows/romeo-sim-certification.yml"
+
+jobs:
+  romeo-sim-plugin-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout TheBitLab course-environment candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout exact Romeo runtime source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: TheBitPoets/romeo
+          ref: 45e5f7e131802fccc89358a23a25dbed1884bbfa
+          path: _romeo
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install exact Romeo plugin
+        run: python -m pip install ./_romeo
+
+      - name: Certify installed romeo-sim entry point and fail-closed boundary
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from scripts.thebitlab_builtin_runtimes import combined_entry_points
+          from scripts.thebitlab_runtime_plugins import (
+              RUNTIME_SANDBOX_CAPABILITY,
+              RuntimePluginRegistry,
+              probe_runtime,
+          )
+
+          registry = RuntimePluginRegistry(combined_entry_points)
+          assert "romeo-sim" in registry.installed_ids()
+          loaded = registry.get("romeo-sim", allowlist={"romeo-sim"})
+          descriptor = loaded.descriptor
+          assert descriptor.runtime_id == "romeo-sim"
+          assert descriptor.plugin_version == "0.2.0"
+          assert descriptor.api_version == "runtime_plugin.v1"
+          assert RUNTIME_SANDBOX_CAPABILITY in descriptor.capabilities
+          assert {
+              "interactive-launch",
+              "headless-run",
+              "deterministic-grade",
+              "artifact-collect",
+              "sandbox-plan.v1",
+          }.issubset(descriptor.capabilities)
+
+          os.environ.pop("ROMEO_SANDBOX_IMAGE", None)
+          probe = probe_runtime(loaded)
+          assert probe.available is True
+          assert probe.version == "0.2.0"
+          assert probe.metadata.get("untrusted_submissions_supported") is False
+          assert probe.metadata.get("execution_isolation") == "process-only"
+          assert probe.metadata.get("sandbox_broker_available") is False
+
+          # A mutable/non-digest image must never make the authoritative broker available.
+          os.environ["ROMEO_SANDBOX_IMAGE"] = "ghcr.io/thebitpoets/romeo-runtime:latest"
+          mutable_probe = probe_runtime(loaded)
+          assert mutable_probe.metadata.get("sandbox_broker_available") is False
+
+          print(
+              "PASS: romeo-sim 0.2.0 discovered through real TheBitLab entry points; "
+              "portable plugin contract is green and unsafe/missing sandbox identity fails closed"
+          )
+          PY
