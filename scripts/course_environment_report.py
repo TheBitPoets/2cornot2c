@@ -46,10 +46,12 @@ class ProbeResult:
 class MachineSnapshot:
     host_system: str
     host_arch: str
-    python: ProbeResult
+    host_python: ProbeResult
     git: ProbeResult
     docker: ProbeResult
+    student_dev_image: ProbeResult
     vagrant: ProbeResult
+    classroom_box: ProbeResult
     vscode: ProbeResult
     flowchart_lab: ProbeResult
     romeo_sim: ProbeResult
@@ -128,6 +130,63 @@ def _active_vm_release(host_system: str, host_arch: str, provider: str) -> str:
     return release.version if release.active else ""
 
 
+def _parse_vagrant_box_list(output: str, *, box: str, provider: str) -> bool:
+    records: dict[str, dict[str, str]] = {}
+    for raw_line in output.splitlines():
+        parts = raw_line.split(",", 3)
+        if len(parts) != 4:
+            continue
+        _, target, kind, data = parts
+        if kind in {"box-name", "box-provider"}:
+            records.setdefault(target, {})[kind] = data.strip()
+    return any(
+        record.get("box-name") == box and record.get("box-provider") == provider
+        for record in records.values()
+    )
+
+
+def _classroom_box_probe(box: str, provider: str) -> ProbeResult:
+    if not box or not provider:
+        return ProbeResult(False, detail="box/provider non selezionati")
+    try:
+        completed = subprocess.run(
+            ("vagrant", "box", "list", "--machine-readable"),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as error:
+        return ProbeResult(False, detail=type(error).__name__)
+    available = completed.returncode == 0 and _parse_vagrant_box_list(
+        completed.stdout, box=box, provider=provider
+    )
+    return ProbeResult(available, detail="selected classroom box" if available else "selected box not installed")
+
+
+def _student_dev_probe(docker: ProbeResult) -> ProbeResult:
+    if not docker.available:
+        return ProbeResult(False, detail="docker daemon non disponibile")
+    try:
+        immutable = student_dev.immutable_reference()
+    except student_dev.StudentDevLockError:
+        return ProbeResult(False, detail="student-dev stable lock non valido")
+    try:
+        completed = subprocess.run(
+            ("docker", "image", "inspect", immutable),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as error:
+        return ProbeResult(False, detail=type(error).__name__)
+    return ProbeResult(
+        completed.returncode == 0,
+        detail="immutable student-dev image present" if completed.returncode == 0 else "immutable student-dev image not present",
+    )
+
+
 def observe_machine(
     *,
     root: Path,
@@ -138,7 +197,7 @@ def observe_machine(
 
     host_system, host_arch = _host_identity()
     provider, box = _provider_files(root)
-    python_probe = ProbeResult(
+    host_python = ProbeResult(
         True,
         version=platform.python_version(),
         detail=f"CPython {platform.python_version()}",
@@ -146,15 +205,21 @@ def observe_machine(
     git = runner(("git", "--version"))
     docker = runner(("docker", "version", "--format", "{{.Server.Version}}"))
     vagrant = runner(("vagrant", "--version"))
-    code_command = ("code.cmd", "--version") if os.name == "nt" and shutil.which("code.cmd") else ("code", "--version")
+    code_command = (
+        ("code.cmd", "--version")
+        if os.name == "nt" and shutil.which("code.cmd")
+        else ("code", "--version")
+    )
     vscode = runner(code_command)
     return MachineSnapshot(
         host_system=host_system,
         host_arch=host_arch,
-        python=python_probe,
+        host_python=host_python,
         git=git,
         docker=docker,
+        student_dev_image=_student_dev_probe(docker),
         vagrant=vagrant,
+        classroom_box=_classroom_box_probe(box, provider) if vagrant.available else ProbeResult(False, detail="vagrant non disponibile"),
         vscode=vscode,
         flowchart_lab=_runtime_probe("flowchart-lab"),
         romeo_sim=_runtime_probe("romeo-sim"),
@@ -165,31 +230,13 @@ def observe_machine(
     )
 
 
-def _version_tuple(value: str) -> tuple[int, ...] | None:
-    match = _VERSION_RE.fullmatch(value.strip())
-    return tuple(int(part) for part in match.group(1).split(".")) if match else None
-
-
-def _python_in_range(version: str, expression: str) -> bool:
-    match = contract.PYTHON_RANGE_RE.fullmatch(expression)
-    found = _version_tuple(version)
-    if match is None or found is None:
-        return False
-    found2 = found[:2]
-    lower = (int(match.group(1)), int(match.group(2)))
-    upper = (int(match.group(3)), int(match.group(4)))
-    return lower <= found2 < upper
-
-
 def _profile_runtime_ready(profile: str, snapshot: MachineSnapshot) -> tuple[bool, str]:
     if profile == "docker-light":
         if not snapshot.docker.available:
             return False, "docker daemon non disponibile"
-        try:
-            immutable = student_dev.immutable_reference()
-        except student_dev.StudentDevLockError:
-            return False, "student-dev stable lock non valido"
-        return True, f"docker disponibile; student-dev lock {immutable.split('@', 1)[-1][:19]}..."
+        if not snapshot.student_dev_image.available:
+            return False, "student-dev immutabile non presente sulla macchina"
+        return True, "docker daemon + immutable student-dev image disponibili"
 
     if profile == "vm-gui":
         expected_provider = ""
@@ -207,7 +254,9 @@ def _profile_runtime_ready(profile: str, snapshot: MachineSnapshot) -> tuple[boo
             return False, "classroom box non selezionata"
         if not snapshot.active_classroom_release:
             return False, "classroom box selezionata senza active release lock"
-        return True, f"active classroom release {snapshot.active_classroom_release}"
+        if not snapshot.classroom_box.available:
+            return False, "classroom box selezionata non installata"
+        return True, f"active classroom release {snapshot.active_classroom_release} installata"
 
     return False, "profilo sconosciuto"
 
@@ -216,20 +265,16 @@ def _capability_observation(
     capability: str,
     *,
     profile: str,
-    manifest: dict[str, Any],
     snapshot: MachineSnapshot,
     profile_ready: bool,
 ) -> ProbeResult:
-    baseline = manifest.get("baseline") if isinstance(manifest.get("baseline"), dict) else {}
     if capability == "workspace.v1":
         return ProbeResult(snapshot.workspace_available, detail="course workspace")
-    if capability == "shell.v1":
-        return ProbeResult(profile_ready, detail="provided by selected classroom profile")
-    if capability == "python.v1":
-        ok = profile_ready and _python_in_range(snapshot.python.version, _clean(baseline.get("python")))
-        return ProbeResult(ok, snapshot.python.version, "Python baseline")
-    if capability == "git.basic.v1":
-        return ProbeResult(profile_ready and snapshot.git.available, snapshot.git.version, "git")
+    if capability in {"shell.v1", "python.v1", "git.basic.v1"}:
+        return ProbeResult(
+            profile_ready and capability in contract.PROFILE_CAPABILITIES.get(profile, frozenset()),
+            detail="provided inside selected certified classroom profile",
+        )
     if capability == "editor.vscode.v1":
         return snapshot.vscode
     if capability == "flowchart.lab.v1":
@@ -237,7 +282,7 @@ def _capability_observation(
     if capability == "runtime.romeo-sim.v1":
         return snapshot.romeo_sim
     if capability in contract.PROFILE_CAPABILITIES.get(profile, frozenset()):
-        return ProbeResult(profile_ready, detail="provided by selected certified profile")
+        return ProbeResult(profile_ready, detail="provided inside selected certified classroom profile")
     return ProbeResult(False, detail="not observed")
 
 
@@ -280,7 +325,6 @@ def resolve_environment(
         observed = _capability_observation(
             capability,
             profile=profile,
-            manifest=manifest,
             snapshot=snapshot,
             profile_ready=profile_ready,
         )
@@ -318,6 +362,7 @@ def resolve_environment(
         "host": {
             "system": snapshot.host_system,
             "architecture": snapshot.host_arch,
+            "installer_python": snapshot.host_python.version,
         },
         "profile": {
             "contract_known": profile in contract.KNOWN_PROFILES,
