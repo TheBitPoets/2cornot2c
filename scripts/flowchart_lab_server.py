@@ -14,6 +14,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ipaddress
+from socketserver import TCPServer
 import json
 from pathlib import Path
 import secrets
@@ -557,6 +558,22 @@ def make_handler(service: FlowchartLabService) -> type[BaseHTTPRequestHandler]:
     return FlowchartLabHandler
 
 
+
+class _LoopbackThreadingHTTPServer(ThreadingHTTPServer):
+    """HTTP server that binds loopback without reverse-DNS/FQDN lookup.
+
+    ``HTTPServer.server_bind`` calls ``socket.getfqdn`` after the TCP bind.
+    Flowchart Lab never consumes that resolved name: its security boundary is
+    the explicit loopback bind plus request Host/Origin checks. Avoiding the
+    lookup keeps managed launch deterministic on classroom/macOS networks.
+    """
+
+    def server_bind(self) -> None:
+        TCPServer.server_bind(self)
+        host, port = self.server_address[:2]
+        self.server_name = str(host)
+        self.server_port = int(port)
+
 def create_http_server(
     *,
     host: str = DEFAULT_HOST,
@@ -581,7 +598,7 @@ def create_http_server(
             else None
         )
         service = FlowchartLabService(workspace_store=store)
-    server = ThreadingHTTPServer((host, port), make_handler(service))
+    server = _LoopbackThreadingHTTPServer((host, port), make_handler(service))
     server.daemon_threads = True
     return server
 

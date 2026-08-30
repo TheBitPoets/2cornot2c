@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 import http.client
 import json
+import socket
 import threading
 
 from scripts import flowchart_lab_server as api
@@ -57,6 +58,20 @@ def raw_json_request(port: int, body: bytes) -> tuple[int, dict]:
     connection.close()
     return status, payload
 
+
+
+def test_loopback_server_bind_never_requires_reverse_dns(monkeypatch) -> None:
+    def reject_reverse_dns(*args, **kwargs):
+        raise AssertionError(f"reverse DNS must not run: {args!r} {kwargs!r}")
+
+    monkeypatch.setattr(socket, "getfqdn", reject_reverse_dns)
+    server = api.create_http_server(port=0)
+    try:
+        assert server.server_address[0] == api.DEFAULT_HOST
+        assert server.server_name == api.DEFAULT_HOST
+        assert server.server_port == server.server_address[1]
+    finally:
+        server.server_close()
 
 def test_duplicate_json_keys_are_rejected() -> None:
     with live_server() as port:
