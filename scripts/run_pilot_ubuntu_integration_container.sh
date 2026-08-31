@@ -25,6 +25,10 @@ elif (( $# == 1 )) && [[ "$1" == "--fence-race-only" ]]; then
     integration_arguments+=(--fence-race-only)
 elif (( $# == 1 )) && [[ "$1" == "--generator-orchestrator-gate-only" ]]; then
     integration_arguments+=(--generator-orchestrator-gate-only)
+elif (( $# == 1 )) && [[ "$1" == "--generator-transition-only" ]]; then
+    integration_arguments+=(--generator-transition-only)
+elif (( $# == 1 )) && [[ "$1" == "--h02-orchestrated-sysv-only" ]]; then
+    integration_arguments+=(--h02-orchestrated-sysv-only)
 elif (( $# == 1 )) && [[ "$1" == "--runtime-directory-authority-only" ]]; then
     integration_arguments+=(--runtime-directory-authority-only)
 elif (( $# == 1 )) && [[ "$1" == "--shard-f-only" ]]; then

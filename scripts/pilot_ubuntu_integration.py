@@ -1660,13 +1660,280 @@ def _exercise_package_logrotate_same_line_hook_rejected(temporary: Path) -> None
     )
 
 
+def _generator_output_identity() -> tuple[dict[str, str], str]:
+    orchestrator = activation.generator_orchestrator
+    descriptors, manifests = orchestrator._current_ro_authority()
+    try:
+        graph = orchestrator.validate_production_graph(manifests)
+        roots: dict[str, str] = {}
+        for root_class in sorted(manifests):
+            row = orchestrator._row_for_fd(descriptors[root_class])
+            roots[root_class] = (
+                f"mnt={row.mount_id};dev={row.major_minor};root={row.root};"
+                f"manifest={manifests[root_class].sha256}"
+            )
+        return roots, graph.identity
+    finally:
+        for descriptor in descriptors.values():
+            os.close(descriptor)
+
+
+def _assert_manager_unit_absent(unit: str) -> None:
+    shown = subprocess.run(
+        ["/usr/bin/systemctl", "show", unit, "--property=LoadState", "--value", "--no-pager"],
+        check=False, capture_output=True, text=True, timeout=15,
+    )
+    status = subprocess.run(
+        ["/usr/bin/systemctl", "status", unit, "--no-pager"],
+        check=False, capture_output=True, text=True, timeout=15,
+    )
+    if shown.returncode != 0 or shown.stdout.strip() != "not-found" or status.returncode == 0:
+        raise RuntimeError(
+            f"Unit candidate esposta dal manager: {unit} "
+            f"show={shown.returncode}:{shown.stdout.strip()!r} status={status.returncode}"
+        )
+
+
+def _read_generated_unit_directives(path: Path) -> dict[tuple[str, str], tuple[str, ...]]:
+    before = path.lstat()
+    if (
+        not stat.S_ISREG(before.st_mode)
+        or before.st_nlink != 1
+        or before.st_uid != 0
+        or before.st_gid != 0
+        or before.st_mode & 0o022
+        or before.st_size > 1024 * 1024
+    ):
+        raise RuntimeError(f"Candidate SysV con metadata non canonici: {path}")
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        opened = os.fstat(descriptor)
+        chunks: list[bytes] = []
+        remaining = opened.st_size
+        while remaining:
+            chunk = os.read(descriptor, min(remaining, 64 * 1024))
+            if not chunk:
+                raise RuntimeError("Candidate SysV troncato durante la lettura")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        after = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    final = path.lstat()
+    identities = (
+        before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+        opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns,
+        after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns,
+        final.st_dev, final.st_ino, final.st_size, final.st_mtime_ns,
+    )
+    if len({identities[index : index + 4] for index in range(0, len(identities), 4)}) != 1:
+        raise RuntimeError("Candidate SysV mutato durante la lettura")
+    try:
+        text = b"".join(chunks).decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise RuntimeError("Candidate SysV non UTF-8") from exc
+    section = ""
+    values: dict[tuple[str, str], list[str]] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        if line.endswith("\\"):
+            raise RuntimeError("Candidate SysV con continuation inattesa")
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1]
+            if not section:
+                raise RuntimeError("Candidate SysV con sezione vuota")
+            continue
+        if not section or "=" not in line:
+            raise RuntimeError(f"Candidate SysV non interpretabile: {raw!r}")
+        key, value = line.split("=", 1)
+        if not key or key.strip() != key:
+            raise RuntimeError(f"Direttiva candidate SysV non canonica: {raw!r}")
+        values.setdefault((section, key), []).append(value)
+    return {key: tuple(items) for key, items in values.items()}
+
+
+def _run_trusted_generator_transaction(
+    seam_callback: Callable[[str], None] | None = None,
+) -> Mapping[str, object]:
+    orchestrator = activation.generator_orchestrator
+    with activation._trusted_activation_session():
+        with activation._trusted_execution_fence():
+            activation._attest_systemd_generator_authority(
+                expected_mode=activation.GENERATOR_SELECTION_ORCHESTRATED
+            )
+            try:
+                evidence = orchestrator.orchestrated_reload(
+                    lambda: activation._systemctl_result(["daemon-reload"]),
+                    seam_callback=seam_callback,
+                )
+            except orchestrator.GeneratorOrchestratorError:
+                activation._mark_executor_safe_boundary_if_pending()
+                raise
+            activation._mark_executor_safe_boundary_if_pending()
+            activation._attest_systemd_generator_authority(
+                expected_mode=activation.GENERATOR_SELECTION_ORCHESTRATED
+            )
+    bundle_id = str(evidence.get("bundle_id", ""))
+    if orchestrator.SHA256_RE.fullmatch(bundle_id) is None:
+        raise RuntimeError("Transaction generator trusted priva di bundle identity")
+    activation._GENERATOR_BUNDLE_ID = bundle_id
+    return evidence
+
+
+def _attest_h02_staged_candidate(
+    seam: str, *, package: str, live: Path, helper: Path, marker: Path,
+    evidence_path: Path,
+) -> None:
+    if seam != "during-attestation":
+        return
+    orchestrator = activation.generator_orchestrator
+    candidates = tuple(
+        path
+        for path in orchestrator.TRANSACTION_ROOT.glob(
+            "*/stage/*/thebitlab-review-sysv.service"
+        )
+        if path.is_file() and not path.is_symlink()
+    )
+    if len(candidates) != 1:
+        raise RuntimeError(f"Candidate SysV staging non univoco: {candidates}")
+    candidate = candidates[0]
+    stage = candidate.parents[1]
+    transaction = stage.parent
+    roots = {root_class: stage / root_class for root_class in orchestrator.TARGETS}
+    if set(path.name for path in roots.values()) != set(orchestrator.TARGETS):
+        raise RuntimeError("Root candidate SysV non canoniche")
+    stage_descriptor = os.open(
+        stage, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    )
+    try:
+        row = orchestrator._row_for_fd(stage_descriptor)
+    finally:
+        os.close(stage_descriptor)
+    if "ro" not in row.options or "ro" not in row.super_options:
+        raise RuntimeError("Candidate SysV non sigillato prima dell'attestazione H-02")
+
+    directives = _read_generated_unit_directives(candidate)
+    source_values = directives.get(("Unit", "SourcePath"), ())
+    exec_start = directives.get(("Service", "ExecStart"), ())
+    exec_stop = directives.get(("Service", "ExecStop"), ())
+    if source_values != (str(live),):
+        raise RuntimeError(f"SourcePath candidate SysV divergente: {source_values}")
+    if exec_start != (f"{live} start",) or exec_stop != (f"{live} stop",):
+        raise RuntimeError(
+            f"Exec candidate SysV divergente: start={exec_start} stop={exec_stop}"
+        )
+
+    source_text = live.read_text(encoding="utf-8")
+    bare_match = re.search(r"(?m)^\s*start\)\s+([^\s;]+)\s*;;\s*$", source_text)
+    bare_command = bare_match.group(1) if bare_match is not None else ""
+    if bare_command != "review-helper":
+        raise RuntimeError(f"Bare command SysV non recuperato: {bare_command!r}")
+    path_candidates = tuple(
+        Path(directory) / bare_command
+        for directory in activation.SCRIPT_RUNTIME_PATH.split(":")
+    )
+    existing_candidates = tuple(path for path in path_candidates if path.exists())
+    if not existing_candidates or existing_candidates[0] != helper:
+        raise RuntimeError(
+            f"PATH SysV non seleziona per primo l'helper locale: {existing_candidates}"
+        )
+    ownership = subprocess.run(
+        ["/usr/bin/dpkg-query", "--search", str(helper)],
+        check=False, capture_output=True, text=True, timeout=15,
+    )
+    if ownership.returncode == 0:
+        raise RuntimeError("Helper PATH locale inatteso package-owned")
+
+    enablement: list[Path] = []
+    for root in roots.values():
+        for path in root.rglob("*"):
+            if not path.is_symlink():
+                continue
+            try:
+                if path.resolve(strict=True) == candidate:
+                    enablement.append(path)
+            except OSError as exc:
+                raise RuntimeError(f"Symlink candidate SysV non risolvibile: {path}") from exc
+    artifacts = (candidate, *sorted(enablement))
+    resolved_targets = {path: candidate for path in enablement}
+    original_property = activation._systemd_property
+
+    def candidate_property(
+        name: str, unit: str = "nginx.service", *, allow_empty: bool = False
+    ) -> str:
+        del allow_empty
+        if unit != candidate.name:
+            raise activation.ActivationError(f"Unit candidate inattesa: {unit}")
+        if name == "FragmentPath":
+            return candidate.as_posix()
+        if name == "SourcePath":
+            return source_values[0]
+        raise activation.ActivationError(f"Proprietà candidate inattesa: {name}")
+
+    reason = ""
+    activation._systemd_property = candidate_property
+    try:
+        activation._attest_generated_systemd_artifacts(
+            artifacts, set(roots.values()), resolved_targets, frozenset()
+        )
+    except activation.ActivationError as exc:
+        reason = str(exc)
+        if reason != f"UNKNOWN EXECUTION POLICY SysV: {live}":
+            raise RuntimeError(
+                f"Candidate H-02 rifiutato per causa estranea: {reason}"
+            ) from exc
+    else:
+        raise RuntimeError("Candidate H-02 accettato dalla policy production")
+    finally:
+        activation._systemd_property = original_property
+
+    sysv_generator = next(
+        item for item in orchestrator.SELECTED_GENERATORS
+        if item["basename"] == "systemd-sysv-generator"
+    )
+    evidence = {
+        "schema": "thebitlab.h02-orchestrated-sysv.v1",
+        "package": package,
+        "transaction": transaction.name,
+        "orchestrator": str(orchestrator.ORCHESTRATOR_ENTRY),
+        "systemd_sysv_generator": dict(sysv_generator),
+        "staging_roots": {key: str(path) for key, path in sorted(roots.items())},
+        "candidate_root": candidate.parent.name,
+        "candidate": str(candidate),
+        "candidate_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
+        "source_path": source_values[0],
+        "exec_start": list(exec_start),
+        "exec_stop": list(exec_stop),
+        "bare_command": bare_command,
+        "runtime_path": activation.SCRIPT_RUNTIME_PATH,
+        "path_candidates": [str(path) for path in path_candidates],
+        "first_existing_candidate": str(existing_candidates[0]),
+        "first_candidate_package_owned": False,
+        "policy_classification": "UNKNOWN",
+        "rejection_reason": reason,
+        "sealed": True,
+        "adopted": False,
+        "marker": str(marker),
+    }
+    evidence_path.write_text(
+        json.dumps(evidence, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    evidence_path.chmod(0o600)
+    raise activation.ActivationError(reason)
+
+
 def _exercise_package_sysv_path_shadow_rejected(temporary: Path) -> None:
     package = "thebitlab-sysv-shadow-fixture"
+    unit = "thebitlab-review-sysv.service"
     root = temporary / "package-sysv-shadow"
     script = root / "etc/init.d/thebitlab-review-sysv"
     script.parent.mkdir(parents=True)
     marker = Path("/run/thebitlab-sysv-shadow-executed")
     helper = Path("/usr/local/bin/review-helper")
+    evidence_path = temporary / "h02-orchestrated-sysv.json"
     script.write_text(
         "#!/bin/sh\n"
         "### BEGIN INIT INFO\n"
@@ -1691,8 +1958,17 @@ def _exercise_package_sysv_path_shadow_rejected(temporary: Path) -> None:
     deb = _build_fixture_deb(root, temporary / f"{package}.deb", package=package)
     live = Path("/etc/init.d/thebitlab-review-sysv")
     installed = False
+
+    pristine = _run_trusted_generator_transaction()
+    pristine_identity = _generator_output_identity()
+    _assert_manager_unit_absent(unit)
+    print(
+        "EVIDENCE: H-02 CASE 1 pristine trusted generation PASS "
+        f"bundle={pristine['bundle_id']} graph={pristine_identity[1]}"
+    )
     try:
         marker.unlink(missing_ok=True)
+        evidence_path.unlink(missing_ok=True)
         helper.write_text(
             f"#!/bin/sh\nprintf executed > {marker}\n", encoding="utf-8"
         )
@@ -1704,37 +1980,82 @@ def _exercise_package_sysv_path_shadow_rejected(temporary: Path) -> None:
         if shutil.which("review-helper", path=activation.SCRIPT_RUNTIME_PATH) != str(helper):
             raise RuntimeError("Fixture SysV non prova il first PATH candidate locale")
         _run(["update-rc.d", "thebitlab-review-sysv", "defaults"])
-        _run(["systemctl", "daemon-reload"])
-        if activation._systemd_property(
-            "SourcePath", "thebitlab-review-sysv.service"
-        ) != str(live):
-            raise RuntimeError("Synthetic package SysV non materializzato dal generator")
+
+        before_candidate = _generator_output_identity()
+        if before_candidate != pristine_identity:
+            raise RuntimeError("Fixture SysV ha cambiato output autorevole prima della transaction")
         try:
-            activation._attest_systemd_boot_surface()
-        except activation.ActivationError as exc:
-            if "UNKNOWN EXECUTION POLICY SysV" not in str(exc):
-                raise RuntimeError(f"SysV shadow rifiutato per causa estranea: {exc}") from exc
+            _run_trusted_generator_transaction(
+                lambda seam: _attest_h02_staged_candidate(
+                    seam, package=package, live=live, helper=helper, marker=marker,
+                    evidence_path=evidence_path,
+                )
+            )
+        except activation.generator_orchestrator.GeneratorOrchestratorError:
+            pass
         else:
-            raise RuntimeError("Package SysV con PATH shadow accettato")
+            raise RuntimeError("Transaction SysV H-02 non rifiutata")
+        if not evidence_path.is_file():
+            raise RuntimeError("Transaction SysV rifiutata prima dell'oracolo causale H-02")
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        if evidence.get("rejection_reason") != f"UNKNOWN EXECUTION POLICY SysV: {live}":
+            raise RuntimeError(f"Evidence H-02 non causale: {evidence}")
+        if _generator_output_identity() != before_candidate:
+            raise RuntimeError("Candidate SysV rifiutato ha cambiato output autorevole")
+        _assert_manager_unit_absent(unit)
         if marker.exists():
             raise RuntimeError("Helper SysV eseguito prima del reject")
+        print(
+            "EVIDENCE: H-02 CASE 2 trusted PREPARED transaction causal REJECT "
+            + json.dumps(evidence, sort_keys=True, separators=(",", ":"))
+        )
+        print(
+            "EVIDENCE: H-02 CASE 4 package ownership is not execution trust; "
+            "package source valid, execution policy UNKNOWN, /usr/local helper unmanaged"
+        )
+
+        before_raw = _generator_output_identity()
+        raw = subprocess.run(
+            ["/usr/bin/systemctl", "daemon-reload"],
+            check=False, capture_output=True, text=True, timeout=40,
+        )
+        after_raw = _generator_output_identity()
+        if raw.returncode != 0 or after_raw != before_raw:
+            raise RuntimeError(
+                f"Reload raw H-02 ha cambiato authority: rc={raw.returncode} "
+                f"detail={(raw.stdout + raw.stderr)[-300:]}"
+            )
+        _assert_manager_unit_absent(unit)
+        if marker.exists():
+            raise RuntimeError("Helper SysV eseguito dal reload non cooperante")
+        print(
+            "EVIDENCE: H-02 CASE 3 raw daemon-reload without PREPARED PASS; "
+            f"graph={after_raw[1]} hostile-unit=not-found marker=absent"
+        )
     finally:
         subprocess.run(
             ["update-rc.d", "-f", "thebitlab-review-sysv", "remove"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=30,
+            check=False, capture_output=True, text=True, timeout=30,
         )
         if installed:
             _run(["dpkg", "--purge", package])
         helper.unlink(missing_ok=True)
         marker.unlink(missing_ok=True)
-        _run(["systemctl", "daemon-reload"])
+        evidence_path.unlink(missing_ok=True)
+
+    restored = _run_trusted_generator_transaction()
     activation._attest_systemd_boot_surface()
+    _assert_manager_unit_absent(unit)
+    if marker.exists():
+        raise RuntimeError("Marker SysV presente dopo restore")
+    print(
+        "EVIDENCE: H-02 CASE 5 restore pristine trusted generation PASS "
+        f"bundle={restored['bundle_id']} graph={_generator_output_identity()[1]}"
+    )
     print(
         "EVIDENCE: valid package boot-reachable SysV + bare review-helper + "
-        "/usr/local first candidate => UNKNOWN REJECT; helper not executed"
+        "/usr/local first candidate => causal UNKNOWN REJECT in sealed staging; "
+        "no adoption; PID1 old graph unchanged; helper not executed"
     )
 
 
@@ -3369,7 +3690,9 @@ def _check_ephemeral_host() -> str:
     return original_default
 
 
-def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
+def _install_ephemeral_toolchain(
+    temporary: Path, *, generator_transition_evidence: Path | None = None,
+) -> tuple[Path, Path, Path]:
     """Install a CI-only fixture; unlike production provisioning this is not an approval step."""
 
     global activation, deployment
@@ -3408,17 +3731,203 @@ def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
     generator_orchestrator.chmod(0o755)
     generator_root = activation.generator_orchestrator.ORCHESTRATOR_ENTRY.parent
     generator_root.mkdir(mode=0o755, parents=True, exist_ok=True)
+    transition_records: list[dict[str, object]] = []
+    transition_marker = temporary / "generator-transition-executed"
+    transition_marker.unlink(missing_ok=True)
+    transition_attack_directories = (
+        Path("/usr/local/lib/systemd/system-generators"),
+        Path("/usr/local/lib/systemd"),
+        Path("/run/systemd/system-generators"),
+    )
+    transition_created_directories = tuple(
+        path for path in transition_attack_directories if not path.exists()
+    )
+
+    def selection_snapshot() -> dict[str, str | None]:
+        roots = activation._systemd_path(activation.SYSTEMD_GENERATOR_SEARCH_PATH_NAME)
+        artifacts = tuple(
+            artifact
+            for root_path in roots
+            if root_path.is_dir()
+            for artifact in root_path.iterdir()
+        )
+        try:
+            selected = activation._effective_systemd_generator_selection(roots, artifacts)
+        except activation.ActivationError as exc:
+            return {"selection_rejected": str(exc)}
+        return {
+            name: None if path is None else str(path)
+            for name, path in sorted(selected.items())
+        }
+
+    def mode_result(mode: str) -> str:
+        try:
+            activation._attest_systemd_generator_authority(expected_mode=mode)
+        except activation.ActivationError as exc:
+            return f"REJECT:{exc}"
+        return "PASS"
+
+    def record_transition(label: str, *, attack: str = "none") -> None:
+        stock = mode_result(activation.GENERATOR_SELECTION_STOCK)
+        orchestrated = mode_result(activation.GENERATOR_SELECTION_ORCHESTRATED)
+        if transition_marker.exists():
+            raise RuntimeError(f"Generator transition attack eseguito: {label}")
+        transition_records.append({
+            "seam": label,
+            "attack": attack,
+            "stock": stock,
+            "orchestrated": orchestrated,
+            "selection": selection_snapshot(),
+            "marker": "ABSENT",
+        })
+
+    def write_hostile(path: Path) -> None:
+        path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+        path.write_text(
+            f"#!/bin/sh\ntouch {transition_marker}\n", encoding="utf-8"
+        )
+        path.chmod(0o755)
+
+    def attacked_transition(label: str, index: int, mask: Path) -> None:
+        attack_class = index % 6
+        if attack_class == 0:
+            hostile = Path("/run/systemd/system-generators/thebitlab-transition-hostile")
+            write_hostile(hostile)
+            try:
+                record_transition(label, attack="hostile-/run-insertion")
+            finally:
+                hostile.unlink(missing_ok=True)
+        elif attack_class == 1:
+            mask.unlink()
+            try:
+                record_transition(label, attack=f"mask-removal:{mask.name}")
+            finally:
+                mask.symlink_to("/dev/null")
+        elif attack_class == 2:
+            mask.unlink()
+            write_hostile(mask)
+            try:
+                record_transition(label, attack=f"mask-wrong-target:{mask.name}")
+            finally:
+                mask.unlink(missing_ok=True)
+                mask.symlink_to("/dev/null")
+        elif attack_class == 3:
+            hostile = Path("/usr/local/lib/systemd/system-generators") / mask.name
+            write_hostile(hostile)
+            try:
+                record_transition(label, attack=f"lower-priority-substitution:{mask.name}")
+            finally:
+                hostile.unlink(missing_ok=True)
+        elif attack_class == 4:
+            hostile = Path(
+                "/run/systemd/system-generators/systemd-gpt-auto-generator"
+            )
+            write_hostile(hostile)
+            try:
+                record_transition(label, attack="expected-absent-fill:gpt-auto")
+            finally:
+                hostile.unlink(missing_ok=True)
+        else:
+            child = Path(str(activation.generator_orchestrator.SELECTED_GENERATORS[0]["path"]))
+            contents = child.read_bytes()
+            mode = stat.S_IMODE(child.stat().st_mode)
+            child.write_text(
+                f"#!/bin/sh\ntouch {transition_marker}\n", encoding="utf-8"
+            )
+            child.chmod(mode)
+            _clear_dpkg_attestation_caches()
+            try:
+                record_transition(label, attack=f"underlying-byte-mutation:{child.name}")
+            finally:
+                child.write_bytes(contents)
+                child.chmod(mode)
+                _clear_dpkg_attestation_caches()
+
+    if generator_transition_evidence is not None:
+        record_transition("before-source-freeze/stock-pristine")
+        hostile_before = Path(
+            "/run/systemd/system-generators/thebitlab-transition-before-freeze"
+        )
+        write_hostile(hostile_before)
+        try:
+            record_transition(
+                "before-source-freeze/hostile-insertion",
+                attack="hostile-/run-insertion",
+            )
+        finally:
+            hostile_before.unlink(missing_ok=True)
+        record_transition("before-masks/reviewed-package-source-attested")
+
+    installed_masks = 0
     for basename in activation.generator_orchestrator.MASKED_GENERATORS:
         mask = generator_root / basename
         if mask.is_symlink() and os.readlink(mask) == "/dev/null":
+            if generator_transition_evidence is not None:
+                transition_records.append({
+                    "seam": f"mask-preexisting:{basename}",
+                    "attack": "none",
+                    "stock": "PREEXISTING_REVIEWED_MASK",
+                    "orchestrated": "NOT_SELECTED",
+                    "selection": selection_snapshot(),
+                    "marker": "ABSENT",
+                })
             continue
         if mask.exists() or mask.is_symlink():
             raise RuntimeError(f"Generator mask fixture divergente: {mask}")
         os.symlink("/dev/null", mask)
+        installed_masks += 1
+        if generator_transition_evidence is not None:
+            attacked_transition(
+                f"during-mask-installation:{installed_masks}:{basename}",
+                installed_masks - 1,
+                mask,
+            )
+    if generator_transition_evidence is not None:
+        record_transition("after-masks/before-orchestrator-entry")
     os.symlink(
         activation.generator_orchestrator.ORCHESTRATOR_BINARY,
         activation.generator_orchestrator.ORCHESTRATOR_ENTRY,
     )
+    if generator_transition_evidence is not None:
+        record_transition("after-orchestrator/before-final-selection-attestation")
+        if transition_records[-1]["orchestrated"] != "PASS":
+            raise RuntimeError(
+                "Overlay generator finale non attestato in modalità orchestrated"
+            )
+        extra = generator_root / "thebitlab-transition-extra"
+        write_hostile(extra)
+        try:
+            record_transition(
+                "before-final-selection-attestation/extra-etc-generator",
+                attack="extra-/etc-generator",
+            )
+            if transition_records[-1]["orchestrated"].startswith("PASS"):
+                raise RuntimeError("Extra generator /etc accettato dalla selection finale")
+        finally:
+            extra.unlink(missing_ok=True)
+        record_transition("final-selection-attestation")
+        generator_transition_evidence.write_text(
+            json.dumps(
+                {
+                    "schema": "thebitlab.generator-stock-overlay-transition.v1",
+                    "masks_installed_individually": installed_masks,
+                    "records": transition_records,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ) + "\n",
+            encoding="utf-8",
+        )
+        generator_transition_evidence.chmod(0o600)
+        for path in transition_created_directories:
+            try:
+                path.rmdir()
+            except FileNotFoundError:
+                pass
+            except OSError as exc:
+                raise RuntimeError(
+                    f"Cleanup directory transition generator fallito: {path}"
+                ) from exc
     pin_path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
     pin = {
         "schema_version": "thebitlab.pilot-toolchain-pin.v1",
@@ -3502,6 +4011,100 @@ def _install_ephemeral_toolchain(temporary: Path) -> tuple[Path, Path, Path]:
     if not str(Path(activation.__file__).resolve()).startswith(str(toolchain) + "/"):
         raise RuntimeError("Activator integration non proviene dalla toolchain installata")
     return toolchain, launcher, pin_path
+
+
+def _exercise_generator_transition_after_source_freeze(
+    temporary: Path, evidence_path: Path,
+) -> None:
+    if not evidence_path.is_file():
+        raise RuntimeError("Evidence transition stock→overlay pre-freeze assente")
+    orchestrator = activation.generator_orchestrator
+    result_path = temporary / "generator-transition-source-freeze.json"
+    marker = temporary / "generator-transition-executed"
+    result_path.unlink(missing_ok=True)
+
+    def attack(seam: str) -> None:
+        if seam != "before-staging":
+            return
+        entry = orchestrator.ORCHESTRATOR_ENTRY
+        mask = entry.parent / orchestrator.MASKED_GENERATORS[0]
+        child = Path(str(orchestrator.SELECTED_GENERATORS[0]["path"]))
+        hostile_run = Path(
+            "/run/systemd/system-generators/thebitlab-transition-after-freeze"
+        )
+        hostile_lower = Path(
+            "/usr/local/lib/systemd/system-generators/systemd-gpt-auto-generator"
+        )
+        attempts: tuple[tuple[str, Callable[[], object]], ...] = (
+            (
+                "hostile-/run-insertion",
+                lambda: hostile_run.write_text(
+                    f"#!/bin/sh\ntouch {marker}\n", encoding="utf-8"
+                ),
+            ),
+            ("mask-removal", mask.unlink),
+            ("orchestrator-entry-removal", entry.unlink),
+            (
+                "lower-priority-substitution",
+                lambda: hostile_lower.write_text(
+                    f"#!/bin/sh\ntouch {marker}\n", encoding="utf-8"
+                ),
+            ),
+            ("underlying-child-byte-mutation", lambda: child.write_bytes(b"hostile")),
+        )
+        results: dict[str, str] = {}
+        for label, operation in attempts:
+            try:
+                operation()
+            except OSError as exc:
+                results[label] = f"DENIED:{exc.errno}"
+            else:
+                results[label] = "UNEXPECTEDLY_WRITABLE"
+        result_path.write_text(
+            json.dumps(results, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+
+    _run_trusted_generator_transaction(attack)
+    results = json.loads(result_path.read_text(encoding="utf-8"))
+    if not results or any(not value.startswith("DENIED:") for value in results.values()):
+        raise RuntimeError(f"Source freeze transition non chiusa: {results}")
+    if marker.exists():
+        raise RuntimeError("Generator transition marker eseguito sotto source freeze")
+    activation._attest_systemd_generator_authority(
+        expected_mode=activation.GENERATOR_SELECTION_ORCHESTRATED
+    )
+    transition = json.loads(evidence_path.read_text(encoding="utf-8"))
+    transition["after_source_freeze"] = {
+        "seam": "immediately-before-trusted-daemon-reload",
+        "attacks": results,
+        "selection": "ORCHESTRATED PASS",
+        "marker": "ABSENT",
+    }
+    evidence_path.write_text(
+        json.dumps(transition, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    result_path.unlink(missing_ok=True)
+    for record in transition["records"]:
+        print(
+            "EVIDENCE: generator transition seam "
+            + json.dumps(record, sort_keys=True, separators=(",", ":"))
+        )
+    print(
+        "EVIDENCE: generator transition seam "
+        + json.dumps(
+            transition["after_source_freeze"],
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    )
+    print(
+        "EVIDENCE: STOCK→ORCHESTRATED transition matrix PASS "
+        f"physical-individual-masks={transition['masks_installed_individually']} "
+        f"records={len(transition['records'])} source-freeze-attacks={len(results)} "
+        "marker=ABSENT"
+    )
 
 
 def _write_preload_from_descriptor(directory_fd: int, target: Path) -> None:
@@ -6648,6 +7251,8 @@ def run(
     executor_lease_timing_diagnostic_only: bool = False,
     fence_race_only: bool = False,
     generator_orchestrator_gate_only: bool = False,
+    generator_transition_only: bool = False,
+    h02_orchestrated_sysv_only: bool = False,
     runtime_directory_authority_only: bool = False,
     shard_f_only: bool = False,
 ) -> None:
@@ -6695,7 +7300,13 @@ def run(
                     "EVIDENCE: ephemeral dedicated systemd surface quarantined "
                     f"{ambient_artifacts} ambient artifact(s)"
                 )
-            installed_toolchain, installed_launcher, installed_pin = _install_ephemeral_toolchain(temporary)
+            transition_evidence = (
+                temporary / "generator-stock-overlay-transition.json"
+                if generator_transition_only else None
+            )
+            installed_toolchain, installed_launcher, installed_pin = _install_ephemeral_toolchain(
+                temporary, generator_transition_evidence=transition_evidence
+            )
             _exercise_runtime_directory_authority()
             if runtime_directory_authority_only:
                 return
@@ -6706,6 +7317,15 @@ def run(
             Path("/run/thebitlab-ephemeral-activation-test").chmod(0o600)
             if private_runtime_start_diagnostic_only:
                 _test_private_runtime_start_diagnostic(temporary)
+                return
+            if generator_transition_only:
+                assert transition_evidence is not None
+                _exercise_generator_transition_after_source_freeze(
+                    temporary, transition_evidence
+                )
+                return
+            if h02_orchestrated_sysv_only:
+                _exercise_package_sysv_path_shadow_rejected(temporary)
                 return
             if generator_orchestrator_gate_only:
                 _test_production_generator_orchestrator()
@@ -7924,6 +8544,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Esegue il gate production generator orchestrator senza evidence A-F.",
     )
     parser.add_argument(
+        "--generator-transition-only",
+        action="store_true",
+        help="Esegue la matrice fisica STOCK→ORCHESTRATED sui seam raggiungibili.",
+    )
+    parser.add_argument(
+        "--h02-orchestrated-sysv-only",
+        action="store_true",
+        help="Esegue la matrice H-02 con il vero systemd-sysv-generator orchestrato.",
+    )
+    parser.add_argument(
         "--private-runtime-start-diagnostic-only",
         action="store_true",
         help="Osserva il vero start production private S0/S1 senza eseguire il gate.",
@@ -7962,10 +8592,16 @@ def main(argv: list[str] | None = None) -> int:
             executor_lease_timing_diagnostic_only=args.executor_lease_timing_diagnostic_only,
             fence_race_only=args.fence_race_only,
             generator_orchestrator_gate_only=args.generator_orchestrator_gate_only,
+            generator_transition_only=args.generator_transition_only,
+            h02_orchestrated_sysv_only=args.h02_orchestrated_sysv_only,
             runtime_directory_authority_only=args.runtime_directory_authority_only,
             shard_f_only=args.shard_f_only,
         )
-        if not args.generator_orchestrator_gate_only:
+        if (
+            not args.generator_orchestrator_gate_only
+            and not args.generator_transition_only
+            and not args.h02_orchestrated_sysv_only
+        ):
             _emit_private_runtime_evidence(args)
     except (OSError, RuntimeError, activation.ActivationError, deployment.DeploymentValidationError) as exc:
         traceback.print_exc()
@@ -7977,6 +8613,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.generator_orchestrator_gate_only:
         print("PASS: production generator orchestrator targeted security gate")
+    elif args.generator_transition_only:
+        print("PASS: STOCK→ORCHESTRATED physically reachable transition matrix")
+    elif args.h02_orchestrated_sysv_only:
+        print("PASS: H-02 orchestrated SysV/PATH-shadow causal security gate")
     elif args.executor_lease_gate_only:
         print("PASS: gate mirato production executor inode lease + Stage-M")
     elif args.private_runtime_gate_only:
