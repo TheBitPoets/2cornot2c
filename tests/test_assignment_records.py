@@ -247,6 +247,24 @@ def test_assignment_record_storage_writes_lists_and_filters_due_without_register
     assert storage.assignments_due_without_register([{"assignment_id": saved["id"]}], "2026-10-20T08:00:00+02:00") == []
 
 
+def test_assignment_record_storage_strict_listing_rejects_corrupt_and_duplicate_records(tmp_path) -> None:
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    saved = storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
+    original_path = tmp_path / saved["path"]
+    duplicate_path = original_path.with_name("duplicate.json")
+    duplicate_path.write_bytes(original_path.read_bytes())
+
+    with pytest.raises(FileNotFoundError, match="Assegnazione non trovata"):
+        storage.read_assignment_strict(saved["id"] + "!!!")
+    with pytest.raises(ValueError, match="Storage assignment non valido"):
+        storage.list_assignments_strict()
+
+    duplicate_path.write_text("{not-json", encoding="utf-8")
+    with pytest.raises(ValueError):
+        storage.list_assignments_strict()
+    assert [item["id"] for item in storage.list_assignments()] == [saved["id"]]
+
+
 def test_assignment_record_storage_deletes_assignment(tmp_path) -> None:
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
     saved = storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
