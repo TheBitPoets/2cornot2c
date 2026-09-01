@@ -227,7 +227,7 @@ func attestRuntimeAuthorityInventory(descriptor int) error {
 	}
 	for _, entry := range entries {
 		switch entry {
-		case "app", "logrotate", "pilot-activation-fence", "pilot-private-runtime":
+		case "app", "logrotate", "pilot-activation-fence", "pilot-generator-orchestrator", "pilot-private-runtime":
 		default:
 			return fmt.Errorf("entry runtime authority inattesa: %s", entry)
 		}

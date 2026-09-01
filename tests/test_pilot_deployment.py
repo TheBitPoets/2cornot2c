@@ -39,6 +39,13 @@ from scripts import validate_pilot_deployment as deployment
 
 ROOT = Path(__file__).resolve().parents[1]
 CANDIDATE = ROOT / "deploy" / "pilot" / "candidate.example.json"
+RUNTIME_AUTHORITY_MEMBERS = (
+    "app",
+    "logrotate",
+    "pilot-activation-fence",
+    "pilot-generator-orchestrator",
+    "pilot-private-runtime",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -5096,6 +5103,69 @@ def test_ubuntu_fixture_package_baseline_is_snapshot_and_artifact_bound() -> Non
     )
 
 
+def _python_runtime_authority_members(source: str) -> tuple[str, ...]:
+    tree = ast.parse(source)
+    assignments = [
+        node for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name)
+            and target.id == "_RUNTIME_AUTHORITY_CHILDREN"
+            for target in node.targets
+        )
+    ]
+    assert len(assignments) == 1
+    value = assignments[0].value
+    assert (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Name)
+        and value.func.id == "frozenset"
+        and len(value.args) == 1
+        and not value.keywords
+        and isinstance(value.args[0], ast.Set)
+    )
+    members = tuple(
+        element.value
+        for element in value.args[0].elts
+        if isinstance(element, ast.Constant) and isinstance(element.value, str)
+    )
+    assert len(members) == len(value.args[0].elts)
+    assert len(members) == len(set(members))
+    assert members == tuple(sorted(members))
+    return members
+
+
+def _go_runtime_authority_members(source: str) -> tuple[str, ...]:
+    start = source.index("func attestRuntimeAuthorityInventory(descriptor int) error {")
+    end = source.index("\nfunc ", start + 1)
+    body = source[start:end]
+    match = re.search(
+        r"for _, entry := range entries \{\s*switch entry \{\s*"
+        r"case (?P<members>[^:\n]+):\s*default:",
+        body,
+    )
+    assert match is not None
+    assert body.count("case ") == 1
+    assert body.count("default:") == 1
+    raw_members = match.group("members")
+    assert re.fullmatch(
+        r'"[a-z][a-z0-9-]*"(?:,\s*"[a-z][a-z0-9-]*")*',
+        raw_members,
+    )
+    members = tuple(re.findall(r'"([a-z][a-z0-9-]*)"', raw_members))
+    assert len(members) == len(set(members))
+    assert members == tuple(sorted(members))
+    return members
+
+
+def _assert_runtime_authority_contract(
+    python_source: str, *go_sources: str
+) -> None:
+    assert _python_runtime_authority_members(python_source) == RUNTIME_AUTHORITY_MEMBERS
+    for source in go_sources:
+        assert _go_runtime_authority_members(source) == RUNTIME_AUTHORITY_MEMBERS
+
+
 def test_runtime_directory_authority_is_consistent_across_all_creators() -> None:
     fence = (ROOT / "scripts/pilot_trusted_activation_fence.py").read_text(
         encoding="utf-8"
@@ -5115,10 +5185,17 @@ def test_runtime_directory_authority_is_consistent_across_all_creators() -> None
     service = (ROOT / "deploy/pilot/templates/thebitlab.service.template").read_text(
         encoding="utf-8"
     )
+    deployment_doc = (ROOT / "doc/PILOT_DEPLOYMENT.md").read_text(encoding="utf-8")
 
     assert 'RUNTIME_AUTHORITY_ROOT = Path("/run/thebitlab")' in fence
-    assert '_RUNTIME_AUTHORITY_CHILDREN = frozenset(' in fence
-    assert "pilot-generator-orchestrator" in trusted_activation_fence._RUNTIME_AUTHORITY_CHILDREN
+    _assert_runtime_authority_contract(fence, static_bootstrap, private_runtime)
+    assert trusted_activation_fence._RUNTIME_AUTHORITY_CHILDREN == frozenset(
+        RUNTIME_AUTHORITY_MEMBERS
+    )
+    documented_members = ", ".join(
+        f"`{member}`" for member in RUNTIME_AUTHORITY_MEMBERS
+    )
+    assert f"inventario chiuso dei soli child {documented_members}" in deployment_doc
     assert 'ensure_runtime_authority_directory("pilot-activation-fence")' in fence
     assert 'ensure_runtime_authority_directory("logrotate")' in activation
     assert "ensure_runtime_authority_parent()" in activation
@@ -5138,6 +5215,61 @@ def test_runtime_directory_authority_is_consistent_across_all_creators() -> None
     assert 'mountTmpfs(s1MountSource, s1Target, "32m", 0755)' in private_runtime
     assert 'mountTmpfs(managerSource, drop, "1m", 0700)' in private_runtime
     assert 'canonicalRuntimeDirectory(rootStat, 0755)' in private_runtime
+    # The shared-parent admission is not a process role or capability selector.
+    # The private broker only mentions this sibling in the closed inventory.
+    assert private_runtime.count('"pilot-generator-orchestrator"') == 1
+
+
+@pytest.mark.parametrize(
+    "representation,old,new",
+    (
+        (
+            "python",
+            '"pilot-private-runtime",',
+            '"pilot-private-runtime", "unexpected-authority",',
+        ),
+        (
+            "private-go",
+            '"pilot-private-runtime":',
+            '"pilot-private-runtime", "unexpected-authority":',
+        ),
+        (
+            "static-go",
+            '"pilot-generator-orchestrator"',
+            '"pilot-generator-orchestrato"',
+        ),
+        (
+            "private-go",
+            '"pilot-generator-orchestrator", ',
+            "",
+        ),
+        (
+            "python",
+            '"pilot-generator-orchestrator",',
+            '"pilot-generator-orchestrator", "pilot-generator-orchestrator",',
+        ),
+    ),
+)
+def test_runtime_authority_parity_guard_rejects_drift(
+    representation: str, old: str, new: str,
+) -> None:
+    sources = {
+        "python": (ROOT / "scripts/pilot_trusted_activation_fence.py").read_text(
+            encoding="utf-8"
+        ),
+        "static-go": (ROOT / "scripts/pilot_static_bootstrap.go").read_text(
+            encoding="utf-8"
+        ),
+        "private-go": (ROOT / "scripts/pilot_private_runtime.go").read_text(
+            encoding="utf-8"
+        ),
+    }
+    assert sources[representation].count(old) == 1
+    sources[representation] = sources[representation].replace(old, new, 1)
+    with pytest.raises(AssertionError):
+        _assert_runtime_authority_contract(
+            sources["python"], sources["static-go"], sources["private-go"]
+        )
 
 
 def _private_runtime_evidence_fixture(now_ns: int) -> tuple[list[dict], list[dict]]:
@@ -5257,12 +5389,17 @@ def test_private_runtime_aggregator_rejects_incomplete_stale_or_conflicting_evid
         )
 
 
-def test_runtime_authority_helper_rejects_unknown_direct_child_without_io() -> None:
+@pytest.mark.parametrize(
+    "name", ("attacker", "pilot-generator-orchestrato")
+)
+def test_runtime_authority_helper_rejects_unknown_direct_child_without_io(
+    name: str,
+) -> None:
     with pytest.raises(
         trusted_activation_fence.TrustedActivationFenceError,
         match="fuori policy",
     ):
-        trusted_activation_fence.ensure_runtime_authority_directory("attacker")
+        trusted_activation_fence.ensure_runtime_authority_directory(name)
 
 
 def test_private_runtime_exec_locks_one_os_thread_and_fails_closed() -> None:
