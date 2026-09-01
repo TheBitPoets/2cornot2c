@@ -1754,6 +1754,37 @@ def _read_generated_unit_directives(path: Path) -> dict[tuple[str, str], tuple[s
     return {key: tuple(items) for key, items in values.items()}
 
 
+def _sealed_staged_artifact(
+    relative: tuple[str, ...],
+) -> tuple[Path, dict[str, Path], Path, str]:
+    orchestrator = activation.generator_orchestrator
+    matches: list[tuple[Path, dict[str, Path], Path, str]] = []
+    for transaction in orchestrator.TRANSACTION_ROOT.iterdir():
+        stage = transaction / "stage"
+        roots = {root_class: stage / root_class for root_class in orchestrator.TARGETS}
+        for root_class, root in roots.items():
+            candidate = root.joinpath(*relative)
+            if candidate.exists() or candidate.is_symlink():
+                matches.append((candidate, roots, transaction, root_class))
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Candidate generator staging non univoco {relative}: "
+            f"{tuple(item[0] for item in matches)}"
+        )
+    candidate, roots, transaction, root_class = matches[0]
+    stage = transaction / "stage"
+    descriptor = os.open(
+        stage, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    )
+    try:
+        row = orchestrator._row_for_fd(descriptor)
+    finally:
+        os.close(descriptor)
+    if "ro" not in row.options or "ro" not in row.super_options:
+        raise RuntimeError(f"Candidate generator non sigillato: {candidate}")
+    return candidate, roots, transaction, root_class
+
+
 def _run_trusted_generator_transaction(
     seam_callback: Callable[[str], None] | None = None,
 ) -> Mapping[str, object]:
@@ -3161,10 +3192,138 @@ def _inventory_reviewed_package_generators() -> tuple[str, ...]:
         ) from exc
 
 
+def _attest_local_sysv_staged_candidate(
+    seam: str, *, script: Path, config: Path, marker: Path, evidence_path: Path,
+) -> None:
+    if seam != "during-attestation":
+        return
+    candidate, roots, transaction, root_class = _sealed_staged_artifact(
+        ("leaky-nginx.service",)
+    )
+    directives = _read_generated_unit_directives(candidate)
+    source_values = directives.get(("Unit", "SourcePath"), ())
+    exec_slots = {
+        slot: directives.get(("Service", slot), ())
+        for slot in activation.SYSTEMD_EXEC_SLOTS
+    }
+    if source_values != (str(script),):
+        raise RuntimeError(f"SourcePath local SysV divergente: {source_values}")
+    if (
+        exec_slots["ExecStart"] != (f"{script} start",)
+        or exec_slots["ExecStop"] != (f"{script} stop",)
+    ):
+        raise RuntimeError(f"Exec local SysV divergente: {exec_slots}")
+    source_text = script.read_text(encoding="utf-8")
+    if (
+        f"exec /usr/sbin/nginx -c {config}" not in source_text
+        or f"/usr/sbin/nginx -c {config} -s quit" not in source_text
+        or "combined" not in config.read_text(encoding="utf-8")
+    ):
+        raise RuntimeError("Relazione query-bearing nginx della fixture SysV divergente")
+    source_owners = activation._dpkg_installed_path_owners((script,))[script]
+    if source_owners:
+        raise RuntimeError(f"Source SysV locale inatteso package-owned: {source_owners}")
+
+    enablement: list[Path] = []
+    for root in roots.values():
+        for path in root.rglob("*"):
+            if not path.is_symlink():
+                continue
+            try:
+                if path.resolve(strict=True) == candidate:
+                    enablement.append(path)
+            except OSError as exc:
+                raise RuntimeError(f"Symlink local SysV non risolvibile: {path}") from exc
+    boot_links = tuple(
+        path for path in sorted(enablement)
+        if path.parent.name == "multi-user.target.wants"
+        and path.name == candidate.name
+    )
+    if not boot_links:
+        raise RuntimeError("Candidate local SysV non boot-reachable nello staging")
+
+    artifacts = (candidate, *sorted(enablement))
+    resolved_targets = {path: candidate for path in enablement}
+    original_property = activation._systemd_property
+
+    def candidate_property(
+        name: str, unit: str = "nginx.service", *, allow_empty: bool = False
+    ) -> str:
+        del allow_empty
+        if unit != candidate.name:
+            raise activation.ActivationError(f"Unit candidate inattesa: {unit}")
+        if name == "FragmentPath":
+            return candidate.as_posix()
+        if name == "SourcePath":
+            return source_values[0]
+        raise activation.ActivationError(f"Proprietà candidate inattesa: {name}")
+
+    expected_reason = (
+        "Input generator source non attribuito/integrity-verified da package "
+        f"installato: {script}"
+    )
+    reason = ""
+    activation._systemd_property = candidate_property
+    try:
+        activation._attest_generated_systemd_artifacts(
+            artifacts, set(roots.values()), resolved_targets, frozenset()
+        )
+    except activation.ActivationError as exc:
+        reason = str(exc)
+        if reason != expected_reason:
+            raise RuntimeError(
+                f"Candidate local SysV rifiutato per causa estranea: {reason}"
+            ) from exc
+    else:
+        raise RuntimeError("Candidate local SysV accettato dalla policy production")
+    finally:
+        activation._systemd_property = original_property
+
+    evidence = {
+        "schema": "thebitlab.local-sysv-orchestrated.v1",
+        "transaction": transaction.name,
+        "orchestrator": str(activation.generator_orchestrator.ORCHESTRATOR_ENTRY),
+        "systemd_sysv_generator": next(
+            dict(item) for item in activation.generator_orchestrator.SELECTED_GENERATORS
+            if item["basename"] == "systemd-sysv-generator"
+        ),
+        "staging_roots": {key: str(path) for key, path in sorted(roots.items())},
+        "candidate_root": root_class,
+        "candidate": str(candidate),
+        "candidate_sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
+        "candidate_origin": "sealed non-authoritative transaction staging",
+        "fragment_path_semantics": str(candidate),
+        "source_path": source_values[0],
+        "source_owners": [],
+        "source_package_attribution": None,
+        "exec_slots": {slot: list(values) for slot, values in exec_slots.items()},
+        "boot_reachability": [str(path) for path in boot_links],
+        "nginx_config": str(config),
+        "nginx_relationship": "query-bearing config selected by SysV start/stop",
+        "execution_classification": "UNMANAGED LOCAL SYSV SOURCE",
+        "policy_branch": "_attest_package_owned_generator_input",
+        "rejection_reason": reason,
+        "sealed": True,
+        "adopted": False,
+        "marker": str(marker),
+    }
+    evidence_path.write_text(
+        json.dumps(evidence, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    evidence_path.chmod(0o600)
+    raise activation.ActivationError(reason)
+
+
 def _expect_generated_sysv_rejected(config: Path) -> None:
+    unit = "leaky-nginx.service"
     script = Path("/etc/init.d/leaky-nginx")
+    marker = Path("/run/thebitlab-leaky-nginx-sysv-executed")
+    evidence_path = config.parent / "local-sysv-orchestrated.json"
     if script.exists() or script.is_symlink():
         raise RuntimeError("Fixture SysV locale già presente")
+    marker.unlink(missing_ok=True)
+    evidence_path.unlink(missing_ok=True)
     script.write_text(
         "#!/bin/sh\n"
         "### BEGIN INIT INFO\n"
@@ -3176,88 +3335,255 @@ def _expect_generated_sysv_rejected(config: Path) -> None:
         "# Short-Description: local query-bearing nginx\n"
         "### END INIT INFO\n"
         "case \"$1\" in\n"
-        f"  start) exec /usr/sbin/nginx -c {config} ;;\n"
+        f"  start) printf executed > {marker}; exec /usr/sbin/nginx -c {config} ;;\n"
         f"  stop) /usr/sbin/nginx -c {config} -s quit ;;\n"
         "  *) exit 0 ;;\n"
         "esac\n",
         encoding="utf-8",
     )
     script.chmod(0o755)
+    before = _generator_output_identity()
+    _assert_manager_unit_absent(unit)
     try:
         _run(["update-rc.d", "leaky-nginx", "defaults"])
-        _run(["systemctl", "daemon-reload"])
-        fragment = activation._systemd_property("FragmentPath", "leaky-nginx.service")
-        source = activation._systemd_property("SourcePath", "leaky-nginx.service")
-        state = activation._systemd_property("UnitFileState", "leaky-nginx.service")
-        if (
-            not fragment.startswith("/run/systemd/generator")
-            or source != str(script)
-            or state != "generated"
-        ):
-            raise RuntimeError("systemd-sysv-generator non ha materializzato la fixture attesa")
-        graph = _run(
+        try:
+            _run_trusted_generator_transaction(
+                lambda seam: _attest_local_sysv_staged_candidate(
+                    seam, script=script, config=config, marker=marker,
+                    evidence_path=evidence_path,
+                )
+            )
+        except activation.generator_orchestrator.GeneratorOrchestratorError:
+            pass
+        else:
+            raise RuntimeError("Transaction local SysV non rifiutata")
+        if not evidence_path.is_file():
+            raise RuntimeError("Local SysV rifiutato prima dell'oracolo causale")
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        expected_reason = (
+            "Input generator source non attribuito/integrity-verified da package "
+            f"installato: {script}"
+        )
+        if evidence.get("rejection_reason") != expected_reason:
+            raise RuntimeError(f"Evidence local SysV non causale: {evidence}")
+        after_reject = _generator_output_identity()
+        if after_reject != before:
+            raise RuntimeError("Candidate local SysV rifiutato ha cambiato authority")
+        _assert_manager_unit_absent(unit)
+        if marker.exists():
+            raise RuntimeError("Side effect local SysV eseguito prima del reject")
+        _assert_guard_absent_after_preflight_reject("leaky-nginx SysV")
+        print(
+            "EVIDENCE: trusted local-SysV PREPARED causal REJECT "
+            + json.dumps(
+                {
+                    **evidence,
+                    "old_roots_before": before[0],
+                    "old_graph_before": before[1],
+                    "old_roots_after": after_reject[0],
+                    "old_graph_after": after_reject[1],
+                    "pid1": "not-found",
+                    "side_effect": "ABSENT",
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
+
+        before_raw = _generator_output_identity()
+        raw = subprocess.run(
+            ["/usr/bin/systemctl", "daemon-reload"],
+            check=False, capture_output=True, text=True, timeout=40,
+        )
+        after_raw = _generator_output_identity()
+        if raw.returncode != 0 or after_raw != before_raw:
+            raise RuntimeError(
+                f"Reload raw local SysV ha cambiato authority: rc={raw.returncode} "
+                f"detail={(raw.stdout + raw.stderr)[-300:]}"
+            )
+        _assert_manager_unit_absent(unit)
+        if marker.exists():
+            raise RuntimeError("Side effect local SysV eseguito dal reload raw")
+        print(
+            "EVIDENCE: raw local-SysV reload without PREPARED PASS; "
+            f"roots={json.dumps(after_raw[0], sort_keys=True)} "
+            f"graph={after_raw[1]} unit=not-found side-effect=ABSENT"
+        )
+    finally:
+        subprocess.run(
+            ["update-rc.d", "-f", "leaky-nginx", "remove"],
+            check=False, capture_output=True, text=True, timeout=30,
+        )
+        script.unlink(missing_ok=True)
+        marker.unlink(missing_ok=True)
+        evidence_path.unlink(missing_ok=True)
+    _run_trusted_generator_transaction()
+    activation._attest_systemd_boot_surface()
+    _assert_manager_unit_absent(unit)
+
+
+def _attest_rc_local_staged_candidate(
+    seam: str, *, rc_local: Path, marker: Path, evidence_path: Path,
+) -> None:
+    if seam != "during-attestation":
+        return
+    relative = ("multi-user.target.wants", "rc-local.service")
+    candidate, roots, transaction, root_class = _sealed_staged_artifact(relative)
+    if not candidate.is_symlink():
+        raise RuntimeError("Candidate rc-local staging non è un symlink")
+    target = candidate.resolve(strict=True)
+    expected_target = Path("/usr/lib/systemd/system/rc-local.service").resolve(strict=True)
+    if target != expected_target:
+        raise RuntimeError(f"Target candidate rc-local divergente: {target}")
+    owners = activation._dpkg_installed_path_owners((rc_local, target))
+    if owners[rc_local] or not owners[target]:
+        raise RuntimeError(f"Attribuzione rc-local fixture divergente: {owners}")
+    package_owned = activation._dpkg_owned_paths((target,))
+
+    def semantic_root(path: Path, semantic_name: str) -> Path:
+        class StagedGeneratedRoot(type(path)):
+            @property
+            def name(self) -> str:
+                return semantic_name
+
+        return StagedGeneratedRoot(path)
+
+    # Production sees /run/systemd/generator{,.early,.late}; the orchestrator
+    # deliberately exposes transaction classes as stage/{normal,early,late}.
+    # Preserve the physical staging paths while projecting only their live class
+    # names into the exact production provenance branch.
+    semantic_roots = {
+        semantic_root(roots[root_class], live_name)
+        for root_class, live_name in {
+            "normal": "generator",
+            "early": "generator.early",
+            "late": "generator.late",
+        }.items()
+    }
+    expected_reason = (
+        "Input generator source non attribuito/integrity-verified da package "
+        f"installato: {rc_local}"
+    )
+    reason = ""
+    try:
+        activation._attest_generated_systemd_artifacts(
+            (candidate,), semantic_roots, {candidate: target}, package_owned
+        )
+    except activation.ActivationError as exc:
+        reason = str(exc)
+        if reason != expected_reason:
+            raise RuntimeError(
+                f"Candidate rc-local rifiutato per causa estranea: {reason}"
+            ) from exc
+    else:
+        raise RuntimeError("Candidate rc-local accettato dalla policy production")
+    evidence = {
+        "schema": "thebitlab.rc-local-orchestrated.v1",
+        "transaction": transaction.name,
+        "orchestrator": str(activation.generator_orchestrator.ORCHESTRATOR_ENTRY),
+        "systemd_rc_local_generator": next(
+            dict(item) for item in activation.generator_orchestrator.SELECTED_GENERATORS
+            if item["basename"] == "systemd-rc-local-generator"
+        ),
+        "staging_roots": {key: str(path) for key, path in sorted(roots.items())},
+        "candidate_root": root_class,
+        "candidate": str(candidate),
+        "candidate_origin": "sealed non-authoritative transaction staging",
+        "target": str(target),
+        "source_path": str(rc_local),
+        "source_owners": [],
+        "target_owners": sorted(owners[target]),
+        "boot_reachability": str(candidate),
+        "execution_classification": "UNMANAGED LOCAL RC.LOCAL SOURCE",
+        "policy_branch": "_attest_package_owned_generator_input",
+        "rejection_reason": reason,
+        "sealed": True,
+        "adopted": False,
+        "marker": str(marker),
+    }
+    evidence_path.write_text(
+        json.dumps(evidence, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    evidence_path.chmod(0o600)
+    raise activation.ActivationError(reason)
+
+
+def _expect_rc_local_rejected(config: Path) -> None:
+    rc_local = Path("/etc/rc.local")
+    marker = Path("/run/thebitlab-rc-local-executed")
+    evidence_path = config.parent / "rc-local-orchestrated.json"
+    if rc_local.exists() or rc_local.is_symlink():
+        raise RuntimeError("Fixture rc.local già presente")
+    marker.unlink(missing_ok=True)
+    evidence_path.unlink(missing_ok=True)
+    rc_local.write_text(
+        f"#!/bin/sh\nprintf executed > {marker}\n"
+        f"exec /usr/sbin/nginx -c {config}\n",
+        encoding="utf-8",
+    )
+    rc_local.chmod(0o755)
+    before = _generator_output_identity()
+    boot_before = _run(
+        [
+            "systemctl", "list-dependencies", "--all", "--plain", "--no-pager",
+            "multi-user.target",
+        ]
+    )
+    if "rc-local.service" in boot_before:
+        raise RuntimeError("rc-local.service già boot-reachable prima della fixture")
+    try:
+        try:
+            _run_trusted_generator_transaction(
+                lambda seam: _attest_rc_local_staged_candidate(
+                    seam, rc_local=rc_local, marker=marker, evidence_path=evidence_path
+                )
+            )
+        except activation.generator_orchestrator.GeneratorOrchestratorError:
+            pass
+        else:
+            raise RuntimeError("Transaction rc-local non rifiutata")
+        if not evidence_path.is_file():
+            raise RuntimeError("rc-local rifiutato prima dell'oracolo causale")
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        expected_reason = (
+            "Input generator source non attribuito/integrity-verified da package "
+            f"installato: {rc_local}"
+        )
+        if evidence.get("rejection_reason") != expected_reason:
+            raise RuntimeError(f"Evidence rc-local non causale: {evidence}")
+        after = _generator_output_identity()
+        boot_after = _run(
             [
                 "systemctl", "list-dependencies", "--all", "--plain", "--no-pager",
                 "multi-user.target",
             ]
         )
-        if "leaky-nginx.service" not in graph:
-            raise RuntimeError("Fixture SysV enabled non boot-reachable")
-        inactive = subprocess.run(
-            ["systemctl", "is-active", "leaky-nginx.service"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=30,
+        if after != before or "rc-local.service" in boot_after:
+            raise RuntimeError("Candidate rc-local rifiutato ha cambiato authority PID1")
+        if marker.exists():
+            raise RuntimeError("Side effect rc-local eseguito prima del reject")
+        print(
+            "EVIDENCE: trusted rc-local PREPARED causal REJECT "
+            + json.dumps(
+                {
+                    **evidence,
+                    "old_roots_before": before[0],
+                    "old_graph_before": before[1],
+                    "old_roots_after": after[0],
+                    "old_graph_after": after[1],
+                    "pid1_boot_reachable": False,
+                    "side_effect": "ABSENT",
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
         )
-        if inactive.returncode != 3 or inactive.stdout.strip() != "inactive":
-            raise RuntimeError("Fixture SysV non è enabled/boot-reachable ma inattiva")
-        try:
-            activation._attest_systemd_boot_surface()
-        except activation.ActivationError:
-            pass
-        else:
-            raise RuntimeError("Output systemd-sysv-generator da input locale accettato")
-        _assert_guard_absent_after_preflight_reject("leaky-nginx SysV")
-    finally:
-        subprocess.run(
-            ["update-rc.d", "-f", "leaky-nginx", "remove"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        script.unlink(missing_ok=True)
-        _run(["systemctl", "daemon-reload"])
-    activation._attest_systemd_boot_surface()
-
-
-def _expect_rc_local_rejected(config: Path) -> None:
-    rc_local = Path("/etc/rc.local")
-    if rc_local.exists() or rc_local.is_symlink():
-        raise RuntimeError("Fixture rc.local già presente")
-    rc_local.write_text(
-        f"#!/bin/sh\nexec /usr/sbin/nginx -c {config}\n", encoding="utf-8"
-    )
-    rc_local.chmod(0o755)
-    generated = Path("/run/systemd/generator/multi-user.target.wants/rc-local.service")
-    try:
-        _run(["systemctl", "daemon-reload"])
-        if (
-            not generated.is_symlink()
-            or generated.resolve(strict=True)
-            != Path("/usr/lib/systemd/system/rc-local.service").resolve(strict=True)
-        ):
-            raise RuntimeError("systemd-rc-local-generator non ha creato l'activation link")
-        try:
-            activation._attest_systemd_boot_surface()
-        except activation.ActivationError:
-            pass
-        else:
-            raise RuntimeError("rc.local locale attivato da unit package accettato")
     finally:
         rc_local.unlink(missing_ok=True)
-        _run(["systemctl", "daemon-reload"])
+        marker.unlink(missing_ok=True)
+        evidence_path.unlink(missing_ok=True)
+    _run_trusted_generator_transaction()
     activation._attest_systemd_boot_surface()
 
 
@@ -7325,7 +7651,13 @@ def run(
                 )
                 return
             if h02_orchestrated_sysv_only:
+                _exercise_package_logrotate_same_line_hook_rejected(temporary)
                 _exercise_package_sysv_path_shadow_rejected(temporary)
+                focused_config, _ = _write_foreign_nginx_config(
+                    temporary, "focused-local-generator-oracles"
+                )
+                _expect_generated_sysv_rejected(focused_config)
+                _expect_rc_local_rejected(focused_config)
                 return
             if generator_orchestrator_gate_only:
                 _test_production_generator_orchestrator()
@@ -8551,7 +8883,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--h02-orchestrated-sysv-only",
         action="store_true",
-        help="Esegue la matrice H-02 con il vero systemd-sysv-generator orchestrato.",
+        help="Esegue H-01/H-02 e gli oracle locali SysV/rc.local orchestrati.",
     )
     parser.add_argument(
         "--private-runtime-start-diagnostic-only",
@@ -8616,7 +8948,7 @@ def main(argv: list[str] | None = None) -> int:
     elif args.generator_transition_only:
         print("PASS: STOCK→ORCHESTRATED physically reachable transition matrix")
     elif args.h02_orchestrated_sysv_only:
-        print("PASS: H-02 orchestrated SysV/PATH-shadow causal security gate")
+        print("PASS: H-01/H-02 + local SysV/rc.local orchestrated causal security gate")
     elif args.executor_lease_gate_only:
         print("PASS: gate mirato production executor inode lease + Stage-M")
     elif args.private_runtime_gate_only:
