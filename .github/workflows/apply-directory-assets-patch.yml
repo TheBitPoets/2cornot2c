@@ -1,0 +1,51 @@
+name: Apply directory asset patch
+
+on:
+  push:
+    branches: [agent/directory-assets-751]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/directory-assets-751
+      - name: Stop after patch is applied
+        id: state
+        shell: bash
+        run: |
+          if [[ -f doc/DIRECTORY_ASSETS.md ]]; then
+            echo "applied=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "applied=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Reconstruct and apply reviewed patch
+        if: steps.state.outputs.applied == 'false'
+        shell: bash
+        run: |
+          cat _patches/dirassets/*.b64 | base64 --decode > /tmp/directory-assets.patch
+          git apply --check /tmp/directory-assets.patch
+          git apply /tmp/directory-assets.patch
+          python -m py_compile \
+            scripts/create_submission_scaffold.py \
+            scripts/assign_activity.py \
+            tests/test_directory_asset_scaffold.py \
+            tests/test_directory_asset_assignment_plan.py
+      - name: Commit implementation
+        if: steps.state.outputs.applied == 'false'
+        shell: bash
+        run: |
+          git config user.name "TheBitLab delivery automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            scripts/create_submission_scaffold.py \
+            scripts/assign_activity.py \
+            tests/test_directory_asset_scaffold.py \
+            tests/test_directory_asset_assignment_plan.py \
+            doc/DIRECTORY_ASSETS.md
+          git commit -m "Support directory-valued student assets"
+          git push origin HEAD:agent/directory-assets-751
