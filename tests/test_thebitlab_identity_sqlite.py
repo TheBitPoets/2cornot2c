@@ -103,7 +103,7 @@ def database_path(tmp_path):
 
 @pytest.fixture
 def storage(database_path):
-    return SqliteIdentityStorage(database_path)
+    return SqliteIdentityStorage(database_path, clock=lambda: NOW)
 
 
 def drop_subject_binding_schema(connection: sqlite3.Connection) -> None:
@@ -218,7 +218,7 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
 def test_migration_v11_rechecks_correlations_after_earlier_v10(
     database_path,
 ) -> None:
-    storage = SqliteIdentityStorage(database_path)
+    storage = SqliteIdentityStorage(database_path, clock=lambda: NOW)
     storage.create_user(account())
     pending = pairing()
     storage.create_pairing(pending)
