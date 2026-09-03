@@ -118,6 +118,10 @@ SYSTEMD_PATH_BINARY = Path("/usr/bin/systemd-path")
 DPKG_QUERY_BINARY = Path("/usr/bin/dpkg-query")
 GETFACL_BINARY = Path("/usr/bin/getfacl")
 LOGROTATE_BINARY = Path("/usr/sbin/logrotate")
+ACTIVATOR_BINARY = Path("/usr/sbin/thebitlab-pilot-activate")
+LOGROTATE_SERVICE_DROPIN = Path(
+    "/etc/systemd/system/logrotate.service.d/70-thebitlab-authority.conf"
+)
 SYSTEMD_ANALYZE_BINARY = Path("/usr/bin/systemd-analyze")
 PROC_ROOT = Path("/proc")
 NGINX_CONTROL_GROUP = "/system.slice/nginx.service"
@@ -131,6 +135,9 @@ PRIVATE_RUNTIME_S1 = PRIVATE_RUNTIME_ROOT / "s1"
 PRIVATE_RUNTIME_MERGED = PRIVATE_RUNTIME_ROOT / "merged"
 PRIVATE_RUNTIME_DROPIN = Path(
     "/run/systemd/system/nginx.service.d/70-thebitlab-private-runtime.conf"
+)
+NGINX_RUNTIME_GUARD_DROPIN = Path(
+    "/etc/systemd/system/nginx.service.d/60-thebitlab-private-runtime-required.conf"
 )
 _PRIVATE_RUNTIME_STATE_SCHEMA = "thebitlab.private-runtime-state.v1"
 _PRIVATE_RUNTIME_MANIFEST_SCHEMA = "thebitlab.private-runtime-manifest.v1"
@@ -190,6 +197,36 @@ LOGROTATE_SNAPSHOT = LOGROTATE_RUNTIME_DIRECTORY / "reopen.json"
 LOGROTATE_SNAPSHOT_MAX_AGE_SECONDS = 300
 LOGROTATE_REOPEN_TIMEOUT_SECONDS = 10.0
 LOGROTATE_REOPEN_POLL_SECONDS = 0.1
+NGINX_RUNTIME_GUARD_DROPIN_BYTES = (
+    "# TheBitLab reboot fail-closed private-runtime guard; issue 704\n"
+    "[Service]\n"
+    "ExecStartPre=\n"
+    "ExecStartPre=/usr/sbin/thebitlab-pilot-activate private-runtime-required\n"
+    "ExecStart=\n"
+    "ExecStart=/usr/sbin/thebitlab-pilot-activate private-runtime-required\n"
+    "ExecReload=\n"
+    "ExecReload=/usr/sbin/thebitlab-pilot-activate private-runtime-required\n"
+    "ExecStop=\n"
+    "ExecStop=/usr/sbin/thebitlab-pilot-activate private-runtime-required\n"
+).encode("utf-8")
+LOGROTATE_SERVICE_DROPIN_BYTES = (
+    "# TheBitLab verify-use logrotate authority; issue 704\n"
+    "[Service]\n"
+    "ExecStart=\n"
+    "ExecStart=/usr/sbin/thebitlab-pilot-activate logrotate-run\n"
+    "# The static bootstrap must enter in PID1's mount namespace; its own sealed\n"
+    "# code/config fence replaces these package restriction-only namespaces.\n"
+    "PrivateDevices=no\n"
+    "PrivateTmp=no\n"
+    "ProtectClock=no\n"
+    "ProtectControlGroups=no\n"
+    "ProtectHostname=no\n"
+    "ProtectKernelLogs=no\n"
+    "ProtectKernelModules=no\n"
+    "ProtectKernelTunables=no\n"
+    "ProtectSystem=no\n"
+    "RestrictNamespaces=no\n"
+).encode("utf-8")
 BOOT_ID_PATH = Path("/proc/sys/kernel/random/boot_id")
 CANONICAL_NGINX_PORTS = frozenset({80, 443})
 ENABLED_NGINX_UNIT_FILE_STATES = frozenset({"enabled"})
@@ -577,10 +614,13 @@ def _require_trusted_runtime() -> None:
 
     expected_root = os.environ.get("THEBITLAB_TRUSTED_TOOLCHAIN_ROOT")
     toolchain_id = os.environ.get("THEBITLAB_TRUSTED_TOOLCHAIN_ID")
+    private_runtime_sha256 = os.environ.get("THEBITLAB_TRUSTED_PRIVATE_RUNTIME_SHA256")
     canonical_parent = Path("/usr/lib/thebitlab/pilot-tools")
     if (
         not expected_root
         or not toolchain_id
+        or private_runtime_sha256 is None
+        or re.fullmatch(r"[0-9a-f]{64}", private_runtime_sha256) is None
         or ROOT != Path(expected_root)
         or ROOT.parent != canonical_parent
         or ROOT.name != toolchain_id
@@ -705,6 +745,13 @@ class ExecutableClosurePolicy:
     closed_directories: Mapping[Path, tuple[str, ...]] | None = None
 
 
+def _static_private_runtime_sha256() -> str:
+    expected = os.environ.get("THEBITLAB_TRUSTED_PRIVATE_RUNTIME_SHA256", "")
+    if re.fullmatch(r"[0-9a-f]{64}", expected) is None:
+        raise ActivationError("Authority statica private-runtime non esportata dal bootstrap")
+    return expected
+
+
 def _private_runtime_json(path: Path, *, mode: int) -> tuple[Mapping[str, Any], bytes]:
     descriptor = -1
     try:
@@ -744,6 +791,31 @@ def _private_runtime_json(path: Path, *, mode: int) -> tuple[Mapping[str, Any], 
     if not isinstance(value, dict):
         raise ActivationError(f"JSON autorità private-runtime non oggetto: {path}")
     return value, raw
+
+
+def _expected_private_runtime_dropin(token: str) -> bytes:
+    if re.fullmatch(r"[1-9][0-9]{0,19}-[0-9a-f]{32}", token) is None:
+        raise ActivationError("Token private-runtime non canonico")
+    broker = PRIVATE_RUNTIME_S0 / "usr/lib/thebitlab/private-runtime-broker"
+    prefix = f"{broker} production-private-exec {token} "
+    return (
+        "# TheBitLab immutable private runtime; issue 704\n"
+        "[Service]\n"
+        "Type=forking\n"
+        f"PIDFile={PRIVATE_RUNTIME_ROOT}/runtime/run/nginx.pid\n"
+        "RootDirectory=\n"
+        "RootDirectoryStartOnly=no\n"
+        "ExecStartPre=\n"
+        f"ExecStartPre={prefix}/usr/sbin/nginx -t -q -g 'daemon on; master_process on;'\n"
+        "ExecStart=\n"
+        f"ExecStart={prefix}/usr/sbin/nginx -g 'daemon on; master_process on;'\n"
+        "ExecReload=\n"
+        f"ExecReload={prefix}/usr/sbin/nginx -g 'daemon on; master_process on;' -s reload\n"
+        "ExecStop=\n"
+        f"ExecStop=-{prefix}/usr/sbin/start-stop-daemon --quiet --stop --retry QUIT/5 --pidfile /run/nginx.pid\n"
+        "TimeoutStopSec=5\n"
+        "KillMode=mixed\n"
+    ).encode("utf-8")
 
 
 def _private_runtime_mounts() -> Mapping[str, Mapping[str, Any]]:
@@ -906,14 +978,17 @@ def _private_runtime_authority(*, required: bool = True) -> PrivateRuntimeAuthor
                 raise ActivationError("Object identity private-runtime non canonica")
             objects[lexical] = identity
     broker = PRIVATE_RUNTIME_S0 / "usr/lib/thebitlab/private-runtime-broker"
+    dropin_bytes = _read_stable_trusted_file(PRIVATE_RUNTIME_DROPIN)
+    expected_dropin = _expected_private_runtime_dropin(token)
     if (
         hashlib.sha256(_read_stable_trusted_file(broker)).hexdigest()
         != state["broker_sha256"]
-        or hashlib.sha256(_read_stable_trusted_file(PRIVATE_RUNTIME_DROPIN)).hexdigest()
-        != state["dropin_sha256"]
+        or dropin_bytes != expected_dropin
+        or hashlib.sha256(dropin_bytes).hexdigest() != state["dropin_sha256"]
     ):
-        raise ActivationError("Broker/drop-in private-runtime divergente")
+        raise ActivationError("Broker/drop-in private-runtime divergente dall'autorità statica")
     pin, _ = _private_runtime_json(PRIVATE_RUNTIME_PIN, mode=0o644)
+    static_source_sha256 = _static_private_runtime_sha256()
     if (
         set(pin) != {
             "schema_version", "toolchain_id", "toolchain_manifest_sha256",
@@ -923,9 +998,10 @@ def _private_runtime_authority(*, required: bool = True) -> PrivateRuntimeAuthor
         or pin.get("toolchain_id") != state["toolchain_id"]
         or pin.get("toolchain_manifest_sha256")
         != state["toolchain_manifest_sha256"]
-        or pin.get("launcher_sha256") != state["broker_sha256"]
+        or pin.get("launcher_sha256") != static_source_sha256
+        or state["broker_sha256"] != static_source_sha256
         or hashlib.sha256(_read_stable_trusted_file(PRIVATE_RUNTIME_BINARY)).hexdigest()
-        != state["broker_sha256"]
+        != static_source_sha256
     ):
         raise ActivationError("Pin esterno private-runtime divergente")
     return PrivateRuntimeAuthority(token, state, s0, s1, objects)
@@ -949,10 +1025,12 @@ def _private_runtime_environment() -> Mapping[str, str]:
 
 def _run_private_runtime(command: str, *arguments: str) -> Mapping[str, Any] | None:
     pin, _ = _private_runtime_json(PRIVATE_RUNTIME_PIN, mode=0o644)
+    static_source_sha256 = _static_private_runtime_sha256()
     if (
         pin.get("schema_version") != "thebitlab.private-runtime-pin.v1"
+        or pin.get("launcher_sha256") != static_source_sha256
         or hashlib.sha256(_read_stable_trusted_file(PRIVATE_RUNTIME_BINARY)).hexdigest()
-        != pin.get("launcher_sha256")
+        != static_source_sha256
     ):
         raise ActivationError("Binary private-runtime non coincide col pin esterno")
     command_line = [str(PRIVATE_RUNTIME_BINARY), command, *arguments]
@@ -1143,6 +1221,46 @@ class RootTimerPolicy:
     support_files: tuple[Path, ...] = ()
     timer_sha256: str = ""
     service_sha256: str = ""
+
+
+# Closed systemd 255 execution-context schema.  Substitution-capable settings
+# are empty for every admitted root service in the reviewed Noble baseline.
+# Restriction-only and context-sensitive settings may retain package-defined
+# values only after their exact fragment/drop-ins have passed static authority.
+SYSTEMD_SUBSTITUTION_PROPERTIES = (
+    "RootDirectory", "RootImage", "BindPaths", "BindReadOnlyPaths",
+    "TemporaryFileSystem", "MountImages", "ExtensionImages",
+    "ExtensionDirectories", "ExecSearchPath", "IPCNamespacePath",
+    "NetworkNamespacePath", "ConfigurationDirectory",
+)
+SYSTEMD_RESTRICTION_PROPERTIES = (
+    "ReadOnlyPaths", "ReadWritePaths", "InaccessiblePaths", "ExecPaths",
+    "NoExecPaths", "ProtectSystem", "ProtectHome", "PrivateDevices",
+    "PrivateNetwork", "PrivateIPC", "PrivateMounts", "MountAPIVFS",
+    "ProtectProc", "ProcSubset", "NoNewPrivileges", "DynamicUser",
+)
+SYSTEMD_CONTEXT_PROPERTIES = (
+    "RootDirectoryStartOnly", "RootEphemeral", "PrivateTmp",
+    "RuntimeDirectory", "RuntimeDirectoryMode", "RuntimeDirectoryPreserve",
+    "StateDirectory", "StateDirectoryMode", "CacheDirectory",
+    "CacheDirectoryMode", "LogsDirectory", "LogsDirectoryMode",
+    "ConfigurationDirectoryMode", "WorkingDirectory", "Environment",
+    "EnvironmentFiles", "PassEnvironment", "UnsetEnvironment",
+    "LoadCredential", "LoadCredentialEncrypted", "ImportCredential",
+    "SetCredential", "SetCredentialEncrypted", "User", "Group",
+    "SupplementaryGroups", "PAMName", "UMask", "StandardInput",
+    "StandardOutput", "StandardError", "TTYPath",
+)
+SYSTEMD_EXECUTION_CONTEXT_PROPERTIES = tuple(dict.fromkeys((
+    *SYSTEMD_SUBSTITUTION_PROPERTIES,
+    *SYSTEMD_RESTRICTION_PROPERTIES,
+    *SYSTEMD_CONTEXT_PROPERTIES,
+)))
+_DANGEROUS_CODE_LOADING_ENVIRONMENT = re.compile(
+    r"(?:^|[=\s\"'])(?:LD_[A-Z0-9_]+|GLIBC_TUNABLES|GCONV_PATH|"
+    r"PYTHON(?:PATH|HOME|INSPECT|STARTUP|USERBASE)|PERL5LIB|PERLLIB|"
+    r"RUBYLIB|BASH_ENV|ENV|CDPATH|SHELLOPTS)(?:=|\s|$)"
+)
 
 
 BOOT_REACHABLE_ROOT_TIMER_POLICIES: Mapping[str, RootTimerPolicy] = {
@@ -4905,6 +5023,127 @@ def _attest_managed_logrotate_hooks(paths: Sequence[Path]) -> None:
     # and boot attestations below; no ambient shell/PATH is involved.
 
 
+def _attest_nginx_runtime_guard(*, required: bool) -> bool:
+    path = NGINX_RUNTIME_GUARD_DROPIN
+    if not path.exists() and not path.is_symlink():
+        if required:
+            raise ActivationError("Guard reboot private-runtime assente")
+        return False
+    _assert_trusted_metadata(path.parent, directory=True, require_root_owner=True)
+    parent = path.parent.lstat()
+    if parent.st_gid != 0 or stat.S_IMODE(parent.st_mode) != 0o755:
+        raise ActivationError("Directory guard reboot nginx non canonica")
+    _assert_trusted_metadata(path, directory=False, require_root_owner=True)
+    metadata = path.lstat()
+    if (
+        metadata.st_gid != 0
+        or stat.S_IMODE(metadata.st_mode) != 0o644
+        or getattr(metadata, "st_nlink", 1) != 1
+        or _read_stable_trusted_file(path) != NGINX_RUNTIME_GUARD_DROPIN_BYTES
+    ):
+        raise ActivationError("Guard reboot private-runtime fuori autorità statica")
+    return True
+
+
+def _ensure_nginx_runtime_guard() -> None:
+    if not _KERNEL_FENCE_ENABLED:
+        return
+    parent = NGINX_RUNTIME_GUARD_DROPIN.parent
+    if parent.exists() or parent.is_symlink():
+        _assert_trusted_metadata(parent, directory=True, require_root_owner=True)
+        if any(entry != NGINX_RUNTIME_GUARD_DROPIN for entry in parent.iterdir()):
+            raise ActivationError("Drop-in nginx persistente estraneo")
+    else:
+        parent.mkdir(mode=0o755, parents=False)
+        if os.name != "nt":
+            os.chown(parent, 0, 0)
+    if _attest_nginx_runtime_guard(required=False):
+        return
+    temporary = parent / f".{NGINX_RUNTIME_GUARD_DROPIN.name}.{os.getpid()}"
+    descriptor = -1
+    try:
+        temporary.unlink(missing_ok=True)
+        descriptor = os.open(
+            temporary,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+            0o644,
+        )
+        os.fchmod(descriptor, 0o644)
+        os.write(descriptor, NGINX_RUNTIME_GUARD_DROPIN_BYTES)
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = -1
+        os.replace(temporary, NGINX_RUNTIME_GUARD_DROPIN)
+        _fsync_directory(parent)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
+    _attest_nginx_runtime_guard(required=True)
+
+
+def _attest_logrotate_service_override(*, required: bool) -> bool:
+    path = LOGROTATE_SERVICE_DROPIN
+    if not path.exists() and not path.is_symlink():
+        if required:
+            raise ActivationError("Override verify-use logrotate assente")
+        return False
+    _assert_trusted_metadata(path.parent, directory=True, require_root_owner=True)
+    parent = path.parent.lstat()
+    if parent.st_gid != 0 or stat.S_IMODE(parent.st_mode) != 0o755:
+        raise ActivationError("Directory override logrotate non canonica")
+    _assert_trusted_metadata(path, directory=False, require_root_owner=True)
+    metadata = path.lstat()
+    if (
+        metadata.st_gid != 0
+        or stat.S_IMODE(metadata.st_mode) != 0o644
+        or getattr(metadata, "st_nlink", 1) != 1
+        or _read_stable_trusted_file(path) != LOGROTATE_SERVICE_DROPIN_BYTES
+    ):
+        raise ActivationError("Override verify-use logrotate fuori autorità statica")
+    return True
+
+
+def _ensure_logrotate_service_override() -> None:
+    if not _KERNEL_FENCE_ENABLED:
+        return
+    parent = LOGROTATE_SERVICE_DROPIN.parent
+    if parent.exists() or parent.is_symlink():
+        _assert_trusted_metadata(parent, directory=True, require_root_owner=True)
+        entries = tuple(parent.iterdir())
+        if any(entry != LOGROTATE_SERVICE_DROPIN for entry in entries):
+            raise ActivationError("Drop-in logrotate estraneo preesistente")
+    else:
+        parent.mkdir(mode=0o755, parents=False)
+        if os.name != "nt":
+            os.chown(parent, 0, 0)
+    if _attest_logrotate_service_override(required=False):
+        return
+    temporary = parent / f".{LOGROTATE_SERVICE_DROPIN.name}.{os.getpid()}"
+    descriptor = -1
+    try:
+        temporary.unlink(missing_ok=True)
+        descriptor = os.open(
+            temporary,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+            0o644,
+        )
+        os.fchmod(descriptor, 0o644)
+        os.write(descriptor, LOGROTATE_SERVICE_DROPIN_BYTES)
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = -1
+        os.replace(temporary, LOGROTATE_SERVICE_DROPIN)
+        _fsync_directory(parent)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
+    _attest_logrotate_service_override(required=True)
+
+
 def _attest_logrotate_inputs() -> frozenset[Path]:
     """Close every effective logrotate input by package or exact bundle provenance."""
 
@@ -4948,6 +5187,49 @@ def _attest_logrotate_inputs() -> frozenset[Path]:
     if final_identity != directory_identity or final_entries != entries:
         raise ActivationError("Inventario input logrotate mutato durante l'attestazione")
     return frozenset(trusted_inputs)
+
+
+def _authorized_logrotate_configuration_bytes() -> bytes:
+    """Build the sole config byte stream accepted by the future-use wrapper."""
+
+    _attest_logrotate_inputs()
+    directory_identity, entries = _directory_snapshot(LOGROTATE_DIRECTORY)
+    snippets: list[bytes] = []
+    for entry in entries:
+        source = _attest_thebitlab_logrotate_link() if entry == LOGROTATE_LINK else entry
+        contents = _read_stable_trusted_file(source)
+        if any(
+            line.split("#", 1)[0].strip().startswith("include ")
+            for line in contents.decode("utf-8").splitlines()
+        ):
+            raise ActivationError(f"Include annidato logrotate fuori policy: {source}")
+        if entry == LOGROTATE_LINK:
+            snapshot_command = b"/usr/sbin/thebitlab-pilot-activate logrotate-snapshot"
+            reopen_command = b"/usr/sbin/thebitlab-pilot-activate logrotate-reopen"
+            if contents.count(snapshot_command) != 1 or contents.count(reopen_command) != 1:
+                raise ActivationError("Hook managed logrotate non trasformabile")
+            contents = contents.replace(snapshot_command, b"/usr/bin/true")
+            contents = contents.replace(reopen_command, b"/usr/bin/true")
+        snippets.append(
+            f"\n# frozen source: {entry.name}\n".encode("utf-8")
+            + contents
+            + (b"" if contents.endswith(b"\n") else b"\n")
+        )
+    global_config = _read_stable_trusted_file(LOGROTATE_CONFIG)
+    lines = global_config.splitlines(keepends=True)
+    include_indexes = [
+        index for index, line in enumerate(lines)
+        if line.decode("utf-8").split("#", 1)[0].strip()
+        == f"include {LOGROTATE_DIRECTORY}"
+    ]
+    if len(include_indexes) != 1:
+        raise ActivationError("Include globale logrotate non trasformabile")
+    index = include_indexes[0]
+    frozen = b"".join((*lines[:index], *snippets, *lines[index + 1:]))
+    final_identity, final_entries = _directory_snapshot(LOGROTATE_DIRECTORY)
+    if final_identity != directory_identity or final_entries != entries:
+        raise ActivationError("Input logrotate mutato durante snapshot autorizzato")
+    return frozen
 
 
 def _collect_systemd_tree(root: Path) -> tuple[tuple[Path, ...], tuple[Path, ...]]:
@@ -5381,6 +5663,65 @@ def _attest_generated_systemd_artifacts(
     return frozenset(trusted_artifacts), frozenset(trusted_units)
 
 
+def _attest_effective_execution_context(
+    unit: str,
+    *,
+    source_authority: str,
+    properties: Mapping[str, str] | None = None,
+) -> Mapping[str, str]:
+    """Bind PID1-effective path, namespace and code-loading semantics."""
+
+    supported_authorities = {
+        "reviewed-package", "reviewed-managed-nonroot", "private-runtime",
+        "reviewed-logrotate-wrapper", "reviewed-nginx-guard",
+    }
+    if source_authority not in supported_authorities:
+        raise ActivationError(f"Execution-context authority sconosciuta: {unit}")
+    if properties is None and not _KERNEL_FENCE_ENABLED:
+        # Pure unit tests and legacy read-only lint do not have a PID1 oracle.
+        # Production enables the kernel fence before any admitted service check.
+        return {}
+    if properties is None:
+        properties = _systemd_show_properties(
+            (unit,), SYSTEMD_EXECUTION_CONTEXT_PROPERTIES
+        )[unit]
+    missing = set(SYSTEMD_EXECUTION_CONTEXT_PROPERTIES) - set(properties)
+    if missing:
+        raise ActivationError(
+            f"Execution-context systemd incompleto: {unit} {sorted(missing)}"
+        )
+    for name in SYSTEMD_SUBSTITUTION_PROPERTIES:
+        if properties[name]:
+            raise ActivationError(
+                f"Execution-context substitution vietata: {unit} {name}={properties[name]!r}"
+            )
+    for name in ("Environment", "EnvironmentFiles", "PassEnvironment"):
+        if _DANGEROUS_CODE_LOADING_ENVIRONMENT.search(properties[name]):
+            raise ActivationError(
+                f"Environment code-loading vietato: {unit} {name}"
+            )
+    root_service = source_authority != "reviewed-managed-nonroot"
+    if root_service and properties["EnvironmentFiles"]:
+        raise ActivationError(f"EnvironmentFile root service vietato: {unit}")
+    if root_service and properties["WorkingDirectory"] not in {"", "/"}:
+        raise ActivationError(f"WorkingDirectory root service fuori policy: {unit}")
+    if properties["RootDirectoryStartOnly"] != "no" or properties["RootEphemeral"] != "no":
+        raise ActivationError(f"Root execution mode fuori policy: {unit}")
+    if source_authority == "private-runtime":
+        private_exact = {
+            "PrivateTmp": "no", "RuntimeDirectory": "", "StateDirectory": "",
+            "CacheDirectory": "", "LogsDirectory": "", "WorkingDirectory": "",
+            "Environment": "", "EnvironmentFiles": "", "PassEnvironment": "",
+            "User": "", "Group": "", "SupplementaryGroups": "", "PAMName": "",
+        }
+        for name, expected in private_exact.items():
+            if properties[name] != expected:
+                raise ActivationError(
+                    f"Execution-context private-runtime divergente: {unit} {name}"
+                )
+    return properties
+
+
 def _attest_root_timer_activation(
     timer: str,
     policy: RootTimerPolicy,
@@ -5418,11 +5759,15 @@ def _attest_root_timer_activation(
     if timer_fragment != expected_timer_fragment:
         raise ActivationError(f"Timer package non canonico: {timer}")
 
+    logrotate_override = (
+        timer == "logrotate.timer"
+        and _attest_logrotate_service_override(required=False)
+    )
     service_contract = {
         "Id": policy.service,
         "Names": policy.service,
         "LoadState": "loaded",
-        "DropInPaths": "",
+        "DropInPaths": str(LOGROTATE_SERVICE_DROPIN) if logrotate_override else "",
         "SourcePath": "",
         "User": "",
         "Group": "",
@@ -5447,13 +5792,20 @@ def _attest_root_timer_activation(
         raise ActivationError(f"Service package non canonico: {policy.service}")
 
     expected_commands: dict[str, tuple[tuple[Path, tuple[str, ...], bool], ...]] = {}
-    for property_name, executable, arguments, ignore_errors in policy.commands:
+    effective_commands = (
+        (("ExecStart", str(ACTIVATOR_BINARY), "logrotate-run", False),)
+        if logrotate_override
+        else policy.commands
+    )
+    for property_name, executable, arguments, ignore_errors in effective_commands:
         if property_name in expected_commands:
             raise ActivationError(f"Policy scheduler duplicata: {timer} {property_name}")
         expected_commands[property_name] = (
             _expected_exec(executable, arguments, ignore_errors=ignore_errors),
         )
     executable_paths: set[Path] = set(policy.support_files)
+    if logrotate_override:
+        executable_paths.add(LOGROTATE_SERVICE_DROPIN)
     for property_name in (
         "ExecCondition",
         "ExecStartPre",
@@ -5582,10 +5934,16 @@ def _attest_boot_reachable_package_unit_files(
                 _verify_trusted_ancestry(path, DEPLOYMENTS_ROOT)
                 continue
             if private_runtime is not None and path == PRIVATE_RUNTIME_DROPIN:
-                if hashlib.sha256(_read_stable_trusted_file(path)).hexdigest() != (
-                    private_runtime.state["dropin_sha256"]
+                if _read_stable_trusted_file(path) != _expected_private_runtime_dropin(
+                    private_runtime.token
                 ):
                     raise ActivationError("Drop-in private boot graph mutato")
+                continue
+            if path == LOGROTATE_SERVICE_DROPIN:
+                _attest_logrotate_service_override(required=True)
+                continue
+            if path == NGINX_RUNTIME_GUARD_DROPIN:
+                _attest_nginx_runtime_guard(required=True)
                 continue
             package_inputs.add(path)
     return _attest_package_input_files(
@@ -5656,6 +6014,14 @@ def _attest_boot_reachable_root_schedulers(
             ),
             label=f"root scheduler identity {timer}",
         )
+        _attest_effective_execution_context(
+            policy.service,
+            source_authority=(
+                "reviewed-logrotate-wrapper"
+                if timer == "logrotate.timer" and LOGROTATE_SERVICE_DROPIN.exists()
+                else "reviewed-package"
+            ),
+        )
         if policy.input_classification == "CLOSED-INPUT":
             if policy.input_attestor is None:
                 raise ActivationError(f"Scheduler CLOSED-INPUT senza attestor: {timer}")
@@ -5678,13 +6044,22 @@ def _attest_boot_reachable_root_schedulers(
                 "execution_policy": policy.execution_policy,
             }
         )
-    executable_activation_files = activation_files & set(
+    managed_activation_files = activation_files & {
+        ACTIVATOR_BINARY, LOGROTATE_SERVICE_DROPIN,
+    }
+    if managed_activation_files:
+        if managed_activation_files != {ACTIVATOR_BINARY, LOGROTATE_SERVICE_DROPIN}:
+            raise ActivationError("Autorità wrapper logrotate incompleta")
+        _attest_logrotate_service_override(required=True)
+        _attest_activator_subprocess_toolchain()
+    package_activation_files = activation_files - managed_activation_files
+    executable_activation_files = package_activation_files & set(
         REVIEWED_PACKAGE_EXECUTABLE_IDENTITIES
     )
     _attest_expected_package_files(
         (
             *_reviewed_package_policies(
-                activation_files - executable_activation_files
+                package_activation_files - executable_activation_files
             ),
             *_reviewed_package_executable_policies(
                 executable_activation_files
@@ -5785,6 +6160,10 @@ def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None
                     raise ActivationError(
                         f"UNKNOWN EXECUTION POLICY Accept socket identity: {unit}"
                     )
+                _attest_effective_execution_context(
+                    template_policy.probe_instance,
+                    source_authority="reviewed-package",
+                )
             elif values["Accept"] not in {"", "no"}:
                 raise ActivationError(f"Accept socket ambiguo: {unit}")
     expected_accept_sockets = set(BOOT_ACCEPT_SOCKET_EXECUTION_POLICIES) & set(
@@ -5835,7 +6214,7 @@ def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None
             raise ActivationError(f"UNKNOWN EXECUTION POLICY boot service: {service}")
         if policy.unit_name != service:
             raise ActivationError(f"Service identity policy divergente: {service}")
-        if service == "nginx.service" and _private_runtime_authority(required=False) is not None:
+        if service == "nginx.service":
             _attest_effective_nginx_unit(
                 expect_running=None,
                 allowed_unit_file_states=(
@@ -5859,6 +6238,9 @@ def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None
                 raise ActivationError(f"Identity service boot fuori policy: {service}")
             # The exact renderer-locked bundle artifact was verified while admitting
             # SYSTEMD_LINK, including every Exec* and privilege prefix.
+            _attest_effective_execution_context(
+                service, source_authority="reviewed-managed-nonroot"
+            )
             continue
         if policy.fragment is None or (
             values["FragmentPath"] != policy.fragment.path.as_posix()
@@ -5905,6 +6287,9 @@ def _attest_boot_reachable_service_execution(boot_units: frozenset[str]) -> None
                 *(command.file for command in command_policies),
             ),
             label=f"boot service identity {service}",
+        )
+        _attest_effective_execution_context(
+            service, source_authority="reviewed-package"
         )
         interpreted: set[Path] = set()
         for command in command_policies:
@@ -6061,6 +6446,12 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
             continue
         if directory.name.endswith(SYSTEMD_ENABLEMENT_DIRECTORY_SUFFIXES):
             continue
+        if directory == LOGROTATE_SERVICE_DROPIN.parent:
+            _attest_logrotate_service_override(required=True)
+            continue
+        if directory == NGINX_RUNTIME_GUARD_DROPIN.parent:
+            _attest_nginx_runtime_guard(required=True)
+            continue
         if private_runtime is not None and directory == PRIVATE_RUNTIME_DROPIN.parent:
             _assert_trusted_metadata(
                 directory, directory=True, require_root_owner=True
@@ -6103,12 +6494,20 @@ def _attest_systemd_boot_surface() -> tuple[Mapping[str, str], ...]:
                 raise ActivationError("Migration guard systemd inatteso")
             trusted_units.add("nginx.service")
             continue
+        if path == LOGROTATE_SERVICE_DROPIN:
+            _attest_logrotate_service_override(required=True)
+            trusted_units.add("logrotate.service")
+            continue
+        if path == NGINX_RUNTIME_GUARD_DROPIN:
+            _attest_nginx_runtime_guard(required=True)
+            trusted_units.add("nginx.service")
+            continue
         if private_runtime is not None and path == PRIVATE_RUNTIME_DROPIN:
             _assert_trusted_metadata(path, directory=False, require_root_owner=True)
-            if hashlib.sha256(_read_stable_trusted_file(path)).hexdigest() != (
-                private_runtime.state["dropin_sha256"]
+            if _read_stable_trusted_file(path) != _expected_private_runtime_dropin(
+                private_runtime.token
             ):
-                raise ActivationError("Drop-in private-runtime fuori authority")
+                raise ActivationError("Drop-in private-runtime fuori authority statica")
             trusted_units.add("nginx.service")
             continue
         if path not in resolved_targets:
@@ -6356,6 +6755,13 @@ def _attest_effective_nginx_unit(
     ):
         raise ActivationError("Allowlist UnitFileState nginx attesa non supportata")
     private_runtime = _private_runtime_authority(required=False)
+    guard_present = _attest_nginx_runtime_guard(required=False)
+    expected_dropins = (
+        ((str(NGINX_RUNTIME_GUARD_DROPIN), str(PRIVATE_RUNTIME_DROPIN))
+         if guard_present else (str(PRIVATE_RUNTIME_DROPIN),))
+        if private_runtime is not None
+        else ((str(NGINX_RUNTIME_GUARD_DROPIN),) if guard_present else ())
+    )
     scalar_contract = {
         "Id": "nginx.service",
         "LoadState": "loaded",
@@ -6368,9 +6774,7 @@ def _attest_effective_nginx_unit(
         "User": "",
         "Group": "",
         "SourcePath": "",
-        "DropInPaths": (
-            str(PRIVATE_RUNTIME_DROPIN) if private_runtime is not None else ""
-        ),
+        "DropInPaths": " ".join(expected_dropins),
         "KillMode": "mixed",
     }
     for name, expected in scalar_contract.items():
@@ -6435,6 +6839,17 @@ def _attest_effective_nginx_unit(
             ),),
             "ExecStopPost": (),
         }
+    elif guard_present:
+        guard_command = ((ACTIVATOR_BINARY, ("private-runtime-required",), False),)
+        private_contract = {
+            "ExecCondition": (),
+            "ExecStartPre": guard_command,
+            "ExecStart": guard_command,
+            "ExecStartPost": (),
+            "ExecReload": guard_command,
+            "ExecStop": guard_command,
+            "ExecStopPost": (),
+        }
     for name in SYSTEMD_EXEC_SLOTS:
         raw = _systemd_property(name, allow_empty=True)
         actual = _parse_systemd_exec(raw, name=name, allow_missing=True) if raw else ()
@@ -6449,15 +6864,26 @@ def _attest_effective_nginx_unit(
         if actual != expected:
             detail = f" actual={actual!r} expected={expected!r}" if private_runtime else ""
             raise ActivationError(f"Contratto systemd nginx divergente: {name}{detail}")
-        if private_runtime is None:
+        if private_runtime is None and not guard_present:
             command_policies.extend(expected_policies)
     _attest_expected_package_files(
         (
             policy.fragment,
-            *(() if private_runtime is not None else policy.dropins),
+            *(() if private_runtime is not None or guard_present else policy.dropins),
             *(command.file for command in command_policies),
         ),
         label="effective nginx seven-slot identity",
+    )
+    if guard_present:
+        _attest_nginx_runtime_guard(required=True)
+        _attest_activator_subprocess_toolchain()
+    _attest_effective_execution_context(
+        "nginx.service",
+        source_authority=(
+            "private-runtime" if private_runtime is not None
+            else "reviewed-nginx-guard" if guard_present
+            else "reviewed-package"
+        ),
     )
     if private_runtime is None:
         _attest_nginx_package_behavior_files()
@@ -7215,6 +7641,114 @@ def logrotate_reopen() -> None:
         time.sleep(LOGROTATE_REOPEN_POLL_SECONDS)
 
 
+def _finish_or_recover_logrotate_snapshot() -> None:
+    if not LOGROTATE_SNAPSHOT.exists() and not LOGROTATE_SNAPSHOT.is_symlink():
+        return
+    previous = _read_logrotate_snapshot()
+    current = tuple(_log_inode(item.path) for item in previous)
+    if any(
+        (old.device, old.inode) != (new.device, new.inode)
+        for old, new in zip(previous, current, strict=True)
+    ):
+        logrotate_reopen()
+        return
+    LOGROTATE_SNAPSHOT.unlink()
+    _fsync_directory(LOGROTATE_RUNTIME_DIRECTORY)
+
+
+def _sealed_memfd(contents: bytes) -> int:
+    if not hasattr(os, "memfd_create"):
+        raise ActivationError("memfd sealing logrotate non disponibile")
+    try:
+        import fcntl
+
+        descriptor = os.memfd_create(
+            "thebitlab-logrotate-config",
+            os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING,
+        )
+        offset = 0
+        while offset < len(contents):
+            offset += os.write(descriptor, contents[offset:])
+        os.fchmod(descriptor, 0o400)
+        seals = (
+            fcntl.F_SEAL_SEAL | fcntl.F_SEAL_SHRINK
+            | fcntl.F_SEAL_GROW | fcntl.F_SEAL_WRITE
+        )
+        fcntl.fcntl(descriptor, fcntl.F_ADD_SEALS, seals)
+        if fcntl.fcntl(descriptor, fcntl.F_GET_SEALS) != seals:
+            raise ActivationError("Seal memfd logrotate incompleto")
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        observed = bytearray()
+        while len(observed) < len(contents):
+            chunk = os.read(descriptor, min(1024 * 1024, len(contents) - len(observed)))
+            if not chunk:
+                break
+            observed.extend(chunk)
+        if bytes(observed) != contents:
+            raise ActivationError("Byte memfd logrotate divergenti")
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        return descriptor
+    except Exception:
+        if "descriptor" in locals():
+            os.close(descriptor)
+        raise
+
+
+def _ensure_generator_authority_for_future_service() -> None:
+    if not _KERNEL_FENCE_ENABLED:
+        return
+    try:
+        descriptors, _manifests = generator_orchestrator._current_ro_authority()
+    except (OSError, generator_orchestrator.GeneratorOrchestratorError):
+        generator_orchestrator.provision_safe_output()
+    else:
+        for descriptor in descriptors.values():
+            os.close(descriptor)
+
+
+def private_runtime_required() -> None:
+    """Fail before package nginx execution when the sealed /run authority is absent."""
+
+    _attest_nginx_runtime_guard(required=True)
+    _private_runtime_authority(required=True)
+
+
+@_in_trusted_activation_session
+def logrotate_run() -> None:
+    """Attest, freeze and consume one exact config view for every real invocation."""
+
+    _attest_logrotate_service_override(required=True)
+    # /run is fresh after reboot. Re-establish SAFE-EMPTY generated roots from
+    # the already-entered static bootstrap before the PID1 execution fence.
+    _ensure_generator_authority_for_future_service()
+    with _trusted_execution_fence():
+        _attest_systemd_boot_surface()
+        _finish_or_recover_logrotate_snapshot()
+        configuration = _authorized_logrotate_configuration_bytes()
+        descriptor = _sealed_memfd(configuration)
+        try:
+            logrotate_snapshot()
+            result = subprocess.run(
+                [str(LOGROTATE_BINARY), f"/proc/self/fd/{descriptor}"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                cwd="/",
+                env={
+                    "HOME": "/root", "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
+                    "PATH": SCRIPT_RUNTIME_PATH,
+                },
+                pass_fds=(descriptor,),
+            )
+            if result.returncode != 0:
+                detail = "\n".join((result.stdout + result.stderr).splitlines()[-20:])
+                raise ActivationError(f"Logrotate frozen-use fallita:\n{detail}")
+            _finish_or_recover_logrotate_snapshot()
+        finally:
+            os.close(descriptor)
+
+
 @_in_trusted_activation_session
 @_in_trusted_execution_fence
 def _attest_preflight_nginx_runtime() -> None:
@@ -7369,18 +7903,25 @@ def _remove_migration_guard() -> None:
 
 
 @_in_trusted_activation_session
-def _start_nginx_service(info: BundleInfo | None = None) -> None:
+def _start_nginx_service(
+    info: BundleInfo | None = None, *, allow_persisted_enabled: bool = False,
+) -> None:
     # S0/S1 and their immutable S1:S0 composition live for the whole service
     # lifetime. They are sealed before Stage-M snapshots the manager drop-in.
     if _KERNEL_FENCE_ENABLED:
         _ensure_private_runtime(info)
+    allowed_before_start = DISABLED_NGINX_UNIT_FILE_STATES
+    if allow_persisted_enabled:
+        _assert_root_symlink(NGINX_WANTS_LINK, NGINX_PACKAGE_UNIT.as_posix())
+        allowed_before_start = PREFLIGHT_NGINX_UNIT_FILE_STATES
     # Freeze -> attest -> reload -> seven-slot late check -> start -> runtime proof.
-    # The service remains disabled throughout this execution-bearing boundary.
+    # Initial activation remains disabled. Reboot recovery may retain only the exact
+    # reviewed wants link while the persistent guard keeps every package slot inert.
     with _trusted_execution_fence():
         _attest_systemd_boot_surface()
         _attest_effective_nginx_unit(
             expect_running=False,
-            allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
+            allowed_unit_file_states=allowed_before_start,
         )
         _require_nginx_not_running()
         _assert_zero_nginx_processes()
@@ -7390,7 +7931,7 @@ def _start_nginx_service(info: BundleInfo | None = None) -> None:
             raise ActivationError("Avvio nginx.service fallito")
         disabled_unit = _attest_effective_nginx_unit(
             expect_running=True,
-            allowed_unit_file_states=DISABLED_NGINX_UNIT_FILE_STATES,
+            allowed_unit_file_states=allowed_before_start,
         )
         _attest_nginx_service_runtime(disabled_unit)
         _mark_executor_safe_boundary_if_pending()
@@ -7407,9 +7948,12 @@ def _start_nginx_service(info: BundleInfo | None = None) -> None:
             if code != 0:
                 raise ActivationError("Riabilitazione persistente nginx.service fallita")
         else:
-            persistence_fence.create_underlying_symlink(
-                NGINX_WANTS_LINK, NGINX_PACKAGE_UNIT.as_posix()
-            )
+            if NGINX_WANTS_LINK.exists() or NGINX_WANTS_LINK.is_symlink():
+                _assert_root_symlink(NGINX_WANTS_LINK, NGINX_PACKAGE_UNIT.as_posix())
+            else:
+                persistence_fence.create_underlying_symlink(
+                    NGINX_WANTS_LINK, NGINX_PACKAGE_UNIT.as_posix()
+                )
     if NGINX_WANTS_LINK.parent.is_dir() and not NGINX_WANTS_LINK.parent.is_symlink():
         _fsync_directory(NGINX_WANTS_LINK.parent)
     _fault("after_nginx_enable")
@@ -7599,6 +8143,8 @@ def _idempotent_activation(bundle: Path, state_path: Path) -> bool:
         raise ActivationError("Topologia attiva divergente dall'activation state")
     for path, target in INTEGRATION_LINKS.items():
         _check_managed_link(path, target, allow_absent=False)
+    if _KERNEL_FENCE_ENABLED and _private_runtime_authority(required=False) is None:
+        _start_nginx_service(candidate, allow_persisted_enabled=True)
     _validate_activated(candidate, guard_required=False)
     _attest_nginx_service_runtime()
     return True
@@ -7606,6 +8152,8 @@ def _idempotent_activation(bundle: Path, state_path: Path) -> bool:
 
 @_in_trusted_activation_session
 def activate(bundle: Path, state_path: Path = STATE_FILE) -> None:
+    _ensure_nginx_runtime_guard()
+    _ensure_logrotate_service_override()
     if _state_exists(state_path):
         if _idempotent_activation(bundle, state_path):
             return
@@ -7630,6 +8178,9 @@ def recover(bundle: Path | None = None, state_path: Path = STATE_FILE) -> None:
 
     if os.geteuid() != 0:
         raise ActivationError("Recovery Ubuntu richiede root")
+    _ensure_nginx_runtime_guard()
+    _ensure_logrotate_service_override()
+    _ensure_generator_authority_for_future_service()
     _attest_systemd_boot_surface()
     if not _state_exists(state_path):
         if not _symlink_state(NGINX_MIGRATION_GUARD)["present"]:
@@ -7672,6 +8223,8 @@ def recover(bundle: Path | None = None, state_path: Path = STATE_FILE) -> None:
 def rollback(state_path: Path = STATE_FILE) -> None:
     if os.geteuid() != 0:
         raise ActivationError("Rollback Ubuntu richiede root")
+    _ensure_nginx_runtime_guard()
+    _ensure_logrotate_service_override()
     state = _read_state(state_path)
     if state["status"] != "active":
         raise ActivationError("Activation state non è in stato active")
@@ -7728,6 +8281,8 @@ def _main(argv: list[str] | None = None) -> int:
     complete_parser = subparsers.add_parser("complete")
     complete_parser.add_argument("--state-file", type=Path, default=STATE_FILE)
     complete_parser.add_argument("--archive", type=Path, required=True)
+    subparsers.add_parser("private-runtime-required")
+    subparsers.add_parser("logrotate-run")
     subparsers.add_parser("logrotate-snapshot")
     subparsers.add_parser("logrotate-reopen")
     subparsers.add_parser("runtime-info")
@@ -7747,6 +8302,10 @@ def _main(argv: list[str] | None = None) -> int:
             recover(args.bundle, args.state_file)
         elif args.command == "complete":
             complete(args.state_file, args.archive)
+        elif args.command == "private-runtime-required":
+            private_runtime_required()
+        elif args.command == "logrotate-run":
+            logrotate_run()
         elif args.command == "logrotate-snapshot":
             logrotate_snapshot()
         else:

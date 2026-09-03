@@ -12,6 +12,7 @@ deploy/pilot/*
 deploy/pilot/ci/*
 !deploy/pilot/ci/isrg-root-x1.pem
 !deploy/pilot/ci/ubuntu-systemd-package-baseline.json
+!deploy/pilot/ci/security-evidence-authority.json
 !scripts/
 scripts/*
 !scripts/grade_activity.py

@@ -236,6 +236,7 @@ else
     docker exec \
         --workdir /workspace \
         --env "GITHUB_SHA=${GITHUB_SHA:-cccccccccccccccccccccccccccccccccccccccc}" \
+        --env "THEBITLAB_SECURITY_BASE_SHA=${THEBITLAB_SECURITY_BASE_SHA:-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb}" \
         --env "GITHUB_RUN_ID=${GITHUB_RUN_ID:-local}" \
         --env PYTHONUNBUFFERED=1 \
         "$container" \

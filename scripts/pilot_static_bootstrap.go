@@ -30,21 +30,23 @@ import (
 )
 
 const (
-	canonicalLauncher = "/usr/sbin/thebitlab-pilot-activate"
-	toolsRoot         = "/usr/lib/thebitlab/pilot-tools"
-	trustPin          = "/etc/thebitlab/trust/pilot-toolchain.json"
-	pythonPath        = "/usr/bin/python3"
-	manifestName      = "pilot-toolchain-manifest.json"
-	runtimeAuthority  = "/run/thebitlab"
-	runtimeRoot       = runtimeAuthority + "/pilot-activation-fence"
-	transactionRoot   = runtimeRoot + "/transactions"
-	statePath         = runtimeRoot + "/state.json"
-	activationLock    = runtimeRoot + "/activation.lock"
-	stateSchema       = "thebitlab.activation-fence.v2"
-	manifestSchema    = "thebitlab.activation-fence-manifest.v1"
-	mountSourcePrefix = "thebitlab-pilot-fence:"
-	transactionName   = "trusted-static-bootstrap"
-	manifestFile      = "transaction-manifest.json"
+	canonicalLauncher    = "/usr/sbin/thebitlab-pilot-activate"
+	toolsRoot            = "/usr/lib/thebitlab/pilot-tools"
+	trustPin             = "/etc/thebitlab/trust/pilot-toolchain.json"
+	pythonPath           = "/usr/bin/python3"
+	privateRuntimePath   = "/usr/sbin/thebitlab-private-runtime"
+	privateRuntimeSHA256 = "2b070bec8c02f7ebb3bf9c3a28b78a964c1806636dfe4349fdf58cbf348745b3"
+	manifestName         = "pilot-toolchain-manifest.json"
+	runtimeAuthority     = "/run/thebitlab"
+	runtimeRoot          = runtimeAuthority + "/pilot-activation-fence"
+	transactionRoot      = runtimeRoot + "/transactions"
+	statePath            = runtimeRoot + "/state.json"
+	activationLock       = runtimeRoot + "/activation.lock"
+	stateSchema          = "thebitlab.activation-fence.v2"
+	manifestSchema       = "thebitlab.activation-fence-manifest.v1"
+	mountSourcePrefix    = "thebitlab-pilot-fence:"
+	transactionName      = "trusted-static-bootstrap"
+	manifestFile         = "transaction-manifest.json"
 )
 
 var (
@@ -616,20 +618,54 @@ func manifestsEqual(left, right map[string][]any) bool {
 	return bytes.Equal(leftJSON, rightJSON)
 }
 
+func attestPersistentPrivateRuntime(manifest map[string][]any, hardlinks []string) error {
+	const relative = "thebitlab-private-runtime"
+	record, ok := manifest[relative]
+	if !ok || len(record) != 6 {
+		return errors.New("private-runtime persistent source assente/non regolare")
+	}
+	kind, kindOK := record[0].(string)
+	mode, modeOK := record[1].(uint32)
+	uid, uidOK := record[2].(uint32)
+	gid, gidOK := record[3].(uint32)
+	digest, digestOK := record[5].(string)
+	if !kindOK || !modeOK || !uidOK || !gidOK || !digestOK || kind != "f" ||
+		mode != uint32(syscall.S_IFREG|0755) || uid != 0 || gid != 0 {
+		return errors.New("private-runtime persistent source metadata fuori authority statica")
+	}
+	if digest != privateRuntimeSHA256 {
+		return errors.New("private-runtime persistent source digest fuori authority statica")
+	}
+	if contains(hardlinks, relative) {
+		return errors.New("private-runtime persistent source hardlinkata")
+	}
+	return nil
+}
+
 func firstManifestDifference(left, right map[string][]any) string {
 	keys := make([]string, 0, len(left)+len(right))
 	seen := map[string]bool{}
-	for key := range left { seen[key] = true; keys = append(keys, key) }
-	for key := range right { if !seen[key] { keys = append(keys, key) } }
+	for key := range left {
+		seen[key] = true
+		keys = append(keys, key)
+	}
+	for key := range right {
+		if !seen[key] {
+			keys = append(keys, key)
+		}
+	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		leftJSON, _ := json.Marshal(left[key]); rightJSON, _ := json.Marshal(right[key])
-		if !bytes.Equal(leftJSON, rightJSON) { return fmt.Sprintf("%s source=%s snapshot=%s", key, leftJSON, rightJSON) }
+		leftJSON, _ := json.Marshal(left[key])
+		rightJSON, _ := json.Marshal(right[key])
+		if !bytes.Equal(leftJSON, rightJSON) {
+			return fmt.Sprintf("%s source=%s snapshot=%s", key, leftJSON, rightJSON)
+		}
 	}
 	return "unknown"
 }
 
-func copyRegular(source, destination string, info fs.FileInfo) error {
+func copyRegular(source, destination string, info fs.FileInfo, requireSingleLink bool) error {
 	fd, err := syscall.Open(source, syscall.O_RDONLY|syscall.O_CLOEXEC|syscall.O_NOFOLLOW, 0)
 	if err != nil {
 		return err
@@ -642,6 +678,9 @@ func copyRegular(source, destination string, info fs.FileInfo) error {
 	}
 	if before.Mode&syscall.S_IFMT != syscall.S_IFREG {
 		return fail("source cambiata tipo: %s", source)
+	}
+	if requireSingleLink && before.Nlink != 1 {
+		return fail("source authority con hardlink: %s", source)
 	}
 	output, err := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY, info.Mode().Perm())
 	if err != nil {
@@ -665,13 +704,16 @@ func copyRegular(source, destination string, info fs.FileInfo) error {
 	if before.Dev != after.Dev || before.Ino != after.Ino || before.Size != after.Size || before.Mtim != after.Mtim || before.Ctim != after.Ctim {
 		return fail("source mutata durante copia: %s", source)
 	}
+	if requireSingleLink && after.Nlink != 1 {
+		return fail("source authority hardlinkata durante copia: %s", source)
+	}
 	if err := os.Chown(destination, int(before.Uid), int(before.Gid)); err != nil {
 		return err
 	}
 	return syscall.Chmod(destination, before.Mode&07777)
 }
 
-func copyTree(source, destination string) error {
+func copyTree(source, destination, singleLinkRelative string) error {
 	rootInfo, err := os.Lstat(source)
 	if err != nil {
 		return err
@@ -686,7 +728,9 @@ func copyTree(source, destination string) error {
 	if os.Chown(destination, int(rootStat.Uid), int(rootStat.Gid)) != nil {
 		return fail("chown root snapshot fallita: %s", destination)
 	}
-	if err := syscall.Chmod(destination, rootStat.Mode&07777); err != nil { return err }
+	if err := syscall.Chmod(destination, rootStat.Mode&07777); err != nil {
+		return err
+	}
 	return filepath.WalkDir(source, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -714,7 +758,7 @@ func copyTree(source, destination string) error {
 			}
 			return syscall.Chmod(target, statValue.Mode&07777)
 		case syscall.S_IFREG:
-			return copyRegular(path, target, info)
+			return copyRegular(path, target, info, filepath.ToSlash(rel) == singleLinkRelative)
 		case syscall.S_IFLNK:
 			value, err := os.Readlink(path)
 			if err != nil {
@@ -815,7 +859,10 @@ func testPoint(point string) {
 	}
 	requested := false
 	for _, candidate := range strings.Split(os.Getenv("THEBITLAB_BOOTSTRAP_PAUSE_POINT"), ",") {
-		if candidate == point { requested = true; break }
+		if candidate == point {
+			requested = true
+			break
+		}
 	}
 	if !requested {
 		return
@@ -925,12 +972,25 @@ func establishFence(lockFD int) (*bootstrapFence, error) {
 		if err != nil {
 			return fence, err
 		}
-		if err := copyTree(lower, snapshot); err != nil {
+		singleLinkRelative := ""
+		if target.Path == "/usr/sbin" {
+			singleLinkRelative = "thebitlab-private-runtime"
+			if err := attestPersistentPrivateRuntime(before, hardlinks); err != nil {
+				return fence, err
+			}
+			testPoint("bootstrap_after_private_source_validation")
+		}
+		if err := copyTree(lower, snapshot, singleLinkRelative); err != nil {
 			return fence, err
 		}
-		after, _, err := manifestTree(lower)
+		after, afterHardlinks, err := manifestTree(lower)
 		if err != nil {
 			return fence, err
+		}
+		if target.Path == "/usr/sbin" {
+			if err := attestPersistentPrivateRuntime(after, afterHardlinks); err != nil {
+				return fence, err
+			}
 		}
 		copied, _, err := manifestTree(snapshot)
 		if err != nil {
@@ -1074,6 +1134,22 @@ func attestBootstrapRuntime() error {
 		if actual != expected {
 			return fail("bootstrap digest divergente: %s", path)
 		}
+	}
+	privateRuntime, err := os.Lstat(privateRuntimePath)
+	if err != nil {
+		return err
+	}
+	privateStat, ok := privateRuntime.Sys().(*syscall.Stat_t)
+	if !ok || !privateRuntime.Mode().IsRegular() || privateRuntime.Mode()&os.ModeSymlink != 0 ||
+		privateStat.Uid != 0 || privateStat.Gid != 0 || privateRuntime.Mode().Perm() != 0755 || privateStat.Nlink != 1 {
+		return errors.New("private-runtime source metadata fuori authority statica")
+	}
+	privateDigest, err := shaFile(privateRuntimePath)
+	if err != nil {
+		return err
+	}
+	if privateDigest != privateRuntimeSHA256 {
+		return errors.New("private-runtime source digest fuori authority statica")
 	}
 	for _, policy := range bootstrapTrees {
 		digest, dirs, files, links, err := treeIdentity(policy.Path)
@@ -1294,6 +1370,7 @@ func sanitizedEnvironment(root string, pin pinDocument, fence *bootstrapFence) [
 		"HOME=/root", "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "PATH=/usr/sbin:/usr/bin:/sbin:/bin",
 		"THEBITLAB_TRUSTED_TOOLCHAIN_ID=" + pin.ToolchainID,
 		"THEBITLAB_TRUSTED_TOOLCHAIN_ROOT=" + root,
+		"THEBITLAB_TRUSTED_PRIVATE_RUNTIME_SHA256=" + privateRuntimeSHA256,
 		"THEBITLAB_STATIC_BOOTSTRAP_TOKEN=" + fence.Transaction.Token,
 		"THEBITLAB_STATIC_BOOTSTRAP_LOCK_FD=" + strconv.Itoa(fence.LockFD),
 	}

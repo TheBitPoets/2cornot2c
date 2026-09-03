@@ -39,6 +39,7 @@ if str(ROOT) not in sys.path:
 
 from scripts import build_pilot_toolchain as toolchain_builder  # noqa: E402
 from scripts import pilot_access_log_scanner as log_scanner  # noqa: E402
+from scripts import pilot_private_runtime_evidence as private_runtime_evidence  # noqa: E402
 from scripts import pilot_service_launcher as service_launcher  # noqa: E402
 from scripts import pilot_toolchain_launcher as toolchain_launcher  # noqa: E402
 from scripts import pilot_trusted_activation_fence as trusted_fence  # noqa: E402
@@ -50,6 +51,13 @@ from scripts import validate_pilot_deployment as deployment  # noqa: E402
 ORIGIN_HOST = "candidate.example.edu"
 ACCESS_LOG = Path("/var/log/thebitlab/thebitlab-access.log")
 PROCESS_LOG = Path("/var/log/thebitlab/thebitlab-process-error.log")
+PERSISTENT_RELEASE_FIXTURE_ROOT = Path("/opt/thebitlab/integration-release")
+PERSISTENT_DATA_FIXTURE_ROOT = Path("/srv/thebitlab/integration-data")
+PERSISTENT_SECRETS_FIXTURE_ROOT = Path("/etc/thebitlab/secrets")
+PERSISTENT_TLS_FIXTURE_ROOT = Path("/etc/thebitlab/tls")
+REVIEWED_PRIVATE_RUNTIME_SHA256 = (
+    "2b070bec8c02f7ebb3bf9c3a28b78a964c1806636dfe4349fdf58cbf348745b3"
+)
 LOCAL_SYSTEMD_PREFIX = Path("/usr/local")
 SYSTEMD_QUARANTINE_DIRECTORY = "systemd-surface-quarantine"
 SYSTEMD_QUARANTINE_MANIFEST = "manifest.json"
@@ -690,6 +698,7 @@ def _exercise_shard_f_logging_lifecycle(
             trusted_module_loads=activation._verify_modules_enabled_entries(),
         )
         activation._attest_logrotate_inputs()
+        _exercise_future_logrotate_authority(temporary)
         backend, backend_thread = _start_backend(int(manifest["service"]["port"]))  # type: ignore[index]
         callback = _send(
             "127.0.0.1", 443,
@@ -924,13 +933,15 @@ def _verify_metadata() -> None:
 
 def _render_bundle(temporary: Path, bundle: Path) -> dict:
     manifest = copy.deepcopy(deployment.load_json(ROOT / "deploy/pilot/candidate.example.json"))
-    release = temporary / "release"
-    release.mkdir()
+    del temporary  # Production inputs must survive reboot; /tmp is never authority.
+    release = PERSISTENT_RELEASE_FIXTURE_ROOT
+    release.mkdir(mode=0o755, parents=True)
     python_link = release / "python"
     python_link.symlink_to(sys.executable)
-    data_root = temporary / "data"
-    data_root.mkdir(mode=0o700)
-    environment = temporary / "pilot.env"
+    data_root = PERSISTENT_DATA_FIXTURE_ROOT
+    data_root.mkdir(mode=0o700, parents=True)
+    PERSISTENT_SECRETS_FIXTURE_ROOT.mkdir(mode=0o700, parents=False)
+    environment = PERSISTENT_SECRETS_FIXTURE_ROOT / "pilot.env"
     environment.write_text(
         "\n".join(
             (
@@ -946,8 +957,9 @@ def _render_bundle(temporary: Path, bundle: Path) -> dict:
         encoding="utf-8",
     )
     environment.chmod(0o600)
-    certificate = temporary / "origin.crt"
-    private_key = temporary / "origin.key"
+    PERSISTENT_TLS_FIXTURE_ROOT.mkdir(mode=0o700, parents=False)
+    certificate = PERSISTENT_TLS_FIXTURE_ROOT / "origin.crt"
+    private_key = PERSISTENT_TLS_FIXTURE_ROOT / "origin.key"
     _run(
         [
             "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
@@ -982,6 +994,17 @@ def _install_legacy(bundle: Path, manifest: dict) -> None:
     activation._stop_nginx_service()
     if activation.NGINX_MIGRATION_GUARD.exists() or activation.NGINX_MIGRATION_GUARD.is_symlink():
         raise RuntimeError("Guard migration inatteso durante installazione fixture legacy")
+    # This destructive fixture reconstructs the pre-pilot legacy baseline.  A
+    # persistent v2 reboot guard left by an earlier completed transition must not
+    # be mistaken for a package/legacy nginx failure in the next independent case.
+    runtime_guard = activation.NGINX_RUNTIME_GUARD_DROPIN
+    if runtime_guard.exists() or runtime_guard.is_symlink():
+        activation._attest_nginx_runtime_guard(required=True)
+        runtime_guard.unlink()
+        activation._fsync_directory(runtime_guard.parent)
+        with contextlib.suppress(OSError):
+            runtime_guard.parent.rmdir()
+        _run(["systemctl", "daemon-reload"])
     activation._remove_symlink(activation.DISTRO_DEFAULT)
     for path in activation.INTEGRATION_LINKS:
         activation._remove_symlink(path)
@@ -3171,6 +3194,152 @@ def _exercise_logrotate_input_provenance(bundle: Path, temporary: Path) -> None:
     )
 
 
+def _exercise_future_logrotate_authority(temporary: Path) -> None:
+    """Attack the real timer/manual service after activation-time attestation."""
+
+    marker = Path("/run/pr720-r1-logrotate-future-marker")
+    snippet = activation.LOGROTATE_DIRECTORY / "pr720-r1-future"
+    fixture_log = Path("/var/log/pr720-r1-future.log")
+    compressor = Path("/root/pr720-r1-hostile-compressor")
+    hardlink_source = activation.LOGROTATE_DIRECTORY / ".pr720-r1-hardlink-source"
+    results: list[dict[str, object]] = []
+
+    def service_start(label: str, *, may_pass_frozen_pristine: bool = False) -> None:
+        marker.unlink(missing_ok=True)
+        result = subprocess.run(
+            ["systemctl", "start", "logrotate.service"],
+            check=False, capture_output=True, text=True, timeout=420,
+        )
+        executed = marker.exists()
+        if executed or (result.returncode == 0 and not may_pass_frozen_pristine):
+            raise RuntimeError(
+                f"Future logrotate authority attack eseguito/accettato: {label} rc={result.returncode}"
+            )
+        results.append({
+            "attack": label,
+            "service_rc": result.returncode,
+            "accepted_exact_frozen_a": result.returncode == 0,
+            "marker": "PRESENT" if executed else "ABSENT",
+        })
+        subprocess.run(
+            ["systemctl", "reset-failed", "logrotate.service"],
+            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            timeout=30,
+        )
+
+    def write_hook(directive: str) -> None:
+        snippet.write_text(
+            f"{fixture_log} {{\n size 1\n rotate 1\n missingok\n notifempty\n"
+            f" {directive}\n  /usr/bin/id -u > {marker}\n endscript\n}}\n",
+            encoding="utf-8",
+        )
+        snippet.chmod(0o644)
+
+    try:
+        pristine = subprocess.run(
+            ["systemctl", "start", "logrotate.service"],
+            check=False, capture_output=True, text=True, timeout=420,
+        )
+        if pristine.returncode != 0:
+            raise RuntimeError(f"Future logrotate wrapper pristine fallita: {pristine.stderr[-500:]}")
+        results.append({"attack": "pristine-package-and-system-config", "service_rc": 0, "marker": "ABSENT"})
+        activation._attest_logrotate_inputs()
+        fixture_log.write_text("future authority fixture\n", encoding="utf-8")
+        fixture_log.chmod(0o600)
+        for directive in ("firstaction", "postrotate", "prerotate", "lastaction"):
+            write_hook(directive)
+            service_start(directive)
+            snippet.unlink()
+
+        compressor.write_text(
+            f"#!/bin/sh\n/usr/bin/id -u > {marker}\nexit 0\n", encoding="utf-8"
+        )
+        compressor.chmod(0o755)
+        snippet.write_text(
+            f"{fixture_log} {{\n size 1\n rotate 1\n compress\n"
+            f" compresscmd {compressor}\n}}\n",
+            encoding="utf-8",
+        )
+        snippet.chmod(0o644)
+        service_start("hostile-compression-executable")
+        snippet.unlink()
+
+        snippet.symlink_to(activation.LOGROTATE_DIRECTORY / "apt")
+        service_start("symlink-substitution")
+        snippet.unlink()
+        hardlink_source.write_text(f"{fixture_log} {{ missingok }}\n", encoding="utf-8")
+        os.link(hardlink_source, snippet)
+        service_start("hardlink-substitution")
+        snippet.unlink()
+        hardlink_source.unlink()
+        snippet.write_text(f"{fixture_log} {{ missingok }}\n", encoding="utf-8")
+        snippet.chmod(0o666)
+        service_start("writable-substitution")
+        snippet.unlink()
+
+        stop = threading.Event()
+        race_errors: list[BaseException] = []
+        marker.unlink(missing_ok=True)
+
+        def mutate_during_snapshot() -> None:
+            try:
+                while not stop.is_set():
+                    try:
+                        write_hook("firstaction")
+                        snippet.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+            except BaseException as exc:  # noqa: BLE001 - transfer thread failure.
+                race_errors.append(exc)
+
+        attacker = threading.Thread(target=mutate_during_snapshot, daemon=True)
+        attacker.start()
+        try:
+            service_start("mutation-during-pre-use", may_pass_frozen_pristine=True)
+        finally:
+            stop.set()
+            attacker.join(timeout=10)
+        if attacker.is_alive() or race_errors:
+            raise RuntimeError(f"Mutatore logrotate pre-use non terminale: {race_errors}")
+        snippet.unlink(missing_ok=True)
+
+        reexec = subprocess.run(
+            ["systemctl", "daemon-reexec"],
+            check=False, capture_output=True, text=True, timeout=120,
+        )
+        if reexec.returncode != 0:
+            raise RuntimeError(f"Fresh manager logrotate reexec fallita: {reexec.stderr[-500:]}")
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            state = subprocess.run(
+                ["systemctl", "is-system-running"], check=False,
+                capture_output=True, text=True, timeout=10,
+            ).stdout.strip()
+            if state in {"running", "degraded"}:
+                break
+            time.sleep(0.1)
+        fresh_manager = subprocess.run(
+            ["systemctl", "start", "logrotate.service"],
+            check=False, capture_output=True, text=True, timeout=420,
+        )
+        if fresh_manager.returncode != 0 or marker.exists():
+            raise RuntimeError("Fresh manager non conserva authority logrotate")
+        results.append({"attack": "fresh-manager-daemon-reexec", "service_rc": 0, "marker": "ABSENT"})
+
+        activation.logrotate_snapshot()
+        stale = subprocess.run(
+            ["systemctl", "start", "logrotate.service"],
+            check=False, capture_output=True, text=True, timeout=420,
+        )
+        if stale.returncode != 0 or activation.LOGROTATE_SNAPSHOT.exists():
+            raise RuntimeError("Crash/rerun logrotate conserva stale authority")
+        results.append({"attack": "crash-rerun-stale-snapshot", "service_rc": 0, "marker": "ABSENT"})
+        print("EVIDENCE: future logrotate verify-use matrix PASS " + json.dumps(results, sort_keys=True))
+    finally:
+        for path in (marker, snippet, fixture_log, compressor, hardlink_source):
+            path.unlink(missing_ok=True)
+
+
 def _inventory_reviewed_package_generators() -> tuple[str, ...]:
     """Return reviewed orchestrator children, not precedence-selected sources."""
 
@@ -4002,6 +4171,10 @@ def _check_ephemeral_host() -> str:
         activation.PRIVATE_RUNTIME_BINARY,
         activation.PRIVATE_RUNTIME_PIN,
         activation.PRIVATE_RUNTIME_ROOT,
+        PERSISTENT_RELEASE_FIXTURE_ROOT,
+        PERSISTENT_DATA_FIXTURE_ROOT,
+        PERSISTENT_SECRETS_FIXTURE_ROOT,
+        PERSISTENT_TLS_FIXTURE_ROOT,
         activation.generator_orchestrator.ORCHESTRATOR_BINARY,
         activation.generator_orchestrator.ORCHESTRATOR_ENTRY,
         activation.generator_orchestrator.RUNTIME_ROOT,
@@ -4051,6 +4224,9 @@ def _install_ephemeral_toolchain(
     launcher.chmod(0o755)
     shutil.copyfile("/root/thebitlab-private-runtime", private_runtime)
     private_runtime.chmod(0o755)
+    if hashlib.sha256(private_runtime.read_bytes()).hexdigest() != REVIEWED_PRIVATE_RUNTIME_SHA256:
+        raise RuntimeError("Private-runtime OCI non coincide con authority statica revisionata")
+    os.environ["THEBITLAB_TRUSTED_PRIVATE_RUNTIME_SHA256"] = REVIEWED_PRIVATE_RUNTIME_SHA256
     shutil.copyfile(
         "/root/thebitlab-systemd-generator-orchestrator", generator_orchestrator
     )
@@ -4270,7 +4446,7 @@ def _install_ephemeral_toolchain(
         "schema_version": "thebitlab.private-runtime-pin.v1",
         "toolchain_id": toolchain_id,
         "toolchain_manifest_sha256": pin["toolchain_manifest_sha256"],
-        "launcher_sha256": hashlib.sha256(private_runtime.read_bytes()).hexdigest(),
+        "launcher_sha256": REVIEWED_PRIVATE_RUNTIME_SHA256,
         "release_commit": commit,
     }
     private_pin_path.write_text(
@@ -6350,6 +6526,87 @@ def _test_executor_lease_timing_diagnostic(bundle: Path) -> None:
         raise error
 
 
+def _exercise_private_execution_context_negative_matrix(
+    authority: activation.PrivateRuntimeAuthority,
+) -> None:
+    dropin = activation.PRIVATE_RUNTIME_DROPIN
+    state_path = activation.PRIVATE_RUNTIME_STATE
+    original_dropin = dropin.read_bytes()
+    original_state = state_path.read_bytes()
+    marker = Path("/run/pr720-r1-execution-context-marker")
+    executable = Path("/root/pr720-r1-unreviewed-context-executable")
+    environment_file = Path("/root/pr720-r1-unreviewed.env")
+    root_directory = Path("/root/pr720-r1-root-directory")
+    fake_image = Path("/root/pr720-r1-root-image.raw")
+    executable.write_text(
+        f"#!/bin/sh\n/usr/bin/id -u > {marker}\nexit 42\n", encoding="utf-8"
+    )
+    executable.chmod(0o755)
+    environment_file.write_text(f"LD_PRELOAD={executable}\n", encoding="utf-8")
+    root_directory.mkdir()
+    fake_image.write_bytes(b"not-an-image")
+    broker = activation.PRIVATE_RUNTIME_S0 / "usr/lib/thebitlab/private-runtime-broker"
+    attacks = {
+        "BindReadOnlyPaths-broker": f"BindReadOnlyPaths={executable}:{broker}",
+        "BindPaths-broker": f"BindPaths={executable}:{broker}",
+        "RootDirectory": f"RootDirectory={root_directory}",
+        "RootImage-not-operational-preexec": f"RootImage={fake_image}",
+        "TemporaryFileSystem-broker-parent": "TemporaryFileSystem=/run/thebitlab/pilot-private-runtime",
+        "MountImages": f"MountImages={fake_image}:/usr",
+        "ExtensionImages": f"ExtensionImages={fake_image}",
+        "ExtensionDirectories": f"ExtensionDirectories={root_directory}",
+        "WorkingDirectory": f"WorkingDirectory={root_directory}",
+        "EnvironmentFile": f"EnvironmentFile={environment_file}",
+        "LD_PRELOAD": f"Environment=LD_PRELOAD={executable}",
+        "LD_LIBRARY_PATH": "Environment=LD_LIBRARY_PATH=/root/unreviewed",
+        "PYTHONPATH": "Environment=PYTHONPATH=/root/unreviewed",
+        "nginx-binary-remap": f"BindReadOnlyPaths={executable}:/usr/sbin/nginx",
+        "nginx-config-remap": f"BindReadOnlyPaths={executable}:/etc/nginx/nginx.conf",
+        "nginx-module-remap": f"BindReadOnlyPaths={executable}:/usr/lib/nginx/modules/ngx_stream_module.so",
+    }
+    results: list[dict[str, str]] = []
+    try:
+        for label, directive in attacks.items():
+            marker.unlink(missing_ok=True)
+            mutated = original_dropin + directive.encode("utf-8") + b"\n"
+            dropin.write_bytes(mutated)
+            state = json.loads(original_state)
+            state["dropin_sha256"] = hashlib.sha256(mutated).hexdigest()
+            state_path.write_text(
+                json.dumps(state, sort_keys=True, separators=(",", ":")) + "\n",
+                encoding="utf-8",
+            )
+            state_path.chmod(0o600)
+            try:
+                activation._private_runtime_authority()
+            except activation.ActivationError as exc:
+                result = "REJECT"
+                detail = str(exc)
+            else:
+                result = "ACCEPT"
+                detail = ""
+            if result != "REJECT" or marker.exists():
+                raise RuntimeError(f"Execution-context attack non bloccato: {label}")
+            results.append({"attack": label, "result": result, "marker": "ABSENT", "detail": detail})
+            dropin.write_bytes(original_dropin)
+            state_path.write_bytes(original_state)
+            state_path.chmod(0o600)
+        restored = activation._private_runtime_authority()
+        if restored is None or restored.token != authority.token:
+            raise RuntimeError("Authority private-runtime non restaurata dopo context matrix")
+        print("EVIDENCE: execution-context negative matrix PASS " + json.dumps(results, sort_keys=True))
+    finally:
+        dropin.write_bytes(original_dropin)
+        state_path.write_bytes(original_state)
+        state_path.chmod(0o600)
+        marker.unlink(missing_ok=True)
+        executable.unlink(missing_ok=True)
+        environment_file.unlink(missing_ok=True)
+        fake_image.unlink(missing_ok=True)
+        with contextlib.suppress(OSError):
+            root_directory.rmdir()
+
+
 def _test_private_runtime_production_vertical_slice(
     info: activation.BundleInfo,
 ) -> None:
@@ -6420,6 +6677,7 @@ def _test_private_runtime_production_vertical_slice(
     try:
         with activation._trusted_activation_session():
             authority = activation._ensure_private_runtime(info)
+            _exercise_private_execution_context_negative_matrix(authority)
             report = {
                 "s0": authority.s0["metrics"],
                 "s1": authority.s1["metrics"],
@@ -7584,6 +7842,7 @@ def run(
 ) -> None:
     if not ephemeral_host:
         raise RuntimeError("Integrazione consentita soltanto da --ephemeral-host")
+    _PASSED_SECURITY_SCENARIOS.clear()
     original_default = _check_ephemeral_host()
     # Ephemeral-host quarantine is harness setup, before the installed production
     # activator starts its hostile interval. _install_ephemeral_toolchain() reloads
@@ -7673,6 +7932,7 @@ def run(
             if fence_race_only:
                 _test_production_generator_orchestrator()
                 _test_trusted_activation_fence_races()
+                _PASSED_SECURITY_SCENARIOS.update(_SHARD_SCENARIOS["C"])
                 return
             deployments.mkdir(mode=0o750, parents=True, exist_ok=True)
             manifest = _render_bundle(temporary, v2_bundle)
@@ -7681,6 +7941,7 @@ def run(
                 _exercise_shard_f_logging_lifecycle(
                     manifest, v2_bundle, v2_next, state, archives, temporary, markers
                 )
+                _PASSED_SECURITY_SCENARIOS.update(_SHARD_SCENARIOS["F"])
                 return
             if executor_lease_timing_diagnostic_only:
                 _test_executor_lease_timing_diagnostic(v2_bundle)
@@ -7705,6 +7966,7 @@ def run(
                 + " ".join(f"{name}={value}" for name, value in closure_detail.items())
             )
             if bootstrap_adversarial_only:
+                _PASSED_SECURITY_SCENARIOS.update(_SHARD_SCENARIOS["A"])
                 return
             if executor_lease_gate_only:
                 try:
@@ -7721,6 +7983,8 @@ def run(
                 except Exception as exc:
                     print(f"EVIDENCE: private-runtime targeted failure before cleanup: {exc}")
                     raise
+                for shard in ("B", "E"):
+                    _PASSED_SECURITY_SCENARIOS.update(_SHARD_SCENARIOS[shard])
                 return
 
             # Effective systemd contract: a pristine package unit may initially be enabled or
@@ -8148,7 +8412,9 @@ def run(
             _install_legacy(legacy_bundle, legacy_manifest)
 
             # Linearization is the return from mask --now plus manager/inactive/start-negative
-            # verification. Concurrent starts may win before it, never after acquisition.
+            # verification. The cached-unit case above covers the pre-acquisition side; this
+            # bounded spammer starts at the after_guard_install fault and proves that no start
+            # can succeed after acquisition.
             _run(["systemctl", "start", "nginx.service"])
             activation._stop_nginx_service()
             acquired = threading.Event()
@@ -8156,15 +8422,12 @@ def run(
             successful_after_acquisition: list[int] = []
 
             def start_spammer() -> None:
-                while not acquired.is_set():
-                    subprocess.run(
-                        ["systemctl", "start", "nginx.service"], check=False,
-                        capture_output=True, text=True, timeout=30,
-                    )
+                if not acquired.wait(timeout=45):
+                    return
                 for attempt in range(40):
                     result = subprocess.run(
-                        ["systemctl", "start", "nginx.service"], check=False,
-                        capture_output=True, text=True, timeout=30,
+                        [str(activation.SYSTEMCTL_BINARY), "start", "nginx.service"],
+                        check=False, capture_output=True, text=True, timeout=30,
                     )
                     if result.returncode == 0:
                         successful_after_acquisition.append(attempt)
@@ -8441,6 +8704,7 @@ def run(
                 )
             activation._attest_logrotate_inputs()
             print("EVIDENCE: exact TheBitLab LOGROTATE_LINK locked-bundle target PASS; alternate REJECT")
+            _exercise_future_logrotate_authority(temporary)
 
             backend, backend_thread = _start_backend(manifest["service"]["port"])
             if activation._nginx_service_state() != ("active", 0):
@@ -8626,6 +8890,8 @@ def run(
             )
             Path("/run/nginx.pid").unlink(missing_ok=True)
             _assert_service_streams_absent(markers)
+            for shard in ("D", "F"):
+                _PASSED_SECURITY_SCENARIOS.update(_SHARD_SCENARIOS[shard])
     finally:
         if backend is not None and backend_thread is not None:
             _stop_backend(backend, backend_thread)
@@ -8647,6 +8913,13 @@ def run(
                 activation._remove_symlink(path)
             except activation.ActivationError:
                 pass
+        for dropin in (
+            activation.LOGROTATE_SERVICE_DROPIN,
+            activation.NGINX_RUNTIME_GUARD_DROPIN,
+        ):
+            dropin.unlink(missing_ok=True)
+            with contextlib.suppress(OSError):
+                dropin.parent.rmdir()
         try:
             activation._remove_symlink(activation.CURRENT_LINK)
         except activation.ActivationError:
@@ -8658,6 +8931,17 @@ def run(
         for bundle in (v2_bundle, v2_next, legacy_bundle):
             if bundle.exists():
                 shutil.rmtree(bundle)
+        for fixture_root in (
+            PERSISTENT_RELEASE_FIXTURE_ROOT,
+            PERSISTENT_DATA_FIXTURE_ROOT,
+            PERSISTENT_SECRETS_FIXTURE_ROOT,
+            PERSISTENT_TLS_FIXTURE_ROOT,
+        ):
+            if fixture_root.exists():
+                shutil.rmtree(fixture_root)
+        for fixture_parent in (Path("/opt/thebitlab"), Path("/srv/thebitlab")):
+            with contextlib.suppress(OSError):
+                fixture_parent.rmdir()
         log_directory = Path("/var/log/thebitlab")
         if log_directory.exists():
             shutil.rmtree(log_directory)
@@ -8681,6 +8965,7 @@ def run(
                 pass
         activation.PRIVATE_RUNTIME_PIN.unlink(missing_ok=True)
         activation.PRIVATE_RUNTIME_BINARY.unlink(missing_ok=True)
+        os.environ.pop("THEBITLAB_TRUSTED_PRIVATE_RUNTIME_SHA256", None)
         if installed_pin is not None:
             installed_pin.unlink(missing_ok=True)
         if installed_launcher is not None:
@@ -8699,6 +8984,9 @@ def run(
                 pass
         if activation.DISTRO_DEFAULT.is_symlink():
             _run(["nginx", "-t", "-c", "/etc/nginx/nginx.conf"])
+
+
+_PASSED_SECURITY_SCENARIOS: set[str] = set()
 
 
 _SHARD_SCENARIOS: Mapping[str, tuple[str, ...]] = {
@@ -8756,40 +9044,30 @@ def _emit_private_runtime_evidence(args: argparse.Namespace) -> None:
     shards = _evidence_shards(args)
     if not shards:
         return
+    expected_scenarios = {
+        scenario for shard in shards for scenario in _SHARD_SCENARIOS[shard]
+    }
+    if _PASSED_SECURITY_SCENARIOS != expected_scenarios:
+        raise RuntimeError(
+            "Scenario evidence non prodotti autenticamente: "
+            f"missing={sorted(expected_scenarios - _PASSED_SECURITY_SCENARIOS)} "
+            f"unexpected={sorted(_PASSED_SECURITY_SCENARIOS - expected_scenarios)}"
+        )
     candidate = os.environ.get("GITHUB_SHA", "")
     if re.fullmatch(r"[0-9a-f]{40}", candidate) is None:
         raise RuntimeError("Candidate SHA evidence non canonico")
-    file_hashes = {
-        relative: hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
-        for relative in toolchain_builder.TOOLCHAIN_FILES
-    }
-    toolchain_id = f"ci-{candidate[:12]}"
-    toolchain_manifest = {
-        "schema_version": "thebitlab.pilot-toolchain.v1",
-        "toolchain_id": toolchain_id,
-        "release_commit": candidate,
-        "files": file_hashes,
-    }
-    toolchain_digest = hashlib.sha256(
-        toolchain_builder.canonical_json(toolchain_manifest)
-    ).hexdigest()
-    policy_names = tuple(
-        name for name in toolchain_builder.TOOLCHAIN_FILES
-        if name.startswith("scripts/")
+    base = os.environ.get("THEBITLAB_SECURITY_BASE_SHA", "")
+    if re.fullmatch(r"[0-9a-f]{40}", base) is None:
+        raise RuntimeError("Base SHA evidence non canonico")
+    authority_path = ROOT / "deploy/pilot/ci/security-evidence-authority.json"
+    image_authority_path = Path(
+        "/usr/local/share/thebitlab/security-evidence-authority.json"
     )
-    policy_digest = hashlib.sha256(
-        json.dumps(
-            {name: file_hashes[name] for name in policy_names},
-            sort_keys=True,
-            separators=(",", ":"),
-        ).encode("utf-8")
-    ).hexdigest()
-    dockerfile = (ROOT / "deploy/pilot/ci/Dockerfile.ubuntu-systemd").read_text(
-        encoding="utf-8"
+    if image_authority_path.read_bytes() != authority_path.read_bytes():
+        raise RuntimeError("Authority manifest image/candidate divergente")
+    expected_authority = private_runtime_evidence.load_authority_manifest(
+        authority_path, root=ROOT, candidate_sha=candidate, base_sha=base
     )
-    oci_matches = set(re.findall(r"ubuntu@(sha256:[0-9a-f]{64})", dockerfile))
-    if len(oci_matches) != 1:
-        raise RuntimeError("OCI identity evidence ambigua")
     mountinfo = Path("/proc/self/mountinfo").read_text(encoding="ascii")
     cleanup = {
         "private_runtime_absent": not activation.PRIVATE_RUNTIME_ROOT.exists(),
@@ -8807,13 +9085,15 @@ def _emit_private_runtime_evidence(args: argparse.Namespace) -> None:
         raise RuntimeError("Run ID evidence non canonico")
     python_path = Path(sys.executable)
     package_identity = package_baseline.attest_runtime_baseline()
+    for name in (
+        "ubuntu_snapshot", "package_baseline_sha256", "package_inventory_sha256"
+    ):
+        if package_identity.get(name) != expected_authority[name]:
+            raise RuntimeError(f"Package authority evidence divergente: {name}")
     common = {
-        "schema_version": "thebitlab.private-runtime-shard-evidence.v2",
+        "schema_version": "thebitlab.private-runtime-shard-evidence.v3",
         "candidate_sha": candidate,
-        "policy_sha256": policy_digest,
-        "toolchain_id": toolchain_id,
-        "toolchain_manifest_sha256": toolchain_digest,
-        "oci_digest": next(iter(oci_matches)),
+        **expected_authority,
         **package_identity,
         "python": {
             "version": sys.version.split()[0],

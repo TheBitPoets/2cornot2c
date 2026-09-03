@@ -4,18 +4,22 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Mapping, Sequence
+
+from scripts import build_pilot_toolchain as toolchain_builder
 
 
 SHARD_PREFIX = "PRIVATE_RUNTIME_SHARD_EVIDENCE "
 CLEANUP_PREFIX = "PRIVATE_RUNTIME_CLEANUP_EVIDENCE "
-SHARD_SCHEMA = "thebitlab.private-runtime-shard-evidence.v2"
+SHARD_SCHEMA = "thebitlab.private-runtime-shard-evidence.v3"
 CLEANUP_SCHEMA = "thebitlab.private-runtime-cleanup-evidence.v1"
-AGGREGATE_SCHEMA = "thebitlab.private-runtime-aggregate.v1"
+AGGREGATE_SCHEMA = "thebitlab.private-runtime-aggregate.v2"
+AUTHORITY_SCHEMA = "thebitlab.security-evidence-authority.v1"
 SHA40 = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 OCI_DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
@@ -51,8 +55,9 @@ REQUIRED_SCENARIOS: Mapping[str, tuple[str, ...]] = {
 }
 SHARD_KEYS = frozenset(
     {
-        "schema_version", "candidate_sha", "policy_sha256", "toolchain_id",
-        "toolchain_manifest_sha256", "oci_digest", "ubuntu_snapshot",
+        "schema_version", "candidate_sha", "base_sha", "policy_sha256",
+        "toolchain_id", "toolchain_manifest_sha256", "authority_manifest_sha256",
+        "oci_digest", "ubuntu_snapshot",
         "package_baseline_sha256", "package_inventory_sha256", "python", "node",
         "run_id", "created_unix_ns", "cleanup", "shard", "scenarios",
     }
@@ -111,8 +116,9 @@ def _fresh(created: object, *, now_ns: int, max_age_seconds: int) -> bool:
 
 def _identity(record: Mapping[str, Any]) -> tuple[object, ...]:
     return (
-        record["candidate_sha"], record["policy_sha256"], record["toolchain_id"],
-        record["toolchain_manifest_sha256"], record["oci_digest"],
+        record["candidate_sha"], record["base_sha"], record["policy_sha256"],
+        record["toolchain_id"], record["toolchain_manifest_sha256"],
+        record["authority_manifest_sha256"], record["oci_digest"],
         record["ubuntu_snapshot"], record["package_baseline_sha256"],
         record["package_inventory_sha256"],
         json.dumps(record["python"], sort_keys=True, separators=(",", ":")),
@@ -120,16 +126,105 @@ def _identity(record: Mapping[str, Any]) -> tuple[object, ...]:
     )
 
 
+def _canonical_json(payload: object) -> bytes:
+    return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def load_authority_manifest(
+    path: Path, *, root: Path, candidate_sha: str, base_sha: str,
+) -> Mapping[str, str]:
+    try:
+        raw = path.read_bytes()
+        manifest = json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise EvidenceError("Authority manifest non leggibile") from exc
+    required = {
+        "schema_version", "policy_files", "policy_sha256", "toolchain_files",
+        "toolchain_source_sha256", "oci_digest", "ubuntu_snapshot",
+        "package_baseline_sha256", "package_inventory_sha256",
+    }
+    if not isinstance(manifest, dict) or set(manifest) != required or manifest.get("schema_version") != AUTHORITY_SCHEMA:
+        raise EvidenceError("Authority manifest schema inatteso")
+    if SHA40.fullmatch(candidate_sha) is None or SHA40.fullmatch(base_sha) is None:
+        raise EvidenceError("Candidate/base authority non canonici")
+    file_sets: dict[str, Mapping[str, str]] = {}
+    for field in ("policy_files", "toolchain_files"):
+        records = manifest.get(field)
+        if not isinstance(records, dict) or not records:
+            raise EvidenceError(f"Authority manifest {field} vuoto")
+        normalized: dict[str, str] = {}
+        for name, digest in records.items():
+            lexical = PurePosixPath(str(name))
+            if (
+                lexical.is_absolute() or ".." in lexical.parts or str(lexical) != str(name)
+                or SHA256.fullmatch(str(digest)) is None
+            ):
+                raise EvidenceError(f"Authority file identity invalida: {name}")
+            source = root / str(lexical)
+            try:
+                actual = hashlib.sha256(source.read_bytes()).hexdigest()
+            except OSError as exc:
+                raise EvidenceError(f"Authority file assente: {name}") from exc
+            if actual != digest:
+                raise EvidenceError(f"Authority file mismatch: {name}")
+            normalized[str(lexical)] = str(digest)
+        file_sets[field] = normalized
+    if set(file_sets["toolchain_files"]) != set(toolchain_builder.TOOLCHAIN_FILES):
+        raise EvidenceError("Authority toolchain inventory divergente")
+    policy_digest = hashlib.sha256(
+        json.dumps(file_sets["policy_files"], sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    toolchain_source_digest = hashlib.sha256(
+        json.dumps(file_sets["toolchain_files"], sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    if policy_digest != manifest.get("policy_sha256") or toolchain_source_digest != manifest.get("toolchain_source_sha256"):
+        raise EvidenceError("Authority manifest digest interno divergente")
+    toolchain_id = f"ci-{candidate_sha[:12]}"
+    runtime_manifest = {
+        "schema_version": "thebitlab.pilot-toolchain.v1",
+        "toolchain_id": toolchain_id,
+        "release_commit": candidate_sha,
+        "files": file_sets["toolchain_files"],
+    }
+    expected = {
+        "base_sha": base_sha,
+        "policy_sha256": policy_digest,
+        "toolchain_id": toolchain_id,
+        "toolchain_manifest_sha256": hashlib.sha256(_canonical_json(runtime_manifest)).hexdigest(),
+        "authority_manifest_sha256": hashlib.sha256(raw).hexdigest(),
+        "oci_digest": str(manifest.get("oci_digest")),
+        "ubuntu_snapshot": str(manifest.get("ubuntu_snapshot")),
+        "package_baseline_sha256": str(manifest.get("package_baseline_sha256")),
+        "package_inventory_sha256": str(manifest.get("package_inventory_sha256")),
+    }
+    if (
+        OCI_DIGEST.fullmatch(expected["oci_digest"]) is None
+        or UBUNTU_SNAPSHOT.fullmatch(expected["ubuntu_snapshot"]) is None
+        or any(SHA256.fullmatch(expected[name]) is None for name in (
+            "policy_sha256", "toolchain_manifest_sha256", "authority_manifest_sha256",
+            "package_baseline_sha256", "package_inventory_sha256",
+        ))
+    ):
+        raise EvidenceError("Authority manifest identity non canonica")
+    return expected
+
+
 def aggregate(
     shard_records: Sequence[Mapping[str, Any]],
     cleanup_records: Sequence[Mapping[str, Any]],
     *,
     candidate_sha: str,
+    base_sha: str,
+    expected_authority: Mapping[str, str],
     max_age_seconds: int = 14_400,
     now_ns: int | None = None,
 ) -> dict[str, Any]:
-    if SHA40.fullmatch(candidate_sha) is None or max_age_seconds <= 0:
-        raise EvidenceError("Candidate/freshness contract non canonico")
+    if (
+        SHA40.fullmatch(candidate_sha) is None
+        or SHA40.fullmatch(base_sha) is None
+        or max_age_seconds <= 0
+    ):
+        raise EvidenceError("Candidate/base/freshness contract non canonico")
     now = time.time_ns() if now_ns is None else now_ns
     by_shard: dict[str, Mapping[str, Any]] = {}
     run_ids: set[str] = set()
@@ -142,9 +237,12 @@ def aggregate(
             raise EvidenceError(f"Shard duplicato/sconosciuto: {shard}")
         if record.get("candidate_sha") != candidate_sha:
             raise EvidenceError(f"Candidate mismatch shard {shard}")
+        if record.get("base_sha") != base_sha:
+            raise EvidenceError(f"Base mismatch shard {shard}")
         if (
             SHA256.fullmatch(str(record.get("policy_sha256"))) is None
             or SHA256.fullmatch(str(record.get("toolchain_manifest_sha256"))) is None
+            or SHA256.fullmatch(str(record.get("authority_manifest_sha256"))) is None
             or OCI_DIGEST.fullmatch(str(record.get("oci_digest"))) is None
             or UBUNTU_SNAPSHOT.fullmatch(str(record.get("ubuntu_snapshot"))) is None
             or SHA256.fullmatch(str(record.get("package_baseline_sha256"))) is None
@@ -204,6 +302,9 @@ def aggregate(
             observed[scenario["scenario_id"]] = scenario
         if set(observed) != set(REQUIRED_SCENARIOS[shard]):
             raise EvidenceError(f"Scenari shard {shard} missing/unknown")
+        for name, expected in expected_authority.items():
+            if record.get(name) != expected:
+                raise EvidenceError(f"Reviewed authority mismatch shard {shard}: {name}")
         identity = _identity(record)
         if expected_identity is None:
             expected_identity = identity
@@ -243,13 +344,15 @@ def aggregate(
     return {
         "schema_version": AGGREGATE_SCHEMA,
         "candidate_sha": candidate_sha,
-        "policy_sha256": expected_identity[1],
-        "toolchain_id": expected_identity[2],
-        "toolchain_manifest_sha256": expected_identity[3],
-        "oci_digest": expected_identity[4],
-        "ubuntu_snapshot": expected_identity[5],
-        "package_baseline_sha256": expected_identity[6],
-        "package_inventory_sha256": expected_identity[7],
+        "base_sha": base_sha,
+        "policy_sha256": expected_identity[2],
+        "toolchain_id": expected_identity[3],
+        "toolchain_manifest_sha256": expected_identity[4],
+        "authority_manifest_sha256": expected_identity[5],
+        "oci_digest": expected_identity[6],
+        "ubuntu_snapshot": expected_identity[7],
+        "package_baseline_sha256": expected_identity[8],
+        "package_inventory_sha256": expected_identity[9],
         "shards": sorted(by_shard),
         "run_ids": sorted(run_ids),
         "cleanup": True,
@@ -261,15 +364,25 @@ def aggregate(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate-sha", required=True)
+    parser.add_argument("--base-sha", required=True)
+    parser.add_argument("--authority-manifest", type=Path, required=True)
     parser.add_argument("--max-age-seconds", type=int, default=14_400)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args(argv)
     try:
+        expected_authority = load_authority_manifest(
+            args.authority_manifest,
+            root=Path(__file__).resolve().parents[1],
+            candidate_sha=args.candidate_sha,
+            base_sha=args.base_sha,
+        )
         shards, cleanups = _records(args.logs)
         result = aggregate(
             shards,
             cleanups,
             candidate_sha=args.candidate_sha,
+            base_sha=args.base_sha,
+            expected_authority=expected_authority,
             max_age_seconds=args.max_age_seconds,
         )
     except EvidenceError as exc:

@@ -1651,6 +1651,9 @@ def test_effective_systemd_unit_contract_accepts_only_pristine_package_definitio
     monkeypatch.setattr(
         ubuntu_activation, "_verify_modules_enabled_entries", lambda: {}
     )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_effective_execution_context", lambda *_args, **_kwargs: {}
+    )
     assert ubuntu_activation._attest_effective_nginx_unit(expect_running=False) == (
         ubuntu_activation.EffectiveNginxUnit(0, "")
     )
@@ -1696,6 +1699,130 @@ def test_effective_systemd_unit_contract_accepts_only_pristine_package_definitio
         )
         with pytest.raises(ubuntu_activation.ActivationError):
             ubuntu_activation._attest_effective_nginx_unit(expect_running=False)
+
+
+def _execution_context_properties() -> dict[str, str]:
+    values = {
+        name: "" for name in ubuntu_activation.SYSTEMD_EXECUTION_CONTEXT_PROPERTIES
+    }
+    values.update(
+        {
+            "RootDirectoryStartOnly": "no",
+            "RootEphemeral": "no",
+            "PrivateTmp": "no",
+            "RuntimeDirectoryMode": "0755",
+            "RuntimeDirectoryPreserve": "no",
+            "StateDirectoryMode": "0755",
+            "CacheDirectoryMode": "0755",
+            "LogsDirectoryMode": "0755",
+            "ConfigurationDirectoryMode": "0755",
+            "ProtectSystem": "no",
+            "ProtectHome": "no",
+            "PrivateDevices": "no",
+            "PrivateNetwork": "no",
+            "PrivateIPC": "no",
+            "PrivateMounts": "no",
+            "MountAPIVFS": "no",
+            "ProtectProc": "default",
+            "ProcSubset": "all",
+            "NoNewPrivileges": "no",
+            "DynamicUser": "no",
+            "UMask": "0022",
+            "StandardInput": "null",
+            "StandardOutput": "journal",
+            "StandardError": "inherit",
+        }
+    )
+    return values
+
+
+@pytest.mark.parametrize("property_name", ubuntu_activation.SYSTEMD_SUBSTITUTION_PROPERTIES)
+def test_effective_execution_context_rejects_every_substitution_surface(
+    property_name: str,
+) -> None:
+    values = _execution_context_properties()
+    values[property_name] = "/unreviewed:/trusted" if "Bind" in property_name else "/unreviewed"
+    with pytest.raises(ubuntu_activation.ActivationError, match="substitution"):
+        ubuntu_activation._attest_effective_execution_context(
+            "nginx.service", source_authority="private-runtime", properties=values
+        )
+
+
+def test_effective_execution_context_classifies_restrictions_and_loader_environment() -> None:
+    values = _execution_context_properties()
+    values.update(
+        {
+            "ProtectSystem": "strict",
+            "ProtectHome": "read-only",
+            "PrivateTmp": "yes",
+            "ReadOnlyPaths": "/usr",
+            "InaccessiblePaths": "/home",
+        }
+    )
+    ubuntu_activation._attest_effective_execution_context(
+        "package.service", source_authority="reviewed-package", properties=values
+    )
+    for name, payload in (
+        ("Environment", "LD_PRELOAD=/root/evil.so"),
+        ("Environment", "PYTHONPATH=/root/evil"),
+        ("PassEnvironment", "LANG LD_LIBRARY_PATH"),
+        ("EnvironmentFiles", "/root/evil.env"),
+    ):
+        changed = dict(values, **{name: payload})
+        with pytest.raises(ubuntu_activation.ActivationError):
+            ubuntu_activation._attest_effective_execution_context(
+                "package.service", source_authority="reviewed-package", properties=changed
+            )
+
+
+def test_private_runtime_source_identity_is_compiled_into_static_bootstrap() -> None:
+    source = (ROOT / "scripts/pilot_static_bootstrap.go").read_text(encoding="utf-8")
+    match = re.search(r'privateRuntimeSHA256 = "([0-9a-f]{64})"', source)
+    assert match is not None
+    assert re.search(
+        r'privateRuntimePath\s+= "/usr/sbin/thebitlab-private-runtime"', source
+    )
+    assert "privateStat.Nlink != 1" in source
+    assert 'singleLinkRelative = "thebitlab-private-runtime"' in source
+    assert "attestPersistentPrivateRuntime(before, hardlinks)" in source
+    assert "attestPersistentPrivateRuntime(after, afterHardlinks)" in source
+    assert "requireSingleLink && before.Nlink != 1" in source
+    assert "requireSingleLink && after.Nlink != 1" in source
+    assert "digest != privateRuntimeSHA256" in source
+    assert "privateDigest != privateRuntimeSHA256" in source
+    assert "THEBITLAB_TRUSTED_PRIVATE_RUNTIME_SHA256=" in source
+
+
+def test_mutable_private_runtime_pin_cannot_redefine_static_source_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    binary = tmp_path / "thebitlab-private-runtime"
+    binary.write_bytes(b"reviewed-static-private-runtime")
+    static_digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+    alternate_digest = hashlib.sha256(b"foreign-private-runtime").hexdigest()
+    pin = {
+        "schema_version": "thebitlab.private-runtime-pin.v1",
+        "launcher_sha256": alternate_digest,
+    }
+    monkeypatch.setattr(ubuntu_activation, "PRIVATE_RUNTIME_BINARY", binary)
+    monkeypatch.setattr(
+        ubuntu_activation, "_private_runtime_json", lambda *_args, **_kwargs: (pin, b"{}")
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_read_stable_trusted_file", lambda path: Path(path).read_bytes()
+    )
+    monkeypatch.setenv("THEBITLAB_TRUSTED_PRIVATE_RUNTIME_SHA256", static_digest)
+    with pytest.raises(ubuntu_activation.ActivationError, match="pin esterno"):
+        ubuntu_activation._run_private_runtime("production-prepare", "/candidate", "a" * 64)
+
+
+def test_private_runtime_dropin_authority_is_static_not_mutable_state() -> None:
+    token = "123-" + "a" * 32
+    expected = ubuntu_activation._expected_private_runtime_dropin(token)
+    assert b"production-private-exec " + token.encode() in expected
+    assert b"BindPaths=" not in expected
+    assert b"BindReadOnlyPaths=" not in expected
+    assert expected + b"BindReadOnlyPaths=/evil:/trusted\n" != expected
 
 
 def test_nginx_execution_policy_is_one_canonical_seven_slot_contract() -> None:
@@ -1755,6 +1882,9 @@ def test_late_nginx_contract_rechecks_reviewed_fragment_bytes(
         ubuntu_activation, "_attest_nginx_package_behavior_files", lambda: frozenset()
     )
     monkeypatch.setattr(ubuntu_activation, "_verify_modules_enabled_entries", lambda: {})
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_effective_execution_context", lambda *_args, **_kwargs: {}
+    )
     ubuntu_activation._attest_effective_nginx_unit(expect_running=False)
     fragment.write_bytes(b"malicious same FragmentPath\n")
     with pytest.raises(ubuntu_activation.ActivationError, match="digest"):
@@ -2260,8 +2390,87 @@ def test_systemd_logrotate_units_require_positive_input_inventory_binding(
     monkeypatch.setattr(
         ubuntu_activation, "_attest_logrotate_inputs", lambda: calls.append(True)
     )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_effective_execution_context", lambda *_args, **_kwargs: {}
+    )
     ubuntu_activation._attest_systemd_boot_surface()
     assert calls == [True]
+
+
+def test_future_logrotate_configuration_is_one_authorized_sealed_stream(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "logrotate.d"
+    root.mkdir()
+    package = root / "apt"
+    package.write_text("/var/log/apt.log { missingok }\n", encoding="utf-8")
+    managed_entry = root / "thebitlab"
+    managed_entry.write_text("placeholder\n", encoding="utf-8")
+    managed = tmp_path / "managed"
+    managed.write_text(
+        "/var/log/thebitlab/access.log /var/log/thebitlab/process-error.log {\n"
+        " firstaction\n"
+        "  /usr/sbin/thebitlab-pilot-activate logrotate-snapshot\n"
+        " endscript\n"
+        " postrotate\n"
+        "  /usr/sbin/thebitlab-pilot-activate logrotate-reopen\n"
+        " endscript\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    global_config = tmp_path / "logrotate.conf"
+    global_config.write_text(
+        "weekly\ninclude " + str(root) + "\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_DIRECTORY", root)
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_CONFIG", global_config)
+    monkeypatch.setattr(ubuntu_activation, "LOGROTATE_LINK", managed_entry)
+    monkeypatch.setattr(ubuntu_activation, "_attest_logrotate_inputs", lambda: frozenset())
+    monkeypatch.setattr(
+        ubuntu_activation, "_read_stable_trusted_file", lambda path: Path(path).read_bytes()
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_thebitlab_logrotate_link", lambda: managed
+    )
+    monkeypatch.setattr(
+        ubuntu_activation,
+        "_directory_snapshot",
+        lambda _root: ((1, 2, 3), tuple(sorted(root.iterdir()))),
+    )
+    frozen = ubuntu_activation._authorized_logrotate_configuration_bytes()
+    assert f"include {root}".encode() not in frozen
+    assert b"/var/log/apt.log" in frozen
+    assert b"/var/log/thebitlab/access.log" in frozen
+    assert b"thebitlab-pilot-activate logrotate-snapshot" not in frozen
+    assert b"thebitlab-pilot-activate logrotate-reopen" not in frozen
+    assert frozen.count(b"/usr/bin/true") == 2
+
+
+def test_nginx_reboot_guard_resets_every_package_execution_slot_before_static_check() -> None:
+    guard = ubuntu_activation.NGINX_RUNTIME_GUARD_DROPIN_BYTES
+    assert guard.count(b"ExecStartPre=\n") == 1
+    assert guard.count(b"ExecStart=\n") == 1
+    assert guard.count(b"ExecReload=\n") == 1
+    assert guard.count(b"ExecStop=\n") == 1
+    assert guard.count(b"/usr/sbin/thebitlab-pilot-activate private-runtime-required") == 4
+    assert b"/usr/sbin/nginx" not in guard
+
+
+def test_logrotate_systemd_override_is_exact_static_wrapper_contract() -> None:
+    override = ubuntu_activation.LOGROTATE_SERVICE_DROPIN_BYTES
+    assert override.startswith(
+        b"# TheBitLab verify-use logrotate authority; issue 704\n"
+        b"[Service]\nExecStart=\n"
+        b"ExecStart=/usr/sbin/thebitlab-pilot-activate logrotate-run\n"
+    )
+    assert b"/usr/sbin/logrotate" not in override
+    for directive in (
+        b"PrivateDevices=no", b"PrivateTmp=no", b"ProtectClock=no",
+        b"ProtectControlGroups=no", b"ProtectHostname=no", b"ProtectKernelLogs=no",
+        b"ProtectKernelModules=no", b"ProtectKernelTunables=no", b"ProtectSystem=no",
+        b"RestrictNamespaces=no",
+    ):
+        assert override.count(directive + b"\n") == 1
 
 
 def _install_apt_input_fixture(
@@ -2435,6 +2644,9 @@ def test_supported_noble_scheduler_policy_is_closed_and_zero_unknown(
     monkeypatch.setattr(
         ubuntu_activation, "_attest_expected_package_files", lambda *_args, **_kwargs: {}
     )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_effective_execution_context", lambda *_args, **_kwargs: {}
+    )
     for name in set(ubuntu_activation.UNIT_INPUT_ATTESTORS.values()):
         monkeypatch.setattr(ubuntu_activation, name, lambda name=name: called.append(name))
     expected = frozenset(ubuntu_activation.BOOT_REACHABLE_ROOT_TIMER_POLICIES)
@@ -2507,6 +2719,9 @@ def test_known_closed_timer_cannot_bypass_its_input_attestor(
         ubuntu_activation,
         "_attest_e2scrub_inputs",
         lambda: (_ for _ in ()).throw(ubuntu_activation.ActivationError("e2 input")),
+    )
+    monkeypatch.setattr(
+        ubuntu_activation, "_attest_effective_execution_context", lambda *_args, **_kwargs: {}
     )
     with pytest.raises(ubuntu_activation.ActivationError, match="e2 input"):
         ubuntu_activation._attest_boot_reachable_root_schedulers(
@@ -5272,13 +5487,94 @@ def test_runtime_authority_parity_guard_rejects_drift(
         )
 
 
+def test_security_evidence_authority_is_static_candidate_bound_and_non_circular(
+    tmp_path: Path,
+) -> None:
+    manifest_path = ROOT / "deploy/pilot/ci/security-evidence-authority.json"
+    raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert raw["schema_version"] == private_runtime_evidence.AUTHORITY_SCHEMA
+    assert "candidate_sha" not in raw and "base_sha" not in raw
+    assert set(raw["toolchain_files"]) == set(toolchain_builder.TOOLCHAIN_FILES)
+    for required in (
+        ".github/workflows/quality.yml",
+        "scripts/pilot_private_runtime_evidence.py",
+        "scripts/pilot_ubuntu_integration.py",
+        "scripts/pilot_ubuntu_activation.py",
+        "scripts/run_pilot_ubuntu_integration_container.sh",
+    ):
+        assert required in raw["policy_files"]
+    expected = private_runtime_evidence.load_authority_manifest(
+        manifest_path,
+        root=ROOT,
+        candidate_sha="5" * 40,
+        base_sha="8" * 40,
+    )
+    assert expected["base_sha"] == "8" * 40
+    assert expected["toolchain_id"] == "ci-555555555555"
+    mutated = copy.deepcopy(raw)
+    mutated["policy_files"]["scripts/pilot_ubuntu_activation.py"] = "0" * 64
+    bad = tmp_path / "authority.json"
+    bad.write_text(json.dumps(mutated), encoding="utf-8")
+    with pytest.raises(private_runtime_evidence.EvidenceError, match="mismatch"):
+        private_runtime_evidence.load_authority_manifest(
+            bad, root=ROOT, candidate_sha="5" * 40, base_sha="8" * 40
+        )
+
+
+def test_quality_workflow_enforces_exact_head_af_and_real_aggregator() -> None:
+    workflow = (ROOT / ".github/workflows/quality.yml").read_text(encoding="utf-8")
+    assert "github.event.pull_request.head.sha" in workflow
+    assert "github.event.pull_request.base.sha" in workflow
+    assert workflow.count("ref: ${{ env.SECURITY_CANDIDATE_SHA }}") >= 2
+    for mode in (
+        "--bootstrap-adversarial-only",
+        "--private-runtime-gate-only",
+        "--fence-race-only",
+    ):
+        assert workflow.count(f"mode: {mode}") == 1
+    assert "- shard: DF\n            mode: \"\"" in workflow
+    assert "needs: security-evidence" in workflow
+    assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in workflow
+    assert "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093" in workflow
+    assert "python scripts/pilot_private_runtime_evidence.py" in workflow
+    assert '--base-sha "$SECURITY_BASE_SHA"' in workflow
+    assert "--authority-manifest deploy/pilot/ci/security-evidence-authority.json" in workflow
+    assert 'test "${#logs[@]}" -eq 4' in workflow
+    assert "PRIVATE RUNTIME AGGREGATOR: PASS" in private_runtime_evidence.main.__code__.co_consts
+
+
+def test_evidence_mode_registry_produces_every_shard_without_synthetic_mode() -> None:
+    class Args:
+        bootstrap_adversarial_only = False
+        private_runtime_gate_only = False
+        fence_race_only = False
+        shard_f_only = False
+        executor_lease_gate_only = False
+        private_runtime_start_diagnostic_only = False
+        executor_lease_timing_diagnostic_only = False
+        runtime_directory_authority_only = False
+
+    modes = []
+    for selected in (
+        "bootstrap_adversarial_only", "private_runtime_gate_only",
+        "fence_race_only", None,
+    ):
+        args = Args()
+        if selected is not None:
+            setattr(args, selected, True)
+        modes.extend(ubuntu_integration._evidence_shards(args))
+    assert modes == ["A", "B", "E", "C", "D", "F"]
+
+
 def _private_runtime_evidence_fixture(now_ns: int) -> tuple[list[dict], list[dict]]:
     common = {
         "schema_version": private_runtime_evidence.SHARD_SCHEMA,
         "candidate_sha": "5" * 40,
+        "base_sha": "8" * 40,
         "policy_sha256": "1" * 64,
         "toolchain_id": "ci-555555555555",
         "toolchain_manifest_sha256": "2" * 64,
+        "authority_manifest_sha256": "9" * 64,
         "oci_digest": "sha256:" + "3" * 64,
         "ubuntu_snapshot": "20260822T000000Z",
         "package_baseline_sha256": "6" * 64,
@@ -5323,11 +5619,27 @@ def _private_runtime_evidence_fixture(now_ns: int) -> tuple[list[dict], list[dic
     return records, cleanups
 
 
+def _expected_evidence_authority(record: Mapping[str, object]) -> dict[str, str]:
+    return {
+        name: str(record[name])
+        for name in (
+            "base_sha", "policy_sha256", "toolchain_id",
+            "toolchain_manifest_sha256", "authority_manifest_sha256", "oci_digest",
+            "ubuntu_snapshot", "package_baseline_sha256", "package_inventory_sha256",
+        )
+    }
+
+
 def test_private_runtime_aggregator_accepts_only_complete_bound_fresh_evidence() -> None:
     now = 20_000_000_000_000
     records, cleanups = _private_runtime_evidence_fixture(now)
     result = private_runtime_evidence.aggregate(
-        records, cleanups, candidate_sha="5" * 40, now_ns=now
+        records,
+        cleanups,
+        candidate_sha="5" * 40,
+        base_sha="8" * 40,
+        expected_authority=_expected_evidence_authority(records[0]),
+        now_ns=now,
     )
     assert result["result"] == "PASS"
     assert result["shards"] == list("ABCDEF")
@@ -5337,8 +5649,9 @@ def test_private_runtime_aggregator_accepts_only_complete_bound_fresh_evidence()
 @pytest.mark.parametrize(
     "mutation",
     (
-        "missing-shard", "stale", "candidate", "schema", "duplicate",
+        "missing-shard", "stale", "candidate", "base", "schema", "duplicate",
         "policy-conflict", "toolchain-id-conflict", "toolchain-conflict",
+        "authority-manifest-conflict",
         "oci-conflict", "package-baseline-conflict", "package-inventory-conflict",
         "snapshot-conflict", "missing-cleanup", "cleanup-false",
         "unknown-scenario", "skip", "required-node-unknown",
@@ -5349,12 +5662,15 @@ def test_private_runtime_aggregator_rejects_incomplete_stale_or_conflicting_evid
 ) -> None:
     now = 20_000_000_000_000
     records, cleanups = _private_runtime_evidence_fixture(now)
+    expected_authority = _expected_evidence_authority(records[0])
     if mutation == "missing-shard":
         records.pop()
     elif mutation == "stale":
         records[0]["created_unix_ns"] = 0
     elif mutation == "candidate":
         records[0]["candidate_sha"] = "6" * 40
+    elif mutation == "base":
+        records[0]["base_sha"] = "6" * 40
     elif mutation == "schema":
         records[0]["schema_version"] = "unknown"
     elif mutation == "duplicate":
@@ -5365,6 +5681,8 @@ def test_private_runtime_aggregator_rejects_incomplete_stale_or_conflicting_evid
         records[1]["toolchain_id"] = "ci-999999999999"
     elif mutation == "toolchain-conflict":
         records[1]["toolchain_manifest_sha256"] = "9" * 64
+    elif mutation == "authority-manifest-conflict":
+        records[1]["authority_manifest_sha256"] = "0" * 64
     elif mutation == "oci-conflict":
         records[1]["oci_digest"] = "sha256:" + "9" * 64
     elif mutation == "package-baseline-conflict":
@@ -5385,7 +5703,12 @@ def test_private_runtime_aggregator_rejects_incomplete_stale_or_conflicting_evid
         records[0]["node"]["required"] = True
     with pytest.raises(private_runtime_evidence.EvidenceError):
         private_runtime_evidence.aggregate(
-            records, cleanups, candidate_sha="5" * 40, now_ns=now
+            records,
+            cleanups,
+            candidate_sha="5" * 40,
+            base_sha="8" * 40,
+            expected_authority=expected_authority,
+            now_ns=now,
         )
 
 

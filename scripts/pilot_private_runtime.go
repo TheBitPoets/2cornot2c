@@ -29,20 +29,20 @@ const (
 	runtimeAuthority = "/run/thebitlab"
 	runtimeHost      = runtimeAuthority + "/pilot-private-runtime"
 	s0Host           = runtimeHost + "/s0"
-	s1Host          = runtimeHost + "/s1"
-	mergedHost      = runtimeHost + "/merged"
-	controlHost     = runtimeHost + "/control"
-	stateHost       = runtimeHost + "/state.json"
-	managerDrop     = "/run/systemd/system/nginx.service.d"
-	managerDropFile = managerDrop + "/70-thebitlab-private-runtime.conf"
-	launcherHost    = "/usr/sbin/thebitlab-private-runtime"
-	pinHost         = "/etc/thebitlab/trust/pilot-private-runtime.json"
-	s0Source        = "thebitlab-private-s0"
-	s1Source        = "thebitlab-private-s1"
-	managerSource   = "thebitlab-private-manager"
-	stateSchema     = "thebitlab.private-runtime-state.v1"
-	manifestSchema  = "thebitlab.private-runtime-manifest.v1"
-	deploymentsRoot = "/etc/thebitlab/deployments"
+	s1Host           = runtimeHost + "/s1"
+	mergedHost       = runtimeHost + "/merged"
+	controlHost      = runtimeHost + "/control"
+	stateHost        = runtimeHost + "/state.json"
+	managerDrop      = "/run/systemd/system/nginx.service.d"
+	managerDropFile  = managerDrop + "/70-thebitlab-private-runtime.conf"
+	launcherHost     = "/usr/sbin/thebitlab-private-runtime"
+	pinHost          = "/etc/thebitlab/trust/pilot-private-runtime.json"
+	s0Source         = "thebitlab-private-s0"
+	s1Source         = "thebitlab-private-s1"
+	managerSource    = "thebitlab-private-manager"
+	stateSchema      = "thebitlab.private-runtime-state.v1"
+	manifestSchema   = "thebitlab.private-runtime-manifest.v1"
+	deploymentsRoot  = "/etc/thebitlab/deployments"
 )
 
 var treePolicies = map[string]treePolicy{
@@ -284,7 +284,9 @@ func attestRuntimeAuthorityDirectory(create bool) error {
 	if create {
 		if err := syscall.Mkdirat(parentFD, "pilot-private-runtime", 0700); err == nil {
 			leafCreated = true
-		} else if err != syscall.EEXIST {
+		} else if err == syscall.EEXIST {
+			return errors.New("pre-existing private-runtime execution instance rejected")
+		} else {
 			return err
 		}
 	}
