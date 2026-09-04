@@ -1,41 +1,52 @@
 # Checkpoint operativo
 
-- **Data/ora:** 2026-08-18T22:11:15+02:00
-- **Obiettivo:** validazione Linux/POSIX finale issue #705 prima di push/PR.
-- **Stato:** **completato — READY FOR PUSH**. Validazione eseguita soltanto con dati demo/sintetici; nessun push, PR, VPS/staging/live o dato reale.
-- **Criterio:** suite integrata Linux, bootstrap root vuota, fail-closed POSIX, backup/restore verificabile e isolato, launcher ordering, render/systemd/nginx e startup loopback tutti PASS. Due difetti POSIX reali trovati, corretti, riesaminati e testati.
+- **Data/ora:** 2026-09-04T17:25:00+02:00
+- **Obiettivo:** rimediare la regressione preesistente di determinismo clock auth/pairing su `main`, prerequisito separato per PR #772.
+- **Stato:** **completato — pronto per Draft PR e review indipendente; non unire**.
+- **Binding base:** repository `TheBitPoets/2cornot2c`, worktree `F:/dev/2cornot2c-main-clock-determinism`, branch `fix/main-auth-clock-determinism`, base/`origin/main` `29c90735a842738c67b798e97b2e5b00696b5e25`.
+- **Rami protetti:** PR #720 candidate `7a0bb350587d94c5cb5d6cb69187f67d25a72ba5` e Trusted Controller V1/PR #772 candidate `368ae2999cd6a8e741871ea79d0f0dd039ee00f3` verificati invariati; worktree/evidenze non modificati.
 
-## Ambiente Linux
+## Causa e correzione
 
-- Container effimero `ubuntu:24.04`, immagine `ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea`, repository host montato read-only e copiato in `/work` interno.
-- Docker Desktop engine 28.3.2 su WSL2 kernel `6.18.33.2-microsoft-standard-WSL2`.
-- Ubuntu 24.04.4 LTS; Python 3.12.3; pytest 8.4.2; nginx 1.24.0; systemd 255; OpenSSL 3.0.13.
+- Riproduzione sul main esatto, UTC reale `2026-09-04`: **23 failure** identici su Python 3.11.15 e 3.12, nei moduli `test_thebitlab_auth_services.py` e `test_thebitlab_identity_sqlite.py`.
+- Fixture/app clock: `2026-09-01T08:00:00Z`; storage costruito senza override: UTC reale. Le verifiche transazionali usano il clock storage dopo `BEGIN IMMEDIATE` e, dove previsto, `max(expected_valid_at, storage_clock)`: sessioni con scadenza `2026-09-01T16:00:00Z` e pairing con scadenza `2026-09-01T08:10:00Z` risultavano quindi scaduti.
+- Controllo disposable: storage allineato alla fixture => **89 passed** sul main invariato; storage tre giorni avanti => `ConcurrentStateChangeError`/`PairingExpiredError`, pairing persistito `expired`. Causalità wall-clock confermata.
+- `SqliteIdentityStorage` supportava già clock d'istanza iniettato e default UTC reale. Correzione: le fixture SQLite dei due moduli e il setup locale della migrazione v11 ora iniettano `NOW`; nessun comportamento production modificato.
+- Aggiunte prove: clock condiviso con data 2001, T0/pre-boundary/exact boundary/post-expiry, reopen, use-after-restart e rollback senza resurrezione; sentinella bounded del default UTC reale senza sleep.
 
-## Finding e correzioni
+## Sicurezza preservata
 
-1. `topology_from_paths()` risolveva il path prima del controllo e accettava una root symlink; inoltre `validate_root()` accettava symlink interni. Ora la root esplicita e l'intero albero applicativo falliscono chiusi. Test di regressione POSIX aggiunto.
-2. I lock `.course-storage.lock` e `.thebitlab-server.lock` creati dopo l'hardening avevano mode `0644`. I rispettivi lock owner applicano ora `0600` su POSIX; test specifici e controllo completo dell'albero verificano directory `0700` e file `0600`.
+- Clock storage resta autoritativo a transaction/use time e viene letto dopo acquisizione lock.
+- Scadenza esclusiva (`expires_at > current_time`), scadenza durante attesa, replay terminale, un solo consumer concorrente, CAS account/session/user revision, disable/re-enable ABA e rollback atomico restano invariati.
+- Tombstone e avanzamento generazioni esterne di un microsecondo restano invariati; nessuna generazione dipende dall'unicità del wall clock.
+- Runtime production continua a costruire storage e servizi senza override, usando UTC reale dinamico; nessun caller-time per singola operazione è stato aggiunto.
 
-File modificati dal follow-up Linux: `scripts/pilot_data_root.py`, `scripts/course_board_server.py`, `scripts/thebitlab_storage.py`, `tests/test_pilot_data_root.py`, `tests/test_course_board_server.py`, `tests/test_thebitlab_storage.py`, `CHECKPOINT.md`. La documentazione canonica `doc/PILOT_ROOT_BACKUP.md` era già coerente e non ha richiesto modifiche.
+## File modificati
 
-## Evidenze Linux/POSIX
+- `tests/test_thebitlab_auth_services.py`
+- `tests/test_thebitlab_identity_sqlite.py`
+- `CHECKPOINT.md`
 
-- Suite finale non-root integrata #705 + binding/assignment/demo + storage + lock: **119 passed, 1 skipped, 1 deselected**; skip = primitiva solo Windows, deselected = smoke deployment eseguito separatamente come root del container.
-- Smoke controllato nginx + `systemd-analyze verify`: **1 passed**. Test focalizzati post-review: **3 passed**.
-- Windows cross-platform mirato: **4 passed, 1 skipped** (symlink POSIX); warning cleanup DACL temporanei storico/estraneo.
-- Bootstrap CLI: prima esecuzione `created=true`, seconda `created=false`, idempotenza e demo-check PASS. Account docente + 2 studenti, classe, 3 membership e binding #702 PASS; `student_lab_demo_check --existing` PASS su sorgente e restore.
-- POSIX: root/entry symlink rejection, secret rejection, lock esclusivo, doppia istanza, root parziale senza reset, DB auth multiplo fail-closed e mode `0700/0600` PASS.
-- Backup: schema `thebitlab.pilot-backup.v1`, `manifest.sha256`, schema JSON e SHA-256/dimensione di tutti i 28 payload PASS; nessun secret, symlink, cache, lock o sidecar incluso. Snapshot SQLite con dato committed in WAL verificato coerente e sidecar esclusi.
-- Restore: solo target nuovo, checksum payload, `PRAGMA integrity_check`, migrazioni 1..12, binding #702, demo-check e startup bind loopback PASS. Root sorgente invariata per insieme path, SHA-256, mode e `mtime_ns`; backup invariato dai test integrati.
-- Launcher: root incompleta fallisce prima dell'accesso all'EnvironmentFile, verificato sia con test monkeypatch call-order sia con CLI.
-- Deployment: bundle sintetico isolato renderizzato; `systemd-analyze verify` PASS sulla unit generata; smoke nginx non distruttivo PASS. Il bundle example diretto non è verificabile senza l'eseguibile `/opt/thebitlab/current/...`, quindi non ripetere quel comando senza il manifest temporaneo usato dallo smoke.
-- Misure locali Linux, **non SLA**: backup **0.063356 s**; restore finale **0.072458 s**.
-- `compileall` e `git diff --check`: PASS. Review finale completa del diff: nessun finding aperto.
+Nessuna documentazione architetturale richiesta: contratto e implementazione production non cambiano.
 
-## Stato Git e prossimo passo
+## Verifiche finali sul diff definitivo
 
-- Worktree `F:/dev/2cornot2c-705`; branch `feat/pilot-root-backup-705`; commit iniziale validato `92cd2864be31a0655377509733433f8bc395824e`.
-- Il follow-up Linux deve essere il nuovo `HEAD` creato al termine di questa unità; branch atteso pulito e ahead 2 rispetto a `origin/main`. Nessun push eseguito.
-- Processi temporanei: container e Docker Desktop avviati per questa unità devono risultare arrestati nel riepilogo finale.
-- Problemi aperti in scope: nessuno.
-- **Prossimo passo distinto:** controllo umano dei due commit, quindi push/apertura PR solo su autorizzazione. File minimi: `AGENTS.md`, `CHECKPOINT.md`, `doc/PILOT_ROOT_BACKUP.md` e `git diff origin/main...HEAD`.
+- Focus Python 3.11.15: **91 passed**.
+- Focus Python 3.12: **91 passed**.
+- Quality Linux Python 3.11 (`python:3.11-bookworm`, container `--init`, Node/nginx): **2392 passed, 22 skipped**, 5 warning preesistenti.
+- Quality Linux Python 3.12 (`python:3.12-bookworm`, container `--init`, Node/nginx): **2392 passed, 22 skipped**, 5 warning preesistenti.
+- `compileall scripts tests`: PASS.
+- `generate_course_plan.py --check`: PASS.
+- Sphinx `-W --keep-going`: PASS.
+- Mermaid 11.16.0: rendering di tutti i diagrammi e output non vuoti PASS; un confronto byte-for-byte aggiuntivo, non richiesto dal workflow, differisce per output renderer e non ha scritto nel worktree.
+- `git diff --check`: PASS.
+- Full suite Windows esplorativa: i failure fuori scope erano vincoli host (symlink POSIX, esecuzione `.sh`, CRLF) e interferenza ACL fra due run paralleli; il gate canonico Linux isolato è verde.
+- Review avversariale finale: nessun finding HIGH/MEDIUM/LOW aperto. Un finding LOW sulla prova reopen è stato corretto prima dei gate finali; review successiva pulita.
+- Processi temporanei/container: nessuno attivo.
+
+## Pubblicazione e prossimo passo
+
+- Autorizzati un commit normale, push del branch e apertura di una Draft PR verso `main`; nessun amend/rebase/force-push/merge.
+- Il commit che contiene questo checkpoint è il candidato: ricavare e fissare il suo SHA con `git rev-parse HEAD` e verificare che coincida con `headRefOid` della Draft PR.
+- **Prossimo passo distinto:** fermarsi dopo l'apertura della Draft PR. Creare worktree detached fresco e sessione Pi fresca per Fresh Independent Review Round 1 sull'esatto SHA immutabile. Se CLEAN registrare 1/2; Round 2 richiede un altro worktree/sessione freschi. Non unire prima di 2/2 CLEAN.
+- File minimi per la review: `AGENTS.md`, `CHECKPOINT.md`, i due file test modificati e `git diff 29c90735a842738c67b798e97b2e5b00696b5e25..<SHA-candidato>`.

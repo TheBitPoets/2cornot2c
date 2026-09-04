@@ -103,7 +103,7 @@ def database_path(tmp_path):
 
 @pytest.fixture
 def storage(database_path):
-    return SqliteIdentityStorage(database_path)
+    return SqliteIdentityStorage(database_path, clock=lambda: NOW)
 
 
 def drop_subject_binding_schema(connection: sqlite3.Connection) -> None:
@@ -218,7 +218,7 @@ def test_user_and_external_identity_round_trip_and_uniqueness(storage) -> None:
 def test_migration_v11_rechecks_correlations_after_earlier_v10(
     database_path,
 ) -> None:
-    storage = SqliteIdentityStorage(database_path)
+    storage = SqliteIdentityStorage(database_path, clock=lambda: NOW)
     storage.create_user(account())
     pending = pairing()
     storage.create_pairing(pending)
@@ -795,6 +795,32 @@ def test_generic_session_paths_and_sql_trigger_reject_unconsumed_tui_session(
                     "pairing-01",
                 ),
             )
+
+
+def test_default_storage_clock_uses_current_utc_for_transaction_expiry(
+    database_path,
+) -> None:
+    before = datetime.now(timezone.utc)
+    storage = SqliteIdentityStorage(database_path)
+    created_at = before - timedelta(seconds=2)
+    expires_at = before
+    user = account(created_at=created_at, updated_at=created_at)
+    pending = pairing(created_at=created_at, expires_at=expires_at)
+    storage.create_user(user)
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(
+        pending,
+        user.user_id,
+        expires_at - timedelta(microseconds=1),
+    )
+
+    with pytest.raises(IdentityStoragePairingExpiredError):
+        storage.save_pairing(authorized)
+
+    after = datetime.now(timezone.utc)
+    expired = storage.read_pairing(pending.pairing_id)
+    assert expired.status == "expired"
+    assert before <= expired.expired_at <= after
 
 
 def test_pairing_session_creation_rechecks_expiry_at_transaction_time(storage) -> None:
