@@ -6784,7 +6784,7 @@ def _test_private_runtime_production_vertical_slice(
                             dir_fd=systemd_fd,
                         )
                     except OSError as exc:
-                        if exc.errno != errno.EAGAIN:
+                        if exc.errno not in {errno.EAGAIN, errno.ETXTBSY}:
                             raise
                     else:
                         os.close(writer)

@@ -5725,6 +5725,11 @@ def test_runtime_authority_helper_rejects_unknown_direct_child_without_io(
         trusted_activation_fence.ensure_runtime_authority_directory(name)
 
 
+def test_private_runtime_handoff_accepts_both_kernel_write_denials() -> None:
+    source = (ROOT / "scripts/pilot_ubuntu_integration.py").read_text(encoding="utf-8")
+    assert "exc.errno not in {errno.EAGAIN, errno.ETXTBSY}" in source
+
+
 def test_private_runtime_exec_locks_one_os_thread_and_fails_closed() -> None:
     source = (ROOT / "scripts/pilot_private_runtime.go").read_text(encoding="utf-8")
     start = source.index("func privateExec() error {")

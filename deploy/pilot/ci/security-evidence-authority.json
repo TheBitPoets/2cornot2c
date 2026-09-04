@@ -18,14 +18,14 @@
     "scripts/pilot_toolchain_launcher.py": "3e0fededb4eb69fff84ca7628e4d4f763a5439844c0906c25278bc859e1f355c",
     "scripts/pilot_trusted_activation_fence.py": "4974f34f7cdcb57778223ba570efe7d587c6d6ae0398fcda504faca28fffe362",
     "scripts/pilot_ubuntu_activation.py": "8be8b9ec4f2f1417fcfce2abfb769989ada9027efe2e417ee7c0d4a3b3908cb7",
-    "scripts/pilot_ubuntu_integration.py": "201fa9aff5dd8b69dccdb204e90e46b60d8039d0bca8c0c6af0e210d94d97d60",
+    "scripts/pilot_ubuntu_integration.py": "b99ee3e05ad17a5e5981b63113c5be37e8e2218760c608678716c3a87b632fc3",
     "scripts/pilot_ubuntu_loader_lookup_policy.py": "b53df700bafcae86d8a95748e1c0989e2f98fffdfe288f5f638bf66ecdbc5fc9",
     "scripts/pilot_ubuntu_package_baseline.py": "bb3d8bb61ee644b2ae77aff80170dbd3f0fd6f23807b7e5f18bf35f2c40746a4",
     "scripts/pilot_ubuntu_reviewed_executables.py": "d3110636065f5ff5e146817f5084069753ab93a4302d246b58129a1769069bfe",
     "scripts/pilot_ubuntu_reviewed_native_code.py": "693a42823ae46f5c17aed7136e5fcd9c8e1b01f18069fadda5b43104a431736c",
     "scripts/run_pilot_ubuntu_integration_container.sh": "04ae811b40e335e24b55751ea83a64fc73f83d262497b6ff4fc07a00fec7f694"
   },
-  "policy_sha256": "af230563706ed643bfe06b66a85804dce3c81d4ea8f48fd5d5c2601aa2d5420b",
+  "policy_sha256": "471ae6d3879e724d7290812dffd48c13916a8244d8c397661715a6dbe9dd6c9f",
   "schema_version": "thebitlab.security-evidence-authority.v1",
   "toolchain_files": {
     "deploy/pilot/legacy-v1/thebitlab-log-format.conf.template": "310d8ea4e73f156646657c7560f9916993e07726ba84a00b8c27f0d62c403a19",
