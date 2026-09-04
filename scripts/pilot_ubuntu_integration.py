@@ -6745,9 +6745,11 @@ def _test_private_runtime_production_vertical_slice(
             (control / "test-handoff-pause").write_text("pause\n", encoding="ascii")
             (control / "test-handoff-pause").chmod(0o600)
             attack_errors: list[BaseException] = []
+            executor_write_denial: int | None = None
 
             def attack_after_stage_m() -> None:
                 nonlocal preload_created, hwcaps_created, config_replaced
+                nonlocal executor_write_denial
                 try:
                     ready = control / "test-handoff-ready"
                     deadline = time.monotonic() + 8
@@ -6786,6 +6788,7 @@ def _test_private_runtime_production_vertical_slice(
                     except OSError as exc:
                         if exc.errno not in {errno.EAGAIN, errno.ETXTBSY}:
                             raise
+                        executor_write_denial = exc.errno
                     else:
                         os.close(writer)
                         raise RuntimeError("Executor writer non bloccato durante handoff")
@@ -6861,8 +6864,11 @@ def _test_private_runtime_production_vertical_slice(
                         if b"HTTP/1." not in connection.recv(4096):
                             raise RuntimeError("HTTP private-runtime assente")
                     lease = activation._EXECUTOR_INODE_LEASE
-                    if lease is None or not lease.break_requested:
-                        raise RuntimeError("Lease break durante handoff non osservato")
+                    if lease is None or (
+                        executor_write_denial != errno.ETXTBSY
+                        and not lease.break_requested
+                    ):
+                        raise RuntimeError("Denial/lease break durante handoff non osservata")
                     _private_start_positive_proof(unit, authority)
                     respawn = _test_private_worker_respawn(unit, authority)
                     # Keep every source attack through target start and worker

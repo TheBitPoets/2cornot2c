@@ -5728,6 +5728,8 @@ def test_runtime_authority_helper_rejects_unknown_direct_child_without_io(
 def test_private_runtime_handoff_accepts_both_kernel_write_denials() -> None:
     source = (ROOT / "scripts/pilot_ubuntu_integration.py").read_text(encoding="utf-8")
     assert "exc.errno not in {errno.EAGAIN, errno.ETXTBSY}" in source
+    assert "executor_write_denial = exc.errno" in source
+    assert "executor_write_denial != errno.ETXTBSY" in source
 
 
 def test_private_runtime_exec_locks_one_os_thread_and_fails_closed() -> None:
