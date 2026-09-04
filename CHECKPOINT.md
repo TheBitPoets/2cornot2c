@@ -1,41 +1,66 @@
-# Checkpoint operativo
+# Checkpoint operativo — Trusted CI Controller V1
 
-- **Data/ora:** 2026-08-18T22:11:15+02:00
-- **Obiettivo:** validazione Linux/POSIX finale issue #705 prima di push/PR.
-- **Stato:** **completato — READY FOR PUSH**. Validazione eseguita soltanto con dati demo/sintetici; nessun push, PR, VPS/staging/live o dato reale.
-- **Criterio:** suite integrata Linux, bootstrap root vuota, fail-closed POSIX, backup/restore verificabile e isolato, launcher ordering, render/systemd/nginx e startup loopback tutti PASS. Due difetti POSIX reali trovati, corretti, riesaminati e testati.
+- **Data/ora:** 2026-09-04T16:44:36+02:00
+- **Obiettivo:** bootstrap one-time del Trusted Security Controller V1 per separare l'autorità CI dal candidate PR #720.
+- **Stato:** **IMPLEMENTATO — pronto per DRAFT PR e review bootstrap indipendente; non approvato e non mergeabile senza review CLEAN separata**.
+- **Criterio:** controller `pull_request_target` da base SHA, candidate isolato in job/VM non trusted, sei wrapper A-F trusted, envelope e aggregator base-owned, provenance artifact corrente e rerun freshness fail-closed. Risultato: soddisfatto da implementazione e test/simulazioni locali; nessuna esecuzione reale PR #720 rivendicata.
 
-## Ambiente Linux
+## Binding
 
-- Container effimero `ubuntu:24.04`, immagine `ubuntu@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea`, repository host montato read-only e copiato in `/work` interno.
-- Docker Desktop engine 28.3.2 su WSL2 kernel `6.18.33.2-microsoft-standard-WSL2`.
-- Ubuntu 24.04.4 LTS; Python 3.12.3; pytest 8.4.2; nginx 1.24.0; systemd 255; OpenSSL 3.0.13.
+- Repository: `TheBitPoets/2cornot2c`.
+- Branch/worktree: `ci/trusted-security-controller-v1`, `F:/dev/2cornot2c-ci-controller-v1`.
+- Base iniziale: `origin/main` = `29c90735a842738c67b798e97b2e5b00696b5e25` dopo fetch/prune.
+- PR #720 candidate invariato: `origin/fix/oauth-log-redaction-704` = `7a0bb350587d94c5cb5d6cb69187f67d25a72ba5`.
+- PR #720: draft/open, non modificata, gate indipendente `0/2`, non pronta e non da unire.
+- Ruleset API al bootstrap: `[]` (nessun ruleset).
+- Commit V1: unico commit normale contenente questo checkpoint; usare `git rev-parse HEAD` per lo SHA esatto. Nessun amend/rebase/force push ammesso.
 
-## Finding e correzioni
+## Architettura e decisioni
 
-1. `topology_from_paths()` risolveva il path prima del controllo e accettava una root symlink; inoltre `validate_root()` accettava symlink interni. Ora la root esplicita e l'intero albero applicativo falliscono chiusi. Test di regressione POSIX aggiunto.
-2. I lock `.course-storage.lock` e `.thebitlab-server.lock` creati dopo l'hardening avevano mode `0644`. I rispettivi lock owner applicano ora `0600` su POSIX; test specifici e controllo completo dell'albero verificano directory `0700` e file `0600`.
+- Specifica canonica: `doc/TRUSTED_SECURITY_CONTROLLER_V1.md`.
+- Il bootstrap non si auto-certifica: commit immutabile → review umana indipendente (seconda CLEAN fortemente preferita) → merge separato → SHA main trusted.
+- Il candidate systemd/root/Docker gira soltanto in una VM/job GitHub-hosted effimera interamente non fidata. Docker privilegiato non è il confine trusted e non condivide VM, filesystem, verifier o token Actions API con wrapper/aggregator.
+- Quattro raw profile (`A`, `BE`, `C`, `DF`) alimentano sei job producer trusted A-F. Il candidate non assegna l'identità producer.
+- Controller identity lega base/controller SHA, digest workflow, wrapper/verifier, aggregator e topologia `A-F/v1`.
+- Il manifest authority candidate reviewed è copiato/pinnato sulla base trusted (SHA-256 `70f6a2666fe977cd23f9ec6ad602a61815d174104915741403aa2aff5a187d35`); aggiornare verifier e manifest candidate insieme viene rifiutato.
+- Artifact scaricati solo per ID ottenuti da API read-only, con nome/run/attempt/timestamp/digest/size/unicità verificati. I nomi includono `run_attempt`.
+- Upgrade V2 non self-approving documentato; V1 resta authority fino a review e merge separato V2.
 
-File modificati dal follow-up Linux: `scripts/pilot_data_root.py`, `scripts/course_board_server.py`, `scripts/thebitlab_storage.py`, `tests/test_pilot_data_root.py`, `tests/test_course_board_server.py`, `tests/test_thebitlab_storage.py`, `CHECKPOINT.md`. La documentazione canonica `doc/PILOT_ROOT_BACKUP.md` era già coerente e non ha richiesto modifiche.
+## File
 
-## Evidenze Linux/POSIX
+- `.github/workflows/trusted-security-controller-v1.yml`
+- `ci/trusted_security_controller_v1/{common.py,producer.py,aggregate.py,controller-authority.json,candidate-security-authority.json}`
+- `tests/test_trusted_security_controller_v1.py`
+- `doc/TRUSTED_SECURITY_CONTROLLER_V1.md`
+- `CHECKPOINT.md`
 
-- Suite finale non-root integrata #705 + binding/assignment/demo + storage + lock: **119 passed, 1 skipped, 1 deselected**; skip = primitiva solo Windows, deselected = smoke deployment eseguito separatamente come root del container.
-- Smoke controllato nginx + `systemd-analyze verify`: **1 passed**. Test focalizzati post-review: **3 passed**.
-- Windows cross-platform mirato: **4 passed, 1 skipped** (symlink POSIX); warning cleanup DACL temporanei storico/estraneo.
-- Bootstrap CLI: prima esecuzione `created=true`, seconda `created=false`, idempotenza e demo-check PASS. Account docente + 2 studenti, classe, 3 membership e binding #702 PASS; `student_lab_demo_check --existing` PASS su sorgente e restore.
-- POSIX: root/entry symlink rejection, secret rejection, lock esclusivo, doppia istanza, root parziale senza reset, DB auth multiplo fail-closed e mode `0700/0600` PASS.
-- Backup: schema `thebitlab.pilot-backup.v1`, `manifest.sha256`, schema JSON e SHA-256/dimensione di tutti i 28 payload PASS; nessun secret, symlink, cache, lock o sidecar incluso. Snapshot SQLite con dato committed in WAL verificato coerente e sidecar esclusi.
-- Restore: solo target nuovo, checksum payload, `PRAGMA integrity_check`, migrazioni 1..12, binding #702, demo-check e startup bind loopback PASS. Root sorgente invariata per insieme path, SHA-256, mode e `mtime_ns`; backup invariato dai test integrati.
-- Launcher: root incompleta fallisce prima dell'accesso all'EnvironmentFile, verificato sia con test monkeypatch call-order sia con CLI.
-- Deployment: bundle sintetico isolato renderizzato; `systemd-analyze verify` PASS sulla unit generata; smoke nginx non distruttivo PASS. Il bundle example diretto non è verificabile senza l'eseguibile `/opt/thebitlab/current/...`, quindi non ripetere quel comando senza il manifest temporaneo usato dallo smoke.
-- Misure locali Linux, **non SLA**: backup **0.063356 s**; restore finale **0.072458 s**.
-- `compileall` e `git diff --check`: PASS. Review finale completa del diff: nessun finding aperto.
+Nessun runtime product code e nessun file del worktree/branch PR #720 modificato.
 
-## Stato Git e prossimo passo
+## Verifiche
 
-- Worktree `F:/dev/2cornot2c-705`; branch `feat/pilot-root-backup-705`; commit iniziale validato `92cd2864be31a0655377509733433f8bc395824e`.
-- Il follow-up Linux deve essere il nuovo `HEAD` creato al termine di questa unità; branch atteso pulito e ahead 2 rispetto a `origin/main`. Nessun push eseguito.
-- Processi temporanei: container e Docker Desktop avviati per questa unità devono risultare arrestati nel riepilogo finale.
-- Problemi aperti in scope: nessuno.
-- **Prossimo passo distinto:** controllo umano dei due commit, quindi push/apertura PR solo su autorizzazione. File minimi: `AGENTS.md`, `CHECKPOINT.md`, `doc/PILOT_ROOT_BACKUP.md` e `git diff origin/main...HEAD`.
+- `python -m pytest -q tests/test_trusted_security_controller_v1.py`: **33 passed**. Warning pytest Windows su vecchie directory temporanee DACL estranee, nessun test failure.
+- `python -m py_compile ...` / `compileall`: PASS.
+- parsing PyYAML workflow: PASS, 3 job topology (due job sono matrici chiuse).
+- `git diff --check`: PASS.
+- confronto byte manifest trusted con blob candidate: PASS, SHA-256 sopra.
+- simulazione read-only del candidate esatto tramite tree Git con `core.autocrlf=false`: PASS, 36 file authority/protected verificati. Il primo archivio locale con `core.autocrlf=true` aveva convertito LF→CRLF ed è stato correttamente rifiutato; non ripetere senza disabilitare la conversione per la fixture Git.
+- Negative matrix: producer mismatch/relabel/unknown/duplicate; cross-run/attempt; candidate/base/controller/workflow/verifier/aggregator/topology errati; stale/rename/spoof artifact; manifest update; verifier alterato + digest candidate aggiornato; missing; cleanup false; malformed: PASS (tutti rifiutati).
+- Safety matrix `pull_request_target`: checkout base/candidate separati, no secret, nessun token API nel job candidate, nessun write permission/cache/mount/socket nel workflow trusted, action pin, niente title/body/branch shell expression, path executable trusted: PASS.
+- Non eseguito il profilo systemd reale contro PR #720: per istruzione pre-merge sono ammesse solo fixture/simulazioni; GitHub non può caricare V1 dalla base finché V1 non è su main.
+
+## Ruleset post-merge
+
+Richiedere su `main` il check esatto `trusted-security-controller`, source/app `GitHub Actions` se selezionabile. Passi admin/UI completi nella specifica canonica. Il ruleset è enforcement, non sostituisce la verifica indipendente di SHA/digest/controller identity.
+
+## Prossimo passo obbligatorio
+
+1. Confermare branch pushato e DRAFT PR separata verso `main` (`gh pr view --head ci/trusted-security-controller-v1`).
+2. Fermare questa sessione developer.
+3. Aprire worktree/sessione fresca read-only sullo SHA V1 immutabile.
+4. Eseguire review completa indipendente di `pull_request_target`, isolamento candidate, producer/artifact provenance, freshness/rerun, aggregator/manifest authority e V1→V2.
+5. Pubblicare finding inline; non unire finché almeno una review bootstrap CLEAN (due preferite) e verifiche richieste non sono soddisfatte.
+6. Non modificare/merge/ready PR #720; non dichiarare ancora R1-MEDIUM-01 chiuso.
+
+Processi temporanei: nessuno. Problemi aperti implementation-side noti: nessuno; resta obbligatoria la review root-of-trust e, dopo merge, configurazione admin ruleset + nuova esecuzione reale PR #720.
+
+File minimi per la ripresa: `AGENTS.md`, `CHECKPOINT.md`, `doc/TRUSTED_SECURITY_CONTROLLER_V1.md`, workflow V1 e intero diff della DRAFT PR rispetto a `main`.

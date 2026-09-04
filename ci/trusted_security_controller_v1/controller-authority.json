@@ -1,0 +1,10 @@
+{
+  "bootstrap_main_sha": "29c90735a842738c67b798e97b2e5b00696b5e25",
+  "bootstrap_pr720_candidate_sha": "7a0bb350587d94c5cb5d6cb69187f67d25a72ba5",
+  "candidate_authority_file": "deploy/pilot/ci/security-evidence-authority.json",
+  "candidate_authority_sha256": "70f6a2666fe977cd23f9ec6ad602a61815d174104915741403aa2aff5a187d35",
+  "closed_topology_version": "A-F/v1",
+  "schema_version": "thebitlab.trusted-security-controller-authority.v1",
+  "trusted_candidate_authority_file": "ci/trusted_security_controller_v1/candidate-security-authority.json",
+  "workflow_file": ".github/workflows/trusted-security-controller-v1.yml"
+}
