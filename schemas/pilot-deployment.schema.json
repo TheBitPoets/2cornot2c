@@ -11,11 +11,12 @@
     "service",
     "data",
     "origin",
+    "logging",
     "features"
   ],
   "properties": {
     "$schema": {"type": "string", "minLength": 1},
-    "schema_version": {"const": "thebitlab.pilot-deployment.v1"},
+    "schema_version": {"const": "thebitlab.pilot-deployment.v2"},
     "deployment_id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]{2,62}$"
@@ -49,7 +50,7 @@
         "bind_host": {"const": "127.0.0.1"},
         "port": {"type": "integer", "minimum": 1024, "maximum": 65535},
         "environment_file": {"$ref": "#/$defs/absolutePath"},
-        "lock_directory": {"const": "/run/thebitlab"}
+        "lock_directory": {"const": "/run/thebitlab/app"}
       }
     },
     "data": {
@@ -96,6 +97,28 @@
           "else": {"properties": {"allowed_proxy_cidrs": {"maxItems": 0}}}
         }
       ]
+    },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory",
+        "directory_mode",
+        "rotation",
+        "retention_days",
+        "file_mode",
+        "owner",
+        "group"
+      ],
+      "properties": {
+        "directory": {"const": "/var/log/thebitlab"},
+        "directory_mode": {"const": "0750"},
+        "rotation": {"const": "daily"},
+        "retention_days": {"const": 30},
+        "file_mode": {"const": "0640"},
+        "owner": {"const": "www-data"},
+        "group": {"const": "adm"}
+      }
     },
     "features": {
       "type": "object",

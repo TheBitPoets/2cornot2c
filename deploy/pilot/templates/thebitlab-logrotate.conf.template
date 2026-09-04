@@ -1,0 +1,21 @@
+# Generated policy: path-only access and process-only nginx logs are retained for 30 days.
+# Incident/legal-hold evidence is preserved separately under the approved procedure.
+@@ACCESS_LOG@@ @@ERROR_LOG@@ {
+    daily
+    rotate 30
+    maxage 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create @@LOG_FILE_MODE@@ @@LOG_OWNER@@ @@LOG_GROUP@@
+    sharedscripts
+    firstaction
+        # The externally pinned toolchain snapshots pre-rotation inode identity atomically.
+        /usr/sbin/thebitlab-pilot-activate logrotate-snapshot
+    endscript
+    postrotate
+        # Success requires bounded, process/cgroup-attested old-to-current FD transition.
+        /usr/sbin/thebitlab-pilot-activate logrotate-reopen
+    endscript
+}

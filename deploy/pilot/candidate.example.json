@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/pilot-deployment.schema.json",
-  "schema_version": "thebitlab.pilot-deployment.v1",
+  "schema_version": "thebitlab.pilot-deployment.v2",
   "deployment_id": "pilot-candidate-example",
   "release": {
     "commit": "0123456789abcdef0123456789abcdef01234567",
@@ -14,7 +14,7 @@
     "bind_host": "127.0.0.1",
     "port": 8000,
     "environment_file": "/etc/thebitlab/secrets/pilot.env",
-    "lock_directory": "/run/thebitlab"
+    "lock_directory": "/run/thebitlab/app"
   },
   "data": {
     "root": "/srv/thebitlab/data",
@@ -29,8 +29,17 @@
     ],
     "tls_certificate_file": "/etc/thebitlab/tls/origin.crt",
     "tls_private_key_file": "/etc/thebitlab/tls/origin.key",
-    "access_log": "/var/log/nginx/thebitlab-access.log",
-    "error_log": "/var/log/nginx/thebitlab-error.log"
+    "access_log": "/var/log/thebitlab/thebitlab-access.log",
+    "error_log": "/var/log/thebitlab/thebitlab-process-error.log"
+  },
+  "logging": {
+    "directory": "/var/log/thebitlab",
+    "directory_mode": "0750",
+    "rotation": "daily",
+    "retention_days": 30,
+    "file_mode": "0640",
+    "owner": "www-data",
+    "group": "adm"
   },
   "features": {
     "google_auth": true,

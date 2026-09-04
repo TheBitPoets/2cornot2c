@@ -95,7 +95,7 @@ def database_path(tmp_path):
 
 @pytest.fixture
 def storage(database_path):
-    return SqliteIdentityStorage(database_path)
+    return SqliteIdentityStorage(database_path, clock=lambda: NOW)
 
 
 def google_assertion(subject="google-42"):

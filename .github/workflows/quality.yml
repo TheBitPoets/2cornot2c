@@ -3,6 +3,10 @@ name: Quality
 permissions:
   contents: read
 
+env:
+  SECURITY_CANDIDATE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  SECURITY_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+
 on:
   workflow_dispatch:
   pull_request:
@@ -40,12 +44,15 @@ on:
 
 jobs:
   python:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       THEBITLAB_REQUIRE_UTUI: "1"
     steps:
-      - name: Checkout repository
+      - name: Checkout exact candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SECURITY_CANDIDATE_SHA }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -56,7 +63,7 @@ jobs:
         run: python -m pip install -r requirements-dev.txt -r requirements-utui.txt -r requirements-auth.txt
 
       - name: Install deployment lint tools
-        run: sudo apt-get update && sudo apt-get install -y nginx
+        run: sudo apt-get update && sudo apt-get install -y nginx logrotate openssl acl systemd python3-jsonschema
 
       - name: Run Python tests
         run: python -m pytest
@@ -69,14 +76,97 @@ jobs:
           python -m pip install -r requirements-docs.txt
           python -m sphinx -W --keep-going -c doc/sphinx doc/sphinx doc/sphinx/_build/html
 
+  security-evidence:
+    name: security-evidence-${{ matrix.shard }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: A
+            mode: --bootstrap-adversarial-only
+          - shard: BE
+            mode: --private-runtime-gate-only
+          - shard: C
+            mode: --fence-race-only
+          - shard: DF
+            mode: ""
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.SECURITY_CANDIDATE_SHA }}
+          fetch-depth: 0
+
+      - name: Bind candidate and base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SECURITY_CANDIDATE_SHA"
+          test "$(git merge-base "$SECURITY_CANDIDATE_SHA" "$SECURITY_BASE_SHA")" = "$SECURITY_BASE_SHA"
+          printf 'candidate=%s\nbase=%s\n' "$SECURITY_CANDIDATE_SHA" "$SECURITY_BASE_SHA"
+
+      - name: Run authentic security shard ${{ matrix.shard }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$SECURITY_CANDIDATE_SHA"
+          export THEBITLAB_SECURITY_BASE_SHA="$SECURITY_BASE_SHA"
+          export GITHUB_RUN_ID="${{ github.run_id }}-${{ matrix.shard }}"
+          scripts/run_pilot_ubuntu_integration_container.sh ${{ matrix.mode }} \
+            | tee "security-${{ matrix.shard }}.log"
+
+      - name: Upload security evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: security-evidence-${{ matrix.shard }}
+          path: security-${{ matrix.shard }}.log
+          if-no-files-found: error
+          retention-days: 7
+
+  security-aggregate:
+    name: security-evidence-aggregate
+    runs-on: ubuntu-24.04
+    needs: security-evidence
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.SECURITY_CANDIDATE_SHA }}
+          fetch-depth: 0
+
+      - name: Download authentic shard evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: security-evidence-*
+          path: security-evidence
+          merge-multiple: true
+
+      - name: Aggregate exact-head A-F security evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SECURITY_CANDIDATE_SHA"
+          mapfile -t logs < <(find security-evidence -maxdepth 1 -type f -name 'security-*.log' -print | sort)
+          test "${#logs[@]}" -eq 4
+          python -m scripts.pilot_private_runtime_evidence \
+            --candidate-sha "$SECURITY_CANDIDATE_SHA" \
+            --base-sha "$SECURITY_BASE_SHA" \
+            --authority-manifest deploy/pilot/ci/security-evidence-authority.json \
+            "${logs[@]}"
+
   mermaid-diagrams:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
     steps:
-      - name: Checkout repository
+      - name: Checkout exact candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SECURITY_CANDIDATE_SHA }}
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -119,8 +209,11 @@ jobs:
     env:
       THEBITLAB_REQUIRE_UTUI: "1"
     steps:
-      - name: Checkout repository
+      - name: Checkout exact candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SECURITY_CANDIDATE_SHA }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -177,8 +270,11 @@ jobs:
     env:
       THEBITLAB_REQUIRE_UTUI: "1"
     steps:
-      - name: Checkout repository
+      - name: Checkout exact candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SECURITY_CANDIDATE_SHA }}
+          fetch-depth: 0
 
       - name: Set up minimum supported Python
         uses: actions/setup-python@v5
