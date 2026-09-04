@@ -1,0 +1,248 @@
+name: Trusted Security Controller V1
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions: {}
+
+concurrency:
+  group: trusted-security-controller-v1-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+
+env:
+  CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+  BASE_SHA: ${{ github.event.pull_request.base.sha }}
+  HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+
+jobs:
+  candidate-execution:
+    name: untrusted-candidate-${{ matrix.profile }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: A
+            mode: --bootstrap-adversarial-only
+          - profile: BE
+            mode: --private-runtime-gate-only
+          - profile: C
+            mode: --fence-race-only
+          - profile: DF
+            mode: full
+    steps:
+      - name: Checkout exact untrusted candidate without persistent credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: TheBitPoets/2cornot2c
+          ref: ${{ env.CANDIDATE_SHA }}
+          path: candidate
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Execute raw profile in disposable untrusted runner boundary
+        shell: bash
+        env:
+          PROFILE: ${{ matrix.profile }}
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$HEAD_REPOSITORY" == "TheBitPoets/2cornot2c" ]]
+          test "$(git -C candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git -C candidate config --local --get-regexp 'http\..*\.extraheader' || true)"
+          case "$PROFILE:$MODE" in
+            A:--bootstrap-adversarial-only|BE:--private-runtime-gate-only|C:--fence-race-only|DF:full) ;;
+            *) echo "Invalid trusted profile mapping" >&2; exit 2 ;;
+          esac
+          execution_id="run-${GITHUB_RUN_ID}.attempt-${GITHUB_RUN_ATTEMPT}.${CANDIDATE_SHA:0:12}.${BASE_SHA:0:12}"
+          raw_path="${RUNNER_TEMP}/security-${PROFILE}.log"
+          export GITHUB_SHA="$CANDIDATE_SHA"
+          export THEBITLAB_SECURITY_BASE_SHA="$BASE_SHA"
+          export GITHUB_RUN_ID="${execution_id}-${PROFILE}"
+          if [[ "$MODE" == "full" ]]; then
+            (cd candidate && scripts/run_pilot_ubuntu_integration_container.sh) | tee "$raw_path"
+          else
+            (cd candidate && scripts/run_pilot_ubuntu_integration_container.sh "$MODE") | tee "$raw_path"
+          fi
+          test -f "$raw_path" && test ! -L "$raw_path"
+          test "$(wc -c < "$raw_path")" -le 8388608
+
+      - name: Upload bounded untrusted raw result
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: trusted-v1-raw-${{ matrix.profile }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/security-${{ matrix.profile }}.log
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+
+  trusted-producer:
+    name: trusted-producer-${{ matrix.slot }}
+    needs: candidate-execution
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - slot: A
+            profile: A
+          - slot: B
+            profile: BE
+          - slot: C
+            profile: C
+          - slot: D
+            profile: DF
+          - slot: E
+            profile: BE
+          - slot: F
+            profile: DF
+    steps:
+      - name: Checkout trusted controller from exact base SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: TheBitPoets/2cornot2c
+          ref: ${{ env.BASE_SHA }}
+          path: trusted
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Checkout exact candidate for read-only digest verification
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: TheBitPoets/2cornot2c
+          ref: ${{ env.CANDIDATE_SHA }}
+          path: candidate
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Bind immutable trusted and candidate checkouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$HEAD_REPOSITORY" == "TheBitPoets/2cornot2c" ]]
+          test "$(git -C trusted rev-parse HEAD)" = "$BASE_SHA"
+          test "$(git -C candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git -C trusted config --local --get-regexp 'http\..*\.extraheader' || true)"
+          test -z "$(git -C candidate config --local --get-regexp 'http\..*\.extraheader' || true)"
+
+      - name: Resolve current-attempt raw artifact provenance
+        id: raw-provenance
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PROFILE: ${{ matrix.profile }}
+        run: >-
+          /usr/bin/python3 trusted/ci/trusted_security_controller_v1/producer.py discover
+          --repository "$GITHUB_REPOSITORY"
+          --run-id "$GITHUB_RUN_ID"
+          --run-attempt "$GITHUB_RUN_ATTEMPT"
+          --base-sha "$BASE_SHA"
+          --profile "$PROFILE"
+          --output "$RUNNER_TEMP/raw-artifact-metadata.json"
+          --github-output "$GITHUB_OUTPUT"
+
+      - name: Download raw artifact only by trusted API artifact ID
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ steps.raw-provenance.outputs.artifact_id }}
+          path: ${{ runner.temp }}/raw
+
+      - name: Construct authoritative producer envelope
+        env:
+          PRODUCER_SLOT: ${{ matrix.slot }}
+          PROFILE: ${{ matrix.profile }}
+        run: >-
+          /usr/bin/python3 trusted/ci/trusted_security_controller_v1/producer.py envelope
+          --trusted-root trusted
+          --candidate-root candidate
+          --raw "$RUNNER_TEMP/raw/security-${PROFILE}.log"
+          --metadata "$RUNNER_TEMP/raw-artifact-metadata.json"
+          --slot "$PRODUCER_SLOT"
+          --profile "$PROFILE"
+          --candidate-sha "$CANDIDATE_SHA"
+          --base-sha "$BASE_SHA"
+          --run-id "$GITHUB_RUN_ID"
+          --run-attempt "$GITHUB_RUN_ATTEMPT"
+          --output "$RUNNER_TEMP/envelope-${PRODUCER_SLOT}.json"
+
+      - name: Upload authoritative producer envelope
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: trusted-v1-envelope-${{ matrix.slot }}-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/envelope-${{ matrix.slot }}.json
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+
+  trusted-security-controller:
+    name: trusted-security-controller
+    needs: trusted-producer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout trusted aggregator from exact base SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: TheBitPoets/2cornot2c
+          ref: ${{ env.BASE_SHA }}
+          path: trusted
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Bind immutable trusted aggregator checkout
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$HEAD_REPOSITORY" == "TheBitPoets/2cornot2c" ]]
+          test "$(git -C trusted rev-parse HEAD)" = "$BASE_SHA"
+          test -z "$(git -C trusted config --local --get-regexp 'http\..*\.extraheader' || true)"
+
+      - name: Resolve exact A-F current-attempt artifact provenance
+        id: envelope-provenance
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          /usr/bin/python3 trusted/ci/trusted_security_controller_v1/aggregate.py discover
+          --repository "$GITHUB_REPOSITORY"
+          --run-id "$GITHUB_RUN_ID"
+          --run-attempt "$GITHUB_RUN_ATTEMPT"
+          --base-sha "$BASE_SHA"
+          --output "$RUNNER_TEMP/envelope-artifact-metadata.json"
+          --github-output "$GITHUB_OUTPUT"
+
+      - name: Download authoritative envelopes only by trusted API artifact IDs
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ steps.envelope-provenance.outputs.artifact_ids }}
+          path: ${{ runner.temp }}/envelopes
+          merge-multiple: true
+
+      - name: Aggregate exact current-execution A-F topology
+        run: >-
+          /usr/bin/python3 trusted/ci/trusted_security_controller_v1/aggregate.py aggregate
+          --trusted-root trusted
+          --envelopes "$RUNNER_TEMP/envelopes"
+          --metadata "$RUNNER_TEMP/envelope-artifact-metadata.json"
+          --candidate-sha "$CANDIDATE_SHA"
+          --base-sha "$BASE_SHA"
+          --run-id "$GITHUB_RUN_ID"
+          --run-attempt "$GITHUB_RUN_ATTEMPT"
