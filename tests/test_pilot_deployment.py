@@ -5536,7 +5536,7 @@ def test_quality_workflow_enforces_exact_head_af_and_real_aggregator() -> None:
     assert "needs: security-evidence" in workflow
     assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in workflow
     assert "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093" in workflow
-    assert "python scripts/pilot_private_runtime_evidence.py" in workflow
+    assert "python -m scripts.pilot_private_runtime_evidence" in workflow
     assert '--base-sha "$SECURITY_BASE_SHA"' in workflow
     assert "--authority-manifest deploy/pilot/ci/security-evidence-authority.json" in workflow
     assert 'test "${#logs[@]}" -eq 4' in workflow

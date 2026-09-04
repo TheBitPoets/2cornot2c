@@ -150,7 +150,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SECURITY_CANDIDATE_SHA"
           mapfile -t logs < <(find security-evidence -maxdepth 1 -type f -name 'security-*.log' -print | sort)
           test "${#logs[@]}" -eq 4
-          python scripts/pilot_private_runtime_evidence.py \
+          python -m scripts.pilot_private_runtime_evidence \
             --candidate-sha "$SECURITY_CANDIDATE_SHA" \
             --base-sha "$SECURITY_BASE_SHA" \
             --authority-manifest deploy/pilot/ci/security-evidence-authority.json \

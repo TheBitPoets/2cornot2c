@@ -4,7 +4,7 @@
   "package_inventory_sha256": "fb412411b0c438b04a3633b0135ef1300c77ec0e3fcebf1bf006ddd6737c2c26",
   "policy_files": {
     ".dockerignore": "ecf187847f2a4b84b2395c4e42d135a3960213379376c96002edef928efc3d3f",
-    ".github/workflows/quality.yml": "cb5553af1d20b4cce1d182656ac8661726f941e6061c28fde2a0229cca3bd8e4",
+    ".github/workflows/quality.yml": "85bf83604424c209ec317ad96a72cb6ffb47c942203395b9022e78371515dd56",
     "deploy/pilot/ci/Dockerfile.ubuntu-systemd": "fe76127b289db845b98be5b634cef8f883adc6324e4485112a78621b9c697e3e",
     "deploy/pilot/ci/isrg-root-x1.pem": "22b557a27055b33606b6559f37703928d3e4ad79f110b407d04986e1843543d1",
     "deploy/pilot/ci/ubuntu-systemd-package-baseline.json": "35dba57876cd9e9daee5a8f251fffa4e5e820c6edee95637533c4aadb45b05fb",
@@ -25,7 +25,7 @@
     "scripts/pilot_ubuntu_reviewed_native_code.py": "693a42823ae46f5c17aed7136e5fcd9c8e1b01f18069fadda5b43104a431736c",
     "scripts/run_pilot_ubuntu_integration_container.sh": "04ae811b40e335e24b55751ea83a64fc73f83d262497b6ff4fc07a00fec7f694"
   },
-  "policy_sha256": "3d953c6abdadb15b802d2287683ad0ffc15c0949019f01dcfd61feb9abda4473",
+  "policy_sha256": "c823a663135b6881de455e7f484f31ab5adae40908eafb2a59202021885399ce",
   "schema_version": "thebitlab.security-evidence-authority.v1",
   "toolchain_files": {
     "deploy/pilot/legacy-v1/thebitlab-log-format.conf.template": "310d8ea4e73f156646657c7560f9916993e07726ba84a00b8c27f0d62c403a19",
