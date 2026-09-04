@@ -95,7 +95,7 @@ def database_path(tmp_path):
 
 @pytest.fixture
 def storage(database_path):
-    return SqliteIdentityStorage(database_path)
+    return SqliteIdentityStorage(database_path, clock=lambda: NOW)
 
 
 def google_assertion(subject="google-42"):
@@ -1270,6 +1270,49 @@ def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> N
     with pytest.raises(PairingExpiredError):
         service.authorize(issued.code, "user-01")
     assert storage.read_pairing("pairing-01").status == "expired"
+
+
+def test_shared_deterministic_clock_controls_boundaries_and_reopen(database_path) -> None:
+    distant_now = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    clock = MutableClock(distant_now)
+    storage = SqliteIdentityStorage(database_path, clock=clock)
+    storage.create_user(
+        account(created_at=distant_now, updated_at=distant_now)
+    )
+    codes = iter(("PAIRCODE01", "PAIRCODE02", "PAIRCODE03"))
+    pairing_ids = iter(("pairing-01", "pairing-02", "pairing-03"))
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: next(codes),
+        pairing_id_factory=lambda: next(pairing_ids),
+    )
+    at_t0 = service.issue()
+    before_boundary = service.issue()
+    at_boundary = service.issue()
+
+    assert service.authorize(at_t0.code, "user-01").status == "authorized"
+    clock.value = distant_now + timedelta(minutes=10) - timedelta(microseconds=1)
+    assert service.authorize(before_boundary.code, "user-01").status == "authorized"
+    clock.value = distant_now + timedelta(minutes=10)
+    with pytest.raises(PairingExpiredError):
+        service.authorize(at_boundary.code, "user-01")
+    clock.value += timedelta(days=1)
+    with pytest.raises(PairingExpiredError):
+        service.authorize(at_boundary.code, "user-01")
+
+    reopened = SqliteIdentityStorage(database_path, clock=clock)
+    reopened_service = PairingService(reopened, pepper=PEPPER, clock=clock)
+    with pytest.raises(PairingExpiredError):
+        reopened_service.consume(at_t0.pairing.pairing_id, at_t0.code)
+    assert reopened.read_pairing(at_t0.pairing.pairing_id).status == "expired"
+    assert reopened.read_pairing(before_boundary.pairing.pairing_id).status == "authorized"
+    assert reopened.read_pairing(at_boundary.pairing.pairing_id).status == "expired"
+
+    clock.value = distant_now
+    with pytest.raises(PairingExpiredError):
+        reopened_service.consume(at_t0.pairing.pairing_id, at_t0.code)
 
 
 def test_pairing_authorization_rechecks_storage_clock_after_lock(storage) -> None:
