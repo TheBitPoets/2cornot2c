@@ -2959,8 +2959,12 @@ class SqliteIdentityStorage:
                 )
 
     def save_session_for_active_user(
-        self, session: UserSession, *, expected_user_updated_at: datetime
-    ) -> None:
+        self,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_valid_at: datetime,
+    ) -> UserSession:
         if session.revoked_at is not None:
             raise IdentityStorageConflictError(
                 "Una sessione revocata non puo essere usata come touch attivo."
@@ -2971,7 +2975,15 @@ class SqliteIdentityStorage:
         expected_user_revision = _encode_datetime(
             expected_user_updated_at, "expected_user_updated_at"
         )
+        expected_valid_time = _encode_datetime(
+            expected_valid_at, "expected_valid_at"
+        )
         with self._transaction("save_session_for_active_user") as connection:
+            transaction_valid_at = max(
+                expected_valid_time,
+                last_seen_at,
+                _encode_datetime(self._clock(), "storage_clock"),
+            )
             cursor = connection.execute(
                 """
                 UPDATE sessions SET last_seen_at = ?
@@ -2979,6 +2991,7 @@ class SqliteIdentityStorage:
                     AND created_at = ? AND expires_at = ? AND audience = ?
                     AND source_pairing_id IS ?
                     AND revoked_at IS NULL AND last_seen_at <= ?
+                    AND created_at <= ? AND expires_at > ?
                     AND EXISTS (
                         SELECT 1 FROM users
                         WHERE users.user_id = sessions.user_id
@@ -2986,7 +2999,7 @@ class SqliteIdentityStorage:
                     )
                 """,
                 (
-                    last_seen_at,
+                    transaction_valid_at,
                     session.session_id,
                     session.user_id,
                     session.token_digest,
@@ -2994,21 +3007,44 @@ class SqliteIdentityStorage:
                     expires_at,
                     session.audience,
                     session.source_pairing_id,
-                    last_seen_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
                     expected_user_revision,
                 ),
             )
             if cursor.rowcount != 1:
-                exists = connection.execute(
-                    "SELECT 1 FROM sessions WHERE session_id = ?", (session.session_id,)
+                current = connection.execute(
+                    "SELECT * FROM sessions WHERE session_id = ?", (session.session_id,)
                 ).fetchone()
-                if exists is None:
+                if current is None:
                     raise IdentityStorageNotFoundError(
                         "Sessione da aggiornare non trovata."
+                    )
+                if (
+                    current["user_id"] == session.user_id
+                    and current["token_digest"] == session.token_digest
+                    and current["created_at"] == created_at
+                    and current["expires_at"] == expires_at
+                    and current["audience"] == session.audience
+                    and current["source_pairing_id"] == session.source_pairing_id
+                    and current["revoked_at"] is None
+                    and current["expires_at"] <= transaction_valid_at
+                ):
+                    raise IdentityStorageSessionExpiredError(
+                        "Sessione scaduta al tempo della transazione di autenticazione."
                     )
                 raise IdentityStorageConflictError(
                     "Sessione o utente modificati durante l'autenticazione."
                 )
+            persisted = connection.execute(
+                "SELECT * FROM sessions WHERE session_id = ?", (session.session_id,)
+            ).fetchone()
+            if persisted is None:
+                raise IdentityStorageNotFoundError(
+                    "Sessione autenticata non trovata dopo il touch."
+                )
+            return self._session(persisted)
 
     def list_user_sessions(self, user_id: str) -> list[UserSession]:
         rows = self._query_all(

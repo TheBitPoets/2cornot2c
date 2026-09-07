@@ -25,6 +25,7 @@ from scripts.thebitlab_identity_sqlite import (
     IdentityStorageGenerationConflictError,
     IdentityStorageNotFoundError,
     IdentityStoragePairingExpiredError,
+    IdentityStorageSessionExpiredError,
     SCHEMA_VERSION,
     SqliteIdentityStorage,
 )
@@ -795,6 +796,34 @@ def test_generic_session_paths_and_sql_trigger_reject_unconsumed_tui_session(
                     "pairing-01",
                 ),
             )
+
+
+def test_active_session_touch_uses_post_lock_conservative_expiry(storage) -> None:
+    storage.create_user(account())
+    active = session()
+    storage.create_session(active)
+    proposed = replace(active, last_seen_at=NOW + timedelta(minutes=1))
+
+    storage._clock = lambda: LATER - timedelta(microseconds=1)
+    persisted = storage.save_session_for_active_user(
+        proposed,
+        expected_user_updated_at=NOW,
+        expected_valid_at=NOW + timedelta(minutes=1),
+    )
+    transaction_touch = replace(
+        proposed, last_seen_at=LATER - timedelta(microseconds=1)
+    )
+    assert persisted == transaction_touch
+    assert storage.read_session("session-01") == transaction_touch
+
+    storage._clock = lambda: LATER
+    with pytest.raises(IdentityStorageSessionExpiredError, match="transazione"):
+        storage.save_session_for_active_user(
+            proposed,
+            expected_user_updated_at=NOW,
+            expected_valid_at=NOW + timedelta(minutes=1),
+        )
+    assert storage.read_session("session-01") == transaction_touch
 
 
 def test_default_storage_clock_uses_current_utc_for_transaction_expiry(

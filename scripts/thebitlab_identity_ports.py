@@ -40,7 +40,7 @@ class IdentityStoragePairingExpiredError(IdentityStorageConflictError):
 
 
 class IdentityStorageSessionExpiredError(IdentityStorageConflictError):
-    """Raised when a candidate session expires before atomic insertion."""
+    """Raised when a session expires before atomic insertion or authenticated use."""
 
 
 class IdentityStorageNotFoundError(IdentityStorageError):
@@ -378,9 +378,13 @@ class SessionStorage(Protocol):
     def save_session(self, session: UserSession) -> None: ...
 
     def save_session_for_active_user(
-        self, session: UserSession, *, expected_user_updated_at: datetime
-    ) -> None:
-        """Touch an active session only while its owner revision remains unchanged."""
+        self,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_valid_at: datetime,
+    ) -> UserSession:
+        """Touch and return a transaction-current session at a monotonic time."""
         ...
 
     def list_user_sessions(self, user_id: str) -> list[UserSession]: ...

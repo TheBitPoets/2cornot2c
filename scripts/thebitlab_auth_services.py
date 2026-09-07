@@ -406,8 +406,12 @@ class SessionApplicationStorage(Protocol):
     def save_session(self, session: UserSession) -> None: ...
 
     def save_session_for_active_user(
-        self, session: UserSession, *, expected_user_updated_at: datetime
-    ) -> None: ...
+        self,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_valid_at: datetime,
+    ) -> UserSession: ...
 
     def revoke_user_sessions(
         self, user_id: str, revoked_at: datetime, *, audience: str | None = None
@@ -1005,20 +1009,50 @@ class SessionService:
         finally:
             bearer_token = None
         session = self.storage.read_session_by_token_digest(digest)
+        expected_generation = None if session is None else self._generation(session)
         now = _utc(self.clock())
         for _attempt in range(_MAX_ATTEMPTS):
             session, account = self._require_valid(session, digest, now)
+            if self._generation(session) != expected_generation:
+                raise ConcurrentStateChangeError(
+                    "Generazione sessione modificata durante l'autenticazione."
+                )
             touched = replace(session, last_seen_at=max(session.last_seen_at, now))
             try:
-                self.storage.save_session_for_active_user(
-                    touched, expected_user_updated_at=account.updated_at
+                persisted = self.storage.save_session_for_active_user(
+                    touched,
+                    expected_user_updated_at=account.updated_at,
+                    expected_valid_at=now,
                 )
+            except IdentityStorageSessionExpiredError:
+                raise InvalidCredentialError("Sessione non valida.") from None
             except (IdentityStorageConflictError, IdentityStorageNotFoundError):
                 session = self.storage.read_session_by_token_digest(digest)
                 continue
-            return AuthenticatedSession(touched, account)
+            if (
+                type(persisted) is not UserSession
+                or self._generation(persisted) != expected_generation
+                or persisted.revoked_at is not None
+                or persisted.last_seen_at < touched.last_seen_at
+            ):
+                raise ConcurrentStateChangeError(
+                    "Risultato storage sessione non coerente con l'autenticazione."
+                )
+            return AuthenticatedSession(persisted, account)
         raise ConcurrentStateChangeError(
             "Sessione o utente modificati ripetutamente durante l'autenticazione."
+        )
+
+    @staticmethod
+    def _generation(session: UserSession) -> tuple[object, ...]:
+        return (
+            session.session_id,
+            session.user_id,
+            session.token_digest,
+            session.created_at,
+            session.expires_at,
+            session.audience,
+            session.source_pairing_id,
         )
 
     def _require_valid(
