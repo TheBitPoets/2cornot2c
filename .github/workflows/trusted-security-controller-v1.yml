@@ -190,6 +190,7 @@ jobs:
 
   trusted-security-controller:
     name: trusted-security-controller
+    if: ${{ always() }}
     needs: trusted-producer
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -197,6 +198,16 @@ jobs:
       contents: read
       actions: read
     steps:
+      - name: Require successful trusted producers
+        env:
+          PRODUCER_RESULT: ${{ needs.trusted-producer.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$PRODUCER_RESULT" != "success" ]]; then
+            echo "Trusted producer jobs did not all succeed" >&2
+            exit 1
+          fi
+
       - name: Checkout trusted aggregator from exact base SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

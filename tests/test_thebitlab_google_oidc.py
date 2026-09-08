@@ -132,7 +132,7 @@ def clock():
 
 
 def make_service(database_path, clock, *, transport=None, verifier=None, flow_ttl=None):
-    storage = SqliteIdentityStorage(database_path)
+    storage = SqliteIdentityStorage(database_path, clock=clock)
     identities = FederatedIdentityService(
         storage,
         clock=clock,

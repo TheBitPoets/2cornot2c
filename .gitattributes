@@ -1,2 +1,3 @@
 *.sh text eol=lf
+ci/trusted_security_controller_v1/candidate-security-authority.json text eol=lf
 doc/architecture/diagrams/*.svg linguist-generated=true

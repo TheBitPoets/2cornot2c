@@ -79,6 +79,8 @@ Il record candidate `shard` è soltanto input non fidato. Il wrapper selezionato
 
 Il manifest su candidate HEAD non può quindi ridefinire autorità. Modificare un verifier e aggiornare il relativo digest candidate cambia il manifest e viene rifiutato dal pin trusted.
 
+La copia trusted del manifest mantiene terminatori LF tramite `.gitattributes`, anche nei checkout Windows con `core.autocrlf=true`: il digest vincola i byte del file e non una rappresentazione JSON normalizzata. Non aggiornare il digest per compensare conversioni locali dei terminatori.
+
 ### Provenienza artifact e freshness
 
 I nomi raw ed envelope includono `github.run_id` e `github.run_attempt`. Prima di ogni download il job trusted interroga le API GitHub Actions con il solo `GITHUB_TOKEN` read-only e richiede:
@@ -98,6 +100,8 @@ Il download usa gli artifact ID appena verificati. Un artifact valido rinominato
 Ogni wrapper trusted costruisce un envelope contenente almeno schema, candidate/base/controller SHA, identità controller, workflow identity, run ID, run attempt, security execution ID, slot e producer identity, digest raw, digest record selezionato, provenienza artifact, identità evidence, cleanup e risultato.
 
 L'aggregator è ricaricato dall'esatto base SHA in un nuovo job. Richiede una e una sola istanza A-F e rifiuta producer errato, duplicato o sconosciuto; run/attempt/execution/candidate/base/controller/workflow/verifier/aggregator/topologia errati; provenienza raw incoerente; artifact stale/rinominato; scenari incompleti; cleanup falso; schema o evidence malformati.
+
+Il job finale usa `always()` e verifica come primo passo che tutti i producer siano terminati con `success`. Failure, cancellation o skip a monte fanno fallire esplicitamente il gate prima di checkout, download e aggregazione. Il gate finale non deve essere saltato per propagazione di `needs`: GitHub può considerare uno skipped check sufficiente per una protezione di branch. Riferimento: [troubleshooting required status checks](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks).
 
 ## Sicurezza `pull_request_target`
 

@@ -3,12 +3,16 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import re
+import shutil
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+import yaml
 
 CONTROLLER_DIR = Path(__file__).resolve().parents[1] / "ci" / "trusted_security_controller_v1"
 sys.path.insert(0, str(CONTROLLER_DIR))
@@ -388,3 +392,39 @@ def test_candidate_job_has_no_trusted_checkout_or_token_environment() -> None:
     assert "actions: read" not in candidate_job
     assert "persist-credentials: false" in candidate_job
     assert "Docker socket" not in candidate_job
+
+
+def test_required_gate_runs_after_failed_or_skipped_dependencies() -> None:
+    source = (ROOT / ".github/workflows/trusted-security-controller-v1.yml").read_text(encoding="utf-8")
+    gate = yaml.safe_load(source)["jobs"]["trusted-security-controller"]
+    assert gate["if"] == "${{ always() }}"
+    assert gate["needs"] == "trusted-producer"
+    guard = gate["steps"][0]
+    assert "if" not in guard
+    assert guard["env"]["PRODUCER_RESULT"] == "${{ needs.trusted-producer.result }}"
+    assert '[[ "$PRODUCER_RESULT" != "success" ]]' in guard["run"]
+    assert "exit 1" in guard["run"]
+    assert not gate.get("continue-on-error", False)
+    assert not guard.get("continue-on-error", False)
+
+
+@pytest.mark.parametrize("producer_result", ["success", "failure", "cancelled", "skipped", "", "unknown"])
+def test_required_gate_guard_accepts_only_success(producer_result: str) -> None:
+    if sys.platform == "win32":
+        git = shutil.which("git")
+        bash = str(Path(git).resolve().parents[1] / "bin" / "bash.exe") if git else None
+    else:
+        bash = shutil.which("bash")
+    if not bash or not Path(bash).is_file():
+        pytest.skip("Bash is required to execute the production Ubuntu gate guard")
+    source = (ROOT / ".github/workflows/trusted-security-controller-v1.yml").read_text(encoding="utf-8")
+    guard = yaml.safe_load(source)["jobs"]["trusted-security-controller"]["steps"][0]
+    result = subprocess.run(
+        [bash, "--noprofile", "--norc", "-c", guard["run"]],
+        env={**os.environ, "PRODUCER_RESULT": producer_result},
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == (0 if producer_result == "success" else 1), result.stderr
