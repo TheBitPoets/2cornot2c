@@ -116,3 +116,37 @@ File minimi per la ripresa/review: `AGENTS.md`, questo checkpoint, i tre file pr
 5. **Prossima unità distinta:** nuovo worktree detached pulito e nuova sessione per Fresh Independent Review Round 1 sull'esatto nuovo candidate; gate resta `0/2`.
 
 File minimi per la nuova review: `AGENTS.md`, questo checkpoint, i tre file production, i quattro file test, i tre documenti canonici e `git diff 29c90735a842738c67b798e97b2e5b00696b5e25..<new-candidate>`.
+
+---
+
+# AUTH-CLOCK-R1-003 — developer remediation
+
+- **Data/ora:** 2026-09-08T18:09:40+02:00.
+- **Stato:** remediation developer implementata e verificata; pubblicazione autorizzata con un commit normale e push fast-forward, senza review indipendente né merge.
+- **Binding iniziale:** PR #773 OPEN/DRAFT/MERGEABLE; base, `origin/main` e merge-base `29c90735a842738c67b798e97b2e5b00696b5e25`; candidate, PR HEAD e remoto feature `4926590af7987cd569158029c9cf166270afea7d`; gate indipendente `0/2`.
+- **Worktree developer:** `F:/dev/2cornot2c-auth-clock-r1-003`, branch `fix/auth-clock-r1-003-remediation`; il worktree review `F:/dev/2cornot2c-773-review-r1-4926590a-20260908` non è stato modificato.
+
+## Riproduzione, causa e correzione
+
+- Regressione HTTP sull'esatto candidate: flow iniziato dalla generazione originale; delete/recreate prima dell'autenticazione callback con stessi `session_id`, `user_id`, `token_digest` e `created_at`, ma `expires_at` esteso; pre-fix callback **ACCEPT** (`303`) e link GitHub persistito.
+- Causa: `PendingGitHubLinkFlow` e `InMemoryGitHubLinkFlowStore.consume()` confrontavano soltanto `session_id`, `token_digest` e `created_at`, quindi la callback poteva adottare una replacement generation prima del CAS storage introdotto da R1-002.
+- Il pending flow conserva e confronta ora l'intera generazione immutabile `(session_id, user_id, token_digest, created_at, expires_at, audience, source_pairing_id)`, oltre a revisione utente e browser binding. Il mismatch resta non terminale nello store e impedisce il token exchange.
+- Post-fix la replacement HTTP è rifiutata con `400` e nessun link persistito; variazioni di `expires_at` e della coppia valida `audience/source_pairing_id` sono rifiutate prima del provider I/O.
+
+## File e verifiche
+
+- Production: `scripts/thebitlab_github_oauth.py`.
+- Test: `tests/test_thebitlab_github_oauth.py`, `tests/test_thebitlab_github_oauth_http.py`.
+- Canonico: `doc/architecture/github-account-linking.md`, `doc/architecture/github-oauth-http-routes.md`.
+- Focused Python 3.11.15: **35 passed**; focused Python 3.12.10: **35 passed**.
+- `git diff --check`: PASS. Nessun processo, container, ambiente virtuale o artefatto pytest temporaneo attivo alla chiusura.
+- Nota ambiente: `py -3.11` non seleziona l'installazione managed; per eventuali rerun usare un venv creato con l'interprete uv CPython 3.11.15 esplicito.
+
+## Pubblicazione e prossimo passo
+
+1. Il nuovo candidate è il commit normale che contiene questa sezione e deve avere parent esatto `4926590af7987cd569158029c9cf166270afea7d`.
+2. Prima del push richiedere ancora `origin/main=29c90735...` e `origin/fix/main-auth-clock-determinism=4926590a...`; divergenza => STOP.
+3. Push fast-forward esplicito verso `fix/main-auth-clock-determinism`; verificare PR #773 ancora OPEN/DRAFT, remoto e PR HEAD uguali al nuovo SHA e CI sull'esatto SHA. Non incrementare il gate e non unire.
+4. **Prossima unità distinta:** nuovo worktree detached pulito e nuova sessione per Fresh Independent Review Round 1 sull'esatto nuovo candidate; gate resta `0/2` perché il fix azzera la sequenza clean.
+
+File minimi per la nuova review: `AGENTS.md`, questo checkpoint, `scripts/thebitlab_github_oauth.py`, i due test GitHub OAuth, i due documenti GitHub canonici e `git diff 29c90735a842738c67b798e97b2e5b00696b5e25..<new-candidate>`.

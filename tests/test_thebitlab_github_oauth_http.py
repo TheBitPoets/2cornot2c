@@ -198,6 +198,39 @@ def test_authenticated_link_callback_and_unlink_round_trip(tmp_path) -> None:
     assert storage.read_external_identity("github", "123456") is None
 
 
+def test_callback_rejects_replacement_session_generation_before_authentication(
+    tmp_path,
+) -> None:
+    routes, storage, established, session_cookie = setup_routes(tmp_path)
+    started = routes.dispatch(
+        request("/auth/github/link", headers=(("Cookie", session_cookie),))
+    )
+    transaction_cookie = header(started, "Set-Cookie")[0].split(";", 1)[0]
+
+    with storage._transaction("replace_callback_session_generation") as connection:
+        connection.execute(
+            "DELETE FROM sessions WHERE session_id = ?",
+            (established.context.session.session_id,),
+        )
+    storage.create_session(
+        replace(
+            established.context.session,
+            expires_at=established.context.session.expires_at + timedelta(hours=1),
+        )
+    )
+
+    completed = routes.dispatch(
+        request(
+            "/auth/github/callback",
+            query=f"code={'c' * 32}&state={STATE}",
+            headers=(("Cookie", session_cookie), ("Cookie", transaction_cookie)),
+        )
+    )
+
+    assert completed.status_code == 400
+    assert storage.read_external_identity("github", "123456") is None
+
+
 def test_unlink_route_rejects_session_replacement_after_authentication(
     tmp_path, monkeypatch
 ) -> None:

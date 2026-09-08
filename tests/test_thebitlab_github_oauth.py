@@ -553,6 +553,34 @@ def test_flow_rejects_reused_token_in_new_session_generation(tmp_path) -> None:
     assert transport.exchange_calls == []
 
 
+@pytest.mark.parametrize("generation_part", ["expires_at", "audience_source"])
+def test_flow_rejects_changes_to_complete_session_generation(
+    tmp_path, generation_part
+) -> None:
+    service, _storage, flows, transport, established, _clock = make_service(tmp_path)
+    state, cookie, _started = start(service, established.context)
+    if generation_part == "expires_at":
+        changes = {
+            "expires_at": established.context.session.expires_at + timedelta(hours=1)
+        }
+    else:
+        changes = {"audience": "tui", "source_pairing_id": "pairing-01"}
+    replacement_context = replace(
+        established.context,
+        authenticated=replace(
+            established.context.authenticated,
+            session=replace(established.context.session, **changes),
+        ),
+    )
+
+    with pytest.raises(GitHubLinkStateError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=replacement_context
+        )
+    assert flows.pending_count() == 1
+    assert transport.exchange_calls == []
+
+
 def test_persisted_session_generation_change_cannot_persist_link(tmp_path) -> None:
     service, storage, flows, _transport, established, _clock = make_service(tmp_path)
     state, cookie, _started = start(service, established.context)
