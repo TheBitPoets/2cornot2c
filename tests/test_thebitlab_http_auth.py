@@ -66,13 +66,13 @@ def database_path(tmp_path):
 
 
 @pytest.fixture
-def storage(database_path):
-    return SqliteIdentityStorage(database_path)
+def clock():
+    return MutableClock()
 
 
 @pytest.fixture
-def clock():
-    return MutableClock()
+def storage(database_path, clock):
+    return SqliteIdentityStorage(database_path, clock=clock)
 
 
 def make_boundary(

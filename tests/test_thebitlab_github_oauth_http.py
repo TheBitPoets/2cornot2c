@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit, urlparse
 
@@ -24,7 +25,7 @@ from scripts.thebitlab_github_oauth_http import (
     GitHubOAuthHttpRoutes,
 )
 from scripts.thebitlab_http_auth import HttpSessionAuthBoundary
-from scripts.thebitlab_identity import UserAccount
+from scripts.thebitlab_identity import ExternalIdentity, UserAccount
 from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 
 NOW = datetime(2026, 9, 1, 8, 0, tzinfo=timezone.utc)
@@ -195,6 +196,80 @@ def test_authenticated_link_callback_and_unlink_round_trip(tmp_path) -> None:
     assert unlinked.status_code == 204
     assert unlinked.body == b""
     assert storage.read_external_identity("github", "123456") is None
+
+
+def test_callback_rejects_replacement_session_generation_before_authentication(
+    tmp_path,
+) -> None:
+    routes, storage, established, session_cookie = setup_routes(tmp_path)
+    started = routes.dispatch(
+        request("/auth/github/link", headers=(("Cookie", session_cookie),))
+    )
+    transaction_cookie = header(started, "Set-Cookie")[0].split(";", 1)[0]
+
+    with storage._transaction("replace_callback_session_generation") as connection:
+        connection.execute(
+            "DELETE FROM sessions WHERE session_id = ?",
+            (established.context.session.session_id,),
+        )
+    storage.create_session(
+        replace(
+            established.context.session,
+            expires_at=established.context.session.expires_at + timedelta(hours=1),
+        )
+    )
+
+    completed = routes.dispatch(
+        request(
+            "/auth/github/callback",
+            query=f"code={'c' * 32}&state={STATE}",
+            headers=(("Cookie", session_cookie), ("Cookie", transaction_cookie)),
+        )
+    )
+
+    assert completed.status_code == 400
+    assert storage.read_external_identity("github", "123456") is None
+
+
+def test_unlink_route_rejects_session_replacement_after_authentication(
+    tmp_path, monkeypatch
+) -> None:
+    routes, storage, established, session_cookie = setup_routes(tmp_path)
+    identity = ExternalIdentity("user-01", "github", "123456", NOW)
+    storage.link_external_identity(identity)
+    original_unlink = routes.service.links.unlink
+
+    def replace_generation_then_unlink(user_id, *, expected_session):
+        with storage._transaction("replace_unlink_session_generation") as connection:
+            connection.execute(
+                "DELETE FROM sessions WHERE session_id = ?",
+                (expected_session.session_id,),
+            )
+        storage.create_session(
+            replace(
+                expected_session,
+                expires_at=expected_session.expires_at + timedelta(hours=1),
+            )
+        )
+        return original_unlink(user_id, expected_session=expected_session)
+
+    monkeypatch.setattr(
+        routes.service.links, "unlink", replace_generation_then_unlink
+    )
+    response = routes.dispatch(
+        request(
+            "/auth/github/unlink",
+            method="POST",
+            headers=(
+                ("Cookie", session_cookie),
+                ("X-CSRF-Token", established.context.csrf_token),
+                ("Content-Length", "0"),
+            ),
+        )
+    )
+
+    assert response.status_code == 503
+    assert storage.read_external_identity("github", "123456") == identity
 
 
 def test_routes_require_https_session_csrf_and_exact_methods(tmp_path) -> None:

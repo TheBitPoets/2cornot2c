@@ -1146,6 +1146,9 @@ class SqliteIdentityStorage:
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> None:
         linked_at = _encode_datetime(identity.linked_at, "linked_at")
@@ -1154,6 +1157,9 @@ class SqliteIdentityStorage:
         )
         expected_created_at = _encode_datetime(
             expected_session_created_at, "expected_session_created_at"
+        )
+        expected_expires_at = _encode_datetime(
+            expected_session_expires_at, "expected_session_expires_at"
         )
         expected_valid_at = _encode_datetime(
             expected_session_valid_at, "expected_session_valid_at"
@@ -1180,6 +1186,9 @@ class SqliteIdentityStorage:
                         WHERE sessions.session_id = ?
                             AND sessions.token_digest = ?
                             AND sessions.created_at = ?
+                            AND sessions.expires_at = ?
+                            AND sessions.audience = ?
+                            AND sessions.source_pairing_id IS ?
                             AND sessions.user_id = users.user_id
                             AND sessions.revoked_at IS NULL
                             AND sessions.created_at <= ?
@@ -1198,6 +1207,9 @@ class SqliteIdentityStorage:
                     expected_session_id,
                     expected_session_token_digest,
                     expected_created_at,
+                    expected_expires_at,
+                    expected_session_audience,
+                    expected_session_source_pairing_id,
                     transaction_valid_at,
                     transaction_valid_at,
                     transaction_valid_at,
@@ -1265,6 +1277,9 @@ class SqliteIdentityStorage:
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> None:
         expected_generation = _encode_datetime(
@@ -1275,6 +1290,9 @@ class SqliteIdentityStorage:
         )
         expected_created_at = _encode_datetime(
             expected_session_created_at, "expected_session_created_at"
+        )
+        expected_expires_at = _encode_datetime(
+            expected_session_expires_at, "expected_session_expires_at"
         )
         expected_valid_at = _encode_datetime(
             expected_session_valid_at, "expected_session_valid_at"
@@ -1300,6 +1318,9 @@ class SqliteIdentityStorage:
                         WHERE sessions.session_id = ?
                             AND sessions.token_digest = ?
                             AND sessions.created_at = ?
+                            AND sessions.expires_at = ?
+                            AND sessions.audience = ?
+                            AND sessions.source_pairing_id IS ?
                             AND sessions.user_id = external_identities.user_id
                             AND sessions.revoked_at IS NULL
                             AND sessions.created_at <= ?
@@ -1318,6 +1339,9 @@ class SqliteIdentityStorage:
                     expected_session_id,
                     expected_session_token_digest,
                     expected_created_at,
+                    expected_expires_at,
+                    expected_session_audience,
+                    expected_session_source_pairing_id,
                     transaction_valid_at,
                     transaction_valid_at,
                     transaction_valid_at,
@@ -1448,6 +1472,9 @@ class SqliteIdentityStorage:
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> bool:
         expected_generation = _encode_datetime(
@@ -1458,6 +1485,9 @@ class SqliteIdentityStorage:
         )
         expected_created_at = _encode_datetime(
             expected_session_created_at, "expected_session_created_at"
+        )
+        expected_expires_at = _encode_datetime(
+            expected_session_expires_at, "expected_session_expires_at"
         )
         expected_valid_at = _encode_datetime(
             expected_session_valid_at, "expected_session_valid_at"
@@ -1483,6 +1513,9 @@ class SqliteIdentityStorage:
                         WHERE sessions.session_id = ?
                             AND sessions.token_digest = ?
                             AND sessions.created_at = ?
+                            AND sessions.expires_at = ?
+                            AND sessions.audience = ?
+                            AND sessions.source_pairing_id IS ?
                             AND sessions.user_id = external_identities.user_id
                             AND sessions.revoked_at IS NULL
                             AND sessions.created_at <= ?
@@ -1499,6 +1532,9 @@ class SqliteIdentityStorage:
                     expected_session_id,
                     expected_session_token_digest,
                     expected_created_at,
+                    expected_expires_at,
+                    expected_session_audience,
+                    expected_session_source_pairing_id,
                     transaction_valid_at,
                     transaction_valid_at,
                     transaction_valid_at,
@@ -2959,8 +2995,12 @@ class SqliteIdentityStorage:
                 )
 
     def save_session_for_active_user(
-        self, session: UserSession, *, expected_user_updated_at: datetime
-    ) -> None:
+        self,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_valid_at: datetime,
+    ) -> UserSession:
         if session.revoked_at is not None:
             raise IdentityStorageConflictError(
                 "Una sessione revocata non puo essere usata come touch attivo."
@@ -2971,7 +3011,15 @@ class SqliteIdentityStorage:
         expected_user_revision = _encode_datetime(
             expected_user_updated_at, "expected_user_updated_at"
         )
+        expected_valid_time = _encode_datetime(
+            expected_valid_at, "expected_valid_at"
+        )
         with self._transaction("save_session_for_active_user") as connection:
+            transaction_valid_at = max(
+                expected_valid_time,
+                last_seen_at,
+                _encode_datetime(self._clock(), "storage_clock"),
+            )
             cursor = connection.execute(
                 """
                 UPDATE sessions SET last_seen_at = ?
@@ -2979,6 +3027,7 @@ class SqliteIdentityStorage:
                     AND created_at = ? AND expires_at = ? AND audience = ?
                     AND source_pairing_id IS ?
                     AND revoked_at IS NULL AND last_seen_at <= ?
+                    AND created_at <= ? AND expires_at > ?
                     AND EXISTS (
                         SELECT 1 FROM users
                         WHERE users.user_id = sessions.user_id
@@ -2986,7 +3035,7 @@ class SqliteIdentityStorage:
                     )
                 """,
                 (
-                    last_seen_at,
+                    transaction_valid_at,
                     session.session_id,
                     session.user_id,
                     session.token_digest,
@@ -2994,21 +3043,44 @@ class SqliteIdentityStorage:
                     expires_at,
                     session.audience,
                     session.source_pairing_id,
-                    last_seen_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
+                    transaction_valid_at,
                     expected_user_revision,
                 ),
             )
             if cursor.rowcount != 1:
-                exists = connection.execute(
-                    "SELECT 1 FROM sessions WHERE session_id = ?", (session.session_id,)
+                current = connection.execute(
+                    "SELECT * FROM sessions WHERE session_id = ?", (session.session_id,)
                 ).fetchone()
-                if exists is None:
+                if current is None:
                     raise IdentityStorageNotFoundError(
                         "Sessione da aggiornare non trovata."
+                    )
+                if (
+                    current["user_id"] == session.user_id
+                    and current["token_digest"] == session.token_digest
+                    and current["created_at"] == created_at
+                    and current["expires_at"] == expires_at
+                    and current["audience"] == session.audience
+                    and current["source_pairing_id"] == session.source_pairing_id
+                    and current["revoked_at"] is None
+                    and current["expires_at"] <= transaction_valid_at
+                ):
+                    raise IdentityStorageSessionExpiredError(
+                        "Sessione scaduta al tempo della transazione di autenticazione."
                     )
                 raise IdentityStorageConflictError(
                     "Sessione o utente modificati durante l'autenticazione."
                 )
+            persisted = connection.execute(
+                "SELECT * FROM sessions WHERE session_id = ?", (session.session_id,)
+            ).fetchone()
+            if persisted is None:
+                raise IdentityStorageNotFoundError(
+                    "Sessione autenticata non trovata dopo il touch."
+                )
+            return self._session(persisted)
 
     def list_user_sessions(self, user_id: str) -> list[UserSession]:
         rows = self._query_all(
