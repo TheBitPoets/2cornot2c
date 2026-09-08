@@ -37,7 +37,7 @@ La risposta `EstablishedHttpSession` espone il valore soltanto attraverso `set_c
 
 ## Autenticazione e CSRF
 
-Ogni richiesta autenticata passa per `SessionService.authenticate`, che controlla digest, generazione, scadenza, revoca, account attivo e revisione utente con CAS. La scadenza viene ricontrollata nello stesso touch SQLite usando il massimo conservativo fra osservazione applicativa e clock storage campionato dopo il lock. Il boundary verifica inoltre strutturalmente `created_at <= now < expires_at`, `now >= last_seen_at`, revoca e account attivo prima di fidarsi del risultato adapter. Ruoli cambiati vengono quindi riletti prima dell'autorizzazione.
+Ogni richiesta autenticata passa per `SessionService.authenticate`, che controlla digest, generazione, scadenza, revoca, account attivo e revisione utente con CAS. La scadenza viene ricontrollata nello stesso touch SQLite usando il massimo conservativo fra osservazione applicativa e clock storage campionato dopo il lock. Il boundary verifica inoltre strutturalmente `created_at <= now < expires_at`, `now >= last_seen_at`, revoca e account attivo prima di fidarsi del risultato adapter. Ruoli cambiati vengono quindi riletti prima dell'autorizzazione. Se il risultato autenticato autorizza una successiva mutazione security-sensitive dopo I/O esterno, il downstream deve ricontrollare nella transazione della mutazione l'intera generazione immutabile ricevuta: non può rileggere e adottare una sessione replacement.
 
 Il token CSRF è:
 

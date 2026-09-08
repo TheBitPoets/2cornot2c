@@ -50,6 +50,8 @@ La disabilitazione di un account revoca atomicamente le sue sessioni e rimuove p
 
 Ogni sessione persiste inoltre l'audience `web` o `tui`. `SessionService` emette, autentica e revoca soltanto la propria audience, impedendo che bearer conservati nel terminale vengano riutilizzati come cookie browser o viceversa. Una sessione TUI può essere emessa soltanto dalla transazione pairing e conserva il `source_pairing_id` univoco verificato a ogni boundary.
 
+Le mutazioni di identità esterne autorizzate da una sessione (`link`, `refresh` e `unlink`) propagano allo storage l'intera generazione immutabile osservata dal caller: `session_id`, `user_id`, `token_digest`, `created_at`, `expires_at`, `audience` e `source_pairing_id`. Dentro la stessa transazione SQLite della mutazione, dopo `BEGIN IMMEDIATE`, il CAS richiede quella generazione esatta, account attivo con revisione invariata, revoca nulla e validità al massimo conservativo fra tempo applicativo e clock storage. Una sessione cancellata e ricreata, anche riutilizzando ID, digest e data di creazione, non viene adottata automaticamente; il mismatch diventa una modifica concorrente e nessuna parte della mutazione viene committata.
+
 Il ruolo `pending` puo possedere una sessione web per completare onboarding, ma `HttpSessionAuthBoundary.authorize_application` lo esclude dalle policy sui dati applicativi.
 
 ## Pairing TUI

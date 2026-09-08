@@ -1146,6 +1146,9 @@ class SqliteIdentityStorage:
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> None:
         linked_at = _encode_datetime(identity.linked_at, "linked_at")
@@ -1154,6 +1157,9 @@ class SqliteIdentityStorage:
         )
         expected_created_at = _encode_datetime(
             expected_session_created_at, "expected_session_created_at"
+        )
+        expected_expires_at = _encode_datetime(
+            expected_session_expires_at, "expected_session_expires_at"
         )
         expected_valid_at = _encode_datetime(
             expected_session_valid_at, "expected_session_valid_at"
@@ -1180,6 +1186,9 @@ class SqliteIdentityStorage:
                         WHERE sessions.session_id = ?
                             AND sessions.token_digest = ?
                             AND sessions.created_at = ?
+                            AND sessions.expires_at = ?
+                            AND sessions.audience = ?
+                            AND sessions.source_pairing_id IS ?
                             AND sessions.user_id = users.user_id
                             AND sessions.revoked_at IS NULL
                             AND sessions.created_at <= ?
@@ -1198,6 +1207,9 @@ class SqliteIdentityStorage:
                     expected_session_id,
                     expected_session_token_digest,
                     expected_created_at,
+                    expected_expires_at,
+                    expected_session_audience,
+                    expected_session_source_pairing_id,
                     transaction_valid_at,
                     transaction_valid_at,
                     transaction_valid_at,
@@ -1265,6 +1277,9 @@ class SqliteIdentityStorage:
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> None:
         expected_generation = _encode_datetime(
@@ -1275,6 +1290,9 @@ class SqliteIdentityStorage:
         )
         expected_created_at = _encode_datetime(
             expected_session_created_at, "expected_session_created_at"
+        )
+        expected_expires_at = _encode_datetime(
+            expected_session_expires_at, "expected_session_expires_at"
         )
         expected_valid_at = _encode_datetime(
             expected_session_valid_at, "expected_session_valid_at"
@@ -1300,6 +1318,9 @@ class SqliteIdentityStorage:
                         WHERE sessions.session_id = ?
                             AND sessions.token_digest = ?
                             AND sessions.created_at = ?
+                            AND sessions.expires_at = ?
+                            AND sessions.audience = ?
+                            AND sessions.source_pairing_id IS ?
                             AND sessions.user_id = external_identities.user_id
                             AND sessions.revoked_at IS NULL
                             AND sessions.created_at <= ?
@@ -1318,6 +1339,9 @@ class SqliteIdentityStorage:
                     expected_session_id,
                     expected_session_token_digest,
                     expected_created_at,
+                    expected_expires_at,
+                    expected_session_audience,
+                    expected_session_source_pairing_id,
                     transaction_valid_at,
                     transaction_valid_at,
                     transaction_valid_at,
@@ -1448,6 +1472,9 @@ class SqliteIdentityStorage:
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> bool:
         expected_generation = _encode_datetime(
@@ -1458,6 +1485,9 @@ class SqliteIdentityStorage:
         )
         expected_created_at = _encode_datetime(
             expected_session_created_at, "expected_session_created_at"
+        )
+        expected_expires_at = _encode_datetime(
+            expected_session_expires_at, "expected_session_expires_at"
         )
         expected_valid_at = _encode_datetime(
             expected_session_valid_at, "expected_session_valid_at"
@@ -1483,6 +1513,9 @@ class SqliteIdentityStorage:
                         WHERE sessions.session_id = ?
                             AND sessions.token_digest = ?
                             AND sessions.created_at = ?
+                            AND sessions.expires_at = ?
+                            AND sessions.audience = ?
+                            AND sessions.source_pairing_id IS ?
                             AND sessions.user_id = external_identities.user_id
                             AND sessions.revoked_at IS NULL
                             AND sessions.created_at <= ?
@@ -1499,6 +1532,9 @@ class SqliteIdentityStorage:
                     expected_session_id,
                     expected_session_token_digest,
                     expected_created_at,
+                    expected_expires_at,
+                    expected_session_audience,
+                    expected_session_source_pairing_id,
                     transaction_valid_at,
                     transaction_valid_at,
                     transaction_valid_at,

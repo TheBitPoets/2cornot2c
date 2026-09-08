@@ -89,9 +89,12 @@ class UserDirectoryStorage(Protocol):
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> None:
-        """Atomically link while both active user and session still match."""
+        """Atomically link while both active user and exact session generation match."""
         ...
 
     def refresh_external_identity(
@@ -113,9 +116,12 @@ class UserDirectoryStorage(Protocol):
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> None:
-        """Refresh a link while active user and session still match."""
+        """Refresh a link while active user and exact session generation match."""
         ...
 
     def read_external_identity(self, provider: str, subject: str) -> ExternalIdentity | None: ...
@@ -151,9 +157,12 @@ class UserDirectoryStorage(Protocol):
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> bool:
-        """Atomically unlink while identity, active owner, and live session match."""
+        """Atomically unlink while identity, active owner, and exact live session match."""
         ...
 
 

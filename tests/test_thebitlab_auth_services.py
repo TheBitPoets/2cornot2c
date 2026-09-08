@@ -225,6 +225,251 @@ def test_external_account_unlink_requires_persisted_live_session(storage) -> Non
     assert storage.read_external_identity(*linked.provider_key) == linked
 
 
+@pytest.mark.parametrize("operation", ("link", "refresh", "unlink"))
+def test_external_identity_mutation_rejects_expiry_replacement_generation(
+    database_path, operation
+) -> None:
+    origin = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    clock = MutableClock(origin)
+    transactional_storage = SqliteIdentityStorage(database_path, clock=clock)
+    user = account(created_at=origin, updated_at=origin)
+    transactional_storage.create_user(user)
+    sessions = SessionService(
+        transactional_storage,
+        clock=clock,
+        ttl=timedelta(seconds=2),
+        token_factory=lambda: "G" * 40,
+        session_id_factory=lambda: "generation-session",
+    )
+    issued = sessions.issue(user.user_id)
+    authenticated = sessions.authenticate(issued.bearer_token)
+    links = ExternalIdentityLinkService(
+        transactional_storage, expected_provider="github", clock=clock
+    )
+    if operation != "link":
+        links.link(user.user_id, github_assertion())
+    durable_before = transactional_storage.read_external_identity("github", "123456")
+
+    clock.value = origin + timedelta(seconds=3)
+    assert transactional_storage.delete_expired_sessions(
+        origin + timedelta(seconds=2)
+    ) == 1
+    transactional_storage.create_session(
+        replace(issued.session, expires_at=origin + timedelta(seconds=10))
+    )
+
+    with pytest.raises(ConcurrentStateChangeError):
+        if operation == "unlink":
+            links.unlink(user.user_id, expected_session=authenticated.session)
+        else:
+            links.link(
+                user.user_id,
+                github_assertion(),
+                expected_session=authenticated.session,
+            )
+
+    assert (
+        transactional_storage.read_external_identity("github", "123456")
+        == durable_before
+    )
+    if operation == "link":
+        assert (
+            transactional_storage.read_latest_external_identity_generation(
+                "github", "123456"
+            )
+            is None
+        )
+
+
+@pytest.mark.parametrize("operation", ("link", "refresh", "unlink"))
+@pytest.mark.parametrize("race", ("revocation", "disable", "disable-reenable"))
+def test_external_identity_mutation_rejects_authority_races(
+    storage, monkeypatch, operation, race
+) -> None:
+    user = account()
+    storage.create_user(user)
+    issued = SessionService(
+        storage,
+        clock=MutableClock(),
+        token_factory=lambda: "R" * 40,
+        session_id_factory=lambda: "race-session",
+    ).issue(user.user_id)
+    links = ExternalIdentityLinkService(
+        storage, expected_provider="github", clock=MutableClock()
+    )
+    if operation != "link":
+        links.link(user.user_id, github_assertion())
+    durable_before = storage.read_external_identity("github", "123456")
+    method_name = f"{operation}_external_identity_for_active_session"
+    original_mutation = getattr(storage, method_name)
+
+    def race_then_mutate(*args, **kwargs):
+        if race == "revocation":
+            storage.save_session(replace(issued.session, revoked_at=NOW))
+        else:
+            disabled = replace(
+                user,
+                active=False,
+                updated_at=NOW + timedelta(seconds=1),
+            )
+            storage.save_user(disabled, expected_updated_at=user.updated_at)
+            if race == "disable-reenable":
+                storage.save_user(
+                    replace(user, updated_at=NOW + timedelta(seconds=2)),
+                    expected_updated_at=disabled.updated_at,
+                )
+        return original_mutation(*args, **kwargs)
+
+    monkeypatch.setattr(storage, method_name, race_then_mutate)
+    with pytest.raises(ConcurrentStateChangeError):
+        if operation == "unlink":
+            links.unlink(user.user_id, expected_session=issued.session)
+        else:
+            links.link(
+                user.user_id,
+                github_assertion(),
+                expected_session=issued.session,
+            )
+
+    assert storage.read_external_identity("github", "123456") == durable_before
+    if operation == "link":
+        assert (
+            storage.read_latest_external_identity_generation("github", "123456")
+            is None
+        )
+
+
+@pytest.mark.parametrize(
+    ("service_offset", "storage_offset", "accepted"),
+    (
+        (timedelta(seconds=1), timedelta(seconds=1), True),
+        (timedelta(seconds=1), timedelta(seconds=2), False),
+        (timedelta(seconds=1), timedelta(seconds=3), False),
+        (timedelta(seconds=3), timedelta(seconds=1), False),
+    ),
+    ids=("before-expiry", "exact-expiry", "later-storage-clock", "stale-storage-clock"),
+)
+def test_external_identity_link_uses_conservative_transaction_time(
+    database_path, service_offset, storage_offset, accepted
+) -> None:
+    origin = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    service_clock = MutableClock(origin)
+    storage_clock = MutableClock(origin)
+    transactional_storage = SqliteIdentityStorage(database_path, clock=storage_clock)
+    user = account(created_at=origin, updated_at=origin)
+    transactional_storage.create_user(user)
+    issued = SessionService(
+        transactional_storage,
+        clock=service_clock,
+        ttl=timedelta(seconds=2),
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "temporal-session",
+    ).issue(user.user_id)
+    links = ExternalIdentityLinkService(
+        transactional_storage, expected_provider="github", clock=service_clock
+    )
+    service_clock.value = origin + service_offset
+    storage_clock.value = origin + storage_offset
+
+    if accepted:
+        links.link(user.user_id, github_assertion(), expected_session=issued.session)
+        assert transactional_storage.read_external_identity("github", "123456")
+    else:
+        with pytest.raises(ConcurrentStateChangeError):
+            links.link(
+                user.user_id,
+                github_assertion(),
+                expected_session=issued.session,
+            )
+        assert transactional_storage.read_external_identity("github", "123456") is None
+
+
+def test_external_identity_link_rechecks_storage_clock_after_real_lock_wait(
+    database_path,
+) -> None:
+    origin = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    service_clock = MutableClock(origin)
+    storage_clock = MutableClock(origin)
+    transactional_storage = SqliteIdentityStorage(database_path, clock=storage_clock)
+    user = account(created_at=origin, updated_at=origin)
+    transactional_storage.create_user(user)
+    issued = SessionService(
+        transactional_storage,
+        clock=service_clock,
+        ttl=timedelta(seconds=2),
+        token_factory=lambda: "L" * 40,
+        session_id_factory=lambda: "waiting-link-session",
+    ).issue(user.user_id)
+    links = ExternalIdentityLinkService(
+        transactional_storage, expected_provider="github", clock=service_clock
+    )
+    service_clock.value = origin + timedelta(seconds=1)
+    clock_called = threading.Event()
+    transaction_attempted = threading.Event()
+    transaction_acquired = threading.Event()
+
+    def observed_storage_clock():
+        clock_called.set()
+        return storage_clock.value
+
+    original_transaction = transactional_storage._transaction
+
+    @contextmanager
+    def observed_transaction(operation):
+        transaction_attempted.set()
+        with original_transaction(operation) as connection:
+            transaction_acquired.set()
+            yield connection
+
+    transactional_storage._clock = observed_storage_clock
+    transactional_storage._transaction = observed_transaction
+    lock_holder = sqlite3.connect(database_path, timeout=30, isolation_level=None)
+    lock_holder.execute("PRAGMA busy_timeout = 30000")
+    lock_holder.execute("BEGIN IMMEDIATE")
+    outcome = {}
+    started = threading.Event()
+
+    def link_while_waiting():
+        started.set()
+        try:
+            links.link(
+                user.user_id,
+                github_assertion(),
+                expected_session=issued.session,
+            )
+            outcome["result"] = "accepted"
+        except Exception as error:
+            outcome["error"] = error
+
+    worker = threading.Thread(target=link_while_waiting)
+    worker.start()
+    assert started.wait(timeout=2)
+    assert transaction_attempted.wait(timeout=2)
+    try:
+        worker.join(timeout=0.2)
+        assert worker.is_alive()
+        assert not transaction_acquired.is_set()
+        assert not clock_called.is_set()
+        storage_clock.value = origin + timedelta(seconds=3)
+    finally:
+        lock_holder.commit()
+        lock_holder.close()
+    worker.join(timeout=5)
+
+    assert not worker.is_alive()
+    assert transaction_acquired.is_set()
+    assert clock_called.is_set()
+    assert isinstance(outcome.get("error"), ConcurrentStateChangeError)
+    assert "result" not in outcome
+    assert transactional_storage.read_external_identity("github", "123456") is None
+    assert (
+        transactional_storage.read_latest_external_identity_generation(
+            "github", "123456"
+        )
+        is None
+    )
+
+
 def test_external_account_link_rejects_provider_and_cross_user_conflicts(storage) -> None:
     first = account("first")
     second = account("second")

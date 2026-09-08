@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
@@ -105,6 +106,34 @@ def database_path(tmp_path):
 @pytest.fixture
 def storage(database_path):
     return SqliteIdentityStorage(database_path, clock=lambda: NOW)
+
+
+def create_tui_session(
+    storage: SqliteIdentityStorage,
+    persisted_session: UserSession,
+) -> None:
+    pairing_id = persisted_session.source_pairing_id
+    assert pairing_id is not None
+    pending = pairing(
+        pairing_id,
+        digest="hmac-sha256:" + hashlib.sha256(pairing_id.encode()).hexdigest(),
+        created_at=persisted_session.created_at - timedelta(minutes=1),
+        expires_at=persisted_session.created_at + timedelta(hours=1),
+    )
+    storage.create_pairing(pending)
+    authorized = authorize_pairing(
+        pending,
+        persisted_session.user_id,
+        persisted_session.created_at - timedelta(seconds=30),
+    )
+    storage.save_pairing(authorized)
+    consumed = consume_pairing(authorized, persisted_session.created_at)
+    storage.consume_pairing_and_create_session(
+        consumed,
+        persisted_session,
+        expected_user_updated_at=NOW,
+        expected_user_role="student",
+    )
 
 
 def drop_subject_binding_schema(connection: sqlite3.Connection) -> None:
@@ -389,6 +418,163 @@ def test_migration_v3_quarantines_ambiguous_provider_links(database_path) -> Non
         ("github", "101", "user-01"),
         ("github", "202", "user-01"),
     ]
+
+
+@pytest.mark.parametrize("operation", ("link", "refresh", "unlink"))
+@pytest.mark.parametrize(
+    "moved_field",
+    (
+        "session_id",
+        "user_id",
+        "token_digest",
+        "created_at",
+        "expires_at",
+        "audience",
+        "source_pairing_id",
+    ),
+)
+def test_external_identity_active_session_cas_rejects_any_generation_movement(
+    storage, operation, moved_field
+) -> None:
+    storage.create_user(account())
+    storage.create_user(account("user-02"))
+    identity = ExternalIdentity("user-01", "github", "subject-01", NOW)
+    if operation != "link":
+        storage.link_external_identity(identity)
+    durable_before = storage.read_external_identity("github", "subject-01")
+    expected = session()
+    if moved_field == "source_pairing_id":
+        expected = replace(
+            expected, audience="tui", source_pairing_id="pairing-old"
+        )
+        create_tui_session(storage, expected)
+    else:
+        storage.create_session(expected)
+    with storage._transaction("replace_session_generation") as connection:
+        connection.execute(
+            "DELETE FROM sessions WHERE session_id = ?", (expected.session_id,)
+        )
+
+    if moved_field == "session_id":
+        replacement = replace(expected, session_id="session-02")
+    elif moved_field == "user_id":
+        replacement = replace(expected, user_id="user-02")
+    elif moved_field == "token_digest":
+        replacement = replace(expected, token_digest="sha256:" + "c" * 64)
+    elif moved_field == "created_at":
+        replacement = replace(
+            expected,
+            created_at=NOW + timedelta(microseconds=1),
+            last_seen_at=NOW + timedelta(microseconds=1),
+        )
+    elif moved_field == "expires_at":
+        replacement = replace(expected, expires_at=LATER + timedelta(minutes=1))
+    elif moved_field == "audience":
+        replacement = replace(
+            expected,
+            audience="tui",
+            source_pairing_id="pairing-replacement",
+        )
+    else:
+        replacement = replace(expected, source_pairing_id="pairing-replacement")
+    if replacement.audience == "tui":
+        create_tui_session(storage, replacement)
+    else:
+        storage.create_session(replacement)
+    session_guard = {
+        "expected_session_id": expected.session_id,
+        "expected_session_token_digest": expected.token_digest,
+        "expected_session_created_at": expected.created_at,
+        "expected_session_expires_at": expected.expires_at,
+        "expected_session_audience": expected.audience,
+        "expected_session_source_pairing_id": expected.source_pairing_id,
+        "expected_session_valid_at": NOW + timedelta(seconds=1),
+    }
+
+    with pytest.raises(IdentityStorageConflictError):
+        if operation == "link":
+            storage.link_external_identity_for_active_session(
+                identity,
+                expected_user_updated_at=NOW,
+                **session_guard,
+            )
+        elif operation == "refresh":
+            storage.refresh_external_identity_for_active_session(
+                replace(identity, email="changed@example.test"),
+                expected_linked_at=identity.linked_at,
+                expected_user_updated_at=NOW,
+                **session_guard,
+            )
+        else:
+            storage.unlink_external_identity_for_active_session(
+                identity.provider,
+                identity.subject,
+                identity.user_id,
+                expected_linked_at=identity.linked_at,
+                expected_user_updated_at=NOW,
+                **session_guard,
+            )
+
+    assert storage.read_external_identity("github", "subject-01") == durable_before
+    if operation == "link":
+        assert (
+            storage.read_latest_external_identity_generation("github", "subject-01")
+            is None
+        )
+
+
+@pytest.mark.parametrize("operation", ("link", "refresh", "unlink"))
+@pytest.mark.parametrize("audience", ("web", "tui"))
+def test_external_identity_active_session_cas_accepts_exact_generation(
+    storage, operation, audience
+) -> None:
+    storage.create_user(account())
+    if audience == "tui":
+        expected = session(audience="tui", source_pairing_id="pairing-exact")
+        create_tui_session(storage, expected)
+    else:
+        expected = session()
+        storage.create_session(expected)
+    identity = ExternalIdentity("user-01", "github", "subject-01", NOW)
+    if operation != "link":
+        storage.link_external_identity(identity)
+    session_guard = {
+        "expected_session_id": expected.session_id,
+        "expected_session_token_digest": expected.token_digest,
+        "expected_session_created_at": expected.created_at,
+        "expected_session_expires_at": expected.expires_at,
+        "expected_session_audience": expected.audience,
+        "expected_session_source_pairing_id": expected.source_pairing_id,
+        "expected_session_valid_at": NOW + timedelta(seconds=1),
+    }
+
+    if operation == "link":
+        storage.link_external_identity_for_active_session(
+            identity,
+            expected_user_updated_at=NOW,
+            **session_guard,
+        )
+        expected_identity = identity
+    elif operation == "refresh":
+        expected_identity = replace(identity, email="changed@example.test")
+        storage.refresh_external_identity_for_active_session(
+            expected_identity,
+            expected_linked_at=identity.linked_at,
+            expected_user_updated_at=NOW,
+            **session_guard,
+        )
+    else:
+        assert storage.unlink_external_identity_for_active_session(
+            identity.provider,
+            identity.subject,
+            identity.user_id,
+            expected_linked_at=identity.linked_at,
+            expected_user_updated_at=NOW,
+            **session_guard,
+        ) is True
+        expected_identity = None
+
+    assert storage.read_external_identity("github", "subject-01") == expected_identity
 
 
 def test_external_identity_generation_tombstone_prevents_aba_refresh(storage) -> None:
