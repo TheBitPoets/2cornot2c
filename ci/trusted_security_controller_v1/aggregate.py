@@ -16,6 +16,7 @@ from common import (
     ARTIFACT_DIGEST,
     ENVELOPE_SCHEMA,
     EXPECTED_SCENARIOS,
+    MAX_ENVELOPE_ARTIFACT_BYTES,
     SHA256,
     SLOT_PROFILE,
     ControllerError,
@@ -39,7 +40,6 @@ ENVELOPE_KEYS = frozenset({
     "cleanup_state", "result", "trusted_wrapper_verifier_digest",
     "trusted_aggregator_digest", "closed_topology_version",
 })
-MAX_ENVELOPE_ARTIFACT_BYTES = 1024 * 1024
 
 
 def _github_json(url: str, token: str) -> object:

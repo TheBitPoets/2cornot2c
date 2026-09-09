@@ -3,9 +3,18 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
+import http.client
+import io
 import json
+import os
 import re
+import stat
+import urllib.parse
+import urllib.request
+import zipfile
+import zlib
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping, Sequence
@@ -16,6 +25,7 @@ ARTIFACT_DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 RUN_ID = re.compile(r"[1-9][0-9]{0,19}")
 SLOT = re.compile(r"[A-F]")
 MAX_RAW_BYTES = 8 * 1024 * 1024
+MAX_ENVELOPE_ARTIFACT_BYTES = 1024 * 1024
 
 CONTROLLER_SCHEMA = "thebitlab.trusted-security-controller-authority.v1"
 ENVELOPE_SCHEMA = "thebitlab.trusted-security-controller-shard.v1"
@@ -325,3 +335,141 @@ def select_current_artifacts(
     if set(selected) != expected or len(artifacts) != len(expected):
         raise ControllerError("missing, unknown, renamed, or spoofed artifact")
     return [selected[name] for name in expected_names]
+
+
+class _ArtifactRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        target = urllib.parse.urlsplit(newurl)
+        if target.scheme != "https" or not target.hostname or target.username or target.password:
+            raise ControllerError("artifact download redirect is not safe HTTPS")
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None:
+            # The signed blob URL authenticates itself; never forward the API token.
+            redirected.remove_header("Authorization")
+        return redirected
+
+
+def download_verified_artifact(
+    artifact: Mapping[str, Any], *, repository: str, token: str,
+    expected_file: str, maximum_size: int,
+) -> bytes:
+    """Verify the bounded archive before parsing its single, exact regular member."""
+    if repository != "TheBitPoets/2cornot2c" or not token:
+        raise ControllerError("trusted download repository or token is invalid")
+    artifact_id = artifact.get("artifact_id")
+    digest = artifact.get("artifact_digest")
+    size = artifact.get("size_in_bytes")
+    if (
+        type(artifact_id) is not int or artifact_id <= 0
+        or ARTIFACT_DIGEST.fullmatch(str(digest)) is None
+        or type(size) is not int or not 0 < size <= maximum_size
+    ):
+        raise ControllerError("trusted download metadata is invalid")
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{repository}/actions/artifacts/{artifact_id}/zip",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "thebitlab-trusted-security-controller-v1",
+        },
+    )
+    try:
+        opener = urllib.request.build_opener(_ArtifactRedirectHandler())
+        with opener.open(request, timeout=30) as response:
+            if response.status != 200:
+                raise ControllerError("artifact download did not return HTTP 200")
+            archive = response.read(size + 1)
+    except (OSError, ValueError, http.client.HTTPException) as exc:
+        # Avoid logging signed blob URLs or HTTP request credentials.
+        raise ControllerError("artifact archive download failed") from exc
+    if len(archive) != size:
+        raise ControllerError("artifact archive size mismatch")
+    if "sha256:" + sha256_bytes(archive) != digest:
+        raise ControllerError("artifact archive digest mismatch")
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
+            members = bundle.infolist()
+            if len(members) != 1 or members[0].filename != expected_file:
+                raise ControllerError("artifact archive file inventory mismatch")
+            member = members[0]
+            file_type = stat.S_IFMT(member.external_attr >> 16)
+            if (
+                member.is_dir() or file_type not in (0, stat.S_IFREG)
+                or member.flag_bits & 1
+                or member.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)
+                or not 0 < member.file_size <= maximum_size
+            ):
+                raise ControllerError("artifact archive member is not a bounded regular file")
+            with bundle.open(member) as stream:
+                content = stream.read(maximum_size + 1)
+            if not content or len(content) > maximum_size or len(content) != member.file_size:
+                raise ControllerError("artifact expanded file size mismatch")
+            return content
+    except (zipfile.BadZipFile, OSError, ValueError, RuntimeError, EOFError, zlib.error) as exc:
+        if isinstance(exc, ControllerError):
+            raise
+        raise ControllerError("artifact archive is malformed") from exc
+
+
+def download_artifacts_main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Download and verify trusted artifact archives")
+    parser.add_argument("--kind", choices=("raw", "envelopes"), required=True)
+    parser.add_argument("--profile", choices=tuple(EXPECTED_PROFILE_SLOTS))
+    parser.add_argument("--repository", required=True)
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--run-attempt", type=int, required=True)
+    parser.add_argument("--base-sha", required=True)
+    parser.add_argument("--metadata", type=Path, required=True)
+    parser.add_argument("--destination", type=Path, required=True)
+    args = parser.parse_args(argv)
+    try:
+        metadata = json.loads(_regular_bytes(args.metadata, label="download metadata", maximum=65536))
+        field = "artifact" if args.kind == "raw" else "artifacts"
+        _strict_object(metadata, {"attempt", field}, label="download metadata")
+        attempt = validate_attempt_metadata(
+            metadata["attempt"], run_id=args.run_id,
+            run_attempt=args.run_attempt, base_sha=args.base_sha,
+        )
+        if args.kind == "raw":
+            names = [raw_artifact_name(args.profile, args.run_id, args.run_attempt)]
+            files = [f"security-{args.profile}.log"]
+            items = [metadata[field]]
+            maximum = MAX_RAW_BYTES
+        else:
+            names = [envelope_artifact_name(slot, args.run_id, args.run_attempt) for slot in EXPECTED_SCENARIOS]
+            files = [f"envelope-{slot}.json" for slot in EXPECTED_SCENARIOS]
+            items = metadata[field]
+            maximum = MAX_ENVELOPE_ARTIFACT_BYTES
+        if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+            raise ControllerError("download artifact inventory is malformed")
+        selected = select_current_artifacts(
+            {"total_count": len(items), "artifacts": [{
+                "id": item.get("artifact_id"), "name": item.get("artifact_name"),
+                "digest": item.get("artifact_digest"), "size_in_bytes": item.get("size_in_bytes"),
+                "expired": False, "created_at": item.get("created_at"),
+                "workflow_run": {"id": item.get("workflow_run_id")},
+            } for item in items]},
+            expected_names=names, run_id=args.run_id,
+            attempt_started_at=attempt["run_started_at"], maximum_size=maximum,
+        )
+        if len({item["artifact_id"] for item in selected}) != len(selected):
+            raise ControllerError("download artifact IDs are duplicated")
+        # Verify the complete batch before creating anything consumed by later steps.
+        contents = [download_verified_artifact(
+            item, repository=args.repository, token=os.environ.get("GITHUB_TOKEN", ""),
+            expected_file=name, maximum_size=maximum,
+        ) for item, name in zip(selected, files, strict=True)]
+        args.destination.mkdir(parents=True, exist_ok=False)
+        for name, content in zip(files, contents, strict=True):
+            with (args.destination / name).open("xb") as stream:
+                stream.write(content)
+    except (ControllerError, OSError, ValueError) as exc:
+        print(f"TRUSTED ARTIFACT DOWNLOAD: FAIL — {exc}")
+        return 2
+    print("TRUSTED ARTIFACT DOWNLOAD: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(download_artifacts_main())

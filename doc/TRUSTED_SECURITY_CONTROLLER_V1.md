@@ -95,6 +95,27 @@ I nomi raw ed envelope includono `github.run_id` e `github.run_attempt`. Prima d
 
 Il download usa gli artifact ID appena verificati. Un artifact valido rinominato, copiato da un altro run o anticipato da un attempt precedente non acquisisce autorità. Attempt 2 usa nomi nuovi e timestamp dell'attempt 2: gli artifact di attempt 1 non sono riutilizzati.
 
+Il comando trusted `common.py --kind raw|envelopes` scarica ogni archivio tramite
+[REST Actions, download per artifact ID](https://docs.github.com/en/rest/actions/artifacts#download-an-artifact).
+Il token read-only viene inviato solo alla richiesta API iniziale; i redirect
+devono usare HTTPS e non ricevono l'header Authorization. Il download è limitato
+alla dimensione API verificata e deve avere esattamente quella dimensione.
+Il digest SHA-256 dei byte ZIP deve coincidere con `artifact_digest` prima di
+aprire l'archivio: un mismatch è un errore terminale, senza consumo dei contenuti.
+
+Ogni ZIP deve contenere un solo file regolare con nome esatto:
+`security-<profile>.log` per raw, `envelope-<slot>.json` per envelope. Directory,
+symlink, nomi annidati o diversi, duplicati, file aggiuntivi, cifratura e formati
+di compressione diversi da stored/deflate sono rifiutati. Anche la dimensione
+decompressa è limitata (8 MiB raw, 1 MiB envelope). Il comando scrive soltanto i
+byte verificati nella nuova directory `raw/` o `envelopes/`, senza aggiungere la
+sottodirectory con il nome dell'artifact e senza estrarre percorsi dallo ZIP.
+Per A-F verifica l'intero insieme prima di scrivere qualsiasi envelope.
+Gli step consumer vengono eseguiti soltanto dopo il successo di questo comando;
+i digest dei file estratti restano evidenza aggiuntiva e non sostituiscono la
+verifica dell'archivio GitHub. Questi contratti sono coperti da fixture locali;
+la verifica live resta subordinata al bootstrap su main.
+
 ### Envelope e aggregazione
 
 Ogni wrapper trusted costruisce un envelope contenente almeno schema, candidate/base/controller SHA, identità controller, workflow identity, run ID, run attempt, security execution ID, slot e producer identity, digest raw, digest record selezionato, provenienza artifact, identità evidence, cleanup e risultato.

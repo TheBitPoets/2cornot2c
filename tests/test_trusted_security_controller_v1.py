@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import io
 import json
 import os
 import re
 import shutil
+import shlex
+import stat
 import subprocess
 import sys
+import urllib.request
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -377,7 +382,8 @@ def test_pull_request_target_workflow_has_separate_minimum_authority_boundaries(
     assert "trusted-producer:" in source and "trusted-security-controller:" in source
     assert "ref: ${{ env.BASE_SHA }}" in source
     assert "ref: ${{ env.CANDIDATE_SHA }}" in source
-    assert "artifact-ids:" in source
+    assert "actions/download-artifact" not in source
+    assert "--kind raw" in source and "--kind envelopes" in source
     assert "/usr/bin/python3 trusted/ci/trusted_security_controller_v1" in source
     for line in source.splitlines():
         if line.strip().startswith("uses:"):
@@ -428,3 +434,200 @@ def test_required_gate_guard_accepts_only_success(producer_result: str) -> None:
         check=False,
     )
     assert result.returncode == (0 if producer_result == "success" else 1), result.stderr
+
+
+def archive_bytes(entries: list[tuple[str | zipfile.ZipInfo, bytes]]) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        for name, content in entries:
+            bundle.writestr(name, content)
+    return buffer.getvalue()
+
+
+def mock_archive_transport(monkeypatch, archives: dict[int, bytes]) -> list[str]:
+    requests = []
+
+    class Opener:
+        def open(self, request, timeout):
+            assert timeout == 30
+            assert request.get_header("Authorization") == "Bearer fixture-token"
+            prefix = "https://api.github.com/repos/TheBitPoets/2cornot2c/actions/artifacts/"
+            assert request.full_url.startswith(prefix) and request.full_url.endswith("/zip")
+            requests.append(request.full_url)
+            artifact_id = int(request.full_url.removeprefix(prefix).removesuffix("/zip"))
+            response = io.BytesIO(archives[artifact_id])
+            response.status = 200
+            return response
+
+    def build_opener(handler):
+        assert isinstance(handler, common._ArtifactRedirectHandler)
+        return Opener()
+
+    monkeypatch.setattr(common.urllib.request, "build_opener", build_opener)
+    monkeypatch.setenv("GITHUB_TOKEN", "fixture-token")
+    return requests
+
+
+def workflow_download_fixture(tmp_path, monkeypatch, kind, profile="A"):
+    source = (ROOT / ".github/workflows/trusted-security-controller-v1.yml").read_text(encoding="utf-8")
+    jobs = yaml.safe_load(source)["jobs"]
+    job = jobs["trusted-producer" if kind == "raw" else "trusted-security-controller"]
+    steps = job["steps"]
+    downloads = [step for step in steps if "common.py" in step.get("run", "")]
+    assert len(downloads) == 1
+    step = downloads[0]
+    assert "if" not in step and not step.get("continue-on-error", False)
+    assert step["env"]["GITHUB_TOKEN"] == "${{ github.token }}"
+    assert not job.get("continue-on-error", False)
+    discovery = next(s for s in steps if s.get("id") == ("raw-provenance" if kind == "raw" else "envelope-provenance"))
+    consumer = next(s for s in steps if ".py envelope " in s.get("run", "") or ".py aggregate " in s.get("run", ""))
+    assert steps.index(discovery) < steps.index(step) < steps.index(consumer)
+    values = {
+        "RUNNER_TEMP": tmp_path.as_posix(), "PROFILE": profile,
+        "GITHUB_REPOSITORY": "TheBitPoets/2cornot2c", "GITHUB_RUN_ID": RUN_ID,
+        "GITHUB_RUN_ATTEMPT": str(ATTEMPT), "BASE_SHA": BASE,
+    }
+
+    def arguments(command):
+        for key, value in values.items():
+            command = command.replace("${" + key + "}", value).replace("$" + key, value)
+        return shlex.split(command)
+
+    argv = arguments(step["run"])[2:]
+    files = {f"security-{profile}.log": raw_log(profile)} if kind == "raw" else {
+        f"envelope-{slot}.json": common.canonical_json(envelope(slot)) for slot in common.EXPECTED_SCENARIOS
+    }
+    archives = {}
+    items = []
+    for index, (name, content) in enumerate(files.items(), 1):
+        archive = archive_bytes([(name, content)])
+        archives[index] = archive
+        artifact_name = common.raw_artifact_name(profile, RUN_ID, ATTEMPT) if kind == "raw" else common.envelope_artifact_name(name[9], RUN_ID, ATTEMPT)
+        item = artifact(artifact_name, index)
+        item.update(size_in_bytes=len(archive), artifact_digest="sha256:" + common.sha256_bytes(archive))
+        items.append(item)
+    metadata = {"attempt": attempt(), **({"artifact": items[0]} if kind == "raw" else {"artifacts": items})}
+    metadata_path = Path(argv[argv.index("--metadata") + 1])
+    discovery_args = arguments(discovery["run"])
+    assert Path(discovery_args[discovery_args.index("--output") + 1]) == metadata_path
+    metadata_path.write_bytes(common.canonical_json(metadata))
+    requests = mock_archive_transport(monkeypatch, archives)
+    destination = Path(argv[argv.index("--destination") + 1])
+    consumer_args = arguments(consumer["run"])
+    flag = "--raw" if kind == "raw" else "--envelopes"
+    consumer_path = Path(consumer_args[consumer_args.index(flag) + 1])
+    assert consumer_path == (destination / f"security-{profile}.log" if kind == "raw" else destination)
+    return argv, files, archives, destination, requests
+
+
+@pytest.mark.parametrize("kind,profile", [("raw", p) for p in common.EXPECTED_PROFILE_SLOTS] + [("envelopes", "A")])
+def test_workflow_download_delivers_verified_files_at_consumer_paths(tmp_path, monkeypatch, kind, profile):
+    argv, files, archives, destination, requests = workflow_download_fixture(tmp_path, monkeypatch, kind, profile)
+    assert common.download_artifacts_main(argv) == 0
+    assert {p.name: p.read_bytes() for p in destination.iterdir()} == files
+    assert len(requests) == len(archives)
+    if kind == "raw":
+        verify_raw((destination / f"security-{profile}.log").read_bytes(), slot=common.EXPECTED_PROFILE_SLOTS[profile][0], profile=profile)
+    else:
+        records, _ = aggregator._load_envelopes(destination)
+        assert aggregate(records)["result"] == "PASS"
+
+
+@pytest.mark.parametrize("kind", ["raw", "envelopes"])
+def test_workflow_digest_mismatch_fails_before_zip_parse_or_any_output(tmp_path, monkeypatch, kind, capsys):
+    argv, _, archives, destination, _ = workflow_download_fixture(tmp_path, monkeypatch, kind)
+    # Corrupt the final archive: even previously verified envelopes stay unpublished.
+    last = max(archives)
+    corrupted = bytearray(archives[last])
+    corrupted[0] ^= 1
+    archives[last] = bytes(corrupted)
+    original = common.zipfile.ZipFile
+    parsed = []
+
+    def checked_zip(stream):
+        assert stream.getvalue() != archives[last], "mismatched ZIP was parsed"
+        parsed.append(True)
+        return original(stream)
+
+    monkeypatch.setattr(common.zipfile, "ZipFile", checked_zip)
+    assert common.download_artifacts_main(argv) == 2
+    assert "digest mismatch" in capsys.readouterr().out
+    assert len(parsed) == last - 1
+    assert not destination.exists()
+
+
+@pytest.mark.parametrize("attack", ["nested", "traversal", "absolute", "backslash", "duplicate", "extra", "symlink", "oversized", "malformed", "truncated", "trailing"])
+def test_archive_download_rejects_unsafe_or_unbounded_content(monkeypatch, attack):
+    filename = "security-A.log"
+    entries = [(filename, b"raw")]
+    if attack in ("nested", "traversal", "absolute", "backslash"):
+        entries = [({"nested": "artifact/", "traversal": "../", "absolute": "/", "backslash": "..\\"}[attack] + filename, b"raw")]
+    elif attack == "duplicate":
+        entries *= 2
+    elif attack == "extra":
+        entries.append(("other.log", b"extra"))
+    elif attack == "symlink":
+        link = zipfile.ZipInfo(filename)
+        link.create_system = 3
+        link.external_attr = (stat.S_IFLNK | 0o777) << 16
+        entries = [(link, b"target")]
+    elif attack == "oversized":
+        entries = [(filename, b"x" * 2048)]
+    if attack == "duplicate":
+        with pytest.warns(UserWarning, match="Duplicate"):
+            archive = archive_bytes(entries)
+    else:
+        archive = archive_bytes(entries)
+    if attack == "malformed":
+        archive = b"not a ZIP"
+    item = {"artifact_id": 1, "size_in_bytes": len(archive), "artifact_digest": "sha256:" + common.sha256_bytes(archive)}
+    if attack == "truncated":
+        archive = archive[:-1]
+    elif attack == "trailing":
+        archive += b"x"
+    mock_archive_transport(monkeypatch, {1: archive})
+    with pytest.raises(common.ControllerError):
+        common.download_verified_artifact(item, repository="TheBitPoets/2cornot2c", token="fixture-token", expected_file=filename, maximum_size=1024)
+
+
+def test_artifact_redirect_strips_token_and_rejects_http():
+    handler = common._ArtifactRedirectHandler()
+    request = urllib.request.Request("https://api.github.com/example", headers={"Authorization": "Bearer fixture-token"})
+    redirected = handler.redirect_request(request, None, 302, "Found", {}, "https://blob.example/archive?signature=fixture")
+    assert redirected.get_header("Authorization") is None
+    with pytest.raises(common.ControllerError, match="HTTPS"):
+        handler.redirect_request(request, None, 302, "Found", {}, "http://blob.example/archive")
+
+
+@pytest.mark.parametrize("kind", ["raw", "envelopes"])
+def test_download_preserves_existing_destination(tmp_path, monkeypatch, kind):
+    argv, _, _, destination, _ = workflow_download_fixture(tmp_path, monkeypatch, kind)
+    destination.mkdir()
+    sentinel = destination / "existing.log"
+    sentinel.write_bytes(b"preserve")
+    assert common.download_artifacts_main(argv) == 2
+    assert list(destination.iterdir()) == [sentinel]
+    assert sentinel.read_bytes() == b"preserve"
+
+
+@pytest.mark.parametrize("kind", ["raw", "envelopes"])
+@pytest.mark.parametrize("failure", ["metadata", "network"])
+def test_download_failure_is_terminal_without_output(tmp_path, monkeypatch, kind, failure, capsys):
+    argv, _, _, destination, requests = workflow_download_fixture(tmp_path, monkeypatch, kind)
+    if failure == "metadata":
+        path = Path(argv[argv.index("--metadata") + 1])
+        metadata = json.loads(path.read_bytes())
+        item = metadata["artifact"] if kind == "raw" else metadata["artifacts"][0]
+        item["artifact_digest"] = ""
+        path.write_bytes(common.canonical_json(metadata))
+    else:
+        class BrokenOpener:
+            def open(self, request, timeout):
+                raise OSError("https://blob.example/?signature=private-signed-url")
+
+        monkeypatch.setattr(common.urllib.request, "build_opener", lambda handler: BrokenOpener())
+    assert common.download_artifacts_main(argv) == 2
+    assert not destination.exists()
+    assert not requests
+    output = capsys.readouterr().out
+    assert "FAIL" in output and "private-signed-url" not in output
