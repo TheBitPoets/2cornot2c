@@ -1,0 +1,115 @@
+{
+  "schema_version": "thebitlab.content-pack.v1",
+  "id": "tpsi5-pack-fullstack-2026",
+  "title": "TPSI quinto - Full Stack Web Development",
+  "version": "0.1.0",
+  "status": "draft",
+  "language": "it",
+  "audience": {
+    "school_level": "secondaria-secondo-grado",
+    "subject": "TPSI",
+    "year": 5
+  },
+  "ownership": {
+    "content_origin": "original-course-material",
+    "redistribution_status": "project-license-to-review",
+    "editorial_copying_allowed": false
+  },
+  "references": [
+    {
+      "id": "tpsi5-ref-curriculum",
+      "kind": "curriculum",
+      "role": "coverage-reference",
+      "provider": "school",
+      "title": "TPSI quinto - riferimento curricolare",
+      "access": "public",
+      "license_status": "reference-only"
+    },
+    {
+      "id": "tpsi5-ref-mdn-html",
+      "kind": "documentation",
+      "role": "technical-reference",
+      "provider": "mdn",
+      "title": "MDN Web Docs - HTML",
+      "uri": "https://developer.mozilla.org/en-US/docs/Web/HTML",
+      "access": "public",
+      "license_status": "reference-and-license-aware-reuse"
+    },
+    {
+      "id": "tpsi5-ref-manning-css",
+      "kind": "book",
+      "role": "teacher-reference",
+      "provider": "manning",
+      "title": "CSS in Depth, Second Edition",
+      "access": "licensed",
+      "license_status": "licensed-reference-only"
+    }
+  ],
+  "sources": [
+    {
+      "id": "tpsi5-source-originali",
+      "kind": "source-package",
+      "label": "TPSI quinto - contenuti originali",
+      "type": "markdown",
+      "provider": "local",
+      "role": "approved-course-content",
+      "path": "content/tpsi5",
+      "files": [
+        "README.md",
+        "COVERAGE.md",
+        "01_WEB_FOUNDATIONS.md"
+      ],
+      "license_status": "project-license-to-review",
+      "indexing_status": "ready"
+    }
+  ],
+  "coverage": {
+    "path": "content/tpsi5/COVERAGE.md",
+    "status": "draft"
+  },
+  "content_items": [
+    {
+      "id": "tpsi5-content-web-foundations",
+      "kind": "module",
+      "path": "content/tpsi5/01_WEB_FOUNDATIONS.md",
+      "order": 1,
+      "status": "draft",
+      "curriculum_topics": [
+        "web-platform",
+        "html-semantics"
+      ],
+      "activity_ids": [
+        "tpsi5-activity-a-html-document-001"
+      ],
+      "source_refs": [
+        {
+          "id": "tpsi5-source-originali",
+          "role": "content-origin",
+          "locator": "content/tpsi5/01_WEB_FOUNDATIONS.md"
+        },
+        {
+          "id": "tpsi5-ref-mdn-html",
+          "role": "technical-reference",
+          "locator": "HTML reference"
+        }
+      ]
+    }
+  ],
+  "course_designs": [
+    {
+      "id": "tpsi5-course-2026-2027",
+      "path": "doc/course_designs/tpsi_quinto_2026_2027.json",
+      "status": "draft"
+    }
+  ],
+  "activity_roots": [
+    "activities/tpsi5"
+  ],
+  "policies": {
+    "provenance_required": true,
+    "teacher_review_required_before_publish": true,
+    "student_teacher_asset_separation_required": true,
+    "ai_is_not_primary_source": true,
+    "restricted_source_copying_forbidden": true
+  }
+}

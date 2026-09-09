@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts import create_activity, student_help_auth
+from scripts.thebitlab_identity_binding import LegacySubjectAlias, SUBJECT_ID_PATTERN
 
 
 LEGACY_STUDENT_ID_RE = re.compile(r"^legacy-[a-z0-9-]+-[0-9a-f]{10}$")
@@ -98,6 +99,33 @@ def target_student_id(target: dict[str, Any]) -> str:
         if value:
             return target_candidate_student_id(cross_platform_basename(value))
     return target_candidate_student_id(target.get("display_name"))
+
+
+def target_help_student_key(
+    target: dict[str, Any],
+    fallback: str,
+    *,
+    class_id: str = "",
+    legacy_aliases: tuple[LegacySubjectAlias, ...] | None = None,
+) -> str:
+    """Resolve a help-log key from a trusted target or explicit class alias."""
+
+    subject_id = target.get("subject_id")
+    if subject_id not in (None, ""):
+        if not isinstance(subject_id, str) or SUBJECT_ID_PATTERN.fullmatch(subject_id) is None:
+            raise ValueError("Identita del registro aiuti non valida.")
+        return subject_id
+    if legacy_aliases is not None:
+        matches = [
+            alias.subject_id
+            for alias in legacy_aliases
+            if alias.class_id == class_id
+            and alias.legacy_student_id == clean_text(target.get("student_id"))
+        ]
+        if len(matches) != 1:
+            raise ValueError("Identita del registro aiuti non risolvibile.")
+        return matches[0]
+    return fallback
 
 
 def target_student_aliases(target: dict[str, Any]) -> set[str]:

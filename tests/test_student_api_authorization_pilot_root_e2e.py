@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import http.client
 import json
 import sqlite3
@@ -10,6 +11,8 @@ from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Iterator
+
+import pytest
 
 from scripts import course_board_server, pilot_data_root
 from scripts.assignment_records import JsonAssignmentRecordStorage
@@ -372,3 +375,46 @@ def test_federated_student_api_e2e_uses_canonical_pilot_root_and_fresh_authority
     assert pilot_data_root.validate_root(topology)["ok"] is True
     assert [path.resolve() for path in root.rglob("*.sqlite3")] == [database_path.resolve()]
     assert set(tmp_path.iterdir()) == {root}
+
+
+@pytest.mark.parametrize("legacy_target", [False, True], ids=["canonical", "explicit-legacy-alias"])
+def test_federated_help_is_visible_in_the_teacher_register(tmp_path: Path, legacy_target: bool) -> None:
+    root = tmp_path / "canonical-root"
+    assert pilot_data_root.bootstrap(pilot_data_root.topology_from_paths(root))["ok"]
+    records = JsonAssignmentRecordStorage(root)
+    assignment = records.list_assignments_strict()[0]
+    own = next(target for target in assignment["targets"] if target["subject_id"] == STUDENT_SUBJECT_ID)
+    if legacy_target:
+        for target in assignment["targets"]:
+            target.pop("subject_id")
+        records.write_assignment(assignment, overwrite=True)
+
+    with _running_pilot(root) as (client, storage, http_sessions):
+        bearer, _ = client.pair(STUDENT_USER_ID, http_sessions)
+        status, event = client.exchange(
+            "/api/student-lab/help",
+            method="POST",
+            headers=_authorization_header(bearer),
+            payload={
+                "assignment_id": assignment["id"],
+                "help_type": "teoria",
+                "prompt": "Come scelgo il primo passaggio?",
+            },
+        )
+        assert status == 200 and event["ok"]
+        teacher_auth = "Basic " + base64.b64encode(b"teacher:teacher-demo-only-706").decode("ascii")
+        status, result = client.exchange(
+            "/api/assignment-reports/generate",
+            method="POST",
+            headers={"Authorization": teacher_auth},
+            payload={
+                "assignment_id": assignment["id"],
+                "activity_path": assignment["activity_path"],
+                "targets_text": str(root / own["path"]),
+                "output_name": "help-identity-regression.json",
+            },
+        )
+        assert status == 200, result
+        help_summary = result["report"]["students"][0]["help"]
+        assert help_summary["total"] == 1
+        assert help_summary["events"][0]["prompt"] == "Come scelgo il primo passaggio?"

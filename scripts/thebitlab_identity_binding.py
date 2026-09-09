@@ -403,6 +403,8 @@ def resolve_assignment_target(
 
     legacy_matches: list[dict[str, Any]] = []
     for target in targets:
+        if target.get("subject_id") not in (None, ""):
+            continue
         raw_legacy_id = target.get("student_id")
         if raw_legacy_id is None or raw_legacy_id == "":
             continue

@@ -5,6 +5,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+from scripts import (
+    python_filesystem_profile,
+    python_function_profile,
+    python_object_profile,
+)
 from scripts.thebitlab_contracts import ALLOWED_ACTIVITY_KINDS
 from scripts.thebitlab_runtime_contracts import validate_runtime_extension
 
@@ -72,6 +77,51 @@ def load_json(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
     return data, []
 
 
+def validate_function_tests(value: Any, source: str) -> list[str]:
+    """Validate optional teacher-only Python function-behavior tests."""
+    try:
+        python_function_profile.validate_function_tests(
+            value,
+            source=f"{source}: function_tests",
+        )
+    except python_function_profile.FunctionProfileError as error:
+        return [str(error)]
+    return []
+
+
+def validate_filesystem_tests(value: Any, source: str) -> list[str]:
+    """Validate optional teacher-only Python filesystem-behavior tests."""
+    try:
+        python_filesystem_profile.validate_filesystem_tests(
+            value,
+            source=f"{source}: filesystem_tests",
+        )
+    except python_filesystem_profile.FilesystemProfileError as error:
+        return [str(error)]
+    return []
+
+
+def validate_object_tests(value: Any, source: str) -> list[str]:
+    """Validate optional teacher-only Python object-behavior scenarios."""
+    try:
+        python_object_profile.validate_object_tests(
+            value,
+            source=f"{source}: object_tests",
+        )
+    except python_object_profile.ObjectProfileError as error:
+        return [str(error)]
+    return []
+
+
+def _python_profile_language_errors(
+    data: dict[str, Any], source: str, field: str
+) -> list[str]:
+    language = str(data.get("language") or data.get("linguaggio") or "").strip().lower()
+    if language and language not in {"python", "py"}:
+        return [f"{source}: {field} e supportato solo per Activity Python"]
+    return []
+
+
 def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[str]:
     """Validate the minimal TheBitLab activity schema."""
     errors: list[str] = []
@@ -98,8 +148,12 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
 
     topics = data.get("argomenti")
     if topics is not None:
-        if not isinstance(topics, list) or not topics or not all(isinstance(topic, str) and topic for topic in topics):
-            errors.append(f"{source}: argomenti deve essere una lista non vuota di stringhe")
+        if not isinstance(topics, list) or not topics or not all(
+            isinstance(topic, str) and topic for topic in topics
+        ):
+            errors.append(
+                f"{source}: argomenti deve essere una lista non vuota di stringhe"
+            )
 
     correction = data.get("correzione")
     if correction is not None:
@@ -116,6 +170,34 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
     assets = data.get("assets")
     if assets is not None:
         errors.extend(validate_assets(assets, source))
+
+    profile_fields = [
+        field
+        for field in ("function_tests", "filesystem_tests", "object_tests")
+        if field in data
+    ]
+    if len(profile_fields) > 1:
+        if set(profile_fields) == {"function_tests", "filesystem_tests"}:
+            errors.append(
+                f"{source}: function_tests e filesystem_tests non possono coesistere nella stessa Activity"
+            )
+        else:
+            errors.append(
+                f"{source}: profili Python incompatibili nella stessa Activity: "
+                + ", ".join(profile_fields)
+            )
+
+    if "function_tests" in data:
+        errors.extend(_python_profile_language_errors(data, source, "function_tests"))
+        errors.extend(validate_function_tests(data.get("function_tests"), source))
+
+    if "filesystem_tests" in data:
+        errors.extend(_python_profile_language_errors(data, source, "filesystem_tests"))
+        errors.extend(validate_filesystem_tests(data.get("filesystem_tests"), source))
+
+    if "object_tests" in data:
+        errors.extend(_python_profile_language_errors(data, source, "object_tests"))
+        errors.extend(validate_object_tests(data.get("object_tests"), source))
 
     errors.extend(validate_runtime_extension(data, source))
     return errors
@@ -154,7 +236,9 @@ def validate_assets(assets: Any, source: str) -> list[str]:
         if not is_safe_relative_path(asset.get("path")):
             errors.append(f"{prefix}.path deve essere un path relativo sicuro")
 
-        if "target_path" in asset and not is_safe_relative_path(asset.get("target_path")):
+        if "target_path" in asset and not is_safe_relative_path(
+            asset.get("target_path")
+        ):
             errors.append(f"{prefix}.target_path deve essere un path relativo sicuro")
 
         visibility = asset.get("visibility")
@@ -199,7 +283,11 @@ def validate_rubric(rubric: Any, source: str) -> list[str]:
         if not isinstance(item.get("criterio"), str) or not item.get("criterio"):
             errors.append(f"{prefix}.criterio deve essere una stringa non vuota")
         points = item.get("punti")
-        if isinstance(points, bool) or not isinstance(points, (int, float)) or points < 0:
+        if (
+            isinstance(points, bool)
+            or not isinstance(points, (int, float))
+            or points < 0
+        ):
             errors.append(f"{prefix}.punti deve essere un numero non negativo")
     return errors
 
@@ -216,8 +304,14 @@ def validate_metrics(metrics: Any, source: str) -> list[str]:
 
     estimated_time = metrics.get("tempo_stimato_minuti")
     if estimated_time is not None:
-        if isinstance(estimated_time, bool) or not isinstance(estimated_time, (int, float)) or estimated_time < 0:
-            errors.append(f"{source}: metriche.tempo_stimato_minuti deve essere un numero non negativo")
+        if (
+            isinstance(estimated_time, bool)
+            or not isinstance(estimated_time, (int, float))
+            or estimated_time < 0
+        ):
+            errors.append(
+                f"{source}: metriche.tempo_stimato_minuti deve essere un numero non negativo"
+            )
 
     for field in BOOLEAN_METRIC_FIELDS & metrics.keys():
         if not isinstance(metrics[field], bool):

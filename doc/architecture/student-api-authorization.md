@@ -44,6 +44,24 @@ Non sono state trovate altre route Student Lab federate: `REMOTE_STUDENT_API_ROU
 
 ## Implementazione
 
+### Registro delle richieste di aiuto
+
+Le richieste federate sono salvate per `subject_id` e `assignment_id`.
+La generazione del registro docente usa lo stesso `subject_id` dal target
+canonico. Per target ancora legacy, il server passa al servizio di tracking
+gli alias espliciti letti dallo storage auth del runtime; il lookup richiede
+la stessa classe e un solo alias. Alias mancanti/ambigui o storage
+indisponibile impediscono la generazione, senza ripiegare su un'altra
+identità o dichiarare uno storico vuoto.
+
+La CLI di tracking con record canonici non richiede accesso allo storage
+auth. Per leggere log federati da record legacy, i consumer devono fornire
+gli alias autorevoli tramite `help_subject_aliases`, oppure migrare prima
+i target secondo l'ADR. Il canale locale non federato conserva il proprio
+formato storico e non viene promosso a fonte di eventi federati.
+
+### File
+
 - Boundary/policy: `scripts/student_api_authorization.py`.
 - HTTP enforcement: `scripts/course_board_server.py`.
 - Consumer di record/target già autorizzati: `scripts/student_lab_service.py`.

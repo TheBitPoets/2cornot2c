@@ -204,3 +204,29 @@ Il grading Docker e la strada consigliata per codice studente, perche prepara il
 - runner senza segreti;
 - report raccolti in modo uniforme;
 - futuri runner multi-linguaggio.
+
+## Runtime plugin
+
+Le Activity `extensions.thebitlab.runtime` usano lo stesso profilo Docker tramite il broker
+comune. Il dispatcher conserva `run()` per il backend locale formativo; con backend `docker`
+richiede invece la capability `sandbox-plan.v1` e orchestra:
+
+```text
+prepare_sandbox trusted -> worker Docker untrusted -> finalize_sandbox trusted
+```
+
+Il worker riceve soltanto gli artifact submission e gli eventuali file Activity elencati
+esplicitamente nel piano, copiati dopo verifica di containment e assenza di symlink. I file
+Activity servono, per esempio, a hidden test comportamentali eseguiti dentro il container.
+Scenario, rubrica e grader possono e devono restare sull'host quando il runtime puo produrre
+una trace tecnica sufficiente. Il payload restituito dal worker non e una decisione di voto:
+il plugin trusted lo valida e ricostruisce `runtime_execution.v1` sull'host.
+
+Read-only non rende segreto un hidden test al programma nello stesso container: questi file
+non devono contenere credenziali o expected outcome sensibili. La parte che deve restare
+segreta e autorevole non viene montata e rimane nel finalize host.
+
+Il piano plugin non puo modificare rete, mount, environment, comando, utente, capability o
+limiti del container. L'immagine deve essere indicata con digest OCI immutabile. Mancanza
+dell'estensione sandbox, timeout e failure infrastrutturali falliscono chiusi e non provocano
+fallback all'esecuzione locale.

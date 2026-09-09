@@ -74,6 +74,10 @@ La rimozione della membership ha effetto al successivo snapshot: il binding pers
 2. membership studente attiva nella `class_id` dell'assignment;
 3. esattamente un target con il `subject_id` risolto, oppure un solo alias legacy esplicito e non ambiguo.
 
+Il fallback legacy si applica soltanto ai target privi di `subject_id`.
+Un target con identità canonica presente non viene reinterpretato attraverso
+`student_id`: un alias non può sostituire il soggetto canonico del target.
+
 Missing, duplicate, cross-class, target mancante, alias legacy ambiguo e storage incoerente producono sempre un diniego. L'errore pubblico e sanitizzato (`Identita didattica non risolvibile.`); il codice di errore strutturato serve al logging server-side senza includere ID o contenuti persistiti nel messaggio esposto.
 
 Questo validator risolve identita e target ma non decide quali endpoint o operazioni siano permessi: tale policy appartiene a #706.

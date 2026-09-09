@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 from scripts import student_runtime, thebitlab_runtime_plugins
@@ -63,6 +64,60 @@ class FakeRuntime:
         return None
 
 
+class FakeSandboxRuntime(FakeRuntime):
+    def describe(self):
+        descriptor = super().describe()
+        descriptor["capabilities"].append("sandbox-plan.v1")
+        return descriptor
+
+    def prepare_sandbox(self, request):
+        return {
+            "schema_version": "runtime_sandbox_plan.v1",
+            "profile": {
+                "image": "ghcr.io/thebitpoets/example@sha256:" + "a" * 64,
+                "platform": "linux/amd64",
+                "worker_schema": "example.trace.v1",
+            },
+            "inputs": [
+                {"source": "submission", "artifact_id": "answer", "target": "main.py"}
+            ],
+            "worker_request": {"schema_version": "example.worker.v1"},
+        }
+
+    def finalize_sandbox(self, request, sandbox_result):
+        assert sandbox_result["payload"] == {"trace": ["forward"]}
+        return {
+            "schema_version": "runtime_execution.v1",
+            "status": "passed",
+            "tests": [{"name": "trusted replay", "passed": True, "detail": "ok"}],
+            "metadata": {"score": 10.0},
+        }
+
+
+class FakeSandboxService:
+    def __init__(self):
+        self.calls = []
+
+    def run(self, plan, request):
+        self.calls.append((plan, request))
+        return {
+            "schema_version": "runtime_sandbox_result.v1",
+            "worker_schema": "example.trace.v1",
+            "status": "completed",
+            "payload": {"trace": ["forward"]},
+        }
+
+
+class TimeoutSandboxService:
+    def run(self, plan, request):
+        raise subprocess.TimeoutExpired("docker run", 20)
+
+
+class MissingDockerSandboxService:
+    def run(self, plan, request):
+        raise FileNotFoundError("docker")
+
+
 def fixture(tmp_path: Path) -> tuple[dict, thebitlab_runtime_plugins.RuntimePluginRegistry]:
     activity_dir = tmp_path / "activity"
     workspace = tmp_path / "workspace"
@@ -83,7 +138,12 @@ def fixture(tmp_path: Path) -> tuple[dict, thebitlab_runtime_plugins.RuntimePlug
                 "required_capabilities": ["headless-run", "deterministic-grade"],
                 "submission": {
                     "artifacts": [
-                        {"id": "answer", "path": "answer.bin", "media_type": "application/octet-stream", "required": True}
+                        {
+                            "id": "answer",
+                            "path": "answer.bin",
+                            "media_type": "application/octet-stream",
+                            "required": True,
+                        }
                     ]
                 },
             }
@@ -120,6 +180,147 @@ def test_runtime_assignment_generates_normal_student_report(tmp_path: Path) -> N
     assert report["summary"] == {"passed": 1, "total": 2}
     assert report["score"] == 5.0
     assert report["tests"][1]["message"] == "fix me"
+    assert report["runtime"]["backend"] == "local"
+    assert report["runtime"]["requested_backend"] == "local"
+    assert report["runtime"]["metadata"]["authoritative"] is False
+
+
+def test_sandbox_capable_runtime_promotes_default_local_to_docker(tmp_path: Path) -> None:
+    assignment, _ = fixture(tmp_path)
+    registry = thebitlab_runtime_plugins.RuntimePluginRegistry(
+        lambda: (FakeEntryPoint("example-runtime", FakeSandboxRuntime),)
+    )
+    service = FakeSandboxService()
+
+    report = student_runtime.run_runtime_assignment(
+        assignment,
+        root=tmp_path,
+        timeout_seconds=10,
+        registry=registry,
+        sandbox_service=service,
+    )
+
+    assert report["passed"] is True
+    assert report["runtime"]["requested_backend"] == "local"
+    assert report["runtime"]["backend"] == "docker"
+    assert report["runtime"]["metadata"]["authoritative"] is True
+    assert report["runtime"]["metadata"]["execution_isolation"] == "docker"
+    assert len(service.calls) == 1
+
+
+def test_sandbox_capable_runtime_default_fails_closed_without_docker(tmp_path: Path) -> None:
+    assignment, _ = fixture(tmp_path)
+    registry = thebitlab_runtime_plugins.RuntimePluginRegistry(
+        lambda: (FakeEntryPoint("example-runtime", FakeSandboxRuntime),)
+    )
+
+    report = student_runtime.run_runtime_assignment(
+        assignment,
+        root=tmp_path,
+        timeout_seconds=10,
+        registry=registry,
+        sandbox_service=MissingDockerSandboxService(),
+    )
+
+    assert report["passed"] is False
+    assert report["status"] == "runtime-unavailable"
+    assert "Docker non trovato" in report["error"]
+    assert "fix me" not in json.dumps(report)
+
+
+def test_runtime_docker_uses_prepare_broker_and_trusted_finalize(tmp_path: Path) -> None:
+    assignment, _ = fixture(tmp_path)
+    registry = thebitlab_runtime_plugins.RuntimePluginRegistry(
+        lambda: (FakeEntryPoint("example-runtime", FakeSandboxRuntime),)
+    )
+    service = FakeSandboxService()
+
+    report = student_runtime.run_runtime_assignment(
+        assignment,
+        root=tmp_path,
+        timeout_seconds=10,
+        backend="docker",
+        registry=registry,
+        sandbox_service=service,
+    )
+
+    assert report["passed"] is True
+    assert report["runtime"]["backend"] == "docker"
+    assert report["runtime"]["requested_backend"] == "docker"
+    assert report["runtime"]["metadata"]["authoritative"] is True
+    assert report["runtime"]["metadata"]["execution_isolation"] == "docker"
+    assert len(service.calls) == 1
+
+
+def test_runtime_docker_fails_closed_for_v1_only_plugin(tmp_path: Path) -> None:
+    assignment, registry = fixture(tmp_path)
+
+    report = student_runtime.run_runtime_assignment(
+        assignment,
+        root=tmp_path,
+        timeout_seconds=10,
+        backend="docker",
+        registry=registry,
+        sandbox_service=FakeSandboxService(),
+    )
+
+    assert report["passed"] is False
+    assert report["status"] == "runtime-unavailable"
+    assert "sandbox-plan.v1" in report["error"]
+
+
+def test_runtime_timeout_does_not_call_trusted_finalize(tmp_path: Path) -> None:
+    assignment, _ = fixture(tmp_path)
+    plugin = FakeSandboxRuntime()
+    plugin.finalize_sandbox = lambda *args: (_ for _ in ()).throw(  # type: ignore[method-assign]
+        AssertionError("finalize must not run after infrastructure timeout")
+    )
+    registry = thebitlab_runtime_plugins.RuntimePluginRegistry(
+        lambda: (FakeEntryPoint("example-runtime", lambda: plugin),)
+    )
+
+    report = student_runtime.run_runtime_assignment(
+        assignment,
+        root=tmp_path,
+        timeout_seconds=10,
+        backend="docker",
+        registry=registry,
+        sandbox_service=TimeoutSandboxService(),
+    )
+
+    assert report["status"] == "timeout"
+    assert report["passed"] is False
+
+
+def test_runtime_distinguishes_missing_docker_from_missing_activity_file(
+    tmp_path: Path,
+) -> None:
+    assignment, _ = fixture(tmp_path)
+    registry = thebitlab_runtime_plugins.RuntimePluginRegistry(
+        lambda: (FakeEntryPoint("example-runtime", FakeSandboxRuntime),)
+    )
+
+    missing_docker = student_runtime.run_runtime_assignment(
+        assignment,
+        root=tmp_path,
+        timeout_seconds=10,
+        backend="docker",
+        registry=registry,
+        sandbox_service=MissingDockerSandboxService(),
+    )
+    (tmp_path / assignment["activity"]["path"]).unlink()
+    missing_activity = student_runtime.run_runtime_assignment(
+        assignment,
+        root=tmp_path,
+        timeout_seconds=10,
+        backend="docker",
+        registry=registry,
+        sandbox_service=MissingDockerSandboxService(),
+    )
+
+    assert "Docker non trovato" in missing_docker["error"]
+    assert "Activity non trovata" in missing_activity["error"]
+    assert "Docker non trovato" not in missing_activity["error"]
 
 
 def test_runtime_launch_is_generic(tmp_path: Path) -> None:

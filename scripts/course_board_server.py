@@ -2953,14 +2953,14 @@ def _distribute_activity_assignment_locked(payload: dict) -> dict:
     }
 
 
-def generate_assignment_report(payload: dict) -> dict:
+def generate_assignment_report(payload: dict, *, help_subject_aliases=None) -> dict:
     """Generate and persist an assignment tracking report from the local GUI."""
 
     with thebitlab_storage.course_storage_lock(ROOT):
-        return _generate_assignment_report_locked(payload)
+        return _generate_assignment_report_locked(payload, help_subject_aliases=help_subject_aliases)
 
 
-def _generate_assignment_report_locked(payload: dict) -> dict:
+def _generate_assignment_report_locked(payload: dict, *, help_subject_aliases=None) -> dict:
     """Persist one report while activity deletion is excluded."""
 
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
@@ -2993,6 +2993,7 @@ def _generate_assignment_report_locked(payload: dict) -> dict:
             assignment_id=canonical_assignment_id or None,
             server_root=ROOT if canonical_assignment_id else None,
             report_source=grading_tracking_report_source() if canonical_assignment_id else None,
+            help_subject_aliases=help_subject_aliases,
         )
         with assignment_operation_lock(assignment_report_operation_id(storage, output_name)):
             if output_path.is_file():
@@ -6700,7 +6701,18 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/assignment-reports/generate":
             try:
-                self.write_json(generate_assignment_report(payload))
+                routes = getattr(self.server, "tui_pairing_http_routes", None)
+                if routes is None:
+                    self.write_json(generate_assignment_report(payload))
+                else:
+                    try:
+                        aliases = tuple(
+                            routes.boundary.tui_sessions.storage.list_legacy_subject_aliases()
+                        )
+                    except Exception:
+                        self.write_error_json(503, "Registro aiuti temporaneamente non disponibile.")
+                        return
+                    self.write_json(generate_assignment_report(payload, help_subject_aliases=aliases))
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

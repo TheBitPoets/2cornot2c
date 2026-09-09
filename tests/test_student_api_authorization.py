@@ -177,6 +177,16 @@ def test_membership_removal_is_effective_on_next_request_and_stale_bearer_is_not
     assert storage.reads == 2
 
 
+def test_canonical_target_identity_is_not_overridden_by_a_legacy_alias() -> None:
+    scope = authorize_student_request(MutableStorage(snapshot()), USER_ID)
+    canonical_other = assignment(
+        targets=[{"subject_id": OTHER_SUBJECT_ID, "student_id": "rossi-mario"}]
+    )
+    assert_denied(lambda: scope.authorize_assignment(canonical_other), "target_missing")
+    legacy_own = assignment(targets=[{"student_id": "rossi-mario"}])
+    assert scope.authorize_assignment(legacy_own).subject_id == SUBJECT_ID
+
+
 def test_legacy_alias_ambiguity_and_revision_mismatch_fail_closed() -> None:
     ambiguous = snapshot(
         aliases=(

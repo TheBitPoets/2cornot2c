@@ -64,29 +64,63 @@ def test_publish_workflow_only_publishes_reviewed_main_toolchains() -> None:
         ".github/workflows/publish-assignment-runner.yml"
     ).read_text(encoding="utf-8")
 
-    assert "packages: write" in source
-    assert "pull_request:" not in source
+    validate_block, publish_block = source.split("  publish:\n", maxsplit=1)
+    trigger_block = source.split("\nconcurrency:\n", maxsplit=1)[0]
+    pull_request_block = trigger_block.split("  pull_request:\n", maxsplit=1)[1].split(
+        "  push:\n", maxsplit=1
+    )[0]
+    push_block = trigger_block.split("  push:\n", maxsplit=1)[1].strip()
+
+    assert "pull_request:" in source
     assert "branches:\n      - main" in source
-    assert "if: github.ref == 'refs/heads/main'" in source
+    assert "if: github.ref == 'refs/heads/main'" in publish_block
+    assert "packages: write" not in validate_block
+    assert "packages: write" in publish_block
+    assert "docker login ghcr.io" not in validate_block
+    assert "docker login ghcr.io" in publish_block
     assert "scripts/build_assignment_runner.py" in source
     assert "scripts/publish_assignment_runner.py" in source
-    assert "THEBITLAB_RUN_DOCKER_TESTS" in source
-    assert "tests/test_student_lab_runner_docker.py" in source
-    assert "docker login ghcr.io" in source
-    assert "image_id: ${{ steps.image-digest.outputs.image_id }}" in source
-    assert "VALIDATED_IMAGE_ID: ${{ needs.validate.outputs.image_id }}" in source
-    assert "actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16" in source
+    assert "THEBITLAB_RUN_DOCKER_TESTS" in validate_block
+    assert "tests/test_student_lab_runner_docker.py" in validate_block
+    assert "tests/test_python_function_student_lab_docker.py" in validate_block
+    assert "tests/test_python_object_student_lab_docker.py" in validate_block
+    assert "tests/test_python_filesystem_student_lab_docker.py" in validate_block
+    assert "tests/test_p2_release_candidate.py" in validate_block
+    assert "tests/test_toolchain_lock.py" in validate_block
+    assert "tests/test_grading_workflows.py" in validate_block
+    assert "image_id: ${{ steps.image-digest.outputs.image_id }}" in validate_block
+    assert "VALIDATED_IMAGE_ID: ${{ needs.validate.outputs.image_id }}" in publish_block
+    assert "actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16" in publish_block
     assert "runner-toolchain" in source
-    assert "docker save" in source
-    assert "docker load" in source
-    assert "gunzip" in source
+    assert "docker save" in validate_block
+    assert "docker load" in publish_block
+    assert "gunzip" in publish_block
     assert ":latest" not in source
     assert source.count("tests/test_student_lab_runner_docker.py") == 1
-    assert '".github/workflows/publish-assignment-runner.yml"' in source
+    assert '".github/workflows/publish-assignment-runner.yml"' in pull_request_block
+    assert '"docker/assignment-runner/**"' in pull_request_block
+    assert '"tests/test_toolchain_lock.py"' in pull_request_block
     assert "actions/checkout@v4" not in source
     assert "actions/upload-artifact@v4" not in source
     assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in source
     assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in source
+
+    # A push to main is a publication trigger, not a generic validation trigger.
+    # Only a reviewed release-manifest/version bump may start an automatic publish.
+    assert push_block == (
+        "branches:\n"
+        "      - main\n"
+        "    paths:\n"
+        '      - "docker/assignment-runner/toolchain.json"'
+    )
+    for forbidden in (
+        "toolchain.lock.json",
+        "docker/assignment-runner/**",
+        ".github/workflows/publish-assignment-runner.yml",
+        "scripts/",
+        "tests/",
+    ):
+        assert forbidden not in push_block
 
 
 def test_student_preview_workflow_does_not_interpolate_inputs_in_shell() -> None:

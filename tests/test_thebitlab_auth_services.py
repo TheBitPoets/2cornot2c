@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
@@ -95,7 +96,7 @@ def database_path(tmp_path):
 
 @pytest.fixture
 def storage(database_path):
-    return SqliteIdentityStorage(database_path)
+    return SqliteIdentityStorage(database_path, clock=lambda: NOW)
 
 
 def google_assertion(subject="google-42"):
@@ -222,6 +223,251 @@ def test_external_account_unlink_requires_persisted_live_session(storage) -> Non
     with pytest.raises(ConcurrentStateChangeError):
         service.unlink(user.user_id, expected_session=issued.session)
     assert storage.read_external_identity(*linked.provider_key) == linked
+
+
+@pytest.mark.parametrize("operation", ("link", "refresh", "unlink"))
+def test_external_identity_mutation_rejects_expiry_replacement_generation(
+    database_path, operation
+) -> None:
+    origin = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    clock = MutableClock(origin)
+    transactional_storage = SqliteIdentityStorage(database_path, clock=clock)
+    user = account(created_at=origin, updated_at=origin)
+    transactional_storage.create_user(user)
+    sessions = SessionService(
+        transactional_storage,
+        clock=clock,
+        ttl=timedelta(seconds=2),
+        token_factory=lambda: "G" * 40,
+        session_id_factory=lambda: "generation-session",
+    )
+    issued = sessions.issue(user.user_id)
+    authenticated = sessions.authenticate(issued.bearer_token)
+    links = ExternalIdentityLinkService(
+        transactional_storage, expected_provider="github", clock=clock
+    )
+    if operation != "link":
+        links.link(user.user_id, github_assertion())
+    durable_before = transactional_storage.read_external_identity("github", "123456")
+
+    clock.value = origin + timedelta(seconds=3)
+    assert transactional_storage.delete_expired_sessions(
+        origin + timedelta(seconds=2)
+    ) == 1
+    transactional_storage.create_session(
+        replace(issued.session, expires_at=origin + timedelta(seconds=10))
+    )
+
+    with pytest.raises(ConcurrentStateChangeError):
+        if operation == "unlink":
+            links.unlink(user.user_id, expected_session=authenticated.session)
+        else:
+            links.link(
+                user.user_id,
+                github_assertion(),
+                expected_session=authenticated.session,
+            )
+
+    assert (
+        transactional_storage.read_external_identity("github", "123456")
+        == durable_before
+    )
+    if operation == "link":
+        assert (
+            transactional_storage.read_latest_external_identity_generation(
+                "github", "123456"
+            )
+            is None
+        )
+
+
+@pytest.mark.parametrize("operation", ("link", "refresh", "unlink"))
+@pytest.mark.parametrize("race", ("revocation", "disable", "disable-reenable"))
+def test_external_identity_mutation_rejects_authority_races(
+    storage, monkeypatch, operation, race
+) -> None:
+    user = account()
+    storage.create_user(user)
+    issued = SessionService(
+        storage,
+        clock=MutableClock(),
+        token_factory=lambda: "R" * 40,
+        session_id_factory=lambda: "race-session",
+    ).issue(user.user_id)
+    links = ExternalIdentityLinkService(
+        storage, expected_provider="github", clock=MutableClock()
+    )
+    if operation != "link":
+        links.link(user.user_id, github_assertion())
+    durable_before = storage.read_external_identity("github", "123456")
+    method_name = f"{operation}_external_identity_for_active_session"
+    original_mutation = getattr(storage, method_name)
+
+    def race_then_mutate(*args, **kwargs):
+        if race == "revocation":
+            storage.save_session(replace(issued.session, revoked_at=NOW))
+        else:
+            disabled = replace(
+                user,
+                active=False,
+                updated_at=NOW + timedelta(seconds=1),
+            )
+            storage.save_user(disabled, expected_updated_at=user.updated_at)
+            if race == "disable-reenable":
+                storage.save_user(
+                    replace(user, updated_at=NOW + timedelta(seconds=2)),
+                    expected_updated_at=disabled.updated_at,
+                )
+        return original_mutation(*args, **kwargs)
+
+    monkeypatch.setattr(storage, method_name, race_then_mutate)
+    with pytest.raises(ConcurrentStateChangeError):
+        if operation == "unlink":
+            links.unlink(user.user_id, expected_session=issued.session)
+        else:
+            links.link(
+                user.user_id,
+                github_assertion(),
+                expected_session=issued.session,
+            )
+
+    assert storage.read_external_identity("github", "123456") == durable_before
+    if operation == "link":
+        assert (
+            storage.read_latest_external_identity_generation("github", "123456")
+            is None
+        )
+
+
+@pytest.mark.parametrize(
+    ("service_offset", "storage_offset", "accepted"),
+    (
+        (timedelta(seconds=1), timedelta(seconds=1), True),
+        (timedelta(seconds=1), timedelta(seconds=2), False),
+        (timedelta(seconds=1), timedelta(seconds=3), False),
+        (timedelta(seconds=3), timedelta(seconds=1), False),
+    ),
+    ids=("before-expiry", "exact-expiry", "later-storage-clock", "stale-storage-clock"),
+)
+def test_external_identity_link_uses_conservative_transaction_time(
+    database_path, service_offset, storage_offset, accepted
+) -> None:
+    origin = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    service_clock = MutableClock(origin)
+    storage_clock = MutableClock(origin)
+    transactional_storage = SqliteIdentityStorage(database_path, clock=storage_clock)
+    user = account(created_at=origin, updated_at=origin)
+    transactional_storage.create_user(user)
+    issued = SessionService(
+        transactional_storage,
+        clock=service_clock,
+        ttl=timedelta(seconds=2),
+        token_factory=lambda: "T" * 40,
+        session_id_factory=lambda: "temporal-session",
+    ).issue(user.user_id)
+    links = ExternalIdentityLinkService(
+        transactional_storage, expected_provider="github", clock=service_clock
+    )
+    service_clock.value = origin + service_offset
+    storage_clock.value = origin + storage_offset
+
+    if accepted:
+        links.link(user.user_id, github_assertion(), expected_session=issued.session)
+        assert transactional_storage.read_external_identity("github", "123456")
+    else:
+        with pytest.raises(ConcurrentStateChangeError):
+            links.link(
+                user.user_id,
+                github_assertion(),
+                expected_session=issued.session,
+            )
+        assert transactional_storage.read_external_identity("github", "123456") is None
+
+
+def test_external_identity_link_rechecks_storage_clock_after_real_lock_wait(
+    database_path,
+) -> None:
+    origin = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    service_clock = MutableClock(origin)
+    storage_clock = MutableClock(origin)
+    transactional_storage = SqliteIdentityStorage(database_path, clock=storage_clock)
+    user = account(created_at=origin, updated_at=origin)
+    transactional_storage.create_user(user)
+    issued = SessionService(
+        transactional_storage,
+        clock=service_clock,
+        ttl=timedelta(seconds=2),
+        token_factory=lambda: "L" * 40,
+        session_id_factory=lambda: "waiting-link-session",
+    ).issue(user.user_id)
+    links = ExternalIdentityLinkService(
+        transactional_storage, expected_provider="github", clock=service_clock
+    )
+    service_clock.value = origin + timedelta(seconds=1)
+    clock_called = threading.Event()
+    transaction_attempted = threading.Event()
+    transaction_acquired = threading.Event()
+
+    def observed_storage_clock():
+        clock_called.set()
+        return storage_clock.value
+
+    original_transaction = transactional_storage._transaction
+
+    @contextmanager
+    def observed_transaction(operation):
+        transaction_attempted.set()
+        with original_transaction(operation) as connection:
+            transaction_acquired.set()
+            yield connection
+
+    transactional_storage._clock = observed_storage_clock
+    transactional_storage._transaction = observed_transaction
+    lock_holder = sqlite3.connect(database_path, timeout=30, isolation_level=None)
+    lock_holder.execute("PRAGMA busy_timeout = 30000")
+    lock_holder.execute("BEGIN IMMEDIATE")
+    outcome = {}
+    started = threading.Event()
+
+    def link_while_waiting():
+        started.set()
+        try:
+            links.link(
+                user.user_id,
+                github_assertion(),
+                expected_session=issued.session,
+            )
+            outcome["result"] = "accepted"
+        except Exception as error:
+            outcome["error"] = error
+
+    worker = threading.Thread(target=link_while_waiting)
+    worker.start()
+    assert started.wait(timeout=2)
+    assert transaction_attempted.wait(timeout=2)
+    try:
+        worker.join(timeout=0.2)
+        assert worker.is_alive()
+        assert not transaction_acquired.is_set()
+        assert not clock_called.is_set()
+        storage_clock.value = origin + timedelta(seconds=3)
+    finally:
+        lock_holder.commit()
+        lock_holder.close()
+    worker.join(timeout=5)
+
+    assert not worker.is_alive()
+    assert transaction_acquired.is_set()
+    assert clock_called.is_set()
+    assert isinstance(outcome.get("error"), ConcurrentStateChangeError)
+    assert "result" not in outcome
+    assert transactional_storage.read_external_identity("github", "123456") is None
+    assert (
+        transactional_storage.read_latest_external_identity_generation(
+            "github", "123456"
+        )
+        is None
+    )
 
 
 def test_external_account_link_rejects_provider_and_cross_user_conflicts(storage) -> None:
@@ -780,6 +1026,317 @@ def test_session_expiration_is_exclusive_and_disabled_users_fail_closed(storage)
         service.issue("user-01")
 
 
+@pytest.mark.parametrize(
+    ("service_offset", "storage_offset", "expected_last_seen_offset"),
+    (
+        (timedelta(seconds=1), timedelta(seconds=1), timedelta(seconds=1)),
+        (timedelta(seconds=1), timedelta(milliseconds=1500), timedelta(milliseconds=1500)),
+        (timedelta(seconds=1), timedelta(seconds=2), None),
+        (timedelta(seconds=1), timedelta(seconds=3), None),
+        (timedelta(seconds=3), timedelta(seconds=1), None),
+    ),
+    ids=(
+        "live-aligned",
+        "live-storage-ahead",
+        "exact-storage-expiry",
+        "stale-service",
+        "stale-storage",
+    ),
+)
+def test_session_authentication_uses_conservative_transaction_time(
+    database_path, service_offset, storage_offset, expected_last_seen_offset
+) -> None:
+    origin = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    service_clock = MutableClock(origin)
+    storage_clock = MutableClock(origin)
+    transactional_storage = SqliteIdentityStorage(database_path, clock=storage_clock)
+    transactional_storage.create_user(
+        account(created_at=origin, updated_at=origin)
+    )
+    service = SessionService(
+        transactional_storage,
+        clock=service_clock,
+        ttl=timedelta(seconds=2),
+        token_factory=lambda: "C" * 40,
+        session_id_factory=lambda: "clock-session",
+    )
+    issued = service.issue("user-01")
+    service_clock.value = origin + service_offset
+    storage_clock.value = origin + storage_offset
+
+    if expected_last_seen_offset is not None:
+        authenticated = service.authenticate(issued.bearer_token)
+        assert authenticated.session.last_seen_at == origin + expected_last_seen_offset
+        assert transactional_storage.read_session("clock-session") == authenticated.session
+    else:
+        with pytest.raises(InvalidCredentialError, match="non valida"):
+            service.authenticate(issued.bearer_token)
+        assert transactional_storage.read_session("clock-session") == issued.session
+
+
+def test_session_authentication_rechecks_storage_clock_after_real_lock_wait(
+    database_path,
+) -> None:
+    origin = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    service_clock = MutableClock(origin)
+    storage_clock = MutableClock(origin)
+    transactional_storage = SqliteIdentityStorage(database_path, clock=storage_clock)
+    transactional_storage.create_user(
+        account(created_at=origin, updated_at=origin)
+    )
+    service = SessionService(
+        transactional_storage,
+        clock=service_clock,
+        ttl=timedelta(seconds=2),
+        token_factory=lambda: "W" * 40,
+        session_id_factory=lambda: "waiting-session",
+    )
+    issued = service.issue("user-01")
+    service_clock.value = origin + timedelta(seconds=1)
+    clock_called = threading.Event()
+    transaction_attempted = threading.Event()
+    transaction_acquired = threading.Event()
+
+    def observed_storage_clock():
+        clock_called.set()
+        return storage_clock.value
+
+    original_transaction = transactional_storage._transaction
+
+    @contextmanager
+    def observed_transaction(operation):
+        transaction_attempted.set()
+        with original_transaction(operation) as connection:
+            transaction_acquired.set()
+            yield connection
+
+    transactional_storage._clock = observed_storage_clock
+    transactional_storage._transaction = observed_transaction
+    lock_holder = sqlite3.connect(database_path, timeout=30, isolation_level=None)
+    lock_holder.execute("PRAGMA busy_timeout = 30000")
+    lock_holder.execute("BEGIN IMMEDIATE")
+    outcome = {}
+    started = threading.Event()
+
+    def authenticate_while_waiting():
+        started.set()
+        try:
+            service.authenticate(issued.bearer_token)
+            outcome["result"] = "accepted"
+        except Exception as error:
+            outcome["error"] = error
+
+    worker = threading.Thread(target=authenticate_while_waiting)
+    worker.start()
+    assert started.wait(timeout=2)
+    assert transaction_attempted.wait(timeout=2)
+    try:
+        worker.join(timeout=0.2)
+        assert worker.is_alive()
+        assert not transaction_acquired.is_set()
+        assert not clock_called.is_set()
+        storage_clock.value = origin + timedelta(seconds=3)
+    finally:
+        lock_holder.commit()
+        lock_holder.close()
+    worker.join(timeout=5)
+
+    assert not worker.is_alive()
+    assert transaction_acquired.is_set()
+    assert clock_called.is_set()
+    assert isinstance(outcome.get("error"), InvalidCredentialError)
+    assert "result" not in outcome
+    assert transactional_storage.read_session("waiting-session") == issued.session
+
+
+def test_session_authentication_rejects_revocation_and_account_aba_races(
+    storage, monkeypatch
+) -> None:
+    original_account = account()
+    storage.create_user(original_account)
+    clock = MutableClock()
+    service = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "J" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+    transactional_save = storage.save_session_for_active_user
+    clock.value = NOW + timedelta(seconds=3)
+
+    def revoke_then_save(session, **kwargs):
+        storage.save_session(replace(issued.session, revoked_at=clock.value))
+        return transactional_save(session, **kwargs)
+
+    monkeypatch.setattr(storage, "save_session_for_active_user", revoke_then_save)
+    with pytest.raises(InvalidCredentialError):
+        service.authenticate(issued.bearer_token)
+    assert storage.read_session("session-01").revoked_at == clock.value
+
+    storage.delete_expired_sessions(issued.session.expires_at)
+    issued = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "B" * 40,
+        session_id_factory=lambda: "session-02",
+    ).issue("user-01")
+
+    def disable_reenable_then_save(session, **kwargs):
+        disabled = replace(
+            original_account,
+            active=False,
+            updated_at=clock.value + timedelta(seconds=1),
+        )
+        storage.save_user(disabled, expected_updated_at=original_account.updated_at)
+        storage.save_user(
+            replace(
+                original_account,
+                updated_at=clock.value + timedelta(seconds=2),
+            ),
+            expected_updated_at=disabled.updated_at,
+        )
+        return transactional_save(session, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "save_session_for_active_user", disable_reenable_then_save
+    )
+    with pytest.raises(InvalidCredentialError):
+        service.authenticate(issued.bearer_token)
+    assert storage.read_user("user-01").active is True
+    assert storage.read_session("session-02").revoked_at is not None
+
+
+def test_session_authentication_rejects_account_disabled_during_save(
+    storage, monkeypatch
+) -> None:
+    original_account = account()
+    storage.create_user(original_account)
+    clock = MutableClock(NOW + timedelta(seconds=3))
+    service = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "H" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+    transactional_save = storage.save_session_for_active_user
+
+    def disable_then_save(session, **kwargs):
+        storage.save_user(
+            replace(
+                original_account,
+                active=False,
+                updated_at=clock.value + timedelta(seconds=1),
+            ),
+            expected_updated_at=original_account.updated_at,
+        )
+        return transactional_save(session, **kwargs)
+
+    monkeypatch.setattr(storage, "save_session_for_active_user", disable_then_save)
+    with pytest.raises(InvalidCredentialError):
+        service.authenticate(issued.bearer_token)
+    assert storage.read_user("user-01").active is False
+    assert storage.read_session("session-01").revoked_at is not None
+
+
+def test_session_authentication_rejects_generation_movement(storage, monkeypatch) -> None:
+    storage.create_user(account())
+    clock = MutableClock()
+    service = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "M" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+    original_save = storage.save_session_for_active_user
+    clock.value = NOW + timedelta(minutes=1)
+
+    def replace_generation_then_save(session, **kwargs):
+        with storage._transaction("replace_session_generation") as connection:
+            connection.execute(
+                "DELETE FROM sessions WHERE session_id = ?", (session.session_id,)
+            )
+        replacement = replace(
+            session,
+            created_at=session.created_at + timedelta(microseconds=1),
+        )
+        storage.create_session(replacement)
+        return original_save(session, **kwargs)
+
+    monkeypatch.setattr(
+        storage, "save_session_for_active_user", replace_generation_then_save
+    )
+    with pytest.raises(ConcurrentStateChangeError, match="Generazione"):
+        service.authenticate(issued.bearer_token)
+    assert storage.read_session("session-01").created_at == (
+        issued.session.created_at + timedelta(microseconds=1)
+    )
+
+
+def test_concurrent_live_session_authentication_preserves_both_calls(storage) -> None:
+    storage.create_user(account())
+    clock = MutableClock(NOW + timedelta(minutes=1))
+    service = SessionService(
+        storage,
+        clock=clock,
+        token_factory=lambda: "N" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+    clock.value = NOW + timedelta(minutes=2)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        authenticated = list(
+            executor.map(lambda _index: service.authenticate(issued.bearer_token), range(2))
+        )
+
+    assert [result.session.last_seen_at for result in authenticated] == [
+        clock.value,
+        clock.value,
+    ]
+    assert storage.read_session("session-01").last_seen_at == clock.value
+
+
+def test_session_restart_and_storage_clock_rollback_do_not_resurrect(database_path) -> None:
+    origin = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    service_clock = MutableClock(origin)
+    storage_clock = MutableClock(origin)
+    initial = SqliteIdentityStorage(database_path, clock=storage_clock)
+    initial.create_user(account(created_at=origin, updated_at=origin))
+    service = SessionService(
+        initial,
+        clock=service_clock,
+        ttl=timedelta(seconds=5),
+        token_factory=lambda: "O" * 40,
+        session_id_factory=lambda: "session-01",
+    )
+    issued = service.issue("user-01")
+    service_clock.value = origin + timedelta(seconds=2)
+    storage_clock.value = origin + timedelta(seconds=3)
+    authenticated = service.authenticate(issued.bearer_token)
+    assert authenticated.session.last_seen_at == storage_clock.value
+    assert initial.read_session("session-01") == authenticated.session
+
+    service_clock.value = origin
+    storage_clock.value = origin
+    with pytest.raises(ConcurrentStateChangeError, match="Clock"):
+        service.authenticate(issued.bearer_token)
+    assert initial.read_session("session-01").last_seen_at == origin + timedelta(seconds=3)
+
+    service_clock.value = origin + timedelta(seconds=4)
+    storage_clock.value = origin + timedelta(seconds=1)
+    assert service.authenticate(issued.bearer_token).session.last_seen_at == service_clock.value
+    reopened = SqliteIdentityStorage(database_path, clock=storage_clock)
+    reopened_service = SessionService(reopened, clock=service_clock)
+    service_clock.value = origin + timedelta(seconds=5)
+    storage_clock.value = origin
+    with pytest.raises(InvalidCredentialError):
+        reopened_service.authenticate(issued.bearer_token)
+    assert reopened.read_session("session-01").expires_at == origin + timedelta(seconds=5)
+
+
 def test_session_deletion_races_are_translated(storage, database_path, monkeypatch) -> None:
     storage.create_user(account())
     clock = MutableClock()
@@ -822,7 +1379,9 @@ def test_session_authentication_retries_user_revision_race(storage, monkeypatch)
     save_for_active = storage.save_session_for_active_user
     changed = False
 
-    def change_role_then_save(session, *, expected_user_updated_at):
+    def change_role_then_save(
+        session, *, expected_user_updated_at, expected_valid_at
+    ):
         nonlocal changed
         if not changed:
             changed = True
@@ -830,8 +1389,10 @@ def test_session_authentication_retries_user_revision_race(storage, monkeypatch)
                 replace(teacher, role="student", updated_at=NOW + timedelta(seconds=1)),
                 expected_updated_at=NOW,
             )
-        save_for_active(
-            session, expected_user_updated_at=expected_user_updated_at
+        return save_for_active(
+            session,
+            expected_user_updated_at=expected_user_updated_at,
+            expected_valid_at=expected_valid_at,
         )
 
     monkeypatch.setattr(
@@ -1270,6 +1831,49 @@ def test_pairing_expiration_is_persisted_and_wrong_code_is_generic(storage) -> N
     with pytest.raises(PairingExpiredError):
         service.authorize(issued.code, "user-01")
     assert storage.read_pairing("pairing-01").status == "expired"
+
+
+def test_shared_deterministic_clock_controls_boundaries_and_reopen(database_path) -> None:
+    distant_now = datetime(2001, 2, 3, 4, 5, tzinfo=timezone.utc)
+    clock = MutableClock(distant_now)
+    storage = SqliteIdentityStorage(database_path, clock=clock)
+    storage.create_user(
+        account(created_at=distant_now, updated_at=distant_now)
+    )
+    codes = iter(("PAIRCODE01", "PAIRCODE02", "PAIRCODE03"))
+    pairing_ids = iter(("pairing-01", "pairing-02", "pairing-03"))
+    service = PairingService(
+        storage,
+        pepper=PEPPER,
+        clock=clock,
+        code_factory=lambda: next(codes),
+        pairing_id_factory=lambda: next(pairing_ids),
+    )
+    at_t0 = service.issue()
+    before_boundary = service.issue()
+    at_boundary = service.issue()
+
+    assert service.authorize(at_t0.code, "user-01").status == "authorized"
+    clock.value = distant_now + timedelta(minutes=10) - timedelta(microseconds=1)
+    assert service.authorize(before_boundary.code, "user-01").status == "authorized"
+    clock.value = distant_now + timedelta(minutes=10)
+    with pytest.raises(PairingExpiredError):
+        service.authorize(at_boundary.code, "user-01")
+    clock.value += timedelta(days=1)
+    with pytest.raises(PairingExpiredError):
+        service.authorize(at_boundary.code, "user-01")
+
+    reopened = SqliteIdentityStorage(database_path, clock=clock)
+    reopened_service = PairingService(reopened, pepper=PEPPER, clock=clock)
+    with pytest.raises(PairingExpiredError):
+        reopened_service.consume(at_t0.pairing.pairing_id, at_t0.code)
+    assert reopened.read_pairing(at_t0.pairing.pairing_id).status == "expired"
+    assert reopened.read_pairing(before_boundary.pairing.pairing_id).status == "authorized"
+    assert reopened.read_pairing(at_boundary.pairing.pairing_id).status == "expired"
+
+    clock.value = distant_now
+    with pytest.raises(PairingExpiredError):
+        reopened_service.consume(at_t0.pairing.pairing_id, at_t0.code)
 
 
 def test_pairing_authorization_rechecks_storage_clock_after_lock(storage) -> None:

@@ -229,6 +229,53 @@ Apre una sessione interattiva quando supportata. L'endpoint/comando operativo pr
 
 Esegue la parte headless quando supportata e restituisce il normale `ExecutionResult` TheBitLab.
 
+Per compatibilita, `run()` resta il percorso locale formativo della API v1. Non e un confine
+di sicurezza: TheBitLab marca questi risultati `authoritative=false` e
+`execution_isolation=process-only`.
+
+### Estensione sandbox autorevole
+
+Un plugin che dichiara la capability `sandbox-plan.v1` deve implementare anche:
+
+```text
+prepare_sandbox(RuntimeRequest) -> runtime_sandbox_plan.v1
+finalize_sandbox(RuntimeRequest, runtime_sandbox_result.v1) -> runtime_execution.v1
+```
+
+Il flusso e:
+
+```text
+plugin trusted prepara il piano
+  -> broker Docker comune TheBitLab esegue gli input untrusted
+  -> plugin trusted ricostruisce test e grading dal solo risultato untrusted
+```
+
+Il piano puo scegliere esclusivamente un'immagine OCI con digest `sha256`, piattaforma,
+schema worker, input espliciti e un payload dati per il worker. Non puo scegliere comando,
+environment, mount, rete, capability Linux o altri controlli host. L'entrypoint appartiene
+all'immagine installata e bloccata dal plugin trusted.
+
+Gli input ammessi sono:
+
+- artifact submission gia dichiarati dall'Activity;
+- file teacher-side espliciti sotto la directory dell'Activity, per esempio
+  `hidden_tests.py`.
+
+TheBitLab copia soltanto questi file regolari in un workspace temporaneo read-only e rifiuta
+symlink, path escape e target duplicati. Scenario, rubrica, grader host, altre submission e
+directory degli artifact di risultato non entrano nel container salvo siano stati
+erroneamente elencati dal plugin trusted. La policy degli adapter deve quindi includere nel
+piano solo il minimo necessario al worker.
+
+Un file Activity copiato nel container non e segreto rispetto al codice in esecuzione nello
+stesso container. Gli hidden test possono restare non distribuiti prima del tentativo, ma non
+devono contenere credenziali, risposte o expected outcome che richiedano segretezza durante
+l'esecuzione. Il confronto autorevole resta sull'host.
+
+Il payload del container resta interamente untrusted. Non puo assegnare voto, stato del
+simulatore o risultato geometrico: `finalize_sandbox()` deve validarlo e ricostruire questi
+valori sul processo host trusted. Timeout o errore infrastrutturale non chiamano il finalize.
+
 ### `close`
 
 Chiude una sessione aperta dal plugin.
@@ -243,6 +290,8 @@ Chiude una sessione aperta dal plugin.
 6. La configurazione runtime-specifica proviene dal course bundle trusted e viene validata dal plugin.
 7. Gli artifact studente restano untrusted.
 8. Il grading deterministico, quando dichiarato, deve poter essere ricostruito lato trusted.
+9. Il backend Docker per runtime fallisce chiuso se manca `sandbox-plan.v1`; non ripiega su
+   `run()` locale.
 
 ## Runtime proprietari o con licenza
 
