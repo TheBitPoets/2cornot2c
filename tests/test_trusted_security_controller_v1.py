@@ -251,29 +251,44 @@ def test_aggregator_cli_refuses_complete_fixture_without_printing_pass(tmp_path:
 
 
 @pytest.mark.parametrize(
-    ("attack", "mutation"),
+    ("attack", "mutation", "expected_error"),
     [
-        ("producer-mismatch", lambda x: x.update(producer_slot="B")),
-        ("producer-relabeling", lambda x: x.update(trusted_producer_identity="trusted-security-controller-v1/producer-B")),
-        ("unknown-producer", lambda x: x.update(producer_slot="Z")),
-        ("cross-run-reuse", lambda x: x.update(workflow_run_id=99)),
-        ("cross-attempt-reuse", lambda x: x.update(workflow_run_attempt=1)),
-        ("wrong-candidate", lambda x: x.update(candidate_sha="a" * 40)),
-        ("wrong-base", lambda x: x.update(base_sha="a" * 40)),
-        ("wrong-controller", lambda x: x.update(trusted_controller_identity="a" * 64)),
-        ("wrong-workflow-identity", lambda x: x.update(workflow_file_identity={"path": "evil", "sha256": "a" * 64})),
-        ("wrong-verifier", lambda x: x.update(trusted_wrapper_verifier_digest="a" * 64)),
-        ("wrong-aggregator", lambda x: x.update(trusted_aggregator_digest="a" * 64)),
-        ("wrong-topology", lambda x: x.update(closed_topology_version="A-G/v2")),
-        ("cleanup-false", lambda x: x["cleanup_state"].update(candidate_internal_cleanup=False)),
-        ("artifact-rename-spoof", lambda x: x["raw_artifact_provenance"].update(artifact_name="renamed-valid.json")),
+        ("producer-mismatch", lambda x: x.update(producer_slot="B"),
+         "wrong producer provenance or producer relabeling"),
+        ("producer-relabeling", lambda x: x.update(trusted_producer_identity="trusted-security-controller-v1/producer-B"),
+         "wrong producer provenance or producer relabeling"),
+        ("unknown-producer", lambda x: x.update(producer_slot="Z"),
+         "missing, duplicate, or unknown producer"),
+        ("cross-run-reuse", lambda x: x.update(workflow_run_id=99),
+         "cross-run or cross-attempt envelope rejected"),
+        ("cross-attempt-reuse", lambda x: x.update(workflow_run_attempt=1),
+         "cross-run or cross-attempt envelope rejected"),
+        ("wrong-candidate", lambda x: x.update(candidate_sha="a" * 40),
+         "wrong candidate or base"),
+        ("wrong-base", lambda x: x.update(base_sha="a" * 40),
+         "wrong candidate or base"),
+        ("wrong-controller", lambda x: x.update(trusted_controller_identity="a" * 64),
+         "wrong trusted controller identity: trusted_controller_identity"),
+        ("wrong-workflow-identity", lambda x: x.update(workflow_file_identity={"path": "evil", "sha256": "a" * 64}),
+         "wrong trusted controller identity: workflow_file_identity"),
+        ("wrong-verifier", lambda x: x.update(trusted_wrapper_verifier_digest="a" * 64),
+         "wrong trusted controller identity: trusted_wrapper_verifier_digest"),
+        ("wrong-aggregator", lambda x: x.update(trusted_aggregator_digest="a" * 64),
+         "wrong trusted controller identity: trusted_aggregator_digest"),
+        ("wrong-topology", lambda x: x.update(closed_topology_version="A-G/v2"),
+         "wrong trusted controller identity: closed_topology_version"),
+        ("cleanup-false", lambda x: x["cleanup_state"].update(candidate_internal_cleanup=False),
+         "cleanup false"),
+        ("artifact-rename-spoof", lambda x: x["raw_artifact_provenance"].update(artifact_name="renamed-valid.json"),
+         "wrong raw artifact provenance or artifact rename"),
     ],
     ids=lambda value: value if isinstance(value, str) else None,
 )
-def test_aggregate_rejects_bound_identity_attacks(attack: str, mutation) -> None:
+def test_aggregate_rejects_bound_identity_attacks(attack: str, mutation, expected_error: str) -> None:
     records = [envelope(slot) for slot in common.EXPECTED_SCENARIOS]
     mutation(records[0])
-    with pytest.raises(common.ControllerError):
+    # The terminal R2-001 interlock must not satisfy an identity validation test.
+    with pytest.raises(common.ControllerError, match=f"^{re.escape(expected_error)}$"):
         aggregate(records)
 
 
