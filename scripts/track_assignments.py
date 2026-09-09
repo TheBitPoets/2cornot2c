@@ -17,6 +17,7 @@ from scripts import (
     thebitlab_tracking_reports,
 )
 from scripts import student_identity
+from scripts.thebitlab_identity_binding import LegacySubjectAlias
 from scripts.thebitlab_contracts import (
     legacy_activity_validation_payload,
     normalize_activity,
@@ -521,6 +522,7 @@ def track_assignments(
     assignment_id: str | None = None,
     server_root: Path | None = None,
     report_source: thebitlab_tracking_reports.TrackingReportSource | None = None,
+    help_subject_aliases: tuple[LegacySubjectAlias, ...] | None = None,
 ) -> dict[str, Any]:
     """Build a teacher-facing tracking index for one activity."""
     activity = create_submission_scaffold.load_activity(activity_path)
@@ -563,7 +565,13 @@ def track_assignments(
         if assignment_id and server_root is not None:
             stable_student_id = assignment_student_id(target, assignment, server_root)
             repository_ref = assignment_repository_ref(target, assignment, server_root)
-            help_log_path = student_help_service.server_help_log_path(server_root, stable_student_id, assignment_id)
+            help_student_key = student_identity.target_help_student_key(
+                assignment_target_record(target, assignment, server_root) or {},
+                stable_student_id,
+                class_id=clean_metadata(assignment.get("class_id")),
+                legacy_aliases=help_subject_aliases,
+            )
+            help_log_path = student_help_service.server_help_log_path(server_root, help_student_key, assignment_id)
         else:
             legacy_help_path = student_help_service.help_log_path(target.path, activity_id)
             help_log_path = student_identity.confined_regular_file(target.path, legacy_help_path)
@@ -668,6 +676,9 @@ def track_assignments(
         else:
             help["path"] = relative_to_root_or_repo(help_log_path, target.path) if help_log_path else ""
         help["activity_id"] = activity_id
+        if assignment_id and help_subject_aliases is not None:
+            # Teacher-owned metadata preserves the channel when reopening a report.
+            help["subject_id"] = help_student_key
         grading = grading_summary(report)
         if remote_report_result is not None and remote_report_result.configured and report is not None:
             grading["provisional"] = remote_report_result.provisional

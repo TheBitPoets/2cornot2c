@@ -8,7 +8,7 @@ Accettato.
 
 Il dominio auth identifica una persona con il `user_id` interno e conserva classi e membership in SQLite. Il dominio didattico storico identifica invece uno studente con `student_id`, nomi di directory, repository o username e conserva assignment e target in JSON. Questi valori legacy possono cambiare, collidere tra classi o essere forniti dal client; non possono quindi essere usati per derivare l'identita autorizzata.
 
-Questa decisione definisce il prerequisito di identita per le policy class-scoped. L'enforcement completo degli endpoint studente resta in #706.
+Questa decisione definisce il prerequisito di identita per le policy class-scoped. L'enforcement degli endpoint studente è definito in [`student-api-authorization.md`](student-api-authorization.md) e implementato da #706.
 
 ## Decisione
 
@@ -74,6 +74,10 @@ La rimozione della membership ha effetto al successivo snapshot: il binding pers
 2. membership studente attiva nella `class_id` dell'assignment;
 3. esattamente un target con il `subject_id` risolto, oppure un solo alias legacy esplicito e non ambiguo.
 
+Il fallback legacy si applica soltanto ai target privi di `subject_id`.
+Un target con identità canonica presente non viene reinterpretato attraverso
+`student_id`: un alias non può sostituire il soggetto canonico del target.
+
 Missing, duplicate, cross-class, target mancante, alias legacy ambiguo e storage incoerente producono sempre un diniego. L'errore pubblico e sanitizzato (`Identita didattica non risolvibile.`); il codice di errore strutturato serve al logging server-side senza includere ID o contenuti persistiti nel messaggio esposto.
 
 Questo validator risolve identita e target ma non decide quali endpoint o operazioni siano permessi: tale policy appartiene a #706.
@@ -138,4 +142,4 @@ Gli alias non vengono creati automaticamente. Sono aggiunti in modo append-only 
 - Storage didattico: [`adr-sqlite-storage-schema.md`](adr-sqlite-storage-schema.md).
 - Contratti dati: [`data-contracts.md`](data-contracts.md).
 - Remediation binding: #702.
-- Enforcement student API: #706.
+- Enforcement student API: [`student-api-authorization.md`](student-api-authorization.md), #706.

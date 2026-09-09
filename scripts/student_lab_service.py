@@ -224,6 +224,8 @@ def build_lab_assignment(
     now: str,
     expose_external_paths: bool = False,
     allow_unscoped_legacy_report: bool = True,
+    response_student_id: str | None = None,
+    server_student_key: str | None = None,
 ) -> dict[str, Any]:
     """Build the student-lab contract for one assignment target."""
 
@@ -233,7 +235,11 @@ def build_lab_assignment(
     workspace_path = repo_path / "assignments" / activity_id if repo_path is not None else None
     report_path = repo_path / "reports" / activity_id / "latest.json" if repo_path is not None else None
     assignment_id = normalized["id"]
-    help_log_path = student_help_service.server_help_log_path(root, student_id, normalized["id"])
+    help_log_path = student_help_service.server_help_log_path(
+        root,
+        server_student_key or student_id,
+        normalized["id"],
+    )
     safe_report_path = confined_regular_file(repo_path, report_path) if repo_path is not None and report_path else None
     legacy_report = load_report(safe_report_path, activity_id) if safe_report_path is not None else None
     if legacy_report is not None:
@@ -319,7 +325,7 @@ def build_lab_assignment(
         "title": activity["title"] or activity_id,
         "student_support_mode": activity.get("student_support_mode", ""),
         "support_policy": support_policy,
-        "student_id": student_id,
+        "student_id": response_student_id or student_id,
         "target_type": normalized["target_type"],
         "class_id": normalized["class_id"],
         "class_label": normalized["class_label"],
@@ -491,6 +497,70 @@ def student_lab_payload(
     }
 
 
+def authorized_student_lab_payload(
+    *,
+    root: Path,
+    authorized_assignments: list[tuple[dict[str, Any], dict[str, Any]]],
+    public_student_id: str,
+    server_student_key: str,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Build a payload only from assignment/target pairs authorized upstream."""
+
+    current_time = parse_now(now)
+    activity_counts: dict[str, int] = {}
+    for assignment, _target in authorized_assignments:
+        activity_id = clean_text(assignment.get("activity_id"))
+        activity_counts[activity_id] = activity_counts.get(activity_id, 0) + 1
+    assignments = []
+    for assignment, target in authorized_assignments:
+        operational_student_id = target_student_id(target) or public_student_id
+        assignments.append(
+            build_lab_assignment(
+                root=root,
+                assignment=assignment,
+                target=target,
+                student_id=operational_student_id,
+                response_student_id=public_student_id,
+                server_student_key=server_student_key,
+                now=current_time,
+                allow_unscoped_legacy_report=(
+                    activity_counts.get(clean_text(assignment.get("activity_id")), 0) == 1
+                ),
+            )
+        )
+    assignments.sort(key=lambda item: (item.get("due_at") or "", item.get("activity_id") or ""))
+    return {
+        "schema_version": "student_lab.v1",
+        "student_id": public_student_id,
+        "generated_at": current_time,
+        "assignments": assignments,
+    }
+
+
+def _authorized_lab_assignment(
+    *,
+    root: Path,
+    assignment: dict[str, Any],
+    target: dict[str, Any],
+    public_student_id: str,
+    server_student_key: str,
+    now: str | None = None,
+    expose_external_paths: bool = True,
+) -> dict[str, Any]:
+    return build_lab_assignment(
+        root=root,
+        assignment=assignment,
+        target=target,
+        student_id=target_student_id(target) or public_student_id,
+        response_student_id=public_student_id,
+        server_student_key=server_student_key,
+        now=parse_now(now),
+        expose_external_paths=expose_external_paths,
+        allow_unscoped_legacy_report=False,
+    )
+
+
 def assignment_repo_path(root: Path, assignment: dict[str, Any]) -> Path | None:
     """Return the student repository represented by one server-built assignment."""
 
@@ -573,6 +643,52 @@ def select_student_final_attempt(
     return selected
 
 
+def select_authorized_student_final_attempt(
+    *,
+    root: Path,
+    assignment: dict[str, Any],
+    target: dict[str, Any],
+    public_student_id: str,
+    server_student_key: str,
+    attempt_id: str,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Select a final attempt without re-resolving client-controlled IDs."""
+
+    clean_attempt_id = clean_text(attempt_id)
+    if not clean_attempt_id:
+        raise ValueError("attempt_id obbligatorio.")
+    built = _authorized_lab_assignment(
+        root=root,
+        assignment=assignment,
+        target=target,
+        public_student_id=public_student_id,
+        server_student_key=server_student_key,
+        now=now,
+    )
+    repo_path = assignment_repo_path(root, built)
+    assignment_id = clean_text(built.get("assignment_id"))
+    activity_id = clean_text(built.get("activity_id"))
+    if repo_path is None or not assignment_id or not activity_id:
+        raise ValueError("Repository studente non disponibile per selezionare il tentativo.")
+    report_path = repo_path / "reports" / activity_id / "latest.json"
+    student_lab_attempts.set_final_attempt(
+        report_path,
+        assignment_id,
+        activity_id,
+        clean_attempt_id,
+    )
+    return _authorized_lab_assignment(
+        root=root,
+        assignment=assignment,
+        target=target,
+        public_student_id=public_student_id,
+        server_student_key=server_student_key,
+        now=now,
+        expose_external_paths=False,
+    )
+
+
 def help_provider_context(assignment: dict[str, Any]) -> dict[str, Any]:
     """Return the minimal assignment context allowed to leave the service."""
 
@@ -594,6 +710,58 @@ def help_provider_context(assignment: dict[str, Any]) -> dict[str, Any]:
         "grading_status": clean_text(grading.get("status")),
         "failed_tests": failed_tests,
     }
+
+
+def record_authorized_student_help_request(
+    *,
+    root: Path,
+    assignment: dict[str, Any],
+    target: dict[str, Any],
+    public_student_id: str,
+    server_student_key: str,
+    help_type: str,
+    prompt: str,
+    provider: StudentHelpProvider,
+    provider_factory: Callable[[], StudentHelpProvider] | None = None,
+    request_id: str = "",
+    now: str | None = None,
+    existing_only: bool = False,
+) -> dict[str, Any]:
+    """Record help against one assignment/target authorized upstream."""
+
+    clean_prompt = clean_text(prompt)
+    if not clean_prompt:
+        raise ValueError("La richiesta di aiuto non puo essere vuota.")
+    if len(clean_prompt) > MAX_HELP_PROMPT_CHARS:
+        raise ValueError(f"La richiesta di aiuto supera {MAX_HELP_PROMPT_CHARS} caratteri.")
+    built = _authorized_lab_assignment(
+        root=root,
+        assignment=assignment,
+        target=target,
+        public_student_id=public_student_id,
+        server_student_key=server_student_key,
+        now=now,
+    )
+    if assignment_repo_path(root, built) is None:
+        raise ValueError("Repository studente non disponibile per salvare la richiesta di aiuto.")
+    support_policy = built.get("support_policy") if isinstance(built.get("support_policy"), dict) else {}
+    return student_help_service.record_help_request(
+        activity_id=clean_text(built.get("activity_id")),
+        support_policy=support_policy,
+        help_type=help_type,
+        prompt=clean_prompt,
+        now=now,
+        provider=provider,
+        provider_factory=provider_factory,
+        context=help_provider_context(built),
+        request_id=request_id,
+        log_path=student_help_service.server_help_log_path(
+            root,
+            server_student_key,
+            clean_text(built.get("assignment_id")),
+        ),
+        existing_only=existing_only,
+    )
 
 
 def record_student_help_request(
@@ -657,6 +825,56 @@ def record_student_help_request(
         ),
         existing_only=existing_only,
     )
+
+
+def authorized_student_help_history(
+    *,
+    root: Path,
+    assignment: dict[str, Any],
+    target: dict[str, Any],
+    public_student_id: str,
+    server_student_key: str,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Return help history for one assignment/target authorized upstream."""
+
+    built = _authorized_lab_assignment(
+        root=root,
+        assignment=assignment,
+        target=target,
+        public_student_id=public_student_id,
+        server_student_key=server_student_key,
+        now=now,
+    )
+    assignment_id = clean_text(built.get("assignment_id"))
+    server_summary = student_help_service.teacher_help_summary(
+        student_help_service.server_help_log_path(root, server_student_key, assignment_id),
+        now,
+    )
+    legacy_events: list[dict[str, Any]] = []
+    repo_path = assignment_repo_path(root, built)
+    if repo_path is not None:
+        legacy_path = student_help_service.help_log_path(repo_path, clean_text(built.get("activity_id")))
+        safe_legacy_path = confined_regular_file(repo_path, legacy_path)
+        if safe_legacy_path is not None:
+            legacy_summary = student_help_service.teacher_help_summary(safe_legacy_path, now)
+            legacy_events = [
+                {**event, "source": "legacy-unverified"}
+                for event in legacy_summary.get("events", [])
+                if isinstance(event, dict)
+            ]
+    server_events = [
+        {**event, "source": "server"}
+        for event in server_summary.get("events", [])
+        if isinstance(event, dict)
+    ]
+    return {
+        "assignment_id": assignment_id,
+        "events": sorted(
+            [*legacy_events, *server_events],
+            key=lambda event: clean_text(event.get("requested_at")),
+        ),
+    }
 
 
 def student_help_history(

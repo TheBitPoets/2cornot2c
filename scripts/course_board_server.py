@@ -67,9 +67,11 @@ from scripts import (
     create_submission_scaffold,
     github_app_token_runtime,
     manual_ai_feedback,
+    student_api_authorization,
     student_help_auth,
     student_help_codex_adapter,
     student_help_service,
+    student_identity,
     student_lab_service,
     thebitlab_auth_runtime,
     thebitlab_auth_styles,
@@ -448,7 +450,7 @@ def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str
 
 
 def select_student_final_attempt(payload: dict[str, Any], *, student_id: str) -> dict[str, Any]:
-    """Select one immutable attempt through the authenticated student API."""
+    """Select one immutable attempt through the legacy local student API."""
 
     assignment_id = str(payload.get("assignment_id", "")).strip()
     with assignment_operation_lock(
@@ -459,6 +461,87 @@ def select_student_final_attempt(payload: dict[str, Any], *, student_id: str) ->
             assignments_dir=TEACHER_ASSIGNMENTS_DIR,
             student_id=student_id,
             assignment_id=assignment_id,
+            attempt_id=payload.get("attempt_id", ""),
+        )
+    return {"ok": True, "assignment": assignment}
+
+
+def record_authorized_student_help(
+    payload: dict[str, Any],
+    *,
+    scope: student_api_authorization.StudentRequestAuthorization,
+    authorized: student_api_authorization.AuthorizedStudentAssignment,
+) -> dict[str, Any]:
+    """Record help using one immutable server-authorized assignment target."""
+
+    request_kwargs = {
+        "root": ROOT,
+        "assignment": authorized.assignment_copy(),
+        "target": authorized.target_copy(),
+        "public_student_id": scope.public_student_id,
+        "server_student_key": scope.subject_id,
+        "help_type": payload.get("help_type", ""),
+        "prompt": payload.get("prompt", ""),
+        "request_id": payload.get("request_id", ""),
+    }
+    try:
+        with assignment_operation_lock(
+            student_help_operation_id(authorized.assignment_id, scope.subject_id),
+            blocking=False,
+        ):
+            # Deletion may have completed after the HTTP authorization snapshot.
+            # Its help lock prevents removal while this fresh record is consumed.
+            try:
+                current = assignment_record_storage().read_assignment_strict(authorized.assignment_id)
+            except FileNotFoundError:
+                raise student_api_authorization.StudentApiAuthorizationDenied("target_missing") from None
+            except Exception:
+                raise student_api_authorization.StudentApiAuthorizationUnavailable("storage_corrupt") from None
+            current_authorized = scope.authorize_assignment(current)
+            request_kwargs.update(
+                assignment=current_authorized.assignment_copy(),
+                target=current_authorized.target_copy(),
+            )
+            event = student_lab_service.record_authorized_student_help_request(
+                **request_kwargs,
+                provider=DeterministicStudentHelpProvider(),
+                provider_factory=student_help_provider,
+            )
+    except StudentHelpBusyError:
+        try:
+            event = student_lab_service.record_authorized_student_help_request(
+                **request_kwargs,
+                provider=DeterministicStudentHelpProvider(),
+                existing_only=True,
+            )
+        except student_help_service.StudentHelpRequestNotFoundError:
+            raise StudentHelpBusyError(
+                "Richiesta di aiuto gia in elaborazione per questa consegna."
+            ) from None
+    response = event.get("response") if isinstance(event, dict) else None
+    provider = response.get("provider") if isinstance(response, dict) else None
+    if isinstance(provider, str) and provider.endswith("-fallback"):
+        LOGGER.warning("Provider aiuto studente federato ricaduto su fallback.")
+    return {"ok": True, "event": event}
+
+
+def select_authorized_student_final_attempt(
+    payload: dict[str, Any],
+    *,
+    scope: student_api_authorization.StudentRequestAuthorization,
+    authorized: student_api_authorization.AuthorizedStudentAssignment,
+) -> dict[str, Any]:
+    """Select a final attempt on one immutable authorized assignment target."""
+
+    with assignment_operation_lock(
+        student_attempt_operation_id(authorized.assignment_id, scope.subject_id),
+    ):
+        assignment = student_lab_service.select_authorized_student_final_attempt(
+            root=ROOT,
+            assignment=authorized.assignment_copy(),
+            target=authorized.target_copy(),
+            public_student_id=scope.public_student_id,
+            server_student_key=scope.subject_id,
             attempt_id=payload.get("attempt_id", ""),
         )
     return {"ok": True, "assignment": assignment}
@@ -1565,14 +1648,14 @@ def rollback_help_deletion(
     purge_help_deletion_trash(trash_root, ignore_errors=True)
 
 
-def delete_assignment_record(payload: dict) -> dict:
+def delete_assignment_record(payload: dict, *, help_subject_aliases=None) -> dict:
     """Delete one assignment, including its authoritative student help logs."""
 
     with thebitlab_storage.course_storage_lock(ROOT):
-        return _delete_assignment_record_locked(payload)
+        return _delete_assignment_record_locked(payload, help_subject_aliases=help_subject_aliases)
 
 
-def _delete_assignment_record_locked(payload: dict) -> dict:
+def _delete_assignment_record_locked(payload: dict, *, help_subject_aliases=None) -> dict:
     """Delete one assignment while activity lifecycle changes are excluded."""
 
     requested_assignment_id = str(payload.get("assignment_id", "")).strip()
@@ -1599,7 +1682,11 @@ def _delete_assignment_record_locked(payload: dict) -> dict:
         student_ids = set()
         for target in assignment.get("targets", []):
             if isinstance(target, dict):
-                student_ids.update(student_lab_service.target_cleanup_student_ids(target))
+                student_ids.update(student_identity.target_cleanup_student_ids(
+                    target,
+                    class_id=str(assignment.get("class_id", "")),
+                    legacy_aliases=help_subject_aliases,
+                ))
         log_paths = sorted(
             {
                 student_help_service.server_help_log_path(ROOT, student_id, assignment_id)
@@ -1997,11 +2084,16 @@ def enrich_assignment_report_help(report: dict) -> dict:
         if not student_id:
             continue
         previous_help = student.get("help") if isinstance(student.get("help"), dict) else {}
+        if "subject_id" in previous_help:
+            # This field is generated by the teacher server, never read from a local log.
+            student_id = student_identity.target_help_student_key(
+                {"subject_id": previous_help["subject_id"]}, "", legacy_aliases=(),
+            )
         log_path = student_help_service.server_help_log_path(ROOT, student_id, assignment_id)
         current_help = student_help_service.teacher_help_summary(log_path)
         current_help["path"] = str(log_path.relative_to(ROOT)).replace("\\", "/")
         current_help["activity_id"] = str(report.get("activity_id", "")).strip()
-        for key in ("legacy_unverified", "legacy_path", "legacy"):
+        for key in ("subject_id", "legacy_unverified", "legacy_path", "legacy"):
             if key in previous_help:
                 current_help[key] = previous_help[key]
         student["help"] = current_help
@@ -2884,14 +2976,14 @@ def _distribute_activity_assignment_locked(payload: dict) -> dict:
     }
 
 
-def generate_assignment_report(payload: dict) -> dict:
+def generate_assignment_report(payload: dict, *, help_subject_aliases=None) -> dict:
     """Generate and persist an assignment tracking report from the local GUI."""
 
     with thebitlab_storage.course_storage_lock(ROOT):
-        return _generate_assignment_report_locked(payload)
+        return _generate_assignment_report_locked(payload, help_subject_aliases=help_subject_aliases)
 
 
-def _generate_assignment_report_locked(payload: dict) -> dict:
+def _generate_assignment_report_locked(payload: dict, *, help_subject_aliases=None) -> dict:
     """Persist one report while activity deletion is excluded."""
 
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
@@ -2924,6 +3016,7 @@ def _generate_assignment_report_locked(payload: dict) -> dict:
             assignment_id=canonical_assignment_id or None,
             server_root=ROOT if canonical_assignment_id else None,
             report_source=grading_tracking_report_source() if canonical_assignment_id else None,
+            help_subject_aliases=help_subject_aliases,
         )
         with assignment_operation_lock(assignment_report_operation_id(storage, output_name)):
             if output_path.is_file():
@@ -5318,8 +5411,10 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 return True
         return False
 
-    def authenticated_student_id(self) -> str | None:
-        """Authenticate one student request without production downgrade fallback."""
+    def authenticated_student_request(
+        self,
+    ) -> str | student_api_authorization.StudentRequestAuthorization | None:
+        """Authenticate locally, or build one fresh federated authorization scope."""
 
         routes = getattr(self.server, "tui_pairing_http_routes", None)
         if routes is None:
@@ -5362,7 +5457,17 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 raise thebitlab_http_auth.HttpAuthenticationRequiredError()
             authorization = values[0]
             context = routes.boundary.authenticate_bearer(authorization)
-            return student_help_auth.validate_student_id(context.user.user_id)
+            storage = routes.boundary.tui_sessions.storage
+            return student_api_authorization.authorize_student_request(
+                storage,
+                context.user.user_id,
+            )
+        except student_api_authorization.StudentApiAuthorizationDenied as error:
+            self._write_student_authorization_error(403, error)
+            return None
+        except student_api_authorization.StudentApiAuthorizationUnavailable as error:
+            self._write_student_authorization_error(503, error)
+            return None
         except thebitlab_http_auth.HttpAuthError as error:
             if self.command == "POST":
                 self.close_connection = True
@@ -5376,13 +5481,63 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         except Exception:  # noqa: BLE001
             if self.command == "POST":
                 self.close_connection = True
-            self.write_error_json(503, STUDENT_HELP_SERVER_ERROR)
+            LOGGER.error(
+                "Student API authorization unavailable: route=%s code=unavailable",
+                self._student_route_label(),
+            )
+            self.write_error_json(
+                503,
+                student_api_authorization.STUDENT_API_UNAVAILABLE_MESSAGE,
+            )
             return None
         finally:
             edge = None
             authorization = None
             values = None
             context = None
+
+    def _student_route_label(self) -> str:
+        path = urlparse(self.path).path
+        return path if (self.command, path) in REMOTE_STUDENT_API_ROUTES else "unknown"
+
+    def _write_student_authorization_error(
+        self,
+        status_code: int,
+        error: student_api_authorization.StudentApiAuthorizationError,
+    ) -> None:
+        if self.command == "POST":
+            self.close_connection = True
+        log = LOGGER.warning if status_code == 403 else LOGGER.error
+        log(
+            "Student API authorization rejected: route=%s code=%s",
+            self._student_route_label(),
+            error.code,
+        )
+        self.write_error_json(status_code, error.public_message)
+
+    def _authorized_assignment(
+        self,
+        scope: student_api_authorization.StudentRequestAuthorization,
+        assignment_id: str,
+    ) -> student_api_authorization.AuthorizedStudentAssignment | None:
+        try:
+            assignment = assignment_record_storage().read_assignment_strict(assignment_id)
+            return scope.authorize_assignment(assignment)
+        except FileNotFoundError:
+            self._write_student_authorization_error(
+                403,
+                student_api_authorization.StudentApiAuthorizationDenied("target_missing"),
+            )
+        except student_api_authorization.StudentApiAuthorizationDenied as error:
+            self._write_student_authorization_error(403, error)
+        except student_api_authorization.StudentApiAuthorizationUnavailable as error:
+            self._write_student_authorization_error(503, error)
+        except Exception:  # noqa: BLE001
+            self._write_student_authorization_error(
+                503,
+                student_api_authorization.StudentApiAuthorizationUnavailable("storage_corrupt"),
+            )
+        return None
 
     def _validate_federated_student_api_request(self, edge) -> None:
         headers = edge.headers
@@ -5998,36 +6153,90 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             "/api/student-lab/assignments",
             "/api/student-lab/help-history",
         }:
-            student_id = self.authenticated_student_id()
-            if student_id is None:
+            student_request = self.authenticated_student_request()
+            if student_request is None:
                 return
+            federated = isinstance(
+                student_request,
+                student_api_authorization.StudentRequestAuthorization,
+            )
+            public_student_id = (
+                student_request.public_student_id if federated else student_request
+            )
             if parsed.path == "/api/student-lab/me":
-                self.write_json({"student_id": student_id})
+                self.write_json({"student_id": public_student_id})
                 return
             try:
                 query = parse_qs(parsed.query)
                 if parsed.path == "/api/student-lab/assignments":
                     requested_now = query.get("now", [""])[0] or None
-                    self.write_json(
-                        locked_student_lab_payload(
-                            student_id=student_id,
-                            now=requested_now if self.is_loopback_client() else None,
+                    if federated:
+                        records = assignment_record_storage().list_assignments_strict()
+                        authorized = student_request.visible_assignments(records)
+                        self.write_json(
+                            student_lab_service.authorized_student_lab_payload(
+                                root=ROOT,
+                                authorized_assignments=[
+                                    (item.assignment_copy(), item.target_copy())
+                                    for item in authorized
+                                ],
+                                public_student_id=student_request.public_student_id,
+                                server_student_key=student_request.subject_id,
+                                now=requested_now if self.is_loopback_client() else None,
+                            )
                         )
-                    )
+                    else:
+                        self.write_json(
+                            locked_student_lab_payload(
+                                student_id=student_request,
+                                now=requested_now if self.is_loopback_client() else None,
+                            )
+                        )
                     return
                 assignment_id = query.get("assignment_id", [""])[0]
-                self.write_json(
-                    student_lab_service.student_help_history(
-                        root=ROOT,
-                        assignments_dir=TEACHER_ASSIGNMENTS_DIR,
-                        student_id=student_id,
-                        assignment_id=assignment_id,
+                if federated:
+                    authorized = self._authorized_assignment(student_request, assignment_id)
+                    if authorized is None:
+                        return
+                    self.write_json(
+                        student_lab_service.authorized_student_help_history(
+                            root=ROOT,
+                            assignment=authorized.assignment_copy(),
+                            target=authorized.target_copy(),
+                            public_student_id=student_request.public_student_id,
+                            server_student_key=student_request.subject_id,
+                        )
                     )
-                )
+                else:
+                    self.write_json(
+                        student_lab_service.student_help_history(
+                            root=ROOT,
+                            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+                            student_id=student_request,
+                            assignment_id=assignment_id,
+                        )
+                    )
+            except student_api_authorization.StudentApiAuthorizationDenied as error:
+                self._write_student_authorization_error(403, error)
+            except student_api_authorization.StudentApiAuthorizationUnavailable as error:
+                self._write_student_authorization_error(503, error)
             except ValueError as error:
-                self.write_error_json(400, str(error))
+                if federated:
+                    self._write_student_authorization_error(
+                        503,
+                        student_api_authorization.StudentApiAuthorizationUnavailable("storage_corrupt"),
+                    )
+                else:
+                    self.write_error_json(400, str(error))
             except Exception:  # noqa: BLE001
-                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
+                self.write_error_json(
+                    503 if federated else 500,
+                    (
+                        student_api_authorization.STUDENT_API_UNAVAILABLE_MESSAGE
+                        if federated
+                        else STUDENT_HELP_SERVER_ERROR
+                    ),
+                )
             return
         if parsed.path == "/api/course-source-context":
             try:
@@ -6180,9 +6389,13 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if self.reject_unsafe_teacher_post(parsed.path):
             return
         if parsed.path == "/api/student-lab/final-attempt":
-            student_id = self.authenticated_student_id()
-            if student_id is None:
+            student_request = self.authenticated_student_request()
+            if student_request is None:
                 return
+            federated = isinstance(
+                student_request,
+                student_api_authorization.StudentRequestAuthorization,
+            )
             try:
                 length = int(self.headers.get("Content-Length", "0"))
             except (TypeError, ValueError):
@@ -6202,16 +6415,48 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 body = None
                 if not isinstance(payload, dict):
                     raise ValueError("Il payload della richiesta deve essere un oggetto JSON.")
-                self.write_json(select_student_final_attempt(payload, student_id=student_id))
+                if isinstance(
+                    student_request,
+                    student_api_authorization.StudentRequestAuthorization,
+                ):
+                    authorized = self._authorized_assignment(
+                        student_request,
+                        str(payload.get("assignment_id", "")).strip(),
+                    )
+                    if authorized is None:
+                        return
+                    self.write_json(
+                        select_authorized_student_final_attempt(
+                            payload,
+                            scope=student_request,
+                            authorized=authorized,
+                        )
+                    )
+                else:
+                    self.write_json(
+                        select_student_final_attempt(payload, student_id=student_request)
+                    )
+            except student_api_authorization.StudentApiAuthorizationError as error:
+                self._write_student_authorization_error(
+                    403 if isinstance(error, student_api_authorization.StudentApiAuthorizationDenied) else 503,
+                    error,
+                )
             except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
-                self.write_error_json(400, str(error))
+                self.write_error_json(
+                    400,
+                    "Richiesta studente non valida." if federated else str(error),
+                )
             except Exception:  # noqa: BLE001
                 self.write_error_json(500, "Selezione tentativo temporaneamente non disponibile.")
             return
         if parsed.path == "/api/student-lab/help":
-            student_id = self.authenticated_student_id()
-            if student_id is None:
+            student_request = self.authenticated_student_request()
+            if student_request is None:
                 return
+            federated = isinstance(
+                student_request,
+                student_api_authorization.StudentRequestAuthorization,
+            )
             try:
                 length = int(self.headers.get("Content-Length", "0"))
             except (TypeError, ValueError):
@@ -6231,7 +6476,30 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 body = None
                 if not isinstance(payload, dict):
                     raise ValueError("Il payload della richiesta deve essere un oggetto JSON.")
-                self.write_json(record_student_help(payload, student_id=student_id))
+                if isinstance(
+                    student_request,
+                    student_api_authorization.StudentRequestAuthorization,
+                ):
+                    authorized = self._authorized_assignment(
+                        student_request,
+                        str(payload.get("assignment_id", "")).strip(),
+                    )
+                    if authorized is None:
+                        return
+                    self.write_json(
+                        record_authorized_student_help(
+                            payload,
+                            scope=student_request,
+                            authorized=authorized,
+                        )
+                    )
+                else:
+                    self.write_json(record_student_help(payload, student_id=student_request))
+            except student_api_authorization.StudentApiAuthorizationError as error:
+                self._write_student_authorization_error(
+                    403 if isinstance(error, student_api_authorization.StudentApiAuthorizationDenied) else 503,
+                    error,
+                )
             except student_help_service.StudentHelpRateLimitError as error:
                 self.write_error_json(429, str(error))
             except student_help_service.StudentHelpPendingError as error:
@@ -6239,7 +6507,10 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             except StudentHelpBusyError as error:
                 self.write_error_json(429, str(error))
             except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
-                self.write_error_json(400, str(error))
+                self.write_error_json(
+                    400,
+                    "Richiesta studente non valida." if federated else str(error),
+                )
             except Exception:  # noqa: BLE001
                 self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
             return
@@ -6453,7 +6724,18 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/assignment-reports/generate":
             try:
-                self.write_json(generate_assignment_report(payload))
+                routes = getattr(self.server, "tui_pairing_http_routes", None)
+                if routes is None:
+                    self.write_json(generate_assignment_report(payload))
+                else:
+                    try:
+                        aliases = tuple(
+                            routes.boundary.tui_sessions.storage.list_legacy_subject_aliases()
+                        )
+                    except Exception:
+                        self.write_error_json(503, "Registro aiuti temporaneamente non disponibile.")
+                        return
+                    self.write_json(generate_assignment_report(payload, help_subject_aliases=aliases))
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -6518,7 +6800,18 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/assignments/delete":
             try:
-                self.write_json(delete_assignment_record(payload))
+                routes = getattr(self.server, "tui_pairing_http_routes", None)
+                if routes is None:
+                    self.write_json(delete_assignment_record(payload))
+                else:
+                    try:
+                        aliases = tuple(
+                            routes.boundary.tui_sessions.storage.list_legacy_subject_aliases()
+                        )
+                    except Exception:
+                        self.write_error_json(503, "Registro aiuti temporaneamente non disponibile.")
+                        return
+                    self.write_json(delete_assignment_record(payload, help_subject_aliases=aliases))
             except FileNotFoundError as error:
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
