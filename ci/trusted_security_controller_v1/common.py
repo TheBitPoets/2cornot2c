@@ -98,6 +98,19 @@ class ControllerError(RuntimeError):
     """An authority, provenance, freshness, or evidence contract failed."""
 
 
+def require_supervised_execution() -> None:
+    """Block promotion until execution origin has an independently reviewed verifier.
+
+    R2-001: source and artifact digests do not attest Python import resolution or
+    the origin of scenario/cleanup assertions. This is intentionally unconditional:
+    no candidate record, manifest, environment variable or CLI flag can enable it.
+    See doc/TRUSTED_SECURITY_CONTROLLER_V1.md before replacing this interlock.
+    """
+    raise ControllerError(
+        "R2-001: trusted promotion disabled; supervised execution origin is not verified"
+    )
+
+
 def canonical_json(value: object) -> bytes:
     return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
 

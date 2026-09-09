@@ -25,6 +25,7 @@ from common import (
     derive_controller_identity,
     envelope_artifact_name,
     raw_artifact_name,
+    require_supervised_execution,
     security_execution_id,
     select_current_artifacts,
     sha256_bytes,
@@ -221,6 +222,7 @@ def aggregate_envelopes(
         raise ControllerError("raw profile topology is incomplete")
     if len({item["artifact_id"] for item in normalized_artifacts}) != 6:
         raise ControllerError("authoritative artifact IDs are duplicated")
+    require_supervised_execution()
     return {
         "schema_version": AGGREGATE_SCHEMA,
         "candidate_sha": candidate_sha,

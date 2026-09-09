@@ -33,6 +33,7 @@ from common import (
     derive_controller_identity,
     load_candidate_authority,
     raw_artifact_name,
+    require_supervised_execution,
     security_execution_id,
     select_current_artifacts,
     sha256_bytes,
@@ -248,6 +249,7 @@ def construct_envelope(
     metadata_path: Path, slot: str, profile: str, candidate_sha: str,
     base_sha: str, run_id: str, run_attempt: int,
 ) -> dict[str, Any]:
+    require_supervised_execution()
     identity = derive_controller_identity(trusted_root, base_sha)
     authority, manifest_digest = load_candidate_authority(trusted_root, candidate_root)
     try:

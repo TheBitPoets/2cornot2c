@@ -35,6 +35,12 @@ jobs:
           - profile: DF
             mode: full
     steps:
+      - name: Block unsupervised execution pending R2-001 remediation
+        shell: bash
+        run: |
+          echo "R2-001: trusted promotion disabled; supervised execution origin is not verified" >&2
+          exit 2
+
       - name: Checkout exact untrusted candidate without persistent credentials
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

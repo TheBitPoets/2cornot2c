@@ -176,15 +176,78 @@ def aggregate(records: list[dict]) -> dict:
     )
 
 
-def test_complete_closed_topology_passes() -> None:
-    result = aggregate([envelope(slot) for slot in common.EXPECTED_SCENARIOS])
-    assert result["producer_slots"] == ["A", "B", "C", "D", "E", "F"]
-    assert result["result"] == "PASS"
+def test_complete_closed_topology_cannot_authorize_unsupervised_execution() -> None:
+    with pytest.raises(common.ControllerError, match="R2-001"):
+        aggregate([envelope(slot) for slot in common.EXPECTED_SCENARIOS])
 
 
 def test_raw_profile_passes_and_candidate_does_not_choose_slot() -> None:
     result = verify_raw(raw_log("BE"), slot="B", profile="BE")
     assert result["scenarios"] == list(common.EXPECTED_SCENARIOS["B"])
+
+
+@pytest.mark.parametrize("slot", list(common.EXPECTED_SCENARIOS))
+def test_producer_cli_refuses_promotion_without_creating_envelope(tmp_path: Path, slot: str) -> None:
+    profile = common.SLOT_PROFILE[slot]
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    # Harmless additional candidate source: never imported or executed by this test.
+    (candidate / "additional_module.py").write_text("VALUE = 1\n", encoding="utf-8")
+    raw = tmp_path / f"security-{profile}.log"
+    raw.write_bytes(raw_log(profile))
+    metadata = tmp_path / "metadata.json"
+    metadata.write_bytes(common.canonical_json({
+        "attempt": attempt(),
+        "artifact": artifact(common.raw_artifact_name(profile, RUN_ID, ATTEMPT), 1),
+    }))
+    output = tmp_path / "output" / f"envelope-{slot}.json"
+    result = subprocess.run(
+        [sys.executable, str(CONTROLLER_DIR / "producer.py"), "envelope",
+         "--trusted-root", str(ROOT), "--candidate-root", str(candidate),
+         "--raw", str(raw), "--metadata", str(metadata),
+         "--slot", slot, "--profile", profile, "--candidate-sha", CANDIDATE,
+         "--base-sha", BASE, "--run-id", RUN_ID, "--run-attempt", str(ATTEMPT),
+         "--output", str(output)],
+        cwd=tmp_path, capture_output=True, text=True, timeout=10, check=False,
+    )
+    assert result.returncode == 2, result.stderr
+    assert "R2-001" in result.stdout
+    assert "PASS" not in result.stdout
+    assert not output.parent.exists()
+
+
+def test_producer_library_blocks_before_reading_candidate(tmp_path: Path, monkeypatch) -> None:
+    def unexpected_read(*args, **kwargs):
+        pytest.fail("blocked promotion must not read candidate authority")
+
+    monkeypatch.setattr(producer, "load_candidate_authority", unexpected_read)
+    with pytest.raises(common.ControllerError, match="R2-001"):
+        producer.construct_envelope(
+            trusted_root=ROOT, candidate_root=tmp_path, raw_path=tmp_path / "raw",
+            metadata_path=tmp_path / "metadata", slot="A", profile="A",
+            candidate_sha=CANDIDATE, base_sha=BASE, run_id=RUN_ID, run_attempt=ATTEMPT,
+        )
+
+
+def test_aggregator_cli_refuses_complete_fixture_without_printing_pass(tmp_path: Path) -> None:
+    directory = tmp_path / "envelopes"
+    directory.mkdir()
+    for slot in common.EXPECTED_SCENARIOS:
+        (directory / f"envelope-{slot}.json").write_bytes(common.canonical_json(envelope(slot)))
+    metadata = tmp_path / "metadata.json"
+    metadata.write_bytes(common.canonical_json({
+        "attempt": attempt(), "artifacts": envelope_artifacts(),
+    }))
+    result = subprocess.run(
+        [sys.executable, str(CONTROLLER_DIR / "aggregate.py"), "aggregate",
+         "--trusted-root", str(ROOT), "--envelopes", str(directory),
+         "--metadata", str(metadata), "--candidate-sha", CANDIDATE,
+         "--base-sha", BASE, "--run-id", RUN_ID, "--run-attempt", str(ATTEMPT)],
+        cwd=tmp_path, capture_output=True, text=True, timeout=10, check=False,
+    )
+    assert result.returncode == 2, result.stderr
+    assert "R2-001" in result.stdout
+    assert "PASS" not in result.stdout
 
 
 @pytest.mark.parametrize(
@@ -400,6 +463,29 @@ def test_candidate_job_has_no_trusted_checkout_or_token_environment() -> None:
     assert "Docker socket" not in candidate_job
 
 
+def test_workflow_blocks_before_candidate_checkout_or_execution() -> None:
+    source = (ROOT / ".github/workflows/trusted-security-controller-v1.yml").read_text(encoding="utf-8")
+    job = yaml.safe_load(source)["jobs"]["candidate-execution"]
+    guard = job["steps"][0]
+    assert "if" not in guard
+    assert not guard.get("continue-on-error", False)
+    assert not job.get("continue-on-error", False)
+    assert guard["shell"] == "bash"
+    if sys.platform == "win32":
+        git = shutil.which("git")
+        bash = str(Path(git).resolve().parents[1] / "bin" / "bash.exe") if git else None
+    else:
+        bash = shutil.which("bash")
+    if not bash or not Path(bash).is_file():
+        pytest.skip("Bash is required to execute the production Ubuntu preflight")
+    result = subprocess.run(
+        [bash, "--noprofile", "--norc", "-c", guard["run"]],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    assert result.returncode == 2
+    assert "R2-001" in result.stderr
+
+
 def test_required_gate_runs_after_failed_or_skipped_dependencies() -> None:
     source = (ROOT / ".github/workflows/trusted-security-controller-v1.yml").read_text(encoding="utf-8")
     gate = yaml.safe_load(source)["jobs"]["trusted-security-controller"]
@@ -530,7 +616,8 @@ def test_workflow_download_delivers_verified_files_at_consumer_paths(tmp_path, m
         verify_raw((destination / f"security-{profile}.log").read_bytes(), slot=common.EXPECTED_PROFILE_SLOTS[profile][0], profile=profile)
     else:
         records, _ = aggregator._load_envelopes(destination)
-        assert aggregate(records)["result"] == "PASS"
+        with pytest.raises(common.ControllerError, match="R2-001"):
+            aggregate(records)
 
 
 @pytest.mark.parametrize("kind", ["raw", "envelopes"])
