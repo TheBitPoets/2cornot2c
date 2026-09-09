@@ -676,6 +676,9 @@ def track_assignments(
         else:
             help["path"] = relative_to_root_or_repo(help_log_path, target.path) if help_log_path else ""
         help["activity_id"] = activity_id
+        if assignment_id and help_subject_aliases is not None:
+            # Teacher-owned metadata preserves the channel when reopening a report.
+            help["subject_id"] = help_student_key
         grading = grading_summary(report)
         if remote_report_result is not None and remote_report_result.configured and report is not None:
             grading["provisional"] = remote_report_result.provisional

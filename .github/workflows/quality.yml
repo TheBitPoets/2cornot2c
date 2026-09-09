@@ -56,7 +56,16 @@ jobs:
         run: python -m pip install -r requirements-dev.txt -r requirements-utui.txt -r requirements-auth.txt
 
       - name: Install deployment lint tools
-        run: sudo apt-get update && sudo apt-get install -y nginx
+        timeout-minutes: 5
+        run: |
+          # nginx needs only Ubuntu archives, not unrelated runner vendor repositories.
+          test -f /etc/apt/sources.list.d/ubuntu.sources
+          apt_options=(
+            -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ubuntu.sources
+            -o Dir::Etc::sourceparts=-
+          )
+          sudo apt-get "${apt_options[@]}" update
+          sudo apt-get "${apt_options[@]}" install -y nginx
 
       - name: Run Python tests
         run: python -m pytest

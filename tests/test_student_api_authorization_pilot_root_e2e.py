@@ -14,7 +14,7 @@ from typing import Any, Iterator
 
 import pytest
 
-from scripts import course_board_server, pilot_data_root
+from scripts import course_board_server, pilot_data_root, student_help_service
 from scripts.assignment_records import JsonAssignmentRecordStorage
 from scripts.thebitlab_auth_services import PairingService, SessionService, TuiPairingSessionService
 from scripts.thebitlab_edge_rate_limit import SqliteAtomicRateLimitStore, TrustedProxyClientResolver
@@ -378,7 +378,7 @@ def test_federated_student_api_e2e_uses_canonical_pilot_root_and_fresh_authority
 
 
 @pytest.mark.parametrize("legacy_target", [False, True], ids=["canonical", "explicit-legacy-alias"])
-def test_federated_help_is_visible_in_the_teacher_register(tmp_path: Path, legacy_target: bool) -> None:
+def test_federated_help_is_visible_in_the_teacher_register(tmp_path: Path, legacy_target: bool, monkeypatch) -> None:
     root = tmp_path / "canonical-root"
     assert pilot_data_root.bootstrap(pilot_data_root.topology_from_paths(root))["ok"]
     records = JsonAssignmentRecordStorage(root)
@@ -390,6 +390,22 @@ def test_federated_help_is_visible_in_the_teacher_register(tmp_path: Path, legac
         records.write_assignment(assignment, overwrite=True)
 
     with _running_pilot(root) as (client, storage, http_sessions):
+        generation_payload = {
+            "assignment_id": assignment["id"],
+            "activity_path": assignment["activity_path"],
+            "targets_text": str(root / own["path"]),
+            "output_name": "help-identity-regression.json",
+        }
+        local_event = course_board_server.record_student_help(
+            {"assignment_id": assignment["id"], "help_type": "teoria", "prompt": "Domanda locale."},
+            student_id=own["student_id"],
+        )
+        assert local_event["ok"]
+        local_report = course_board_server.generate_assignment_report(generation_payload)["report"]
+        local_help = local_report["students"][0]["help"]
+        assert any(event["prompt"] == "Domanda locale." for event in local_help["events"])
+        assert "subject_id" not in local_help
+        assert course_board_server.read_assignment_report(generation_payload["output_name"])["students"][0]["help"]["total"] == local_help["total"]
         bearer, _ = client.pair(STUDENT_USER_ID, http_sessions)
         status, event = client.exchange(
             "/api/student-lab/help",
@@ -407,14 +423,89 @@ def test_federated_help_is_visible_in_the_teacher_register(tmp_path: Path, legac
             "/api/assignment-reports/generate",
             method="POST",
             headers={"Authorization": teacher_auth},
-            payload={
-                "assignment_id": assignment["id"],
-                "activity_path": assignment["activity_path"],
-                "targets_text": str(root / own["path"]),
-                "output_name": "help-identity-regression.json",
-            },
+            payload=generation_payload,
         )
         assert status == 200, result
         help_summary = result["report"]["students"][0]["help"]
         assert help_summary["total"] == 1
         assert help_summary["events"][0]["prompt"] == "Come scelgo il primo passaggio?"
+        assert help_summary["subject_id"] == STUDENT_SUBJECT_ID
+        status, event = client.exchange(
+            "/api/student-lab/help", method="POST", headers=_authorization_header(bearer),
+            payload={"assignment_id": assignment["id"], "help_type": "teoria", "prompt": "Seconda domanda federata."},
+        )
+        assert status == 200 and event["ok"]
+        status, loaded = client.exchange(
+            "/api/assignment-reports/load", method="POST", headers={"Authorization": teacher_auth},
+            payload={"name": generation_payload["output_name"]},
+        )
+        assert status == 200, loaded
+        refreshed = loaded["report"]["students"][0]["help"]
+        assert refreshed["total"] == 2
+        assert {event["prompt"] for event in refreshed["events"]} == {
+            "Come scelgo il primo passaggio?", "Seconda domanda federata.",
+        }
+        assert refreshed["subject_id"] == STUDENT_SUBJECT_ID
+
+        # Deletion must acquire the very same operation lock used by federated help.
+        operation_id = course_board_server.student_help_operation_id(assignment["id"], STUDENT_SUBJECT_ID)
+        original_lock = course_board_server.assignment_operation_lock
+        delete_waiting = threading.Event()
+        delete_done = threading.Event()
+        deletion_results = []
+
+        @contextmanager
+        def observed_lock(requested, **kwargs):
+            if requested == operation_id:
+                delete_waiting.set()
+            with original_lock(requested, **kwargs):
+                yield
+
+        monkeypatch.setattr(course_board_server, "assignment_operation_lock", observed_lock)
+
+        def delete_assignment():
+            try:
+                deletion_results.append(client.exchange(
+                    "/api/assignments/delete", method="POST", headers={"Authorization": teacher_auth},
+                    payload={"assignment_id": assignment["id"]},
+                ))
+            finally:
+                delete_done.set()
+
+        federated_log = student_help_service.server_help_log_path(root, STUDENT_SUBJECT_ID, assignment["id"])
+        local_log = student_help_service.server_help_log_path(root, own["student_id"], assignment["id"])
+        worker = threading.Thread(target=delete_assignment)
+        try:
+            with original_lock(operation_id):
+                worker.start()
+                assert delete_waiting.wait(5)
+                assert not delete_done.wait(0.1)
+                assert federated_log.exists() and local_log.exists()
+        finally:
+            worker.join(10)
+        assert not worker.is_alive()
+        assert deletion_results[0][0] == 200, deletion_results
+        assert not federated_log.parent.exists() and not local_log.parent.exists()
+
+
+def test_help_does_not_recreate_logs_when_assignment_was_deleted_after_authorization(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "canonical-root"
+    assert pilot_data_root.bootstrap(pilot_data_root.topology_from_paths(root))["ok"]
+    records = JsonAssignmentRecordStorage(root)
+    assignment = records.list_assignments_strict()[0]
+    original_record = course_board_server.record_authorized_student_help
+
+    def delete_before_record(payload, **kwargs):
+        assert course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})["ok"]
+        return original_record(payload, **kwargs)
+
+    monkeypatch.setattr(course_board_server, "record_authorized_student_help", delete_before_record)
+    with _running_pilot(root) as (client, storage, http_sessions):
+        bearer, _ = client.pair(STUDENT_USER_ID, http_sessions)
+        status, body = client.exchange(
+            "/api/student-lab/help", method="POST", headers=_authorization_header(bearer),
+            payload={"assignment_id": assignment["id"], "help_type": "teoria", "prompt": "Una domanda."},
+        )
+        assert status == 403
+        _assert_sanitized_denial(status, body, STUDENT_SUBJECT_ID, assignment["id"])
+        assert not student_help_service.server_help_log_path(root, STUDENT_SUBJECT_ID, assignment["id"]).exists()

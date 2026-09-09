@@ -54,11 +54,26 @@ la stessa classe e un solo alias. Alias mancanti/ambigui o storage
 indisponibile impediscono la generazione, senza ripiegare su un'altra
 identità o dichiarare uno storico vuoto.
 
-La CLI di tracking con record canonici non richiede accesso allo storage
-auth. Per leggere log federati da record legacy, i consumer devono fornire
-gli alias autorevoli tramite `help_subject_aliases`, oppure migrare prima
-i target secondo l'ADR. Il canale locale non federato conserva il proprio
-formato storico e non viene promosso a fonte di eventi federati.
+Il parametro `help_subject_aliases=None` seleziona il canale locale, anche
+per target canonici; una tupla, anche vuota, seleziona il canale federato.
+Per target legacy la tupla deve contenere gli alias autorevoli. La CLI
+senza runtime auth continua quindi a leggere il canale locale.
+
+Nei report federati il server docente conserva il campo additivo
+`students[].help.subject_id`, derivato dal target o dall'alias autorevole.
+La riapertura e la revisione del registro validano questo identificatore
+e aggiornano lo storico dello stesso soggetto. Il campo non viene copiato
+da report o log studente; i registri precedenti senza il campo mantengono
+la semantica locale e richiedono rigenerazione per passare al canale federato.
+Il canale locale non viene promosso a fonte di eventi federati.
+
+La cancellazione dell'assegnazione acquisisce i lock e rimuove i log sia
+delle identita locali storiche sia dei soggetti canonici o risolti tramite
+alias della stessa classe. Con runtime federato, storage alias non
+disponibile o identita non risolvibile impediscono la cancellazione.
+Il writer federato rilegge e autorizza il record dopo aver acquisito il
+lock dell'aiuto, prima di chiamare il provider, cosi una cancellazione
+conclusa dopo lo snapshot HTTP non ricrea lo storico.
 
 ### File
 

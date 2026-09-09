@@ -108,24 +108,24 @@ def target_help_student_key(
     class_id: str = "",
     legacy_aliases: tuple[LegacySubjectAlias, ...] | None = None,
 ) -> str:
-    """Resolve a help-log key from a trusted target or explicit class alias."""
+    """Resolve the local key, or a federated key when an alias snapshot is supplied."""
 
+    if legacy_aliases is None:
+        return fallback
     subject_id = target.get("subject_id")
     if subject_id not in (None, ""):
         if not isinstance(subject_id, str) or SUBJECT_ID_PATTERN.fullmatch(subject_id) is None:
             raise ValueError("Identita del registro aiuti non valida.")
         return subject_id
-    if legacy_aliases is not None:
-        matches = [
-            alias.subject_id
-            for alias in legacy_aliases
-            if alias.class_id == class_id
-            and alias.legacy_student_id == clean_text(target.get("student_id"))
-        ]
-        if len(matches) != 1:
-            raise ValueError("Identita del registro aiuti non risolvibile.")
-        return matches[0]
-    return fallback
+    matches = [
+        alias.subject_id
+        for alias in legacy_aliases
+        if alias.class_id == class_id
+        and alias.legacy_student_id == clean_text(target.get("student_id"))
+    ]
+    if len(matches) != 1:
+        raise ValueError("Identita del registro aiuti non risolvibile.")
+    return matches[0]
 
 
 def target_student_aliases(target: dict[str, Any]) -> set[str]:
@@ -155,11 +155,20 @@ def target_legacy_student_aliases(target: dict[str, Any]) -> set[str]:
     return {candidate for candidate in candidates if candidate}
 
 
-def target_cleanup_student_ids(target: dict[str, Any]) -> set[str]:
+def target_cleanup_student_ids(
+    target: dict[str, Any],
+    *,
+    class_id: str = "",
+    legacy_aliases: tuple[LegacySubjectAlias, ...] | None = None,
+) -> set[str]:
     """Return canonical and historical storage keys to remove for one target."""
 
     identities = target_legacy_student_aliases(target)
     canonical_student_id = target_student_id(target)
     if canonical_student_id:
         identities.add(canonical_student_id)
+    if target.get("subject_id") not in (None, "") or legacy_aliases is not None:
+        identities.add(target_help_student_key(
+            target, "", class_id=class_id, legacy_aliases=legacy_aliases or (),
+        ))
     return identities

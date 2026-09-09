@@ -30,3 +30,16 @@ def test_help_log_legacy_alias_requires_an_exact_class_scoped_match() -> None:
                 target, "student-a", class_id=class_id, legacy_aliases=aliases
             )
     assert student_identity.target_help_student_key(target, "student-a") == "student-a"
+
+
+def test_canonical_target_keeps_local_and_federated_help_channels_separate() -> None:
+    subject_id = "subject:" + "1" * 32
+    target = {"student_id": "student-a", "subject_id": subject_id}
+    assert student_identity.target_help_student_key(target, "student-a") == "student-a"
+    assert student_identity.target_help_student_key(target, "student-a", legacy_aliases=()) == subject_id
+
+
+@pytest.mark.parametrize("subject_id", [None, "", "invalid", 12])
+def test_invalid_federated_help_identity_does_not_fall_back_to_local(subject_id) -> None:
+    with pytest.raises(ValueError):
+        student_identity.target_help_student_key({"subject_id": subject_id}, "student-a", legacy_aliases=())
