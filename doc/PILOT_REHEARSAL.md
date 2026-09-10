@@ -26,6 +26,18 @@ Una topologia con host di esecuzione studente separati è **NO-GO** finché non 
 
 In assenza di questa suite, scegliere e registrare la baseline a root unica; un mount o una copia manuale non documentata non conta come sincronizzazione autorevole.
 
+Il percorso sperimentale `--student-deliveries` dispone ora di un
+[collaudo HTTP locale con root separate](architecture/student-delivery-storage.md#integrazione-http-tui-e-registro),
+inclusi pairing reale, menu TUI, invio, perdita della risposta, riavvio,
+definitivo e preview docente. La prova usa un proxy loopback e non attesta TLS,
+VPS. Una prova distinta del [grading docente dello snapshot](architecture/student-delivery-grading.md)
+usa il producer Docker reale per il profilo stdin/stdout a singolo sorgente
+senza asset. Il collaudo M04 aggiunge la policy docente circoscritta per
+`main.py` e `GUIDA.md` obbligatoria e invariata, con tre test originali,
+rifiuti e retry; non certifica tutti i profili delle classi. Il rilascio distribuito resta
+NO-GO. Per eseguire la baseline di questo runbook non attivare tale opzione;
+i gate Docker, backup/restore, attività reali e governance rimangono necessari.
+
 ## Ruoli e scheda della prova
 
 Assegnare persone distinte quando possibile:

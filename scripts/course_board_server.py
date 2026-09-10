@@ -68,6 +68,8 @@ from scripts import (
     github_app_token_runtime,
     manual_ai_feedback,
     student_api_authorization,
+    student_delivery_service,
+    student_delivery_store,
     student_help_auth,
     student_help_codex_adapter,
     student_help_service,
@@ -181,7 +183,8 @@ HELP_DELETION_SCHEMA_VERSION = "student_help_deletion.v2"
 ASSIGNMENT_TARGET_BINDINGS_OPERATION_ID = "assignment-target-bindings-global"
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 TEACHER_AUTH_REALM = "TheBitLab docente"
-PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
+PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports",
+                        "teacher-deliveries", "teacher-delivery-grading", "student-delivery"}
 REMOTE_STUDENT_API_ROUTES = frozenset(
     {
         ("GET", "/api/student-lab/me"),
@@ -189,6 +192,10 @@ REMOTE_STUDENT_API_ROUTES = frozenset(
         ("GET", "/api/student-lab/help-history"),
         ("POST", "/api/student-lab/help"),
         ("POST", "/api/student-lab/final-attempt"),
+        ("GET", "/api/student-lab/delivery-manifest"),
+        ("GET", "/api/student-lab/deliveries"),
+        ("POST", "/api/student-lab/deliveries"),
+        ("POST", "/api/student-lab/delivery-final"),
     }
 )
 _ASSIGNMENT_OPERATION_LOCKS: dict[str, dict[str, Any]] = {}
@@ -1687,6 +1694,15 @@ def _delete_assignment_record_locked(payload: dict, *, help_subject_aliases=None
                     class_id=str(assignment.get("class_id", "")),
                     legacy_aliases=help_subject_aliases,
                 ))
+        # Until an explicit receipt retention/export policy exists, deleting
+        # an assignment with received sources would orphan its authoritative
+        # archive and allow the same assignment identity to be reused.
+        deliveries = student_delivery_store.JsonStudentDeliveryStore(ROOT)
+        for student_id in student_ids if assignment.get("class_id") else ():
+            context = student_delivery_service.archive_context(assignment, student_id)
+            directory = deliveries._directory(context)
+            if directory.exists() and any(path.name.startswith("attempt-") for path in directory.iterdir()):
+                raise ValueError("Assegnazione con consegne ricevute: conservare il registro e l'archivio.")
         log_paths = sorted(
             {
                 student_help_service.server_help_log_path(ROOT, student_id, assignment_id)
@@ -2152,6 +2168,11 @@ def preserve_assignment_ai_feedback(previous: dict, generated: dict) -> dict:
             previous_student = by_student_name.get(student_name)
         if previous_student is None:
             continue
+        delivery = student.get("submission", {}).get("delivery")
+        if isinstance(delivery, dict):
+            previous_delivery = previous_student.get("submission", {}).get("delivery", {})
+            if not delivery.get("package_digest") or previous_delivery.get("package_digest") != delivery.get("package_digest"):
+                continue
         feedback = previous_student.get("ai_feedback")
         if not isinstance(feedback, dict):
             continue
@@ -2687,6 +2708,32 @@ def read_submission_file(payload: dict) -> dict:
     student = next((entry for entry in report.get("students", []) if entry.get("student") == student_name), None)
     if student is None:
         raise FileNotFoundError(f"Studente non trovato nel registro: {student_name}")
+    submission = student.get("submission", {})
+    delivery = submission.get("delivery")
+    if isinstance(delivery, dict):
+        requested = normalized_submission_file_reference(payload.get("path", ""))
+        if requested not in registered_submission_file_references(student):
+            raise FileNotFoundError("File consegna non consentito.")
+        assignment_id = report.get("assignment_id", "")
+        with thebitlab_storage.course_storage_lock(ROOT):
+            storage = assignment_record_storage()
+            with assignment_operation_lock(assignment_record_operation_id(storage, assignment_id)):
+                assignment = storage.read_assignment_strict(assignment_id)
+                context = student_delivery_service.archive_context(assignment, delivery.get("subject_id", ""))
+                if any(delivery.get(key) != value for key, value in context.identity().items()):
+                    raise ValueError("Riferimento consegna non valido.")
+                receipt = student_delivery_store.JsonStudentDeliveryStore(ROOT).read(
+                    submission["attempt_id"], context_loader=lambda: context)
+                if receipt["package_digest"] != delivery.get("package_digest"):
+                    raise ValueError("Riferimento consegna non valido.")
+                entry = next((item for item in receipt["package"]["files"] if item["path"] == requested), None)
+                if entry is None:
+                    raise FileNotFoundError("File consegna non disponibile.")
+                content = base64.b64decode(entry["content_base64"], validate=True)
+                if len(content) > MAX_SUBMISSION_FILE_BYTES:
+                    raise ValueError("File troppo grande per l'anteprima nella dashboard.")
+                return {"path": requested, "name": Path(requested).name,
+                        "size": len(content), "content": content.decode("utf-8-sig")}
     path = resolve_submission_file_path(student, payload.get("path", ""))
     size = path.stat().st_size
     if size > MAX_SUBMISSION_FILE_BYTES:
@@ -2976,14 +3023,58 @@ def _distribute_activity_assignment_locked(payload: dict) -> dict:
     }
 
 
-def generate_assignment_report(payload: dict, *, help_subject_aliases=None) -> dict:
+def grade_student_delivery(payload: dict, *, review: bool = False) -> dict:
+    """Teacher-only adapter: freeze the receipt identity before releasing lifecycle locks."""
+    from scripts import student_delivery_grading
+
+    fields = {"assignment_id", "subject_id", "attempt_id"}
+    if review:
+        fields |= {"result_digest", "teacher_grade"}
+    if not isinstance(payload, dict) or payload.keys() != fields:
+        raise student_delivery_store.DeliveryError("invalid")
+    assignment_id = student_delivery_store._text(payload["assignment_id"])
+    attempt_id = student_delivery_store._attempt_id(payload["attempt_id"])
+    grading = student_delivery_grading.JsonDeliveryGradingStore(ROOT)
+    with thebitlab_storage.course_storage_lock(ROOT):
+        records = assignment_record_storage()
+        with assignment_operation_lock(assignment_record_operation_id(records, assignment_id)):
+            assignment = records.read_assignment_strict(assignment_id)
+            context = student_delivery_service.archive_context(assignment, payload["subject_id"])
+            receipt = grading.read(attempt_id, context_loader=lambda: context)
+            if not review:
+                # Legacy receipts may be recovered only from exactly matching material.
+                try:
+                    grading._revision(receipt)
+                except student_delivery_store.DeliveryError as error:
+                    if error.code != "contract_unavailable":
+                        raise
+                    try:
+                        contract = student_delivery_service.teacher_contract(ROOT, assignment)
+                    except (OSError, ValueError, TypeError, KeyError):
+                        contract = None
+                    if contract is not None and all(
+                            contract[key] == receipt["package"][key]
+                            for key in ("activity_digest", "tests_digest")):
+                        grading.archive_contract(contract)
+    # No course/assignment lock is held while a container runs. Final selection
+    # can change independently; publication remains bound to this exact attempt.
+    if review:
+        return grading.review(attempt_id, context_loader=lambda: context,
+            result_digest=payload["result_digest"], teacher_grade=payload["teacher_grade"])
+    return grading.grade(attempt_id, context_loader=lambda: context)
+
+
+def generate_assignment_report(payload: dict, *, help_subject_aliases=None,
+                               student_delivery_enabled: bool = False) -> dict:
     """Generate and persist an assignment tracking report from the local GUI."""
 
     with thebitlab_storage.course_storage_lock(ROOT):
-        return _generate_assignment_report_locked(payload, help_subject_aliases=help_subject_aliases)
+        return _generate_assignment_report_locked(payload, help_subject_aliases=help_subject_aliases,
+            student_delivery_enabled=student_delivery_enabled)
 
 
-def _generate_assignment_report_locked(payload: dict, *, help_subject_aliases=None) -> dict:
+def _generate_assignment_report_locked(payload: dict, *, help_subject_aliases=None,
+                                       student_delivery_enabled: bool = False) -> dict:
     """Persist one report while activity deletion is excluded."""
 
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
@@ -3015,8 +3106,9 @@ def _generate_assignment_report_locked(payload: dict, *, help_subject_aliases=No
             github_team=payload.get("github_team") or None,
             assignment_id=canonical_assignment_id or None,
             server_root=ROOT if canonical_assignment_id else None,
-            report_source=grading_tracking_report_source() if canonical_assignment_id else None,
+            report_source=grading_tracking_report_source() if canonical_assignment_id and not student_delivery_enabled else None,
             help_subject_aliases=help_subject_aliases,
+            student_delivery_enabled=student_delivery_enabled,
         )
         with assignment_operation_lock(assignment_report_operation_id(storage, output_name)):
             if output_path.is_file():
@@ -5283,6 +5375,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
     def log_error(self, format, *args) -> None:
         """Redact even malformed OAuth request lines before parser completion."""
 
+        if "/api/student-lab/" in str(getattr(self, "requestline", "")):
+            self.log_message("Student API request non valida")
+            return
         if self._is_sensitive_auth_request_line() or any(
             any(
                 auth_path in str(argument)
@@ -5301,6 +5396,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
         path = str(getattr(self, "path", ""))
         requestline = str(getattr(self, "requestline", ""))
+        if "/api/student-lab/" in path + " " + requestline:
+            self.log_message('"STUDENT %s HTTP" %s %s', self._student_route_label(), str(code), str(size))
+            return
         if self._is_sensitive_auth_request_line():
             combined = path + " " + requestline
             if "/auth/google/callback" in combined:
@@ -5581,7 +5679,10 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             self.close_connection = True
             raise thebitlab_http_auth.HttpBadRequestError()
         length = int(lengths[0])
-        if not 1 <= length <= MAX_STUDENT_HELP_REQUEST_BYTES:
+        body_limit = (student_delivery_store.MAX_DOCUMENT_BYTES
+                      if urlparse(self.path).path == "/api/student-lab/deliveries"
+                      else MAX_STUDENT_HELP_REQUEST_BYTES)
+        if not 1 <= length <= body_limit:
             self.close_connection = True
             raise thebitlab_http_auth.HttpBadRequestError()
         content_types = [
@@ -6122,6 +6223,108 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
     def do_CONNECT(self) -> None:  # noqa: N802
         self.do_unsupported_auth_method()
 
+    def dispatch_student_delivery(self, parsed) -> bool:
+        if parsed.path not in {"/api/student-lab/delivery-manifest",
+                               "/api/student-lab/deliveries",
+                               "/api/student-lab/delivery-final"}:
+            return False
+        if not getattr(self.server, "student_delivery_enabled", False):
+            self.close_connection = True
+            self.write_error_json(404, "Servizio consegne non abilitato.")
+            return True
+        # Source transfer requires the federated boundary; never accept HMAC
+        # aliases as authoritative identities for durable teacher receipts.
+        if getattr(self.server, "tui_pairing_http_routes", None) is None:
+            self.close_connection = True
+            self.write_error_json(403, "Accesso studente non consentito.")
+            return True
+        scope = self.authenticated_student_request()
+        if scope is None:
+            return True
+        try:
+            if self.command == "GET":
+                payload = dict(parse_qsl(parsed.query))
+            else:
+                body = self._read_body_with_deadline(
+                    int(self.headers["Content-Length"]), STUDENT_API_BODY_DEADLINE_SECONDS)
+                if body is None:
+                    raise student_delivery_store.DeliveryError("invalid")
+                payload = json.loads(body.decode("utf-8"),
+                                     object_pairs_hook=student_delivery_store._unique_object)
+            expected = {"assignment_id"}
+            if self.command == "POST":
+                expected |= ({"package"} if parsed.path.endswith("/deliveries")
+                             else {"attempt_id", "expected_revision"})
+            if not isinstance(payload, dict) or payload.keys() != expected:
+                raise student_delivery_store.DeliveryError("invalid")
+            assignment_id = student_delivery_store._text(payload["assignment_id"])
+            record_storage = assignment_record_storage()
+            with thebitlab_storage.course_storage_lock(ROOT):
+                with assignment_operation_lock(assignment_record_operation_id(record_storage, assignment_id)):
+                    def context_loader():
+                        routes = self.server.tui_pairing_http_routes
+                        try:
+                            authentication = routes.boundary.authenticate_bearer(self.headers["Authorization"])
+                        except ValueError:
+                            raise student_api_authorization.StudentApiAuthorizationDenied("account") from None
+                        fresh = student_api_authorization.authorize_student_request(
+                            routes.boundary.tui_sessions.storage, authentication.user.user_id)
+                        if fresh.subject_id != scope.subject_id:
+                            raise student_api_authorization.StudentApiAuthorizationDenied("identity_incoherent")
+                        try:
+                            assignment = record_storage.read_assignment_strict(assignment_id)
+                        except FileNotFoundError:
+                            raise student_api_authorization.StudentApiAuthorizationDenied("target_missing") from None
+                        authorized = fresh.authorize_assignment(assignment)
+                        try:
+                            contract = student_delivery_service.teacher_contract(ROOT, authorized.assignment_copy())
+                            if self.command == "POST" and parsed.path.endswith("/deliveries"):
+                                from scripts.student_delivery_grading import JsonDeliveryGradingStore
+                                JsonDeliveryGradingStore(ROOT).archive_contract(contract)
+                        except (OSError, ValueError, TypeError, KeyError):
+                            raise student_api_authorization.StudentApiAuthorizationUnavailable("storage_corrupt") from None
+                        return student_delivery_service.delivery_context(assignment, fresh.subject_id, contract)
+
+                    context = context_loader()
+                    delivery_store = student_delivery_store.JsonStudentDeliveryStore(ROOT)
+                    if parsed.path.endswith("/delivery-manifest"):
+                        contract = student_delivery_service.teacher_contract(
+                            ROOT, record_storage.read_assignment_strict(assignment_id))
+                        result = student_delivery_service.workspace_manifest(ROOT, context, contract)
+                    elif self.command == "GET":
+                        result = delivery_store.history(context_loader=context_loader)
+                        selected = result["final"] or (result["items"][-1] if result["items"] else None)
+                        received = next((item["received_at"] for item in result["items"]
+                                         if selected and item["attempt_id"] == selected["attempt_id"]), None)
+                        status, _ = track_assignments.submission_status(submitted=bool(selected),
+                            submitted_at=received, due_at=context.closes_at.isoformat())
+                        result["status"] = "submitted" if status == "submitted_on_time" else status
+                    elif parsed.path.endswith("/deliveries"):
+                        receipt = delivery_store.receive(payload["package"], context_loader=context_loader)
+                        result = delivery_store._summary(receipt)
+                    else:
+                        result = delivery_store.select_final(payload["attempt_id"],
+                            expected_revision=payload["expected_revision"], context_loader=context_loader)
+            self.write_sensitive_json(result)
+        except student_api_authorization.StudentApiAuthorizationError as error:
+            self._write_student_authorization_error(
+                403 if isinstance(error, student_api_authorization.StudentApiAuthorizationDenied) else 503, error)
+        except thebitlab_http_auth.HttpAuthError as error:
+            self.close_connection = True
+            self.write_error_json(error.status_code, error.public_message)
+        except student_delivery_store.DeliveryError as error:
+            self.close_connection = True
+            status = {"conflict": 409, "contract_changed": 409, "closed": 409,
+                      "missing": 404, "limit": 413, "storage": 503}.get(error.code, 400)
+            self.write_error_json(status, str(error))
+        except (ValueError, TypeError, KeyError, RecursionError):
+            self.close_connection = True
+            self.write_error_json(400, "Richiesta consegna non valida.")
+        except Exception:  # No credentials, identities or paths in errors/logs.
+            self.close_connection = True
+            self.write_error_json(503, "Servizio consegne temporaneamente non disponibile.")
+        return True
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         if self.dispatch_tui_pairing_http(parsed):
@@ -6147,6 +6350,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.serve_login_page()
                 return
         if self.reject_unauthenticated_teacher_api("GET", parsed.path):
+            return
+        if self.dispatch_student_delivery(parsed):
             return
         if parsed.path in {
             "/api/student-lab/me",
@@ -6174,7 +6379,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                         records = assignment_record_storage().list_assignments_strict()
                         authorized = student_request.visible_assignments(records)
                         self.write_json(
-                            student_lab_service.authorized_student_lab_payload(
+                            {"delivery_api": bool(getattr(self.server, "student_delivery_enabled", False)),
+                             **student_lab_service.authorized_student_lab_payload(
                                 root=ROOT,
                                 authorized_assignments=[
                                     (item.assignment_copy(), item.target_copy())
@@ -6183,7 +6389,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                                 public_student_id=student_request.public_student_id,
                                 server_student_key=student_request.subject_id,
                                 now=requested_now if self.is_loopback_client() else None,
-                            )
+                            )}
                         )
                     else:
                         self.write_json(
@@ -6387,6 +6593,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if self.reject_unauthenticated_teacher_api("POST", parsed.path):
             return
         if self.reject_unsafe_teacher_post(parsed.path):
+            return
+        if self.dispatch_student_delivery(parsed):
             return
         if parsed.path == "/api/student-lab/final-attempt":
             student_request = self.authenticated_student_request()
@@ -6708,6 +6916,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
             return
+        if parsed.path in {"/api/assignment-reports/delivery-grade", "/api/assignment-reports/delivery-grade/review"}:
+            if not getattr(self.server, "student_delivery_enabled", False):
+                self.write_error_json(404, "Valutazione consegne non abilitata.")
+                return
+            try:
+                result = grade_student_delivery(payload, review=parsed.path.endswith("/review"))
+                self.write_sensitive_json({"ok": True, **result})
+            except (OSError, ValueError, TypeError, KeyError):
+                self.write_error_json(400, "Valutazione consegna non disponibile.")
+            return
         if parsed.path == "/api/assignment-reports/ai-feedback/review":
             try:
                 report = review_assignment_ai_feedback(
@@ -6735,7 +6953,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     except Exception:
                         self.write_error_json(503, "Registro aiuti temporaneamente non disponibile.")
                         return
-                    self.write_json(generate_assignment_report(payload, help_subject_aliases=aliases))
+                    self.write_json(generate_assignment_report(payload, help_subject_aliases=aliases,
+                        student_delivery_enabled=bool(getattr(self.server, "student_delivery_enabled", False))))
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -7104,6 +7323,8 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--root", type=Path, default=APP_ROOT, help="Root dati da usare per API e dashboard.")
+    parser.add_argument("--student-deliveries", action="store_true",
+                        help="Abilita consegne da TUI su PC separati; richiede il runtime auth federato.")
     parser.add_argument(
         "--allow-insecure-network-http",
         action="store_true",
@@ -7120,6 +7341,8 @@ def main() -> int:
         help="Genera e rinnova il token GitHub App dalla configurazione esterna protetta.",
     )
     args = parser.parse_args()
+    if args.student_deliveries and not args.enable_google_auth:
+        parser.error("--student-deliveries richiede --enable-google-auth.")
     teacher_token_is_configured = bool(os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip())
     try:
         validate_server_bind(args.host, args.allow_insecure_network_http)
@@ -7155,6 +7378,7 @@ def main() -> int:
                 parser.error(str(error))
         server = BoundedThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
         server.teacher_token = configured_teacher_token
+        server.student_delivery_enabled = args.student_deliveries
         if auth_runtime is not None:
             server.google_oidc_runtime = auth_runtime
             server.google_oidc_http_routes = auth_runtime.routes

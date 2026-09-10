@@ -30,8 +30,16 @@ Il `student_id` restituito per compatibilità TUI è un alias legacy esplicito e
 | `GET /api/student-lab/help-history` | read target | `assignment_id` come selettore | record riletto server-side; ID esatto; `resolve_assignment_target` positivo | record e target autorizzati; log server keyed dal `subject_id` |
 | `POST /api/student-lab/help` | write target | `assignment_id`, tipo, prompt, request id | come help-history; gli eventuali ID identitari aggiuntivi sono ignorati | record e target già autorizzati; chiave lock/log server-side |
 | `POST /api/student-lab/final-attempt` | write target | `assignment_id`, `attempt_id` | come help-history | record e target già autorizzati; tentativo operativo selezionato nella consegna |
+| `GET /api/student-lab/delivery-manifest` | read contratto | `assignment_id` | bearer e record strict riletti sotto lock lifecycle | soli asset pubblici e fingerprint docente |
+| `GET /api/student-lab/deliveries` | read ricevute | `assignment_id` | stesso boundary; snapshot fresco anche nel lock archivio | storico server del soggetto autorizzato |
+| `POST /api/student-lab/deliveries` | write sorgenti | `assignment_id`, `package` | come storico, con rivalidazione bearer prima della scrittura | pacchetto immutabile e ricevuta ungraded |
+| `POST /api/student-lab/delivery-final` | write definitivo ricevuto | `assignment_id`, `attempt_id`, `expected_revision` | stesso boundary e confronto revisione | selezione dello snapshot, senza attribuzione di voto |
 
-Non sono state trovate altre route Student Lab federate: `REMOTE_STUDENT_API_ROUTES` è la allowlist canonica e contiene esattamente le cinque righe sopra. Le API dashboard/docente e i consumer CLI locali non federati restano su boundary separati.
+`REMOTE_STUDENT_API_ROUTES` è la allowlist canonica delle nove operazioni sopra.
+Le quattro route di consegna richiedono l'opzione server `--student-deliveries`,
+disabilitata per default; non ammettono fallback HMAC. Contratto e limiti sono in
+[student-delivery-storage.md](student-delivery-storage.md). Le API dashboard/docente
+e i consumer CLI locali non federati restano su boundary separati.
 
 ## Failure model
 

@@ -217,6 +217,7 @@ class AssignmentOverviewService:
                         "source_path": submission.get("source_path"),
                         "attempt_id": submission.get("attempt_id"),
                         "report_selection": submission.get("report_selection"),
+                        "report_authority": submission.get("report_authority"),
                         "final_selected": bool(submission.get("final_selected", False)),
                         "grading_provisional": bool(grading.get("provisional", False)),
                         "grading_status": grading.get("status", ""),

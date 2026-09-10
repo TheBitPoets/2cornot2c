@@ -3786,7 +3786,8 @@ def test_delete_activity_record_rejects_non_draft_activity(tmp_path, monkeypatch
     assert activity_path.exists()
 
 
-def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatch) -> None:
+@pytest.mark.parametrize("help_subject_aliases", [None, ()])
+def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatch, help_subject_aliases) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
     monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
@@ -3830,7 +3831,8 @@ def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatc
             target_type="student",
             assigned_at="2026-10-12T09:00:00+02:00",
             due_at="2026-10-19T23:59:00+02:00",
-            targets=[{"student_id": "rossi-mario", "path": str(student_repo)}],
+            targets=[{"student_id": "rossi-mario", "path": str(student_repo),
+                      "subject_id": "subject:11111111111111111111111111111111"}],
         )
     )
 
@@ -3845,9 +3847,10 @@ def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatc
         "now": "2026-10-20T08:00:00+02:00",
         "targets_text": str(student_repo),
         "assignment_id": "assignment-python-base-somma-001-3a",
-    })
+    }, help_subject_aliases=help_subject_aliases)
 
     assert result["report"]["assignment_id"] == "assignment-python-base-somma-001-3a"
+    assert result["report"]["students"][0]["submitted"] is False
     saved_payload = json.loads((tmp_path / "teacher-reports" / "demo" / "report.json").read_text(encoding="utf-8"))
     assert saved_payload["assignment_id"] == "assignment-python-base-somma-001-3a"
 

@@ -97,6 +97,8 @@ sequenceDiagram
 
 Il bearer TUI resta in memoria e può essere revocato esattamente. Browser e terminale non si scambiano credenziali dell'altro canale. L'MVP non implementa ancora l'upload autenticato dei report di tentativo da una macchina studente separata: dashboard docente e selezione definitiva vedono i report soltanto quando condividono la root dati o quando un processo esterno li sincronizza. Un pilot distribuito deve definire questa sincronizzazione prima di considerare autorevoli tentativi e grading remoti.
 
+Il percorso distribuito usa l'[archivio delle consegne dai PC](architecture/student-delivery-storage.md): conserva sorgenti immutabili, ricevute server e definitivo separati dal grading. API, workspace/outbox TUI e registro docente sono integrati dietro l'opzione server `--student-deliveries`, con collaudo HTTP locale e root separate. L'opzione richiede auth federata; il default conserva il rehearsal a root unica. Il [grading docente dello snapshot](architecture/student-delivery-grading.md) usa Docker fissato, test originali e revisione esplicita del voto per il profilo stdin/stdout a singolo sorgente senza asset e per l'eccezione M04 con GUIDA.md obbligatoria e byte-identica. La policy M04 è docente, versionata e vincolata ai materiali originali e alla provenienza del job; la ricevuta resta integrale. Restano estensione agli altri profili richiesti dalle classi, quote aggregate, retention/export e collaudi di rilascio: la topologia distribuita non ha ancora GO pilot.
+
 ## Dati e storage
 
 ```mermaid
