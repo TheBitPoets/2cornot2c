@@ -4,10 +4,12 @@ import argparse
 import json
 from typing import Any
 
-from scripts import thebitlab_runtime_plugins
+from scripts import thebitlab_builtin_runtimes, thebitlab_runtime_plugins
 
 
-DEFAULT_REGISTRY = thebitlab_runtime_plugins.RuntimePluginRegistry()
+DEFAULT_REGISTRY = thebitlab_runtime_plugins.RuntimePluginRegistry(
+    entry_points_provider=thebitlab_builtin_runtimes.combined_entry_points
+)
 
 
 def runtime_record(
@@ -50,7 +52,7 @@ def runtime_inventory(
     *,
     registry: thebitlab_runtime_plugins.RuntimePluginRegistry = DEFAULT_REGISTRY,
 ) -> list[dict[str, Any]]:
-    """Probe every administrator-installed runtime known to this Python environment."""
+    """Probe every administrator-installed or built-in runtime known here."""
 
     return [runtime_record(runtime_id, registry=registry) for runtime_id in registry.installed_ids()]
 
@@ -82,11 +84,11 @@ def render_inventory(records: list[dict[str, Any]]) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Scopri e verifica i runtime esterni installati per TheBitLab."
+        description="Scopri e verifica i runtime installati/built-in per TheBitLab."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    list_parser = subparsers.add_parser("list", help="Elenca e prova tutti i runtime installati.")
+    list_parser = subparsers.add_parser("list", help="Elenca e prova tutti i runtime disponibili.")
     list_parser.add_argument("--json", action="store_true", dest="as_json")
 
     probe_parser = subparsers.add_parser("probe", help="Verifica un runtime specifico.")
