@@ -114,6 +114,9 @@ private-key.pem
 
 # File privati generati da docenti/studenti
 *_private.json
+teacher-deliveries/
+teacher-delivery-grading/
+student-delivery/
 
 # Artefatti Windows da evitare
 NUL

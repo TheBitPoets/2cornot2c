@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "id": "py2-activity-b-input-somma-001",
+  "title": "Completa la somma",
+  "titolo": "Completa la somma",
+  "kind": "laboratorio",
+  "tipo": "laboratorio",
+  "language": "python",
+  "linguaggio": "python",
+  "source_name": "main.py",
+  "difficulty": "B",
+  "difficolta": "B",
+  "topics": [
+    "input-output",
+    "variabili",
+    "conversione-tipi",
+    "operatori-aritmetici"
+  ],
+  "argomenti": [
+    "input-output",
+    "variabili",
+    "conversione-tipi",
+    "operatori-aritmetici"
+  ],
+  "instructions": "Completa il programma starter: legge due numeri interi, uno per riga, e deve stampare soltanto la loro somma.",
+  "consegna": "Completa il programma starter: legge due numeri interi, uno per riga, e deve stampare soltanto la loro somma.",
+  "student_support_mode": "feedback-tecnico",
+  "grading_policy": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 15,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  },
+  "test_cases": [
+    {
+      "name": "positivi",
+      "stdin": "2\n3\n",
+      "expected_stdout": "5\n"
+    },
+    {
+      "name": "zeri",
+      "stdin": "0\n0\n",
+      "expected_stdout": "0\n"
+    },
+    {
+      "name": "negativo e positivo",
+      "stdin": "-4\n10\n",
+      "expected_stdout": "6\n"
+    }
+  ],
+  "source_refs": [
+    {
+      "source_id": "python-course-content",
+      "href": "content/python/04_INTERPRETE_REPL_VALORI_IO.md#m04-interprete-repl-script-valori-e-inputoutput"
+    },
+    {
+      "source_id": "python-secondo-design",
+      "href": "tracks/secondo/PY2_02_SPEC.md#activity-candidate"
+    }
+  ],
+  "assets": [
+    {
+      "type": "starter",
+      "path": "starter/main.py",
+      "target_path": "main.py",
+      "visibility": "student",
+      "description": "Programma incompleto da correggere"
+    },
+    {
+      "type": "fixture",
+      "path": "student/GUIDA.md",
+      "target_path": "GUIDA.md",
+      "visibility": "student",
+      "description": "Guida breve allo svolgimento"
+    },
+    {
+      "type": "teacher_only",
+      "path": "teacher/README.md",
+      "visibility": "teacher",
+      "description": "Note docente e criteri del vertical slice"
+    }
+  ],
+  "contesto": {
+    "percorso": "python-secondo-2026-2027",
+    "uda": "py2-02"
+  }
+}

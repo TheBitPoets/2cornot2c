@@ -2154,7 +2154,13 @@ button.matrixCell:disabled:focus-visible {
   font-weight: 800;
 }
 
-.matrixSelectionState {
+.gradeReviewState {
+  display: block;
+  margin-top: .25rem;
+}
+
+.matrixSelectionState,
+.matrixGradeReviewState .badge {
   min-width: 3.7rem;
   justify-content: center;
   font-size: .58rem;

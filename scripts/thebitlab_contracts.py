@@ -247,6 +247,9 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
     else:
         normalized_submission["final_selected"] = False
         normalized_grading["provisional"] = bool(normalized["submitted"])
+    if normalized_submission.get("report_authority") == "verified_delivery":
+        # Delivery review belongs to the result, independently of attempt selection.
+        normalized_grading["provisional"] = normalized_grading["teacher_grade"] is None
     normalized["submission"] = normalized_submission
     normalized["grading"] = normalized_grading
     normalized["ai_feedback"] = normalize_ai_feedback(ai_feedback)

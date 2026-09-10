@@ -397,6 +397,8 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         reportSelectionState,
         reportSelectionBadge,
         reportSelectionCompactBadge,
+        gradeReviewBadge,
+        renderOverview,
         aiFeedbackState,
         aiFeedbackDetails,
         aiFeedbackReviewDetails,
@@ -614,6 +616,61 @@ def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> 
         assert.match(compactInvalid, />ERR</);
         assert.match(compactInvalid, /tabindex="0"/);
         assert.match(compactInvalid, /aria-label="Finale non valido[.]/);
+        """
+    )
+
+
+def test_delivery_attempt_and_grade_review_are_separate_in_all_teacher_views() -> None:
+    run_dashboard_js(
+        """
+        for (const selection of ["final", "latest"]) {
+          // Include confirmation at zero and revocation after confirmation.
+          for (const teacherGrade of [null, 8, 0, null]) {
+            const provisional = teacherGrade === null;
+            const student = {
+              student: "student-one", submitted: true, status: "submitted_on_time",
+              submission: { report_authority: "verified_delivery", report_selection: selection,
+                final_selected: selection === "final" },
+              grading: { status: "graded_passed", score: 10, teacher_grade: teacherGrade, provisional },
+            };
+            const row = {
+              student: student.student, submitted: true, status: student.status,
+              activity_id: "demo", report_name: "demo.json", ...student.submission,
+              grading_status: "graded_passed", grading_provisional: provisional,
+              score: 10, teacher_grade: teacherGrade,
+            };
+            const attemptLabel = selection === "final" ? "Tentativo definitivo" : "Ultimo tentativo";
+            const gradeLabel = provisional ? "Voto da revisionare" : "Voto confermato";
+            for (const value of [student, row]) {
+              assert.equal(tested.reportSelectionState(value).label, attemptLabel);
+              const badge = tested.gradeReviewBadge(value);
+              assert.ok(badge.includes(gradeLabel));
+              assert.match(badge, provisional ? /badgeWarn/ : /badgeOk/);
+              assert.match(badge, /tabindex="0"/);
+            }
+            tested.state.report = { activity_id: "demo", students: [student] };
+            tested.els.studentsBody.children = [];
+            tested.renderStudents([student]);
+            const register = tested.els.studentsBody.children[0].innerHTML;
+            assert.ok(register.includes(attemptLabel));
+            assert.match(register, new RegExp(`<code>${teacherGrade ?? 10}</code>.*${gradeLabel}`));
+
+            tested.state.overviewRows = [row];
+            tested.els.overviewBody.children = [];
+            tested.els.overviewMatrixBody.children = [];
+            tested.renderOverview();
+            const table = tested.els.overviewBody.children[0].innerHTML;
+            const matrix = tested.els.overviewMatrixBody.children[0].innerHTML;
+            assert.ok(table.includes(attemptLabel));
+            assert.match(table, new RegExp(`<code>${teacherGrade ?? 10}</code>.*${gradeLabel}`));
+            assert.ok(matrix.includes(attemptLabel));
+            assert.ok(matrix.includes(gradeLabel));
+            assert.match(matrix, provisional ? />REV</ : />CONF</);
+          }
+        }
+        for (const authority of [undefined, "ungraded", "verified_remote"]) {
+          assert.equal(tested.gradeReviewBadge({ report_authority: authority, score: 10 }), "");
+        }
         """
     )
 

@@ -2823,6 +2823,7 @@ function renderOverviewMatrix(rows) {
                   ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
                 </button>
                 ${selection ? reportSelectionCompactBadge(row) : ""}
+                ${gradeReviewBadge(row, true)}
               ` : '<span class="matrixCell matrixCellEmpty">-</span>'}
             </div>
           </td>
@@ -2905,7 +2906,7 @@ function renderOverview() {
             }, { detailsKey: testDetailsKey })
           : ""}
       </td>
-      <td><code>${escapeHtml(grade)}</code></td>
+      <td><code>${escapeHtml(grade)}</code>${gradeReviewBadge(row)}</td>
       <td>
         <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
           Consegna
@@ -4002,6 +4003,21 @@ function badge(text, kind = "muted", title = "") {
   return `<span class="badge ${className}${title ? " hasTooltip" : ""}"${tooltipAttributes(label, title)}>${escapeHtml(label)}</span>`;
 }
 
+function gradeReviewBadge(value, compact = false) {
+  const submission = value?.submission || value || {};
+  if (submission.report_authority !== "verified_delivery") return "";
+  const grading = value?.grading || value || {};
+  const provisional = grading.provisional ?? value?.grading_provisional;
+  const confirmed = provisional === false && grading.teacher_grade != null;
+  const label = confirmed ? "Voto confermato" : "Voto da revisionare";
+  const tooltip = confirmed
+    ? "Il docente ha confermato il voto di questo tentativo."
+    : "Il punteggio automatico resta provvisorio fino alla revisione docente, anche per un tentativo definitivo.";
+  return `<span class="${compact ? "matrixGradeReviewState" : "gradeReviewState"}">${badge(
+    compact ? (confirmed ? "CONF" : "REV") : label,
+    confirmed ? "ok" : "warn", `${label}. ${tooltip}`)}</span>`;
+}
+
 function reportSelectionState(value) {
   const submission = value?.submission || value || {};
   const grading = value?.grading || value || {};
@@ -4015,6 +4031,16 @@ function reportSelectionState(value) {
       compactLabel: "ERR",
       kind: "bad",
       tooltip: "La selezione definitiva non e valida: il registro non usa un altro tentativo al suo posto.",
+    };
+  }
+  if (submission.report_authority === "verified_delivery" && ["final", "latest"].includes(selection)) {
+    return {
+      label: selection === "final" ? "Tentativo definitivo" : "Ultimo tentativo",
+      compactLabel: selection === "final" ? "DEF" : "ULT",
+      kind: "muted",
+      tooltip: selection === "final"
+        ? "Lo studente ha scelto questa consegna come definitiva. La revisione del voto e indicata separatamente."
+        : "Il registro usa l'ultima consegna ricevuta. La revisione del voto e indicata separatamente.",
     };
   }
   if (selection === "final") {
@@ -4761,7 +4787,7 @@ function renderStudents(students) {
         <small>Test: ${escapeHtml(grading.tests_passed ?? "-")}/${escapeHtml(grading.tests_total ?? "-")}</small>
         ${gradingDetails(grading, { detailsKey: testDetailsKey })}
       </td>
-      <td><code>${escapeHtml(grading.teacher_grade ?? grading.score ?? "-")}</code></td>
+      <td><code>${escapeHtml(grading.teacher_grade ?? grading.score ?? "-")}</code>${gradeReviewBadge(student)}</td>
       <td>
         <div data-ai-feedback-student="${escapeHtml(student.student_id || student.student)}">
           ${aiFeedbackDetails(ai)}

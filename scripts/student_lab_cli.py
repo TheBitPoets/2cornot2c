@@ -24,6 +24,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts import (
+    student_delivery_client,
     student_help_auth,
     student_help_service,
     student_lab_layout,
@@ -39,7 +40,8 @@ PrintFn = Callable[[str], None]
 DEFAULT_SERVER_URL = "http://127.0.0.1:8765"
 _USER_AGENT = "TheBitLab-TUI/1.0"
 HELP_REQUEST_TIMEOUT_SECONDS = 150
-MAX_STUDENT_API_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_STUDENT_API_RESPONSE_BYTES = 12 * 1024 * 1024
+MAX_STUDENT_API_WORKER_BYTES = 17 * 1024 * 1024
 TUI_RENDERERS = {"auto", "legacy", "utui"}
 
 
@@ -1056,6 +1058,11 @@ def select_final_attempt_from_server(
 ) -> dict[str, Any]:
     """Select one final attempt through the authenticated student API."""
 
+    if isinstance(assignment.get("delivery"), dict):
+        return student_delivery_client.request("delivery-final", server_url=server_url,
+            server_token=server_token, allow_insecure_http=allow_insecure_http,
+            payload={"assignment_id": assignment["assignment_id"], "attempt_id": attempt_id,
+                     "expected_revision": assignment["delivery"]["revision"]})
     credential = _MemoryBearer(server_token)
     server_token = ""
     assignment_id = clean_text(assignment.get("assignment_id"), "")
@@ -1219,8 +1226,8 @@ def _run_student_api_worker() -> int:
     raw = None
     outcome = ["error", None]
     try:
-        raw = sys.stdin.buffer.read(65537)
-        if len(raw) > 65536:
+        raw = sys.stdin.buffer.read(MAX_STUDENT_API_WORKER_BYTES + 1)
+        if len(raw) > MAX_STUDENT_API_WORKER_BYTES:
             raise ValueError("specification")
         specification = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_json_object)
         if type(specification) is not dict or set(specification) != {
@@ -1628,6 +1635,10 @@ def load_current_payload(
             now=now,
             allow_insecure_http=allow_insecure_http,
         )
+        if remote_payload.get("delivery_api") is True:
+            return student_delivery_client.enrich_payload(remote_payload, root=root,
+                server_url=server_url, server_token=credential.value,
+                allow_insecure_http=allow_insecure_http)
         try:
             local_payload = load_payload(root, student_id, now)
         except Exception:  # Local paths are an optional operational enhancement.
@@ -1789,6 +1800,9 @@ def run_tui(
                 selected_renderer = "legacy"
             if actual_renderer == "utui":
                 print_fn(render_utui_detail_commands())
+            if assignment.get("delivery"):
+                print_fn("Consegna: i = invia / riprova | n = nuovo invio | t = storico server e definitivo")
+                print_fn("Valutazione docente: Da valutare" if assignment.get("submitted") else "Nessuna consegna ricevuta")
             action = input_fn("\nDettaglio: ").strip().lower()
             if action in {"", "b", "back", "indietro"}:
                 break
@@ -1799,6 +1813,21 @@ def run_tui(
                 continue
             if actual_renderer == "utui" and action in {"k", "up", "su"}:
                 dashboard_offset = max(0, dashboard_offset - 5)
+                continue
+            if action in {"i", "n"} and assignment.get("delivery"):
+                if action == "n" and input_fn("Conservare il tentativo in attesa e inviare i sorgenti attuali? s/N: ").strip().lower() != "s":
+                    continue
+                try:
+                    receipt = student_delivery_client.send_assignment(assignment, root=root,
+                        server_url=server_url, server_token=memory_bearer.value,
+                        allow_insecure_http=allow_insecure_http, new_snapshot=action == "n")
+                    print_fn(f"Consegna ricevuta dal docente: {receipt['attempt_id']}. Da valutare.")
+                    payload = load_current_payload(root=root, student_id=student_id, now=now,
+                        server_url=server_url, server_token=memory_bearer.value,
+                        allow_insecure_http=allow_insecure_http)
+                except (ValueError, OSError) as error:
+                    print_fn(f"Invio o aggiornamento non completato:\n{error}")
+                input_fn("Premi invio per continuare...")
                 continue
             if action == "o":
                 workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
