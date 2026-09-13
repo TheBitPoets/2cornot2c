@@ -9,6 +9,7 @@ ARG GCC_VERSION
 ARG GDB_VERSION
 ARG GIT_VERSION
 ARG MAKE_VERSION
+ARG MICRO_VERSION
 ARG NODEJS_VERSION
 ARG PYTHON3_VERSION
 ARG SQLITE3_VERSION
@@ -50,6 +51,7 @@ RUN printf '%s\n' \
       "gdb=${GDB_VERSION}" \
       "git=${GIT_VERSION}" \
       "make=${MAKE_VERSION}" \
+      "micro=${MICRO_VERSION}" \
       "nodejs=${NODEJS_VERSION}" \
       "python3=${PYTHON3_VERSION}" \
       "sqlite3=${SQLITE3_VERSION}" \
@@ -70,6 +72,7 @@ RUN groupmod --new-name student ubuntu \
     && install -d -o student -g student -m 0755 /workspace
 
 ENV HOME=/home/student
+ENV EDITOR=micro VISUAL=micro
 WORKDIR /workspace
 USER student
 

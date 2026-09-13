@@ -1,6 +1,6 @@
 {
   "schema_version": "2cornot2c.student-dev-build.v1",
-  "version": "2026.07.1",
+  "version": "2026.09.1",
   "platforms": [
     "linux/amd64",
     "linux/arm64"
@@ -15,6 +15,7 @@
     "gdb": "15.1-1ubuntu1~24.04.1",
     "git": "1:2.43.0-1ubuntu7.3",
     "make": "4.3-4.1build2",
+    "micro": "2.0.13-1",
     "nodejs": "18.19.1+dfsg-6ubuntu5",
     "python3": "3.12.3-0ubuntu2.1",
     "sqlite3": "3.45.1-1ubuntu2.6",

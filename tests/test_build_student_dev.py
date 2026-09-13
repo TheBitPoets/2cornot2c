@@ -23,7 +23,15 @@ def test_manifest_is_ubuntu_2404_multiarch() -> None:
 
     assert manifest["platforms"] == ["linux/amd64", "linux/arm64"]
     assert manifest["base_image"].startswith("ubuntu:24.04@sha256:")
-    assert {"gcc", "gdb", "make", "git", "vim-tiny"} <= set(manifest["packages"])
+    assert {"gcc", "gdb", "make", "git", "micro", "vim-tiny"} <= set(manifest["packages"])
+
+
+def test_manifest_rejects_missing_default_editor(tmp_path: Path) -> None:
+    payload = manifest_payload()
+    del payload["packages"]["micro"]
+
+    with pytest.raises(build_student_dev.StudentDevBuildError, match="Pacchetti"):
+        build_student_dev.load_manifest(write_manifest(tmp_path, payload))
 
 
 def test_manifest_rejects_missing_architecture(tmp_path: Path) -> None:
@@ -54,6 +62,7 @@ def test_build_command_pins_snapshot_packages_and_platform() -> None:
     joined = "\n".join(command)
     assert "UBUNTU_SNAPSHOT=20260713T000000Z" in joined
     assert "GCC_VERSION=4:13.2.0-7ubuntu1" in joined
+    assert "MICRO_VERSION=2.0.13-1" in command
     assert manifest["base_image"] in joined
 
 
@@ -86,3 +95,4 @@ def test_publish_command_uses_versioned_and_latest_multiarch_tags() -> None:
     assert f"{manifest['image_repository']}:{manifest['version']}" in command
     assert f"{manifest['image_repository']}:latest" in command
     assert command[-2:] == ["--push", str(build_student_dev.ROOT)]
+    assert "MICRO_VERSION=2.0.13-1" in command

@@ -7,8 +7,11 @@ La TUI di TheBitLab integra di default l'editor **micro**:
 - supporto mouse;
 - keybinding intuitivi (`Ctrl+S` salva, `Ctrl+Q` esce, `Ctrl+G` aiuto).
 
-`micro` viene installato automaticamente nelle immagini del lab (Windows e Linux).
-Lo studente non deve configurare nulla per iniziare.
+Il bootstrap Windows installa `micro` sul sistema host. La build Docker
+`student-dev` 2026.09.1 include micro come `EDITOR` e `VISUAL`; il lock
+distribuito 2026.07.1 seleziona ancora l'immagine precedente con solo Vim.
+In quel contenitore usare `vim nomefile.c` finche non viene distribuito il
+nuovo digest qualificato. L'editor Windows e quello nel contenitore sono distinti.
 
 ## Variabili d'ambiente
 

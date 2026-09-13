@@ -295,8 +295,12 @@ la selezione viene inviata a `POST /api/student-lab/final-attempt`: il server ri
 consegna e tentativo sui propri dati. Senza token, la stessa operazione applicativa lavora sulla root locale.
 
 Il comando `v` cerca un editor terminale nell'ordine `micro`, `nvim`, `vim`, `hx`, `nano` (e `notepad` su Windows).
-`micro` e' l'editor minimale di default ed e' installato automaticamente nelle immagini del lab: e' un binario
-piccolo, ha syntax highlighting, supporto mouse e keybinding intuitivi (`Ctrl+S` salva, `Ctrl+Q` esce).
+`micro` e' l'editor minimale di default: e' piccolo, ha syntax highlighting,
+supporto mouse e keybinding intuitivi (`Ctrl+S` salva, `Ctrl+Q` esce).
+La build Docker `student-dev` 2026.09.1 lo include e imposta `EDITOR` e `VISUAL`
+a `micro`. Il lock distribuito 2026.07.1 punta ancora all'immagine con solo Vim:
+in quella shell usare `vim nomefile.c`. Installare micro su Windows non lo
+aggiunge al contenitore; serve una nuova immagine qualificata e un nuovo lock.
 L'editor viene eseguito nella cartella della consegna e apre il file sorgente indicato dall'activity.
 
 Il comando `o` apre la cartella del workspace. Senza configurazione usa il file manager di sistema

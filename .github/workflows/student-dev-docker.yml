@@ -10,6 +10,7 @@ on:
       - "docker/student-dev/**"
       - "scripts/build_student_dev.py"
       - "tests/test_build_student_dev.py"
+      - "tests/student_dev_editor_smoke.py"
       - ".github/workflows/student-dev-docker.yml"
   push:
     branches:
@@ -18,6 +19,7 @@ on:
       - "docker/student-dev/**"
       - "scripts/build_student_dev.py"
       - "tests/test_build_student_dev.py"
+      - "tests/student_dev_editor_smoke.py"
       - ".github/workflows/student-dev-docker.yml"
 
 jobs:
@@ -70,4 +72,24 @@ jobs:
               node --version
               sqlite3 --version
               vim --version
+              test "$EDITOR" = micro
+              test "$VISUAL" = micro
+              micro --version
             '
+
+      - name: Save and reopen with micro in isolated containers
+        run: |
+          workspace=$(mktemp -d)
+          chmod 0777 "$workspace"
+          for mode in --write ''; do
+            docker run --rm --init --read-only --network none \
+              --cap-drop ALL --security-opt no-new-privileges \
+              --memory 512m --cpus 1 --pids-limit 256 \
+              --platform "${{ matrix.platform }}" \
+              --mount "type=bind,source=$workspace,target=/workspace" \
+              --mount "type=bind,source=$PWD/tests/student_dev_editor_smoke.py,target=/editor-smoke.py,readonly" \
+              --tmpfs /tmp:rw,nosuid,size=64m \
+              --tmpfs /home/student:rw,nosuid,size=32m,uid=1000,gid=1000 \
+              "2cornot2c-student-dev:${{ matrix.tag }}" \
+              python3 /editor-smoke.py $mode
+          done
