@@ -1,7 +1,7 @@
 # Checkpoint — reinstallazione Windows E09
 
 - Data: 2026-09-15, Europe/Rome.
-- Stato: correzione implementata e verificata; commit e push autorizzati esplicitamente dall'utente nella stessa sessione.
+- Stato: correzione implementata, verificata e pubblicata nel commit 3f5d560ba49de67442624195b711d7f1c860e274; PR #777 aperta in bozza: https://github.com/TheBitPoets/2cornot2c/pull/777. Commit, push e apertura PR autorizzati esplicitamente.
 - Pubblicazione: branch `fix/windows-installer-e09-detection`, remoto `origin` (TheBitPoets/2cornot2c). Candidato identificabile con il commit contenente questo checkpoint; usare `git rev-parse HEAD` e confrontare `git ls-remote origin refs/heads/fix/windows-installer-e09-detection` per verificare la pubblicazione.
 - Base locale/remota verificata prima del commit: `fea22eb53087e9cf43c8b33c6f1ff754cdb27c1e`. Worktree: `C:/Users/acari/dev/2cornot2c`. Nessun merge autorizzato; correzione non ancora disponibile in main.
 
@@ -23,6 +23,6 @@
 
 ## Prossimo passo
 
-- Verificare branch, worktree e stato Git; confermare SHA locale/remoto. Preparare la PR e verificare CI/review nella prossima unita; non eseguire merge senza relativo incarico e gate del repository.
+- Verificare branch, worktree e stato Git; confermare SHA locale/remoto. Verificare CI e review della PR #777 nella prossima unita; non eseguire merge senza relativo incarico e gate del repository.
 - Raccogliere conferma del tentativo completo dell'utente. Sblocco temporaneo per installer su main: in PowerShell `$env:Path += ';C:\Program Files\Oracle\VirtualBox'`, poi rilanciare l'installer dalla stessa finestra.
 - File minimi: AGENTS.md, questo checkpoint, installer/diagnostics.py, tests/test_classroom_windows_detection.py, sezione Windows di installer/README.md.
