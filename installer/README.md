@@ -94,6 +94,14 @@ vecchia viene aggiornata con `winget`. Gli aggiornamenti di programmi già
 presenti sono registrati come `updated` e non diventano proprietà di
 2cornot2c: la successiva disinstallazione dell'ambiente li conserva.
 
+La diagnosi Windows cerca Git, Vagrant, VirtualBox e Docker anche nelle
+rispettive cartelle standard sotto `ProgramW6432` e `ProgramFiles` se il
+comando non è nel PATH. Questo evita di reinstallare programmi compatibili
+dopo la rimozione della VM o con un PATH non aggiornato. Le versioni minime
+vengono comunque verificate eseguendo il programma trovato. In particolare,
+VirtualBox già installato ma non rilevato poteva provocare E09 con il messaggio
+winget «Non sono disponibili versioni più recenti del pacchetto».
+
 Per la VM completa 8 GiB di RAM restano la raccomandazione, non un blocco.
 Un computer nominalmente da 8 GB può dichiarare a Windows meno di 8 GiB:
 l'installer mostra un avviso giallo con le conseguenze, ma permette di

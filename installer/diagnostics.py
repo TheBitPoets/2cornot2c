@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
+from pathlib import Path
 import re
+import shutil
 import subprocess
+import sys
 
 from installer.model import Check, InstallPlan
 
@@ -45,7 +49,7 @@ def run_check(check: Check) -> CheckResult:
     """Esegue un singolo controllo senza shell e ne limita l'output."""
 
     result = subprocess.run(
-        check.command,
+        _resolve_windows_command(check.command),
         check=False,
         capture_output=True,
         text=True,
@@ -77,6 +81,27 @@ def run_check(check: Check) -> CheckResult:
                 f"versione {rendered}; serve almeno {check.minimum_version}"
             )
     return CheckResult(check, ok, detail, present)
+
+
+def _resolve_windows_command(command: tuple[str, ...]) -> tuple[str, ...]:
+    """Find installed Windows tools even when this process has a stale PATH."""
+
+    if sys.platform != "win32" or not command or shutil.which(command[0]):
+        return command
+    relative_path = {
+        "git": ("Git", "cmd", "git.exe"),
+        "vagrant": ("Vagrant", "bin", "vagrant.exe"),
+        "VBoxManage.exe": ("Oracle", "VirtualBox", "VBoxManage.exe"),
+        "docker": ("Docker", "Docker", "resources", "bin", "docker.exe"),
+    }.get(command[0])
+    if relative_path is not None:
+        for variable in ("ProgramW6432", "ProgramFiles"):
+            root = os.environ.get(variable)
+            if root:
+                candidate = Path(root).joinpath(*relative_path)
+                if candidate.is_file():
+                    return (str(candidate), *command[1:])
+    return command
 
 
 def diagnose(plan: InstallPlan) -> tuple[CheckResult, ...]:

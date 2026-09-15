@@ -1,3 +1,5 @@
+> Unita corrente 2026-09-15: vedere [CHECKPOINT-installer-e09.md](CHECKPOINT-installer-e09.md), correzione locale del rilevamento VirtualBox su Windows. Il contenuto storico seguente resta conservato.
+
 # Checkpoint operativo — AUTH-CLOCK-R1-001
 
 - **Data/ora:** 2026-09-07T19:53:13+02:00
