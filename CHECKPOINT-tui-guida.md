@@ -15,3 +15,31 @@
 - Pubblicazione autorizzata: utente ha richiesto commit e push e confermato esplicitamente la continuazione nella stessa sessione. Branch dedicato previsto: docs/windows-tui-guide, da c5a7dc3c (gia incluso nel merge E09). Commit limitato a README.md e questo checkpoint; CHECKPOINT-installer-e09.md resta una modifica locale preesistente esclusa.
 - Verifica remoto: nome branch libero prima della pubblicazione. Proxy sandbox non raggiungibile; git ls-remote riuscito fuori sandbox con autorizzazione.
 - Prossimo passo: verificare pubblicazione confrontando git rev-parse HEAD e git ls-remote origin refs/heads/docs/windows-tui-guide. Nessuna PR o merge richiesti. File minimi: AGENTS.md, questo checkpoint, nuova sezione README.md. Non ripetere analisi TUI o test gia superati in assenza di modifiche.
+- Esito finale: commit e689f23c pubblicato su origin/docs/windows-tui-guide; SHA remoto riconfermato uguale a HEAD locale. Commit comprende soltanto README.md e questo checkpoint. git diff --cached --check PASS prima del commit; test non ripetuti, contenuto guida invariato. Nessuna PR/merge o processo temporaneo. Questa nota di esito resta locale non committata; anche CHECKPOINT-installer-e09.md resta modificato come prima. Nessuna attivita residua per commit/push; attendere nuovo incarico.
+- Review richiesta nella stessa sessione: autorizzazione esplicita utente. Ricerca GitHub non trova PR per docs/windows-tui-guide; review del candidato e689f23c1d9ac32148e5ca6d4f5b10f44aded70f rispetto a main 785a9e75b346950a60fb3afa3827a6b120c0a35d, merge-base c5a7dc3cf94226ccf5cbe7d520b794f8bf654865. Round in corso non indipendente, essendo questa la sessione di implementazione.
+- Esito review: intero diff dei due file esaminato; un finding P2 in README.md:600. Il nuovo h3 HTML non viene riconosciuto da HEADING_RE di scripts/course_board_server.py:124 e headings_from_source_snapshot; la guida non compare come paragrafo selezionabile e viene inglobata nel corpo Guest Additions. Anche update_course_frames usa heading Markdown.
+- Riproduzione read-only PASS tramite funzioni reali board.extract_headings e board.section_text_from_source: titolo TUI assente dal catalogo; testo TUI presente nell'estratto Guest Additions e troncamento al limite di contesto. Git diff --check sul candidato PASS; SHA candidato/base remoti riconfermati invariati a fine review. Controlli HTML precedenti non ripetuti, contenuto invariato; nessuna build o reinstallazione necessaria.
+- Review conclusa senza fix, commit, push, PR o commenti remoti (PR non trovata). Gate indipendenti 0/2; questa sessione non conta. Nessun processo temporaneo avviato. Checkpoint aggiornato solo localmente; modifica E09 preservata.
+- Prossimo passo corrente: correggere, se richiesto, l'indicizzazione del nuovo paragrafo mantenendo il corpo HTML richiesto dall'utente; soluzione minima titolo Markdown coerente con i titoli esistenti, oppure supporto HTML nei parser se anche il titolo deve restare HTML. Rieseguire estrazione catalogo e anteprima Guest Additions dopo il fix. File minimi README.md:600, scripts/course_board_server.py (heading/estrazione sezioni), scripts/update_course_frames.py. Nessuna PR attualmente individuata per il branch.
+
+
+## Correzione finding indicizzazione TUI
+
+- Data/ora: 2026-09-15T19:34:45+02:00 (Europe/Rome). Stato: completato e verificato localmente.
+- Incarico corrente: correggere il finding P2 sull'indicizzazione; nessun nuovo commit/push richiesto o eseguito.
+- Git verificato: branch docs/windows-tui-guide, worktree C:/Users/acari/dev/2cornot2c, HEAD e689f23c1d9ac32148e5ca6d4f5b10f44aded70f. Modifiche preesistenti ai due checkpoint preservate.
+- Fix canonico: README.md:600 usa ora un titolo Markdown di livello 3, coerente con i parser esistenti. Corpo HTML e collegamento nell'indice invariati; nessuna modifica ai parser o ai contratti.
+- Verifiche Python con funzioni reali: extract_headings indicizza una sola voce README.md#gestire-lambiente-con-la-tui-windows; section_text_from_source separa Guest Additions dalla TUI e non tronca Guest Additions; sei voci presenti nel corpo integrale; update_markdown inserisce la cornice TUI correttamente in memoria. Confronto con HEAD conferma che l'unica modifica README e il titolo. Tutto PASS.
+- Primo controllo troppo restrittivo: cercava la sesta voce nell'anteprima TUI, limitata per contratto a 6000 caratteri. Verifica corretta distingue corpo integrale e anteprima e conferma il troncamento previsto. Non aumentare il limite per questo finding.
+- Test applicativi completi, build e resa browser omessi: modifica di una sola riga documentale, verificata con i parser reali; corpo HTML invariato. git diff --check PASS. Nessun processo temporaneo avviato.
+- Stato finale atteso: README.md e i due checkpoint modificati, nessun altro file modificato. CHECKPOINT-installer-e09.md estraneo al fix.
+- Il finding e risolto nel worktree; pubblicazione della correzione ancora da richiedere/autorizzare. Nessuna PR o review remota verificata in questa unita; nessun round indipendente conteggiato.
+- Prossimo passo: su richiesta, pubblicare la correzione locale con commit/push limitati a README.md e CHECKPOINT-tui-guida.md, preservando CHECKPOINT-installer-e09.md. File minimi da leggere: AGENTS.md, questa sezione del checkpoint e diff README.md. Non ripetere analisi TUI o verifiche gia superate se i file restano invariati.
+
+## Pubblicazione correzione indicizzazione TUI
+
+- Data: 2026-09-15. Commit e push autorizzati esplicitamente dall'utente.
+- Branch/worktree verificati: docs/windows-tui-guide, C:/Users/acari/dev/2cornot2c; HEAD iniziale e689f23c1d9ac32148e5ca6d4f5b10f44aded70f, upstream origin/docs/windows-tui-guide.
+- Diff README confermato identico alla correzione verificata sopra: cambia soltanto il titolo da HTML a Markdown. Test dei parser non ripetuti per assenza di ulteriori modifiche; git diff --check PASS.
+- Pubblicazione limitata a README.md e CHECKPOINT-tui-guida.md. CHECKPOINT-installer-e09.md resta escluso e preservato localmente. Nessuna PR o merge richiesti, nessun processo temporaneo avviato.
+- Passo conclusivo: creare il commit, eseguire push e confrontare HEAD con refs/heads/docs/windows-tui-guide sul remoto; registrare localmente l'esito. Nessuna nuova decisione architetturale.

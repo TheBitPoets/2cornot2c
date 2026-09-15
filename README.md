@@ -597,7 +597,7 @@ vagrant status
 vagrant reload
 ```
 
-<h3 id="gestire-lambiente-con-la-tui-windows">Gestire l'ambiente con la TUI Windows</h3>
+### Gestire l'ambiente con la TUI Windows
 
 <div align="justify">
 <p align="justify">
