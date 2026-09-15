@@ -18,6 +18,7 @@ Punti di ingresso:
   * [Introduzione](#introduzione)
   * [Installare l'ambiente di sviluppo](#installare-lambiente-di-sviluppo)
     + [Guest Additions](#guest-additions)
+    + [Gestire l'ambiente con la TUI Windows](#gestire-lambiente-con-la-tui-windows)
   * [Laboratori](#laboratori)
   * [Il processo di compilazione](#il-processo-di-compilazione)
   * [Introduzione](#introduzione-1)
@@ -595,6 +596,172 @@ Il docente può ottenere una prima diagnosi con:
 vagrant status
 vagrant reload
 ```
+
+### Gestire l'ambiente con la TUI Windows
+
+<div align="justify">
+<p align="justify">
+La <strong>TUI</strong> è l'interfaccia testuale guidata con cui puoi gestire l'ambiente didattico. Su Windows la apri dal collegamento <strong>Ambiente 2cornot2c</strong> sul desktop o nel menu Start. Da qui puoi avviare l'ambiente, prepararlo, aggiornarlo oppure rimuoverlo. Di seguito trovi una spiegazione breve di ogni voce e la procedura dettagliata, con le conferme richieste e gli effetti sui tuoi file.
+</p>
+
+<h4>Panoramica rapida</h4>
+<table align="center">
+<thead>
+<tr><th>Voce</th><th>Spiegazione breve</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Avvia l'ambiente</strong></td><td>Apre l'ambiente già preparato: la macchina virtuale VirtualBox oppure il terminale Docker.</td></tr>
+<tr><td><strong>Installa, completa o ripara</strong></td><td>Controlla i requisiti e prepara i componenti necessari, completando un'installazione interrotta o riparando parti della preparazione.</td></tr>
+<tr><td><strong>Aggiorna l'ambiente</strong></td><td>Scarica gli aggiornamenti del progetto e prepara nuovamente il menu guidato; da lì puoi completare l'aggiornamento dell'ambiente scelto.</td></tr>
+<tr><td><strong>Disinstalla l'ambiente</strong></td><td>Rimuove l'installazione dopo il backup previsto. Se rileva lo stato di una macchina virtuale, si ferma per proteggerla.</td></tr>
+<tr><td><strong>Ripristina il PC - elimina anche la VM</strong></td><td>Rimuove l'installazione e distrugge anche la macchina virtuale 2cornot2c con il suo disco.</td></tr>
+<tr><td><strong>Esci</strong></td><td>Chiude il menu di gestione.</td></tr>
+</tbody>
+</table>
+
+<h4>Comandi comuni</h4>
+<ul>
+<li><strong>Freccia su / freccia giù</strong>, oppure <kbd>k</kbd> / <kbd>j</kbd>: seleziona una voce.</li>
+<li><kbd>Invio</kbd>: apre la voce selezionata; nella schermata di installazione esegue la diagnosi.</li>
+<li>Quando compare una conferma, <kbd>s</kbd> procede; <kbd>n</kbd> oppure <kbd>Esc</kbd> annulla.</li>
+<li>Nella schermata di installazione, <kbd>a</kbd> richiede l'installazione e <kbd>m</kbd> torna al menu principale.</li>
+<li>Fuori dalle conferme e dalle operazioni in corso, <kbd>q</kbd> oppure <kbd>Esc</kbd> chiude la TUI.</li>
+</ul>
+
+<h4>1. Avvia l'ambiente</h4>
+<p align="justify"><strong>In breve:</strong> serve per iniziare a lavorare dopo aver preparato l'ambiente.</p>
+<ol>
+<li>Apri <strong>Ambiente 2cornot2c</strong> dal desktop o dal menu Start.</li>
+<li>Seleziona <strong>Avvia l'ambiente</strong> e premi <kbd>Invio</kbd>.</li>
+<li>La TUI apre una console separata e si chiude.</li>
+<li>Il programma di avvio legge l'ultima scelta di ambiente completata: VirtualBox oppure Docker.</li>
+<li>Se la scelta non è salvata, prova a riconoscere un'installazione precedente.</li>
+<li>Se non trova un ambiente pronto, indica di usare <strong>Installa, completa o ripara</strong>.</li>
+</ol>
+<p align="justify"><strong>Se usi VirtualBox</strong>, la procedura svolge questi passaggi:</p>
+<ol>
+<li>Controlla la configurazione della <em>box</em>, cioè l'immagine di base della macchina virtuale.</li>
+<li>Cerca Vagrant e VirtualBox e verifica la configurazione Vagrant.</li>
+<li>Crea e avvia la VM al primo utilizzo, oppure avvia quella già esistente.</li>
+<li>Controlla dentro la VM il compilatore <code>gcc</code>, il debugger <code>gdb</code>, i servizi di integrazione VirtualBox, il servizio del desktop grafico e le cartelle condivise <code>/lab</code> e <code>/lab2</code>.</li>
+<li>Se il primo controllo fallisce, prova un riavvio automatico della VM e ripete la verifica.</li>
+<li>Se tutto riesce, mostra <strong>AMBIENTE PRONTO</strong>; la finestra grafica si apre automaticamente. Se il controllo continua a fallire, mostra un errore da comunicare al docente.</li>
+</ol>
+<p align="justify">Puoi quindi lavorare nella macchina virtuale. Il primo avvio può richiedere più tempo; per aprire una sessione terminale nella VM è disponibile anche il comando <code>vagrant ssh</code>, dalla cartella del progetto.</p>
+<p align="justify"><strong>Se usi Docker</strong>, la procedura svolge questi passaggi:</p>
+<ol>
+<li>Usa l'immagine didattica prevista dalla versione del progetto.</li>
+<li>Avvia un contenitore con un terminale Linux interattivo.</li>
+<li>Rende disponibile la cartella del progetto come <code>/workspace</code>.</li>
+<li>Applica, per impostazione predefinita, un limite di <strong>512 MB di memoria</strong> al contenitore.</li>
+</ol>
+<p align="justify">I file salvati in <code>/workspace</code> restano sul PC. Il contenitore viene rimosso quando termina la sessione; le cartelle temporanee interne non sono destinate a conservare gli esercizi.</p>
+
+<h4>2. Installa, completa o ripara</h4>
+<p align="justify"><strong>In breve:</strong> prepara l'ambiente scelto e permette di riprendere un'installazione incompleta.</p>
+<ol>
+<li>Seleziona <strong>Installa, completa o ripara</strong> e premi <kbd>Invio</kbd>.</li>
+<li>Scegli <strong>VM completa - VirtualBox</strong> oppure <strong>Docker leggero - 512 MB</strong>.</li>
+<li>Premi <kbd>Invio</kbd> per eseguire la diagnosi.</li>
+<li>Leggi i risultati: <strong>OK</strong> indica un controllo superato; <strong>MANCA</strong> indica un componente assente o un requisito non soddisfatto. Gli eventuali avvisi ed errori spiegano come procedere.</li>
+<li>Premi <kbd>a</kbd> per chiedere l'installazione.</li>
+<li>Controlla l'ambiente indicato e premi <kbd>s</kbd> per confermare, oppure <kbd>n</kbd> / <kbd>Esc</kbd> per annullare.</li>
+<li>La procedura ripete i controlli e applica il piano. Se manca una risorsa obbligatoria, si ferma prima di installare i componenti.</li>
+<li>Attendi il riepilogo finale e leggi gli eventuali errori.</li>
+<li>Quando la preparazione è completata, premi <kbd>m</kbd> e scegli <strong>Avvia l'ambiente</strong>.</li>
+</ol>
+<p align="justify"><strong>Per VirtualBox</strong>, vengono controllati risorse del PC, connessione, Windows Package Manager, presenza e versione minima di Git, Vagrant e VirtualBox, oltre alla disponibilità della box didattica prevista. La procedura installa i programmi mancanti o aggiorna quelli sotto la versione minima. Per la box preconfigurata attiva verifica il download e la <strong>reimporta anche se già presente</strong>, così da riparare una copia locale corrotta.</p>
+<p align="justify"><strong>Per Docker</strong>, vengono controllati risorse del PC, connessione, WSL 2, Docker Desktop, disponibilità del motore Docker e immagine didattica prevista. WSL 2 è il componente Windows necessario a questo percorso. Se occorre, la procedura prepara WSL, installa o aggiorna Docker Desktop, lo avvia e scarica l'immagine.</p>
+<p align="justify"><strong>Durante l'operazione:</strong></p>
+<ul>
+<li>La schermata mostra il passo corrente, i passi completati e il tempo trascorso. La barra rappresenta i passaggi completati, non una percentuale stimata del download.</li>
+<li>Eventuali richieste di Windows possono comparire in un'altra finestra: controlla con <kbd>Alt</kbd> + <kbd>Tab</kbd>.</li>
+<li>Se serve un riavvio per WSL, salva il lavoro e riavvia Windows. La procedura prevede la ripresa automatica al nuovo accesso, conservando la scelta dell'ambiente; non forza il riavvio.</li>
+<li>Se un passo fallisce, l'installazione si ferma mostrando l'errore. Al tentativo successivo ripete la diagnosi e salta i componenti già adeguati.</li>
+</ul>
+<p align="justify"><strong>Cosa significa “ripara”:</strong> la riparazione riguarda i componenti e la preparazione riconosciuti dall'installer. Non garantisce la correzione di qualsiasi problema dentro una VM già esistente e non ne ricrea automaticamente il disco.</p>
+<p align="justify"><strong>Per annullare mentre installa:</strong></p>
+<ol>
+<li>Premi <kbd>c</kbd>.</li>
+<li>Leggi la richiesta di annullamento e premi <kbd>s</kbd> per confermare, oppure <kbd>n</kbd> / <kbd>Esc</kbd> per continuare l'installazione.</li>
+<li>Il passo corrente termina in sicurezza.</li>
+<li>Parte la pulizia dei componenti attribuiti a 2cornot2c, con il salvataggio previsto degli esercizi.</li>
+</ol>
+<p align="justify"><strong>Attenzione:</strong> l'annullamento avvia una pulizia, non è una semplice pausa. Durante l'installazione i normali comandi di uscita vengono ignorati; attendi il termine delle operazioni senza chiudere la finestra.</p>
+
+<h4>3. Aggiorna l'ambiente</h4>
+<p align="justify"><strong>In breve:</strong> aggiorna i file del progetto e il menu guidato, quindi permette di aggiornare la preparazione dell'ambiente.</p>
+<ol>
+<li>Seleziona <strong>Aggiorna l'ambiente</strong> e premi <kbd>Invio</kbd>.</li>
+<li>Leggi il messaggio sulla conservazione degli esercizi e delle impostazioni e premi <kbd>s</kbd> per procedere.</li>
+<li>La TUI si chiude e apre la procedura in una console separata.</li>
+<li>La procedura scarica lo script di preparazione aggiornato e verifica e prepara i prerequisiti.</li>
+<li>Aggiorna il repository tramite Git, senza merge automatici.</li>
+<li>Aggiorna i collegamenti e gli script di gestione.</li>
+<li>Ricrea l'ambiente Python dedicato all'installer e installa le dipendenze del menu.</li>
+<li>Riapre la TUI.</li>
+<li>Per completare l'aggiornamento dei componenti, scegli <strong>Installa, completa o ripara</strong>, seleziona l'ambiente e premi <kbd>a</kbd>, poi <kbd>s</kbd>. Questo passaggio prepara anche l'immagine Docker prevista dalla versione aggiornata del progetto.</li>
+<li>Al termine scegli <strong>Avvia l'ambiente</strong>.</li>
+</ol>
+<p align="justify">Se lo script aggiornato non può essere scaricato, la procedura mostra l'errore e invita a controllare la connessione. Se Git non può aggiornare in sicurezza, la procedura si ferma senza forzare la sovrascrittura dei file in conflitto: conserva la cartella e comunica l'errore al docente.</p>
+<p align="justify"><strong>Distinzione importante:</strong> aggiornare il progetto o la box di base non equivale a ricreare una VM già esistente né ad aggiornare automaticamente tutti i programmi installati al suo interno.</p>
+
+<h4>4. Disinstalla l'ambiente</h4>
+<p align="justify"><strong>In breve:</strong> rimuove l'installazione usando i registri dei componenti installati da 2cornot2c, con protezioni per i dati.</p>
+<ol>
+<li>Seleziona <strong>Disinstalla l'ambiente</strong> e premi <kbd>Invio</kbd>.</li>
+<li>Leggi il messaggio sul backup e sui componenti da rimuovere, quindi premi <kbd>s</kbd> per confermare.</li>
+<li>Si apre una console separata e la TUI si chiude.</li>
+<li>La procedura verifica che la cartella da eliminare appartenga al progetto.</li>
+<li>Controlla la presenza delle directory di stato delle VM. <strong>Se rileva tale stato, si ferma con E28 prima della rimozione</strong>, anche se la macchina virtuale è spenta.</li>
+<li>Se può continuare, mostra il piano e crea il backup previsto quando ci sono dati da salvare.</li>
+<li>Tenta di rimuovere l'immagine Docker del progetto; se è in uso o non è rimovibile, segnala un avviso e continua.</li>
+<li>Disinstalla i programmi registrati come installati da 2cornot2c.</li>
+<li>Gestisce la rimozione di WSL solo quando risulta attribuito all'installazione, applicando le protezioni per eventuali distribuzioni personali.</li>
+<li>Rimuove la cartella del progetto, i registri e i collegamenti.</li>
+<li>Mostra l'esito e l'eventuale percorso del backup.</li>
+</ol>
+<p align="justify">Se il backup fallisce, la procedura si ferma prima della rimozione. Se la rimozione dei programmi non viene completata, conserva il registro per consentire un nuovo tentativo e mostra le istruzioni da seguire.</p>
+<p align="justify"><strong>Dove viene salvato il backup:</strong> nella cartella personale, con un nome simile a <code>C:\Users\&lt;utente&gt;\2cornot2c-backup-AAAAMMGG-HHMMSS</code>. Il percorso effettivo viene mostrato dalla procedura.</p>
+<p align="justify"><strong>Quale conferma serve:</strong> dal menu basta <kbd>s</kbd>. La parola <code>DISINSTALLA</code> viene richiesta quando si avvia direttamente lo script senza la conferma della TUI.</p>
+<p align="justify"><strong>Limiti del backup:</strong> il codice copia <code>lab</code> e <code>lab2</code>; quando Git è disponibile salva anche una patch delle modifiche rilevate e i file non tracciati non ignorati. Non è un backup integrale: non comprende il disco della VM e non garantisce tutti i file ignorati o tutte le modifiche già preparate per un commit. Prima di rimuovere l'ambiente, salva separatamente eventuali dati importanti fuori dalle cartelle degli esercizi.</p>
+
+<h4>5. Ripristina il PC - elimina anche la VM</h4>
+<p align="justify"><strong>In breve:</strong> esegue la rimozione completa dell'ambiente 2cornot2c, includendo la distruzione della sua VM.</p>
+<p align="justify"><strong>Il nome indica una pulizia dell'ambiente didattico:</strong> Windows non viene reinstallato e il PC non viene riportato alle impostazioni di fabbrica.</p>
+<ol>
+<li>Salva nelle cartelle condivise gli eventuali file importanti presenti soltanto dentro la VM.</li>
+<li>Seleziona <strong>Ripristina il PC - elimina anche la VM</strong> e premi <kbd>Invio</kbd>.</li>
+<li>Leggi l'avviso: il disco della VM verrà eliminato definitivamente.</li>
+<li>Premi <kbd>s</kbd> per confermare, oppure <kbd>n</kbd> / <kbd>Esc</kbd> per annullare.</li>
+<li>La TUI apre la procedura in una console separata e si chiude.</li>
+<li>La procedura verifica la cartella del progetto e crea il backup previsto degli esercizi e delle modifiche locali.</li>
+<li>Usa Vagrant per distruggere le VM associate alle directory di stato del progetto.</li>
+<li>Dopo la conferma della distruzione, elimina il relativo stato locale.</li>
+<li>Tenta di rimuovere dalla cache la box indicata dal progetto, se appartiene al namespace <code>2cornot2c/</code>; le box Bento e quelle esterne a questo namespace sono escluse da questa rimozione.</li>
+<li>Prosegue con la rimozione di immagine Docker, programmi attribuiti all'installer, eventuale WSL, progetto e collegamenti.</li>
+<li>Mostra il risultato e il percorso dell'eventuale backup.</li>
+</ol>
+<p align="justify"><strong>Effetti sui dati:</strong></p>
+<ul>
+<li>Il disco della VM 2cornot2c viene <strong>eliminato definitivamente</strong>.</li>
+<li>I file conservati soltanto dentro quel disco vengono persi.</li>
+<li>Le cartelle degli esercizi salvate dal backup restano nel percorso indicato, con i limiti descritti per la disinstallazione.</li>
+<li>Le altre VM sono escluse dalla distruzione prevista dalla procedura.</li>
+</ul>
+<p align="justify">I programmi condivisi, come VirtualBox, possono comunque essere disinstallati se risultano installati da 2cornot2c: questo può influire sull'uso di altre VM, anche se i loro dischi restano presenti.</p>
+<p align="justify">Se Vagrant non è disponibile o non riesce a confermare la distruzione, la procedura si ferma con <strong>E33</strong>. La rimozione non è una transazione: un errore successivo può lasciare alcune operazioni già completate. Leggi il messaggio e chiedi assistenza senza cancellare manualmente dischi o cartelle.</p>
+<p align="justify"><strong>Dal menu basta <kbd>s</kbd></strong>; lo script avviato direttamente richiede la frase distinta <code>DISINSTALLA TUTTO</code>.</p>
+
+<h4>6. Esci</h4>
+<p align="justify"><strong>In breve:</strong> chiude il menu di gestione.</p>
+<ol>
+<li>Seleziona <strong>Esci</strong>.</li>
+<li>Premi <kbd>Invio</kbd>.</li>
+</ol>
+<p align="justify">In alternativa, fuori da una conferma o da un'installazione in corso, premi <kbd>q</kbd> oppure <kbd>Esc</kbd>. Se è aperta una richiesta di conferma, <kbd>Esc</kbd> annulla prima quella richiesta.</p>
+<p align="justify"><strong>Effetto:</strong> termina la TUI. Non esegue un comando di spegnimento della VM, di arresto di Docker o di disinstallazione. Un ambiente già avviato va chiuso attraverso i suoi comandi.</p>
+</div>
 
 ## Laboratori
 
