@@ -1,19 +1,29 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from scripts import (
     student_lab_service,
+    thebitlab_builtin_runtimes,
     thebitlab_runtime_contracts,
     thebitlab_runtime_plugins,
     thebitlab_runtime_sandbox,
 )
 
-DEFAULT_REGISTRY = thebitlab_runtime_plugins.RuntimePluginRegistry()
+DEFAULT_REGISTRY = thebitlab_runtime_plugins.RuntimePluginRegistry(
+    entry_points_provider=thebitlab_builtin_runtimes.combined_entry_points
+)
+
+
+def _trace(stage: str) -> None:
+    if os.environ.get("CI", "").casefold() == "true":
+        print(f"thebitlab-student-runtime:{stage}", file=sys.stderr, flush=True)
 
 
 def clean_text(value: Any) -> str:
@@ -67,17 +77,23 @@ def _runtime_context(
     thebitlab_runtime_plugins.LoadedRuntimePlugin,
     thebitlab_runtime_plugins.RuntimeRequest,
 ]:
+    _trace("context-before-paths")
     activity_path = _activity_path(root, assignment)
     workspace_path = _workspace_path(root, assignment)
+    _trace("context-after-paths")
     activity = _load_activity(activity_path)
     extension = thebitlab_runtime_contracts.normalize_runtime_extension(activity)
     if extension is None:
         raise ValueError("Activity senza extensions.thebitlab.runtime")
     runtime_id = clean_text(extension.get("runtime_id"))
     try:
+        _trace(f"context-before-registry-get:{runtime_id}")
         loaded = registry.get(runtime_id)
+        _trace(f"context-after-registry-get:{runtime_id}")
         thebitlab_runtime_plugins.assert_runtime_supports_activity(activity, loaded.descriptor)
+        _trace(f"context-after-support-check:{runtime_id}")
         probe = thebitlab_runtime_plugins.probe_runtime(loaded)
+        _trace(f"context-after-probe:{runtime_id}")
     except thebitlab_runtime_plugins.RuntimePluginError as error:
         raise ValueError(str(error)) from error
     if not probe.available:
@@ -92,6 +108,7 @@ def _runtime_context(
         timeout_seconds=timeout_seconds,
         metadata={"source": "student_lab_runner"},
     )
+    _trace(f"context-after-request:{runtime_id}")
     return activity, loaded, request
 
 
@@ -144,15 +161,6 @@ def _student_runtime_backend(
     requested_backend: str,
     loaded: thebitlab_runtime_plugins.LoadedRuntimePlugin,
 ) -> str:
-    """Prefer the authoritative sandbox for student-facing sandbox-capable runtimes.
-
-    Historical student callers default to ``local``. Once an administrator-installed
-    runtime advertises ``sandbox-plan.v1``, treating that implicit local value as
-    process-only grading would silently downgrade the security boundary. Promote it
-    to Docker instead. Legacy v1 runtimes that do not offer the sandbox capability
-    keep their existing local behavior.
-    """
-
     if (
         requested_backend == "local"
         and thebitlab_runtime_plugins.RUNTIME_SANDBOX_CAPABILITY
@@ -193,10 +201,7 @@ def run_runtime_assignment(
             execution = thebitlab_runtime_plugins.run_runtime(loaded, request)
         elif effective_backend == "docker":
             plan = thebitlab_runtime_plugins.prepare_sandbox_runtime(loaded, request)
-            service = (
-                sandbox_service
-                or thebitlab_runtime_sandbox.DockerRuntimeSandboxExecutionService()
-            )
+            service = sandbox_service or thebitlab_runtime_sandbox.DockerRuntimeSandboxExecutionService()
             try:
                 sandbox_result = service.run(plan, request)
             except subprocess.TimeoutExpired as error:
@@ -212,10 +217,7 @@ def run_runtime_assignment(
                     assignment,
                     runtime_id=runtime_id,
                     source=source,
-                    error=(
-                        "Docker non trovato; il grading runtime autorevole "
-                        "non e disponibile."
-                    ),
+                    error="Docker non trovato; il grading runtime autorevole non e disponibile.",
                 )
             if sandbox_result.get("worker_schema") != plan.profile.worker_schema:
                 raise thebitlab_runtime_plugins.RuntimePluginIncompatibleError(
@@ -287,12 +289,16 @@ def launch_runtime_assignment(
     registry: thebitlab_runtime_plugins.RuntimePluginRegistry = DEFAULT_REGISTRY,
 ) -> thebitlab_runtime_plugins.RuntimeLaunchResult:
     try:
+        _trace("launch-before-context")
         _, loaded, request = _runtime_context(
             assignment,
             root=root,
             timeout_seconds=timeout_seconds,
             registry=registry,
         )
-        return thebitlab_runtime_plugins.launch_runtime(loaded, request)
+        _trace(f"launch-before-plugin:{loaded.descriptor.runtime_id}")
+        result = thebitlab_runtime_plugins.launch_runtime(loaded, request)
+        _trace(f"launch-after-plugin:{loaded.descriptor.runtime_id}:{result.status}")
+        return result
     except thebitlab_runtime_plugins.RuntimePluginError as error:
         raise ValueError(str(error)) from error

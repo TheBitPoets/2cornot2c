@@ -2,6 +2,7 @@ name: Grade student assignment
 
 permissions:
   contents: read
+  packages: read
 
 on:
   workflow_dispatch:
@@ -143,14 +144,33 @@ jobs:
           print(f"Toolchain bloccata: {reference}")
           PY
 
-      - name: Pull pinned runner image
+      - name: Authenticate to GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull and verify pinned runner image
+        env:
+          RUNNER_REFERENCE: ${{ steps.toolchain.outputs.reference }}
         run: |
-          docker pull "${{ steps.toolchain.outputs.reference }}"
-          pulled_id=$(docker image inspect --format '{{.Id}}' "${{ steps.toolchain.outputs.reference }}")
-          if [ "$pulled_id" != "${{ steps.toolchain.outputs.digest }}" ]; then
-            echo "Digest dell'immagine scaricata $pulled_id diverso dal lock ${{ steps.toolchain.outputs.digest }}"
-            exit 1
-          fi
+          docker pull "$RUNNER_REFERENCE"
+          RUNNER_REFERENCE="$RUNNER_REFERENCE" python - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          reference = os.environ["RUNNER_REFERENCE"]
+          raw = subprocess.run(
+              ["docker", "image", "inspect", "--format", "{{json .RepoDigests}}", reference],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout.strip()
+          repo_digests = json.loads(raw)
+          if reference not in repo_digests:
+              raise SystemExit(
+                  f"Il riferimento immutabile {reference} non compare nei RepoDigests: {repo_digests}"
+              )
+          print(f"Runner immutabile verificato: {reference}")
+          PY
 
       - name: Run deterministic grading
         run: |
