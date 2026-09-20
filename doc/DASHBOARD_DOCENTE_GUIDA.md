@@ -39,6 +39,8 @@ Screenshot previsto: `doc/images/dashboard-guides/docente-genera-registro.png`.
 
 #### Wizard Assegna activity
 
+Per caricare activity già presenti in un repository di corso, premi **Importa activity** a destra di **Scegli activity**, nello step **1 Activity**. Nel modal ridimensionabile scegli repository pubblico e revisione, seleziona le activity, controlla l'anteprima e conferma l'importazione nel catalogo. Il contenuto scorre in orizzontale e verticale quando lo spazio non basta; **Chiudi** o **Esc** riportano alla dashboard. Non vengono assegnate consegne automaticamente. Vedi [guida importazione](COURSE_ACTIVITY_IMPORT.md) per limiti, duplicati e materiali riservati.
+
 Il pannello usa un percorso guidato. Puoi saltare tra le linguette, ma il flusso consigliato e andare avanti in ordine.
 
 1. **Activity**

@@ -2669,3 +2669,54 @@ code {
     display: grid;
   }
 }
+/* Keep the import action beside the picker, including in narrow panels. */
+.activityPickerRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: .8rem;
+}
+
+.activityPickerRow > label { min-width: 0; }
+
+.courseImportDialog {
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(96vw, 64rem);
+  height: min(88dvh, 44rem);
+  min-width: min(92vw, 22rem);
+  min-height: min(70dvh, 16rem);
+  max-width: 98vw;
+  max-height: 94dvh;
+  margin: auto;
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 22px 70px rgba(17, 17, 17, .28);
+  color: var(--ink);
+  padding: 0;
+  resize: both;
+  overflow: hidden;
+}
+
+.courseImportDialog[open] { display: grid; }
+.courseImportDialog::backdrop { background: rgba(17, 17, 17, .42); }
+.courseImportDialog .overviewDialogHead { min-width: 0; }
+.courseImportDialog .overviewDialogHead h2 { min-width: 0; overflow-wrap: anywhere; }
+.courseImportDialog .dialogActions { flex-shrink: 0; }
+
+.courseImportBody {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.courseImportContent { min-width: 36rem; padding: 1.1rem; }
+.courseImportContent .generateGrid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); padding: 1rem 0; }
+.courseImportContent .generateActions { padding-right: 0; padding-left: 0; }
+#courseImportFields { border: 0; padding: 0; min-width: 0; }
+#courseImportChoices { display: grid; gap: .5rem; margin: 1rem 0; }
+#courseImportChoices label { display: flex; gap: .6rem; align-items: flex-start; white-space: nowrap; }
+#courseImportChoices input { width: auto; flex: 0 0 auto; }
+#courseImportSummary > div { margin: .75rem 0; padding: .75rem; border: 1px solid currentColor; border-radius: .5rem; }

@@ -158,12 +158,17 @@ class GitHubApiTransport:
         lock: threading.Lock,
     ) -> Any:
         parsed_path = parse.urlsplit(api_path)
+        recursive_tree = parsed_path.query == "recursive=1" and re.fullmatch(
+            r"/repos/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/git/trees/[0-9a-f]{40}",
+            parsed_path.path,
+        ) is not None
         if (
             not parsed_path.path.startswith("/")
             or parsed_path.scheme
             or parsed_path.netloc
             or parsed_path.fragment
-            or (parsed_path.query and re.fullmatch(r"ref=[0-9a-f]{40}(?:[0-9a-f]{24})?", parsed_path.query) is None)
+            or (parsed_path.query and not recursive_tree
+                and re.fullmatch(r"ref=[0-9a-f]{40}(?:[0-9a-f]{24})?", parsed_path.query) is None)
         ):
             raise RemoteMarkdownError("Path GitHub API non valido.")
         remaining = deadline - self._clock()

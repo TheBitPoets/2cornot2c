@@ -266,7 +266,6 @@ const els = {
   activityEditorBody: document.querySelector("#activityEditorBody"),
   activityWizardEditorMount: document.querySelector("#activityWizardEditorMount"),
   openActivityEditorBtn: document.querySelector("#openActivityEditorBtn"),
-  wizardOpenActivityEditorBtn: document.querySelector("#wizardOpenActivityEditorBtn"),
   activityPanelStatus: document.querySelector("#activityPanelStatus"),
   activityPanelSummary: document.querySelector("#activityPanelSummary"),
   activityAuthorStatus: document.querySelector("#activityAuthorStatus"),
@@ -1772,6 +1771,139 @@ async function loadActivities() {
   renderActivityAuthorMetadataSelects();
   renderCoverage();
 }
+
+// Import previews are immutable snapshots kept on the server for ten minutes.
+const courseImport = { catalog: null, preview: null, busy: false };
+const importEls = Object.fromEntries([
+  "Open", "Close", "Dialog",
+  "Fields", "Repository", "Ref", "Load", "Choices", "Preview", "Summary", "Publish", "Status",
+].map((name) => [name, document.querySelector(`#courseImport${name}`)]));
+
+importEls.Open.addEventListener("click", () => {
+  if (!importEls.Dialog.open) importEls.Dialog.showModal();
+});
+importEls.Close.addEventListener("click", () => importEls.Dialog.close());
+
+function invalidateCourseImport(clearCatalog = false) {
+  if (courseImport.preview) {
+    courseImportRequest("discard", { preview_token: courseImport.preview.preview_token }).catch(() => {});
+  }
+  courseImport.preview = null;
+  importEls.Publish.disabled = true;
+  importEls.Summary.textContent = "";
+  if (clearCatalog) {
+    courseImport.catalog = null;
+    importEls.Choices.textContent = "";
+    importEls.Preview.disabled = true;
+  }
+}
+
+async function courseImportRequest(action, payload) {
+  return api(`/api/activity-import/${action}`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+async function runCourseImport(work) {
+  if (courseImport.busy) return;
+  courseImport.busy = true;
+  importEls.Fields.disabled = true;
+  importEls.Status.textContent = "Operazione in corso…";
+  try {
+    await work();
+  } catch (error) {
+    importEls.Status.textContent = error.message;
+  } finally {
+    courseImport.busy = false;
+    importEls.Fields.disabled = false;
+  }
+}
+
+async function loadCourseImport() {
+  await runCourseImport(async () => {
+    invalidateCourseImport(true);
+    const result = await courseImportRequest("catalog", {
+      repository: importEls.Repository.value.trim(), ref: importEls.Ref.value.trim() || "main",
+    });
+    courseImport.catalog = result;
+    for (const path of result.activities) {
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = path;
+      checkbox.addEventListener("change", () => invalidateCourseImport());
+      const text = document.createElement("span");
+      text.textContent = path;
+      label.append(checkbox, text);
+      importEls.Choices.append(label);
+    }
+    importEls.Preview.disabled = !result.activities.length;
+    importEls.Status.textContent = result.activities.length
+      ? `${result.activities.length} file disponibili. Seleziona fino a ${result.max_selection} activity. Revisione ${result.commit.slice(0, 12)}.`
+      : "Nessuna activity trovata nella cartella activities del corso.";
+  });
+}
+
+async function previewCourseImport() {
+  await runCourseImport(async () => {
+    invalidateCourseImport();
+    const catalog = courseImport.catalog;
+    if (!catalog) throw new Error("Carica prima l'elenco del corso.");
+    const paths = Array.from(importEls.Choices.querySelectorAll("input:checked"), (item) => item.value);
+    if (!paths.length || paths.length > catalog.max_selection) {
+      throw new Error(`Seleziona da 1 a ${catalog.max_selection} activity.`);
+    }
+    const result = await courseImportRequest("preview", {
+      repository: catalog.repository, commit: catalog.commit, paths,
+    });
+    courseImport.preview = result;
+    for (const activity of result.activities) {
+      const card = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = activity.title;
+      const description = document.createElement("p");
+      description.textContent = `${activity.language} · ${activity.student_assets} file studente · ${activity.reserved_assets} file riservati al docente/grading.`;
+      card.append(title, description);
+      for (const warning of activity.warnings) {
+        const note = document.createElement("p");
+        note.textContent = warning;
+        card.append(note);
+      }
+      importEls.Summary.append(card);
+    }
+    importEls.Publish.disabled = false;
+    importEls.Status.textContent = `Anteprima pronta: ${result.activities.length} activity, ${Math.ceil(result.bytes / 1024)} KB. Conferma entro 10 minuti.`;
+  });
+}
+
+async function publishCourseImport() {
+  await runCourseImport(async () => {
+    const preview = courseImport.preview;
+    if (!preview) throw new Error("Ripeti l'anteprima prima di importare.");
+    const accepted = await DashboardDialogs.confirm({
+      title: "Importa activity", message: `Aggiungere ${preview.activities.length} activity al catalogo? Non verranno assegnate agli studenti.`,
+      confirmLabel: "Importa", cancelLabel: "Annulla",
+    });
+    if (!accepted) {
+      importEls.Status.textContent = "Importazione annullata. L'anteprima resta disponibile.";
+      return;
+    }
+    // Consume the preview locally too: a failed response may follow a successful write.
+    courseImport.preview = null;
+    invalidateCourseImport();
+    const result = await courseImportRequest("publish", { preview_token: preview.preview_token });
+    importEls.Status.textContent = `${result.imported.length} activity importate. Sceglile nel catalogo, poi controlla revisione e destinatari.`;
+    try {
+      await loadActivities();
+    } catch {
+      importEls.Status.textContent += " Ricarica la pagina per aggiornare l'elenco.";
+    }
+  });
+}
+
+importEls.Repository.addEventListener("input", () => invalidateCourseImport(true));
+importEls.Ref.addEventListener("input", () => invalidateCourseImport(true));
+importEls.Load.addEventListener("click", loadCourseImport);
+importEls.Preview.addEventListener("click", previewCourseImport);
+importEls.Publish.addEventListener("click", publishCourseImport);
 
 async function loadAssignments() {
   const now = dateTimeInputToIso(els.nowAt?.value);
@@ -5283,7 +5415,6 @@ els.assignmentAiFilesReview?.addEventListener("input", (event) => {
 });
 els.assignmentAiFilesCloseBtn?.addEventListener("click", closeAssignmentAiFilesDialog);
 els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));
-els.wizardOpenActivityEditorBtn?.addEventListener("click", openActivityReviewStep);
 els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);

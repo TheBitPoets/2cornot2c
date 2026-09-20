@@ -65,19 +65,19 @@
 
         <section class="assignmentWizardStep isActive" data-assignment-step="activity">
           <div class="generateGrid">
-            <label>
-              <span>Scegli activity</span>
-              <select id="activitySelect" aria-label="Scegli activity">
-                <option value="">Caricamento activity...</option>
-              </select>
-            </label>
+            <div class="activityPickerRow wideField">
+              <label>
+                <span>Scegli activity</span>
+                <select id="activitySelect" aria-label="Scegli activity">
+                  <option value="">Caricamento activity...</option>
+                </select>
+              </label>
+              <button id="courseImportOpen" type="button" aria-haspopup="dialog" aria-controls="courseImportDialog" title="Importa activity da un repository di corso GitHub.">Importa activity</button>
+            </div>
             <label class="wideField">
               <span>Activity JSON</span>
               <input id="activityPath" type="text" value="examples/assignment_tracking/demo_activity.json">
             </label>
-          </div>
-          <div class="generateActions">
-            <button id="wizardOpenActivityEditorBtn" type="button" title="Vai allo step Revisione activity per controllare e salvare la bozza.">Vai a revisione activity</button>
           </div>
         </section>
 
@@ -376,6 +376,32 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
     </section>
 
   </main>
+
+  <dialog id="courseImportDialog" class="courseImportDialog" aria-labelledby="courseImportTitle">
+    <div class="overviewDialogHead">
+      <h2 id="courseImportTitle">Importa activity da un corso GitHub</h2>
+      <div class="dialogActions">
+        <button id="courseImportClose" type="button" class="smallButton" title="Chiudi l'importazione e torna alla dashboard.">Chiudi</button>
+      </div>
+    </div>
+    <div class="courseImportBody" tabindex="0" role="region" aria-label="Contenuto importazione activity">
+      <div class="courseImportContent">
+        <p>Importa le activity e i file dichiarati da un repository pubblico. Dopo l'importazione scegli classe e destinatari: nessuna consegna viene assegnata automaticamente.</p>
+        <fieldset id="courseImportFields">
+          <div class="generateGrid">
+            <label><span>Repository del corso</span><input id="courseImportRepository" type="url" placeholder="https://github.com/TheBitPoets/tpsi-quinto-docente" autofocus></label>
+            <label><span>Branch, tag o revisione</span><input id="courseImportRef" type="text" value="main" maxlength="160"></label>
+          </div>
+          <div class="generateActions"><button id="courseImportLoad" type="button">Carica elenco</button></div>
+          <div id="courseImportChoices" aria-label="Activity del corso"></div>
+          <div class="generateActions"><button id="courseImportPreview" type="button" disabled>Anteprima selezionate</button></div>
+          <div id="courseImportSummary"></div>
+          <div class="generateActions"><button id="courseImportPublish" type="button" disabled>Importa nel catalogo</button></div>
+        </fieldset>
+        <p id="courseImportStatus" class="status" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="activityEditorDialog" class="activityEditorDialog" aria-labelledby="activityEditorTitle">
     <div class="activityEditorDialogHead">
