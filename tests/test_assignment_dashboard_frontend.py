@@ -499,6 +499,12 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         generateReport,
         loadSelectedReport,
         loadAssignments,
+        courseImport,
+        importEls,
+        loadCourseImport,
+        previewCourseImport,
+        publishCourseImport,
+        invalidateCourseImport,
         renderAssignmentSelect,
         clearSelectedAssignment,
         applyAssignmentToGenerateForm,
@@ -531,6 +537,72 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
             f"Node dashboard test failed with exit code {result.returncode}\n"
             f"STDOUT:\n{result.stdout}\n"
             f"STDERR:\n{result.stderr}"
+    )
+
+
+def test_course_import_flow_pins_preview_and_refreshes_catalog_without_assignment() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const ui = tested.importEls;
+          ui.Repository.value = "https://github.com/School/course";
+          ui.Ref.value = "main";
+          tested.fetchResponses["/api/activity-import/catalog"] = {json: {
+            repository: "School/course", commit: "a".repeat(40),
+            activities: ["activities/intro/activity.json"], max_selection: 10,
+          }};
+          await tested.loadCourseImport();
+          assert.equal(ui.Choices.children.length, 1);
+          assert.equal(ui.Preview.disabled, false);
+          ui.Choices.querySelectorAll = () => [{value: "activities/intro/activity.json"}];
+          tested.fetchResponses["/api/activity-import/preview"] = {json: {
+            preview_token: "token", bytes: 300, activities: [{
+              id: "intro", title: "<img onerror=evil()>", language: "html",
+              student_assets: 2, reserved_assets: 1, warnings: ["Valutazione manuale"],
+            }],
+          }};
+          await tested.previewCourseImport();
+          assert.equal(ui.Publish.disabled, false);
+          assert.equal(ui.Summary.children[0].children[0].textContent, "<img onerror=evil()>");
+          const previewCall = tested.fetchCalls.find(call => call.path === "/api/activity-import/preview");
+          assert.equal(JSON.parse(previewCall.options.body).commit, "a".repeat(40));
+          tested.DashboardDialogs.confirm = async () => true;
+          tested.fetchResponses["/api/activity-import/publish"] = {json: {imported: [{id: "intro"}]}};
+          await tested.publishCourseImport();
+          assert.equal(ui.Publish.disabled, true);
+          assert.equal(tested.courseImport.preview, null);
+          assert.ok(ui.Status.textContent.includes("1 activity importate"));
+          assert.equal(tested.fetchCalls.filter(call => call.path === "/api/activity-import/discard").length, 0);
+          assert.equal(tested.fetchCalls.filter(call => call.path === "/api/assignments/save").length, 0);
+          assert.equal(ui.Fields.disabled, false);
+        })().catch(error => { console.error(error); process.exitCode = 1; });
+        """
+    )
+
+
+def test_course_import_invalidation_cancellation_and_errors() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const ui = tested.importEls;
+          tested.courseImport.preview = {preview_token: "old", activities: [{id: "intro"}]};
+          ui.Publish.disabled = false;
+          tested.DashboardDialogs.confirm = async () => false;
+          await tested.publishCourseImport();
+          assert.equal(tested.courseImport.preview.preview_token, "old");
+          assert.equal(tested.fetchCalls.filter(call => call.path === "/api/activity-import/publish").length, 0);
+          tested.invalidateCourseImport(true);
+          assert.equal(ui.Publish.disabled, true);
+          assert.equal(ui.Preview.disabled, true);
+          assert.equal(tested.courseImport.catalog, null);
+          assert.equal(tested.fetchCalls.filter(call => call.path === "/api/activity-import/discard").length, 1);
+          tested.fetchResponses["/api/activity-import/catalog"] = {ok: false, status: 502, text: "GitHub non disponibile"};
+          await tested.loadCourseImport();
+          assert.ok(ui.Status.textContent.includes("GitHub non disponibile"));
+          assert.equal(ui.Fields.disabled, false);
+          assert.equal(ui.Publish.disabled, true);
+        })().catch(error => { console.error(error); process.exitCode = 1; });
+        """
     )
 
 
@@ -942,7 +1014,7 @@ def test_activity_editor_modal_is_shared_by_panel_and_wizard() -> None:
 
     assert 'id="activityEditorDialog"' in html
     assert 'id="openActivityEditorBtn"' in html
-    assert 'id="wizardOpenActivityEditorBtn"' in html
+    assert 'data-assignment-step-tab="review"' in html
     assert 'id="activityAuthorTitle"' in html.split('id="activityEditorDialog"', 1)[1]
 
 

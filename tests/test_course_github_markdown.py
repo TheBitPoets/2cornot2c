@@ -241,6 +241,50 @@ def test_rejects_declared_blob_over_per_file_limit_without_decoding() -> None:
         )
 
 
+def test_transport_allows_only_commit_pinned_recursive_tree_query() -> None:
+    import io
+
+    requested = []
+
+    class Response:
+        status = 200
+
+        def __init__(self):
+            self.body = io.BytesIO(b'{"tree": [], "truncated": false}')
+
+        def read(self, size):
+            return self.body.read(size)
+
+        def close(self):
+            pass
+
+    class Connection:
+        sock = None
+
+        def __init__(self, host, *, timeout):
+            assert host == "api.github.com"
+
+        def request(self, method, path, *, headers):
+            requested.append(path)
+
+        def getresponse(self):
+            return Response()
+
+        def close(self):
+            pass
+
+    transport = GitHubApiTransport(None, connection_factory=Connection)
+    path = "/repos/School/course/git/trees/" + "a" * 40
+    assert transport.get_json(path + "?recursive=1", timeout_seconds=2)["tree"] == []
+    for invalid in (
+        path + "?recursive=1&url=http://localhost", path + "?recursive=0",
+        "/repos/School/course/git/trees/main?recursive=1", "/other?recursive=1",
+    ):
+        with pytest.raises(RemoteMarkdownError, match="Path GitHub"):
+            transport.get_json(invalid, timeout_seconds=2)
+    assert requested == [path + "?recursive=1"]
+
+
 def test_transport_enforces_absolute_deadline_during_slow_response() -> None:
     now = [10.0]
 

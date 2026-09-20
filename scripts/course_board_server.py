@@ -60,6 +60,7 @@ from scripts import (
     assign_activity,
     codex_activity_adapter,
     course_activity_links,
+    course_activity_import,
     course_github_markdown,
     course_gitlab_markdown,
     course_source_catalog,
@@ -6594,6 +6595,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if self.reject_unsafe_teacher_post(parsed.path):
             return
+        if parsed.path.startswith("/api/activity-import/"):
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+            if not 0 < length <= 16384 or parsed.query:
+                self.write_error_json(400, "Richiesta import non valida o troppo grande.")
+                self.close_connection = True
+                return
         if self.dispatch_student_delivery(parsed):
             return
         if parsed.path == "/api/student-lab/final-attempt":
@@ -6724,6 +6734,22 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         payload = self.read_teacher_json()
         if payload is None:
+            return
+        if parsed.path in {
+            "/api/activity-import/catalog", "/api/activity-import/preview",
+            "/api/activity-import/publish", "/api/activity-import/discard",
+        }:
+            try:
+                result = course_activity_import.handle(ROOT, parsed.path.rsplit("/", 1)[1], payload)
+                self.write_sensitive_json(result)
+            except course_activity_import.ImportConflict as error:
+                self.write_error_json(409, str(error))
+            except course_github_markdown.RemoteMarkdownError:
+                self.write_error_json(502, "GitHub non disponibile: verifica repository pubblico e limiti API, poi riprova.")
+            except ValueError as error:
+                self.write_error_json(422, str(error))
+            except Exception:  # noqa: BLE001
+                self.write_error_json(500, "Importazione non completata. Controlla il catalogo prima di riprovare.")
             return
         if parsed.path == "/api/course-sources/preview":
             try:
@@ -7290,6 +7316,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             self.send_error(403)
             return
         lowered_parts = {part.lower() for part in relative_target.parts}
+        if tuple(part.lower() for part in relative_target.parts[:2]) == ("activities", "imported"):
+            # Imported source files may contain active HTML/JS and teacher solutions.
+            # Access goes through the authenticated content/delivery APIs, never static serving.
+            self.send_error(403)
+            return
         if lowered_parts & PRIVATE_STATIC_ROOTS or any(part.startswith(".") for part in relative_target.parts):
             self.send_error(403)
             return

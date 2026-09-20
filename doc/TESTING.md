@@ -59,6 +59,7 @@ I test attivi sono:
 | `tests/test_generate_course_plan.py` | Verifica la generazione del Markdown del percorso didattico a partire da fixture JSON minimali. |
 | `tests/test_validate_activity.py` | Verifica la validazione delle schede JSON di attivita TheBitLab. |
 | `tests/test_create_activity.py` | Verifica la creazione guidata/scriptata delle schede di attivita. |
+| `tests/test_course_activity_import.py` | Import GitHub con trasporto simulato: commit fissato, limiti, percorsi e separazione asset, anteprima, pubblicazione atomica, autenticazione HTTP e scaffold studente. |
 | `tests/test_grade_activity.py` | Verifica il grading deterministico, i casi non supportati, la generazione dei report e la costruzione del comando Docker della sandbox. |
 
 Per lanciare un solo file di test:

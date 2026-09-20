@@ -10,6 +10,7 @@ Usa questo file come punto di partenza per capire quale documento leggere in bas
 |---|---|---|
 | Cornice didattica | [`CORNICE_DIDATTICA.md`](CORNICE_DIDATTICA.md) | docenti, coordinatori, sviluppatori |
 | Guida operativa pilot | [`MVP_2026_2027.md`](MVP_2026_2027.md) | docenti e gestori dell'installazione |
+| Import activity da GitHub | [`COURSE_ACTIVITY_IMPORT.md`](COURSE_ACTIVITY_IMPORT.md) | docenti e gestori TheBitLab |
 | Pilot rehearsal e go/no-go | [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md) | docenti, gestori e decision owner |
 | Deployment pilot versionato | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) | gestori tecnici e reviewer |
 | Architettura | [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md) | sviluppatori e gestori tecnici |
