@@ -232,7 +232,8 @@ def _activity(source, path):
     with tempfile.TemporaryDirectory(prefix="thebitlab-import-check-") as temp:
         root = Path(temp)
         _write_files(root, files)
-        scaffold.student_asset_copy_plan(root / f"{identifier}.json", adapted)
+        asset_plan = scaffold.student_asset_copy_plan(root / f"{identifier}.json", adapted)
+        scaffold.validate_student_asset_targets(asset_plan, source_name)
     files[f"{identifier}.json"] = _bytes(adapted)
     if activity.get("source_refs") or activity.get("materiali"):
         warnings.append("Riferimenti alle lezioni conservati; materiali esterni non importati.")

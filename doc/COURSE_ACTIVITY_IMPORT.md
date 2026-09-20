@@ -25,6 +25,7 @@ L'importazione non iscrive utenti, non crea roster e non assegna consegne. Il ro
 - Ricerca sotto `activities/`: file `activity.json` nelle sottocartelle e JSON entro due livelli sotto `activities/`. Eventuali file JSON non activity sono rifiutati in anteprima.
 - ID già presente: nessuna sovrascrittura. Deseleziona quell'activity e ripeti l'anteprima. Anche la copia manuale usata nella prova della quinta conta come già presente.
 - Linguaggi o contratti non supportati, asset mancanti, link e percorsi non sicuri bloccano l'importazione. Non viene eseguito codice del repository per risolverli.
+- I target degli asset studente sono verificati in anteprima con gli stessi controlli dello scaffold: con `source_name=main.py`, `MAIN.py` e `main.py/helper.py` sono rifiutati; `main.py` è ammesso come starter del sorgente. Il controllo usa il nome sorgente dichiarato o quello predefinito del linguaggio.
 - Anteprima valida dieci minuti, persa al riavvio del server e utilizzabile una sola volta. Se cambi sorgente o selezione, ripeti l'anteprima.
 - GitHub applica limiti API anche ai repository pubblici. In caso di errore attendi o riduci il numero di activity selezionate; il server conserva una cache limitata dei file già verificati.
 - Limiti per richiesta: dieci activity, 256 file sorgente, 8 MiB per file, 32 MiB complessivi; due acquisizioni contemporanee e quattro anteprime per processo (64 MiB totali).

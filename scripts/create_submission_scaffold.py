@@ -530,6 +530,30 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
     return planned_assets
 
 
+def validate_student_asset_targets(asset_plan: list[tuple[Path, Path]], source_name: str) -> None:
+    """Check a student asset copy plan against the selected scaffold source."""
+    for _, target_rel in asset_plan:
+        for reserved_target in RESERVED_SCAFFOLD_TARGETS:
+            if portable_paths_overlap(target_rel, Path(reserved_target)):
+                raise ValueError(
+                    f"Target asset sovrapposto a un file riservato allo scaffold: {target_rel}."
+                )
+        if (
+            portable_path_key(target_rel) != portable_path_key(Path(source_name))
+            and portable_paths_overlap(target_rel, Path(source_name))
+        ):
+            raise ValueError(
+                f"Target asset sovrapposto al file sorgente dello scaffold: {target_rel}."
+            )
+        if (
+            portable_path_key(target_rel) == portable_path_key(Path(source_name))
+            and target_rel.as_posix() != Path(source_name).as_posix()
+        ):
+            raise ValueError(
+                f"Il target del sorgente deve usare il nome canonico {source_name}: {target_rel}."
+            )
+
+
 def file_sha256(path: Path) -> str:
     """Return the SHA-256 digest of one scaffold file."""
     digest = hashlib.sha256()
@@ -1056,26 +1080,7 @@ def create_scaffold(
     destination = scaffold_dir(target_dir, identifier)
     manifest_path = managed_assets_path(target_dir, identifier, state_dir)
     asset_plan = student_asset_copy_plan(activity_path, activity)
-    for _, target_rel in asset_plan:
-        for reserved_target in RESERVED_SCAFFOLD_TARGETS:
-            if portable_paths_overlap(target_rel, Path(reserved_target)):
-                raise ValueError(
-                    f"Target asset sovrapposto a un file riservato allo scaffold: {target_rel}."
-                )
-        if (
-            portable_path_key(target_rel) != portable_path_key(Path(source_name))
-            and portable_paths_overlap(target_rel, Path(source_name))
-        ):
-            raise ValueError(
-                f"Target asset sovrapposto al file sorgente dello scaffold: {target_rel}."
-            )
-        if (
-            portable_path_key(target_rel) == portable_path_key(Path(source_name))
-            and target_rel.as_posix() != Path(source_name).as_posix()
-        ):
-            raise ValueError(
-                f"Il target del sorgente deve usare il nome canonico {source_name}: {target_rel}."
-            )
+    validate_student_asset_targets(asset_plan, source_name)
     current_asset_targets = {target_rel for _, target_rel in asset_plan}
     current_asset_target_keys = {
         portable_path_key(target_rel)

@@ -147,6 +147,39 @@ def test_portable_target_collision_blocks_preview(tmp_path):
         prepare(tmp_path, FakeGitHub(remote.activity))
 
 
+@pytest.mark.parametrize("source_name", [None, "main.py", "solution.py"])
+@pytest.mark.parametrize("case_alias", [True, False], ids=["case-alias", "below-source"])
+def test_source_target_conflict_blocks_preview(tmp_path, source_name, case_alias):
+    activity = FakeGitHub().activity
+    activity.pop("source_name", None)
+    if source_name is not None:
+        activity["source_name"] = source_name
+    canonical_name = source_name or "main.py"
+    target = canonical_name.replace(".py", "").upper() + ".py" if case_alias else canonical_name + "/helper.py"
+    activity["assets"] = [{"type": "starter", "visibility": "student",
+                           "path": "starter/main.py", "target_path": target}]
+
+    with pytest.raises(ValueError, match="nome canonico|sovrapposto al file sorgente"):
+        prepare(tmp_path, FakeGitHub(activity))
+
+    assert not importer._PREVIEWS
+    assert not (tmp_path / "activities").exists()
+
+
+@pytest.mark.parametrize("source_name", ["main.py", "solution.py"])
+def test_canonical_source_target_can_be_imported_and_assigned(tmp_path, source_name):
+    activity = FakeGitHub().activity
+    activity["source_name"] = source_name
+    activity["assets"] = [{"type": "starter", "visibility": "student",
+                           "path": "starter/main.py", "target_path": source_name}]
+    preview = prepare(tmp_path, FakeGitHub(activity))
+    result = importer.publish(tmp_path, preview["preview_token"])
+    activity_path = tmp_path / result["imported"][0]["path"]
+    assigned = assign_activity.assign_activity_to_targets(
+        activity_path=activity_path, targets=[tmp_path / "student"])
+    assert (assigned[0].assignment_dir / source_name).read_bytes() == b"print('student')\n"
+
+
 def test_directory_asset_expands_with_root_target(tmp_path):
     remote = FakeGitHub()
     remote.activity["assets"] = [{"type": "starter", "path": "starter", "target_path": ".", "visibility": "student"}]
