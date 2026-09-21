@@ -926,6 +926,8 @@ class JsonAssignmentStorage:
     def list_activities(self) -> list[dict[str, Any]]:
         """List available activity JSON files for the assignment dashboard."""
 
+        from scripts import activity_revision_registry as revisions
+        snapshot = revisions.read(self.root)
         activities = []
         seen_paths = set()
         for directory in self.activity_dirs:
@@ -934,6 +936,8 @@ class JsonAssignmentStorage:
             for path in sorted(directory.rglob("*.json")):
                 relative_parts = path.relative_to(directory).parts
                 if "assets" in relative_parts[:-1]:
+                    continue
+                if not revisions.catalog_visible(self.root, path, snapshot):
                     continue
                 resolved = path.resolve()
                 if resolved in seen_paths:
@@ -959,6 +963,10 @@ class JsonAssignmentStorage:
                         "source_name": activity.get("source_name", ""),
                         "topics": activity.get("topics", []),
                         "path": self.relative_path(path),
+                        **({"origin": {key: value for key, value in
+                                      snapshot["history"][self.relative_path(path)].items()
+                                      if key in {"repository", "commit", "ref", "source_path", "fingerprint"}}}
+                           if self.relative_path(path) in snapshot["history"] else {}),
                     }
                 )
         return activities

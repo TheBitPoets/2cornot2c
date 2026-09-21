@@ -72,7 +72,7 @@
                   <option value="">Caricamento activity...</option>
                 </select>
               </label>
-              <button id="courseImportOpen" type="button" aria-haspopup="dialog" aria-controls="courseImportDialog" title="Importa activity da un repository di corso GitHub.">Importa activity</button>
+              <button id="courseImportOpen" type="button" aria-haspopup="dialog" aria-controls="courseImportDialog" title="Importa activity da un repository di corso GitHub.">Importa / aggiorna activity</button>
             </div>
             <label class="wideField">
               <span>Activity JSON</span>
@@ -379,7 +379,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
 
   <dialog id="courseImportDialog" class="courseImportDialog" aria-labelledby="courseImportTitle">
     <div class="overviewDialogHead">
-      <h2 id="courseImportTitle">Importa activity da un corso GitHub</h2>
+      <h2 id="courseImportTitle">Importa / aggiorna activity da un corso GitHub</h2>
       <div class="dialogActions">
         <button id="courseImportClose" type="button" class="smallButton" title="Chiudi l'importazione e torna alla dashboard.">Chiudi</button>
       </div>
@@ -392,11 +392,11 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
             <label><span>Repository del corso</span><input id="courseImportRepository" type="url" placeholder="https://github.com/TheBitPoets/tpsi-quinto-docente" autofocus></label>
             <label><span>Branch, tag o revisione</span><input id="courseImportRef" type="text" value="main" maxlength="160"></label>
           </div>
-          <div class="generateActions"><button id="courseImportLoad" type="button">Carica elenco</button></div>
+          <div class="generateActions"><button id="courseImportLoad" type="button">Controlla aggiornamenti</button></div>
           <div id="courseImportChoices" aria-label="Activity del corso"></div>
           <div class="generateActions"><button id="courseImportPreview" type="button" disabled>Anteprima selezionate</button></div>
           <div id="courseImportSummary"></div>
-          <div class="generateActions"><button id="courseImportPublish" type="button" disabled>Importa nel catalogo</button></div>
+          <div class="generateActions"><button id="courseImportPublish" type="button" disabled>Applica al catalogo</button></div>
         </fieldset>
         <p id="courseImportStatus" class="status" role="status" aria-live="polite"></p>
       </div>

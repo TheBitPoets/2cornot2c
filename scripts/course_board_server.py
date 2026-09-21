@@ -61,6 +61,7 @@ from scripts import (
     codex_activity_adapter,
     course_activity_links,
     course_activity_import,
+    activity_revision_registry,
     course_github_markdown,
     course_gitlab_markdown,
     course_source_catalog,
@@ -2865,10 +2866,25 @@ def validate_global_assignment_target_bindings(
     return new_bindings
 
 
+@contextmanager
+def activity_assignment_storage_locks(payload: dict):
+    """Lock server and import owner in a common order before assignment locks."""
+
+    activity_path = resolve_local_path(str(payload.get("activity_path", "")).strip(), "activity_path")
+    roots = {ROOT.resolve()}
+    owner = activity_revision_registry.imported_root(activity_path)
+    if owner is not None:
+        roots.add(owner)
+    with ExitStack() as locks:
+        for root in sorted(roots, key=lambda path: os.path.normcase(str(path))):
+            locks.enter_context(thebitlab_storage.course_storage_lock(root))
+        yield
+
+
 def save_assignment_record(payload: dict) -> dict:
     """Persist an explicit assignment record from the teacher dashboard."""
 
-    with thebitlab_storage.course_storage_lock(ROOT):
+    with activity_assignment_storage_locks(payload):
         return _save_assignment_record_locked(payload)
 
 
@@ -2877,6 +2893,9 @@ def _save_assignment_record_locked(payload: dict) -> dict:
 
     activity_path_value = str(payload.get("activity_path", "")).strip()
     activity_path = resolve_local_path(activity_path_value, "activity_path")
+    overwrite = bool(payload.get("overwrite", False))
+    if not overwrite:
+        activity_revision_registry.require_active(ROOT, activity_path)
     if not activity_path.is_file():
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
     activity = normalize_activity(assignment_storage().read_json(activity_path))
@@ -2897,7 +2916,6 @@ def _save_assignment_record_locked(payload: dict) -> dict:
         due_at=str(payload.get("due_at", "")).strip(),
         targets=targets,
     )
-    overwrite = bool(payload.get("overwrite", False))
     storage = assignment_record_storage()
     with assignment_operation_lock(ASSIGNMENT_TARGET_BINDINGS_OPERATION_ID):
         with assignment_operation_lock(assignment_record_operation_id(storage, assignment["id"])):
@@ -2907,6 +2925,12 @@ def _save_assignment_record_locked(payload: dict) -> dict:
                     existing = storage.read_assignment(assignment["id"])
                 except FileNotFoundError:
                     existing = None
+                # An overwrite without an existing record is still a new assignment.
+                # Existing records may retain their historical revision for metadata edits.
+                if existing is None:
+                    activity_revision_registry.require_active(ROOT, activity_path)
+                if existing is not None and existing["activity_path"] != assignment["activity_path"]:
+                    raise ValueError("La versione di una consegna esistente non e modificabile.")
                 if existing is not None and assignment_target_bindings(existing) != new_bindings:
                     raise ValueError(
                         "I destinatari o i repository di un'assegnazione esistente non sono modificabili: "
@@ -2925,6 +2949,7 @@ def preview_activity_assignment(payload: dict) -> dict:
     """Return a write-free assignment plan for the local GUI."""
 
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
+    activity_revision_registry.require_active(ROOT, activity_path)
     if not activity_path.is_file():
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
     targets = read_assignment_target_paths_from_text(str(payload.get("targets_text", "")))
@@ -2978,7 +3003,7 @@ def preview_activity_ai_codex_draft(payload: dict) -> dict:
 def distribute_activity_assignment(payload: dict) -> dict:
     """Create activity scaffolds in the selected local target repositories."""
 
-    with thebitlab_storage.course_storage_lock(ROOT):
+    with activity_assignment_storage_locks(payload):
         return _distribute_activity_assignment_locked(payload)
 
 
@@ -2986,6 +3011,7 @@ def _distribute_activity_assignment_locked(payload: dict) -> dict:
     """Distribute one stable activity snapshot while writes/deletion are excluded."""
 
     activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
+    activity_revision_registry.require_active(ROOT, activity_path)
     if not activity_path.is_file():
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
     if activity_path.parent == (ROOT / "activities" / "drafts").resolve(strict=False):

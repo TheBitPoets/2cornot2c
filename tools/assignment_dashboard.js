@@ -1780,6 +1780,14 @@ const importEls = Object.fromEntries([
 ].map((name) => [name, document.querySelector(`#courseImport${name}`)]));
 
 importEls.Open.addEventListener("click", () => {
+  const selected = state.activities.find(item => item.path === els.activityPath.value);
+  if (selected?.origin?.repository && !courseImport.catalog) {
+    importEls.Repository.value = `https://github.com/${selected.origin.repository}`;
+    importEls.Ref.value = selected.origin.ref || "";
+    importEls.Status.textContent = selected.origin.ref
+      ? `Provenienza: ${selected.origin.repository} · ${selected.origin.commit.slice(0, 12)}`
+      : "Importazione precedente: scegli esplicitamente branch, tag o commit.";
+  }
   if (!importEls.Dialog.open) importEls.Dialog.showModal();
 });
 importEls.Close.addEventListener("click", () => importEls.Dialog.close());
@@ -1821,7 +1829,7 @@ async function loadCourseImport() {
   await runCourseImport(async () => {
     invalidateCourseImport(true);
     const result = await courseImportRequest("catalog", {
-      repository: importEls.Repository.value.trim(), ref: importEls.Ref.value.trim() || "main",
+      repository: importEls.Repository.value.trim(), ref: importEls.Ref.value.trim(),
     });
     courseImport.catalog = result;
     for (const path of result.activities) {
@@ -1831,7 +1839,7 @@ async function loadCourseImport() {
       checkbox.value = path;
       checkbox.addEventListener("change", () => invalidateCourseImport());
       const text = document.createElement("span");
-      text.textContent = path;
+      text.textContent = `${path} — Da verificare`;
       label.append(checkbox, text);
       importEls.Choices.append(label);
     }
@@ -1852,7 +1860,7 @@ async function previewCourseImport() {
       throw new Error(`Seleziona da 1 a ${catalog.max_selection} activity.`);
     }
     const result = await courseImportRequest("preview", {
-      repository: catalog.repository, commit: catalog.commit, paths,
+      repository: catalog.repository, commit: catalog.commit, paths, ref: catalog.ref,
     });
     courseImport.preview = result;
     for (const activity of result.activities) {
@@ -1862,6 +1870,29 @@ async function previewCourseImport() {
       const description = document.createElement("p");
       description.textContent = `${activity.language} · ${activity.student_assets} file studente · ${activity.reserved_assets} file riservati al docente/grading.`;
       card.append(title, description);
+      const status = document.createElement("p");
+      status.textContent = ({new: "Nuova", update: "Aggiornamento disponibile", unchanged: "Invariata", conflict: "Conflitto"})[activity.status] || "";
+      card.append(status);
+      for (const change of activity.changes || []) {
+        const line = document.createElement("p");
+        line.textContent = `${({added: "Aggiunto", modified: "Modificato", removed: "Rimosso"})[change.change]}: ${change.path} (${({student: "studente", teacher: "riservato", descriptor: "descriptor"})[change.audience]})`;
+        if (change.visibility_changed) line.textContent += " — visibilità modificata";
+        card.append(line);
+      }
+      const details = [activity.conflict,
+        activity.descriptor_fields?.length ? `Campi modificati: ${activity.descriptor_fields.join(", ")}` : "",
+        activity.previous_source_path && activity.previous_source_path !== activity.source_path
+          ? `Spostata da ${activity.previous_source_path} a ${activity.source_path}` : ""];
+      for (const detail of details.filter(Boolean)) {
+        const line = document.createElement("p");
+        line.textContent = detail;
+        card.append(line);
+      }
+      for (const change of activity.descriptor_changes || []) {
+        const line = document.createElement("p");
+        line.textContent = `${change.field}: ${JSON.stringify(change.before)} → ${JSON.stringify(change.after)}`;
+        card.append(line);
+      }
       for (const warning of activity.warnings) {
         const note = document.createElement("p");
         note.textContent = warning;
@@ -1869,8 +1900,9 @@ async function previewCourseImport() {
       }
       importEls.Summary.append(card);
     }
-    importEls.Publish.disabled = false;
-    importEls.Status.textContent = `Anteprima pronta: ${result.activities.length} activity, ${Math.ceil(result.bytes / 1024)} KB. Conferma entro 10 minuti.`;
+    importEls.Publish.disabled = result.can_apply === false;
+    importEls.Status.textContent = `Anteprima pronta: ${result.activities.length} activity, ${Math.ceil(result.bytes / 1024)} KB. Conferma entro 10 minuti. Le consegne esistenti mantengono la loro versione.`;
+    if (result.missing?.length) importEls.Status.textContent += ` Assenti dal corso: ${result.missing.join(", ")}. Nessuna cancellazione locale.`;
   });
 }
 
@@ -1879,17 +1911,17 @@ async function publishCourseImport() {
     const preview = courseImport.preview;
     if (!preview) throw new Error("Ripeti l'anteprima prima di importare.");
     const accepted = await DashboardDialogs.confirm({
-      title: "Importa activity", message: `Aggiungere ${preview.activities.length} activity al catalogo? Non verranno assegnate agli studenti.`,
-      confirmLabel: "Importa", cancelLabel: "Annulla",
+      title: "Applica al catalogo", message: `Applicare ${preview.activities.length} activity al catalogo? Le consegne esistenti conservano la versione assegnata. Gli aggiornamenti valgono per le nuove assegnazioni.`,
+      confirmLabel: "Applica", cancelLabel: "Annulla",
     });
     if (!accepted) {
       importEls.Status.textContent = "Importazione annullata. L'anteprima resta disponibile.";
       return;
     }
-    // Consume the preview locally too: a failed response may follow a successful write.
+    // Keep the token on transport failure: publish recognizes a committed operation.
+    const result = await courseImportRequest("publish", { preview_token: preview.preview_token });
     courseImport.preview = null;
     invalidateCourseImport();
-    const result = await courseImportRequest("publish", { preview_token: preview.preview_token });
     importEls.Status.textContent = `${result.imported.length} activity importate. Sceglile nel catalogo, poi controlla revisione e destinatari.`;
     try {
       await loadActivities();

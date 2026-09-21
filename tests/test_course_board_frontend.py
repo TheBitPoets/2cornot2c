@@ -28,6 +28,7 @@ def run_course_board_js(assertions: str) -> None:
       focus() {{ this.focused = true; }}
       contains() {{ return false; }}
       querySelectorAll() {{ return []; }}
+      append(...items) {{ (this.children ||= []).push(...items); }}
       showModal() {{ this.open = true; }}
       close() {{
         this.open = false;
@@ -52,6 +53,7 @@ def run_course_board_js(assertions: str) -> None:
       assert,
       console,
       document: {{
+        createElement() {{ return new FakeElement(); }},
         querySelector: elementFor,
         querySelectorAll() {{ return []; }},
         addEventListener() {{}},
@@ -265,6 +267,27 @@ def test_activity_link_dialog_rejects_duplicate_activity_in_same_uda() -> None:
 
         assert.equal(uda.activity_links.length, 1);
         assert.match(els.activityLinkError.textContent, /già collegata/);
+        """
+    )
+
+
+def test_activity_link_keeps_old_revision_until_explicit_selection() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        const link = {activity_id: "a", activity_path: "activities/imported/old/a.json", title: "A", kind: "lab", role: "practice"};
+        const uda = {activity_links: [link]};
+        const year = {udas: [uda]};
+        state.design = {years: [year]};
+        state.activities = [{id: "a", path: "activities/imported/new/a.json", title: "A updated", kind: "lab"}];
+        openActivityLinkDialog(year, uda, link);
+        assert.equal(els.activityLinkSelect.value, link.activity_path);
+        assert.equal(els.activityLinkSelect.disabled, false);
+        assert.equal(uda.activity_links[0].activity_path, link.activity_path);
+        els.activityLinkSelect.value = state.activities[0].path;
+        saveActivityLink({preventDefault() {}});
+        assert.equal(uda.activity_links[0].activity_path, state.activities[0].path);
+        assert.equal(uda.activity_links[0].title, "A updated");
         """
     )
 
