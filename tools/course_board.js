@@ -2093,6 +2093,7 @@ function renderUdaActivities(year, uda) {
         <strong>${escapeHtml(link.title)}</strong>
         <span>${escapeHtml(link.role === "verification" ? "Verifica" : "Esercitazione")} · ${escapeHtml(link.kind || "activity")}</span>
         <code>${escapeHtml(link.activity_path)}</code>
+        ${state.activities.some(activity => activity.id === link.activity_id && activity.path !== link.activity_path) ? '<span>Revisione precedente conservata. Usa Modifica per scegliere quella attiva.</span>' : ''}
         <span>${escapeHtml(dates)}</span>
       </div>
       <div class="activityLinkActions">
@@ -2135,11 +2136,11 @@ function openActivityLinkDialog(year, uda, link = null) {
   for (const activity of choices) {
     const option = document.createElement("option");
     option.value = activity.path;
-    option.textContent = `${activity.title || activity.id} (${activity.id})`;
+    option.textContent = `${activity.title || activity.id} (${activity.id})${link && activity.path === link.activity_path && !state.activities.some(item => item.path === activity.path) ? " — revisione precedente" : ""}`;
     els.activityLinkSelect.append(option);
   }
   els.activityLinkSelect.value = link?.activity_path || state.activities[0]?.path || "";
-  els.activityLinkSelect.disabled = Boolean(link);
+  els.activityLinkSelect.disabled = false;
   els.activityLinkRole.value = link?.role || "practice";
   els.activityLinkScheduledOn.value = link?.scheduled_on || "";
   els.activityLinkDueOn.value = link?.due_on || "";

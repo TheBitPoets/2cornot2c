@@ -606,6 +606,41 @@ def test_course_import_invalidation_cancellation_and_errors() -> None:
     )
 
 
+def test_course_update_conflicts_changes_and_lost_response_retry() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const ui = tested.importEls;
+          tested.courseImport.catalog = {repository: "School/course", commit: "a".repeat(40), ref: "release", max_selection: 10};
+          ui.Choices.querySelectorAll = () => [{value: "activities/a.json"}];
+          const activity = {id: "a", title: "A", status: "conflict", conflict: "File locale modificato", warnings: [], changes: []};
+          tested.fetchResponses["/api/activity-import/preview"] = {json: {preview_token: "p", activities: [activity], can_apply: false}};
+          await tested.previewCourseImport();
+          assert.equal(ui.Publish.disabled, true);
+          assert.ok(ui.Summary.children[0].children.some(item => item.textContent === "Conflitto"));
+          assert.ok(ui.Summary.children[0].children.some(item => item.textContent === activity.conflict));
+          activity.status = "update";
+          activity.conflict = "";
+          activity.changes = [{path: "private/test.py", change: "removed", audience: "teacher"}];
+          tested.fetchResponses["/api/activity-import/preview"].json.can_apply = true;
+          await tested.previewCourseImport();
+          assert.ok(ui.Summary.children.at(-1).children.some(item => item.textContent.includes("Rimosso: private/test.py (riservato)")));
+          tested.DashboardDialogs.confirm = async options => {
+            assert.ok(options.message.includes("conservano la versione assegnata"));
+            return true;
+          };
+          tested.fetchResponses["/api/activity-import/publish"] = {ok: false, status: 502, text: "Risposta persa"};
+          await tested.publishCourseImport();
+          assert.equal(tested.courseImport.preview.preview_token, "p");
+          assert.equal(ui.Publish.disabled, false);
+          tested.fetchResponses["/api/activity-import/publish"] = {json: {already_applied: true, imported: [{id: "a"}]}};
+          await tested.publishCourseImport();
+          assert.equal(tested.courseImport.preview, null);
+        })().catch(error => { console.error(error); process.exitCode = 1; });
+        """
+    )
+
+
 def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> None:
     run_dashboard_js(
         """

@@ -198,8 +198,7 @@ def test_duplicate_existing_activity_blocks_preview_and_publish(tmp_path):
     importer.publish(tmp_path, first["preview_token"])
     with pytest.raises(importer.ImportConflict):
         importer.publish(tmp_path, second["preview_token"])
-    with pytest.raises(importer.ImportConflict):
-        prepare(tmp_path)
+    assert prepare(tmp_path)["activities"][0]["status"] == "unchanged"
 
 
 def test_concurrent_imports_publish_only_one_copy(tmp_path):
@@ -224,8 +223,7 @@ def test_preview_is_root_bound_one_use_and_expires(tmp_path):
         importer.publish(tmp_path, token)
     value = prepare(tmp_path)
     importer.publish(tmp_path, value["preview_token"])
-    with pytest.raises(importer.ImportConflict):
-        importer.publish(tmp_path, value["preview_token"])
+    assert importer.publish(tmp_path, value["preview_token"])["already_applied"]
 
 
 def test_preview_quota_and_batch_limit(tmp_path, monkeypatch):
@@ -324,16 +322,21 @@ def test_truncated_tree_and_mismatched_commit_rejected():
         importer.catalog("School/course", "c" * 40, transport=FakeGitHub())
 
 
-def test_import_directory_symlink_rejected(tmp_path):
+@pytest.mark.parametrize("stage", ["preview", "publish"])
+def test_import_directory_symlink_rejected(tmp_path, stage):
+    value = prepare(tmp_path) if stage == "publish" else None
     other = tmp_path / "outside"
     other.mkdir()
-    (tmp_path / "activities").mkdir()
+    (tmp_path / "activities").mkdir(exist_ok=True)
     link = tmp_path / "activities" / "imported"
     try:
         link.symlink_to(other, target_is_directory=True)
     except OSError:
         pytest.skip("Windows host does not permit creating symlinks")
-    value = prepare(tmp_path)
-    with pytest.raises(ValueError, match="sicura"):
-        importer.publish(tmp_path, value["preview_token"])
+    with pytest.raises(ValueError, match="sicur[ao]"):
+        if stage == "preview":
+            prepare(tmp_path)
+        else:
+            importer.publish(tmp_path, value["preview_token"])
+    assert link.is_symlink()
     assert not list(other.iterdir())

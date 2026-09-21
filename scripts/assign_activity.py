@@ -144,6 +144,11 @@ def build_assignment_plan(
 ) -> AssignmentPlan:
     """Validate an assignment request and return a write-free execution preview."""
 
+    from scripts import activity_revision_registry as revisions
+    root = revisions.imported_root(activity_path)
+    if root is not None:
+        activity_path = activity_path.resolve()
+        revisions.require_active(root, activity_path)
     if not targets:
         raise ValueError("Indica almeno un repository studente.")
     normalized_targets = normalize_targets(targets)
@@ -199,6 +204,20 @@ def assign_activity_to_targets(
     overwrite_source: bool = False,
 ) -> list[AssignmentResult]:
     """Create the activity scaffold in each target student repository."""
+    from scripts import activity_revision_registry as revisions, thebitlab_storage
+    from contextlib import nullcontext
+    root = revisions.imported_root(activity_path)
+    if root is not None:
+        activity_path = activity_path.resolve()
+    with thebitlab_storage.course_storage_lock(root) if root is not None else nullcontext():
+        return _assign_activity_to_targets_locked(
+            activity_path=activity_path, targets=targets, source_name=source_name,
+            language=language, thebitlab_ref=thebitlab_ref, overwrite=overwrite,
+            overwrite_source=overwrite_source)
+
+
+def _assign_activity_to_targets_locked(*, activity_path, targets, source_name, language,
+                                      thebitlab_ref, overwrite, overwrite_source):
     plan = build_assignment_plan(
         activity_path=activity_path,
         targets=targets,

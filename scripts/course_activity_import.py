@@ -6,7 +6,6 @@ executed. Only declared assets are acquired; source references stay metadata.
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -20,6 +19,7 @@ from urllib.parse import quote, urlsplit
 from scripts import course_github_markdown as github
 from scripts import create_submission_scaffold as scaffold
 from scripts import thebitlab_storage as storage
+from scripts import activity_revision_registry as revisions
 
 MAX_FILE_BYTES = 8 * 1024 * 1024
 MAX_BATCH_BYTES = 32 * 1024 * 1024
@@ -166,7 +166,7 @@ class CourseSource:
 
 def catalog(repository, ref="main", *, transport=None):
     source = CourseSource(repository, ref, transport)
-    return {"repository": source.repository, "commit": source.commit,
+    return {"repository": source.repository, "commit": source.commit, "ref": ref,
             "activities": source.candidates(), "max_selection": MAX_SELECTION}
 
 
@@ -258,15 +258,48 @@ def _write_files(root, files):
             os.fsync(stream.fileno())
 
 
-def _check_ids(root, summaries):
+def _local_catalog(root):
     catalog_storage = storage.JsonAssignmentStorage(
         root, root / "teacher-reports", [root / "activities", root / "examples" / "assignment_tracking"])
-    existing = {item["id"] for item in catalog_storage.list_activities()}
-    seen = set()
-    for item in summaries:
-        if item["id"] in existing or item["id"] in seen:
-            raise ImportConflict(f"Activity gia presente o duplicata: {item['id']}. Nessun file sovrascritto.")
-        seen.add(item["id"])
+    return catalog_storage.list_activities()
+
+
+def _comparison(root, repository, files, summary, snapshot, local):
+    identifier = summary["id"]
+    previous_path = snapshot["active"].get(identifier)
+    previous = snapshot["history"].get(previous_path)
+    collisions = [item for item in local if item["id"] == identifier]
+    if collisions and (len(collisions) != 1 or previous is None
+                       or collisions[0]["path"] != previous_path):
+        raise ImportConflict("ID gia presente in un'activity locale o ambiguo.")
+    if previous and previous["repository"] != repository.casefold():
+        raise ImportConflict("ID gia presente da un repository diverso.")
+    old = revisions.verify(root, previous) if previous else {}
+    hashes = {name: revisions.digest(data) for name, data in files.items()}
+    before = previous["sha256"] if previous else {}
+    after = _json(files[f"{identifier}.json"])
+    old_assets = {a["path"]: a for a in old.get("assets", [])}
+    new_assets = {a["path"]: a for a in after.get("assets", [])}
+    changes = []
+    for name in sorted(before.keys() | hashes.keys()):
+        if before.get(name) == hashes.get(name) and old_assets.get(name) == new_assets.get(name):
+            continue
+        asset = new_assets.get(name, old_assets.get(name))
+        changes.append({"path": name, "change": "added" if name not in before else
+                        "removed" if name not in hashes else "modified",
+                        "visibility_changed": (name in old_assets and name in new_assets
+                                               and old_assets[name].get("visibility") != new_assets[name].get("visibility")),
+                        "audience": "descriptor" if asset is None else
+                        "student" if asset in scaffold.student_assets(after if name in new_assets else old)
+                        else "teacher"})
+    fields = sorted(key for key in old.keys() | after.keys() if old.get(key) != after.get(key))
+    return {"status": "new" if previous is None else
+            "unchanged" if before == hashes else "update",
+            "expected_path": previous_path, "fingerprint": revisions.fingerprint(hashes),
+            "changes": changes, "descriptor_fields": fields,
+            "descriptor_changes": [{"field": key, "before": old.get(key), "after": after.get(key)}
+                                   for key in fields if key != "assets"],
+            "previous_source_path": previous.get("source_path") if previous else None}
 
 
 def _prune():
@@ -275,7 +308,7 @@ def _prune():
             del _PREVIEWS[token]
 
 
-def preview(root: Path, repository, commit, paths, *, transport=None):
+def preview(root: Path, repository, commit, paths, *, ref=None, transport=None):
     if not isinstance(commit, str) or not SHA.fullmatch(commit):
         raise ValueError("Ricarica il catalogo per fissare la revisione del corso.")
     if (not isinstance(paths, list) or not 1 <= len(paths) <= MAX_SELECTION
@@ -283,27 +316,58 @@ def preview(root: Path, repository, commit, paths, *, transport=None):
         raise ValueError(f"Seleziona da 1 a {MAX_SELECTION} activity diverse.")
     source = CourseSource(repository, commit, transport)
     candidates = set(source.candidates())
+    if ref is not None and (not isinstance(ref, str) or not re.fullmatch(r"[A-Za-z0-9_./-]{1,160}", ref)):
+        raise ValueError("Ref non valido.")
+    # Verify uniqueness across the complete candidate set, within acquisition limits.
+    # A partial search must never authorize an ambiguous identity or claim removal.
+    identities = {}
+    complete_identities = True
+    for candidate in sorted(candidates):
+        content = source.file(candidate)
+        try:
+            identifier = scaffold.activity_id(_json(content))
+        except ValueError:
+            if candidate in paths:
+                raise
+            complete_identities = False
+            continue
+        identities.setdefault(identifier, []).append(candidate)
+    with storage.course_storage_lock(root):
+        snapshot = revisions.read(root)
+        local = _local_catalog(root)
     files, summaries = {}, []
     for path in sorted(paths):
         if path not in candidates:
             raise ValueError("Activity assente dal catalogo della revisione scelta.")
         added, summary = _activity(source, path)
+        try:
+            if len(identities[summary["id"]]) != 1:
+                raise ImportConflict("ID duplicato nel corso: abbinamento ambiguo.")
+            summary.update(_comparison(root, source.repository, added, summary, snapshot, local))
+        except ValueError as error:
+            summary.update(status="conflict", conflict=str(error))
         summaries.append(summary)
-        _check_ids(root, summaries)
         files.update(added)
     total = sum(map(len, files.values()))
     if total > MAX_BATCH_BYTES:
         raise ValueError("Import troppo grande.")
     token = secrets.token_urlsafe(32)
+    retained_bytes = total + len(_bytes(summaries))
     with _LOCK:
         _prune()
-        if len(_PREVIEWS) >= MAX_PREVIEWS or sum(p["bytes"] for p in _PREVIEWS.values()) + total > MAX_PREVIEW_BYTES:
+        if len(_PREVIEWS) >= MAX_PREVIEWS or sum(p["bytes"] for p in _PREVIEWS.values()) + retained_bytes > MAX_PREVIEW_BYTES:
             raise ValueError("Troppe anteprime aperte. Importa o attendi 10 minuti.")
         _PREVIEWS[token] = {"root": root.resolve(), "repository": source.repository,
+                            "ref": ref, "snapshot": revisions.digest(revisions.encoded(snapshot)),
                             "commit": source.commit, "files": files, "activities": summaries,
-                            "bytes": total, "expires": time.monotonic() + PREVIEW_TTL}
+                            "bytes": retained_bytes, "expires": time.monotonic() + PREVIEW_TTL}
     return {"preview_token": token, "repository": source.repository, "commit": source.commit,
-            "activities": summaries, "bytes": total, "expires_in": PREVIEW_TTL}
+            "activities": summaries, "bytes": total, "expires_in": PREVIEW_TTL,
+            "can_apply": not any(item["status"] == "conflict" for item in summaries),
+            "missing": [item["id"] for item in snapshot["history"].values()
+                        if snapshot["active"].get(item["id"]) == item["path"]
+                        and item["repository"] == source.repository.casefold()
+                        and complete_identities and item["id"] not in identities]}
 
 
 def _safe_directory(root: Path, relative: str) -> Path:
@@ -319,42 +383,82 @@ def _safe_directory(root: Path, relative: str) -> Path:
 
 
 def publish(root: Path, token: str):
-    if not isinstance(token, str):
+    if not isinstance(token, str) or not re.fullmatch(r"[A-Za-z0-9_-]{43}", token):
         raise ImportConflict("Anteprima non valida.")
-    with _LOCK:
-        _prune()
-        batch = _PREVIEWS.get(token)
-        if batch is None or batch["root"] != root.resolve():
-            raise ImportConflict("Anteprima scaduta o gia usata. Ripeti l'anteprima.")
-        del _PREVIEWS[token]
+    operation = revisions.digest(token.encode())
     with storage.course_storage_lock(root):
-        _check_ids(root, batch["activities"])
-        destination_parent = _safe_directory(root, "activities/imported")
+        snapshot = revisions.read(root)
+        if operation in snapshot["operations"]:
+            return {**snapshot["operations"][operation], "already_applied": True}
+        with _LOCK:
+            _prune()
+            batch = _PREVIEWS.get(token)
+            if batch is None or batch["root"] != root.resolve():
+                raise ImportConflict("Anteprima scaduta o gia usata. Ripeti l'anteprima.")
+        if any(item["status"] == "conflict" for item in batch["activities"]):
+            raise ImportConflict("Risolvi i conflitti e ripeti l'anteprima.")
+        # Global compare-and-swap also protects concurrent v1 migration.
+        if revisions.digest(revisions.encoded(snapshot)) != batch["snapshot"]:
+            raise ImportConflict("Catalogo cambiato: ripeti l'anteprima.")
+        local = _local_catalog(root)
+        changed = []
+        for item in batch["activities"]:
+            identifier = item["id"]
+            files = {name: data for name, data in batch["files"].items()
+                     if name == f"{identifier}.json" or name.startswith(f"assets/{identifier}/")}
+            try:
+                current = _comparison(root, batch["repository"], files, item, snapshot, local)
+            except ValueError as error:
+                raise ImportConflict(str(error)) from error
+            if current["status"] != item["status"]:
+                raise ImportConflict("Catalogo cambiato: ripeti l'anteprima.")
+            if item["status"] != "unchanged":
+                changed.append(item)
+        # Validate every legacy revision before persisting the first registry.
+        if not (root / revisions.REGISTRY).exists():
+            for revision in snapshot["history"].values():
+                revisions.verify(root, revision)
+        destination_parent = _safe_directory(root, revisions.REVISIONS)
         staging_parent = _safe_directory(root, ".activity-import-staging")
+        storage.ensure_directory_durable(destination_parent, root)
         batch_id = secrets.token_hex(16)
-        destination = destination_parent / batch_id
-        with tempfile.TemporaryDirectory(dir=staging_parent, prefix="batch-") as temp:
-            staging = Path(temp) / "content"
-            staging.mkdir()
-            _write_files(staging, batch["files"])
-            origin = {"format": "thebitlab-activity-import/1", "repository": batch["repository"],
-                      "commit": batch["commit"], "activities": batch["activities"],
-                      "sha256": {name: hashlib.sha256(data).hexdigest() for name, data in batch["files"].items()}}
-            _write_files(staging, {"origin.txt": _bytes(origin)})
-            for folder, _, _ in os.walk(staging, topdown=False):
-                storage.sync_directory(Path(folder))
-            # Destination is a fresh random name; the root process lock excludes other writers.
-            if destination.exists() or destination.is_symlink():
-                raise ImportConflict("Destinazione import gia presente.")
-            os.rename(staging, destination)
-            storage.sync_directory(destination_parent)
-    return {"imported": [{**item, "path": f"activities/imported/{batch_id}/{item['id']}.json"}
-                         for item in batch["activities"]], "commit": batch["commit"]}
+        package = f"{revisions.REVISIONS}/{batch_id}"
+        destination = root / package
+        if changed:
+            identifiers = {item["id"] for item in changed}
+            files = {name: data for name, data in batch["files"].items()
+                     if any(name == f"{identifier}.json" or name.startswith(f"assets/{identifier}/")
+                            for identifier in identifiers)}
+            with tempfile.TemporaryDirectory(dir=staging_parent, prefix="batch-") as temp:
+                staging = Path(temp) / "content"
+                staging.mkdir()
+                _write_files(staging, files)
+                origin = {"format": "thebitlab-activity-import/2", "repository": batch["repository"],
+                          "commit": batch["commit"], "ref": batch["ref"], "activities": changed,
+                          "sha256": {name: revisions.digest(data) for name, data in files.items()}}
+                _write_files(staging, {"origin.txt": _bytes(origin)})
+                for folder, _, _ in os.walk(staging, topdown=False):
+                    storage.sync_directory(Path(folder))
+                if destination.exists() or destination.is_symlink():
+                    raise ImportConflict("Destinazione import gia presente.")
+                os.rename(staging, destination)
+                storage.sync_directory(destination_parent)
+            for item in changed:
+                revision = revisions.entry(package, origin, item)
+                snapshot["history"][revision["path"]] = revision
+                snapshot["active"][item["id"]] = revision["path"]
+        result = {"imported": [{**item, "path": snapshot["active"][item["id"]]}
+                               for item in batch["activities"]], "commit": batch["commit"]}
+        snapshot["operations"][operation] = result
+        revisions.write(root, snapshot)
+        with _LOCK:
+            _PREVIEWS.pop(token, None)
+        return result
 
 
 def handle(root: Path, action: str, payload: dict):
     """Bound concurrent imports independently from the HTTP worker pool."""
-    fields = {"catalog": {"repository", "ref"}, "preview": {"repository", "commit", "paths"},
+    fields = {"catalog": {"repository", "ref"}, "preview": {"repository", "commit", "paths", "ref"},
               "publish": {"preview_token"}, "discard": {"preview_token"}}
     if action not in fields or not isinstance(payload, dict) or set(payload) - fields[action]:
         raise ValueError("Richiesta import non valida.")
@@ -370,7 +474,7 @@ def handle(root: Path, action: str, payload: dict):
         if action == "catalog":
             return catalog(payload.get("repository"), payload.get("ref", "main"))
         if action == "preview":
-            return preview(root, payload.get("repository"), payload.get("commit"), payload.get("paths"))
+            return preview(root, payload.get("repository"), payload.get("commit"), payload.get("paths"), ref=payload.get("ref"))
         if action == "publish":
             return publish(root, payload.get("preview_token"))
         raise ValueError("Operazione import non valida.")
