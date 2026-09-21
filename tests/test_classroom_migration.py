@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -318,7 +319,21 @@ def test_shared_folder_symlink_outside_project_is_rejected(tmp_path: Path) -> No
     project.mkdir()
     outside = tmp_path / "outside"
     outside.mkdir()
-    (project / "lab").symlink_to(outside, target_is_directory=True)
+    link = project / "lab"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError as error:
+        if getattr(error, "winerror", None) != 1314:
+            raise
+        # Junctions exercise the same resolved-path escape without requiring
+        # Windows Developer Mode or an administrator token on the test host.
+        quoted_link = str(link).replace("'", "''")
+        quoted_outside = str(outside).replace("'", "''")
+        subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+             f"New-Item -ItemType Junction -Path '{quoted_link}' -Target '{quoted_outside}' -ErrorAction Stop"],
+            check=True, capture_output=True, timeout=20,
+        )
     (project / "lab2").mkdir()
 
     with pytest.raises(RuntimeError, match="fuori dal progetto"):

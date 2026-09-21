@@ -37,6 +37,24 @@ il BIOS. Poiché alcuni PC restituiscono un valore WMI errato, un contrasto con
 lo stato mostrato da Gestione attività produce l'avviso `W03` e non blocca
 l'installazione; sarà WSL a eseguire la verifica reale.
 
+La diagnosi distingue componenti mancanti, controlli in attesa di un
+prerequisito (`ATTESA`) e timeout (`DA RIPROVARE`). Senza Docker CLI non vengono
+eseguiti i controlli di motore e immagine; senza motore pronto non viene
+interrogata l'immagine. Il menu indica l'azione per preparare WSL e Docker.
+
+Gli errori WSL conservano fase, exit code nativo e output limitato in
+`%LOCALAPPDATA%\2cornot2c\diagnostics\wsl-<id>.json`. Il processo elevato
+trasmette il resoconto al menu; il dettaglio compare anche in
+`~/.2cornot2c/installer.jsonl`. L'annullamento UAC usa E29, un fallimento WSL
+E20. Solo un'installazione riuscita e la registrazione della ripresa producono
+la richiesta di riavvio; un errore della registrazione indica come riaprire
+manualmente il menu. Nessuna distribuzione o VM viene rimossa per riparare WSL.
+
+Per le VM, E26 identifica uno stato legacy da migrare con assistenza, E27 una
+configurazione incoerente e E28 una release non attiva. Questi casi non vengono
+presentati come errori di rete. Diagnosi e installazione applicano gli stessi
+controlli conservativi; la migrazione resta esplicita e richiede `RICREA VM`.
+
 ## Bootstrap monocomando
 
 Su macOS Apple Silicon:
@@ -59,6 +77,15 @@ diagnostica e installa poi l'ambiente selezionato:
 
 - VMware Fusion su macOS o VirtualBox su Windows per una VM grafica completa;
 - Docker Desktop e l'immagine pubblica `student-dev` per il percorso da 512 MB.
+
+Il bootstrap Windows verifica l'origine Git e i file di avvio prima di creare
+i collegamenti. Un checkout con la sola directory `.git`, origine attesa e
+nessun lock viene conservato in una cartella sorella `.incomplete-<id>` e
+scaricato nuovamente. La copia resta disponibile anche se il nuovo download
+fallisce. Cartelle con file, origini diverse, junction o lock non vengono
+ricostruite automaticamente. Il normale aggiornamento usa `pull --ff-only`;
+se mancano ancora file essenziali, E13 ferma l'avvio e richiede assistenza.
+Non usare `reset --hard` o cancellare esercizi per aggirare il controllo.
 
 Il bootstrap crea il collegamento **Ambiente 2cornot2c** sul desktop e nel
 menu Start. Da quel momento non servono altri comandi: lo stesso menu permette
@@ -93,6 +120,16 @@ Docker CLI 24. Una versione più recente viene conservata; una versione più
 vecchia viene aggiornata con `winget`. Gli aggiornamenti di programmi già
 presenti sono registrati come `updated` e non diventano proprietà di
 2cornot2c: la successiva disinstallazione dell'ambiente li conserva.
+
+Il bootstrap (Git, Python 3.12, micro) e i piani Windows (Git, Vagrant,
+VirtualBox, Docker Desktop) selezionano esplicitamente `--source winget`
+sia per installare sia per aggiornare. Un errore della sorgente Microsoft
+Store non deve bloccare un pacchetto disponibile nella sorgente winget.
+I fallimenti della sorgente selezionata o del download restano bloccanti:
+il bootstrap distingue in E09 l'errore di certificato `0x8a15005e` e il
+timeout `0x80072ee2`, conservando l'exit code. Non disabilita TLS e non
+modifica la configurazione delle sorgenti del computer. Gli altri errori
+restano E09 senza attribuirne automaticamente la causa a un rifiuto UAC.
 
 La diagnosi Windows cerca Git, Vagrant, VirtualBox e Docker anche nelle
 rispettive cartelle standard sotto `ProgramW6432` e `ProgramFiles` se il

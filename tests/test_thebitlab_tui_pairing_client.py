@@ -397,7 +397,7 @@ def test_client_rejects_redirects_and_malformed_contracts() -> None:
     for payload in (
         begin_payload(pairing_id="../secret"),
         begin_payload(verification_path="https://attacker.test"),
-        begin_payload(expires_at="2027-09-01T08:10:00.000000Z"),
+        begin_payload(expires_at="invalid-secret-expiry"),
     ):
         with pytest.raises(TuiPairingClientError, match="risposta non valida"):
             TuiPairingClient(
@@ -405,6 +405,60 @@ def test_client_rejects_redirects_and_malformed_contracts() -> None:
                 urlopen=lambda *args, payload=payload, **kwargs: Response(201, payload),
                 clock=lambda: NOW,
             ).begin()
+
+
+@pytest.mark.parametrize("expiry", [
+    "2027-09-01T08:10:00.000000Z", "2026-09-01T07:59:00.000000Z",
+])
+def test_pairing_clock_mismatch_has_safe_actionable_diagnosis(expiry) -> None:
+    payload = begin_payload(expires_at=expiry)
+    with pytest.raises(TuiPairingClientError, match="P02") as caught:
+        TuiPairingClient(
+            "https://school.test",
+            urlopen=lambda *args, **kwargs: Response(201, payload),
+            clock=lambda: NOW,
+        ).begin()
+    message = str(caught.value)
+    assert "Sincronizza ora" in message
+    assert "server" in message
+    assert payload["pairing_id"] not in message
+    assert payload["user_code"] not in message
+
+
+@pytest.mark.parametrize("changes, category", [
+    ({"unexpected": "private-response-field"}, "P01"),
+    ({"expires_at": "private-response-fieldZ"}, "P01"),
+    ({"expires_at": "2027-09-01T08:10:00.000000Z"}, "P02"),
+])
+def test_begin_diagnostics_do_not_retain_response_secrets_in_tracebacks(changes, category):
+    payload = begin_payload(**changes)
+    client = TuiPairingClient(
+        "https://school.test",
+        urlopen=lambda *args, **kwargs: Response(201, payload),
+        clock=lambda: NOW,
+    )
+    with pytest.raises(TuiPairingClientError, match=category) as captured:
+        client.begin()
+    fragments = []
+    pending = [captured.value]
+    seen = set()
+    while pending:
+        error = pending.pop()
+        if id(error) in seen:
+            continue
+        seen.add(id(error))
+        fragments.append(repr(error))
+        traceback = error.__traceback__
+        while traceback is not None:
+            filename = traceback.tb_frame.f_code.co_filename.replace("\\", "/")
+            if filename.endswith("/scripts/thebitlab_tui_pairing_client.py"):
+                fragments.extend(repr(value) for value in traceback.tb_frame.f_locals.values())
+            traceback = traceback.tb_next
+        pending.extend(item for item in (error.__context__, error.__cause__) if item is not None)
+    rendered = "\n".join(fragments)
+    assert payload["pairing_id"] not in rendered
+    assert payload["user_code"] not in rendered
+    assert "private-response-field" not in rendered
 
 
 def test_poll_caps_each_network_timeout_at_pairing_deadline() -> None:

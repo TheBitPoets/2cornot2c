@@ -173,6 +173,9 @@ jobs:
           tests/test_thebitlab_google_oidc.py
           tests/test_thebitlab_github_oauth.py
           tests/test_thebitlab_github_team_mapping.py
+          tests/test_classroom_winget_source.py
+          tests/test_classroom_windows_recovery.py
+          tests/test_classroom_school_errors.py
 
       - name: Test portable Node.js and SQL runners
         run: >-

@@ -14,6 +14,7 @@ from urllib.request import urlopen
 
 from installer.artifacts import (
     ArtifactError,
+    BoxArtifact,
     download_box,
     load_release,
     select_artifact,
@@ -74,7 +75,7 @@ def latest_manifest_url(
     release = _target_lock(host, provider)
     if release.manifest_url is None:
         raise ClassroomImageError(
-            f"Immagine Packer {release.target_id} non ancora attiva."
+            f"CLASSROOM_RELEASE_PENDING: Immagine Packer {release.target_id} non ancora attiva."
         )
     return release.manifest_url
 
@@ -112,7 +113,7 @@ def _official_manifest_digest(
     release = _target_lock(host, provider)
     if not release.active:
         raise ClassroomImageError(
-            f"Immagine Packer {release.target_id} non ancora attiva; "
+            f"CLASSROOM_RELEASE_PENDING: Immagine Packer {release.target_id} non ancora attiva; "
             "usare il fallback Bento."
         )
     if release.manifest_sha256 is None:
@@ -254,7 +255,7 @@ def _configured_identity(project: Path) -> tuple[str, str] | None:
     if (box_present and not box.is_file()) or (
         provider_present and not provider.is_file()
     ):
-        raise ClassroomImageError("Marker box Packer non valido.")
+        raise ClassroomImageError("CLASSROOM_STATE_INVALID: Marker box Packer non valido.")
     return (
         box.read_text(encoding="utf-8").strip() if box_present else "",
         provider.read_text(encoding="utf-8").strip() if provider_present else "",
@@ -312,7 +313,7 @@ def check_ready(project: Path, host: Host, provider: Provider) -> str:
     cache = Path.home() / ".2cornot2c" / "images"
     artifact = resolve_artifact(host, provider, cache)
     expected = (artifact.box_name, artifact.provider.value)
-    configured = _configured_identity(project)
+    configured = _validate_project(project, artifact, provider)
     if configured != expected:
         raise ClassroomImageError(
             "Box Packer non configurata; esegui Installa, completa o ripara."
@@ -322,11 +323,13 @@ def check_ready(project: Path, host: Host, provider: Provider) -> str:
     return f"box Packer {artifact.box_name} pronta"
 
 
-def install_image(project: Path, host: Host, provider: Provider) -> str:
-    cache = Path.home() / ".2cornot2c" / "images"
-    artifact = resolve_artifact(host, provider, cache)
+def _validate_project(
+    project: Path, artifact: BoxArtifact, provider: Provider,
+) -> tuple[str, str] | None:
+    """Use the same conservative state checks in diagnosis and installation."""
     expected = (artifact.box_name, artifact.provider.value)
     configured = _configured_identity(project)
+    identity = configured
     if configured is not None:
         configured_box, configured_provider = configured
         if (
@@ -334,12 +337,12 @@ def install_image(project: Path, host: Host, provider: Provider) -> str:
             or configured_provider not in {"", expected[1]}
         ):
             raise ClassroomImageError(
-                "Il progetto usa un'altra box. Avvia la migrazione esplicita "
+                "CLASSROOM_STATE_INVALID: Il progetto usa un'altra box. Avvia la migrazione esplicita "
                 "prima di cambiare immagine."
             )
         if not configured_box and _legacy_vm_exists(project, provider):
             raise ClassroomImageError(
-                "Stato VM ambiguo: esiste soltanto il marker provider insieme "
+                "CLASSROOM_STATE_INVALID: Stato VM ambiguo: esiste soltanto il marker provider insieme "
                 "a una VM. Ripristina il marker box da una fonte verificata o "
                 "richiedi assistenza; nessuna migrazione viene avviata."
             )
@@ -363,10 +366,17 @@ def install_image(project: Path, host: Host, provider: Provider) -> str:
             for legacy in blocking_legacy
         )
         raise ClassroomImageError(
-            "È presente una VM Bento legacy incompatibile. Esegui prima la "
+            "CLASSROOM_LEGACY_VM: È presente una VM Bento legacy incompatibile. Esegui prima la "
             f"migrazione esplicita per ogni stato rilevato: {commands}; la "
             "VM non verrà sostituita automaticamente."
         )
+    return identity
+
+
+def install_image(project: Path, host: Host, provider: Provider) -> str:
+    cache = Path.home() / ".2cornot2c" / "images"
+    artifact = resolve_artifact(host, provider, cache)
+    _validate_project(project, artifact, provider)
 
     cache_name = f"{artifact.box_name.replace('/', '--')}.box"
     box_path = cache / cache_name

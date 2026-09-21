@@ -53,21 +53,43 @@ function Stop-WithMessage {
     exit 1
 }
 
+function Stop-WingetFailure {
+    param([string]$Title, [int]$ExitCode)
+
+    $Explanation = "winget non ha completato l'operazione. Il codice tecnico distingue la causa; non devi ricominciare da zero."
+    $Actions = @(
+        "Controlla se il programma di installazione mostra una richiesta da confermare."
+        "Rilancia lo stesso comando: i componenti compatibili presenti saranno saltati."
+        "Se ricompare, comunica E09 e il codice tecnico al docente."
+    )
+    if ($ExitCode -eq -1978335138) {
+        $Explanation = "winget non ha potuto verificare il certificato di una sorgente. Non si tratta di un rifiuto dell'installazione da parte di Windows."
+        $Actions = @(
+            "Chiedi al docente di verificare data e ora del PC e l'accesso alla sorgente winget."
+            "Non disattivare la verifica dei certificati; riprova dopo il controllo."
+            "Se ricompare, comunica E09 e il codice tecnico al docente."
+        )
+    } elseif ($ExitCode -eq -2147012894) {
+        $Explanation = "winget ha superato il tempo di attesa della connessione alla sorgente o al server di download. Non devi ricominciare da zero."
+        $Actions = @(
+            "Controlla la connessione e riprova tra poco."
+            "Se Internet funziona ma l'errore continua, chiedi al docente di verificare l'accesso ai server di download."
+            "Comunica E09 e il codice tecnico; non devi ricominciare da zero."
+        )
+    }
+    Stop-WithMessage "E09" $Title $Explanation $Actions `
+        "winget exit code $ExitCode; source winget"
+}
+
 function Install-WingetPackage {
     param(
         [string]$Id,
         [bool]$TrackOwnership = $true
     )
-    winget install --id $Id --exact --silent `
+    winget install --id $Id --exact --source winget --silent `
         --accept-package-agreements --accept-source-agreements
     if ($LASTEXITCODE -ne 0) {
-        Stop-WithMessage "E09" "Installazione di $Id non riuscita" `
-            "Windows ha interrotto o rifiutato l'installazione. Non devi ricominciare da zero." `
-            @(
-                "Controlla se Windows aspetta una conferma e scegli Sì."
-                "Rilancia lo stesso comando: i componenti presenti saranno saltati."
-                "Se ricompare, comunica E09 al docente."
-            ) "winget exit code $LASTEXITCODE"
+        Stop-WingetFailure "Installazione di $Id non riuscita" $LASTEXITCODE
     }
     if ($TrackOwnership -and -not $InstalledByBootstrap.Contains($Id)) {
         $InstalledByBootstrap.Add($Id)
@@ -77,16 +99,10 @@ function Install-WingetPackage {
 
 function Update-WingetPackage {
     param([string]$Id)
-    winget upgrade --id $Id --exact --silent `
+    winget upgrade --id $Id --exact --source winget --silent `
         --accept-package-agreements --accept-source-agreements
     if ($LASTEXITCODE -ne 0) {
-        Stop-WithMessage "E09" "Aggiornamento di $Id non riuscito" `
-            "Il programma è presente, ma è troppo vecchio e Windows non è riuscito ad aggiornarlo." `
-            @(
-                "Chiudi il programma da aggiornare."
-                "Rilancia lo stesso comando."
-                "Se ricompare, comunica E09 al docente."
-            ) "winget exit code $LASTEXITCODE"
+        Stop-WingetFailure "Aggiornamento di $Id non riuscito" $LASTEXITCODE
     }
     Save-BootstrapState
 }
@@ -168,6 +184,84 @@ function Install-ClassroomLauncher {
         $Shortcut.WorkingDirectory = $LauncherDir
         $Shortcut.Description = "Installa e gestisci l'ambiente 2cornot2c"
         $Shortcut.Save()
+    }
+}
+
+function Initialize-ClassroomRepository {
+    param([string]$Directory, [string]$Url)
+    $Target = [System.IO.Path]::GetFullPath($Directory).TrimEnd('\', '/')
+    $Parent = Split-Path -Parent $Target
+    if (-not $Parent -or $Target -eq [System.IO.Path]::GetPathRoot($Target).TrimEnd('\', '/')) {
+        throw 'E11: la cartella del progetto non può essere la radice del disco.'
+    }
+    # Never move or populate a directory through a junction/symbolic link.
+    $Ancestor = $Target
+    while ($Ancestor) {
+        if (Test-Path -LiteralPath $Ancestor) {
+            $Item = Get-Item -LiteralPath $Ancestor -Force
+            if ($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                throw 'E11: percorso con collegamenti; chiedi al docente di verificarlo.'
+            }
+        }
+        $Ancestor = Split-Path -Parent $Ancestor
+    }
+    $GitDirectory = Join-Path $Target '.git'
+    $Clone = -not (Test-Path -LiteralPath $Target)
+    if (-not $Clone) {
+        $Children = @(Get-ChildItem -LiteralPath $Target -Force)
+        if ($Children.Count -eq 0) {
+            $Clone = $true
+        } elseif (Test-Path -LiteralPath $GitDirectory -PathType Container) {
+            if ((Get-Item -LiteralPath $GitDirectory -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                throw 'E13: metadati Git collegati altrove; chiedi al docente, cartella preservata.'
+            }
+            $Origin = & git -C $Target config --get remote.origin.url
+            if ($LASTEXITCODE -ne 0 -or $Origin -cne $Url) {
+                throw 'E13: origine Git diversa o assente; cartella preservata, chiedi al docente.'
+            }
+            if ($Children.Count -eq 1 -and $Children[0].Name -eq '.git') {
+                if (@(Get-ChildItem -LiteralPath $GitDirectory -Filter '*.lock' -Recurse -Force).Count) {
+                    throw 'E13: operazione Git in corso o interrotta; chiedi al docente, nessun file rimosso.'
+                }
+                $Backup = $Target + '.incomplete-' + [guid]::NewGuid().ToString('N')
+                # Validate both absolute paths immediately before moving.
+                if ([IO.Path]::GetFullPath($Backup) -ne $Backup -or
+                    (Split-Path -Parent $Backup) -ne $Parent -or
+                    (Test-Path -LiteralPath $Backup)) {
+                    throw 'E13: impossibile creare una copia di sicurezza del checkout.'
+                }
+                Move-Item -LiteralPath $Target -Destination $Backup -ErrorAction Stop
+                Write-Host "Checkout incompleto conservato in: $Backup"
+                $Clone = $true
+            } else {
+                & git -C $Target rev-parse --verify HEAD
+                if ($LASTEXITCODE -ne 0) {
+                    throw 'E13: checkout incompleto con file presenti; chiedi al docente, file preservati.'
+                }
+                & git -C $Target pull --ff-only
+                if ($LASTEXITCODE -ne 0) {
+                    throw "E13: aggiornamento non riuscito (exit code $LASTEXITCODE). Controlla Internet o chiedi al docente; non cancellare la cartella."
+                }
+            }
+        } else {
+            throw 'E11: cartella occupata; chiedi al docente di verificarla prima di rilanciare.'
+        }
+    }
+    if ($Clone) {
+        & git clone $Url $Target
+        if ($LASTEXITCODE -ne 0) {
+            throw "E12: download interrotto (exit code $LASTEXITCODE). Controlla Internet e rilancia lo stesso comando; le copie precedenti sono conservate."
+        }
+    }
+    $Required = @('scripts/student_lab_cli.py', 'installer/tui.py', 'requirements-utui.txt',
+        'scripts/manage-classroom-windows.ps1', 'scripts/launch-classroom-windows.ps1',
+        'scripts/prepare-wsl-windows.ps1', 'scripts/remove-classroom-shortcuts-windows.ps1',
+        'scripts/remove-wsl-windows.ps1', 'scripts/update-classroom-windows.ps1',
+        'scripts/uninstall-classroom-windows.ps1')
+    foreach ($Relative in $Required) {
+        if (-not (Test-Path -LiteralPath (Join-Path $Target $Relative) -PathType Leaf)) {
+            throw "E13: checkout incompleto, manca $Relative. File preservati; chiedi al docente."
+        }
     }
 }
 
@@ -325,34 +419,15 @@ if (-not (Test-Python312)) {
 }
 
 Write-Host "[2/4] Preparazione repository..."
-if (Test-Path (Join-Path $InstallDir ".git")) {
-    git -C $InstallDir pull --ff-only
-    if ($LASTEXITCODE -ne 0) {
-        Stop-WithMessage "E13" "Non posso aggiornare il progetto in sicurezza" `
-            "La rete potrebbe essere assente oppure alcuni file potrebbero essere stati modificati. Ho fermato tutto per non perdere il tuo lavoro." `
-            @(
-                "Non cancellare la cartella e non usare comandi Git trovati su Internet."
-                "Controlla Internet."
-                "Se l'errore rimane, comunica E13 al docente."
-            ) "git pull exit code $LASTEXITCODE"
-    }
-} elseif (Test-Path $InstallDir) {
-    Stop-WithMessage "E11" "La cartella 2cornot2c è già occupata" `
-        "La cartella esiste ma non contiene il nostro ambiente. Per sicurezza non verrà modificata o cancellata." `
-        @(
-            "Rinomina la cartella in 2cornot2c-vecchia oppure chiedi al docente di controllarla."
-            "Rilancia il comando."
-        ) $InstallDir
-} else {
-    git clone $RepositoryUrl $InstallDir
-    if ($LASTEXITCODE -ne 0) {
-        Stop-WithMessage "E12" "Non sono riuscito a scaricare l'ambiente 2cornot2c" `
-            "Il download è stato interrotto. Non cancellare manualmente una cartella rimasta incompleta." `
-            @(
-                "Controlla Internet e riprova."
-                "Se ricompare, comunica E12 al docente."
-            ) "git clone exit code $LASTEXITCODE"
-    }
+try {
+    Initialize-ClassroomRepository -Directory $InstallDir -Url $RepositoryUrl
+} catch {
+    $Detail = $_.Exception.Message
+    $Code = if ($Detail -match '^(E1[123]):') { $Matches[1] } else { 'E13' }
+    Stop-WithMessage $Code 'Preparazione del progetto non completata' `
+        'Il progetto non è pronto per avviare il menu guidato.' `
+        @('Segui il dettaglio qui sotto; non cancellare cartelle o esercizi.',
+          'Se ricompare, comunica il codice e il dettaglio al docente.') $Detail
 }
 
 Install-ClassroomLauncher

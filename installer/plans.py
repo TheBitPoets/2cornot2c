@@ -26,7 +26,7 @@ def _winget_ensure(package_id: str) -> tuple[str, ...]:
     """Aggiorna un pacchetto esistente oppure lo installa se assente."""
 
     agreements = (
-        "--accept-package-agreements --accept-source-agreements"
+        "--source winget --accept-package-agreements --accept-source-agreements"
     )
     command = (
         f"winget upgrade --id '{package_id}' --exact --silent {agreements}; "
