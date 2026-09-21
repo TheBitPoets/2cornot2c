@@ -27,6 +27,14 @@ Il proof permette al server di scartare e limitare bearer inventati senza interr
 
 Il deadline deriva una volta dalla scadenza server e da un clock monotono non decrescente; il timeout di ogni singola richiesta è ridotto al tempo monotono ancora disponibile. Il trasporto HTTPS di produzione viene eseguito in un subprocess dedicato con ambiente minimo; codice e bearer passano soltanto su pipe stdin/stdout e non compaiono in argv o variabili ambiente. Il parent misura il limite assoluto prima di avviare il processo. Anche `Popen` avviene in un launcher daemon bounded; alla deadline il chiamante ritorna subito e cleanup daemon esegue kill/reap appena esiste un handle. DNS/TLS/header/body lenti non lasciano processi operativi né bloccano il thread TUI oltre la scadenza. Gli adapter `urlopen` iniettati dai test restano confinati a thread daemon dietro quattro slot globali; l'esaurimento di tali slot non influenza il percorso subprocess di produzione e non crea altri thread. Redirect HTTP non vengono seguiti. Risposte oltre 16 KiB, JSON con chiavi duplicate, Content-Type inatteso, Content-Encoding eccessivo, timestamp naïve o contratti con campi extra falliscono chiusi. Errori mostrati all'utente non includono pairing ID, codice o bearer.
 
+La validazione iniziale distingue `P01` (schema, campi o formato della scadenza
+non conformi) da `P02` (scadenza già passata o oltre i 15 minuti rispetto
+all'orologio del PC). P01 invita ad aggiornare il client e coinvolgere il docente;
+P02 invita a sincronizzare l'ora del PC e, se corretta, a verificare il server.
+P02 è un'indicazione di incoerenza temporale, non la prova che il PC sia la causa.
+I messaggi non riflettono payload, pairing ID, codice o bearer. Restano invariati
+schema rigoroso, scadenza massima, HTTPS e deadline: nessun fallback insicuro.
+
 ## Pagina browser
 
 `GET /auth/tui/pair` restituisce una pagina statica `no-store`, senza dati pairing. La pagina:

@@ -337,10 +337,22 @@ def refresh_report(state: State) -> None:
         elif not result.ok and result.check.key in {"resources", "network"}:
             report.extend(for_check(result.check.key, result.detail).lines(result.detail))
         else:
-            report.append(
-                f"[{'OK' if result.ok else 'MANCA'}] "
-                f"{result.check.label}: {result.detail}"
+            status = "OK" if result.ok else (
+                "ATTESA" if result.reason == "dependency" else
+                "DA RIPROVARE" if result.reason == "timeout" else "MANCA"
             )
+            report.append(
+                f"[{status}] {result.check.label}: {result.detail}"
+            )
+            if not result.ok and result.reason not in {"dependency", "timeout"}:
+                if result.check.key == "wsl":
+                    report.append("Premi a per preparare WSL 2; conferma Windows e riavvia quando richiesto.")
+                elif result.check.key in {"docker", "git", "vagrant", "virtualbox"}:
+                    report.append("Premi a per installare o aggiornare il componente; quelli compatibili saranno conservati.")
+                elif result.check.key == "docker-engine":
+                    report.append("Premi a per avviare Docker Desktop e attendi che sia pronto.")
+                elif result.check.key == "classroom-image":
+                    report.extend(for_check(result.check.key, result.detail).lines())
     state.report = tuple(report)
 
 
@@ -433,7 +445,7 @@ def _format_results(
             )
         elif result.status in {"failed", "blocked"}:
             error = (
-                for_step(result.key)
+                for_step(result.key, result.detail)
                 if result.status == "failed"
                 else for_check(result.key, result.detail)
             )

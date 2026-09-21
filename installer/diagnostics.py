@@ -21,6 +21,7 @@ class CheckResult:
     ok: bool
     detail: str
     present: bool = False
+    reason: str = ""
 
 
 _VERSION = re.compile(r"(?<!\d)(\d+(?:\.\d+){1,3})(?!\d)")
@@ -57,7 +58,7 @@ def run_check(check: Check) -> CheckResult:
     )
     combined_output = f"{result.stdout}\n{result.stderr}".strip()
     output = combined_output.splitlines()
-    detail = output[0][:160] if output else f"exit code {result.returncode}"
+    detail = " ".join(output)[:600] if output else f"exit code {result.returncode}"
     present = result.returncode == 0
     ok = present
     if check.expected_text:
@@ -109,8 +110,21 @@ def diagnose(plan: InstallPlan) -> tuple[CheckResult, ...]:
 
     results = []
     for check in plan.checks:
+        dependency = {"docker-engine": "docker", "student-image": "docker-engine"}.get(check.key)
+        previous = next((item for item in results if item.check.key == dependency), None)
+        if previous is not None and not previous.ok:
+            results.append(CheckResult(
+                check, False, f"Prima completa il controllo: {previous.check.label}.",
+                False, "dependency",
+            ))
+            continue
         try:
             results.append(run_check(check))
-        except (FileNotFoundError, subprocess.TimeoutExpired) as error:
-            results.append(CheckResult(check, False, type(error).__name__, False))
+        except FileNotFoundError:
+            results.append(CheckResult(check, False, "Comando non disponibile.", False, "missing"))
+        except subprocess.TimeoutExpired:
+            results.append(CheckResult(
+                check, False, "Il controllo non ha risposto entro 20 secondi. Riprova; "
+                "se persiste, comunica il componente al docente.", False, "timeout",
+            ))
     return tuple(results)

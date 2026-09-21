@@ -120,7 +120,11 @@ def execute_plan(
             result = StepResult(step.key, step.label, "blocked", step.detail)
         else:
             returncode, output = runner(step.command)
-            detail = output.strip().splitlines()[-1][:300] if output.strip() else ""
+            # Keep the cause and its diagnostic log path, not just PowerShell's
+            # final FullyQualifiedErrorId line. Also persist it in installer.jsonl.
+            clean_output = output.replace("\x00", "").strip()
+            detail = (f"exit code {returncode}; {clean_output}"[:4000]
+                      if returncode else clean_output[:4000])
             result = StepResult(
                 step.key,
                 step.label,

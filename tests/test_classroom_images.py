@@ -187,8 +187,9 @@ def test_provider_only_marker_with_vm_is_ambiguous_not_migrated(
     assert (root / ".classroom-provider").is_file()
 
 
+@pytest.mark.parametrize("action", [classroom_images.install_image, classroom_images.check_ready])
 def test_install_image_refuses_implicit_legacy_vm_migration(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, action
 ) -> None:
     root = project(tmp_path)
     machine = root / ".vagrant" / "machines" / "default" / "virtualbox"
@@ -200,10 +201,12 @@ def test_install_image_refuses_implicit_legacy_vm_migration(
         lambda host, provider, cache: artifact(),
     )
 
-    with pytest.raises(classroom_images.ClassroomImageError, match="migration"):
-        classroom_images.install_image(
+    with pytest.raises(classroom_images.ClassroomImageError, match="CLASSROOM_LEGACY_VM:.*migration"):
+        action(
             root, Host.WINDOWS_AMD64, Provider.VIRTUALBOX
         )
+    assert (machine / "id").read_text(encoding="utf-8") == "vm-id"
+    assert not (root / ".classroom-box").exists()
 
 
 def test_install_image_blocks_virtualbox_legacy_state_before_selecting_vmware(
@@ -333,7 +336,7 @@ def test_pending_activation_refuses_official_manifest_installation(
     monkeypatch.setattr(classroom_images, "_target_lock", lambda *args: release)
     with pytest.raises(
         classroom_images.ClassroomImageError,
-        match="non ancora attiva",
+        match="CLASSROOM_RELEASE_PENDING:.*non ancora attiva",
     ):
         REAL_OFFICIAL_MANIFEST_DIGEST()
 

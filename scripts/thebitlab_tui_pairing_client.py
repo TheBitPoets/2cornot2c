@@ -136,23 +136,40 @@ class TuiPairingClient:
                 "verification_path",
                 "expires_at",
             }:
-                raise TuiPairingClientError("Il server pairing ha restituito una risposta non valida.")
+                raise TuiPairingClientError(
+                    "P01 - Il server pairing ha restituito una risposta non valida (schema). "
+                    "Aggiorna il client dal menu; se persiste, comunica P01 al docente."
+                )
             pairing_id = payload.get("pairing_id")
             code = payload.get("user_code")
             verification_path = payload.get("verification_path")
-            expires_at = _parse_utc(payload.get("expires_at"))
+            try:
+                expires_at = _parse_utc(payload.get("expires_at"))
+            except TuiPairingClientError:
+                raise TuiPairingClientError(
+                    "P01 - Il server pairing ha restituito una risposta non valida (scadenza). "
+                    "Aggiorna il client dal menu; se persiste, comunica P01 al docente."
+                ) from None
             now = _aware_utc(self.clock())
-            lifetime = expires_at - now
             if (
                 type(pairing_id) is not str
                 or _PAIRING_ID_RE.fullmatch(pairing_id) is None
                 or type(code) is not str
                 or _CODE_RE.fullmatch(code) is None
                 or verification_path != "/auth/tui/pair"
-                or lifetime <= timedelta(0)
-                or lifetime > _MAX_PAIRING_LIFETIME
             ):
-                raise TuiPairingClientError("Il server pairing ha restituito una risposta non valida.")
+                raise TuiPairingClientError(
+                    "P01 - Il server pairing ha restituito una risposta non valida (campi). "
+                    "Aggiorna il client dal menu; se persiste, comunica P01 al docente."
+                )
+            lifetime = expires_at - now
+            if lifetime <= timedelta(0) or lifetime > _MAX_PAIRING_LIFETIME:
+                raise TuiPairingClientError(
+                    "P02 - Scadenza pairing incoerente con l'orologio del PC. "
+                    "In Windows apri Impostazioni > Data/ora, attiva l'ora automatica "
+                    "e scegli Sincronizza ora; poi riprova. Se l'ora è corretta, "
+                    "comunica P02 al docente per verificare l'orologio del server."
+                )
             result = TuiPairingStart(
                 pairing_id,
                 code,
@@ -872,13 +889,21 @@ def _unique_object(pairs):
 
 
 def _parse_utc(value) -> datetime:
-    if type(value) is not str or len(value) > 64 or not value.endswith("Z"):
-        raise TuiPairingClientError("Il server pairing ha restituito una scadenza non valida.")
+    parsed = None
     try:
-        parsed = datetime.fromisoformat(value[:-1] + "+00:00")
-    except ValueError:
-        raise TuiPairingClientError("Il server pairing ha restituito una scadenza non valida.") from None
-    return _aware_utc(parsed)
+        if type(value) is str and len(value) <= 64 and value.endswith("Z"):
+            try:
+                parsed = datetime.fromisoformat(value[:-1] + "+00:00")
+            except ValueError:
+                # Raise outside this handler: ValueError can echo untrusted input
+                # through __context__, even when displayed with "from None".
+                pass
+        if parsed is None:
+            raise TuiPairingClientError("Il server pairing ha restituito una scadenza non valida.")
+        return _aware_utc(parsed)
+    finally:
+        value = None
+        parsed = None
 
 
 def _aware_utc(value: datetime) -> datetime:
