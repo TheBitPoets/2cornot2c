@@ -176,6 +176,7 @@ jobs:
           tests/test_classroom_winget_source.py
           tests/test_classroom_windows_recovery.py
           tests/test_classroom_school_errors.py
+          tests/test_classroom_selective_uninstall.py
 
       - name: Test portable Node.js and SQL runners
         run: >-

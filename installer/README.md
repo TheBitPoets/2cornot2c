@@ -230,8 +230,114 @@ irm https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/scripts/remove-
 
 Il bootstrap registra in `~/.2cornot2c/bootstrap-state.json` soltanto Git e
 Python installati da lui. L'executor registra separatamente i passi riusciti.
-La disinstallazione usa entrambi i registri, crea un backup del lavoro, richiede
-`DISINSTALLA` e non esegue mai `vagrant destroy`. Se trova una VM, si ferma.
+La disinstallazione completa protetta usa entrambi i registri, crea un backup
+del lavoro, richiede `DISINSTALLA` e non esegue mai `vagrant destroy`. Se trova
+una VM, si ferma. Rimane disponibile dal comando diretto sopra e per il
+rollback dopo annullamento dell'installazione.
+
+Dal menu **Disinstalla - scegli i componenti** si apre una lista numerata
+con caselle inizialmente vuote. Inserisci il numero per selezionare o
+deselezionare una voce, `t` per tutte, `z` per azzerare, Invio per il riepilogo,
+`q` per annullare. Il primo
+consenso nella TUI apre soltanto la lista; per eseguire la selezione serve
+la conferma distinta `DISINSTALLA` nella console. Nessuna scelta equivale
+a nessuna modifica.
+
+Sono selezionabili separatamente cartella progetto, immagine Docker didattica
+fissata dal lock, VM/disco/box didattica, collegamenti, WSL e ciascun programma
+dell'ambiente (Git, Python 3.12, micro, Vagrant, VirtualBox, Docker Desktop).
+La lista combina i registri di attribuzione con il rilevamento dei pacchetti
+registrati in Windows: permette anche la rimozione di software preesistente o
+installato da altri. Non è un disinstallatore generico di qualsiasi programma
+o copia portabile presente sul disco. Le voci distinguono l'attribuzione;
+software soltanto aggiornato resta esterno e richiede il consenso aggiuntivo
+`RIMUOVI COMPONENTI ESTERNI`. Le attribuzioni storiche non provano che il
+programma sia tuttora presente; ogni rimozione viene verificata. La rimozione
+dei programmi condivisi selezionati può influire su altri progetti del PC.
+
+- Conservando una VM, non si possono selezionare progetto, Vagrant o VirtualBox.
+- La VM richiede anche `ELIMINA VM`: il backup del progetto non include dati
+  salvati soltanto nel suo disco. La box rimossa deve avere namespace `2cornot2c/`.
+- Ogni distribuzione WSL può essere selezionata separatamente e richiede
+  `ELIMINA WSL <nome>`. Questo elimina definitivamente tutti i suoi dati;
+  non esiste un backup automatico delle distribuzioni. Le altre restano intatte.
+  Il componente WSL richiede anche `RIMUOVI WSL`: non viene rimosso sotto Docker
+  Desktop conservato o se rimangono distribuzioni non selezionate. Se l'elenco
+  non è verificabile, la rimozione si ferma. Le distribuzioni gestite da Docker
+  richiedono anche la selezione di Docker Desktop e dei suoi dati.
+  Prima di disabilitare WSL, il processo elevato deve usare lo stesso account
+  e verificare che non resti alcuna distribuzione: non ne cancella altre
+  automaticamente. Credenziali amministrative di un altro account fermano
+  questa operazione e richiedono assistenza.
+- La rimozione selettiva di progetto o VM crea una copia completa del progetto,
+  inclusi file staged, ignorati, non tracciati e metadati Git, in una cartella
+  `~/2cornot2c-backup-<id>`. Verifica SHA-256 di ogni file copiato tramite .NET,
+  anche quando `Get-FileHash` non è disponibile nel processo PowerShell; collegamenti
+  o errori di copia fermano la procedura. Servono spazio e tempo proporzionati
+  all'intero progetto, inclusi eventuali ambienti virtuali.
+  Subito prima di cancellare il progetto confronta nuovamente percorsi, tipi
+  di voce e SHA-256 con il backup. File aggiunti, rinominati, rimossi o modificati,
+  nuovi collegamenti e letture non verificabili fermano la cancellazione con E29:
+  progetto e backup restano disponibili; le rimozioni già riuscite non vengono
+  annullate. Chiudere prima editor e processi che scrivono nel progetto: il
+  confronto non costituisce uno snapshot atomico del filesystem. Se il controllo
+  fallisce, una nuova selezione crea un nuovo backup.
+- La rimozione dell'immagine Docker non forza container e non elimina volumi.
+  Un errore ferma la selezione; le operazioni già riuscite non sono annullate.
+- La voce distinta **Dati Docker** richiede `ELIMINA DATI DOCKER` dopo il
+  riepilogo di container, immagini, volumi e reti. Con Docker Desktop conservato
+  opera sul motore locale attivo: controlla nuovamente le identità mostrate,
+  rimuove esclusivamente quegli oggetti e non usa `prune`. Container selezionati
+  vengono anche fermati/rimossi forzatamente; immagini selezionate rimosse con
+  `--force`. Le reti di sistema sono escluse. Il motore è fissato tramite
+  `--host` a una named pipe locale di Docker Desktop; contesti remoti o inventario
+  incompleto bloccano la pulizia. Il riepilogo può includere dati di altri progetti.
+- **Docker Desktop** richiede anche **Dati Docker**: il disinstallatore del
+  produttore elimina tutti i dati locali di Desktop, anche di motori non attivi
+  o non elencabili. Questa conseguenza viene mostrata prima della conferma.
+  Il backup del progetto non è un backup dei volumi o dei dati di Docker Desktop.
+
+Il rilevamento WSL/Docker usa comandi read-only con timeout di 10 secondi
+ciascuno; non avvia distribuzioni o Docker Desktop. Il percorso automatico di
+rollback e la disinstallazione completa protetta conservano la precedente
+regola di rimuovere soltanto software attribuito all'installer. L'opt-in ai
+componenti esterni esiste soltanto nella selezione interattiva/esplicita.
+
+Riferimenti: [comandi WSL e unregister](https://learn.microsoft.com/en-us/windows/wsl/basic-commands),
+[conseguenze della disinstallazione Docker Desktop](https://docs.docker.com/desktop/uninstall/),
+[backup dei dati Docker Desktop](https://docs.docker.com/desktop/settings-and-maintenance/backup-and-restore/).
+
+La modalità selettiva conserva sempre registri e script di gestione e aggiorna
+soltanto l'attribuzione dei programmi rimossi con successo. I record conservati
+in `installer.jsonl` mantengono il testo originale in UTF-8 senza BOM, inclusi
+accenti e altri caratteri Unicode. Mantiene il riferimento
+all'immagine lasciata sul PC in `~/.2cornot2c/uninstall-retained-image.json` quando
+viene rimossa la cartella progetto. Questo file contiene soltanto `image`, il
+riferimento immutabile alla stessa immagine didattica (oppure stringa vuota).
+Le operazioni successive possono quindi ritrovarla senza il checkout originale.
+Se il menu Python non è più disponibile, il collegamento di gestione offre
+una scelta fra riparazione, disinstallazione dei componenti rimasti e uscita.
+Il launcher verifica che Python sia avviabile: un eseguibile del virtualenv
+rimasto dopo la rimozione di Python 3.12 porta allo stesso menu di recupero.
+I collegamenti vengono rimossi solo se selezionati; gli script persistenti
+rimangono comunque richiamabili da `%LOCALAPPDATA%\2cornot2c`.
+
+Per il supporto tecnico, da un checkout aggiornato:
+
+```powershell
+# Anteprima JSON: nessuna modifica, conferma o elevazione.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-classroom-windows.ps1 -Preview
+# Simula una scelta e mostra gli eventuali blocchi.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-classroom-windows.ps1 -Preview -Components project
+# Apre la lista interattiva, senza preselezioni.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/uninstall-classroom-windows.ps1 -SelectComponents
+```
+
+`-Components` accetta gli ID mostrati dall'anteprima, separati da virgole.
+Senza `-Preview` richiede comunque tutte le conferme: `-ConfirmedFromTui`
+non le aggira nella modalità selettiva. I launcher già installati ricevono
+questa funzionalità con il normale aggiornamento del bootstrap; una modifica
+nel checkout di sviluppo non aggiorna da sola la copia persistente.
 
 Dal menu è disponibile anche **Ripristina il PC - elimina anche la VM**. Questa
 modalità crea prima lo stesso backup, poi esegue `vagrant destroy --force`
