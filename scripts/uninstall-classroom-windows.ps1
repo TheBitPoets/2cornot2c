@@ -630,6 +630,21 @@ function Get-SelectedProjectEntries {
     return $Entries.ToArray()
 }
 
+function Get-ProjectFileHash {
+    param([string]$LiteralPath)
+    # Get-FileHash may be unavailable in Windows PowerShell child processes.
+    # Use the runtime directly and propagate every open/read/hash failure.
+    $Stream = $null
+    $Hasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        $Stream = [IO.File]::OpenRead($LiteralPath)
+        return [BitConverter]::ToString($Hasher.ComputeHash($Stream)).Replace('-', '')
+    } finally {
+        if ($Stream) { $Stream.Dispose() }
+        $Hasher.Dispose()
+    }
+}
+
 function Backup-SelectedProject {
     param([string]$Source)
     if (-not (Test-Path -LiteralPath $Source)) { return $null }
@@ -644,8 +659,8 @@ function Backup-SelectedProject {
             New-Item -ItemType Directory -Path $Destination -Force | Out-Null
         } else {
             Copy-Item -LiteralPath $Item.FullName -Destination $Destination -ErrorAction Stop
-            if ((Get-FileHash -LiteralPath $Item.FullName).Hash -ne
-                (Get-FileHash -LiteralPath $Destination).Hash) { throw "Backup non verificato: $Relative" }
+            if ((Get-ProjectFileHash -LiteralPath $Item.FullName) -ne
+                (Get-ProjectFileHash -LiteralPath $Destination)) { throw "Backup non verificato: $Relative" }
         }
     }
     return $Backup
@@ -669,8 +684,8 @@ function Assert-SelectedProjectBackup {
             throw "Il contenuto del progetto è cambiato dopo il backup: $Relative"
         }
         if (-not $Item.PSIsContainer) {
-            $SourceHash = (Get-FileHash -LiteralPath $Item.FullName -Algorithm SHA256 -ErrorAction Stop).Hash
-            $BackupHash = (Get-FileHash -LiteralPath $Copy.FullName -Algorithm SHA256 -ErrorAction Stop).Hash
+            $SourceHash = Get-ProjectFileHash -LiteralPath $Item.FullName
+            $BackupHash = Get-ProjectFileHash -LiteralPath $Copy.FullName
             if (-not $SourceHash -or -not $BackupHash -or $SourceHash -ne $BackupHash) {
                 throw "Il file non corrisponde al backup: $Relative"
             }

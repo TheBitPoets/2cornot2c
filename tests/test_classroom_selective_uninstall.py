@@ -58,7 +58,7 @@ def installation(tmp_path):
 def exercise(installation, components="", *, preview=False, vm=False, answers=None,
              package_exit=0, package_present=False, image_exit=0, cleanup_exit=0,
              select_menu=False, external_packages=(), distributions=(), docker_inventory=None,
-             during_package_removal=""):
+             during_package_removal="", without_filehash=False):
     home, project, state, launcher = installation
     if vm:
         (project / ".vagrant").mkdir(exist_ok=True)
@@ -118,6 +118,8 @@ function Remove-Item {
         docker_inventory = {"endpoint": ENDPOINT, "error": "", "containers": [], "volumes": [], "images": [], "networks": []}
     mocks = mocks.replace("__DOCKER__", quote(json.dumps(docker_inventory)))
     mocks = mocks.replace("__DURING_PACKAGE_REMOVAL__", during_package_removal)
+    if without_filehash:
+        mocks += "\nfunction Get-FileHash { throw [System.Management.Automation.CommandNotFoundException]::new('Get-FileHash unavailable') }\n"
     source = source.replace("$SafeInstallDir = Test-SafeInstallDirectory", mocks + "\n$SafeInstallDir = Test-SafeInstallDirectory", 1)
     script_file = home.parent / "isolated-uninstall.ps1"
     script_file.write_text(source, encoding="utf-8-sig")
@@ -247,7 +249,16 @@ def test_project_only_creates_complete_backup_and_retains_image_and_registry(ins
     assert (state / "bootstrap-state.json").exists() and launcher.exists()
 
 
-@pytest.mark.parametrize("change", ["save", "create", "rename", "junction", "backup", "missing"])
+def test_project_backup_and_recheck_do_not_require_filehash_cmdlet(installation):
+    before = snapshot(installation[1])
+    result = exercise(installation, "project", without_filehash=True)
+    assert result["error"] is None and result["code"] == 0, result["output"]
+    backup, = installation[0].glob("2cornot2c-backup-*")
+    assert snapshot(backup) == before
+    assert "remove:" + str(installation[1]) in result["events"]
+
+
+@pytest.mark.parametrize("change", ["save", "create", "rename", "junction", "backup", "missing", "locked"])
 def test_project_changes_after_backup_block_removal(installation, change):
     home, project, state, launcher = installation
     before = snapshot(project)
@@ -259,6 +270,7 @@ def test_project_changes_after_backup_block_removal(installation, change):
         "junction": "New-Item -ItemType Junction -Path (Join-Path $SafeInstallDir 'link') -Target $StateDir | Out-Null",
         "backup": "[IO.File]::WriteAllText((Join-Path $BackupPath 'exercise.c'), 'bad backup')",
         "missing": "Move-Item -LiteralPath (Join-Path $SafeInstallDir 'exercise.c') -Destination (Join-Path $TestHome 'saved-exercise.c')",
+        "locked": "$script:lockedExercise = [IO.File]::Open((Join-Path $SafeInstallDir 'exercise.c'), [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)",
     }
     result = exercise(installation, "project,zyedidia.micro", during_package_removal=changes[change])
     assert result["code"] == 1

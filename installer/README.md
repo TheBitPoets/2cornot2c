@@ -271,7 +271,8 @@ dei programmi condivisi selezionati può influire su altri progetti del PC.
   questa operazione e richiedono assistenza.
 - La rimozione selettiva di progetto o VM crea una copia completa del progetto,
   inclusi file staged, ignorati, non tracciati e metadati Git, in una cartella
-  `~/2cornot2c-backup-<id>`. Verifica SHA-256 di ogni file copiato; collegamenti
+  `~/2cornot2c-backup-<id>`. Verifica SHA-256 di ogni file copiato tramite .NET,
+  anche quando `Get-FileHash` non è disponibile nel processo PowerShell; collegamenti
   o errori di copia fermano la procedura. Servono spazio e tempo proporzionati
   all'intero progetto, inclusi eventuali ambienti virtuali.
   Subito prima di cancellare il progetto confronta nuovamente percorsi, tipi
