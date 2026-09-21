@@ -71,7 +71,7 @@ ACTION_LABELS = (
     "Avvia l'ambiente",
     "Installa, completa o ripara",
     "Aggiorna l'ambiente",
-    "Disinstalla l'ambiente",
+    "Disinstalla - scegli i componenti",
     "Ripristina il PC - elimina anche la VM",
     "Esci",
 )
@@ -392,10 +392,11 @@ def open_home_action(state: State) -> None:
     elif state.action_index == 3:
         state.confirmation_pending = True
         state.report = (
-            "Disinstallazione protetta",
-            "Prima della rimozione verrà creato un backup degli esercizi.",
-            "Verranno rimossi solo i componenti installati da 2cornot2c.",
-            "Premi s per continuare oppure n per annullare.",
+            "Scegli cosa disinstallare",
+            "Si aprirà una lista con caselle: nessun componente preselezionato.",
+            "La rimozione del progetto richiede un backup completo verificato.",
+            "Vedrai il riepilogo e confermerai la selezione prima di rimuovere qualcosa.",
+            "Premi s per aprire la lista oppure n per annullare.",
         )
     elif state.action_index == 4:
         state.confirmation_pending = True
@@ -418,7 +419,7 @@ def confirm_home_action(state: State) -> None:
         if state.action_index == 2
         else "reset"
         if state.action_index == 4
-        else "uninstall"
+        else "select-uninstall"
     )
     launch_windows_action(action)
     state.confirmation_pending = False

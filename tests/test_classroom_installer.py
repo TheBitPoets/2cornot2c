@@ -197,7 +197,7 @@ def test_tui_home_exposes_the_complete_lifecycle() -> None:
     assert "Avvia l'ambiente" in rendered
     assert "Installa, completa o ripara" in rendered
     assert "Aggiorna l'ambiente" in rendered
-    assert "Disinstalla l'ambiente" in rendered
+    assert "Disinstalla - scegli i componenti" in rendered
     assert "Ripristina il PC - elimina anche la VM" in rendered
 
 
@@ -228,7 +228,7 @@ def test_tui_uninstall_requires_confirmation_and_launches_separately(
     assert "backup" in " ".join(state.report)
 
     confirm_home_action(state)
-    assert launched == ["uninstall"]
+    assert launched == ["select-uninstall"]
     assert state.running is False
 
 
@@ -254,6 +254,10 @@ def test_windows_lifecycle_uses_only_persistent_known_scripts(
         str(launcher / "uninstall-classroom-windows.ps1"),
     )
     assert command[-1] == "-ConfirmedFromTui"
+
+    selective_command = powershell_action_command("select-uninstall")
+    assert selective_command[-1] == "-SelectComponents"
+    assert "-ConfirmedFromTui" not in selective_command
 
     reset_command = powershell_action_command("reset")
     assert reset_command[-2:] == (
