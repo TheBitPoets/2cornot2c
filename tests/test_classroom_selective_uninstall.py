@@ -228,7 +228,7 @@ def test_image_only_never_uninstalls_docker_or_touches_project(installation):
 
 def test_image_failure_stops_before_package_or_project_removal(installation):
     result = exercise(installation, "docker-image,Git.Git,project", image_exit=1)
-    assert result["error"], result
+    assert result["error"], result["output"]
     assert not any(e.startswith(("winget:", "remove:")) for e in result["events"])
 
 
@@ -238,7 +238,7 @@ def test_project_only_creates_complete_backup_and_retains_image_and_registry(ins
     (project / "ignored.bin").write_bytes(b"ignored work")
     before = snapshot(project)
     result = exercise(installation, "project")
-    assert result["error"] is None and result["code"] == 0, result
+    assert result["error"] is None and result["code"] == 0, result["output"]
     backup, = home.glob("2cornot2c-backup-*")
     assert snapshot(backup) == before
     assert "remove:" + str(project) in result["events"]
