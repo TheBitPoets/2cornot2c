@@ -1,3 +1,8 @@
+param(
+    [ValidateSet("docker", "virtualbox")]
+    [string]$Provider
+)
+
 $ErrorActionPreference = "Stop"
 
 $StateDir = Join-Path $HOME ".2cornot2c"
@@ -117,7 +122,7 @@ function Find-ExistingProvider {
     return $null
 }
 
-if (-not (Test-Path $ProviderPath)) {
+if (-not $Provider -and -not (Test-Path $ProviderPath)) {
     $ExistingProvider = Find-ExistingProvider
     if ($ExistingProvider) {
         New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
@@ -135,10 +140,16 @@ if (-not (Test-Path $ProviderPath)) {
     }
 }
 
-$Provider = (Get-Content $ProviderPath -Raw).Trim()
+if (-not $Provider) {
+    $Provider = (Get-Content $ProviderPath -Raw).Trim()
+}
 Push-Location $InstallDir
 try {
     if ($Provider -eq "docker") {
+        $DockerBin = Join-Path $env:ProgramFiles "Docker\Docker\resources\bin"
+        if (Test-Path $DockerBin) {
+            $env:Path = $DockerBin + ";" + $env:Path
+        }
         $Python = Join-Path $InstallDir ".installer-venv\Scripts\python.exe"
         & $Python (Join-Path $InstallDir "scripts\student_dev_shell.py")
         exit $LASTEXITCODE

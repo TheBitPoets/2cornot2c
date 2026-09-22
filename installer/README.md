@@ -233,10 +233,27 @@ cd ~/2cornot2c
 Su Windows:
 
 apri **Ambiente 2cornot2c** dal desktop o dal menu Start e scegli
-**Avvia l'ambiente**. Il launcher usa automaticamente Docker o VirtualBox in
-base all'ultima installazione completata. Al primo avvio dopo un aggiornamento,
-riconosce anche gli ambienti creati dalle versioni precedenti tramite il
-registro e una verifica diretta dell'immagine Docker.
+**Avvia l'ambiente**. La schermata mostra separatamente **VM completa** e
+**Docker leggero**, con lo stato rilevato. Se entrambi sono installati puoi
+scegliere quale avviare con le frecce e Invio; la TUI rimane aperta e permette
+di avviare anche l'altro in una finestra separata. Sui PC con poca RAM usa un
+ambiente alla volta. `r` aggiorna l'elenco, `m` o Esc torna al menu principale.
+
+Il rilevamento è read-only e indipendente dall'ultima installazione scelta:
+verifica la VM `default/virtualbox` del progetto, il lock delle release e la
+configurazione Packer (o la release transitoria ancora pending), Vagrant e la registrazione della VM
+in VirtualBox; per Docker controlla CLI, motore e immagine fissata dal lock.
+Ogni probe ha un timeout di 5 secondi. Le installazioni incomplete non vengono
+avviate: la schermata indica come completarle. Se Docker Desktop è spento o
+non risponde, l'immagine risulta **Da verificare**, non assente: apri Docker
+Desktop, attendi che sia pronto e premi `r`. Il rilevamento non installa,
+scarica o avvia nulla.
+
+La selezione passa esplicitamente `-Provider docker|virtualbox` allo script
+del progetto, anche se la copia persistente del launcher è precedente
+all'aggiornamento; non modifica `selected-provider.txt`. Il launcher senza
+parametro conserva il comportamento precedente per compatibilità. La cartella
+del progetto viene letta da `bootstrap-state.json`, come nel launcher.
 
 ## Aggiornamento e disinstallazione Windows
 
