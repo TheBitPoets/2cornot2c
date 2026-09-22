@@ -145,6 +145,28 @@ def test_probe_is_bounded_and_read_only(monkeypatch, exception):
     assert environments._probe("docker", "info") is None
 
 
+def test_null_active_vm_version_keeps_docker_and_tui_available(project, monkeypatch):
+    pytest.importorskip("utui")
+    from installer import tui
+    from installer.model import Host
+
+    add_vm(project)
+    lock_path = project / "packer/classroom-releases.lock.json"
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    lock["targets"]["windows-amd64-virtualbox"]["active_release"]["version"] = None
+    lock_path.write_text(json.dumps(lock), encoding="utf-8")
+    monkeypatch.setattr(environments, "installed_project", lambda: project)
+    monkeypatch.setattr(environments, "_probe", lambda *args: 0)
+    state = tui.State(Host.WINDOWS_AMD64, (Provider.VIRTUALBOX, Provider.DOCKER), screen="home")
+
+    tui.open_home_action(state)
+
+    vm, docker = state.environments
+    assert state.running and state.screen == "launch"
+    assert not vm.launchable and docker.launchable
+    assert "Docker leggero - Installato" in "\n".join(tui.frame(state, 80, 25, color=False))
+
+
 def test_custom_installation_and_explicit_provider_use_current_launcher(tmp_path, monkeypatch):
     monkeypatch.setattr(environments.Path, "home", lambda: tmp_path)
     project = tmp_path / "custom project"
