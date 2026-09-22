@@ -185,6 +185,73 @@ def test_existing_checkout_with_missing_entrypoint_is_not_overwritten(tmp_path, 
     assert (target / "exercise.c").read_text() == "keep"
 
 
+@pytest.mark.parametrize("actual,expected,equivalent", [
+    ("https://github.com/TheBitPoets/2cornot2c", "https://github.com/TheBitPoets/2cornot2c.git", True),
+    ("HTTPS://GITHUB.COM/TheBitPoets/2cornot2c.git", "https://github.com/TheBitPoets/2cornot2c", True),
+    ("https://github.com/Other/2cornot2c.git", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://github.com/TheBitPoets/other.git", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://github.com/thebitpoets/2cornot2c.git", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("http://github.com/TheBitPoets/2cornot2c.git", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://user:secret@github.com/TheBitPoets/2cornot2c.git", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://github.com:443/TheBitPoets/2cornot2c.git", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://github.com/TheBitPoets/2cornot2c.git?x=1", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://github.com/TheBitPoets/2cornot2c.git#x", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://github.com/TheBitPoets/2cornot2c.git/", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://github.com/TheBitPoets%2fother/2cornot2c.git", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://github.com.example/TheBitPoets/2cornot2c.git", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("https://example.test/repo", "https://example.test/repo.git", False),
+    ("git@github.com:TheBitPoets/2cornot2c.git", "https://github.com/TheBitPoets/2cornot2c.git", False),
+    ("custom path", "custom path", True),
+    ("custom path", "CUSTOM PATH", False),
+])
+def test_origin_equivalence_is_restricted(actual, expected, equivalent):
+    result = run_functions("bootstrap-classroom-windows.ps1", """
+@{equivalent=(Test-ClassroomRepositoryOrigin -Actual __ACTUAL__ -Expected __EXPECTED__)} |
+    ConvertTo-Json -Compress
+""".replace("__ACTUAL__", quote(actual)).replace("__EXPECTED__", quote(expected)))
+    assert result["equivalent"] is equivalent
+
+
+@pytest.mark.parametrize("condition,marker", [
+    ("absent", "origine Git assente"),
+    ("empty", "origine Git assente"),
+    ("malformed", "lettura dell'origine Git non riuscita"),
+    ("multiple", "origine Git ambigua"),
+    ("different", "origine Git diversa da quella attesa"),
+    ("without-suffix", "operazione Git in corso o interrotta"),
+    ("host-case", "operazione Git in corso o interrotta"),
+])
+def test_origin_diagnostics_preserve_checkout_and_hide_credentials(tmp_path, condition, marker):
+    target = tmp_path / "student"
+    expected = "https://github.com/TheBitPoets/2cornot2c.git"
+    git("init", target)
+    config = target / ".git/config"
+    if condition == "malformed":
+        config.write_text("[invalid secret-value\n", encoding="utf-8")
+    elif condition == "empty":
+        with config.open("a", encoding="utf-8") as stream:
+            stream.write('\n[remote "origin"]\nurl =\n')
+    elif condition != "absent":
+        actual = {
+            "multiple": expected,
+            "different": "https://user:secret-value@example.test/repo.git",
+            "without-suffix": expected.removesuffix(".git"),
+            "host-case": expected.replace("github.com", "GITHUB.COM"),
+        }[condition]
+        git("-C", target, "remote", "add", "origin", actual)
+        if condition == "multiple":
+            git("-C", target, "config", "--add", "remote.origin.url", "secret-value")
+    # Stop the accepted variants before clone/pull, proving the origin gate passed.
+    (target / ".git/index.lock").write_text("audit lock", encoding="utf-8")
+    before = {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    result = prepare(target, expected)
+    assert not result["ok"]
+    assert marker in result["error"]
+    assert "secret-value" not in result["error"]
+    assert before == {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    assert not list(tmp_path.glob("student.incomplete-*"))
+
+
 def test_failed_reclone_keeps_original_metadata(tmp_path):
     target = tmp_path / "student"
     missing = tmp_path / "unreachable-origin"

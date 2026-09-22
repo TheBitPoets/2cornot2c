@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 
-from installer.model import Check, InstallPlan
+from installer.model import CHECK_TIMEOUT_SECONDS, Check, InstallPlan
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,7 +54,7 @@ def run_check(check: Check) -> CheckResult:
         check=False,
         capture_output=True,
         text=True,
-        timeout=20,
+        timeout=CHECK_TIMEOUT_SECONDS,
     )
     combined_output = f"{result.stdout}\n{result.stderr}".strip()
     output = combined_output.splitlines()
@@ -81,7 +81,18 @@ def run_check(check: Check) -> CheckResult:
             detail = (
                 f"versione {rendered}; serve almeno {check.minimum_version}"
             )
-    return CheckResult(check, ok, detail, present)
+    reason = ""
+    if not ok:
+        if check.key == "network" and "CLASSROOM_NETWORK_TIMEOUT:" in combined_output:
+            reason = "timeout"
+        detail = _failure_detail(check, detail)
+    return CheckResult(check, ok, detail, present, reason)
+
+
+def _failure_detail(check: Check, detail: str) -> str:
+    """Keep the probe context even when the subprocess omits or truncates it."""
+
+    return f"{check.failure_context} {detail}".strip()[:600]
 
 
 def _resolve_windows_command(command: tuple[str, ...]) -> tuple[str, ...]:
@@ -121,10 +132,14 @@ def diagnose(plan: InstallPlan) -> tuple[CheckResult, ...]:
         try:
             results.append(run_check(check))
         except FileNotFoundError:
-            results.append(CheckResult(check, False, "Comando non disponibile.", False, "missing"))
+            results.append(CheckResult(
+                check, False, _failure_detail(check, "Comando non disponibile."), False, "missing",
+            ))
         except subprocess.TimeoutExpired:
             results.append(CheckResult(
-                check, False, "Il controllo non ha risposto entro 20 secondi. Riprova; "
-                "se persiste, comunica il componente al docente.", False, "timeout",
+                check, False, _failure_detail(
+                    check, f"Il controllo non ha risposto entro {CHECK_TIMEOUT_SECONDS} secondi. Riprova; "
+                    "se persiste, comunica il componente al docente.",
+                ), False, "timeout",
             ))
     return tuple(results)

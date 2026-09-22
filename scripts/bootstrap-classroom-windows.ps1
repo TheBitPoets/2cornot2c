@@ -187,6 +187,51 @@ function Install-ClassroomLauncher {
     }
 }
 
+function Test-ClassroomRepositoryOrigin {
+    param([string]$Actual, [string]$Expected)
+    if ($Actual -ceq $Expected) { return $true }
+    # Normalize only credential-free HTTPS GitHub URLs. Keep repository casing,
+    # custom hosts, local paths, SSH URLs, ports, queries and fragments distinct.
+    $Pattern = '\A(?i:https://github[.]com)/(?<owner>[A-Za-z0-9-]+)/(?<repo>[A-Za-z0-9_.-]+)\z'
+    $ActualMatch = [regex]::Match($Actual, $Pattern)
+    $ExpectedMatch = [regex]::Match($Expected, $Pattern)
+    if (-not $ActualMatch.Success -or -not $ExpectedMatch.Success) { return $false }
+    $ActualRepo = $ActualMatch.Groups['repo'].Value
+    $ExpectedRepo = $ExpectedMatch.Groups['repo'].Value
+    if ($ActualRepo.EndsWith('.git', [StringComparison]::Ordinal)) {
+        $ActualRepo = $ActualRepo.Substring(0, $ActualRepo.Length - 4)
+    }
+    if ($ExpectedRepo.EndsWith('.git', [StringComparison]::Ordinal)) {
+        $ExpectedRepo = $ExpectedRepo.Substring(0, $ExpectedRepo.Length - 4)
+    }
+    return ($ActualMatch.Groups['owner'].Value -ceq $ExpectedMatch.Groups['owner'].Value -and
+        $ActualRepo -ceq $ExpectedRepo)
+}
+
+function Get-ClassroomRepositoryOrigin {
+    param([string]$Directory)
+    try {
+        $Origins = @(& git -C $Directory config --local --get-all remote.origin.url 2>$null)
+        $OriginExitCode = $LASTEXITCODE
+    } catch {
+        # Do not echo Git output: configuration may contain credentials.
+        throw 'E13: lettura dell''origine Git non riuscita; cartella preservata, chiedi al docente.'
+    }
+    if ($OriginExitCode -eq 1 -and $Origins.Count -eq 0) {
+        throw 'E13: origine Git assente; cartella preservata, chiedi al docente.'
+    }
+    if ($OriginExitCode -ne 0) {
+        throw "E13: lettura dell'origine Git non riuscita (exit code $OriginExitCode); cartella preservata, chiedi al docente."
+    }
+    if ($Origins.Count -ne 1) {
+        throw 'E13: origine Git ambigua (più URL); cartella preservata, chiedi al docente.'
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$Origins[0])) {
+        throw 'E13: origine Git assente; cartella preservata, chiedi al docente.'
+    }
+    return [string]$Origins[0]
+}
+
 function Initialize-ClassroomRepository {
     param([string]$Directory, [string]$Url)
     $Target = [System.IO.Path]::GetFullPath($Directory).TrimEnd('\', '/')
@@ -215,9 +260,9 @@ function Initialize-ClassroomRepository {
             if ((Get-Item -LiteralPath $GitDirectory -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
                 throw 'E13: metadati Git collegati altrove; chiedi al docente, cartella preservata.'
             }
-            $Origin = & git -C $Target config --get remote.origin.url
-            if ($LASTEXITCODE -ne 0 -or $Origin -cne $Url) {
-                throw 'E13: origine Git diversa o assente; cartella preservata, chiedi al docente.'
+            $Origin = Get-ClassroomRepositoryOrigin -Directory $Target
+            if (-not (Test-ClassroomRepositoryOrigin -Actual $Origin -Expected $Url)) {
+                throw 'E13: origine Git diversa da quella attesa; cartella preservata, chiedi al docente.'
             }
             if ($Children.Count -eq 1 -and $Children[0].Name -eq '.git') {
                 if (@(Get-ChildItem -LiteralPath $GitDirectory -Filter '*.lock' -Recurse -Force).Count) {

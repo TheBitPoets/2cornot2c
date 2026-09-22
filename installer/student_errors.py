@@ -66,9 +66,9 @@ ERRORS = {
     "network": StudentError(
         "E07",
         "Non riesco a collegarmi al server di download",
-        "La procedura ha bisogno di Internet.",
+        "Il controllo verso il server indicato nei dettagli non è riuscito.",
         (
-            "Controlla con il browser che Internet funzioni.",
+            "Prova ad aprire nel browser l'URL indicato nei dettagli.",
             "Non disattivare l'antivirus; riprova o comunica E07.",
         ),
     ),
@@ -211,7 +211,14 @@ def resource_error(detail: str) -> StudentError:
     return ERRORS["resources"]
 
 
-def for_check(key: str, detail: str) -> StudentError:
+def for_check(key: str, detail: str, *, reason: str = "") -> StudentError:
+    if key == "network" and reason == "timeout":
+        return StudentError(
+            "E07",
+            "Il controllo della connessione è scaduto",
+            "Il controllo non è terminato entro il tempo previsto; non basta a stabilire se Internet è assente.",
+            ("Riprova il controllo dal menu.", *ERRORS["network"].actions),
+        )
     if key == "resources":
         return resource_error(detail)
     if key == "wsl" and "WSL_UAC_CANCELLED" in detail:

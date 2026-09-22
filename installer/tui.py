@@ -335,7 +335,11 @@ def refresh_report(state: State) -> None:
                 )
             )
         elif not result.ok and result.check.key in {"resources", "network"}:
-            report.extend(for_check(result.check.key, result.detail).lines(result.detail))
+            if result.check.key == "network" and result.reason == "timeout":
+                report.append(f"[DA RIPROVARE] {result.check.label}")
+            report.extend(for_check(
+                result.check.key, result.detail, reason=result.reason,
+            ).lines(result.detail))
         else:
             status = "OK" if result.ok else (
                 "ATTESA" if result.reason == "dependency" else
