@@ -115,7 +115,10 @@ def load_target_releases(path: Path = DEFAULT_LOCK_PATH) -> dict[str, TargetRele
             version = _parse_version(
                 active["version"], field="Versione attiva", target_id=target_id
             )
-            assert version is not None
+            if version is None:
+                raise ClassroomReleaseLockError(
+                    f"Versione attiva mancante per {target_id}."
+                )
             url = active["manifest_url"]
             digest = active["manifest_sha256"]
             expected_url = (

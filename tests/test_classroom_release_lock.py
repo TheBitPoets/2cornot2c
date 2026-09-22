@@ -99,6 +99,12 @@ def test_candidate_does_not_disable_existing_active_release(tmp_path: Path) -> N
         lambda value: value["targets"]["windows-amd64-virtualbox"].update(
             active_release={
                 **active_release("windows-amd64-virtualbox"),
+                "version": None,
+            }
+        ),
+        lambda value: value["targets"]["windows-amd64-virtualbox"].update(
+            active_release={
+                **active_release("windows-amd64-virtualbox"),
                 "manifest_url": "https://example.test/manifest.json",
             }
         ),

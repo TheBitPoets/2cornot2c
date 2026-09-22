@@ -298,12 +298,17 @@ def test_tui_launches_environment_without_showing_python_commands(
     monkeypatch,
 ) -> None:
     pytest.importorskip("utui")
-    from installer.tui import State, open_home_action
+    from installer.tui import State, open_home_action, launch_selected_environment
+    from installer.environments import Environment
 
     launched = []
     monkeypatch.setattr(
         "installer.tui.launch_windows_action",
-        lambda action: launched.append(action),
+        lambda action, **kwargs: launched.append((action, kwargs["provider"])),
+    )
+    monkeypatch.setattr(
+        "installer.tui.detect_windows_environments",
+        lambda: (Environment(Provider.DOCKER, "Installato", "Apri Docker", True),),
     )
     state = State(
         Host.WINDOWS_AMD64,
@@ -314,8 +319,11 @@ def test_tui_launches_environment_without_showing_python_commands(
 
     open_home_action(state)
 
-    assert launched == ["launch"]
-    assert state.running is False
+    assert launched == []
+    assert state.screen == "launch"
+    launch_selected_environment(state)
+    assert launched == [("launch", Provider.DOCKER)]
+    assert state.running is True
 
 
 def test_successful_installation_remembers_provider(monkeypatch, tmp_path) -> None:

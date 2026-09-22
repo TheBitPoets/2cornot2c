@@ -30,6 +30,7 @@ from utui import (
 
 from installer.diagnostics import diagnose
 from installer.executor import StepResult, execute_plan
+from installer.environments import Environment, detect_windows_environments
 from installer.lifecycle import launch_windows_action
 from installer.model import Host, Provider
 from installer.platforms import detect_host
@@ -65,6 +66,8 @@ class State:
     cancel_confirmation_pending: bool = False
     cancellation_requested: bool = False
     running: bool = True
+    environments: tuple[Environment, ...] = ()
+    environment_index: int = 0
 
 
 ACTION_LABELS = (
@@ -105,6 +108,24 @@ def build_screen(
                 "Invio: apri\n"
                 "q/Esc: esci"
             )
+    elif state.screen == "launch":
+        names = {Provider.VIRTUALBOX: "VM completa", Provider.DOCKER: "Docker leggero"}
+        choices = Panel(
+            ListView(
+                tuple(f"{names[item.provider]} - {item.status}" for item in state.environments)
+                or ("Inventario non disponibile",),
+                active_index=state.environment_index,
+                focused=True,
+            ),
+            title="Scegli l'ambiente da avviare",
+            min_width=38,
+        )
+        visible_report = state.report
+        report_title = "Ambienti installati"
+        command_text = (
+            "Su/Giu o k/j: scegli\nInvio: avvia\nr: aggiorna elenco\n"
+            "m/Esc: menu, q: esci"
+        )
     else:
         names = {
         Provider.VMWARE: "VM completa - VMware Fusion",
@@ -391,12 +412,8 @@ def open_home_action(state: State) -> None:
     """Apre la funzione selezionata oppure ne richiede conferma."""
 
     if state.action_index == 0:
-        try:
-            launch_windows_action("launch")
-            state.running = False
-        except Exception as error:
-            message = for_check("installer", str(error))
-            state.report = message.lines(str(error))
+        state.screen = "launch"
+        refresh_environments(state)
     elif state.action_index == 1:
         state.screen = "providers"
         state.confirmation_pending = False
@@ -427,6 +444,67 @@ def open_home_action(state: State) -> None:
             "Premi s per confermare oppure n per annullare.",
         )
     else:
+        state.running = False
+
+
+def refresh_environments(state: State) -> None:
+    """Rilegge l'inventario senza installare o avviare alcun ambiente."""
+
+    try:
+        state.environments = detect_windows_environments()
+        state.environment_index = min(state.environment_index, max(0, len(state.environments) - 1))
+        describe_environment(state)
+    except (OSError, ValueError) as error:
+        state.environments = ()
+        state.environment_index = 0
+        state.report = ("Inventario non disponibile. Premi r per riprovare.", str(error))
+
+
+def describe_environment(state: State) -> None:
+    if not state.environments:
+        state.report = ("Nessun ambiente rilevato. Torna al menu per installare o riparare.",)
+        return
+    item = state.environments[state.environment_index]
+    state.report = (
+        item.detail,
+        "Puoi avviare entrambi gli ambienti, uno alla volta da questo menu.",
+        "La TUI resta aperta. Su PC con poca RAM usane uno alla volta.",
+    )
+
+
+def launch_selected_environment(state: State) -> None:
+    if not state.environments:
+        return
+    item = state.environments[state.environment_index]
+    if not item.launchable:
+        state.report = (item.detail, "Premi r dopo aver completato l'azione indicata.")
+        return
+    try:
+        launch_windows_action("launch", provider=item.provider)
+        state.report = (
+            "Avvio richiesto in una nuova finestra.",
+            "Puoi scegliere anche l'altro ambiente oppure tornare al menu con m.",
+        )
+    except Exception as error:
+        message = for_check("installer", str(error))
+        state.report = message.lines(str(error))
+
+
+def handle_launch_key(state: State, key: Key, character: str = "") -> None:
+    if key is Key.UP or character == "k":
+        state.environment_index = max(0, state.environment_index - 1)
+        describe_environment(state)
+    elif key is Key.DOWN or character == "j":
+        state.environment_index = min(max(0, len(state.environments) - 1), state.environment_index + 1)
+        describe_environment(state)
+    elif key is Key.ENTER:
+        launch_selected_environment(state)
+    elif character == "r":
+        refresh_environments(state)
+    elif key is Key.ESCAPE or character == "m":
+        state.screen = "home"
+        state.report = ("Scegli cosa vuoi fare.",)
+    elif character == "q":
         state.running = False
 
 
@@ -763,6 +841,15 @@ def main() -> int:
                     size = resized
                 if event is not None:
                     character = event.character if event.key is Key.CHARACTER else ""
+                    if not state.installing and not state.confirmation_pending and (
+                        (state.screen == "home" and state.action_index == 0 and event.key is Key.ENTER)
+                        or (state.screen == "launch" and character == "r")
+                    ):
+                        state.report = (
+                            "Rilevamento di VM completa e Docker in corso...",
+                            "Attendi: ogni controllo può richiedere fino a 5 secondi.",
+                        )
+                        present(frame(state, size.width, size.height, color=color))
                     if state.installing:
                         if (
                             character == "s"
@@ -806,6 +893,8 @@ def main() -> int:
                             open_home_action(state)
                         elif event.key is Key.ESCAPE or character == "q":
                             state.running = False
+                    elif state.screen == "launch":
+                        handle_launch_key(state, event.key, character)
                     elif character == "s" and state.confirmation_pending:
                         start_selected(state)
                         progress_refreshed_at = monotonic()
