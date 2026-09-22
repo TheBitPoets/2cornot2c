@@ -50,6 +50,9 @@ Windows viene riconosciuto dal tipo di errore, senza analizzare messaggi tradott
 come il timeout del processo, produce E07 con indicazione `DA RIPROVARE`.
 Altri errori di rete mantengono E07 senza essere classificati come timeout.
 La verifica suggerita nel browser usa lo stesso URL mostrato nei dettagli.
+La TUI mostra il contesto del probe subito dopo il titolo E07, prima delle
+istruzioni, così URL e soglie restano visibili anche nel pannello compatto 80×25.
+Il messaggio nativo rimane separato nei dettagli tecnici, senza duplicare l'URL.
 Un controllo fallito continua a bloccare l'installazione prima delle modifiche.
 
 `Check.failure_context` è un campo opzionale, vuoto per i controlli esistenti:

@@ -337,9 +337,17 @@ def refresh_report(state: State) -> None:
         elif not result.ok and result.check.key in {"resources", "network"}:
             if result.check.key == "network" and result.reason == "timeout":
                 report.append(f"[DA RIPROVARE] {result.check.label}")
-            report.extend(for_check(
+            error = for_check(
                 result.check.key, result.detail, reason=result.reason,
-            ).lines(result.detail))
+            )
+            context = result.check.failure_context if result.check.key == "network" else ""
+            if context:
+                detail = result.detail.removeprefix(context).lstrip()
+                lines = error.lines(detail)
+                # Keep the target visible before long guidance in compact terminals.
+                report.extend((lines[0], f"Controllo: {context}", *lines[1:]))
+            else:
+                report.extend(error.lines(result.detail))
         else:
             status = "OK" if result.ok else (
                 "ATTESA" if result.reason == "dependency" else

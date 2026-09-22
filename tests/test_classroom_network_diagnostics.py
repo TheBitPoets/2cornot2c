@@ -96,6 +96,28 @@ def test_failure_context_survives_large_stderr(monkeypatch):
     assert result.detail.startswith(check.failure_context)
 
 
+@pytest.mark.parametrize("reason", ["timeout", ""])
+def test_compact_network_report_shows_target_and_limits(monkeypatch, reason):
+    plan = network_plan()
+    check = plan.checks[0]
+    detail = "Il controllo non ha risposto entro 20 secondi." if reason else "HTTP 403"
+    results = (diagnostics.CheckResult(check, False, f"{check.failure_context} {detail}", False, reason),)
+    monkeypatch.setattr(tui, "diagnose", lambda plan: results)
+    state = tui.State(Host.WINDOWS_AMD64, (Provider.DOCKER,))
+    tui.refresh_report(state)
+    # Join only the diagnosis panel's content; allow wrapping inside an URL.
+    rows = tui.frame(state, 80, 25, color=False)
+    first = next(i for i, row in enumerate(rows) if "Diagnosi" in row) + 1
+    last = next(i for i in range(first, len(rows)) if rows[i].startswith("+"))
+    visible = "".join(row.strip(" |") for row in rows[first:last])
+    assert NETWORK_CHECK_URL in visible
+    assert "HEAD" in visible
+    assert "15 s" in visible
+    assert "20 s" in visible
+    assert sum(NETWORK_CHECK_URL in line for line in state.report) == 1
+    assert any(line == f"Dettagli tecnici: {detail}" for line in state.report)
+
+
 def test_timeout_marker_does_not_reclassify_unrelated_checks(monkeypatch):
     monkeypatch.setattr(diagnostics.subprocess, "run", lambda *args, **kwargs:
                         subprocess.CompletedProcess(args[0], 1, "", "CLASSROOM_NETWORK_TIMEOUT: text"))
