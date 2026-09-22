@@ -42,6 +42,28 @@ prerequisito (`ATTESA`) e timeout (`DA RIPROVARE`). Senza Docker CLI non vengono
 eseguiti i controlli di motore e immagine; senza motore pronto non viene
 interrogata l'immagine. Il menu indica l'azione per preparare WSL e Docker.
 
+Il controllo di connessione verifica con HEAD un singolo URL GitHub Raw, non
+la disponibilità generale di Internet né tutti i server dei download successivi.
+E07 riporta URL, metodo e limiti temporali: su Windows la richiesta ha 15 secondi,
+mentre il processo diagnostico ha 20 secondi su entrambi i sistemi. Il timeout
+Windows viene riconosciuto dal tipo di errore, senza analizzare messaggi tradotti;
+come il timeout del processo, produce E07 con indicazione `DA RIPROVARE`.
+Altri errori di rete mantengono E07 senza essere classificati come timeout.
+La verifica suggerita nel browser usa lo stesso URL mostrato nei dettagli.
+La TUI mostra il contesto del probe subito dopo il titolo E07, prima delle
+istruzioni, così URL e soglie restano visibili anche nel pannello compatto 80×25.
+Gli errori bloccanti di risorse e rete precedono gli avvisi non bloccanti e i
+controlli dei componenti; gli avvisi restano nel report dopo gli errori. A parità
+di priorità si conserva l'ordine del piano, compreso il blocco risorse prima
+della rete quando entrambi falliscono. L'ordine di esecuzione non cambia.
+Il messaggio nativo rimane separato nei dettagli tecnici, senza duplicare l'URL.
+Un controllo fallito continua a bloccare l'installazione prima delle modifiche.
+
+`Check.failure_context` è un campo opzionale, vuoto per i controlli esistenti:
+contiene solo dati diagnostici pubblici e viene anteposto ai dettagli in caso di
+errore, anche se il sottoprocesso omette il target o scade. Il dettaglio risultante
+resta limitato a 600 caratteri; non inserire credenziali in questo campo.
+
 Gli errori WSL conservano fase, exit code nativo e output limitato in
 `%LOCALAPPDATA%\2cornot2c\diagnostics\wsl-<id>.json`. Il processo elevato
 trasmette il resoconto al menu; il dettaglio compare anche in
@@ -86,6 +108,18 @@ fallisce. Cartelle con file, origini diverse, junction o lock non vengono
 ricostruite automaticamente. Il normale aggiornamento usa `pull --ff-only`;
 se mancano ancora file essenziali, E13 ferma l'avvio e richiede assistenza.
 Non usare `reset --hard` o cancellare esercizi per aggirare il controllo.
+
+E13 distingue origine locale assente/vuota, configurazione non leggibile, più URL
+per la stessa origine e origine diversa da quella attesa. I messaggi non mostrano
+URL configurati o stderr Git, che potrebbero contenere credenziali. L'origine viene
+letta dalla configurazione locale del repository, senza fallback alla globale.
+Il confronto accetta l'identità letterale e, solo per URL HTTPS di `github.com`
+senza credenziali, porte esplicite, query, frammenti o slash finale, tollera
+maiuscole nel protocollo/dominio e il suffisso `.git` opzionale. Proprietario e
+nome del repository mantengono un confronto sensibile alle maiuscole. Host
+personalizzati, percorsi locali e URL SSH richiedono ancora identità letterale.
+L'accettazione di una variante non riscrive l'origine né rimuove i controlli
+successivi su lock, file, HEAD e recupero conservativo.
 
 Il bootstrap crea il collegamento **Ambiente 2cornot2c** sul desktop e nel
 menu Start. Da quel momento non servono altri comandi: lo stesso menu permette

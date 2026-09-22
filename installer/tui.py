@@ -319,7 +319,14 @@ def refresh_report(state: State) -> None:
     provider = state.providers[state.active_index]
     results = diagnose(install_plan(state.host, provider))
     report: list[str] = []
-    for result in results:
+    # Show installation blockers before warnings and component checks can fill
+    # the compact panel. Stable sorting preserves the order within each group.
+    for result in sorted(
+        results,
+        key=lambda result: not (
+            not result.ok and result.check.key in {"resources", "network"}
+        ),
+    ):
         if (
             result.check.key == "resources"
             and result.ok
@@ -335,7 +342,19 @@ def refresh_report(state: State) -> None:
                 )
             )
         elif not result.ok and result.check.key in {"resources", "network"}:
-            report.extend(for_check(result.check.key, result.detail).lines(result.detail))
+            if result.check.key == "network" and result.reason == "timeout":
+                report.append(f"[DA RIPROVARE] {result.check.label}")
+            error = for_check(
+                result.check.key, result.detail, reason=result.reason,
+            )
+            context = result.check.failure_context if result.check.key == "network" else ""
+            if context:
+                detail = result.detail.removeprefix(context).lstrip()
+                lines = error.lines(detail)
+                # Keep the target visible before long guidance in compact terminals.
+                report.extend((lines[0], f"Controllo: {context}", *lines[1:]))
+            else:
+                report.extend(error.lines(result.detail))
         else:
             status = "OK" if result.ok else (
                 "ATTESA" if result.reason == "dependency" else

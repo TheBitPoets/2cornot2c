@@ -8,9 +8,13 @@ from installer.classroom_release_lock import (
     ClassroomReleaseLockError,
     target_release,
 )
-from installer.model import Check, Host, InstallPlan, Provider, Step
+from installer.model import CHECK_TIMEOUT_SECONDS, Check, Host, InstallPlan, Provider, Step
 from installer.student_dev import immutable_reference
 from installer.tool_versions import MINIMUM_TOOL_VERSIONS
+
+
+NETWORK_CHECK_URL = "https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/README.md"
+NETWORK_REQUEST_TIMEOUT_SECONDS = 15
 
 
 def classroom_images_active(host: Host, provider: Provider) -> bool:
@@ -87,8 +91,11 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
                 "--silent",
                 "--show-error",
                 "--head",
-                "https://raw.githubusercontent.com/"
-                "TheBitPoets/2cornot2c/main/README.md",
+                NETWORK_CHECK_URL,
+            ),
+            failure_context=(
+                f"URL: {NETWORK_CHECK_URL}; metodo: HEAD; "
+                f"limite controllo: {CHECK_TIMEOUT_SECONDS} s."
             ),
         )
         if host is Host.MACOS_ARM64
@@ -100,9 +107,17 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
                 "-NoProfile",
                 "-NonInteractive",
                 "-Command",
-                "Invoke-WebRequest -UseBasicParsing -Method Head -TimeoutSec 15 "
-                "'https://raw.githubusercontent.com/"
-                "TheBitPoets/2cornot2c/main/README.md' | Out-Null",
+                "try { Invoke-WebRequest -UseBasicParsing -Method Head "
+                f"-TimeoutSec {NETWORK_REQUEST_TIMEOUT_SECONDS} -ErrorAction Stop "
+                f"'{NETWORK_CHECK_URL}' | Out-Null }} catch {{ "
+                "if ($_.Exception.Status -eq [System.Net.WebExceptionStatus]::Timeout) { "
+                "[Console]::Error.WriteLine('CLASSROOM_NETWORK_TIMEOUT: ' + $_.Exception.Message) "
+                "} else { [Console]::Error.WriteLine($_.Exception.Message) }; exit 1 }",
+            ),
+            failure_context=(
+                f"URL: {NETWORK_CHECK_URL}; metodo: HEAD; "
+                f"timeout richiesta: {NETWORK_REQUEST_TIMEOUT_SECONDS} s; "
+                f"limite controllo: {CHECK_TIMEOUT_SECONDS} s."
             ),
         )
     )
