@@ -52,6 +52,10 @@ Altri errori di rete mantengono E07 senza essere classificati come timeout.
 La verifica suggerita nel browser usa lo stesso URL mostrato nei dettagli.
 La TUI mostra il contesto del probe subito dopo il titolo E07, prima delle
 istruzioni, così URL e soglie restano visibili anche nel pannello compatto 80×25.
+Gli errori bloccanti di risorse e rete precedono gli avvisi non bloccanti e i
+controlli dei componenti; gli avvisi restano nel report dopo gli errori. A parità
+di priorità si conserva l'ordine del piano, compreso il blocco risorse prima
+della rete quando entrambi falliscono. L'ordine di esecuzione non cambia.
 Il messaggio nativo rimane separato nei dettagli tecnici, senza duplicare l'URL.
 Un controllo fallito continua a bloccare l'installazione prima delle modifiche.
 

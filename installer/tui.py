@@ -319,7 +319,14 @@ def refresh_report(state: State) -> None:
     provider = state.providers[state.active_index]
     results = diagnose(install_plan(state.host, provider))
     report: list[str] = []
-    for result in results:
+    # Show installation blockers before warnings and component checks can fill
+    # the compact panel. Stable sorting preserves the order within each group.
+    for result in sorted(
+        results,
+        key=lambda result: not (
+            not result.ok and result.check.key in {"resources", "network"}
+        ),
+    ):
         if (
             result.check.key == "resources"
             and result.ok

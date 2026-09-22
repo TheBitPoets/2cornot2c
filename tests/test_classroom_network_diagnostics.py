@@ -6,7 +6,7 @@ import subprocess
 
 import pytest
 
-from installer import diagnostics, tui
+from installer import diagnostics, preflight, tui
 from installer.executor import execute_plan
 from installer.model import Check, Host, Provider
 from installer.plans import NETWORK_CHECK_URL, install_plan
@@ -97,25 +97,60 @@ def test_failure_context_survives_large_stderr(monkeypatch):
 
 
 @pytest.mark.parametrize("reason", ["timeout", ""])
-def test_compact_network_report_shows_target_and_limits(monkeypatch, reason):
-    plan = network_plan()
-    check = plan.checks[0]
+@pytest.mark.parametrize("provider", [Provider.DOCKER, Provider.VIRTUALBOX])
+@pytest.mark.parametrize("virtualization", [True, False, None])
+def test_compact_network_report_shows_target_and_limits(
+    monkeypatch, reason, provider, virtualization,
+):
+    plan = install_plan(Host.WINDOWS_AMD64, provider)
+    resources = preflight.evaluate(
+        plan.host, provider,
+        preflight.ResourceSnapshot(16 * 1024**3, 40 * 1024**3, virtualization),
+    )
+    resource_detail = "; ".join(
+        f"{result.status.upper()} {result.detail}" for result in resources
+    )
+    assert all(result.status != "blocked" for result in resources)
     detail = "Il controllo non ha risposto entro 20 secondi." if reason else "HTTP 403"
-    results = (diagnostics.CheckResult(check, False, f"{check.failure_context} {detail}", False, reason),)
-    monkeypatch.setattr(tui, "diagnose", lambda plan: results)
-    state = tui.State(Host.WINDOWS_AMD64, (Provider.DOCKER,))
+    checked = []
+
+    def run_check(check):
+        checked.append(check)
+        if check.key == "resources":
+            return diagnostics.CheckResult(check, True, resource_detail, True)
+        if check.key == "network":
+            return diagnostics.CheckResult(
+                check, False, f"{check.failure_context} {detail}", False, reason,
+            )
+        return diagnostics.CheckResult(check, True, "exit code 0", True)
+
+    # Keep the real plan and diagnosis pipeline, replacing only the offline probes.
+    monkeypatch.setattr(diagnostics, "run_check", run_check)
+    state = tui.State(Host.WINDOWS_AMD64, (provider,))
     tui.refresh_report(state)
+    assert tuple(checked) == plan.checks
     # Join only the diagnosis panel's content; allow wrapping inside an URL.
     rows = tui.frame(state, 80, 25, color=False)
     first = next(i for i, row in enumerate(rows) if "Diagnosi" in row) + 1
     last = next(i for i in range(first, len(rows)) if rows[i].startswith("+"))
     visible = "".join(row.strip(" |") for row in rows[first:last])
+    assert "ERRORE E07" in visible
+    assert ("[DA RIPROVARE]" in visible) is (reason == "timeout")
     assert NETWORK_CHECK_URL in visible
     assert "HEAD" in visible
     assert "15 s" in visible
     assert "20 s" in visible
     assert sum(NETWORK_CHECK_URL in line for line in state.report) == 1
     assert any(line == f"Dettagli tecnici: {detail}" for line in state.report)
+    report = "\n".join(state.report)
+    assert resource_detail in report
+    if virtualization is not True:
+        assert "AVVISO - COMPUTER CON RISORSE LIMITATE" in report
+        assert "Puoi continuare comunque con la VM completa." in report
+        assert "Chiudi Docker Desktop, browser e altri programmi pesanti." in report
+        assert "Durante l'uso Windows e la VM potrebbero essere lenti." in report
+    for check in plan.checks[2:]:
+        assert f"[OK] {check.label}: exit code 0" in report
 
 
 def test_timeout_marker_does_not_reclassify_unrelated_checks(monkeypatch):
