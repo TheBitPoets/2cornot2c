@@ -966,7 +966,24 @@ La API key deve stare solo nella shell, in una variabile d'ambiente locale, oppu
 .secrets/ai.secret
 ```
 
-Il server legge prima le variabili d'ambiente e poi `.secrets/ai.secret`.
+Le singole variabili d'ambiente (per esempio `OPENAI_API_KEY`) hanno precedenza.
+Per il file AI, server e `scripts/probe_ai_payload_limit.py` usano, nell'ordine:
+
+1. il percorso assoluto indicato da `THEBITLAB_AI_SECRET_FILE`, se configurato;
+2. `~/.thebitlab-secrets/ai.secret`, se presente (su Windows nel profilo utente);
+3. `.secrets/ai.secret` nel progetto, per compatibilità con le installazioni precedenti.
+
+Viene letto un solo file, senza unire credenziali di origini diverse. Un percorso
+esplicito mancante non provoca il ripiego sui file predefiniti. Il percorso standard
+esterno è condiviso dai cloni dello stesso utente; per credenziali diverse per clone
+usare `THEBITLAB_AI_SECRET_FILE` nella rispettiva sessione di avvio.
+
+Il ripristino aggiornato di `thebitlab-secrets` conserva anche `ai.secret` nella
+cartella privata esterna: il clone può quindi mantenere i permessi degli strumenti
+di sviluppo. Le ACL private e i controlli degli antenati restano obbligatori sulla
+destinazione dei secret. Per `-SecretsRoot` personalizzato, impostare
+`THEBITLAB_AI_SECRET_FILE` al suo `ai.secret` prima di avviare gli strumenti.
+I vecchi file locali non vengono spostati, cancellati o sovrascritti dal ripristino.
 
 Le versioni attuali della board non leggono piu il vecchio percorso `scripts/.secrets/ai.secret`. Se avevi configurato le chiavi li, spostale in `.secrets/ai.secret`: il server espone solo uno stato diagnostico sicuro, ma non legge ne mostra mai i valori del file legacy.
 
