@@ -30,6 +30,12 @@ from scripts.student_help_provider import StudentHelpResponse
 
 @pytest.fixture(autouse=True)
 def isolated_process_lock_dir(tmp_path, monkeypatch) -> None:
+    # Never load the developer's restored AI credentials while running tests.
+    monkeypatch.delenv("THEBITLAB_AI_SECRET_FILE", raising=False)
+    monkeypatch.setattr(
+        course_board_server.ai_secret_store, "user_secret_path",
+        lambda: tmp_path / "private-ai" / "ai.secret",
+    )
     lock_dir = tmp_path.parent / f"{tmp_path.name}-process-locks"
     monkeypatch.setenv("THEBITLAB_LOCK_DIR", str(lock_dir))
     monkeypatch.setattr(

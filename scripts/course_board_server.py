@@ -55,6 +55,7 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 from scripts import (
+    ai_secret_store,
     activity_ai_package,
     assignment_records,
     assign_activity,
@@ -3181,18 +3182,8 @@ def write_school_calendar_cas(name: object, payload: object, expected_revision: 
 
 
 def read_secret_env() -> dict[str, str]:
-    """Read local secret values from .secrets/ai.secret."""
-
-    values: dict[str, str] = {}
-    if not AI_SECRET_PATH.is_file():
-        return values
-    for line in AI_SECRET_PATH.read_text(encoding="utf-8-sig").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip()
-    return values
+    """Read the configured external AI file or the compatible local file."""
+    return ai_secret_store.read_env(AI_SECRET_PATH)
 
 
 def secret_value(key: str) -> str:
@@ -5143,9 +5134,10 @@ def ai_secret_status(providers: dict | None = None) -> dict:
             if provider.get("secret_key", "")
         }
     )
+    secret_path = ai_secret_store.resolve_path(AI_SECRET_PATH)
     return {
-        "path": diagnostic_path(AI_SECRET_PATH),
-        "exists": AI_SECRET_PATH.is_file(),
+        "path": diagnostic_path(secret_path),
+        "exists": secret_path.is_file(),
         "legacy_path": diagnostic_path(LEGACY_AI_SECRET_PATH),
         "legacy_exists": LEGACY_AI_SECRET_PATH.is_file(),
         "configured_keys": {
