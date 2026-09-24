@@ -1,5 +1,12 @@
 # Installer guidato
 
+Il nucleo del supervisore della lezione e implementato in `lesson_session.py`,
+ma non e ancora collegato al menu. Impedisce doppi avvii e richiede conferme
+esplicite prima di dichiarare conclusa una sessione; non implementa ancora
+browser dedicato, salvataggio bozze o pulizia del PC condiviso.
+Per integrazione e limiti vedere il
+[contratto S1](../doc/architecture/installer-lesson-session.md).
+
 Il codice in questa directory prepara il percorso unico per installare
 l'ambiente didattico:
 
