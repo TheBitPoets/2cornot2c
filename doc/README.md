@@ -83,6 +83,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`ROADMAP.md`](ROADMAP.md) | Quando devi decidere priorita, prossime PR o lavori ancora aperti |
 | [`ideas/federated-knowledge-plan.md`](ideas/federated-knowledge-plan.md) | Visione lunga per evolvere verso una piattaforma di conoscenza federata |
 | [`COURSE_BOARD.md`](COURSE_BOARD.md) | Quando devi usare la board dei progetti didattici, il calendario scolastico o le funzioni AI assisted |
+| [`THEBITLAB_SECRETS.md`](THEBITLAB_SECRETS.md) | Quando devi configurare i file AI, capire il ruolo di thebitlab-secrets o ripristinare le credenziali su un PC |
 | [`ASSIGNMENTS.md`](ASSIGNMENTS.md) | Quando devi progettare esercizi, compiti, verifiche, correzioni automatiche o metriche di classe |
 | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) | Quando devi creare o validare schede JSON di attivita TheBitLab |
 | [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md) | Quando devi lavorare su dati JSON, storage, classi, assegnazioni, registri o compatibilita schema |

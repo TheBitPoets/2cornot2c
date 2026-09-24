@@ -12,6 +12,7 @@ Punti di ingresso:
 - [cornice didattica](doc/CORNICE_DIDATTICA.md);
 - [guida MVP 2026/2027](doc/MVP_2026_2027.md);
 - [architettura MVP](doc/ARCHITETTURA_MVP.md);
+- [secret, configurazione AI e ripristino](doc/THEBITLAB_SECRETS.md);
 - [indice completo della documentazione](doc/README.md).
 
 ## Indice

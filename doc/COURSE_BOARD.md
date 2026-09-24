@@ -938,7 +938,7 @@ La board mostra nella sezione `Percorso didattico` la configurazione AI attiva e
 - presenza o assenza della API key;
 - nota su quota, billing o free tier.
 
-Il cambio provider funziona solo se la API key del provider scelto e gia presente nelle variabili d'ambiente del server locale oppure nel file locale `.secrets/ai.secret`. Se scegli un provider non configurato, la board mantiene il provider precedente e mostra un messaggio di errore.
+Il cambio provider funziona solo se la API key del provider scelto e gia presente nelle variabili d'ambiente del server locale oppure nel file AI selezionato secondo la [ricerca delle configurazioni AI](THEBITLAB_SECRETS.md#come-vengono-cercate-le-configurazioni-ai). Se scegli un provider non configurato, la board mantiene il provider precedente e mostra un messaggio di errore.
 
 Il cambio modello funziona dalla UI senza riavviare il server, purche il modello sia dichiarato in:
 
@@ -960,10 +960,10 @@ Non scrivere mai una API key dentro:
 - file `.html`;
 - commit Git.
 
-La API key deve stare solo nella shell, in una variabile d'ambiente locale, oppure nel file locale non versionato:
+La API key deve stare solo nella shell, in una variabile d'ambiente locale, oppure in un file privato non versionato. La posizione standard esterna al clone è:
 
 ```text
-.secrets/ai.secret
+~/.thebitlab-secrets/ai.secret
 ```
 
 Le singole variabili d'ambiente (per esempio `OPENAI_API_KEY`) hanno precedenza.
@@ -985,7 +985,13 @@ destinazione dei secret. Per `-SecretsRoot` personalizzato, impostare
 `THEBITLAB_AI_SECRET_FILE` al suo `ai.secret` prima di avviare gli strumenti.
 I vecchi file locali non vengono spostati, cancellati o sovrascritti dal ripristino.
 
-Le versioni attuali della board non leggono piu il vecchio percorso `scripts/.secrets/ai.secret`. Se avevi configurato le chiavi li, spostale in `.secrets/ai.secret`: il server espone solo uno stato diagnostico sicuro, ma non legge ne mostra mai i valori del file legacy.
+La guida [Secret TheBitLab](THEBITLAB_SECRETS.md) spiega la distinzione tra il
+repository privato `thebitlab-secrets`, l'archivio cifrato e la cartella runtime,
+il motivo del cambiamento e i passaggi di ripristino e verifica. Il repository
+privato serve agli operatori autorizzati per il recupero; la board legge il file
+locale selezionato e non scarica credenziali dal repository.
+
+Le versioni attuali della board non leggono piu il vecchio percorso `scripts/.secrets/ai.secret`. Se avevi configurato le chiavi li, predisponile nella cartella privata esterna o in un percorso esplicito protetto, seguendo la guida: il server espone solo uno stato diagnostico sicuro, ma non legge ne mostra mai i valori del file legacy.
 
 Esempio:
 
@@ -994,7 +1000,8 @@ OPENAI_API_KEY=sk-...
 GEMINI_API_KEY=...
 ```
 
-La cartella `.secrets/` e ignorata da Git.
+La cartella `.secrets/` del clone resta ignorata da Git per compatibilità. Anche
+il file esterno e le eventuali copie estratte devono rimanere fuori dai commit.
 
 ### Configurazione dei provider e dei modelli
 
@@ -1193,9 +1200,10 @@ Poi avvia il server:
 python scripts/course_board_server.py
 ```
 
-#### 4. Configurazione tramite `.secrets/ai.secret`
+#### 4. Configurazione tramite file AI
 
-In alternativa puoi salvare la chiave nel file locale non versionato:
+In alternativa puoi salvare la chiave nel file privato selezionato, normalmente
+`~/.thebitlab-secrets/ai.secret`, secondo la [regola di ricerca](THEBITLAB_SECRETS.md#come-vengono-cercate-le-configurazioni-ai):
 
 ```text
 GROQ_API_KEY=...
@@ -1255,9 +1263,10 @@ Poi avvia il server:
 python scripts/course_board_server.py
 ```
 
-#### 4. Configurazione tramite `.secrets/ai.secret`
+#### 4. Configurazione tramite file AI
 
-In alternativa puoi salvare la chiave nel file locale non versionato:
+In alternativa puoi salvare la chiave nel file privato selezionato, normalmente
+`~/.thebitlab-secrets/ai.secret`, secondo la [regola di ricerca](THEBITLAB_SECRETS.md#come-vengono-cercate-le-configurazioni-ai):
 
 ```text
 OPENROUTER_API_KEY=...
@@ -1432,7 +1441,7 @@ GROQ_COMPACT_TEXT_CHARS=6360
 OPENROUTER_COMPACT_TEXT_CHARS=404
 ```
 
-Puoi inserire questi valori come variabili d'ambiente oppure nel file locale `.secrets/ai.secret`.
+Puoi inserire questi valori come variabili d'ambiente oppure nel file AI selezionato secondo la [regola di ricerca](THEBITLAB_SECRETS.md#come-vengono-cercate-le-configurazioni-ai), normalmente `~/.thebitlab-secrets/ai.secret`.
 
 Per Gemini il contesto compatto viene usato solo se imposti esplicitamente `GEMINI_COMPACT_TEXT_CHARS`. Se non la imposti, Gemini continua a ricevere il contesto esteso.
 
@@ -1460,7 +1469,7 @@ python scripts/probe_ai_payload_limit.py --provider openrouter --max-chars 12000
 
 Lo script:
 
-1. legge la API key da variabili d'ambiente o `.secrets/ai.secret`;
+1. legge la API key da variabili d'ambiente o dal file AI selezionato con la stessa [regola della board](THEBITLAB_SECRETS.md#come-vengono-cercate-le-configurazioni-ai);
 2. costruisce un payload simile a quello della cornice didattica;
 3. prova dimensioni crescenti con ricerca binaria;
 4. stampa il massimo riuscito;
