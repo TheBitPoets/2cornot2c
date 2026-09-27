@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thebitlab.dev/schemas/pilot-backup-manifest-v2.schema.json",
+  "title": "Historical pilot root backup, complete directories and files",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "root_schema_version", "profile", "deployment_id", "auth_db_path", "consistency", "directories", "files"],
+  "properties": {
+    "schema_version": {"const": "thebitlab.pilot-backup.v2"},
+    "root_schema_version": {"const": "thebitlab.pilot-root.v2"},
+    "profile": {"const": "legacy-adopted"},
+    "deployment_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,62}$"},
+    "auth_db_path": {"$ref": "#/$defs/path"},
+    "consistency": {"const": "application-stopped-exclusive-root-lock+sqlite-backup-api"},
+    "directories": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/path"}},
+    "files": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "size", "sha256"],
+        "properties": {
+          "path": {"$ref": "#/$defs/path"},
+          "size": {"type": "integer", "minimum": 0},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string", "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*[ .](?:/|$))[^\\\\<>:\"|?*\\u0000-\\u001f/]+(?:/[^\\\\<>:\"|?*\\u0000-\\u001f/]+)*$"
+    }
+  }
+}

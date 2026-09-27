@@ -56,7 +56,12 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["root", "auth_db_path"],
+      "allOf": [{
+        "if": {"required": ["profile"], "properties": {"profile": {"const": "legacy-adopted"}}},
+        "then": {"properties": {"auth_db_path": {"const": ".thebitlab-auth/auth.sqlite3"}}}
+      }],
       "properties": {
+        "profile": {"enum": ["pilot-demo", "legacy-adopted"], "default": "pilot-demo"},
         "root": {"$ref": "#/$defs/absolutePath"},
         "auth_db_path": {
           "type": "string",
@@ -103,6 +108,7 @@
       "required": ["google_auth", "github_oauth", "github_app_token_runtime"],
       "properties": {
         "google_auth": {"const": true},
+        "student_deliveries": {"type": "boolean", "default": false},
         "github_oauth": {"type": "boolean"},
         "github_app_token_runtime": {"type": "boolean"}
       }

@@ -2,6 +2,12 @@
 
 Questo documento è il contratto canonico per preparare una nuova candidate TheBitLab con nginx e systemd. Gli artefatti sono una baseline **offline**: non modificano DNS, Cloudflare, firewall, staging o produzione. La guida storica [`INFRASTRUTTURA_PRODUZIONE.md`](INFRASTRUTTURA_PRODUZIONE.md) descrive la topologia esistente, ma non sostituisce questo contratto versionato.
 
+Per l'accesso amministrativo da una nuova postazione tramite `thebitlab-secrets`
+e la mappa verificata del VPS
+consultare le sezioni 7 e 9 della guida infrastrutturale, aggiornate il
+24 settembre 2026. Distinguere sempre risorse osservate da destinazioni
+proposte: l'environment storico non è direttamente quello della nuova candidate.
+
 ## Artefatti e fonti di verità
 
 | Artefatto | Scopo |
@@ -27,6 +33,13 @@ python scripts/validate_pilot_deployment.py \
 
 La directory output deve essere nuova: il renderer non sovrascrive un bundle. Il manifest di esempio usa dominio e reti riservati alla documentazione e **non è una configurazione installabile** finché non viene derivato un manifest candidate approvato.
 
+Per le consegne remote TUI impostare esplicitamente `features.student_deliveries=true`.
+Il campo è opzionale: assente o `false` conserva il comportamento precedente.
+Il renderer passa `--student-deliveries` al launcher, che lo inoltra al server
+insieme a `--enable-google-auth`. La scelta entra nei digest del bundle;
+non aggiungere il flag modificando manualmente l'unit renderizzata.
+L'attivazione non supera automaticamente i gate di dati, backup o rehearsal.
+
 Smoke non distruttivo su Linux, senza usare riferimenti o segreti reali:
 
 ```bash
@@ -34,7 +47,7 @@ python scripts/pilot_deployment_smoke.py \
   --config deploy/pilot/candidate.example.json
 ```
 
-Lo smoke crea root, `EnvironmentFile`, certificato e output in una directory temporanea, esegue soltanto `nginx -t` e `systemd-analyze verify`, quindi elimina tutto. Per restare eseguibile senza privilegi, la sola copia nginx temporanea usa le porte 18080/18443; il bundle firmato resta invariato su 80/443. Non avvia né ricarica servizi.
+Lo smoke crea root, `EnvironmentFile`, certificato e output in una directory temporanea, esegue soltanto `nginx -t` e `systemd-analyze verify`, quindi elimina tutto. Per restare eseguibile senza privilegi, la sola copia nginx temporanea usa le porte 18080/18443 e directory private per i buffer client body, proxy, FastCGI, uWSGI e SCGI: anche `nginx -t` crea queste directory e non deve usare i default di sistema sotto `/var/lib/nginx`. Il bundle firmato resta invariato su 80/443. Non avvia né ricarica servizi.
 
 ## Contratto della data root
 
@@ -55,6 +68,12 @@ Lo smoke crea root, `EnvironmentFile`, certificato e output in una directory tem
 La baseline usa `.thebitlab-auth/auth.sqlite3`. L'unit non usa la direttiva systemd `EnvironmentFile=`: il launcher legge il file esterno a ogni avvio, ne accetta soltanto la allowlist e imposta `THEBITLAB_AUTH_DB_PATH` dalla configurazione renderizzata prima di sostituirsi al server. Percorsi assoluti, traversal, root sovrapposta alla release o riferimenti secret dentro release/data root sono rifiutati. Il lock applicativo è fissato a `/run/thebitlab`; il backend ascolta solo su `127.0.0.1`.
 
 Una root diversa identifica una diversa istanza. Copie o mount manuali non documentati non costituiscono sincronizzazione autorevole; valgono i confini di [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md). Bootstrap, marker di completezza e procedura coerente di backup/restore sono definiti in [`PILOT_ROOT_BACKUP.md`](PILOT_ROOT_BACKUP.md). Il launcher valida questa root canonica prima di leggere i secret esterni e rifiuta root parziali, auth DB divergenti o una seconda istanza sullo stesso root.
+
+`data.profile` seleziona `pilot-demo` (default compatibile) o `legacy-adopted`.
+Il renderer lo propaga come `--root-profile` al launcher. Il profilo storico
+richiede il marker v2 prodotto da `adopt-legacy` su una nuova copia verificata;
+non si attiva per la sola presenza del marker. Procedura e limiti:
+[`PILOT_LEGACY_ROOT_ADOPTION.md`](PILOT_LEGACY_ROOT_ADOPTION.md).
 
 ## Segreti e configurazione runtime
 
@@ -143,6 +162,16 @@ Target operativo: decisione e rollback tecnico entro **15 minuti**, con un solo 
 7. Se un controllo fallisce o si supera il limite, fermare l'app, mantenere l'origin fail-closed ed escalare secondo governance/incident response. Non tentare modifiche manuali iterative.
 
 Il rollback del bundle **non** ripristina dati né segreti. Prima del deploy bisogna dichiarare la compatibilità backward dello schema auth/dati. Se la release precedente non può leggere lo schema corrente, il rollback applicativo è bloccato: mantenere il servizio fermo e usare soltanto la procedura di restore isolato approvata. Un'eventuale rotazione secret si annulla dal secret store secondo procedura separata; i valori precedenti non vengono archiviati nel repository.
+
+La transizione dallo schema identity 11 al 12 è uno di questi casi: il codice
+precedente rifiuta esplicitamente database con versioni superiori. Il restore
+eseguito dalla candidate applica le migrazioni correnti e **non** produce un
+database utilizzabile dal codice precedente. Per tornare alla release con
+schema 11 occorre una procedura approvata che ripristini in isolamento lo
+snapshot coerente pre-upgrade senza aprirlo con il migratore nuovo, preservi
+l'intera root e verifichi l'avvio con codice e dipendenze precedenti.
+Gli eventuali dati scritti dopo lo snapshot vanno conservati separatamente:
+non sono riconciliati automaticamente dal rollback.
 
 ## Gate prima di staging o produzione
 

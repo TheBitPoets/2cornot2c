@@ -34,6 +34,7 @@
   },
   "features": {
     "google_auth": true,
+    "student_deliveries": false,
     "github_oauth": false,
     "github_app_token_runtime": false
   }

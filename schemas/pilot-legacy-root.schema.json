@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Adopted historical pilot root marker",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "profile", "deployment_id", "auth_db_path", "identity_schema_version"],
+  "properties": {
+    "schema_version": {"const": "thebitlab.pilot-root.v2"},
+    "profile": {"const": "legacy-adopted"},
+    "deployment_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,62}$"},
+    "auth_db_path": {"type": "string", "const": ".thebitlab-auth/auth.sqlite3"},
+    "identity_schema_version": {"const": 12}
+  }
+}
