@@ -277,6 +277,7 @@ def render_bundle(manifest: Mapping[str, Any], output: Path) -> None:
         "LOCK_DIRECTORY": service["lock_directory"],
         "DATA_ROOT": manifest["data"]["root"],
         "AUTH_DB_PATH": manifest["data"]["auth_db_path"],
+        "ROOT_PROFILE": manifest["data"].get("profile", "pilot-demo"),
         "GOOGLE_REDIRECT_URI": f"{origin['url'].rstrip('/')}/auth/google/callback",
         "GITHUB_OAUTH_ARGUMENTS": (
             f" --enable-github-oauth --github-redirect-uri {origin['url'].rstrip('/')}/auth/github/callback"
@@ -284,6 +285,7 @@ def render_bundle(manifest: Mapping[str, Any], output: Path) -> None:
             else ""
         ),
         "GITHUB_APP_FLAG": " --enable-github-app-token-runtime" if features["github_app_token_runtime"] else "",
+        "STUDENT_DELIVERIES_FLAG": " --student-deliveries" if features.get("student_deliveries", False) else "",
         "GITHUB_APP_WRITE_PATH": f" -{github_app_directory}" if features["github_app_token_runtime"] else "",
         "ORIGIN_HOST": origin_host,
         "ORIGIN_ACCESS_RULES": _origin_access_rules(manifest),

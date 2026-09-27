@@ -6,6 +6,9 @@ Archivio collegato alle API HTTP, alla TUI e al registro docente, con
 attivazione esplicita tramite `--student-deliveries` sul server. Richiede
 `--enable-google-auth` e il pairing federato; il bearer HMAC locale non abilita
 queste operazioni. Il default conserva il flusso precedente a root unica.
+Nel bundle canonico impostare `features.student_deliveries=true` nel manifest
+come descritto in [PILOT_DEPLOYMENT](../PILOT_DEPLOYMENT.md); il flag raggiunge
+il server attraverso renderer e launcher, senza edit manuali dell'unit.
 La topologia richiesta il 9 settembre 2026 è TUI su
 PC Windows degli studenti e server docente online su VPS Hetzner. Lo sviluppo
 e il successivo collaudo HTTP possono usare un server locale con root dati

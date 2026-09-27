@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import copy
 import json
+import shlex
 import shutil
 import subprocess
 import sys
@@ -289,6 +290,34 @@ def test_github_features_render_only_the_explicit_contract(tmp_path: Path) -> No
     assert "--enable-github-app-token-runtime" in unit
     assert "-/home/thebitlab/.thebitlab-secrets/github-app" in unit
     assert "private-key.pem" not in unit
+
+
+@pytest.mark.parametrize("enabled", [None, False, True])
+def test_delivery_feature_reaches_server_only_when_enabled(tmp_path: Path, enabled: bool | None) -> None:
+    payload = manifest()
+    payload["features"].pop("student_deliveries", None)
+    if enabled is not None:
+        payload["features"]["student_deliveries"] = enabled
+    output = tmp_path / "delivery-bundle"
+    deployment.render_bundle(payload, output)
+    unit = (output / "systemd/thebitlab.service").read_text(encoding="utf-8")
+    start = next(line.removeprefix("ExecStart=") for line in unit.splitlines() if line.startswith("ExecStart="))
+    args = service_launcher.build_parser().parse_args(shlex.split(start)[2:])
+    command = service_launcher._server_command(args)
+    assert ("--student-deliveries" in command) is (enabled is True)
+    assert "--enable-google-auth" in command
+    if enabled:
+        args.enable_google_auth = False
+        with pytest.raises(deployment.DeploymentValidationError, match="richiede --enable-google-auth"):
+            service_launcher._server_command(args)
+
+
+@pytest.mark.parametrize("value", ["true", 1, None])
+def test_delivery_feature_rejects_non_boolean_configuration(value: object) -> None:
+    payload = manifest()
+    payload["features"]["student_deliveries"] = value
+    with pytest.raises(deployment.DeploymentValidationError):
+        deployment.validate_manifest(payload)
 
 
 def test_nginx_smoke_uses_unprivileged_ports_without_mutating_bundle(tmp_path: Path) -> None:

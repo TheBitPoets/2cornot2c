@@ -155,6 +155,13 @@ def run_smoke(config: Path) -> None:
                     f"error_log {temporary / 'nginx-global.log'};",
                     "events {}",
                     "http {",
+                    # nginx -t creates these paths even without starting workers.
+                    # Keep distro defaults such as /var/lib/nginx out of the smoke.
+                    f"    client_body_temp_path {temporary / 'client-body'};",
+                    f"    proxy_temp_path {temporary / 'proxy'};",
+                    f"    fastcgi_temp_path {temporary / 'fastcgi'};",
+                    f"    uwsgi_temp_path {temporary / 'uwsgi'};",
+                    f"    scgi_temp_path {temporary / 'scgi'};",
                     "    include /etc/nginx/mime.types;",
                     f"    include {bundle / 'nginx/thebitlab-log-format.conf'};",
                     f"    include {nginx_smoke_site};",

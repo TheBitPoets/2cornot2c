@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import sqlite3
+import subprocess
 import sys
 import time
 from contextlib import contextmanager
@@ -100,6 +101,7 @@ class PilotTopology:
     root: Path
     auth_db_relative: str
     deployment_id: str
+    profile: str = "pilot-demo"
 
     @property
     def auth_db_path(self) -> Path:
@@ -140,6 +142,7 @@ def topology_from_paths(
     auth_db_path: str = DEFAULT_AUTH_DB_PATH,
     *,
     deployment_id: str = "pilot-demo-local",
+    profile: str = "pilot-demo",
 ) -> PilotTopology:
     expanded = root.expanduser()
     if not expanded.is_absolute():
@@ -151,7 +154,14 @@ def topology_from_paths(
         raise PilotRootError("La data root deve essere una directory assoluta dedicata.")
     if not isinstance(deployment_id, str) or DEPLOYMENT_ID_PATTERN.fullmatch(deployment_id) is None:
         raise PilotRootError("deployment_id non valido.")
-    return PilotTopology(resolved, _relative_path(auth_db_path), deployment_id)
+    if profile not in {"pilot-demo", "legacy-adopted"}:
+        raise PilotRootError("Profilo root non supportato.")
+    if profile == "legacy-adopted":
+        from scripts.pilot_legacy_profile import check_path
+        check_path(expanded)
+        if auth_db_path != DEFAULT_AUTH_DB_PATH:
+            raise PilotRootError("Il profilo storico richiede il DB auth canonico.")
+    return PilotTopology(resolved, _relative_path(auth_db_path), deployment_id, profile)
 
 
 def topology_from_manifest(path: Path) -> PilotTopology:
@@ -161,10 +171,14 @@ def topology_from_manifest(path: Path) -> PilotTopology:
         Path(manifest["data"]["root"]),
         manifest["data"]["auth_db_path"],
         deployment_id=manifest["deployment_id"],
+        profile=manifest["data"].get("profile", "pilot-demo"),
     )
 
 
 def _root_marker(topology: PilotTopology) -> dict[str, Any]:
+    if topology.profile == "legacy-adopted":
+        from scripts.pilot_legacy_profile import marker
+        return marker(topology)
     return {
         "schema_version": ROOT_SCHEMA,
         "profile": "pilot-demo",
@@ -345,6 +359,8 @@ def _harden_tree_permissions(root: Path) -> None:
 def bootstrap(topology: PilotTopology) -> dict[str, Any]:
     """Create a complete demo installation, or validate the existing one unchanged."""
 
+    if topology.profile != "pilot-demo":
+        raise PilotRootError("Bootstrap riservato al profilo demo; usare adopt-legacy.")
     root = topology.root
     existed = root.exists()
     root.mkdir(parents=True, exist_ok=True)
@@ -468,6 +484,16 @@ def validate_root(
         marker = _load_object(root / ROOT_MARKER, "Marker root canonica")
         if marker != _root_marker(topology):
             raise PilotRootError("Marker root incoerente con deployment/auth configurati.")
+        if topology.profile == "legacy-adopted":
+            from scripts.pilot_legacy_profile import validate_state
+            counts = validate_state(topology)
+            return {
+                "ok": True, "root": str(root), "profile": topology.profile,
+                "auth_db_path": topology.auth_db_relative,
+                "deployment_id": topology.deployment_id,
+                "identity_schema_version": SCHEMA_VERSION,
+                "demo_check": False, "state_check": True, **counts,
+            }
         _check_required_state(root, topology.auth_db_relative)
         _sqlite_integrity(topology.auth_db_path)
         try:
@@ -493,6 +519,9 @@ def validate_root(
     if lock:
         if not topology.root.is_dir() or topology.root.is_symlink():
             raise PilotRootError("Data root canonica assente, non-directory o symlink.")
+        if topology.profile == "legacy-adopted":
+            from scripts.pilot_legacy_profile import inventory
+            inventory(topology.root)
         with _stopped_root_lock(topology.root):
             return perform()
     return perform()
@@ -559,6 +588,8 @@ def _copy_sqlite_snapshot(source: Path, destination: Path) -> None:
             raise PilotRootError("SQLite sorgente non integro: backup rifiutato.")
         destination_connection = sqlite3.connect(destination)
         source_connection.backup(destination_connection)
+        if destination_connection.execute("PRAGMA journal_mode=DELETE").fetchone() != ("delete",):
+            raise PilotRootError("Snapshot SQLite non autonomo.")
     except sqlite3.DatabaseError as error:
         raise PilotRootError("Snapshot SQLite coerente non riuscito.") from error
     finally:
@@ -574,6 +605,9 @@ def create_backup(topology: PilotTopology, output: Path) -> dict[str, Any]:
     started = time.perf_counter()
     if not topology.root.is_dir() or topology.root.is_symlink():
         raise PilotRootError("Data root canonica assente, non-directory o symlink.")
+    if topology.profile == "legacy-adopted":
+        from scripts.pilot_legacy_profile import check_path
+        check_path(output.expanduser())
     output = output.expanduser().resolve(strict=False)
     if _paths_overlap(topology.root, output):
         raise PilotRootError("Il backup deve essere esterno e isolato dalla root sorgente.")
@@ -582,11 +616,25 @@ def create_backup(topology: PilotTopology, output: Path) -> dict[str, Any]:
     staging = output.with_name(f".{output.name}.partial-{os.getpid()}")
     if staging.exists():
         raise PilotRootError("Directory staging backup gia presente.")
+    staging.mkdir(mode=0o700, parents=True, exist_ok=False)
     try:
+        if topology.profile == "legacy-adopted":
+            from scripts.pilot_legacy_profile import inventory
+            inventory(topology.root)
         with _stopped_root_lock(topology.root):
             validate_root(topology, run_demo_check=True, lock=False)
             files = _root_files(topology.root, topology.auth_db_relative)
             payload_root = staging / BACKUP_PAYLOAD
+            historical = topology.profile == "legacy-adopted"
+            if historical:
+                from scripts import pilot_legacy_profile as legacy
+                entries = legacy.inventory(topology.root)
+                directories = [name for name, entry in entries.items() if "directory" in entry]
+                sidecars = {topology.auth_db_relative + suffix for suffix in ("-wal", "-shm", "-journal")}
+                files = [(topology.root / name, PurePosixPath(name)) for name, entry in entries.items()
+                         if "sha256" in entry and name not in sidecars]
+                for name in directories:
+                    (payload_root / name).mkdir(parents=True, exist_ok=True)
             for source, relative in files:
                 destination = payload_root.joinpath(*relative.parts)
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -610,6 +658,14 @@ def create_backup(topology: PilotTopology, output: Path) -> dict[str, Any]:
                 "consistency": "application-stopped-exclusive-root-lock+sqlite-backup-api",
                 "files": manifest_files,
             }
+            if historical:
+                manifest.update(schema_version=legacy.BACKUP_SCHEMA, root_schema_version=legacy.ROOT_SCHEMA,
+                                profile=topology.profile, directories=directories)
+                validate_root(topology_from_paths(payload_root, topology.auth_db_relative,
+                              deployment_id=topology.deployment_id, profile=topology.profile))
+                (payload_root / ".thebitlab-server.lock").unlink(missing_ok=True)
+                if legacy.inventory(topology.root) != entries:
+                    raise PilotRootError("Root modificata durante backup.")
             manifest_bytes = _canonical_json(manifest)
             (staging / BACKUP_MANIFEST).write_bytes(manifest_bytes)
             checksum = hashlib.sha256(manifest_bytes).hexdigest()
@@ -655,10 +711,14 @@ def _validated_backup(backup: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         "consistency",
         "files",
     }
+    historical = manifest.get("schema_version") == "thebitlab.pilot-backup.v2"
+    if historical:
+        required_keys.update({"profile", "directories"})
     if (
         set(manifest) != required_keys
-        or manifest.get("schema_version") != BACKUP_SCHEMA
-        or manifest.get("root_schema_version") != ROOT_SCHEMA
+        or manifest.get("schema_version") != ("thebitlab.pilot-backup.v2" if historical else BACKUP_SCHEMA)
+        or manifest.get("root_schema_version") != ("thebitlab.pilot-root.v2" if historical else ROOT_SCHEMA)
+        or (historical and manifest.get("profile") != "legacy-adopted")
         or manifest.get("consistency")
         != "application-stopped-exclusive-root-lock+sqlite-backup-api"
         or not isinstance(manifest.get("deployment_id"), str)
@@ -666,6 +726,12 @@ def _validated_backup(backup: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     ):
         raise PilotRootError("Contratto manifest backup non supportato.")
     auth_relative = _relative_path(manifest.get("auth_db_path"))
+    if historical:
+        from scripts import pilot_legacy_profile as legacy
+        actual_entries = legacy.inventory(backup / BACKUP_PAYLOAD)
+        directories = manifest.get("directories")
+        if not isinstance(directories, list) or directories != [name for name, entry in actual_entries.items() if "directory" in entry]:
+            raise PilotRootError("Directory backup mancanti o non dichiarate.")
     raw_files = manifest.get("files")
     if not isinstance(raw_files, list) or not raw_files:
         raise PilotRootError("Elenco file del backup assente.")
@@ -675,6 +741,8 @@ def _validated_backup(backup: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         if not isinstance(item, dict) or set(item) != {"path", "size", "sha256"}:
             raise PilotRootError("Entry manifest backup non valida.")
         relative_text = item.get("path")
+        if historical:
+            legacy.relative_path(relative_text)
         try:
             relative = PurePosixPath(relative_text)
         except TypeError as error:
@@ -717,7 +785,22 @@ def _validated_backup(backup: Path) -> tuple[dict[str, Any], list[dict[str, Any]
 
 
 def _controlled_startup_smoke(root: Path) -> None:
-    original_root = course_board_server.ROOT
+    # configure_data_root performs recovery. Keep its globals and side effects
+    # in a child process; restoring the parent's root would also recover it.
+    try:
+        subprocess.run(
+            [sys.executable, "-c",
+             "import sys; from pathlib import Path; "
+             "from scripts.pilot_data_root import _startup_smoke_worker; "
+             "_startup_smoke_worker(Path(sys.argv[1]))", str(root)],
+            cwd=PROJECT_ROOT, check=True, capture_output=True, timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise PilotRootError("Startup smoke controllato del restore non riuscito.") from error
+
+
+def _startup_smoke_worker(root: Path) -> None:
+    """Run only in the disposable smoke process; never restore another root."""
     lock = course_board_server.DataRootProcessLock(root)
     server = None
     try:
@@ -734,16 +817,16 @@ def _controlled_startup_smoke(root: Path) -> None:
             if server is not None:
                 server.server_close()
         finally:
-            try:
-                course_board_server.configure_data_root(original_root)
-            finally:
-                lock.release()
+            lock.release()
 
 
 def restore_backup(backup: Path, target: Path) -> dict[str, Any]:
     """Verify and restore a backup into a new isolated root, never into its source."""
 
     started = time.perf_counter()
+    from scripts.pilot_legacy_profile import check_path
+    check_path(backup.expanduser().absolute())
+    check_path(target.expanduser().absolute())
     backup = backup.expanduser().resolve(strict=True)
     target = target.expanduser().resolve(strict=False)
     if target.exists():
@@ -755,11 +838,15 @@ def restore_backup(backup: Path, target: Path) -> dict[str, Any]:
         target,
         manifest["auth_db_path"],
         deployment_id=manifest["deployment_id"],
+        profile=manifest.get("profile", "pilot-demo"),
     )
     staging = target.with_name(f".{target.name}.partial-{os.getpid()}")
     if staging.exists():
         raise PilotRootError("Directory staging restore gia presente.")
+    staging.mkdir(mode=0o700, parents=True, exist_ok=False)
     try:
+        for directory in manifest.get("directories", []):
+            (staging / directory).mkdir(parents=True, exist_ok=True)
         for item in files:
             relative = PurePosixPath(item["path"])
             source = backup / BACKUP_PAYLOAD / Path(*relative.parts)
@@ -767,16 +854,25 @@ def restore_backup(backup: Path, target: Path) -> dict[str, Any]:
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, destination)
         _harden_tree_permissions(staging)
-        staging.rename(target)
+        staged_topology = topology_from_paths(staging, topology.auth_db_relative,
+                            deployment_id=topology.deployment_id, profile=topology.profile)
         try:
-            SqliteIdentityStorage(topology.auth_db_path)
+            if topology.profile == "pilot-demo":
+                SqliteIdentityStorage(staged_topology.auth_db_path)
         except IdentityStorageError as error:
             raise PilotRootError("Migrazione schema identity del restore non riuscita.") from error
-        result = validate_root(topology, run_demo_check=True)
-        _controlled_startup_smoke(target)
+        result = validate_root(staged_topology, run_demo_check=True)
+        if topology.profile == "legacy-adopted":
+            from scripts.pilot_legacy_profile import startup_smoke
+            startup_smoke(staging)
+        else:
+            _controlled_startup_smoke(staging)
+        if target.exists():
+            raise PilotRootError("Destinazione restore creata durante la verifica.")
+        staging.rename(target)
+        result["root"] = str(target)
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
-        shutil.rmtree(target, ignore_errors=True)
         raise
     duration = time.perf_counter() - started
     return {
@@ -801,17 +897,19 @@ def _topology_arguments(parser: argparse.ArgumentParser) -> None:
     group.add_argument("--root", type=Path, help="Root assoluta per smoke locali/demo.")
     parser.add_argument("--auth-db-path", default=DEFAULT_AUTH_DB_PATH)
     parser.add_argument("--deployment-id", default="pilot-demo-local")
+    parser.add_argument("--profile", choices=("pilot-demo", "legacy-adopted"), default=None)
 
 
 def _args_topology(args: argparse.Namespace) -> PilotTopology:
     if args.config is not None:
-        if args.auth_db_path != DEFAULT_AUTH_DB_PATH or args.deployment_id != "pilot-demo-local":
+        if args.auth_db_path != DEFAULT_AUTH_DB_PATH or args.deployment_id != "pilot-demo-local" or args.profile is not None:
             raise PilotRootError("Con --config root, auth e deployment_id derivano soltanto dal manifest.")
         return topology_from_manifest(args.config)
     return topology_from_paths(
         args.root,
         args.auth_db_path,
         deployment_id=args.deployment_id,
+        profile=args.profile or "pilot-demo",
     )
 
 
@@ -820,6 +918,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     bootstrap_parser = subparsers.add_parser("bootstrap", help="Bootstrap idempotente della root vuota.")
     _topology_arguments(bootstrap_parser)
+    adopt_parser = subparsers.add_parser("adopt-legacy", help="Adotta una candidate offline in una root nuova.")
+    _topology_arguments(adopt_parser)
+    adopt_parser.add_argument("--rehearsal", type=Path, required=True)
+    adopt_parser.add_argument("--offline-copy", action="store_true")
     validate_parser = subparsers.add_parser("validate", help="Validazione fail-closed della root.")
     _topology_arguments(validate_parser)
     backup_parser = subparsers.add_parser("backup", help="Snapshot coerente a processo fermo.")
@@ -840,6 +942,9 @@ def main(argv: list[str] | None = None) -> int:
             topology = _args_topology(args)
             if args.command == "bootstrap":
                 result = bootstrap(topology)
+            elif args.command == "adopt-legacy":
+                from scripts.pilot_legacy_profile import adopt
+                result = adopt(topology, args.rehearsal, offline_copy=args.offline_copy)
             elif args.command == "validate":
                 result = validate_root(topology)
             else:

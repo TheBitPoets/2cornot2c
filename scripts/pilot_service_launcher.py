@@ -64,6 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--deployment-revision", required=True)
     parser.add_argument("--lock-directory", required=True)
     parser.add_argument("--auth-db-path", required=True)
+    parser.add_argument("--root-profile", choices=("pilot-demo", "legacy-adopted"), default="pilot-demo")
     parser.add_argument("--trusted-proxy-cidrs", required=True)
     parser.add_argument("--google-redirect-uri", required=True)
     parser.add_argument("--github-redirect-uri")
@@ -72,6 +73,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--enable-google-auth", action="store_true")
+    parser.add_argument("--student-deliveries", action="store_true")
     parser.add_argument("--enable-github-app-token-runtime", action="store_true")
     return parser
 
@@ -92,6 +94,8 @@ def _authoritative_environment(args: argparse.Namespace) -> dict[str, str]:
 
 
 def _server_command(args: argparse.Namespace) -> list[str]:
+    if args.student_deliveries and not args.enable_google_auth:
+        raise DeploymentValidationError("--student-deliveries richiede --enable-google-auth.")
     command = [
         sys.executable,
         str(ROOT / "scripts" / "course_board_server.py"),
@@ -104,6 +108,8 @@ def _server_command(args: argparse.Namespace) -> list[str]:
     ]
     if args.enable_google_auth:
         command.append("--enable-google-auth")
+    if args.student_deliveries:
+        command.append("--student-deliveries")
     if args.enable_github_app_token_runtime:
         command.append("--enable-github-app-token-runtime")
     return command
@@ -117,6 +123,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.root,
                 args.auth_db_path,
                 deployment_id=args.deployment_id,
+                profile=args.root_profile,
             ),
             run_demo_check=False,
         )

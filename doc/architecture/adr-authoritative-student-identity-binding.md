@@ -112,6 +112,14 @@ Gli alias non vengono creati automaticamente. Sono aggiunti in modo append-only 
 - Source-of-truth e migrazione schema v12: `scripts/thebitlab_identity_sqlite.py`.
 - Compatibilita target Assignment: `scripts/assignment_records.py`.
 - Fixture contrattuali: `tests/fixtures/identity_binding/`.
+- Rehearsal offline di migrazione schema 11 e mapping amministrativo esplicito:
+  `scripts/rehearse_legacy_root.py`, procedura in
+  [`../PILOT_LEGACY_ROOT_ADOPTION.md`](../PILOT_LEGACY_ROOT_ADOPTION.md).
+  Non crea marker di adozione né abilita il launcher su root storiche.
+- Adozione separata su destinazione nuova: `pilot_data_root.py adopt-legacy`,
+  con validatore `scripts/pilot_legacy_profile.py`, profilo `legacy-adopted`
+  e marker v2. Riusa i subject ID della candidate verificata; non deduce alias,
+  non modifica identity e non allenta la matrice del profilo demo.
 
 ## Conseguenze
 
