@@ -32,7 +32,7 @@ La migrazione della documentazione esistente verso questo catalogo avviene incre
 
 | Feature | Stato iniziale | Note |
 |---|---|---|
-| Activities | IMPLEMENTED | Da consolidare da schema, import e guide esistenti |
+| [Activities](activities/README.md) | IMPLEMENTED | Feature canonica; [architettura](activities/architecture.md) |
 | Assignments | IMPLEMENTED | Da consolidare dalla documentazione assignments esistente |
 | Student Lab | IMPLEMENTED | Da consolidare da Student Lab e guide studente |
 | [Student Deliveries](student-deliveries/README.md) | PILOT-GATED | Prima feature canonica dello standard; [architettura](student-deliveries/architecture.md) |
