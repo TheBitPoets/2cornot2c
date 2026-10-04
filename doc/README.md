@@ -22,6 +22,17 @@ Usa questo file come punto di partenza per capire quale documento leggere in bas
 
 La documentazione utente descrive cosa fare; la cornice didattica spiega perche; l'architettura e gli ADR descrivono confini e decisioni; la documentazione Sphinx espone API e docstring dei moduli principali.
 
+## Standard feature documentation
+
+TheBitLab usa uno standard canonico per separare descrizione funzionale, architettura, guide operative e roadmap:
+
+- [`FEATURE_DOCUMENTATION_STANDARD.md`](FEATURE_DOCUMENTATION_STANDARD.md) — regole dello standard;
+- [`features/README.md`](features/README.md) — catalogo delle feature e relativo stato;
+- [`features/_template/README.md`](features/_template/README.md) — template funzionale;
+- [`features/_template/architecture.md`](features/_template/architecture.md) — template tecnico.
+
+Le feature devono essere collegate da roadmap ed epic quando vengono citate, evitando duplicazioni con ADR e documenti specialistici esistenti.
+
 ## Percorso consigliato
 
 Se devi lavorare sui blocchi lab nel README, leggi i documenti in questo ordine:
