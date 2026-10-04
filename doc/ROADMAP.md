@@ -27,7 +27,7 @@ Il closeout tecnico dell'MVP ha già portato su `main`, tra le altre cose:
 - [Student Lab](features/student-lab/README.md) e TUI;
 - [Grading](features/grading/README.md) deterministico e sandbox;
 - [Teacher Dashboard](features/teacher-dashboard/README.md);
-- Activities, Assignments e registri;
+- [Activities](features/activities/README.md), [Assignments](features/assignments/README.md) e registri;
 - autenticazione federata e authorization boundary studente;
 - amministrazione e deployment versionato;
 - collegamenti Activity/UDA/calendario;
@@ -134,12 +134,12 @@ Lo stesso `attempt_id` deve rimanere coerente tra studente, server, grading e da
 ### Exit gates della Phase 1
 
 - [ ] prima lezione reale #708 approvata e immutabile;
-- [ ] studente autenticato vede l'Assignment/Activity corretto;
+- [ ] studente autenticato vede l'[Assignment](features/assignments/README.md)/[Activity](features/activities/README.md) corretto;
 - [ ] ambiente necessario disponibile sul PC del pilot;
 - [ ] lo [Student Lab](features/student-lab/README.md) consente allo studente di eseguire l'Activity senza passaggi amministrativi fuori processo;
 - [ ] delivery reale ricevuta dal server;
-- [ ] più attempt persistono correttamente;
-- [ ] selezione del definitivo persiste;
+- [ ] più [Attempt](features/attempts-final-selection/README.md) persistono correttamente;
+- [ ] la [selezione del definitivo](features/attempts-final-selection/README.md) persiste;
 - [ ] il [Grading](features/grading/README.md) trusted usa lo snapshot corretto;
 - [ ] la [Teacher Dashboard](features/teacher-dashboard/README.md) mostra lo stesso attempt/final;
 - [ ] #700, #703 e #704 chiuse o esplicitamente risolte nel gate di release;
@@ -273,6 +273,8 @@ Catalogo:
 
 - [Feature catalog](features/README.md)
 - [Activities](features/activities/README.md) — `IMPLEMENTED`
+- [Assignments](features/assignments/README.md) — `IMPLEMENTED`
+- [Attempts & Final Selection](features/attempts-final-selection/README.md) — `IMPLEMENTED`
 - [Student Lab](features/student-lab/README.md) — `IMPLEMENTED`
 - [Student Deliveries](features/student-deliveries/README.md) — `PILOT-GATED`
 - [Runtime System](features/runtime-system/README.md) — `IMPLEMENTED`
