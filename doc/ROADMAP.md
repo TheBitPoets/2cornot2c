@@ -24,9 +24,9 @@ Il primo pilot deve quindi provare un flusso reale, non soltanto la presenza del
 
 Il closeout tecnico dell'MVP ha già portato su `main`, tra le altre cose:
 
-- Student Lab e TUI;
-- grading deterministico e sandbox;
-- dashboard docente;
+- [Student Lab](features/student-lab/README.md) e TUI;
+- [Grading](features/grading/README.md) deterministico e sandbox;
+- [Teacher Dashboard](features/teacher-dashboard/README.md);
 - Activities, Assignments e registri;
 - autenticazione federata e authorization boundary studente;
 - amministrazione e deployment versionato;
@@ -136,12 +136,12 @@ Lo stesso `attempt_id` deve rimanere coerente tra studente, server, grading e da
 - [ ] prima lezione reale #708 approvata e immutabile;
 - [ ] studente autenticato vede l'Assignment/Activity corretto;
 - [ ] ambiente necessario disponibile sul PC del pilot;
-- [ ] studente esegue l'Activity senza passaggi amministrativi fuori processo;
+- [ ] lo [Student Lab](features/student-lab/README.md) consente allo studente di eseguire l'Activity senza passaggi amministrativi fuori processo;
 - [ ] delivery reale ricevuta dal server;
 - [ ] più attempt persistono correttamente;
 - [ ] selezione del definitivo persiste;
-- [ ] trusted grading usa lo snapshot corretto;
-- [ ] docente vede lo stesso attempt/final nella dashboard;
+- [ ] il [Grading](features/grading/README.md) trusted usa lo snapshot corretto;
+- [ ] la [Teacher Dashboard](features/teacher-dashboard/README.md) mostra lo stesso attempt/final;
 - [ ] #700, #703 e #704 chiuse o esplicitamente risolte nel gate di release;
 - [ ] release candidate #709 assemblata;
 - [ ] rehearsal #678 = PASS;
@@ -149,7 +149,7 @@ Lo stesso `attempt_id` deve rimanere coerente tra studente, server, grading e da
 
 ## Parallel tracks
 
-### Installer Windows corrente
+### [Installer Windows corrente](features/installer/README.md)
 
 **Status:** `ACTIVE`  
 Epic operativo: [#795 — Stabilizzare bootstrap/installazione Windows corrente](https://github.com/TheBitPoets/2cornot2c/issues/795)
@@ -167,10 +167,11 @@ Obiettivi principali:
 
 Non deve assorbire la nuova architettura Agent nel bootstrap legacy.
 
-### Standalone Agent
+### [Standalone Agent](features/standalone-agent/README.md)
 
 **Status:** `LIMITED`  
 Epic: [#794 — Transizione installer → Standalone Agent](https://github.com/TheBitPoets/2cornot2c/issues/794)  
+Feature: [Standalone Agent](features/standalone-agent/README.md)  
 ADR: [Standalone Agent transition](architecture/adr-standalone-agent-transition.md)
 
 Direzione futura:
@@ -185,12 +186,12 @@ Direzione futura:
 
 Finché il first real pilot non è sbloccato, questo filone non deve sottrarre priorità al critical path.
 
-### Runtime interattivi
+### [Runtime System / runtime interattivi](features/runtime-system/README.md)
 
 **Status:** `PARALLEL / NON-BLOCKING`  
 Issue: [#698 — Generic runtime launch](https://github.com/TheBitPoets/2cornot2c/issues/698)
 
-Il dispatch runtime headless necessario alla prima Activity esiste già. #698 riguarda soprattutto il lancio interattivo generico dalla TUI e non è un blocker della prima Activity C/POSIX/Docker, salvo cambio esplicito del contenuto pilot.
+Il dispatch runtime headless necessario alla prima Activity esiste già nella feature [Runtime System](features/runtime-system/README.md). #698 riguarda soprattutto il lancio interattivo generico dalla TUI e non è un blocker della prima Activity C/POSIX/Docker, salvo cambio esplicito del contenuto pilot.
 
 ### AI / assistenza didattica
 
@@ -271,7 +272,14 @@ Le funzionalità devono essere documentate secondo [`FEATURE_DOCUMENTATION_STAND
 Catalogo:
 
 - [Feature catalog](features/README.md)
+- [Activities](features/activities/README.md) — `IMPLEMENTED`
+- [Student Lab](features/student-lab/README.md) — `IMPLEMENTED`
 - [Student Deliveries](features/student-deliveries/README.md) — `PILOT-GATED`
+- [Runtime System](features/runtime-system/README.md) — `IMPLEMENTED`
+- [Grading](features/grading/README.md) — `IMPLEMENTED`
+- [Teacher Dashboard](features/teacher-dashboard/README.md) — `IMPLEMENTED`
+- [Installer](features/installer/README.md) — `IN DEVELOPMENT`
+- [Standalone Agent](features/standalone-agent/README.md) — `PLANNED`
 
 Quando una feature viene citata in questa roadmap, il riferimento preferito è la relativa feature doc. La roadmap deve dire **quando e perché conta**, non rispiegarne l'intero comportamento.
 
