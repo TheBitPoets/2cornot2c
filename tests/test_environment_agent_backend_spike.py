@@ -1,6 +1,7 @@
 from scripts.environment_agent_backend_spike import (
     AssessmentStatus,
     CommandResult,
+    EnvironmentAssessment,
     SaltBackend,
     WSL_UBUNTU_2404_AMD64,
     WinGetDscBackend,
@@ -57,10 +58,11 @@ def test_salt_apply_and_verify_use_same_generic_contract():
 
     plan = backend.plan(
         WSL_UBUNTU_2404_AMD64,
-        backend.inspect.__annotations__ and type("A", (), {
-            "status": AssessmentStatus.REPAIRABLE,
-            "actions_required": ("install-ubuntu-24.04",),
-        })(),
+        EnvironmentAssessment(
+            AssessmentStatus.REPAIRABLE,
+            "salt",
+            actions_required=("install-ubuntu-24.04",),
+        ),
     )
     applied = backend.apply(plan)
     verified = backend.verify(WSL_UBUNTU_2404_AMD64)
