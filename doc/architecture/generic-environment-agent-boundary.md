@@ -190,15 +190,18 @@ verify()
 
 Backend possibili:
 
-- Puppet;
 - Salt;
 - WinGet/DSC;
-- Chef;
+- Puppet;
 - Ansible;
+- Chef;
+- Nix;
 - backend custom;
 - altri strumenti futuri.
 
-Il backend concreto è sostituibile senza modificare i consumer.
+La prima direzione sperimentale è usare **Salt come backend generico portabile** e **WinGet/DSC come backend o helper Windows-specifico** quando offre primitive native migliori. Questa è una scelta iniziale di implementazione, non un vincolo architetturale.
+
+Il contratto `ConfigurationBackend` resta stabile e il backend concreto deve poter essere sostituito o affiancato senza modificare `EnvironmentRequirement`, `EnvironmentAssessment`, `Plan`, `VerifiedEnvironment` o i consumer. Più backend possono coesistere e possono essere selezionati in base all'host, al tipo di environment o alla policy.
 
 ## Plan
 
@@ -457,6 +460,28 @@ Il componente può essere riutilizzato almeno in:
 - physical instrument labs;
 - edge/field deployments.
 
+## Direzione iniziale dei backend
+
+Il confronto iniziale sul caso Windows/WSL indica come direzione da prototipare:
+
+```text
+Generic Environment Agent
+        ↓
+ConfigurationBackend
+        │
+        ├── SaltBackend
+        │     generic / cross-platform
+        │     standalone oggi, managed in futuro
+        │
+        └── WinGetDscBackend
+              Windows-native
+              optional features / packages / configuration
+```
+
+Salt viene privilegiato come primo backend generico perché può operare sia in modalità locale/masterless sia in modalità gestita; WinGet/DSC viene privilegiato per le primitive Windows native. Questa combinazione deve essere validata con uno spike reale sul medesimo requisito WSL.
+
+L'architettura deve permettere in seguito backend aggiuntivi come Puppet, Ansible, Chef, Nix o altri senza cambiare il core generico né i consumer.
+
 ## Decisioni rinviate
 
 Non sono ancora decisi:
@@ -464,9 +489,9 @@ Non sono ancora decisi:
 - nome definitivo del prodotto;
 - repository separato;
 - linguaggio/packaging;
-- backend di configuration management preferito;
+- backend definitivo o default a lungo termine;
 - backend di workspace provisioning preferito;
 - protocollo control-plane/agent;
 - modello commerciale o distribuzione.
 
-Prima di scegliere un configuration backend verrà eseguito uno spike comparativo almeno tra Puppet, Salt e WinGet/DSC sul medesimo caso WSL.
+La scelta Salt + WinGet/DSC resta quindi una **baseline sperimentale sostituibile**, non una dipendenza irreversibile.
