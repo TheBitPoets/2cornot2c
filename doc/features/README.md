@@ -35,7 +35,7 @@ La migrazione della documentazione esistente verso questo catalogo avviene incre
 | Activities | IMPLEMENTED | Da consolidare da schema, import e guide esistenti |
 | Assignments | IMPLEMENTED | Da consolidare dalla documentazione assignments esistente |
 | Student Lab | IMPLEMENTED | Da consolidare da Student Lab e guide studente |
-| Student Deliveries | PILOT-GATED | Prima feature campione dello standard |
+| [Student Deliveries](student-deliveries/README.md) | PILOT-GATED | Prima feature canonica dello standard; [architettura](student-deliveries/architecture.md) |
 | Grading | IMPLEMENTED | Da consolidare da grading e sandbox |
 | Teacher Dashboard | IMPLEMENTED | Da consolidare con guida docente e frontend architecture |
 | Course Design / UDA | IMPLEMENTED | Da consolidare da Course Board e cornice didattica |
