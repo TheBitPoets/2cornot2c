@@ -33,9 +33,10 @@ La migrazione della documentazione esistente verso questo catalogo avviene incre
 | Feature | Stato iniziale | Note |
 |---|---|---|
 | [Activities](activities/README.md) | IMPLEMENTED | Feature canonica; [architettura](activities/architecture.md) |
-| Assignments | IMPLEMENTED | Da consolidare dalla documentazione assignments esistente |
+| [Assignments](assignments/README.md) | IMPLEMENTED | Feature canonica; [architettura](assignments/architecture.md) |
 | [Student Lab](student-lab/README.md) | IMPLEMENTED | Feature canonica; [architettura](student-lab/architecture.md) |
 | [Student Deliveries](student-deliveries/README.md) | PILOT-GATED | Prima feature canonica dello standard; [architettura](student-deliveries/architecture.md) |
+| [Attempts & Final Selection](attempts-final-selection/README.md) | IMPLEMENTED | Feature canonica; [architettura](attempts-final-selection/architecture.md) |
 | [Grading](grading/README.md) | IMPLEMENTED | Feature canonica; [architettura](grading/architecture.md) |
 | [Teacher Dashboard](teacher-dashboard/README.md) | IMPLEMENTED | Feature canonica; [architettura](teacher-dashboard/architecture.md) |
 | Course Design / UDA | IMPLEMENTED | Da consolidare da Course Board e cornice didattica |
