@@ -34,16 +34,16 @@ La migrazione della documentazione esistente verso questo catalogo avviene incre
 |---|---|---|
 | [Activities](activities/README.md) | IMPLEMENTED | Feature canonica; [architettura](activities/architecture.md) |
 | Assignments | IMPLEMENTED | Da consolidare dalla documentazione assignments esistente |
-| Student Lab | IMPLEMENTED | Da consolidare da Student Lab e guide studente |
+| [Student Lab](student-lab/README.md) | IMPLEMENTED | Feature canonica; [architettura](student-lab/architecture.md) |
 | [Student Deliveries](student-deliveries/README.md) | PILOT-GATED | Prima feature canonica dello standard; [architettura](student-deliveries/architecture.md) |
-| Grading | IMPLEMENTED | Da consolidare da grading e sandbox |
-| Teacher Dashboard | IMPLEMENTED | Da consolidare con guida docente e frontend architecture |
+| [Grading](grading/README.md) | IMPLEMENTED | Feature canonica; [architettura](grading/architecture.md) |
+| [Teacher Dashboard](teacher-dashboard/README.md) | IMPLEMENTED | Feature canonica; [architettura](teacher-dashboard/architecture.md) |
 | Course Design / UDA | IMPLEMENTED | Da consolidare da Course Board e cornice didattica |
 | Authentication | IMPLEMENTED | Architettura distribuita tra documenti auth/OIDC |
 | Classes / Membership | IMPLEMENTED | Da consolidare da roster e mapping classi |
-| Runtime System | IMPLEMENTED | Runtime generico presente; UX interattiva ancora evolutiva |
-| Installer | IN DEVELOPMENT | Bootstrap corrente in stabilizzazione |
-| Standalone Agent | PLANNED | Epic #794 |
+| [Runtime System](runtime-system/README.md) | IMPLEMENTED | Feature canonica; [architettura](runtime-system/architecture.md) |
+| [Installer](installer/README.md) | IN DEVELOPMENT | Bootstrap corrente in stabilizzazione; [architettura](installer/architecture.md) |
+| [Standalone Agent](standalone-agent/README.md) | PLANNED | Epic #794; [architettura](standalone-agent/architecture.md) |
 | TheBitLab Live / PXE | IDEA | Evoluzione futura |
 | AI Assistance | PLANNED | Roadmap AI dedicata |
 
