@@ -36,3 +36,7 @@ Niente orchestratore generico, niente remote shell amministrativa, niente selezi
 
 - [ADR transizione Agent](../../architecture/adr-standalone-agent-transition.md)
 - [Architecture](architecture.md)
+- [Status / blockers](STATUS.md)
+- [Real Windows backend spike runbook](real-windows-backend-spike-runbook.md)
+- [v0.1 WSL plan](v0.1-wsl.md)
+- [ConfigurationBackend spike](configuration-backend-spike.md)
