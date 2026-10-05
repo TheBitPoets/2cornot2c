@@ -480,53 +480,131 @@ def student_activity_payload(activity: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def resolve_student_asset_source(activity_root: Path, source_rel: Path) -> Path:
+    """Resolve one declared asset without accepting aliases or symbolic links."""
+    current = activity_root
+    for part in source_rel.parts:
+        try:
+            names = {entry.name for entry in current.iterdir()}
+        except OSError as error:
+            raise ValueError(f"Asset non trovato: {source_rel}") from error
+        part_key = portable_path_key(Path(part))
+        matches = [name for name in names if portable_path_key(Path(name)) == part_key]
+        if not matches:
+            raise ValueError(f"Asset non trovato: {source_rel}")
+        if len(matches) != 1 or unicodedata.normalize("NFC", matches[0]) != part:
+            raise ValueError(f"Asset non portabile: {source_rel}")
+        current = current / matches[0]
+        if current.is_symlink():
+            raise ValueError(f"L'asset non puo attraversare link simbolici: {source_rel}")
+    return current
+
+
+def directory_asset_files(source_dir: Path, source_rel: Path) -> list[tuple[Path, Path]]:
+    """Return deterministic file descendants for a safe directory asset."""
+    planned_files: list[tuple[Path, Path]] = []
+
+    def walk(current: Path, relative_dir: Path) -> None:
+        try:
+            entries = list(current.iterdir())
+        except OSError as error:
+            raise ValueError(f"Directory asset non leggibile: {source_rel}") from error
+
+        portable_names: dict[tuple[str, ...], str] = {}
+        for entry in entries:
+            if entry.is_symlink():
+                raise ValueError(
+                    f"La directory asset non puo contenere link simbolici: {source_rel / relative_dir / entry.name}"
+                )
+            validate_portable_path_component(entry.name, f"directory asset {source_rel}")
+            name_key = portable_path_key(Path(entry.name))
+            previous = portable_names.get(name_key)
+            if previous is not None:
+                raise ValueError(
+                    "La directory asset contiene nomi portabilmente equivalenti: "
+                    f"{previous} e {entry.name}."
+                )
+            portable_names[name_key] = entry.name
+
+        for entry in sorted(
+            entries,
+            key=lambda item: (portable_path_key(Path(item.name)), item.name),
+        ):
+            relative_path = relative_dir / entry.name
+            if entry.is_dir():
+                walk(entry, relative_path)
+            elif entry.is_file():
+                planned_files.append((entry, relative_path))
+            else:
+                raise ValueError(
+                    f"La directory asset contiene un nodo non supportato: {source_rel / relative_path}"
+                )
+
+    walk(source_dir, Path())
+    if not planned_files:
+        raise ValueError(f"Directory asset vuota: {source_rel}")
+    return planned_files
+
+
+def validate_directory_target_base(value: Any, field_name: str) -> Path:
+    """Validate a directory target base, allowing '.' to mean scaffold root."""
+    if isinstance(value, str) and value.strip() == ".":
+        return Path()
+    return validate_relative_path(value, field_name)
+
+
+def register_asset_target(
+    target_rel: Path,
+    target_keys: set[tuple[str, ...]],
+) -> None:
+    """Register one flattened file target and reject portable overlaps."""
+    if is_reserved_scaffold_target(target_rel):
+        raise ValueError(f"Target asset riservato allo scaffold: {target_rel}.")
+    target_key = portable_path_key(target_rel)
+    if any(
+        target_key == existing_key
+        or target_key[: len(existing_key)] == existing_key
+        or existing_key[: len(target_key)] == target_key
+        for existing_key in target_keys
+    ):
+        raise ValueError(f"Target asset duplicato, equivalente o sovrapposto: {target_rel}.")
+    target_keys.add(target_key)
+
+
 def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> list[tuple[Path, Path]]:
-    """Validate student-visible assets and return source/target relative paths."""
+    """Validate and flatten student-visible file/directory assets into file copies."""
     planned_assets: list[tuple[Path, Path]] = []
     activity_root = activity_path.parent
     activity_root_resolved = activity_root.resolve()
     target_keys: set[tuple[str, ...]] = set()
+
     for index, asset in enumerate(student_assets(activity)):
         source_rel = validate_relative_path(asset.get("path"), f"assets[{index}].path")
-        target_rel = validate_relative_path(
-            asset.get("target_path", asset.get("path")),
-            f"assets[{index}].target_path",
-        )
-        if is_reserved_scaffold_target(target_rel):
-            raise ValueError(f"Target asset riservato allo scaffold: {target_rel}.")
-        target_key = portable_path_key(target_rel)
-        if any(
-            target_key == existing_key
-            or target_key[: len(existing_key)] == existing_key
-            or existing_key[: len(target_key)] == target_key
-            for existing_key in target_keys
-        ):
-            raise ValueError(f"Target asset duplicato, equivalente o sovrapposto: {target_rel}.")
-        target_keys.add(target_key)
-        current = activity_root
-        for part in source_rel.parts:
-            try:
-                names = {entry.name for entry in current.iterdir()}
-            except OSError as error:
-                raise ValueError(f"Asset non trovato: {source_rel}") from error
-            part_key = portable_path_key(Path(part))
-            matches = [name for name in names if portable_path_key(Path(name)) == part_key]
-            if not matches:
-                raise ValueError(f"Asset non trovato: {source_rel}")
-            if len(matches) != 1 or unicodedata.normalize("NFC", matches[0]) != part:
-                raise ValueError(f"Asset non portabile: {source_rel}")
-            current = current / matches[0]
-            if current.is_symlink():
-                raise ValueError(f"L'asset non puo attraversare link simbolici: {source_rel}")
-        source_path = current
-        if not source_path.is_file():
-            raise ValueError(f"Asset non trovato: {source_path}")
+        source_path = resolve_student_asset_source(activity_root, source_rel)
         try:
             source_path.resolve().relative_to(activity_root_resolved)
         except ValueError as error:
             raise ValueError(f"Asset fuori dalla directory della activity: {source_rel}") from error
 
-        planned_assets.append((source_path, target_rel))
+        raw_target = asset.get("target_path", asset.get("path"))
+        if source_path.is_file():
+            target_rel = validate_relative_path(raw_target, f"assets[{index}].target_path")
+            register_asset_target(target_rel, target_keys)
+            planned_assets.append((source_path, target_rel))
+            continue
+
+        if not source_path.is_dir():
+            raise ValueError(f"Asset non trovato: {source_path}")
+
+        target_base = validate_directory_target_base(
+            raw_target,
+            f"assets[{index}].target_path",
+        )
+        for child_source, child_rel in directory_asset_files(source_path, source_rel):
+            target_rel = target_base / child_rel if target_base.parts else child_rel
+            register_asset_target(target_rel, target_keys)
+            planned_assets.append((child_source, target_rel))
+
     return planned_assets
 
 
