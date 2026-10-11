@@ -14451,10 +14451,6 @@ La prima riga riporta gli indici dell'array, la seconda i valori memorizzati. Gl
 <p align="justify">
 Non tutti gli array di <code>char</code> contengono una stringa C valida. Una stringa deve avere un terminatore <code>\0</code> raggiungibile entro lo spazio di memoria valido.
 </p>
-</td>
-</tr>
-</table>
-
 <p align="justify">
 Consideriamo le seguenti dichiarazioni:
 </p>
@@ -14467,6 +14463,9 @@ char c[4] = "ciao";               /* Array pieno: non c'è spazio per \0. */
 <p align="justify">
 Tutte e tre le dichiarazioni sono valide in C. Solo <code>a</code>, però, contiene anche il terminatore <code>\0</code>: <code>b</code> e <code>c</code> sono array di quattro caratteri <strong>senza terminatore</strong>. Usarli con <code>strlen</code>, <code>printf("%s", ...)</code> o altre funzioni che richiedono una stringa terminata provoca <strong>comportamento indefinito</strong>, perché la ricerca di <code>\0</code> può proseguire oltre l'oggetto.
 </p>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
