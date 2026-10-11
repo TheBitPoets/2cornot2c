@@ -14492,7 +14492,7 @@ Il comando mostra dieci byte a partire dal buffer: possiamo individuare i quattr
 <table align="center">
 <tr>
 <td>
-:pill: <b>Da ricordare</b>
+:pill: <b>Nota</b>
 <p align="justify">
 <code>strlen</code> richiede una sequenza con un terminatore <code>\0</code> accessibile: non conosce la capacità del buffer e non può verificare da sola se la stringa è correttamente terminata. Inoltre la lunghezza in byte non coincide necessariamente con il numero di caratteri Unicode; la differenza sarà approfondita nella sezione dedicata a UTF-8.
 </p>
