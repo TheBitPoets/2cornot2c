@@ -14359,6 +14359,65 @@ c       i       a       o
 Anche in questo caso possiamo scordarci di \0.
 </p>
 
+#### Dimensione dell'array, lunghezza della stringa e capacità
+
+Per utilizzare correttamente le stringhe è necessario distinguere tre concetti: **dimensione dell'array**, **lunghezza della stringa** e **capacità del buffer**. Non sono sinonimi.
+
+Consideriamo un array di dieci elementi di tipo `char`, inizializzato con la stringa `"ciao"`:
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    char testo[10] = "ciao";
+
+    printf("sizeof testo = %zu\n", sizeof testo);
+    printf("strlen(testo) = %zu\n", strlen(testo));
+    printf("lunghezza massima = %zu\n", sizeof testo - 1);
+    return 0;
+}
+```
+
+L'output atteso è:
+
+```text
+sizeof testo = 10
+strlen(testo) = 4
+lunghezza massima = 9
+```
+
+| Espressione o proprietà | Risultato | Che cosa misura |
+| --- | ---: | --- |
+| `sizeof testo` | `10` | Dimensione in **byte** dell'intero array; un `char` occupa un byte C. |
+| `strlen(testo)` | `4` | Numero di elementi `char` prima del primo `\0`, **senza** contare il terminatore. |
+| Capacità dell'array | `10` | Numero di elementi `char` disponibili nel buffer. |
+| Massima lunghezza di una stringa terminata che può contenere l'array | `9` | Byte di contenuto disponibili se uno è riservato al terminatore `\0`. |
+
+Quando l'array è inizializzato con `"ciao"`, i primi cinque elementi contengono `'c'`, `'i'`, `'a'`, `'o'` e `\0`; **gli altri cinque vengono inizializzati a zero**. Questo comportamento deriva dall'inizializzazione dell'array, non da una proprietà di tutte le stringhe.
+
+**Attenzione: non tutti gli array di `char` contengono una stringa C valida.** Consideriamo:
+
+```c
+char a[5] = "ciao";
+char b[4] = {'c', 'i', 'a', 'o'};
+char c[4] = "ciao";
+```
+
+Tutte e tre le dichiarazioni sono valide in C. Solo `a`, però, contiene anche il terminatore `\0`: `b` e `c` sono array di quattro caratteri **senza terminatore**. Usarli con `strlen`, `printf("%s", ...)` o altre funzioni che richiedono una stringa terminata provoca **comportamento indefinito**, perché la ricerca di `\0` può proseguire oltre l'oggetto.
+
+La capacità è una proprietà del **buffer**: `sizeof` restituisce la dimensione completa soltanto quando l'operando è realmente un array (in questo contesto). Quando si ha invece un `char *`, `sizeof` misura il puntatore e **non** la memoria a cui esso punta. La differenza tra array e puntatori sarà approfondita nella sezione successiva.
+
+Per **osservare i byte** con GDB, compiliamo l'esempio usando `-g3 -O0`, fermiamoci dopo l'inizializzazione di `testo` ed eseguiamo:
+
+```gdb
+(gdb) x/10xb testo
+```
+
+Il comando richiede dieci byte a partire dal buffer: possiamo individuare i quattro caratteri, il terminatore di valore zero e i byte residui inizializzati a zero. Per altre modalità di ispezione della memoria si rimanda al percorso GDB ([issue #829](https://github.com/TheBitPoets/2cornot2c/issues/829)).
+
+**Da ricordare:** `strlen` può esaminare una sequenza soltanto se esiste un terminatore `\0` raggiungibile nell'area di memoria valida. Inoltre il numero di byte non coincide necessariamente con il numero di caratteri Unicode: questa distinzione sarà approfondita parlando di codifiche come UTF-8.
+
 ### Dettagli sull'inizializzazione
 
 <!-- COURSE-FRAME:START README.md#dettagli-sullinizializzazione -->
