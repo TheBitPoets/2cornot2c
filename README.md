@@ -14478,6 +14478,10 @@ La capacità è una proprietà del <strong>buffer</strong>. Nell'esempio precede
 </tr>
 </table>
 
+<table align="center">
+<tr>
+<td>
+&#129714; <b>GDB</b>
 <p align="justify">
 Per <strong>osservare i byte</strong> con GDB, compiliamo il programma con <code>-g3 -O0</code>, fermiamoci dopo l'inizializzazione di <code>testo</code> ed eseguiamo:
 </p>
@@ -14488,6 +14492,9 @@ Per <strong>osservare i byte</strong> con GDB, compiliamo il programma con <code
 <p align="justify">
 Il comando mostra dieci byte a partire dal buffer: possiamo individuare i quattro caratteri, il terminatore di valore zero e i byte residui inizializzati a zero. Per altri comandi di ispezione della memoria si rimanda al percorso GDB (<a href="https://github.com/TheBitPoets/2cornot2c/issues/829">issue #829</a>).
 </p>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
