@@ -14359,6 +14359,210 @@ c       i       a       o
 Anche in questo caso possiamo scordarci di \0.
 </p>
 
+#### Dimensione dell'array, lunghezza della stringa e capacità
+
+<div align="justify">
+<p>
+Per utilizzare correttamente le stringhe è necessario distinguere tre concetti, che non sono sinonimi:
+</p>
+<ul>
+  <li><strong>Dimensione dell'array</strong>: numero totale di byte occupati dall'array, ottenibile con <code>sizeof</code> quando l'operando è effettivamente un array.</li>
+  <li><strong>Lunghezza della stringa</strong>: numero di elementi <code>char</code> prima del primo terminatore <code>\0</code>, restituito da <code>strlen</code> senza contare il terminatore.</li>
+  <li><strong>Capacità del buffer</strong>: spazio totale disponibile per memorizzare i dati. Per una stringa C terminata occorre riservare almeno un elemento al terminatore <code>\0</code>.</li>
+</ul>
+<p>
+Consideriamo un array di dieci elementi di tipo <code>char</code>, inizializzato con la stringa <code>"ciao"</code>:
+</p>
+</div>
+
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int main(void) {
+    char testo[10] = "ciao";
+
+    printf("sizeof testo = %zu\n", sizeof testo);
+    printf("strlen(testo) = %zu\n", strlen(testo));
+    printf("lunghezza massima = %zu\n", sizeof testo - 1);
+    return 0;
+}
+</code></pre>
+
+<p align="justify">
+L'output atteso è:
+</p>
+
+<pre lang="text"><code>sizeof testo = 10
+strlen(testo) = 4
+lunghezza massima = 9
+</code></pre>
+
+<table align="center">
+<thead>
+<tr>
+  <th>Espressione o proprietà</th>
+  <th align="center">Risultato</th>
+  <th>Significato</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>sizeof testo</code></td>
+  <td align="center"><code>10</code></td>
+  <td>Dimensione in byte dell'intero array; <code>sizeof(char)</code> vale 1 per definizione.</td>
+</tr>
+<tr>
+  <td><code>strlen(testo)</code></td>
+  <td align="center"><code>4</code></td>
+  <td>Numero di elementi prima di <code>\0</code>, escluso il terminatore.</td>
+</tr>
+<tr>
+  <td>Capacità dell'array</td>
+  <td align="center"><code>10</code></td>
+  <td>Numero di elementi <code>char</code> disponibili nel buffer.</td>
+</tr>
+<tr>
+  <td>Lunghezza massima di una stringa terminata nell'array</td>
+  <td align="center"><code>9</code></td>
+  <td>Massimo numero di byte prima del terminatore, riservando un elemento per <code>\0</code>.</td>
+</tr>
+</tbody>
+</table>
+
+<p align="justify">
+Quando l'array è inizializzato con <code>"ciao"</code>, i primi cinque elementi contengono <code>'c'</code>, <code>'i'</code>, <code>'a'</code>, <code>'o'</code> e <code>\0</code>; <strong>gli altri cinque vengono inizializzati a zero</strong>. Questo comportamento deriva dall'inizializzazione dell'array, non da una proprietà di tutte le stringhe.
+</p>
+
+<pre lang="text"><code>+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+|  0  |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |
++-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+|  c  |  i  |  a  |  o  | \0  |  0  |  0  |  0  |  0  |  0  |
++-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+</code></pre>
+
+<p align="justify">
+La prima riga riporta gli indici dell'array, la seconda i valori memorizzati. Gli elementi da 5 a 9 valgono zero, esattamente come l'elemento 4 che termina la stringa.
+</p>
+
+<table align="center">
+<tr>
+<td>
+&#9888; <b>Attenzione</b>
+<p align="justify">
+Non tutti gli array di <code>char</code> contengono una stringa C valida. Una stringa deve avere un terminatore <code>\0</code> raggiungibile entro lo spazio di memoria valido.
+</p>
+<p align="justify">
+Consideriamo le seguenti dichiarazioni:
+</p>
+
+<pre lang="c"><code>char a[5] = "ciao";                 /* Contiene anche il terminatore \0. */
+char b[4] = {'c', 'i', 'a', 'o'};   /* Nessun terminatore \0. */
+char c[4] = "ciao";                 /* Array pieno: non c'è spazio per \0. */
+</code></pre>
+
+<p align="justify">
+Tutte e tre le dichiarazioni sono valide in C. Solo <code>a</code>, però, contiene anche il terminatore <code>\0</code>: <code>b</code> e <code>c</code> sono array di quattro caratteri <strong>senza terminatore</strong>. Usarli con <code>strlen</code>, <code>printf("%s", ...)</code> o altre funzioni che richiedono una stringa terminata provoca <strong>comportamento indefinito</strong>, perché la ricerca di <code>\0</code> può proseguire oltre l'oggetto.
+</p>
+</td>
+</tr>
+</table>
+
+<table align="center">
+<tr>
+<td>
+:pill: <b>Nota</b>
+<p align="justify">
+La capacità è una proprietà del <strong>buffer</strong>. Nell'esempio precedente <code>sizeof testo</code> misura l'intero array, ma quando l'operando è un <code>char *</code>, <code>sizeof</code> misura il puntatore e <strong>non</strong> la memoria a cui punta. La relazione tra array e puntatori è approfondita nelle sezioni dedicate.
+</p>
+</td>
+</tr>
+</table>
+
+<table align="center">
+<tr>
+<td>
+&#129714; <b>GDB</b>
+<p align="justify">
+Per <strong>osservare i byte</strong> dell'array direttamente in memoria, salviamo il programma precedente nel file <code>stringhe.c</code> e lo compiliamo con le informazioni necessarie al debugger:
+</p>
+
+<pre lang="bash"><code>gcc -g stringhe.c -o stringhe
+gdb ./stringhe
+</code></pre>
+
+<p align="justify">
+L'opzione <code>-g</code> permette a GDB di riconoscere variabili e righe del sorgente. Non occorre specificare <code>-O0</code>: in assenza di opzioni di ottimizzazione, GCC non ottimizza il programma.
+</p>
+
+<p align="justify">
+All'interno di GDB impostiamo un <strong>breakpoint</strong> alla riga 7 dell'esempio (prima della prima chiamata a <code>printf</code>, quando <code>testo</code> è già stato inizializzato), avviamo il programma e chiediamo di esaminare dieci byte:
+</p>
+
+<pre lang="gdb"><code>(gdb) break stringhe.c:7
+(gdb) run
+(gdb) x/10xb testo
+</code></pre>
+
+<p align="justify">
+Il comando <code>x/10xb testo</code> è composto da:
+</p>
+<ul>
+  <li><code>x</code>: <em>examine</em>, esamina una zona di memoria;</li>
+  <li><code>10</code>: numero di unità da visualizzare;</li>
+  <li><code>x</code>: formato esadecimale dei valori;</li>
+  <li><code>b</code>: dimensione di ciascuna unità, un <em>byte</em>;</li>
+  <li><code>testo</code>: indirizzo del primo elemento dell'array da cui iniziare la lettura.</li>
+</ul>
+
+<p align="justify">
+Un possibile output è il seguente. <strong>Gli indirizzi sono indicativi</strong>: cambiano in base al sistema e all'esecuzione, così come può cambiare la suddivisione dei byte sulle righe.
+</p>
+
+<pre lang="text"><code>0x7fffffffdca6: 0x63 0x69 0x61 0x6f 0x00 0x00 0x00 0x00
+0x7fffffffdcae: 0x00 0x00
+</code></pre>
+
+<p align="justify">
+L'indirizzo a sinistra identifica il punto di memoria da cui parte ciascuna riga. Ogni valore <code>0x...</code> che segue rappresenta un byte in esadecimale. Interpretando i dieci byte:
+</p>
+
+<table align="center">
+<thead>
+<tr><th>Indici</th><th>Byte esadecimali</th><th>Significato</th></tr>
+</thead>
+<tbody>
+<tr><td>0–3</td><td><code>0x63 0x69 0x61 0x6f</code></td><td>I caratteri <code>c</code>, <code>i</code>, <code>a</code>, <code>o</code> nella codifica ASCII usata nell'esempio.</td></tr>
+<tr><td>4</td><td><code>0x00</code></td><td>Il terminatore <code>\0</code> della stringa.</td></tr>
+<tr><td>5–9</td><td><code>0x00</code> (cinque volte)</td><td>Gli elementi rimanenti, inizializzati a zero.</td></tr>
+</tbody>
+</table>
+
+<p align="justify">
+Il risultato corrisponde al disegno ASCII dell'array mostrato sopra: <code>sizeof testo</code> vale 10 perché l'array contiene dieci byte, mentre <code>strlen(testo)</code> vale 4 perché si ferma al primo <code>\0</code>, nell'elemento di indice 4.
+</p>
+
+<p align="justify">
+<strong>Prova:</strong> sostituisci <code>"ciao"</code> con <code>"ciao!"</code>. Prima di avviare GDB, prevedi quali byte cambieranno e quali saranno i nuovi valori di <code>sizeof</code> e <code>strlen</code>; poi verifica la previsione.
+</p>
+
+<p align="justify">
+Per altri comandi di ispezione della memoria si rimanda al percorso GDB (<a href="https://github.com/TheBitPoets/2cornot2c/issues/829">issue #829</a>).
+</p>
+</td>
+</tr>
+</table>
+
+<table align="center">
+<tr>
+<td>
+:pill: <b>Nota</b>
+<p align="justify">
+<code>strlen</code> richiede una sequenza con un terminatore <code>\0</code> accessibile: non conosce la capacità del buffer e non può verificare da sola se la stringa è correttamente terminata. Inoltre la lunghezza in byte non coincide necessariamente con il numero di caratteri Unicode; la differenza sarà approfondita nella sezione dedicata a UTF-8.
+</p>
+</td>
+</tr>
+</table>
+
 ### Dettagli sull'inizializzazione
 
 <!-- COURSE-FRAME:START README.md#dettagli-sullinizializzazione -->
