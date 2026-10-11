@@ -14455,9 +14455,9 @@ Non tutti gli array di <code>char</code> contengono una stringa C valida. Una st
 Consideriamo le seguenti dichiarazioni:
 </p>
 
-<pre lang="c"><code>char a[5] = "ciao";               /* Contiene anche il terminatore \0. */
+<pre lang="c"><code>char a[5] = "ciao";                 /* Contiene anche il terminatore \0. */
 char b[4] = {'c', 'i', 'a', 'o'};   /* Nessun terminatore \0. */
-char c[4] = "ciao";               /* Array pieno: non c'è spazio per \0. */
+char c[4] = "ciao";                 /* Array pieno: non c'è spazio per \0. */
 </code></pre>
 
 <p align="justify">
