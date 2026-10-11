@@ -14546,7 +14546,7 @@ Il risultato corrisponde al disegno ASCII dell'array mostrato sopra: <code>sizeo
 </p>
 
 <p align="justify">
-Per altri comandi di ispezione della memoria si rimanda al percorso GDB (<a href="https://github.com/TheBitPoets/2cornot2c/issues/829">issue #829</a>). Questo riferimento provvisorio sarà sostituito con il collegamento al capitolo quando verrà pubblicato.
+Per altri comandi di ispezione della memoria si rimanda al percorso GDB (<a href="https://github.com/TheBitPoets/2cornot2c/issues/829">issue #829</a>).
 </p>
 </td>
 </tr>
