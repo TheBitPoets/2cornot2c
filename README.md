@@ -14483,14 +14483,70 @@ La capacità è una proprietà del <strong>buffer</strong>. Nell'esempio precede
 <td>
 &#129714; <b>GDB</b>
 <p align="justify">
-Per <strong>osservare i byte</strong> con GDB, compiliamo il programma con <code>-g3 -O0</code>, fermiamoci dopo l'inizializzazione di <code>testo</code> ed eseguiamo:
+Per <strong>osservare i byte</strong> dell'array direttamente in memoria, salviamo il programma precedente nel file <code>stringhe.c</code> e lo compiliamo con le informazioni necessarie al debugger:
 </p>
 
-<pre lang="gdb"><code>(gdb) x/10xb testo
+<pre lang="bash"><code>gcc -g stringhe.c -o stringhe
+gdb ./stringhe
 </code></pre>
 
 <p align="justify">
-Il comando mostra dieci byte a partire dal buffer: possiamo individuare i quattro caratteri, il terminatore di valore zero e i byte residui inizializzati a zero. Per altri comandi di ispezione della memoria si rimanda al percorso GDB (<a href="https://github.com/TheBitPoets/2cornot2c/issues/829">issue #829</a>).
+L'opzione <code>-g</code> permette a GDB di riconoscere variabili e righe del sorgente. Non occorre specificare <code>-O0</code>: in assenza di opzioni di ottimizzazione, GCC non ottimizza il programma.
+</p>
+
+<p align="justify">
+All'interno di GDB impostiamo un <strong>breakpoint</strong> alla riga 7 dell'esempio (prima della prima chiamata a <code>printf</code>, quando <code>testo</code> è già stato inizializzato), avviamo il programma e chiediamo di esaminare dieci byte:
+</p>
+
+<pre lang="gdb"><code>(gdb) break stringhe.c:7
+(gdb) run
+(gdb) x/10xb testo
+</code></pre>
+
+<p align="justify">
+Il comando <code>x/10xb testo</code> è composto da:
+</p>
+<ul>
+  <li><code>x</code>: <em>examine</em>, esamina una zona di memoria;</li>
+  <li><code>10</code>: numero di unità da visualizzare;</li>
+  <li><code>x</code>: formato esadecimale dei valori;</li>
+  <li><code>b</code>: dimensione di ciascuna unità, un <em>byte</em>;</li>
+  <li><code>testo</code>: indirizzo del primo elemento dell'array da cui iniziare la lettura.</li>
+</ul>
+
+<p align="justify">
+Un possibile output è il seguente. <strong>Gli indirizzi sono indicativi</strong>: cambiano in base al sistema e all'esecuzione, così come può cambiare la suddivisione dei byte sulle righe.
+</p>
+
+<pre lang="text"><code>0x7fffffffdca6: 0x63 0x69 0x61 0x6f 0x00 0x00 0x00 0x00
+0x7fffffffdcae: 0x00 0x00
+</code></pre>
+
+<p align="justify">
+L'indirizzo a sinistra identifica il punto di memoria da cui parte ciascuna riga. Ogni valore <code>0x...</code> che segue rappresenta un byte in esadecimale. Interpretando i dieci byte:
+</p>
+
+<table align="center">
+<thead>
+<tr><th>Indici</th><th>Byte esadecimali</th><th>Significato</th></tr>
+</thead>
+<tbody>
+<tr><td>0–3</td><td><code>0x63 0x69 0x61 0x6f</code></td><td>I caratteri <code>c</code>, <code>i</code>, <code>a</code>, <code>o</code> nella codifica ASCII usata nell'esempio.</td></tr>
+<tr><td>4</td><td><code>0x00</code></td><td>Il terminatore <code>\0</code> della stringa.</td></tr>
+<tr><td>5–9</td><td><code>0x00</code> (cinque volte)</td><td>Gli elementi rimanenti, inizializzati a zero.</td></tr>
+</tbody>
+</table>
+
+<p align="justify">
+Il risultato corrisponde al disegno ASCII dell'array mostrato sopra: <code>sizeof testo</code> vale 10 perché l'array contiene dieci byte, mentre <code>strlen(testo)</code> vale 4 perché si ferma al primo <code>\0</code>, nell'elemento di indice 4.
+</p>
+
+<p align="justify">
+<strong>Prova:</strong> sostituisci <code>"ciao"</code> con <code>"ciao!"</code>. Prima di avviare GDB, prevedi quali byte cambieranno e quali saranno i nuovi valori di <code>sizeof</code> e <code>strlen</code>; poi verifica la previsione.
+</p>
+
+<p align="justify">
+Per altri comandi di ispezione della memoria si rimanda al percorso GDB (<a href="https://github.com/TheBitPoets/2cornot2c/issues/829">issue #829</a>). Questo riferimento provvisorio sarà sostituito con il collegamento al capitolo quando verrà pubblicato.
 </p>
 </td>
 </tr>
