@@ -13795,45 +13795,158 @@ int main(void){
 
 
 <p align="justify">
-Abbiamo visto che esiste una stretta relazione tra array e puntatori. Per costruire un primo modello mentale possiamo immaginare il nome di un array come un <strong>puntatore costante al suo primo elemento</strong>: questo aiuta a capire perché possiamo indicizzare i puntatori con le parentesi quadre <code>[]</code> e utilizzare espressioni come <code>a[i]</code> e <code>*(a + i)</code>.
+Abbiamo visto che esiste una stretta relazione tra array e puntatori. Per costruire un primo modello mentale possiamo immaginare il nome di un array come un <strong>puntatore costante al suo primo elemento</strong>: questa semplificazione aiuta a capire perché possiamo indicizzare i puntatori con le parentesi quadre <code>[]</code> e perché le espressioni <code>a[i]</code> e <code>*(a + i)</code> individuano lo stesso elemento.
 </p>
 
 <p align="justify">
-Questa immagine è però una <strong>semplificazione didattica</strong>, o «bugia didattica»: <strong>un array non è un puntatore</strong>. Un array è un oggetto formato da elementi contigui dello stesso tipo; un puntatore è invece un oggetto che contiene un valore utilizzabile come indirizzo. Quando un array compare in molte espressioni, il C lo <strong>converte automaticamente in un puntatore al primo elemento</strong> (<em>array-to-pointer conversion</em>, detta anche <em>array decay</em>). La conversione non avviene in tutti i contesti: per esempio, non avviene quando applichiamo <code>sizeof</code> all'array oppure l'operatore <code>&amp;</code> per ottenere il puntatore all'intero array.
+Questo modello è però una <strong>semplificazione didattica</strong>, una sorta di «bugia didattica»: <strong>un array non è un puntatore</strong>. Vediamo qual è il tipo effettivo di un array e perché in molte espressioni si comporta in maniera simile a un puntatore.
+</p>
+
+#### Il tipo array in C
+
+<p align="justify">
+Nel linguaggio C un array possiede un <strong>tipo proprio</strong>, distinto da quello di un puntatore. È un <strong>tipo derivato</strong> (<em>derived type</em>), costruito a partire dal tipo degli elementi. Quando la dimensione è specificata da una costante, anch'essa fa parte del tipo. Consideriamo:
+</p>
+
+<pre lang="c"><code>int numeri[3] = {10, 20, 30};
+char testo[5] = "ciao";
+double valori[10];
+</code></pre>
+
+<table align="center">
+<thead>
+<tr><th>Variabile</th><th>Tipo</th><th>Significato</th></tr>
+</thead>
+<tbody>
+<tr><td><code>numeri</code></td><td><code>int[3]</code></td><td>Array di tre interi.</td></tr>
+<tr><td><code>testo</code></td><td><code>char[5]</code></td><td>Array di cinque caratteri, incluso il terminatore <code>\0</code>.</td></tr>
+<tr><td><code>valori</code></td><td><code>double[10]</code></td><td>Array di dieci numeri <code>double</code>.</td></tr>
+</tbody>
+</table>
+
+<p align="justify">
+La notazione <code>int[3]</code> indica quindi il tipo «array di tre <code>int</code>». Un array è <strong>un unico oggetto che contiene direttamente elementi contigui in memoria</strong>: non contiene un puntatore nascosto al primo elemento.
 </p>
 
 <p align="justify">
-Questa distinzione spiega perché <strong>non possiamo assegnare un nuovo indirizzo al nome di un array né incrementarlo con <code>++</code></strong>, mentre possiamo cambiare il valore di una variabile puntatore e modificare i singoli elementi di un array non dichiarato <code>const</code>. Vediamo un esempio:
+Ad esempio, l'oggetto <code>int a[3] = {10, 20, 30};</code> può essere rappresentato così:
+</p>
+
+<pre lang="text"><code>                 Array a (tipo int[3])
+
+         +----------+----------+----------+
+Indice   |    0     |    1     |    2     |
+         +----------+----------+----------+
+Valore   |    10    |    20    |    30    |
+         +----------+----------+----------+
+             a[0]       a[1]       a[2]
+</code></pre>
+
+<p align="justify">
+<strong>La conversione array-puntatore.</strong> Se <code>a</code> non è un puntatore, perché possiamo scrivere <code>int *p = a;</code>? Nella maggior parte delle espressioni il C converte automaticamente un'espressione di tipo array in un <strong>puntatore al suo primo elemento</strong> (<em>array-to-pointer conversion</em>, detta anche <em>array decay</em>). In questo contesto:
+</p>
+
+<pre lang="c"><code>int a[3] = {10, 20, 30};
+int *p = a;             /* Equivale qui a: int *p = &amp;a[0]; */
+</code></pre>
+
+<p align="justify">
+La conversione riguarda l'<strong>espressione</strong> e non cambia il tipo dell'oggetto originario: <code>a</code> rimane un array di tipo <code>int[3]</code>, l'espressione convertita ha tipo <code>int *</code> e <code>p</code> è una variabile puntatore distinta dall'array.
+</p>
+
+<p align="justify">
+<strong>Una prima verifica con <code>sizeof</code>.</strong> L'operatore <code>sizeof</code> consente di distinguere il tipo array dal tipo puntatore:
 </p>
 
 <pre lang="c"><code>#include &lt;stdio.h&gt;
 
-#define N 300
-
 int main(void) {
-    int a[N] = {1};
-    int *p = a;                 /* p punta al primo elemento di a. */
+    int a[3] = {10, 20, 30};
+    int *p = a;
 
-    p = a + 1;                  /* Corretto: p punta al secondo elemento. */
-    a[0] = 10;                  /* Corretto: l'elemento è modificabile. */
-
-    // a = p;                   /* Errore: l'array non è assegnabile. */
-    // a++;                     /* Errore: l'array non è incrementabile. */
-
-    int (*pa)[N] = &amp;a;         /* Puntatore all'intero array. */
-    p = &amp;a[0];                 /* Puntatore al primo elemento. */
-
-    printf("sizeof a = %zu\n", sizeof a);
-    printf("sizeof p = %zu\n", sizeof p);
-    printf("a[0] = %d\n", p[0]);
-    printf("(*pa)[0] = %d\n", (*pa)[0]);
+    printf("Array: %zu byte\n", sizeof a);
+    printf("Puntatore: %zu byte\n", sizeof p);
     return 0;
 }
 </code></pre>
 
 <p align="justify">
-L'espressione <code>&amp;a</code> è dunque <strong>valida</strong>, contrariamente a quanto potrebbe far pensare il modello del «puntatore costante». <code>&amp;a[0]</code> ha tipo <code>int *</code> (puntatore al primo elemento), mentre <code>&amp;a</code> ha tipo <code>int (*)[300]</code> (puntatore all'intero array). Gli indirizzi iniziali coincidono, ma i tipi sono diversi: l'espressione <code>p + 1</code> avanza di un elemento <code>int</code>, mentre <code>pa + 1</code> avanza di un intero array di <code>300</code> elementi. Analogamente, <code>sizeof a</code> restituisce la dimensione dell'intero array, mentre <code>sizeof p</code> misura soltanto il puntatore.
+<code>sizeof a</code> restituisce la dimensione dell'intero array, cioè <code>3 * sizeof(int)</code>; <code>sizeof p</code> restituisce la dimensione del solo oggetto puntatore. Su una piattaforma in cui <code>sizeof(int)</code> vale 4 e <code>sizeof(int *)</code> vale 8, l'output sarà:
 </p>
+
+<pre lang="text"><code>Array: 12 byte
+Puntatore: 8 byte
+</code></pre>
+
+<p align="justify">
+I valori numerici dipendono dall'implementazione, mentre la distinzione concettuale vale sempre. In particolare, con <code>sizeof a</code> <strong>non avviene la conversione array-puntatore</strong>: l'operatore considera il tipo dell'array originale.
+</p>
+
+<p align="justify">
+<strong>Puntatore al primo elemento e puntatore all'intero array.</strong> Anche l'operatore <code>&amp;</code> permette di osservare una differenza sostanziale:
+</p>
+
+<pre lang="c"><code>int a[3] = {10, 20, 30};
+
+int *p = &amp;a[0];       /* Puntatore al primo elemento. */
+int (*q)[3] = &amp;a;     /* Puntatore all'intero array. */
+</code></pre>
+
+<p align="justify">
+I due puntatori individuano l'inizio dello stesso oggetto in memoria, ma hanno <strong>tipi differenti</strong>:
+</p>
+
+<table align="center">
+<thead>
+<tr><th>Espressione o variabile</th><th>Tipo</th><th>Significato</th></tr>
+</thead>
+<tbody>
+<tr><td><code>a</code> (prima della conversione)</td><td><code>int[3]</code></td><td>Array di tre interi.</td></tr>
+<tr><td><code>a</code> (dopo la conversione)</td><td><code>int *</code></td><td>Puntatore al primo elemento.</td></tr>
+<tr><td><code>p</code></td><td><code>int *</code></td><td>Puntatore a <code>int</code>.</td></tr>
+<tr><td><code>q</code></td><td><code>int (*)[3]</code></td><td>Puntatore a un array di tre interi.</td></tr>
+<tr><td><code>*p</code></td><td><code>int</code></td><td>L'intero puntato.</td></tr>
+<tr><td><code>*q</code> (prima della conversione)</td><td><code>int[3]</code></td><td>L'intero array puntato.</td></tr>
+</tbody>
+</table>
+
+<p align="justify">
+La differenza si vede nell'aritmetica dei puntatori: <code>p + 1</code> avanza di un elemento <code>int</code>, mentre <code>q + 1</code> avanza di un intero array di tre <code>int</code>. Se un <code>int</code> occupa quattro byte, gli spostamenti sono rispettivamente di 4 e 12 byte. Il secondo puntatore può quindi avanzare di un array intero, ma non bisogna dereferenziarlo se si trova oltre l'oggetto.
+</p>
+
+<p align="justify">
+È dunque <strong>errato affermare che non possiamo scrivere <code>&amp;a</code></strong>: l'espressione è perfettamente valida e restituisce un puntatore all'intero array. Attenzione anche a un possibile equivoco sulla nostra «bugia didattica»: <strong>l'indirizzo di un vero puntatore costante si può ottenere</strong>. Se <code>p</code> fosse dichiarato <code>int *const p</code>, l'espressione <code>&amp;p</code> sarebbe lecita e avrebbe tipo <code>int *const *</code>, cioè un puntatore all'oggetto puntatore costante. <code>const</code> impedisce di riassegnare <code>p</code>, non di conoscerne l'indirizzo. Ciò che distingue <code>&amp;a</code> da <code>&amp;p</code> è il <strong>tipo dell'oggetto a cui si applica l'operatore</strong>.
+</p>
+
+<p align="justify">
+<strong>Quando non avviene la conversione?</strong> Nei casi appena visti, <code>sizeof a</code> opera sull'intero array e <code>&amp;a</code> restituisce un puntatore all'intero array. Esistono altre eccezioni, tra cui l'uso di un letterale stringa per inizializzare un array di caratteri, trattate nelle sezioni dedicate.
+</p>
+
+<p align="justify">
+<strong>In sintesi:</strong> il tipo array e il tipo puntatore sono distinti. La conversione automatica spiega molte somiglianze tra le loro espressioni, ma <strong>non trasforma l'array originale in un puntatore</strong>.
+</p>
+
+<p align="justify">
+<strong>Conseguenze pratiche.</strong> Proprio perché un array non è una variabile puntatore, non possiamo assegnargli un nuovo valore né applicargli l'operatore di incremento <code>++</code>. Possiamo invece modificare un puntatore e gli elementi di un array non dichiarato <code>const</code>:
+</p>
+
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+
+int main(void) {
+    int a[3] = {10, 20, 30};
+    int *p = a;
+
+    p = a + 1;             /* Corretto: ora p punta ad a[1]. */
+    a[0] = 50;             /* Corretto: modifica un elemento. */
+
+    // a = p;              /* Errore: un array non è assegnabile. */
+    // a++;                /* Errore: un array non è incrementabile. */
+
+    p = &amp;a[0];            /* Corretto: p torna al primo elemento. */
+    printf("%d\n", p[0]);
+    return 0;
+}
+</code></pre>
 
 <table align="center">
 <tr>
