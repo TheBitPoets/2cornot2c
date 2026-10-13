@@ -1372,14 +1372,7 @@
         "bin/5_strings"
       ],
       "output": "lab/8_strings/output/5_strings.txt",
-      "timeout_seconds": 5,
-      "allow_failure": true,
-      "normalize": [
-        {
-          "pattern": "(?s)\\A.*\\Z",
-          "replacement": "[exit code]\n-11\n"
-        }
-      ]
+      "timeout_seconds": 5
     }
   ]
 }
