@@ -13795,21 +13795,67 @@ int main(void){
 
 
 <p align="justify">
-Abbiamo detto che il nome di un array è un puntatore costante al primo elemento del vettore. Quello che non abbiamo detto è che i puntatori, come gli array, possono essere indicizzati con le parentesi [ ] esattamente come i vettori. La differenza tra nome di un array e puntatori è che il primo è un puntatore costante quindi non è possibile fare le operazioni seguenti:
+Abbiamo visto che esiste una stretta relazione tra array e puntatori. Per costruire un primo modello mentale possiamo immaginare il nome di un array come un <strong>puntatore costante al suo primo elemento</strong>: questo aiuta a capire perché possiamo indicizzare i puntatori con le parentesi quadre <code>[]</code> e utilizzare espressioni come <code>a[i]</code> e <code>*(a + i)</code>.
 </p>
 
-```c
+<p align="justify">
+Questa immagine è però una <strong>semplificazione didattica</strong>, o «bugia didattica»: <strong>un array non è un puntatore</strong>. Un array è un oggetto formato da elementi contigui dello stesso tipo; un puntatore è invece un oggetto che contiene un valore utilizzabile come indirizzo. Quando un array compare in molte espressioni, il C lo <strong>converte automaticamente in un puntatore al primo elemento</strong> (<em>array-to-pointer conversion</em>, detta anche <em>array decay</em>). La conversione non avviene in tutti i contesti: per esempio, non avviene quando applichiamo <code>sizeof</code> all'array oppure l'operatore <code>&amp;</code> per ottenere il puntatore all'intero array.
+</p>
+
+<p align="justify">
+Questa distinzione spiega perché <strong>non possiamo assegnare un nuovo indirizzo al nome di un array né incrementarlo con <code>++</code></strong>, mentre possiamo cambiare il valore di una variabile puntatore e modificare i singoli elementi di un array non dichiarato <code>const</code>. Vediamo un esempio:
+</p>
+
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+
 #define N 300
 
-int main(void){
-        int a[N] = {1};
-        int *p;
+int main(void) {
+    int a[N] = {1};
+    int *p = a;                 /* p punta al primo elemento di a. */
 
-        a = p;   // errore: a è un puntatore costante, non lo posso cambiare assegnando un altro indirizzo
-        p = a++; // errore: a è un puntatore costante, non lo posso incrementare con operatore ++ ma (a+1) ok
-        p = &a;  // errore: a è un puntatore costante, non posso accedere al suo indirizzo
+    p = a + 1;                  /* Corretto: p punta al secondo elemento. */
+    a[0] = 10;                  /* Corretto: l'elemento è modificabile. */
+
+    // a = p;                   /* Errore: l'array non è assegnabile. */
+    // a++;                     /* Errore: l'array non è incrementabile. */
+
+    int (*pa)[N] = &amp;a;         /* Puntatore all'intero array. */
+    p = &amp;a[0];                 /* Puntatore al primo elemento. */
+
+    printf("sizeof a = %zu\n", sizeof a);
+    printf("sizeof p = %zu\n", sizeof p);
+    printf("a[0] = %d\n", p[0]);
+    printf("(*pa)[0] = %d\n", (*pa)[0]);
+    return 0;
 }
-```
+</code></pre>
+
+<p align="justify">
+L'espressione <code>&amp;a</code> è dunque <strong>valida</strong>, contrariamente a quanto potrebbe far pensare il modello del «puntatore costante». <code>&amp;a[0]</code> ha tipo <code>int *</code> (puntatore al primo elemento), mentre <code>&amp;a</code> ha tipo <code>int (*)[300]</code> (puntatore all'intero array). Gli indirizzi iniziali coincidono, ma i tipi sono diversi: l'espressione <code>p + 1</code> avanza di un elemento <code>int</code>, mentre <code>pa + 1</code> avanza di un intero array di <code>300</code> elementi. Analogamente, <code>sizeof a</code> restituisce la dimensione dell'intero array, mentre <code>sizeof p</code> misura soltanto il puntatore.
+</p>
+
+<table align="center">
+<tr>
+<td>
+:pill: <b>Nota — Un vero puntatore costante</b>
+<p align="justify">
+Nel C possiamo dichiarare un <strong>vero puntatore costante</strong> utilizzando <code>const</code> dopo l'asterisco. In questo caso è il valore del puntatore a non poter essere riassegnato, mentre gli elementi puntati possono ancora essere modificati (purché l'oggetto non sia <code>const</code>).
+</p>
+
+<pre lang="c"><code>int a[3] = {10, 20, 30};
+int *const p = a;       /* p è un puntatore costante a int. */
+
+p[0] = 50;              /* Corretto: modifica a[0]. */
+// p = a + 1;           /* Errore: non possiamo cambiare p. */
+</code></pre>
+
+<p align="justify">
+Questa dichiarazione è diversa dal nome di un array: <code>p</code> è realmente un oggetto puntatore, mentre <code>a</code> rimane un array. La distinzione tra <code>int *const</code> e <code>const int *</code> verrà approfondita parlando di <code>const</code> e del passaggio dei puntatori alle funzioni.
+</p>
+</td>
+</tr>
+</table>
 
 ```c
 #include<stdio.h>
