@@ -2103,6 +2103,25 @@ Dentro GDB possiamo digitare i comandi al prompt <code>(gdb)</code>. Questi sono
 <table align="center">
 <tr>
 <td>
+:pill: <b>Nota — Che cos'è un breakpoint?</b>
+<p align="justify">
+Un <strong>breakpoint</strong> (<em>punto di interruzione</em>) è un punto del programma nel quale chiediamo al debugger di <strong>sospendere temporaneamente l'esecuzione</strong> quando viene raggiunto. Il programma non termina: rimane fermo, permettendoci di controllare i valori delle variabili e decidere come proseguire. Di norma l'istruzione su cui GDB si ferma <strong>non è ancora stata eseguita</strong>.
+</p>
+
+<p align="justify">
+Possiamo impostare un breakpoint indicando una funzione, per esempio <code>break main</code>, oppure una riga del sorgente, per esempio <code>break 3</code> nel file <code>esempio.c</code>. Con <code>continue</code> riprendiamo l'esecuzione fino a un altro punto di arresto o alla conclusione del programma. Il breakpoint resta impostato anche dopo che l'esecuzione è ripresa, finché non lo disabilitiamo o eliminiamo.
+</p>
+
+<p align="justify">
+Più avanti incontreremo altri strumenti di arresto, fra cui i <strong>watchpoint</strong>, che permettono di fermare l'esecuzione quando cambia il valore di un'espressione osservata (o, nelle relative varianti, quando viene letta o scritta una posizione di memoria). Per ora ci concentriamo sui breakpoint.
+</p>
+</td>
+</tr>
+</table>
+
+<table align="center">
+<tr>
+<td>
 &#129714; <b>GDB — La prima sessione</b>
 <p align="justify">
 Impostiamo un breakpoint all'inizio di <code>main</code>, avviamo il programma e usiamo <code>next</code> per eseguire l'inizializzazione <code>int valore = 10;</code> <strong>prima</strong> di leggere la variabile. Una possibile sessione è:
