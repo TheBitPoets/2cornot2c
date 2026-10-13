@@ -14903,12 +14903,12 @@ ciao
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Differenza tra array modificabile e puntatore a string literal read-only.
+Array modificabile e puntatore a letterale stringa con const.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra array modificabile e puntatore a string literal read-only e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Confronta la modifica degli elementi di un array con la riassegnazione di un puntatore a letterale stringa, senza eseguire modifiche ai letterali con comportamento indefinito.
 </p>
 
 <p align="justify">
@@ -14929,45 +14929,31 @@ bin/5_strings</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/8_strings/5_strings.c" -->
-<pre lang="c"><code>#include&lt;stdio.h&gt;
-#include&lt;string.h&gt;
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
 
-int main(void){
-	char ciao[] = "ciao";
-	/*  Il nome di un array e' un putatore costante al primo elemento del vettore
-	 *  non posso farlo puntatore ad un'altro indirizzo, si ottiene un errore:
-	 *  error: assignment to expression with array type
-	 */
-	//ciao = "miao";/* errore: ciao e' puntaore costante */
-	
-	/* Il puntatore non può essere modificato ma i caratteri ovviamente si come 
-	 * singoli elementi del vettore oppure usando la strcpy()
-	 */
-	ciao[0] = 'm'; // corretto
-	printf("%s\n", ciao); // (1) miao
-	strcpy(ciao, "ciao"); 
-	printf("%s\n", ciao); // (2) ciao
+int main(void) {
+    char ciao[] = "ciao";
 
-	printf("\n");
+    /* L'array non e' assegnabile, ma i suoi elementi sono modificabili. */
+    // ciao = "miao";  /* Errore: un array non e' assegnabile. */
+    ciao[0] = 'm';
+    printf("%s\n", ciao);     // (1) miao
 
-	/* Se assegno la stringa ad un puntatore a carattere posso far puntare ciao_
-	 * ad un' altra  cella di memoria senza problemi perche' il puntatore non e' 
-	 * const
-	 */
-	char *ciao_ = "ciao";
-	printf("%s\n", ciao_); // (3) ciao
-	ciao_ = "miao";
-	printf("%s\n", ciao_); // (4) miao
-	/* In questo caso *ciao_ punta alla stringa "ciao" e di solito il compilatore 
-	 * inserisce le stringhe in un'area di memoria a sola lettura quindi probabil
-	 * mente tentare di modificare la stringa con indicizzazione  o strcpy  porta 
-	 * al crash del programma (segmentation fault)
-	 */
-	strcpy(ciao_, "ciao");
-	printf("%s\n", ciao_); // (5) ciao
-	ciao_[0] = 's';
-	printf("%s\n", ciao_); // (6) siao
-	
+    /* Qui strcpy e' valida: ciao contiene cinque char, compreso '\0'. */
+    strcpy(ciao, "ciao");
+    printf("%s\n", ciao);     // (2) ciao
+
+    printf("\n");
+
+    /* Il puntatore e' riassegnabile, ma i literal non vanno modificati. */
+    const char *ciao_ = "ciao";
+    printf("%s\n", ciao_);    // (3) ciao
+
+    ciao_ = "miao";
+    printf("%s\n", ciao_);    // (4) miao
+
+    return 0;
 }
 </code></pre>
 <!-- lab-snippet:end -->
@@ -14977,8 +14963,11 @@ int main(void){
 </p>
 
 <!-- lab-output:start path="lab/8_strings/output/5_strings.txt" -->
-<pre lang="text"><code>[exit code]
--11
+<pre lang="text"><code>miao
+ciao
+
+ciao
+miao
 </code></pre>
 <!-- lab-output:end -->
 </details>
@@ -14988,63 +14977,81 @@ int main(void){
 
 <!-- lab-exercises:end -->
 
-
 <p align="justify">
-Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di caratteri e il secondo pensandola come un literal puntato da un puntatore a carattere), esistono delle differenze sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per \0. Vediamole in questo esempio:
+La dichiarazione <code>char ciao[] = "ciao";</code> crea un <strong>array di caratteri</strong> distinto dal letterale utilizzato per inizializzarlo. Il compilatore ne deduce la dimensione, cinque elementi compreso il terminatore <code>\0</code>. Possiamo quindi modificare i caratteri dell'array, ma <strong>non possiamo riassegnare l'array</strong> come se fosse una variabile puntatore. Il comportamento dell'array è spiegato anche nella sezione <a href="#il-tipo-array-in-c">Il tipo array in C</a>.
 </p>
 
-```c
-#include<stdio.h>
-#include<string.h>
+<p align="justify">
+La dichiarazione <code>const char *ciao_ = "ciao";</code>, invece, crea una <strong>variabile puntatore</strong> che indica il primo carattere di un letterale stringa. Possiamo assegnare al puntatore l'indirizzo di un altro letterale, per esempio <code>ciao_ = "miao";</code>. Il qualificatore <code>const</code> impedisce di modificare i caratteri <strong>attraverso quel puntatore</strong>, ma non rende costante il puntatore stesso.
+</p>
 
-int main(void){
-        char ciao[] = "ciao";
-        /*  Il nome di un array e' un puntatore costante al primo elemento del vettore
-         *  non posso farlo puntare a un altro indirizzo, si ottiene un errore:
-         *  error: assignment to expression with array type
-         */
-        //ciao = "miao";/* errore: ciao e' puntatore costante */
+<p align="justify">
+Confrontiamo le operazioni nel programma del laboratorio, qui riportato per comodità:
+</p>
 
-        /* Il puntatore non può essere modificato ma i caratteri ovviamente sì, come
-         * singoli elementi del vettore oppure usando la strcpy()
-         */
-        ciao[0] = 'm'; // corretto
-        printf("%s\n", ciao); // (1) miao
-        strcpy(ciao, "ciao");
-        printf("%s\n", ciao); // (2) ciao
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
 
-        printf("\n");
+int main(void) {
+    char ciao[] = "ciao";
 
-        /* Se assegno la stringa a un puntatore a carattere posso far puntare ciao_
-         * a un'altra  cella di memoria senza problemi perche' il puntatore non e'
-         * const
-         */
-        char *ciao_ = "ciao";
-        printf("%s\n", ciao_); // (3) ciao
-        ciao_ = "miao";
-        printf("%s\n", ciao_); // (4) miao
-        /* In questo caso *ciao_ punta alla stringa "ciao" e di solito il compilatore
-         * inserisce le stringhe in un'area di memoria a sola lettura quindi probabil
-         * mente tentare di modificare la stringa con indicizzazione  o strcpy  porta
-         * al crash del programma (segmentation fault)
-         */
-        strcpy(ciao_, "ciao");
-        printf("%s\n", ciao_); // (5) ciao
-        ciao_[0] = 's';
-        printf("%s\n", ciao_); // (6) siao
+    /* L'array non e' assegnabile, ma i suoi elementi sono modificabili. */
+    // ciao = "miao";  /* Errore: un array non e' assegnabile. */
+    ciao[0] = 'm';
+    printf("%s\n", ciao);     // (1) miao
 
+    /* Qui strcpy e' valida: ciao contiene cinque char, compreso '\0'. */
+    strcpy(ciao, "ciao");
+    printf("%s\n", ciao);     // (2) ciao
+
+    printf("\n");
+
+    /* Il puntatore e' riassegnabile, ma i literal non vanno modificati. */
+    const char *ciao_ = "ciao";
+    printf("%s\n", ciao_);    // (3) ciao
+
+    ciao_ = "miao";
+    printf("%s\n", ciao_);    // (4) miao
+
+    return 0;
 }
-```
+</code></pre>
 
-```bash
-vagrant@ubuntu2204:/lab/8_strings$ bin/5_strings
-miao
+<p align="justify">
+Il programma termina normalmente e produce il seguente output:
+</p>
+
+<pre lang="text"><code>miao
 ciao
 
 ciao
 miao
-Segmentation fault (core dumped)
-```
+</code></pre>
+
+<p align="justify">
+La chiamata <code>strcpy(ciao, "ciao")</code> è valida <strong>in questo caso specifico</strong> perché l'array <code>ciao</code> ha spazio per tutti e cinque gli elementi copiati, compreso <code>\0</code>. La funzione <code>strcpy</code>, però, non conosce la capacità del buffer di destinazione: la useremo soltanto quando è garantito che vi sia spazio sufficiente.
+</p>
+
+<table align="center">
+<tr>
+<td>
+&#9888; <b>Attenzione</b>
+<p align="justify">
+In C è consentito inizializzare un <code>char *</code> con un letterale stringa, anche senza <code>const</code>; tuttavia <strong>tentare di modificare il letterale produce comportamento indefinito</strong>. Ecco due operazioni che non devono essere eseguite:
+</p>
+
+<pre lang="c"><code>char *p = "ciao";        /* Dichiarazione consentita in C. */
+
+// p[0] = 'm';           /* Comportamento indefinito. */
+// strcpy(p, "miao");    /* Comportamento indefinito: scrive sul letterale. */
+</code></pre>
+
+<p align="justify">
+Un possibile effetto è un <em>segmentation fault</em>, ma il linguaggio C non garantisce un crash: il programma potrebbe comportarsi in altri modi. Per questo il vecchio esempio che modificava direttamente un letterale non deve essere usato come normale laboratorio con output atteso. Preferiamo <code>const char *</code> per segnalare al compilatore che i caratteri non devono essere modificati attraverso quel puntatore.
+</p>
+</td>
+</tr>
+</table>
 
 ### Stampare una stringa
 
