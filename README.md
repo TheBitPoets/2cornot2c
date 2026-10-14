@@ -26,6 +26,7 @@ Punti di ingresso:
   * [Il primo programma in C](#il-primo-programma-in-c)
   * [Funzioni](#funzioni)
   * [Variabili](#variabili)
+  * [Introduzione al debugging con GDB](#introduzione-al-debugging-con-gdb)
   * [Classi di memorizzazione](#classi-di-memorizzazione)
   * [Block scope](#block-scope)
   * [File scope](#file-scope)
@@ -2051,6 +2052,124 @@ int risultato = 0;
 int primo, secondo;
 char operazione;
 ```
+
+## Introduzione al debugging con GDB
+
+<p align="justify">
+Quando eseguiamo normalmente un programma osserviamo soprattutto ciò che esso produce, ad esempio attraverso <code>printf</code>. Un <strong>debugger</strong> ci permette invece di <strong>interrompere temporaneamente l'esecuzione</strong> in un punto scelto e osservare lo stato del programma: la riga che sta per essere eseguita e il valore delle variabili. <strong>GDB</strong> (<em>GNU Debugger</em>) è un debugger usato per analizzare programmi C.
+</p>
+
+<p align="justify">
+Iniziamo con una sola <strong>variabile locale</strong>, inizializzata a un valore noto. Per ora non ci servono puntatori, stack o rappresentazione dei byte: vogliamo soltanto verificare come cambia il valore durante l'esecuzione.
+</p>
+
+<pre lang="c"><code>int main(void) {
+    int valore = 10;
+    valore = valore + 5;
+    return 0;
+}
+</code></pre>
+
+<p align="justify">
+Salviamo il sorgente nel file <code>esempio.c</code> e, dalla sua cartella, compiliamo e avviamo il debugger:
+</p>
+
+<pre lang="bash"><code>gcc -g esempio.c -o esempio
+gdb ./esempio
+</code></pre>
+
+<p align="justify">
+L'opzione <code>-g</code> include nell'eseguibile le <strong>informazioni di debug</strong> necessarie a riconoscere righe del sorgente e variabili. Senza opzioni di ottimizzazione GCC usa già <code>-O0</code>; non occorre indicarlo esplicitamente per questo esperimento. Il comando <code>gdb ./esempio</code> apre il debugger e carica l'eseguibile senza avviarlo subito.
+</p>
+
+<p align="justify">
+Dentro GDB possiamo digitare i comandi al prompt <code>(gdb)</code>. Questi sono i primi che utilizzeremo:
+</p>
+
+<table align="center">
+<thead>
+<tr><th>Comando</th><th>Che cosa fa</th></tr>
+</thead>
+<tbody>
+<tr><td><code>break main</code></td><td>Imposta un <strong>breakpoint</strong>, cioè un punto in cui fermare il programma all'inizio della funzione <code>main</code>.</td></tr>
+<tr><td><code>run</code></td><td>Avvia il programma e lo esegue fino al breakpoint.</td></tr>
+<tr><td><code>next</code></td><td>Esegue la riga corrente e si ferma alla successiva, senza entrare nelle eventuali funzioni chiamate.</td></tr>
+<tr><td><code>print valore</code></td><td>Mostra il valore corrente della variabile <code>valore</code>.</td></tr>
+<tr><td><code>continue</code></td><td>Riprende l'esecuzione fino alla fine o a un altro breakpoint.</td></tr>
+<tr><td><code>quit</code></td><td>Esce da GDB.</td></tr>
+</tbody>
+</table>
+
+<table align="center">
+<tr>
+<td>
+:pill: <b>Nota — Che cos'è un breakpoint?</b>
+<p align="justify">
+Un <strong>breakpoint</strong> (<em>punto di interruzione</em>) è un punto del programma nel quale chiediamo al debugger di <strong>sospendere temporaneamente l'esecuzione</strong> quando viene raggiunto. Il programma non termina: rimane fermo, permettendoci di controllare i valori delle variabili e decidere come proseguire. Di norma l'istruzione su cui GDB si ferma <strong>non è ancora stata eseguita</strong>.
+</p>
+
+<p align="justify">
+Possiamo impostare un breakpoint indicando una funzione, per esempio <code>break main</code>, oppure una riga del sorgente, per esempio <code>break 3</code> nel file <code>esempio.c</code>. Con <code>continue</code> riprendiamo l'esecuzione fino a un altro punto di arresto o alla conclusione del programma. Il breakpoint resta impostato anche dopo che l'esecuzione è ripresa, finché non lo disabilitiamo o eliminiamo.
+</p>
+
+<p align="justify">
+Più avanti incontreremo altri strumenti di arresto, fra cui i <strong>watchpoint</strong>, che permettono di fermare l'esecuzione quando cambia il valore di un'espressione osservata (o, nelle relative varianti, quando viene letta o scritta una posizione di memoria). Per ora ci concentriamo sui breakpoint.
+</p>
+</td>
+</tr>
+</table>
+
+<table align="center">
+<tr>
+<td>
+&#129714; <b>GDB — La prima sessione</b>
+<p align="justify">
+Impostiamo un breakpoint all'inizio di <code>main</code>, avviamo il programma e usiamo <code>next</code> per eseguire l'inizializzazione <code>int valore = 10;</code> <strong>prima</strong> di leggere la variabile. Una possibile sessione è:
+</p>
+
+<pre lang="gdb"><code>(gdb) break main
+(gdb) run
+(gdb) next
+3           valore = valore + 5;
+(gdb) print valore
+$1 = 10
+(gdb) next
+4           return 0;
+(gdb) print valore
+$2 = 15
+(gdb) continue
+(gdb) quit
+</code></pre>
+
+<p align="justify">
+Questo è un <strong>estratto illustrativo</strong>: GDB mostrerà anche messaggi sul breakpoint, sul programma avviato e sulla sua terminazione. I numeri <code>3</code> e <code>4</code> individuano le righe del file <code>esempio.c</code>; <code>$1</code> e <code>$2</code> identificano i risultati successivi di <code>print</code>, <strong>non</strong> indirizzi di memoria.
+</p>
+
+<p align="justify">
+Dopo il primo <code>next</code>, <code>valore</code> è uguale a <code>10</code>. Dopo il secondo, abbiamo eseguito <code>valore = valore + 5;</code> e il valore è diventato <code>15</code>. Con <code>continue</code> il programma termina normalmente.
+</p>
+
+<p align="justify">
+<strong>Prova:</strong> cambia l'istruzione in <code>valore = valore * 2;</code>. Prima di rieseguire GDB, prevedi il valore mostrato dalla seconda chiamata a <code>print valore</code> e verifica la tua risposta.
+</p>
+</td>
+</tr>
+</table>
+
+<table align="center">
+<tr>
+<td>
+:pill: <b>Nota</b>
+<p align="justify">
+Il momento in cui osserviamo una variabile è importante. Nel nostro esempio non proviamo a leggere <code>valore</code> prima della sua inizializzazione: una variabile automatica non inizializzata non ha un valore da usare come risultato attendibile. Più avanti approfondiremo il problema delle variabili non inizializzate.
+</p>
+</td>
+</tr>
+</table>
+
+<p align="justify">
+Per il momento basta saper <strong>fermare, avanzare e osservare</strong> un programma. Nei capitoli successivi continueremo a usare riquadri &#129714; <strong>GDB</strong> per approfondire indirizzi, byte, array, puntatori e memoria dinamica, introducendo nuovi comandi soltanto quando saranno necessari.
+</p>
 
 ## Classi di memorizzazione
 
