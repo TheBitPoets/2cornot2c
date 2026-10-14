@@ -1799,7 +1799,7 @@ Sulla base del tempo di vita e della visibilità possiamo classificare le variab
 </p>
 
 <p align="justify">
-<b>Le variabili locali</b> sono definite all'interno delle funzioni e hanno una visibilità limitata: dal punto in cui sono dichiarate fino al termine del corpo della funzione (ti ricordo che il corpo è compreso tra { e }); anche il loro tempo di vita è limitato: la locazione di memoria a esse associata è allocata quando la funzione viene invocata ed è liberata quando l'esecuzione dell'intero corpo della funzione termina.
+<b>Le variabili locali</b> sono dichiarate all'interno di una funzione o di un blocco di istruzioni. Il loro identificatore è visibile dal punto della dichiarazione fino alla fine del blocco in cui sono dichiarate. Le normali variabili locali automatiche hanno un tempo di vita limitato all'esecuzione del blocco che le contiene. Le variabili locali dichiarate con <code>static</code>, invece, conservano il proprio valore per tutta la durata del programma.
 </p>
 
 <p align="justify">
@@ -1808,7 +1808,7 @@ Hanno visibilità globale, cioè sono visibili a tutte le funzioni nel file in c
 </p>
 
 <p align="justify">
-<b>Le variabili globali</b>, se non inizializzate, vengono poste a zero automaticamente; al contrario <b>le variabili locali</b>, se non inizializzate, contengono semplicemente un valore sporco e assolutamente non prevedibile (il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla variabile, al suo identificatore).
+<b>Le variabili globali</b>, se non inizializzate esplicitamente, vengono inizializzate automaticamente a zero. Al contrario, le normali <b>variabili locali automatiche</b> non ricevono un valore iniziale garantito. Non possiamo quindi presumere che contengano zero né un valore precedentemente presente nella stessa locazione di memoria. Utilizzarne il valore prima di inizializzarle può provocare un comportamento indefinito (<em>undefined behavior</em>).
 </p>
 
 <p align="justify">
@@ -3137,7 +3137,7 @@ Una variabile appartenente alla <strong>classe di memorizzazione automatica</str
 </ul>
 
 <p align="justify">
-Qualsiasi variabile dichiarata all'interno di un blocco ({ e }) è di tipo auto: in pratica, è la classe di memorizzazione per tutte le variabili locali. Le variabili di classe auto non sono inizializzate automaticamente: questo è il motivo per cui le variabili locali devono essere inizializzate esplicitamente, altrimenti ospitano un valore assolutamente casuale, sporco.
+Una variabile dichiarata all'interno di un blocco senza specificare una classe di memorizzazione ha normalmente durata di memorizzazione automatica (<em>automatic storage duration</em>), salvo casi particolari. Le variabili automatiche non vengono inizializzate automaticamente a zero. Se non ricevono un valore iniziale, il loro contenuto non deve essere considerato valido o prevedibile. È quindi importante assegnare loro un valore prima di leggerle.
 </p>
 
 ```c
@@ -17822,7 +17822,7 @@ Riferimento principale: README.md sezione "L'inizializzazione delle variabili" (
   </li>
   <li>
     <p align="justify">
-    le <strong>variabili locali</strong> possono essere inizializzate anche con valori di altre variabili o restituiti da funzione e se non inizializzate esplicitamente <strong>non vengono poste a zero ma contengono un valore casuale e non prevedibile</strong> a priori.
+    le <strong>variabili locali automatiche</strong> possono essere inizializzate anche mediante espressioni che utilizzano altre variabili o valori restituiti da funzioni. Se non vengono inizializzate, non ricevono automaticamente il valore zero e non possiamo utilizzarne il contenuto come se fosse un valore valido.
     </p>
   </li>
 </ul>
