@@ -1971,12 +1971,12 @@ Tornando alle variabili, possiamo riassumere quanto segue:
   </li>
   <li>
     <p align="justify">
-    se non inizializzate, sono settate a un valore assolutamente casuale
+    se non inizializzate, non hanno un valore iniziale garantito; leggerle prima di assegnare loro un valore può provocare comportamento indefinito
     </p>
   </li>
   <li>
     <p align="justify">
-    il loro ciclo di vita è limitato all'esecuzione del blocco dove sono dichiarate
+    il loro ciclo di vita è limitato all'esecuzione del blocco dove sono dichiarate, nel caso delle normali variabili locali automatiche
     </p>
   </li>
 </ul>
@@ -2044,7 +2044,7 @@ int moltiplicazione(int primo_fattore, int secondo_fattore){
 ```
 
 <p align="justify">
-Come puoi vedere, le variabili primo e secondo sono state dichiarate dentro la funzione main() e quindi sono locali (sono visibili solo all'interno di questa funzione), esattamente come risultato e operazione. Solo risultato è inizializzato a zero; le altre variabili conterranno all'inizio un valore casuale (le variabili locali non sono inizializzate automaticamente).
+Come puoi vedere, le variabili <code>primo</code> e <code>secondo</code> sono state dichiarate all'interno della funzione <code>main()</code> e sono quindi variabili locali, esattamente come <code>risultato</code> e <code>operazione</code>. Soltanto <code>risultato</code> viene inizializzata esplicitamente a zero. Le altre variabili non ricevono un valore iniziale e il loro contenuto non deve essere utilizzato prima di aver assegnato loro un valore valido. Nel nostro esempio, <code>primo</code> e <code>secondo</code> ricevono un valore mediante <code>scanf()</code>, mentre <code>operazione</code> riceve il carattere letto da <code>getchar()</code>. Il programma presuppone che queste operazioni di lettura abbiano successo.
 </p>
 
 ```c
