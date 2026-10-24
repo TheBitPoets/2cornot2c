@@ -46,13 +46,23 @@
 - `git diff --cached origin/main --check`: PASS.
 - PowerShell runtime non eseguito: `pwsh`/Windows non disponibili su questo
   host macOS. La verifica reale su Windows resta necessaria prima del merge.
+- GitHub sul candidate `6a876bd3ea1d98f81839d6aea97d39b7334985a8`:
+  uTUI Windows/Linux, Docker, snippet e Mermaid PASS. I job Quality Python,
+  minimum-python e windows-filesystem sono FAIL per tre test estranei al diff:
+  il test documentale era già rosso sull'esatto `main` integrato nel run
+  38607806380; due aspettative con date del 18–20 ottobre ora producono
+  `interrupted` e `submitted_late`. La remediation di questi test non appartiene
+  alla PR #863 e resta un blocco esterno al merge.
+- Soluzioni pubblicate inline e discussioni risolte:
+  `discussion_r4367374043` per il percorso Windows e
+  `discussion_r4367375430` per la documentazione.
 - Nessun processo temporaneo lasciato attivo. Il venv di test usa
   `/tmp/pr863-review` e non appartiene al repository.
 
 ## Prossimo passo
 
-1. Verificare che PR, branch remoto e candidate HEAD coincidano e attendere le
-   check GitHub sull'esatto SHA.
+1. Correggere su `main`, in un'unità separata, i tre test Quality estranei a
+   questa PR oppure integrare il commit che li corregge; poi attendere CI verde.
 2. Eseguire in una nuova sessione un round indipendente completo sull'intero
    diff rispetto a `main`; se pulito, registrare `1/2`.
 3. Eseguire un secondo round indipendente sullo stesso HEAD; soltanto a `2/2`,
