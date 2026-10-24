@@ -207,6 +207,116 @@ Silicon).
 
 ## Installare l'ambiente di sviluppo
 
+### Alternativa: importare la VM già pronta in VirtualBox
+
+Se l'installazione automatica non riesce, il docente può fornire il file
+**`2cornot2c-virtualbox-amd64-20261024.ova`**: contiene Ubuntu 24.04, il desktop
+XFCE, GCC, GDB, Make, Git, Vim e i laboratori in `/lab` e `/lab2`.
+Per questo percorso basta **VirtualBox già installato**: Git e Vagrant sul PC
+non sono necessari. L'immagine è per **PC Intel/AMD a 64 bit**, non per Mac
+Apple Silicon o Windows ARM. Mantieni almeno 20 GiB liberi e 8 GiB di RAM sul
+PC; la VM usa 2 CPU, 2048 MB di RAM e un disco dinamico con capacità massima
+di 64 GiB. Questo metodo evita l'installer, ma richiede comunque che
+VirtualBox riesca ad avviare le VM sul computer.
+
+**Importazione — per gli studenti**
+
+1. Copia l'OVA fornito dal docente in una cartella del PC: non estrarlo e non
+   creare una nuova macchina vuota. Se ricevi anche il file `.ova.sha256`,
+   puoi confrontarne il valore con il risultato di questo comando PowerShell,
+   eseguito nella cartella del download:
+
+   ```powershell
+   Get-FileHash .\2cornot2c-virtualbox-amd64-20261024.ova -Algorithm SHA256
+   ```
+
+2. Fai doppio clic sul file `.ova`. In alternativa, in VirtualBox scegli
+   **Home → Importa** oppure **File → Importa applicazione virtuale**
+   (la voce cambia con versione e lingua), seleziona il file e prosegui.
+3. Nel riepilogo controlla **nome `2cornot2c`**, sistema **Ubuntu (64-bit)**,
+   **RAM 2048 MB** e **2 CPU**. Scegli una cartella con spazio sufficiente;
+   lascia generare nuovi indirizzi MAC. Se esiste già una VM chiamata
+   `2cornot2c`, assegna alla nuova un nome diverso, senza cancellare la vecchia.
+   Concludi con **Importa / Fine** e attendi il completamento.
+
+   ![Esempio della finestra di importazione: nome, RAM, CPU e cartella di destinazione](doc/images/virtualbox-ova/02-importazione-oracle.png)
+
+   *Schermata di esempio dalla [guida ufficiale Oracle VirtualBox 7.0](https://docs.oracle.com/en/virtualization/virtualbox/7.0/user/Introduction.html#ovf-import).
+   I valori Windows mostrati nell'esempio non sono quelli della nostra VM:
+   per 2cornot2c usa i valori Ubuntu indicati sopra. L'interfaccia 7.2 può
+   avere una disposizione diversa.*
+
+4. Seleziona la VM importata e premi **Avvia**. Attendi il desktop Ubuntu;
+   l'accesso è automatico. Se viene richiesta una credenziale locale,
+   **utente e password sono entrambi `vagrant`**. È un account didattico
+   condiviso: non usarlo per custodire dati personali o servizi pubblici.
+   **Se l'avvio resta fermo per alcuni minuti su `Begin: Loading essential
+   drivers ...`**, nella finestra della VM scegli **Macchina → Pausa**, attendi
+   due secondi e scegli di nuovo **Macchina → Pausa** per riprendere. In
+   alternativa premi due volte **Ctrl destro + P**, con due secondi di pausa.
+   Questo rimedio è stato necessario e verificato sul PC usato per il
+   collaudo; non richiede di spegnere forzatamente o reinstallare la VM.
+   Se non basta, comunica al docente il messaggio o lo screenshot dell'errore.
+
+   ![VirtualBox sul PC di collaudo: la copia importata selezionata, spenta, con 2048 MB e due processori](doc/images/virtualbox-ova/00-manager.png)
+
+   *Schermata reale dopo il collaudo: seleziona la copia importata e usa
+   il pulsante verde **Avvia**. Il nome con suffisso `import-test` identifica
+   soltanto la copia usata per la verifica su questo PC.*
+
+5. Apri **Applicazioni → Emulatore di terminale**. Per provare il compilatore:
+
+   ```bash
+   cd ~
+   printf '#include <stdio.h>\nint main(void) { puts("Ciao da 2cornot2c!"); return 0; }\n' > prova.c
+   gcc -Wall -Wextra prova.c -o prova
+   ./prova
+   ```
+
+   Deve comparire `Ciao da 2cornot2c!`. I sorgenti delle lezioni sono in
+   `/lab` e `/lab2`; sul desktop trovi anche `LEGGIMI.txt`.
+
+   ![Screenshot reale della VM importata: desktop XFCE attivo, laboratori presenti e compilazione C riuscita](doc/images/virtualbox-ova/03-vm-importata.png)
+
+   *Collaudo reale su questo PC, 24 ottobre 2026: la prova viene eseguita
+   dentro la macchina ottenuta importando l'OVA.*
+
+Avvia e spegni questa copia direttamente da VirtualBox e dal menu di Ubuntu
+(oppure con `sudo poweroff` nel terminale). Non usare `vagrant up`,
+`vagrant ssh` o il launcher dell'installazione automatica per gestirla:
+l'importazione OVA non la registra in Vagrant. **Gli esercizi vengono salvati
+dentro il disco della VM**, senza sincronizzazione con le cartelle Windows.
+Conservane una copia prima di rimuovere o sostituire la macchina. La rete è
+NAT, senza porte inoltrate dal PC; il servizio SSH è disabilitato.
+
+**Esportazione — per il docente**
+
+1. Usa una copia dedicata alla distribuzione. Prima dell'esportazione controlla
+   che contenga i laboratori sul proprio disco e che non abbia account personali,
+   token, chiavi SSH, cronologie o cartelle condivise legate al tuo PC.
+   L'esportazione di VirtualBox, da sola, **non ripulisce questi dati** e non
+   incorpora i file presenti nelle cartelle condivise del computer ospitante.
+2. Salva il lavoro e arresta Ubuntu normalmente: in VirtualBox lo stato deve
+   essere **Spenta**, non **Salvata**. Se è salvata, riprendila e arrestala
+   correttamente. Seleziona **File → Esporta applicazione virtuale**, scegli
+   solo la copia da distribuire e prosegui.
+3. Seleziona **Open Virtualization Format 2.0**, indica un nome che termina in
+   **`.ova`**, escludi gli indirizzi MAC e abilita **Scrivi file manifest**.
+   Non includere immagini ISO. Controlla il riepilogo e premi **Esporta / Fine**.
+   Il risultato è un unico file da passare agli studenti.
+4. Importa l'OVA con un nome diverso e prova l'avvio e la compilazione C
+   descritti sopra. Distribuisci il file solo dopo questo controllo; puoi
+   allegare l'hash SHA-256 per verificare che il trasferimento sia integro.
+
+Procedura di riferimento: [Oracle VirtualBox — importazione ed esportazione](https://docs.oracle.com/en/virtualization/virtualbox/7.2/user/working-with-vms.html#ovf).
+**Copia preparata e verificata il 24 ottobre 2026:** file di circa **813 MiB**
+(852941312 byte), importato su Windows con VirtualBox 7.2.16; avvio completato
+con la pausa/ripresa descritta sopra, desktop XFCE, laboratori locali e
+compilazione/esecuzione C verificati. Non è una verifica su tutti i PC o su
+tutte le versioni di VirtualBox. L'archivio, il checksum e un foglio di
+istruzioni sono nella cartella locale `exports/`, esclusa da Git: richiedi
+il file al docente; non viene scaricato clonando questo repository.
+
 ### Procedura guidata consigliata
 
 La procedura misura la RAM e propone VM completa oppure Docker leggero. Installa
