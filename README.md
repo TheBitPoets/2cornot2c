@@ -551,6 +551,18 @@ git clone https://github.com/TheBitPoets/2cornot2c.git
 cd 2cornot2c
 ```
 
+### Procedura manuale con VM già pronta
+
+La procedura guidata non scarica ancora una box VM di rilascio: il manifest
+reale verrà pubblicato dopo il collaudo di tutti gli artefatti. Se il percorso
+automatico non funziona, il docente può distribuire separatamente la VM Fusion
+già preparata.
+
+Per installare Fusion, verificare lo ZIP e aprire la macchina senza Vagrant,
+segui [la guida manuale](release/manual/README.md). La VM manuale attuale è
+ARM64 e funziona soltanto sui Mac Apple Silicon; non è compatibile con Mac
+Intel o Windows.
+
 ### Primo avvio
 
 Esegui **un solo avvio guidato**:

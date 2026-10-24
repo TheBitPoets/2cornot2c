@@ -208,6 +208,11 @@ La parte VM non scarica ancora la box Packer reale e non avvia la VM. Questi
 passi verranno attivati dopo aver fissato URL, versione e checksum degli
 artefatti che superano il collaudo VirtualBox AMD64.
 
+Come procedura temporanea per macOS Apple Silicon è disponibile una VM Fusion
+manuale, indipendente da Vagrant. Le istruzioni per scaricare Fusion, verificare
+il pacchetto e aprire la macchina sono in `release/manual/README.md`. Il file
+ZIP della VM è un artefatto esterno e non viene salvato nel repository Git.
+
 Il contratto e il downloader verificato sono implementati in
 `installer/artifacts.py`; manca intenzionalmente il manifest reale finché la
 box VirtualBox AMD64 non supera il collaudo Windows.
